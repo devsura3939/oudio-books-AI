@@ -1,13 +1,14 @@
 // ==========================================================================
-// LUMINA AUDIO — PRO TRANSLATION & NATURAL VOICE ENGINE v5
+// LUMINA AUDIO — PRO AI AUDIOBOOK & MOON+ READER ENGINE (v6.0)
 // ==========================================================================
-// Architecture:
-//   English playback → window.speechSynthesis (browser voices)
-//   Georgian playback → Google Translate TTS (native ka-GE neural audio)
-//   Translation → Pre-translate entire book, store in IndexedDB
+// Full Capabilities:
+//   1. Moon+ Reader View: Typography, Themes (Sepia/Light/Dark/OLED), Sentence Sync
+//   2. Whole-Book Translation: Resilient Batch Translation + Mkhedruli Normalization
+//   3. High-Quality TTS: Dual-Mode Engine (Native Georgian + Phonetics Acoustics)
+//   4. Formatted PDF Book Export in English & Georgian
 // ==========================================================================
 
-// ── State ──────────────────────────────────────────────────────────────────
+// ── Application State ──────────────────────────────────────────────────────
 let db = null;
 let currentBook = null;
 let currentPlayingChapterId = null;
@@ -15,7 +16,7 @@ let isPlaying = false;
 let isPaused = false;
 let currentGlobalSpeed = 1.0;
 let currentPitch = 1.0;
-let currentLang = 'en';           // 'en' or 'ka'
+let currentLang = 'en'; // 'en' or 'ka'
 let selectedVoiceURI = '';
 
 let sentenceQueue = [];
@@ -25,16 +26,57 @@ let secondsElapsed = 0;
 let timerInterval = null;
 let currentUser = null;
 
-// Google TTS audio element reference (for pause/resume/stop)
-let currentGoogleAudio = null;
-let googleTTSChunks = [];
-let googleTTSChunkIndex = 0;
+// Reader View State
+let readerActive = false;
+let readerBook = null;
+let readerChapterId = null;
+let readerLang = 'en'; // 'en' or 'ka'
+let readerFontSize = 18; // in px
+let readerTheme = 'dark'; // 'dark', 'sepia', 'light', 'oled'
+let readerFontFamily = 'font-sans';
 
-// Translation state
-let isTranslating = false;
+// Whole Book Translation State
+let isTranslatingWholeBook = false;
 let cancelTranslationFlag = false;
 
-// ── Pre-loaded Classics ───────────────────────────────────────────────────
+// Georgian Unicode Maps (Mtavruli U+1C90..U+1CBA to Mkhedruli U+10D0..U+10FA)
+function normalizeGeorgian(text) {
+    if (!text) return '';
+    const res = [];
+    for (let i = 0; i < text.length; i++) {
+        const code = text.charCodeAt(i);
+        if (code >= 0x1C90 && code <= 0x1CBA) {
+            res.push(String.fromCharCode(code - 0x1C90 + 0x10D0));
+        } else {
+            res.push(text[i]);
+        }
+    }
+    return res.join('');
+}
+
+// Georgian Phonetic Syllables for Natural Speech Acoustics
+const GEORGIAN_TO_PHONETIC = {
+    'ა': 'a', 'ბ': 'b', 'გ': 'g', 'დ': 'd', 'ე': 'e',
+    'ვ': 'v', 'ზ': 'z', 'თ': 't', 'ი': 'i', 'კ': 'k',
+    'ლ': 'l', 'მ': 'm', 'ნ': 'n', 'ო': 'o', 'პ': 'p',
+    'ჟ': 'zh', 'რ': 'r', 'ს': 's', 'ტ': 't', 'უ': 'u',
+    'ფ': 'p', 'ქ': 'k', 'ღ': 'gh', 'ყ': 'k', 'შ': 'sh',
+    'ჩ': 'ch', 'ც': 'ts', 'ძ': 'dz', 'წ': 'ts', 'ჭ': 'ch',
+    'ხ': 'kh', 'ჯ': 'j', 'ჰ': 'h'
+};
+
+function transliterateGeorgianToPhonetic(kaText) {
+    if (!kaText) return '';
+    const normalized = normalizeGeorgian(kaText);
+    let out = '';
+    for (let i = 0; i < normalized.length; i++) {
+        const ch = normalized[i];
+        out += GEORGIAN_TO_PHONETIC[ch] !== undefined ? GEORGIAN_TO_PHONETIC[ch] : ch;
+    }
+    return out;
+}
+
+// ── Default Discover Classics ──────────────────────────────────────────────
 const DISCOVER_CLASSICS = [
     {
         id: 'classic_war_of_art',
@@ -46,20 +88,20 @@ const DISCOVER_CLASSICS = [
                 id: 1,
                 title: 'Chapter 1: Defining Resistance',
                 text: "Most of us have two lives: the life we live, and the unlived life within us. Between the two stands Resistance. Have you ever brought home a treadmill and let it gather dust in the attic? Have you ever quit a diet or a creative project? If you have, you know what Resistance is.",
-                text_ka: null,
+                text_ka: "უმეტესობას ორი ცხოვრება გვაქვს: ცხოვრება, რომლითაც ვცხოვრობთ და არაცოცხალი ცხოვრება ჩვენში. ამ ორს შორის დგას წინააღმდეგობა. ოდესმე მოგიტანიათ სახლში სარბენი ბილიკი და დაგიტოვებიათ სხვენში მტვრის ასაკრეფად? ოდესმე მიგიტოვებიათ დიეტა ან შემოქმედებითი პროექტი? თუ ასეა, თქვენ იცით, რა არის წინააღმდეგობა.",
                 word_count: 58,
                 estimated_duration_sec: 25
             },
             {
                 id: 2,
                 title: 'Chapter 2: Overcoming The Enemy',
-                text: "Resistance is invisible and cannot be touched, but it can be felt. It is an energetic field radiating from potential work whose only aim is to distract us.",
-                text_ka: null,
-                word_count: 32,
-                estimated_duration_sec: 15
+                text: "Resistance is invisible and cannot be touched, but it can be felt. It is an energetic field radiating from potential work whose only aim is to distract us from our true greatness.",
+                text_ka: "წინააღმდეგობა უხილავია და მისი შეხება შეუძლებელია, მაგრამ მისი შეგრძნება შესაძლებელია. ეს არის ენერგეტიკული ველი, რომელიც ასხივებს პოტენციურ სამუშაოებს, რომლის ერთადერთი მიზანია ყურადღება გადაგვატანინოს ჩვენი ნამდვილი სიდიადიდან.",
+                word_count: 35,
+                estimated_duration_sec: 18
             }
         ],
-        translatedLangs: [],
+        translatedLangs: ['ka'],
         dateAdded: new Date().toISOString(),
         progressPct: 0
     },
@@ -73,18 +115,18 @@ const DISCOVER_CLASSICS = [
                 id: 1,
                 title: 'Chapter 1: Laying Plans',
                 text: "The art of war is of vital importance to the State. It is a matter of life and death, a road either to safety or to ruin. Hence it is a subject of inquiry which can on no account be neglected.",
-                text_ka: null,
+                text_ka: "ომის ხელოვნებას სასიცოცხლო მნიშვნელობა აქვს სახელმწიფოსთვის. ეს არის სიცოცხლისა და სიკვდილის საკითხი, გზა ან უსაფრთხოებისკენ, ან დაღუპვისკენ. აქედან გამომდინარე, ეს არის კვლევის საგანი, რომლის უგულებელყოფა არავითარ შემთხვევაში არ შეიძლება.",
                 word_count: 42,
-                estimated_duration_sec: 18
+                estimated_duration_sec: 20
             }
         ],
-        translatedLangs: [],
+        translatedLangs: ['ka'],
         dateAdded: new Date().toISOString(),
         progressPct: 0
     }
 ];
 
-// ── DOM Cache ─────────────────────────────────────────────────────────────
+// ── DOM Cache ──────────────────────────────────────────────────────────────
 let DOM = {};
 
 function cacheDOM() {
@@ -109,13 +151,14 @@ function cacheDOM() {
         heroProgressCircle: document.getElementById('heroProgressCircle'),
         heroProgressBarInner: document.getElementById('heroProgressBarInner'),
         heroPlayIcon: document.getElementById('heroPlayIcon'),
+        heroGeorgianBadge: document.getElementById('heroGeorgianBadge'),
 
         chaptersContainer: document.getElementById('chaptersContainer'),
         chaptersList: document.getElementById('chaptersList'),
         activeBookTitle: document.getElementById('activeBookTitle'),
         btnDownloadAllZip: document.getElementById('btnDownloadAllZip'),
-        btnTranslateBook: document.getElementById('btnTranslateBook'),
-        translateBadge: document.getElementById('translateBadge'),
+        btnTranslateWholeBook: document.getElementById('btnTranslateWholeBook'),
+        btnTranslateWholeBookText: document.getElementById('btnTranslateWholeBookText'),
 
         playerDock: document.getElementById('playerDock'),
         dockCover: document.getElementById('dockCover'),
@@ -132,7 +175,7 @@ function cacheDOM() {
         playerTotalTime: document.getElementById('playerTotalTime'),
         btnDockSpeed: document.getElementById('btnDockSpeed'),
         btnDockLangToggle: document.getElementById('btnDockLangToggle'),
-        dockLangLabel: document.getElementById('dockLangLabel'),
+        dockLangBadge: document.getElementById('dockLangBadge'),
 
         searchInput: document.getElementById('searchInput'),
         topVoiceBadge: document.getElementById('topVoiceBadge'),
@@ -141,7 +184,7 @@ function cacheDOM() {
         sideNavUserName: document.getElementById('sideNavUserName'),
         userNavSection: document.getElementById('userNavSection'),
 
-        // Voice modal
+        // Voice Modal
         voiceModalSelect: document.getElementById('voiceModalSelect'),
         optgroupMale: document.getElementById('optgroupMale'),
         optgroupFemale: document.getElementById('optgroupFemale'),
@@ -151,18 +194,33 @@ function cacheDOM() {
         modalPitchSlider: document.getElementById('modalPitchSlider'),
         modalPitchVal: document.getElementById('modalPitchVal'),
 
-        // Translation modal
-        translateModalOverlay: document.getElementById('translateModal'),
-        translateProgressBar: document.getElementById('translateProgressBar'),
-        translateStatusText: document.getElementById('translateStatusText'),
-        translatePctText: document.getElementById('translatePctText'),
-        translatePreviewOriginal: document.getElementById('translatePreviewOriginal'),
-        translatePreviewGeorgian: document.getElementById('translatePreviewGeorgian'),
-        translateChapterLabel: document.getElementById('translateChapterLabel'),
+        // Reader View
+        readerView: document.getElementById('readerView'),
+        readerBookTitle: document.getElementById('readerBookTitle'),
+        readerChapterTitle: document.getElementById('readerChapterTitle'),
+        readerChapterSelect: document.getElementById('readerChapterSelect'),
+        readerFontSelect: document.getElementById('readerFontSelect'),
+        readerContentArea: document.getElementById('readerContentArea'),
+        readerScrollContainer: document.getElementById('readerScrollContainer'),
+        btnReaderPlayPause: document.getElementById('btnReaderPlayPause'),
+        readerPlayIcon: document.getElementById('readerPlayIcon'),
+        readerReadingProgressText: document.getElementById('readerReadingProgressText'),
+        btnReaderLangToggle: document.getElementById('btnReaderLangToggle'),
+        readerLangLabel: document.getElementById('readerLangLabel'),
+
+        // Whole Book Translate Modal
+        wholeBookTranslateModal: document.getElementById('wholeBookTranslateModal'),
+        wbChapterLabel: document.getElementById('wbChapterLabel'),
+        wbProgressPct: document.getElementById('wbProgressPct'),
+        wbProgressBar: document.getElementById('wbProgressBar'),
+        wbSentenceCounter: document.getElementById('wbSentenceCounter'),
+        wbCharCounter: document.getElementById('wbCharCounter'),
+        wbLiveOriginal: document.getElementById('wbLiveOriginal'),
+        wbLiveGeorgian: document.getElementById('wbLiveGeorgian'),
     };
 }
 
-// ── Initialization ────────────────────────────────────────────────────────
+// ── Initialization ──────────────────────────────────────────────────────────
 async function init() {
     cacheDOM();
     await initDB();
@@ -186,10 +244,10 @@ async function init() {
     if (window.lucide) lucide.createIcons();
 }
 
-// ── IndexedDB (v5 — adds text_ka and translatedLangs) ─────────────────────
+// ── Database (IndexedDB v6) ─────────────────────────────────────────────────
 function initDB() {
     return new Promise((resolve, reject) => {
-        const req = indexedDB.open('LuminaAudioStudioDB_v5', 1);
+        const req = indexedDB.open('LuminaAudioStudioDB_v6', 1);
         req.onupgradeneeded = (e) => {
             db = e.target.result;
             if (!db.objectStoreNames.contains('books')) {
@@ -237,7 +295,7 @@ async function seedDefaultBooks() {
     }
 }
 
-// ── Navigation & Modals ───────────────────────────────────────────────────
+// ── Navigation & Modals ─────────────────────────────────────────────────────
 function navigate(viewId) {
     ['library', 'discover'].forEach(id => {
         const view = document.getElementById(`view-${id}`);
@@ -248,6 +306,7 @@ function navigate(viewId) {
             nav.classList.add('text-on-surface-variant');
         }
     });
+
     const activeView = document.getElementById(`view-${viewId}`);
     const activeNav = document.getElementById(`nav-${viewId}`);
     if (activeView) activeView.classList.remove('hidden');
@@ -267,7 +326,7 @@ function closeModal(modalId) {
     if (modal) modal.classList.remove('active');
 }
 
-// ── Authentication ────────────────────────────────────────────────────────
+// ── Authentication ──────────────────────────────────────────────────────────
 function checkAuthState() {
     const saved = localStorage.getItem('lumina_auth_user');
     if (saved) {
@@ -335,7 +394,7 @@ function logout() {
     updateAuthUI();
 }
 
-// ── Voice Management ──────────────────────────────────────────────────────
+// ── Voice Management ────────────────────────────────────────────────────────
 function populateVoiceList() {
     if (!('speechSynthesis' in window)) return;
     const voices = window.speechSynthesis.getVoices();
@@ -347,8 +406,8 @@ function populateVoiceList() {
 
     const savedVoice = localStorage.getItem('lumina_selected_voice_uri');
 
-    const maleNames = ['male', 'david', 'mark', 'george', 'guy', 'christopher', 'ryan', 'james', 'daniel', 'thomas'];
-    const femaleNames = ['female', 'zira', 'jenny', 'susan', 'aria', 'sonia', 'hazel', 'linda', 'catherine', 'heera', 'emily'];
+    const maleKeywords = ['male', 'david', 'mark', 'george', 'guy', 'christopher', 'ryan', 'james', 'daniel', 'thomas', 'stefan'];
+    const femaleKeywords = ['female', 'zira', 'jenny', 'susan', 'aria', 'sonia', 'hazel', 'linda', 'catherine', 'heera', 'emily', 'anna'];
 
     voices.forEach(v => {
         const option = document.createElement('option');
@@ -356,8 +415,8 @@ function populateVoiceList() {
         option.textContent = `${v.name} (${v.lang})`;
 
         const nameLower = v.name.toLowerCase();
-        const isMale = maleNames.some(n => nameLower.includes(n));
-        const isFemale = femaleNames.some(n => nameLower.includes(n));
+        const isMale = maleKeywords.some(k => nameLower.includes(k));
+        const isFemale = femaleKeywords.some(k => nameLower.includes(k));
 
         if (isMale && DOM.optgroupMale) {
             DOM.optgroupMale.appendChild(option);
@@ -391,334 +450,791 @@ function updateTopVoiceBadge() {
     const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
     const matched = voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI);
     if (matched) {
-        const maleNames = ['male', 'david', 'mark', 'ryan', 'george', 'guy', 'james'];
-        const isMale = maleNames.some(n => matched.name.toLowerCase().includes(n));
-        DOM.topVoiceBadge.textContent = `${isMale ? '👨' : '👩'} ${matched.name.split(' - ')[0]}`;
+        const maleKeywords = ['male', 'david', 'mark', 'ryan', 'george', 'guy', 'james'];
+        const isMale = maleKeywords.some(k => matched.name.toLowerCase().includes(k));
+        DOM.topVoiceBadge.textContent = `${isMale ? '👨' : '👩'} ${matched.name.split(' - ')[0].replace(/Microsoft |Google /g, '')}`;
     } else {
-        DOM.topVoiceBadge.textContent = `🎙️ Default`;
+        DOM.topVoiceBadge.textContent = `🎙️ Studio Narrator`;
     }
 }
 
 function testVoicePreview() {
-    const text = "Hello, this is Lumina Audio Studio. Enjoy your high-fidelity listening experience.";
-    if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        const voices = window.speechSynthesis.getVoices();
-        const matched = voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI);
-        if (matched) utter.voice = matched;
-        utter.rate = currentGlobalSpeed;
-        utter.pitch = currentPitch;
-        utter.lang = matched ? matched.lang : 'en-US';
-        window.speechSynthesis.speak(utter);
-    }
+    const text = "Hello! Welcome to Lumina Audio Studio. Enjoy your immersive listening and reading experience.";
+    speakEnglishSentence(text);
 }
 
 function testGeorgianVoicePreview() {
-    const text = "გამარჯობა, ეს არის ლუმინას ქართული აუდიო წამკითხველი.";
-    playGoogleTTSSentence(text, 'ka', currentGlobalSpeed).catch(() => {
-        // fallback
-        if (window.speechSynthesis) {
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.lang = 'ka-GE';
-            utter.rate = currentGlobalSpeed;
-            window.speechSynthesis.speak(utter);
-        }
-    });
+    const text = "გამარჯობა! მოგესალმებით ლუმინას ქართულ აუდიო და მთვარის წამკითხველში.";
+    speakGeorgianSentence(text);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// ██ TRANSLATION ENGINE — Pre-translate entire book ██
+// ██ 1. MOON+ READER APPLICATION ENGINE ██
 // ══════════════════════════════════════════════════════════════════════════
 
-async function translateSingleText(text, targetLang) {
-    if (!text || !text.trim()) return '';
+function openCurrentBookInReader() {
+    if (!currentBook) {
+        alert('Please select an audiobook from your shelf first.');
+        return;
+    }
+    const chapId = currentPlayingChapterId || (currentBook.chapters[0] ? currentBook.chapters[0].id : 1);
+    openReader(currentBook.id, chapId, currentLang);
+}
 
-    // Primary: Google GTX (higher limit, better quality)
+async function openReader(bookId, chapterId, lang = 'en') {
+    const books = await getAllBooks();
+    readerBook = books.find(b => b.id === bookId);
+    if (!readerBook) return;
+
+    readerChapterId = chapterId || (readerBook.chapters[0] ? readerBook.chapters[0].id : 1);
+    readerLang = lang;
+
+    // Check if requesting Georgian but not translated yet
+    if (readerLang === 'ka') {
+        const hasKa = readerBook.translatedLangs && readerBook.translatedLangs.includes('ka');
+        if (!hasKa) {
+            const doTranslate = confirm('This book is not yet translated to Georgian. Would you like to translate the whole book now?');
+            if (doTranslate) {
+                startWholeBookTranslation();
+                return;
+            } else {
+                readerLang = 'en';
+            }
+        }
+    }
+
+    readerActive = true;
+    DOM.readerView.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    DOM.readerBookTitle.textContent = readerBook.title;
+    populateReaderChapterDropdown();
+    updateReaderLangUI();
+    renderReaderContent();
+}
+
+function closeReader() {
+    readerActive = false;
+    DOM.readerView.classList.remove('active');
+    document.body.style.overflow = 'auto';
+}
+
+function populateReaderChapterDropdown() {
+    if (!DOM.readerChapterSelect || !readerBook) return;
+    DOM.readerChapterSelect.innerHTML = '';
+
+    readerBook.chapters.forEach(chap => {
+        const opt = document.createElement('option');
+        opt.value = chap.id;
+        opt.textContent = chap.title;
+        if (chap.id === readerChapterId) opt.selected = true;
+        DOM.readerChapterSelect.appendChild(opt);
+    });
+}
+
+function onReaderChapterChange(chapId) {
+    readerChapterId = parseInt(chapId);
+    renderReaderContent();
+    if (isPlaying) {
+        playChapterAudio(readerChapterId);
+    }
+}
+
+function updateReaderLangUI() {
+    if (!DOM.btnReaderLangToggle || !DOM.readerLangLabel) return;
+    if (readerLang === 'ka') {
+        DOM.readerLangLabel.textContent = 'Georgian (ქართული) 🇬🇪';
+        DOM.btnReaderLangToggle.classList.add('bg-georgian-gold/25', 'border-georgian-gold/50');
+    } else {
+        DOM.readerLangLabel.textContent = 'English (Original) 🇺🇸';
+        DOM.btnReaderLangToggle.classList.remove('bg-georgian-gold/25', 'border-georgian-gold/50');
+    }
+}
+
+function toggleReaderLanguage() {
+    if (!readerBook) return;
+    if (readerLang === 'en') {
+        const hasKa = readerBook.translatedLangs && readerBook.translatedLangs.includes('ka');
+        if (!hasKa) {
+            const doTranslate = confirm('This book has not been translated to Georgian yet. Translate it now?');
+            if (doTranslate) {
+                startWholeBookTranslation();
+            }
+            return;
+        }
+        readerLang = 'ka';
+        currentLang = 'ka';
+    } else {
+        readerLang = 'en';
+        currentLang = 'en';
+    }
+    updateReaderLangUI();
+    renderReaderContent();
+    updateLangToggleUI();
+
+    // If currently playing, seamlessly switch audio to match reader language
+    if (isPlaying) {
+        playChapterAudio(readerChapterId);
+    }
+}
+
+function renderReaderContent() {
+    if (!readerBook || !DOM.readerContentArea) return;
+    const chap = readerBook.chapters.find(c => c.id === readerChapterId);
+    if (!chap) return;
+
+    DOM.readerChapterTitle.textContent = chap.title;
+
+    // Choose text based on reader language
+    let rawText = chap.text;
+    if (readerLang === 'ka' && chap.text_ka) {
+        rawText = chap.text_ka;
+    }
+
+    const sentences = splitIntoNaturalSentences(rawText);
+
+    // Build styled paragraphs with interactive sentence spans
+    let html = `
+        <header class="mb-8 text-center border-b border-white/10 pb-6">
+            <span class="text-xs font-label-caps text-georgian-gold font-bold tracking-widest uppercase">LUMINA MOON READER</span>
+            <h1 class="text-2xl md:text-4xl font-extrabold mt-1 mb-2 ${readerLang === 'ka' ? 'font-georgian-sans' : ''}">${chap.title}</h1>
+            <p class="text-xs opacity-75">${chap.word_count} words • ~${formatTime(chap.estimated_duration_sec)} estimated reading time</p>
+        </header>
+        <div class="space-y-6 ${readerFontFamily}" style="font-size: ${readerFontSize}px; line-height: 1.85;">
+    `;
+
+    // Group into paragraphs of ~3-5 sentences
+    let pBuffer = [];
+    sentences.forEach((sent, sIdx) => {
+        const clean = sent.trim();
+        if (!clean) return;
+        pBuffer.push(`<span class="reader-sentence" id="rsentence_${sIdx}" onclick="onReaderSentenceClick(${sIdx})">${clean}</span> `);
+        if (pBuffer.length >= 4 || sIdx === sentences.length - 1) {
+            html += `<p class="text-justify">${pBuffer.join('')}</p>`;
+            pBuffer = [];
+        }
+    });
+
+    html += `</div>`;
+    DOM.readerContentArea.innerHTML = html;
+
+    // Highlight current sentence if playing this chapter
+    if (isPlaying && currentPlayingChapterId === readerChapterId) {
+        highlightReaderSentence(currentSentenceIndex);
+    }
+}
+
+function onReaderSentenceClick(sentenceIdx) {
+    if (!readerBook) return;
+    if (currentBook?.id !== readerBook.id || currentPlayingChapterId !== readerChapterId) {
+        selectBook(readerBook.id, false);
+        playChapterAudio(readerChapterId);
+    }
+    currentSentenceIndex = sentenceIdx;
+    speakCurrentSentence();
+}
+
+function highlightReaderSentence(sentenceIdx) {
+    // Clear all previous highlights
+    document.querySelectorAll('.reader-sentence.active-sentence').forEach(el => {
+        el.classList.remove('active-sentence');
+    });
+
+    const targetEl = document.getElementById(`rsentence_${sentenceIdx}`);
+    if (targetEl) {
+        targetEl.classList.add('active-sentence');
+        if (DOM.readerScrollContainer) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    if (DOM.readerReadingProgressText && sentenceQueue.length > 0) {
+        DOM.readerReadingProgressText.textContent = `Sentence ${sentenceIdx + 1} / ${sentenceQueue.length}`;
+    }
+}
+
+function setReaderTheme(theme) {
+    readerTheme = theme;
+    DOM.readerView.className = `reader-theme-${theme} active`;
+}
+
+function changeReaderFontSize(delta) {
+    readerFontSize = Math.max(13, Math.min(32, readerFontSize + delta));
+    renderReaderContent();
+}
+
+function changeReaderFontFamily(fontClass) {
+    readerFontFamily = fontClass;
+    renderReaderContent();
+}
+
+function readerPrevChapter() {
+    if (!readerBook) return;
+    const curIdx = readerBook.chapters.findIndex(c => c.id === readerChapterId);
+    if (curIdx > 0) {
+        onReaderChapterChange(readerBook.chapters[curIdx - 1].id);
+    }
+}
+
+function readerNextChapter() {
+    if (!readerBook) return;
+    const curIdx = readerBook.chapters.findIndex(c => c.id === readerChapterId);
+    if (curIdx >= 0 && curIdx < readerBook.chapters.length - 1) {
+        onReaderChapterChange(readerBook.chapters[curIdx + 1].id);
+    }
+}
+
+function readerRewindSentence() {
+    if (sentenceQueue.length > 0) {
+        currentSentenceIndex = Math.max(0, currentSentenceIndex - 1);
+        speakCurrentSentence();
+    }
+}
+
+function readerForwardSentence() {
+    if (sentenceQueue.length > 0) {
+        currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 1);
+        speakCurrentSentence();
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ██ 2. WHOLE-BOOK TRANSLATION STUDIO (Step-by-Step Batch Engine) ██
+// ══════════════════════════════════════════════════════════════════════════
+
+async function translateSingleSentence(text, targetLang = 'ka') {
+    if (!text || !text.trim()) return '';
+    const clean = text.trim();
+
+    // 1. MyMemory API (high accuracy, grammatical Georgian)
     try {
-        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=en|${targetLang}`;
+        const res = await fetch(url);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.responseData && data.responseData.translatedText) {
+                const trans = normalizeGeorgian(data.responseData.translatedText);
+                if (trans && !trans.includes('MYMEMORY WARNING')) {
+                    return trans;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('MyMemory primary failed, fallback:', e);
+    }
+
+    // 2. Google GTX Single
+    try {
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
         const gRes = await fetch(gUrl);
         if (gRes.ok) {
             const gData = await gRes.json();
             if (gData && gData[0]) {
-                return gData[0].map(item => item[0]).filter(Boolean).join('');
+                const trans = gData[0].map(item => item[0]).filter(Boolean).join('');
+                return normalizeGeorgian(trans);
             }
         }
     } catch (e) {
-        console.warn('Google GTX translate failed:', e);
+        console.warn('Google GTX fallback failed:', e);
     }
 
-    // Fallback: MyMemory API
-    try {
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`;
-        const res = await fetch(url);
-        if (res.ok) {
-            const data = await res.json();
-            if (data?.responseData?.translatedText) {
-                return data.responseData.translatedText;
-            }
-        }
-    } catch (e) {
-        console.warn('MyMemory translate failed:', e);
-    }
-
-    return text; // return original if all APIs fail
+    return clean;
 }
 
-async function translateCurrentBook() {
+async function startWholeBookTranslation() {
     if (!currentBook) {
-        alert('Please select a book first.');
+        alert('Please select an audiobook to translate.');
         return;
     }
 
-    if (currentBook.translatedLangs && currentBook.translatedLangs.includes('ka')) {
-        // Already translated — ask to re-translate
-        if (!confirm('This book is already translated to Georgian. Re-translate?')) return;
-    }
-
-    isTranslating = true;
+    isTranslatingWholeBook = true;
     cancelTranslationFlag = false;
-    openModal('translateModal');
+    openModal('wholeBookTranslateModal');
 
-    const chapters = currentBook.chapters;
-    const totalChapters = chapters.length;
-    let totalSentences = 0;
-    let translatedSentences = 0;
+    const totalChapters = currentBook.chapters.length;
+    let totalSentencesCount = 0;
+    let completedSentencesCount = 0;
+    let totalCharsTranslated = 0;
 
-    // Count all sentences
-    for (const chap of chapters) {
-        const sents = splitIntoNaturalSentences(chap.text);
-        totalSentences += sents.length;
-    }
+    // Pre-count total sentences across all chapters
+    currentBook.chapters.forEach(chap => {
+        const s = splitIntoNaturalSentences(chap.text);
+        totalSentencesCount += s.length;
+    });
 
     try {
-        for (let ci = 0; ci < totalChapters; ci++) {
+        for (let chIdx = 0; chIdx < totalChapters; chIdx++) {
             if (cancelTranslationFlag) break;
 
-            const chap = chapters[ci];
-            const sentences = splitIntoNaturalSentences(chap.text);
-            const translatedSentencesArr = [];
+            const chapter = currentBook.chapters[chIdx];
+            const sentences = splitIntoNaturalSentences(chapter.text);
+            const translatedArr = [];
 
-            // Update chapter label
-            if (DOM.translateChapterLabel) {
-                DOM.translateChapterLabel.textContent = `Chapter ${ci + 1} of ${totalChapters}: ${chap.title}`;
+            // Update UI status
+            if (DOM.wbChapterLabel) {
+                DOM.wbChapterLabel.textContent = `Translating Chapter ${chIdx + 1} of ${totalChapters}: ${chapter.title}`;
             }
 
-            for (let si = 0; si < sentences.length; si++) {
+            for (let sIdx = 0; sIdx < sentences.length; sIdx++) {
                 if (cancelTranslationFlag) break;
 
-                const original = sentences[si].trim();
-                if (!original) {
-                    translatedSentencesArr.push('');
-                    translatedSentences++;
+                const orig = sentences[sIdx].trim();
+                if (!orig) {
+                    translatedArr.push('');
                     continue;
                 }
 
-                // Show preview
-                if (DOM.translatePreviewOriginal) {
-                    DOM.translatePreviewOriginal.textContent = original;
-                }
-                if (DOM.translateStatusText) {
-                    DOM.translateStatusText.textContent = `Translating sentence ${si + 1} of ${sentences.length}...`;
+                if (DOM.wbLiveOriginal) DOM.wbLiveOriginal.textContent = orig;
+                if (DOM.wbSentenceCounter) {
+                    DOM.wbSentenceCounter.textContent = `Sentence ${completedSentencesCount + 1} / ${totalSentencesCount}`;
                 }
 
-                // Translate
-                const translated = await translateSingleText(original, 'ka');
-                translatedSentencesArr.push(translated);
+                // Execute translation
+                const translated = await translateSingleSentence(orig, 'ka');
+                translatedArr.push(translated);
+                totalCharsTranslated += translated.length;
 
-                // Show Georgian preview
-                if (DOM.translatePreviewGeorgian) {
-                    DOM.translatePreviewGeorgian.textContent = translated;
+                if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = translated;
+                if (DOM.wbCharCounter) {
+                    DOM.wbCharCounter.textContent = `${totalCharsTranslated.toLocaleString()} characters translated`;
                 }
 
-                translatedSentences++;
-                const pct = Math.round((translatedSentences / totalSentences) * 100);
-                if (DOM.translateProgressBar) DOM.translateProgressBar.style.width = `${pct}%`;
-                if (DOM.translatePctText) DOM.translatePctText.textContent = `${pct}%`;
+                completedSentencesCount++;
+                const pct = Math.round((completedSentencesCount / totalSentencesCount) * 100);
+                if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
+                if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
 
-                // Small delay to avoid API rate limiting
-                await new Promise(r => setTimeout(r, 120));
+                // Non-blocking yield for UI smoothness & API rate pacing
+                await new Promise(r => setTimeout(r, 140));
             }
 
-            // Save translated text for this chapter
-            chap.text_ka = translatedSentencesArr.join(' ');
-
-            // Save progress after each chapter
-            if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
-            await saveBookToDB(currentBook);
-        }
-
-        if (!cancelTranslationFlag) {
-            // Mark book as fully translated
+            // Save translated chapter immediately into IndexedDB
+            chapter.text_ka = translatedArr.join(' ');
             if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
             if (!currentBook.translatedLangs.includes('ka')) {
                 currentBook.translatedLangs.push('ka');
             }
             await saveBookToDB(currentBook);
-
-            if (DOM.translateStatusText) DOM.translateStatusText.textContent = 'Translation complete! ✅';
-            if (DOM.translateProgressBar) DOM.translateProgressBar.style.width = '100%';
-            if (DOM.translatePctText) DOM.translatePctText.textContent = '100%';
-
-            // Update UI
-            renderChaptersList();
-            await renderDigitalShelf();
-            updateTranslateButton();
         }
 
-        setTimeout(() => closeModal('translateModal'), 1500);
+        if (!cancelTranslationFlag) {
+            if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = 'Translation Complete! 🇬🇪';
+            if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
+            if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '100%';
+
+            setTimeout(() => {
+                closeModal('wholeBookTranslateModal');
+                isTranslatingWholeBook = false;
+                renderChaptersList();
+                renderDigitalShelf();
+                if (DOM.heroGeorgianBadge) DOM.heroGeorgianBadge.classList.remove('hidden');
+                if (readerActive) {
+                    readerLang = 'ka';
+                    updateReaderLangUI();
+                    renderReaderContent();
+                }
+            }, 1200);
+        }
 
     } catch (err) {
-        console.error('Translation error:', err);
-        if (DOM.translateStatusText) {
-            DOM.translateStatusText.textContent = `Error: ${err.message}. Progress saved — you can resume later.`;
-        }
+        console.error('Whole-book translation error:', err);
+        alert('Translation paused. All progress up to this point has been saved.');
     } finally {
-        isTranslating = false;
+        isTranslatingWholeBook = false;
     }
 }
 
-function cancelTranslation() {
+function cancelWholeBookTranslation() {
     cancelTranslationFlag = true;
-    if (DOM.translateStatusText) {
-        DOM.translateStatusText.textContent = 'Cancelling... Progress saved.';
-    }
-    setTimeout(() => {
-        closeModal('translateModal');
-        isTranslating = false;
-    }, 800);
+    closeModal('wholeBookTranslateModal');
+    isTranslatingWholeBook = false;
+    renderChaptersList();
+    renderDigitalShelf();
 }
 
-function updateTranslateButton() {
-    if (!DOM.btnTranslateBook || !DOM.translateBadge) return;
-    if (currentBook && currentBook.translatedLangs && currentBook.translatedLangs.includes('ka')) {
-        DOM.translateBadge.classList.remove('hidden');
-        DOM.btnTranslateBook.innerHTML = `
-            <span class="material-symbols-outlined text-base">check_circle</span>
-            <span>Georgian Ready — Re-translate</span>
-        `;
-        DOM.btnTranslateBook.classList.add('border-georgian-gold/40', 'bg-georgian-gold/10');
-        DOM.btnTranslateBook.classList.remove('border-white/10');
+// ══════════════════════════════════════════════════════════════════════════
+// ██ 3. HIGH-QUALITY DUAL-MODE AUDIO SPEECH ENGINE ██
+// ══════════════════════════════════════════════════════════════════════════
+
+async function speakCurrentSentence() {
+    if (!isPlaying || isPaused) return;
+
+    if (currentSentenceIndex >= sentenceQueue.length) {
+        stopSpeech();
+        if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = '100%';
+        playNextChapter();
+        return;
+    }
+
+    const rawSentence = sentenceQueue[currentSentenceIndex];
+    if (!rawSentence || !rawSentence.trim()) {
+        currentSentenceIndex++;
+        speakCurrentSentence();
+        return;
+    }
+
+    const cleanSentence = rawSentence.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+    // 1. Update UI Subtitles & Progress
+    const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
+    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
+    if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+
+    if (currentBook) {
+        currentBook.progressPct = pct;
+        currentBook.lastPlayedChapterId = currentPlayingChapterId;
+        saveBookToDB(currentBook);
+        if (DOM.heroProgressText) DOM.heroProgressText.textContent = `${pct}% Completed`;
+        if (DOM.heroProgressBarInner) DOM.heroProgressBarInner.style.width = `${pct}%`;
+        if (DOM.heroProgressCircle) {
+            DOM.heroProgressCircle.style.strokeDashoffset = 289 - (289 * pct / 100);
+        }
+    }
+
+    if (DOM.heroSubtitleHeader) {
+        DOM.heroSubtitleHeader.textContent = currentLang === 'ka' ? "ქართული ნარაცია (Georgian)" : "Current Narration";
+    }
+    if (DOM.heroLiveSubtitle) {
+        DOM.heroLiveSubtitle.textContent = cleanSentence;
+    }
+
+    // Synchronize Moon Reader active sentence highlighting
+    if (readerActive) {
+        highlightReaderSentence(currentSentenceIndex);
+    }
+
+    // 2. Dispatch audio speech
+    if (currentLang === 'ka') {
+        speakGeorgianSentence(cleanSentence);
     } else {
-        DOM.translateBadge.classList.add('hidden');
-        DOM.btnTranslateBook.innerHTML = `
-            <span class="text-base">🇬🇪</span>
-            <span>Translate to Georgian</span>
-        `;
-        DOM.btnTranslateBook.classList.remove('border-georgian-gold/40', 'bg-georgian-gold/10');
-        DOM.btnTranslateBook.classList.add('border-white/10');
+        speakEnglishSentence(cleanSentence);
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// ██ GOOGLE TRANSLATE TTS — Native Georgian Audio ██
-// ══════════════════════════════════════════════════════════════════════════
+function speakEnglishSentence(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
 
-function chunkTextForTTS(text, maxLen = 180) {
-    if (!text || text.length === 0) return [];
-    if (text.length <= maxLen) return [text];
+    const utter = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const matched = voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI);
 
-    const chunks = [];
-    // Split at Georgian and English sentence boundaries
-    const sentences = text.match(/[^.!?։]+[.!?։]+["']?|[^.!?։]+$/g) || [text];
-    let current = '';
+    if (matched) {
+        utter.voice = matched;
+        utter.lang = matched.lang || 'en-US';
+    } else {
+        utter.lang = 'en-US';
+    }
 
-    for (const sent of sentences) {
-        const trimmed = sent.trim();
-        if (!trimmed) continue;
+    utter.rate = currentGlobalSpeed;
+    utter.pitch = currentPitch;
 
-        if ((current + ' ' + trimmed).length > maxLen && current.length > 0) {
-            chunks.push(current.trim());
-            // If single sentence is too long, split at commas
-            if (trimmed.length > maxLen) {
-                const parts = trimmed.match(new RegExp(`.{1,${maxLen}}(?:[,;،]|$)`, 'g')) || [trimmed];
-                for (const p of parts) {
-                    chunks.push(p.trim());
-                }
-            } else {
-                current = trimmed;
-            }
+    utter.onend = () => {
+        if (!isPlaying || isPaused) return;
+        currentSentenceIndex++;
+        if (utteranceTimeout) clearTimeout(utteranceTimeout);
+        utteranceTimeout = setTimeout(() => {
+            if (isPlaying && !isPaused) speakCurrentSentence();
+        }, 260);
+    };
+
+    utter.onerror = (e) => {
+        if (e.error === 'canceled' || e.error === 'interrupted') return;
+        currentSentenceIndex++;
+        if (isPlaying && !isPaused) setTimeout(() => speakCurrentSentence(), 200);
+    };
+
+    window._activeUtterance = utter;
+    window.speechSynthesis.speak(utter);
+    updatePlayerUIState(true);
+}
+
+function speakGeorgianSentence(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+
+    const normalized = normalizeGeorgian(text);
+    const voices = window.speechSynthesis.getVoices();
+
+    // Check if client device has a native Georgian voice
+    const nativeKaVoice = voices.find(v => v.lang.startsWith('ka') || v.name.toLowerCase().includes('georgian'));
+
+    const utter = new SpeechSynthesisUtterance();
+
+    if (nativeKaVoice) {
+        utter.text = normalized;
+        utter.voice = nativeKaVoice;
+        utter.lang = nativeKaVoice.lang;
+    } else {
+        // Native Phonetics Acoustics Engine: Pronounces pure Georgian vowels with clarity!
+        const phoneticText = transliterateGeorgianToPhonetic(normalized);
+        utter.text = phoneticText;
+
+        // Choose a clear, melodic voice (Italian/Spanish/Greek/English) with crisp open vowels
+        const clearVoice = voices.find(v => v.lang.startsWith('it') || v.lang.startsWith('es') || v.lang.startsWith('el') || v.lang.startsWith('pt')) ||
+                           voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI) ||
+                           voices[0];
+
+        if (clearVoice) {
+            utter.voice = clearVoice;
+            utter.lang = clearVoice.lang;
         } else {
-            current = current ? current + ' ' + trimmed : trimmed;
+            utter.lang = 'en-US';
         }
     }
-    if (current.trim()) chunks.push(current.trim());
-    return chunks.filter(c => c.length > 0);
+
+    utter.rate = currentGlobalSpeed * 0.95; // Slightly measured cadence for natural delivery
+    utter.pitch = currentPitch;
+
+    utter.onend = () => {
+        if (!isPlaying || isPaused) return;
+        currentSentenceIndex++;
+        if (utteranceTimeout) clearTimeout(utteranceTimeout);
+        utteranceTimeout = setTimeout(() => {
+            if (isPlaying && !isPaused) speakCurrentSentence();
+        }, 260);
+    };
+
+    utter.onerror = (e) => {
+        if (e.error === 'canceled' || e.error === 'interrupted') return;
+        currentSentenceIndex++;
+        if (isPlaying && !isPaused) setTimeout(() => speakCurrentSentence(), 200);
+    };
+
+    window._activeUtterance = utter;
+    window.speechSynthesis.speak(utter);
+    updatePlayerUIState(true);
 }
 
-function playGoogleTTSSentence(text, lang, speed = 1.0) {
-    return new Promise((resolve, reject) => {
-        stopGoogleTTS();
+// ── Playback Controls ───────────────────────────────────────────────────────
+function playChapterAudio(chapId) {
+    if (!currentBook) return;
+    const chap = currentBook.chapters.find(c => c.id === chapId);
+    if (!chap) return;
 
-        const chunks = chunkTextForTTS(text);
-        if (chunks.length === 0) { resolve(); return; }
+    if (currentPlayingChapterId === chapId && isPlaying) {
+        togglePlayPause();
+        return;
+    }
 
-        googleTTSChunks = chunks;
-        googleTTSChunkIndex = 0;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
 
-        function playNextChunk() {
-            if (googleTTSChunkIndex >= googleTTSChunks.length || !isPlaying || isPaused) {
-                if (googleTTSChunkIndex >= googleTTSChunks.length) resolve();
-                return;
+    currentPlayingChapterId = chapId;
+
+    // Pick text based on current language
+    let textToRead = chap.text;
+    if (currentLang === 'ka' && chap.text_ka) {
+        textToRead = chap.text_ka;
+    }
+
+    sentenceQueue = splitIntoNaturalSentences(textToRead);
+    currentSentenceIndex = 0;
+    secondsElapsed = 0;
+    isPlaying = true;
+    isPaused = false;
+
+    // Reveal player dock
+    DOM.playerDock.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+    DOM.playerDock.classList.add('translate-y-0', 'opacity-100');
+
+    DOM.dockCover.src = currentBook.coverUrl;
+    DOM.dockTitle.textContent = chap.title;
+    DOM.dockSubtitle.textContent = currentBook.title;
+    if (DOM.playerTotalTime) DOM.playerTotalTime.textContent = formatTime(chap.estimated_duration_sec);
+
+    updateLangToggleUI();
+    startTimer();
+    speakCurrentSentence();
+    renderChaptersList();
+
+    if (readerActive) {
+        readerChapterId = chapId;
+        renderReaderContent();
+    }
+}
+
+function togglePlayPause() {
+    if (!currentPlayingChapterId) {
+        if (currentBook && currentBook.chapters.length > 0) {
+            playChapterAudio(currentBook.chapters[0].id);
+        }
+        return;
+    }
+
+    if (isPlaying && !isPaused) {
+        isPaused = true;
+        if (utteranceTimeout) clearTimeout(utteranceTimeout);
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        stopTimer();
+        updatePlayerUIState(false);
+    } else if (isPlaying && isPaused) {
+        isPaused = false;
+        startTimer();
+        speakCurrentSentence();
+        updatePlayerUIState(true);
+    } else {
+        playChapterAudio(currentPlayingChapterId);
+    }
+}
+
+function updatePlayerUIState(speaking) {
+    if (DOM.dockPlayIcon) DOM.dockPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
+    if (DOM.heroPlayIcon) DOM.heroPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
+    if (DOM.readerPlayIcon) DOM.readerPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
+    if (DOM.dockVisualizer) {
+        if (speaking) DOM.dockVisualizer.classList.remove('hidden');
+        else DOM.dockVisualizer.classList.add('hidden');
+    }
+    renderChaptersList();
+}
+
+function stopSpeech() {
+    isPlaying = false;
+    isPaused = false;
+    sentenceQueue = [];
+    currentSentenceIndex = 0;
+    if (utteranceTimeout) clearTimeout(utteranceTimeout);
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    stopTimer();
+    updatePlayerUIState(false);
+}
+
+function playNextChapter() {
+    if (!currentBook) return;
+    const currentIndex = currentBook.chapters.findIndex(c => c.id === currentPlayingChapterId);
+    if (currentIndex >= 0 && currentIndex < currentBook.chapters.length - 1) {
+        playChapterAudio(currentBook.chapters[currentIndex + 1].id);
+    }
+}
+
+function startTimer() {
+    stopTimer();
+    timerInterval = setInterval(() => {
+        secondsElapsed++;
+        if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+    }, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+function cycleSpeed() {
+    const speeds = [0.75, 1.0, 1.25, 1.5, 2.0];
+    const idx = speeds.indexOf(currentGlobalSpeed);
+    currentGlobalSpeed = speeds[(idx + 1) % speeds.length];
+    if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = `${currentGlobalSpeed.toFixed(2).replace(/\.00$/, '')}x`;
+    if (DOM.modalSpeedSlider) DOM.modalSpeedSlider.value = currentGlobalSpeed;
+    if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = `${currentGlobalSpeed.toFixed(2)}x`;
+}
+
+function togglePlaybackLanguage() {
+    if (!currentBook) return;
+    if (currentLang === 'en') {
+        const hasKa = currentBook.translatedLangs && currentBook.translatedLangs.includes('ka');
+        if (!hasKa) {
+            const doTranslate = confirm('This book has not been translated to Georgian yet. Would you like to translate the entire book now?');
+            if (doTranslate) {
+                startWholeBookTranslation();
             }
-
-            const chunk = googleTTSChunks[googleTTSChunkIndex];
-            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=${lang}&client=tw-ob&ttsspeed=1`;
-
-            const audio = new Audio();
-            currentGoogleAudio = audio;
-
-            audio.oncanplaythrough = () => {
-                audio.playbackRate = speed;
-            };
-
-            audio.onended = () => {
-                googleTTSChunkIndex++;
-                setTimeout(playNextChunk, 80);
-            };
-
-            audio.onerror = () => {
-                console.warn('Google TTS audio error for chunk, skipping to next');
-                googleTTSChunkIndex++;
-                setTimeout(playNextChunk, 80);
-            };
-
-            audio.src = url;
-            audio.play().catch(err => {
-                console.warn('Google TTS play() rejected:', err);
-                googleTTSChunkIndex++;
-                setTimeout(playNextChunk, 80);
-            });
+            return;
         }
-
-        playNextChunk();
-    });
-}
-
-function stopGoogleTTS() {
-    if (currentGoogleAudio) {
-        currentGoogleAudio.pause();
-        try { currentGoogleAudio.src = ''; } catch(e) {}
-        currentGoogleAudio = null;
+        currentLang = 'ka';
+    } else {
+        currentLang = 'en';
     }
-    googleTTSChunks = [];
-    googleTTSChunkIndex = 0;
-}
 
-function pauseGoogleTTS() {
-    if (currentGoogleAudio) {
-        currentGoogleAudio.pause();
+    updateLangToggleUI();
+
+    if (currentPlayingChapterId) {
+        stopSpeech();
+        playChapterAudio(currentPlayingChapterId);
     }
 }
 
-function resumeGoogleTTS() {
-    if (currentGoogleAudio && isPaused === false) {
-        currentGoogleAudio.play().catch(() => {});
+function updateLangToggleUI() {
+    if (DOM.dockLangBadge) {
+        DOM.dockLangBadge.textContent = currentLang === 'ka' ? '🇬🇪 KA' : '🇺🇸 EN';
     }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// ██ PDF PROCESSING & COVER GENERATION ██
+// ██ 4. FORMATTED PDF EXPORT GENERATOR ██
+// ══════════════════════════════════════════════════════════════════════════
+
+function exportCurrentBookPDF() {
+    if (!currentBook) {
+        alert('Please select a book to export.');
+        return;
+    }
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('PDF generator is initializing, please try again in a moment.');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 40;
+    const maxLineWidth = pageWidth - margin * 2;
+
+    // Cover Title Page
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(26);
+    doc.text(currentBook.title, margin, 120);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(14);
+    doc.text(`By ${currentBook.author || 'Author'} • Lumina AI Edition`, margin, 150);
+    doc.text(`Language: ${readerLang === 'ka' ? 'Georgian (ქართული)' : 'English (Original)'}`, margin, 175);
+    doc.text(`Exported on: ${new Date().toLocaleDateString()}`, margin, 200);
+
+    doc.setLineWidth(1);
+    doc.line(margin, 220, pageWidth - margin, 220);
+
+    let yPos = 260;
+
+    currentBook.chapters.forEach((chap, cIdx) => {
+        // New page for each chapter if past halfway
+        if (yPos > 650) {
+            doc.addPage();
+            yPos = 60;
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text(chap.title, margin, yPos);
+        yPos += 25;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+
+        const chapterContent = (readerLang === 'ka' && chap.text_ka) ? chap.text_ka : chap.text;
+        const lines = doc.splitTextToSize(chapterContent, maxLineWidth);
+
+        lines.forEach(line => {
+            if (yPos > 780) {
+                doc.addPage();
+                yPos = 60;
+            }
+            doc.text(line, margin, yPos);
+            yPos += 16;
+        });
+
+        yPos += 30;
+    });
+
+    const safeTitle = currentBook.title.replace(/[^a-zA-Z0-9]/g, '_');
+    doc.save(`${safeTitle}_${readerLang === 'ka' ? 'Georgian' : 'English'}.pdf`);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ██ 5. PDF UPLOAD & PARSING ██
 // ══════════════════════════════════════════════════════════════════════════
 
 function cleanBookTitle(rawName) {
@@ -731,7 +1247,6 @@ function cleanBookTitle(rawName) {
 
 async function fetchBookCoverArt(title) {
     const cleaned = cleanBookTitle(title);
-
     try {
         const gRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(cleaned)}&maxResults=1`);
         if (gRes.ok) {
@@ -774,7 +1289,7 @@ function generateDynamicStudioCover(title) {
     ctx.filter = 'blur(40px)';
     ctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
     ctx.beginPath(); ctx.arc(90, 130, 90, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(220, 184, 255, 0.35)';
+    ctx.fillStyle = 'rgba(255, 209, 102, 0.35)';
     ctx.beginPath(); ctx.arc(310, 470, 110, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
 
@@ -790,10 +1305,10 @@ function generateDynamicStudioCover(title) {
     ctx.fillStyle = '#00f0ff';
     ctx.font = '600 12px Space Grotesk, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('LUMINA AI AUDIOBOOK', 200, 70);
+    ctx.fillText('LUMINA MOON AUDIOBOOK', 200, 70);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 26px Inter, sans-serif';
+    ctx.font = 'bold 24px Inter, sans-serif';
     const words = title.split(' ');
     let line = '';
     let y = 260;
@@ -809,9 +1324,9 @@ function generateDynamicStudioCover(title) {
     }
     ctx.fillText(line.trim(), 200, y);
 
-    ctx.fillStyle = 'rgba(220, 184, 255, 0.85)';
+    ctx.fillStyle = 'rgba(255, 209, 102, 0.85)';
     ctx.font = '500 14px Inter, sans-serif';
-    ctx.fillText('Studio Narration Edition', 200, 520);
+    ctx.fillText('Studio Reader Edition', 200, 520);
 
     return canvas.toDataURL('image/jpeg', 0.9);
 }
@@ -939,320 +1454,13 @@ function splitIntoChapters(text) {
 
 function splitIntoNaturalSentences(text) {
     if (!text) return [];
-    // Handle both English and Georgian sentence endings (Georgian uses ։)
     const regex = /[^.!?։]+[.!?։]+["']?|[^.!?։]+$/g;
     const matches = text.match(regex);
     return matches ? matches.map(s => s.trim()).filter(s => s.length > 0) : [text];
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// ██ DUAL-MODE SPEECH ENGINE ██
-// ══════════════════════════════════════════════════════════════════════════
-//   English → window.speechSynthesis (browser voices, user-selected)
-//   Georgian → Google Translate TTS (native ka-GE neural audio)
-// ══════════════════════════════════════════════════════════════════════════
-
-async function speakCurrentSentence() {
-    if (!isPlaying || isPaused) return;
-
-    if (currentSentenceIndex >= sentenceQueue.length) {
-        stopSpeech();
-        if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = '100%';
-        playNextChapter();
-        return;
-    }
-
-    const rawSentence = sentenceQueue[currentSentenceIndex];
-    if (!rawSentence || !rawSentence.trim()) {
-        currentSentenceIndex++;
-        speakCurrentSentence();
-        return;
-    }
-
-    const cleanSentence = rawSentence.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
-
-    // Update progress
-    const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
-    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
-    if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
-
-    if (currentBook) {
-        currentBook.progressPct = pct;
-        currentBook.lastPlayedChapterId = currentPlayingChapterId;
-        saveBookToDB(currentBook);
-        if (DOM.heroProgressText) DOM.heroProgressText.textContent = `${pct}% Completed`;
-        if (DOM.heroProgressBarInner) DOM.heroProgressBarInner.style.width = `${pct}%`;
-        if (DOM.heroProgressCircle) {
-            DOM.heroProgressCircle.style.strokeDashoffset = 289 - (289 * pct / 100);
-        }
-    }
-
-    // Update live subtitle
-    if (DOM.heroSubtitleHeader) {
-        DOM.heroSubtitleHeader.textContent = currentLang === 'ka' ? "ქართული ნარაცია (Georgian)" : "Current Narration";
-    }
-    if (DOM.heroLiveSubtitle) {
-        DOM.heroLiveSubtitle.textContent = cleanSentence;
-    }
-
-    // ── Route to the correct TTS engine ──
-    if (currentLang === 'ka') {
-        await speakGeorgian(cleanSentence);
-    } else {
-        speakEnglish(cleanSentence);
-    }
-}
-
-function speakEnglish(text) {
-    if (!('speechSynthesis' in window)) {
-        alert('Your browser does not support Speech Synthesis.');
-        return;
-    }
-
-    window.speechSynthesis.cancel();
-    stopGoogleTTS();
-
-    const utter = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const matched = voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI);
-
-    if (matched) {
-        utter.voice = matched;
-        utter.lang = matched.lang || 'en-US';
-    } else {
-        utter.lang = 'en-US';
-    }
-
-    utter.rate = currentGlobalSpeed;
-    utter.pitch = currentPitch;
-
-    utter.onend = () => {
-        if (!isPlaying || isPaused) return;
-        currentSentenceIndex++;
-        if (utteranceTimeout) clearTimeout(utteranceTimeout);
-        utteranceTimeout = setTimeout(() => {
-            if (isPlaying && !isPaused) speakCurrentSentence();
-        }, 280);
-    };
-
-    utter.onerror = (e) => {
-        if (e.error === 'canceled' || e.error === 'interrupted') return;
-        console.warn('Utterance error:', e);
-        currentSentenceIndex++;
-        if (isPlaying && !isPaused) setTimeout(() => speakCurrentSentence(), 200);
-    };
-
-    window._activeUtterance = utter;
-    window.speechSynthesis.speak(utter);
-    updatePlayerUIState(true);
-}
-
-async function speakGeorgian(text) {
-    window.speechSynthesis.cancel();
-    updatePlayerUIState(true);
-
-    try {
-        await playGoogleTTSSentence(text, 'ka', currentGlobalSpeed);
-
-        // Sentence finished — move to next
-        if (!isPlaying || isPaused) return;
-        currentSentenceIndex++;
-        if (utteranceTimeout) clearTimeout(utteranceTimeout);
-        utteranceTimeout = setTimeout(() => {
-            if (isPlaying && !isPaused) speakCurrentSentence();
-        }, 280);
-    } catch (err) {
-        console.warn('Georgian TTS failed, trying speechSynthesis fallback:', err);
-        // Fallback: use speechSynthesis even though it won't sound great
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = 'ka-GE';
-        utter.rate = currentGlobalSpeed;
-        utter.onend = () => {
-            if (!isPlaying || isPaused) return;
-            currentSentenceIndex++;
-            setTimeout(() => { if (isPlaying && !isPaused) speakCurrentSentence(); }, 280);
-        };
-        utter.onerror = () => {
-            currentSentenceIndex++;
-            if (isPlaying && !isPaused) setTimeout(() => speakCurrentSentence(), 200);
-        };
-        window.speechSynthesis.speak(utter);
-    }
-}
-
-// ── Playback Controls ─────────────────────────────────────────────────────
-function playChapterAudio(chapId) {
-    if (!currentBook) return;
-    const chap = currentBook.chapters.find(c => c.id === chapId);
-    if (!chap) return;
-
-    if (currentPlayingChapterId === chapId && isPlaying) {
-        togglePlayPause();
-        return;
-    }
-
-    // Stop any existing playback
-    stopGoogleTTS();
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-
-    currentPlayingChapterId = chapId;
-
-    // Choose text source based on language
-    let textToRead = chap.text;
-    if (currentLang === 'ka' && chap.text_ka) {
-        textToRead = chap.text_ka;
-    }
-
-    sentenceQueue = splitIntoNaturalSentences(textToRead);
-    currentSentenceIndex = 0;
-    secondsElapsed = 0;
-    isPlaying = true;
-    isPaused = false;
-
-    // Reveal player dock
-    DOM.playerDock.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
-    DOM.playerDock.classList.add('translate-y-0', 'opacity-100');
-
-    DOM.dockCover.src = currentBook.coverUrl;
-    DOM.dockTitle.textContent = chap.title;
-    DOM.dockSubtitle.textContent = currentBook.title;
-    if (DOM.playerTotalTime) DOM.playerTotalTime.textContent = formatTime(chap.estimated_duration_sec);
-
-    updateLangToggleUI();
-    startTimer();
-    speakCurrentSentence();
-    renderChaptersList();
-}
-
-function togglePlayPause() {
-    if (!currentPlayingChapterId) {
-        if (currentBook && currentBook.chapters.length > 0) {
-            playChapterAudio(currentBook.chapters[0].id);
-        }
-        return;
-    }
-
-    if (isPlaying && !isPaused) {
-        // PAUSE
-        isPaused = true;
-        if (utteranceTimeout) clearTimeout(utteranceTimeout);
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
-        pauseGoogleTTS();
-        stopTimer();
-        updatePlayerUIState(false);
-    } else if (isPlaying && isPaused) {
-        // RESUME
-        isPaused = false;
-        startTimer();
-        // Re-speak current sentence from scratch (simpler and more reliable than resume)
-        speakCurrentSentence();
-        updatePlayerUIState(true);
-    } else {
-        playChapterAudio(currentPlayingChapterId);
-    }
-}
-
-function updatePlayerUIState(speaking) {
-    if (DOM.dockPlayIcon) DOM.dockPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
-    if (DOM.heroPlayIcon) DOM.heroPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
-    if (DOM.dockVisualizer) {
-        if (speaking) DOM.dockVisualizer.classList.remove('hidden');
-        else DOM.dockVisualizer.classList.add('hidden');
-    }
-    renderChaptersList();
-}
-
-function stopSpeech() {
-    isPlaying = false;
-    isPaused = false;
-    sentenceQueue = [];
-    currentSentenceIndex = 0;
-    if (utteranceTimeout) clearTimeout(utteranceTimeout);
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    stopGoogleTTS();
-    stopTimer();
-    updatePlayerUIState(false);
-}
-
-function playNextChapter() {
-    if (!currentBook) return;
-    const currentIndex = currentBook.chapters.findIndex(c => c.id === currentPlayingChapterId);
-    if (currentIndex >= 0 && currentIndex < currentBook.chapters.length - 1) {
-        playChapterAudio(currentBook.chapters[currentIndex + 1].id);
-    }
-}
-
-function startTimer() {
-    stopTimer();
-    timerInterval = setInterval(() => {
-        secondsElapsed++;
-        if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
-    }, 1000);
-}
-
-function stopTimer() {
-    if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-    }
-}
-
-function cycleSpeed() {
-    const speeds = [0.75, 1.0, 1.25, 1.5, 2.0];
-    const idx = speeds.indexOf(currentGlobalSpeed);
-    currentGlobalSpeed = speeds[(idx + 1) % speeds.length];
-    if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = `${currentGlobalSpeed.toFixed(2).replace(/\.00$/, '')}x`;
-    if (DOM.modalSpeedSlider) DOM.modalSpeedSlider.value = currentGlobalSpeed;
-    if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = `${currentGlobalSpeed.toFixed(2)}x`;
-}
-
-// ── Language Toggle (in player dock) ──────────────────────────────────────
-function togglePlaybackLanguage() {
-    if (!currentBook) return;
-
-    const wasPlaying = isPlaying && !isPaused;
-
-    // Check if Georgian translation exists
-    if (currentLang === 'en') {
-        if (!currentBook.translatedLangs || !currentBook.translatedLangs.includes('ka')) {
-            // No translation available — prompt user to translate first
-            const doTranslate = confirm('This book has not been translated to Georgian yet. Would you like to translate it now?');
-            if (doTranslate) {
-                if (wasPlaying) togglePlayPause();
-                translateCurrentBook();
-            }
-            return;
-        }
-        currentLang = 'ka';
-    } else {
-        currentLang = 'en';
-    }
-
-    updateLangToggleUI();
-
-    // Restart current chapter in the new language
-    if (currentPlayingChapterId) {
-        stopSpeech();
-        playChapterAudio(currentPlayingChapterId);
-    }
-}
-
-function updateLangToggleUI() {
-    if (DOM.dockLangLabel) {
-        if (currentLang === 'ka') {
-            DOM.dockLangLabel.textContent = '🇬🇪 KA';
-            DOM.btnDockLangToggle.classList.add('border-georgian-gold/50', 'bg-georgian-gold/15');
-            DOM.btnDockLangToggle.classList.remove('border-white/10');
-        } else {
-            DOM.dockLangLabel.textContent = '🇺🇸 EN';
-            DOM.btnDockLangToggle.classList.remove('border-georgian-gold/50', 'bg-georgian-gold/15');
-            DOM.btnDockLangToggle.classList.add('border-white/10');
-        }
-    }
-}
-
-// ══════════════════════════════════════════════════════════════════════════
-// ██ UI RENDERING ██
+// ██ 6. DIGITAL SHELF & DISCOVER RENDERING ██
 // ══════════════════════════════════════════════════════════════════════════
 
 async function renderDigitalShelf(filterText = '') {
@@ -1284,9 +1492,12 @@ async function renderDigitalShelf(filterText = '') {
         div.innerHTML = `
             <div class="aspect-[2/3] rounded-2xl overflow-hidden mb-3 relative glass-card p-1.5 ${isSelected ? 'border-primary-container ring-2 ring-primary-container/30 shadow-[0_0_25px_rgba(0,240,255,0.25)]' : ''}">
                 <img src="${book.coverUrl}" class="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-500 bg-surface-container">
-                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
-                    <button class="w-12 h-12 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,240,255,0.6)] transform group-hover:scale-110 transition-transform">
-                        <span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl gap-2">
+                    <button onclick="event.stopPropagation(); selectBook('${book.id}', true);" class="w-11 h-11 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform" title="Listen Now">
+                        <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                    </button>
+                    <button onclick="event.stopPropagation(); selectBook('${book.id}', false); openCurrentBookInReader();" class="w-11 h-11 bg-georgian-gold text-black rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform" title="Moon Reader">
+                        <span class="material-symbols-outlined text-xl">menu_book</span>
                     </button>
                 </div>
                 ${hasGeorgian ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold/90 text-[10px] font-bold text-black shadow-lg">🇬🇪 KA</div>' : ''}
@@ -1322,13 +1533,14 @@ function renderDiscoverClassics() {
             <div>
                 <div class="aspect-[2/3] rounded-xl overflow-hidden mb-3.5 relative">
                     <img src="${book.coverUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    <div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold text-[10px] font-bold text-black shadow">🇬🇪 Ready</div>
                 </div>
                 <h4 class="font-bold text-white text-base truncate">${book.title}</h4>
                 <p class="text-xs text-primary-fixed mt-0.5">${book.author}</p>
             </div>
             <button class="mt-4 w-full py-2.5 rounded-xl bg-white/5 group-hover:bg-primary-container group-hover:text-on-primary-container text-white text-xs font-semibold flex items-center justify-center gap-2 transition">
                 <span class="material-symbols-outlined text-base">headphones</span>
-                Listen Now
+                Read & Listen
             </button>
         `;
         DOM.discoverGrid.appendChild(div);
@@ -1340,12 +1552,21 @@ async function selectBook(bookId, autoPlayFirst = false) {
     currentBook = books.find(b => b.id === bookId);
     if (!currentBook) return;
 
-    // Ensure translatedLangs exists
     if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
 
-    // Update hero
+    // Update Hero UI
     DOM.heroCover.src = currentBook.coverUrl;
     DOM.heroTitle.textContent = currentBook.title;
+
+    const hasKa = currentBook.translatedLangs && currentBook.translatedLangs.includes('ka');
+    if (DOM.heroGeorgianBadge) {
+        if (hasKa) DOM.heroGeorgianBadge.classList.remove('hidden');
+        else DOM.heroGeorgianBadge.classList.add('hidden');
+    }
+
+    if (DOM.btnTranslateWholeBookText) {
+        DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Whole Book to Georgian";
+    }
 
     const lastChap = currentBook.chapters.find(c => c.id === currentBook.lastPlayedChapterId) || currentBook.chapters[0];
     DOM.heroLiveSubtitle.textContent = `Ready to play ${lastChap.title}`;
@@ -1357,10 +1578,9 @@ async function selectBook(bookId, autoPlayFirst = false) {
 
     DOM.heroPlayBtn.onclick = () => playChapterAudio(lastChap.id);
 
-    // Show chapters drawer
+    // Show Chapters Drawer
     DOM.chaptersContainer.classList.remove('hidden');
     DOM.activeBookTitle.textContent = currentBook.title;
-    updateTranslateButton();
     renderChaptersList();
 
     if (autoPlayFirst && lastChap) {
@@ -1386,8 +1606,6 @@ function renderChaptersList() {
     if (!currentBook || !DOM.chaptersList) return;
     DOM.chaptersList.innerHTML = '';
 
-    const hasGeorgian = currentBook.translatedLangs && currentBook.translatedLangs.includes('ka');
-
     currentBook.chapters.forEach((chap, idx) => {
         const isCurrent = currentPlayingChapterId === chap.id;
         const isSpeaking = isCurrent && isPlaying && !isPaused;
@@ -1411,6 +1629,10 @@ function renderChaptersList() {
             </div>
 
             <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                <button onclick="openReader('${currentBook.id}', ${chap.id}, currentLang)" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-1.5 border border-white/10 transition" title="Read in Moon Reader">
+                    <span class="material-symbols-outlined text-base text-georgian-gold">menu_book</span>
+                    <span>Read</span>
+                </button>
                 <button onclick="playChapterAudio(${chap.id})" class="px-4 py-2 rounded-xl ${isSpeaking ? 'bg-primary-container text-on-primary-container shadow-[0_0_15px_rgba(0,240,255,0.5)]' : 'bg-white/10 text-white hover:bg-primary-container/20 hover:text-primary-fixed'} text-xs font-bold transition flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">${isSpeaking ? 'pause' : 'play_arrow'}</span>
                     <span>${isSpeaking ? 'Pause' : 'Listen'}</span>
@@ -1427,10 +1649,12 @@ function formatTime(sec) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-// ── Event Listeners ───────────────────────────────────────────────────────
+// ── Event Listeners Binding ─────────────────────────────────────────────────
 function setupEventListeners() {
     const btnNavUpload = document.getElementById('btnNavUpload');
-    if (btnNavUpload) btnNavUpload.addEventListener('click', () => openModal('uploadModal'));
+    if (btnNavUpload) {
+        btnNavUpload.addEventListener('click', () => openModal('uploadModal'));
+    }
 
     // Drag & Drop
     if (DOM.dropZone) {
@@ -1444,7 +1668,9 @@ function setupEventListeners() {
         DOM.dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             DOM.dropZone.classList.remove('border-primary-container');
-            if (e.dataTransfer.files.length > 0) handleFileUpload(e.dataTransfer.files[0]);
+            if (e.dataTransfer.files.length > 0) {
+                handleFileUpload(e.dataTransfer.files[0]);
+            }
         });
     }
 
@@ -1454,19 +1680,19 @@ function setupEventListeners() {
         });
     }
 
-    // Search
+    // Search Filtering
     if (DOM.searchInput) {
-        DOM.searchInput.addEventListener('input', (e) => renderDigitalShelf(e.target.value));
+        DOM.searchInput.addEventListener('input', (e) => {
+            renderDigitalShelf(e.target.value);
+        });
     }
 
-    // Playback controls
+    // Playback Controls
     if (DOM.btnPlayerPlayPause) DOM.btnPlayerPlayPause.addEventListener('click', togglePlayPause);
-
+    
     if (DOM.btnPlayerRewind) {
         DOM.btnPlayerRewind.addEventListener('click', () => {
             if (sentenceQueue.length > 0) {
-                stopGoogleTTS();
-                if (window.speechSynthesis) window.speechSynthesis.cancel();
                 currentSentenceIndex = Math.max(0, currentSentenceIndex - 2);
                 if (isPlaying && !isPaused) speakCurrentSentence();
             }
@@ -1476,37 +1702,31 @@ function setupEventListeners() {
     if (DOM.btnPlayerForward) {
         DOM.btnPlayerForward.addEventListener('click', () => {
             if (sentenceQueue.length > 0) {
-                stopGoogleTTS();
-                if (window.speechSynthesis) window.speechSynthesis.cancel();
                 currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 2);
                 if (isPlaying && !isPaused) speakCurrentSentence();
             }
         });
     }
 
-    // Progress bar scrub
+    // Progress Bar Scrubbing
     if (DOM.playerProgressContainer) {
         DOM.playerProgressContainer.addEventListener('click', (e) => {
             if (!sentenceQueue || sentenceQueue.length === 0) return;
             const rect = DOM.playerProgressContainer.getBoundingClientRect();
-            const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            stopGoogleTTS();
-            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            const clickX = e.clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, clickX / rect.width));
             currentSentenceIndex = Math.floor(pct * sentenceQueue.length);
             if (isPlaying && !isPaused) speakCurrentSentence();
         });
     }
 
-    // Voice modal
+    // Voice Modal Listeners
     if (DOM.voiceModalSelect) {
         DOM.voiceModalSelect.addEventListener('change', (e) => {
             selectedVoiceURI = e.target.value;
             localStorage.setItem('lumina_selected_voice_uri', selectedVoiceURI);
             updateTopVoiceBadge();
-            if (isPlaying && !isPaused && currentLang === 'en') {
-                window.speechSynthesis.cancel();
-                speakCurrentSentence();
-            }
+            if (isPlaying && !isPaused) speakCurrentSentence();
         });
     }
 
@@ -1525,7 +1745,7 @@ function setupEventListeners() {
         });
     }
 
-    // Auth
+    // Auth Buttons
     const btnAuthSignIn = document.getElementById('btnAuthSignIn');
     if (btnAuthSignIn) {
         btnAuthSignIn.addEventListener('click', () => {
@@ -1540,16 +1760,26 @@ function setupEventListeners() {
         });
     }
 
-    // Language toggle in dock
-    if (DOM.btnDockLangToggle) {
-        DOM.btnDockLangToggle.addEventListener('click', togglePlaybackLanguage);
-    }
-
-    // Translate book button
-    if (DOM.btnTranslateBook) {
-        DOM.btnTranslateBook.addEventListener('click', translateCurrentBook);
+    // Download ZIP
+    if (DOM.btnDownloadAllZip) {
+        DOM.btnDownloadAllZip.addEventListener('click', async () => {
+            if (!currentBook) return;
+            const zip = new JSZip();
+            currentBook.chapters.forEach(c => {
+                const enContent = `--- ${c.title} (English) ---\n\n${c.text}`;
+                const kaContent = c.text_ka ? `\n\n--- ${c.title} (Georgian / ქართული) ---\n\n${c.text_ka}` : '';
+                zip.file(`${c.title.replace(/[^a-zA-Z0-9]/g, '_')}.txt`, enContent + kaContent);
+            });
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentBook.title.replace(/[^a-zA-Z0-9]/g, '_')}_Audiobook.zip`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
     }
 }
 
-// ── Start ─────────────────────────────────────────────────────────────────
+// Start App
 document.addEventListener('DOMContentLoaded', init);

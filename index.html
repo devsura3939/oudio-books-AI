@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lumina Audio - AI Audiobook Studio</title>
+    <title>Lumina Audio - AI Audiobook & Moon Reader Studio</title>
 
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
-    <!-- JSZip -->
+    <!-- JSZip & jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
-    <!-- Fonts: Inter, Space Grotesk, Noto Sans Georgian (for native Georgian script) -->
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Georgian:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Space Grotesk, Inter, Noto Sans Georgian, Noto Serif Georgian, Merriweather -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Noto+Sans+Georgian:wght@300;400;500;600;700;800&family=Noto+Serif+Georgian:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
     <!-- Lucide Icons -->
@@ -41,13 +42,16 @@
                 "on-surface-variant": "#9aa4b8",
                 "on-primary-container": "#00363a",
                 "error": "#ff6b6b",
-                "georgian-gold": "#ffd166"
+                "georgian-gold": "#ffd166",
+                "georgian-gold-dark": "#d4a237"
             },
             fontFamily: {
                 "label-caps": ["Space Grotesk", "sans-serif"],
                 "headline-md": ["Inter", "sans-serif"],
                 "body-md": ["Inter", "sans-serif"],
-                "georgian": ["Noto Sans Georgian", "Inter", "sans-serif"]
+                "serif-reader": ["Merriweather", "Georgia", "serif"],
+                "georgian-sans": ["Noto Sans Georgian", "Inter", "sans-serif"],
+                "georgian-serif": ["Noto Serif Georgian", "Merriweather", "serif"]
             }
           },
         },
@@ -55,9 +59,9 @@
     </script>
     <style>
         :root {
-            --mesh-cyan: rgba(0, 240, 255, 0.15);
-            --mesh-purple: rgba(220, 184, 255, 0.14);
-            --mesh-violet: rgba(119, 1, 208, 0.16);
+            --mesh-cyan: rgba(0, 240, 255, 0.14);
+            --mesh-purple: rgba(220, 184, 255, 0.12);
+            --mesh-violet: rgba(119, 1, 208, 0.15);
         }
 
         body {
@@ -118,11 +122,11 @@
             transform: translateY(-4px);
         }
         .glass-dock {
-            background: rgba(17, 22, 34, 0.82);
+            background: rgba(17, 22, 34, 0.84);
             backdrop-filter: blur(40px);
             -webkit-backdrop-filter: blur(40px);
             border: 1px solid rgba(255, 255, 255, 0.16);
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(0, 240, 255, 0.15);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(0, 240, 255, 0.15);
         }
         .glass-input {
             background: rgba(255, 255, 255, 0.05) !important;
@@ -137,7 +141,7 @@
 
         /* Modals */
         .modal-overlay {
-            position: fixed; inset: 0; background: rgba(4, 6, 10, 0.8); backdrop-filter: blur(16px);
+            position: fixed; inset: 0; background: rgba(4, 6, 10, 0.82); backdrop-filter: blur(16px);
             display: flex; justify-content: center; align-items: center; z-index: 100;
             opacity: 0; pointer-events: none; transition: all 0.3s ease;
         }
@@ -147,24 +151,127 @@
         }
         .modal-overlay.active .modal-content { transform: scale(1); }
 
-        /* Georgian text styling */
-        .ka-text {
-            font-family: 'Noto Sans Georgian', 'Inter', sans-serif;
-            line-height: 1.8;
+        /* ════════════════ Moon+ Reader Theme Styles ════════════════ */
+        #readerView {
+            position: fixed; inset: 0; z-index: 90;
+            display: flex; flex-direction: column;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(100%);
+            opacity: 0; pointer-events: none;
+        }
+        #readerView.active {
+            transform: translateY(0);
+            opacity: 1; pointer-events: auto;
         }
 
-        /* Georgian gold glow */
-        .georgian-glow {
-            box-shadow: 0 0 20px rgba(255, 209, 102, 0.2);
+        /* Theme: Cyber Dark (Default) */
+        .reader-theme-dark {
+            background-color: #0c1017;
+            color: #e5eaf3;
+        }
+        .reader-theme-dark .reader-toolbar {
+            background: rgba(13, 18, 28, 0.88);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        .reader-theme-dark .reader-sentence:hover {
+            background-color: rgba(0, 240, 255, 0.12);
+        }
+        .reader-theme-dark .reader-sentence.active-sentence {
+            background-color: rgba(0, 240, 255, 0.24);
+            color: #ffffff;
+            border-bottom: 2px solid #00f0ff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            border-radius: 4px;
         }
 
-        /* Translation progress shimmer */
+        /* Theme: Warm Sepia */
+        .reader-theme-sepia {
+            background-color: #f7eed8;
+            color: #382c1e;
+        }
+        .reader-theme-sepia .reader-toolbar {
+            background: rgba(240, 228, 202, 0.95);
+            border-color: rgba(140, 110, 75, 0.25);
+            color: #382c1e;
+        }
+        .reader-theme-sepia .reader-sentence:hover {
+            background-color: rgba(180, 140, 90, 0.18);
+        }
+        .reader-theme-sepia .reader-sentence.active-sentence {
+            background-color: rgba(212, 162, 55, 0.35);
+            color: #1a1208;
+            border-bottom: 2px solid #b8860b;
+            box-shadow: 0 0 12px rgba(212, 162, 55, 0.25);
+            border-radius: 4px;
+        }
+        .reader-theme-sepia .reader-btn {
+            color: #382c1e !important;
+            background: rgba(140, 110, 75, 0.12) !important;
+            border-color: rgba(140, 110, 75, 0.25) !important;
+        }
+
+        /* Theme: Clean Light */
+        .reader-theme-light {
+            background-color: #fafbfc;
+            color: #1b212d;
+        }
+        .reader-theme-light .reader-toolbar {
+            background: rgba(255, 255, 255, 0.96);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: #1b212d;
+        }
+        .reader-theme-light .reader-sentence:hover {
+            background-color: rgba(0, 150, 255, 0.1);
+        }
+        .reader-theme-light .reader-sentence.active-sentence {
+            background-color: rgba(0, 150, 255, 0.2);
+            color: #000000;
+            border-bottom: 2px solid #0088cc;
+            box-shadow: 0 0 12px rgba(0, 150, 255, 0.2);
+            border-radius: 4px;
+        }
+        .reader-theme-light .reader-btn {
+            color: #1b212d !important;
+            background: rgba(0, 0, 0, 0.06) !important;
+            border-color: rgba(0, 0, 0, 0.12) !important;
+        }
+
+        /* Theme: OLED Black */
+        .reader-theme-oled {
+            background-color: #000000;
+            color: #d8d8d8;
+        }
+        .reader-theme-oled .reader-toolbar {
+            background: rgba(10, 10, 10, 0.95);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        .reader-theme-oled .reader-sentence:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .reader-theme-oled .reader-sentence.active-sentence {
+            background-color: rgba(255, 209, 102, 0.25);
+            color: #ffffff;
+            border-bottom: 2px solid #ffd166;
+            box-shadow: 0 0 16px rgba(255, 209, 102, 0.35);
+            border-radius: 4px;
+        }
+
+        /* Sentence clickability */
+        .reader-sentence {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 2px 3px;
+            border-radius: 3px;
+            display: inline;
+        }
+
+        /* Shimmer Animation */
         @keyframes shimmer {
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
         }
-        .shimmer-bg {
-            background: linear-gradient(90deg, transparent, rgba(255, 209, 102, 0.15), transparent);
+        .shimmer-gold {
+            background: linear-gradient(90deg, rgba(255,209,102,0.1), rgba(255,209,102,0.3), rgba(255,209,102,0.1));
             background-size: 200% 100%;
             animation: shimmer 2s infinite;
         }
@@ -190,16 +297,16 @@
             </div>
             <div>
                 <h1 class="font-label-caps text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
-                    Lumina <span class="text-primary-container text-xs px-1.5 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">AI</span>
+                    Lumina <span class="text-primary-container text-xs px-1.5 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">PRO</span>
                 </h1>
-                <p class="text-on-surface-variant text-[11px] font-medium tracking-wide">Audiobook Studio</p>
+                <p class="text-on-surface-variant text-[11px] font-medium tracking-wide">Audiobook & Moon Reader</p>
             </div>
         </div>
 
-        <!-- Upload PDF -->
+        <!-- Upload PDF Primary Action -->
         <button id="btnNavUpload" class="mb-6 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-semibold shadow-[0_0_25px_rgba(0,240,255,0.35)] hover:shadow-[0_0_35px_rgba(0,240,255,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 group">
             <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">upload_file</span>
-            <span>Upload PDF</span>
+            <span>Upload PDF Book</span>
         </button>
 
         <!-- Navigation Menu -->
@@ -217,14 +324,20 @@
                 </button>
             </li>
             <li>
+                <button onclick="openCurrentBookInReader()" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-georgian-gold hover:bg-georgian-gold/10 transition-all font-medium text-sm">
+                    <span class="material-symbols-outlined text-[20px]">menu_book</span>
+                    <span>Moon Reader Mode</span>
+                </button>
+            </li>
+            <li>
                 <button onclick="openModal('voiceModal')" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all font-medium text-sm">
                     <span class="material-symbols-outlined text-[20px]">record_voice_over</span>
-                    <span>Voice Settings</span>
+                    <span>Voice & Narration</span>
                 </button>
             </li>
         </ul>
 
-        <!-- User -->
+        <!-- Bottom User Profile Section -->
         <div class="mt-auto pt-6 border-t border-white/10" id="userNavSection">
             <button onclick="openModal('authModal')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-on-surface-variant hover:text-white transition-all text-sm font-medium">
                 <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-primary-fixed">
@@ -240,24 +353,30 @@
 
     <!-- ════════════════ TopNavBar ════════════════ -->
     <header class="hidden md:flex justify-between items-center px-8 py-3.5 glass-header fixed top-0 right-0 w-[calc(100%-16rem)] z-30">
-        <!-- Search -->
+        <!-- Live Library Search -->
         <div class="flex-grow max-w-md">
             <div class="relative">
                 <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
-                <input id="searchInput" class="w-full glass-input rounded-full py-2 pl-10 pr-4 text-sm placeholder:text-on-surface-variant focus:outline-none" placeholder="Search audiobooks..." type="text">
+                <input id="searchInput" class="w-full glass-input rounded-full py-2 pl-10 pr-4 text-sm placeholder:text-on-surface-variant focus:outline-none" placeholder="Search audiobooks & chapters..." type="text">
             </div>
         </div>
 
-        <!-- Action Bar -->
+        <!-- Direct Action Bar -->
         <div class="flex items-center gap-3">
-            <!-- Voice Button -->
+            <!-- Moon Reader Quick Button -->
+            <button onclick="openCurrentBookInReader()" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-georgian-gold/15 hover:bg-georgian-gold/25 border border-georgian-gold/30 text-xs font-bold text-georgian-gold transition shadow-sm" title="Open Moon+ Reader view">
+                <span class="material-symbols-outlined text-base">menu_book</span>
+                <span>Moon Reader</span>
+            </button>
+
+            <!-- Direct Voice Selector Button -->
             <button onclick="openModal('voiceModal')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/12 text-xs font-semibold text-white transition shadow-sm">
                 <span class="material-symbols-outlined text-primary-fixed text-base">record_voice_over</span>
-                <span id="topVoiceBadge">🎙️ Default</span>
+                <span id="topVoiceBadge">Narrator: Studio</span>
                 <span class="material-symbols-outlined text-sm text-on-surface-variant">expand_more</span>
             </button>
 
-            <!-- Profile -->
+            <!-- Profile Button -->
             <button id="topProfileBtn" onclick="openModal('authModal')" class="p-1 rounded-full text-on-surface-variant hover:text-white transition flex items-center gap-2">
                 <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-container/20 to-secondary/30 border border-white/15 flex items-center justify-center text-primary-fixed font-bold text-xs" id="topAvatarBadge">
                     G
@@ -266,18 +385,18 @@
         </div>
     </header>
 
-    <!-- ════════════════ Main Content ════════════════ -->
+    <!-- ════════════════ Main Content Canvas ════════════════ -->
     <main class="flex-grow md:ml-64 relative min-h-screen pb-36 pt-6 md:pt-24 px-4 md:px-8 max-w-7xl mx-auto w-full">
-
-        <!-- View: Library -->
+        
+        <!-- View: Library (Home) -->
         <div id="view-library" class="space-y-10">
-
-            <!-- Hero Section -->
+            
+            <!-- Hero Section: Continue Listening & Reading -->
             <section id="heroSection" class="glass-card rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-80 h-80 bg-primary-container/10 rounded-full blur-[90px] -translate-y-1/3 translate-x-1/3 pointer-events-none"></div>
-
-                <!-- Vinyl Cover -->
-                <div class="relative w-36 h-36 md:w-48 md:h-48 flex-shrink-0 cursor-pointer group" id="heroPlayBtn" title="Click to Play">
+                
+                <!-- Rotating Vinyl Holographic Cover -->
+                <div class="relative w-36 h-36 md:w-48 md:h-48 flex-shrink-0 cursor-pointer group" id="heroPlayBtn" title="Click to Play / Pause">
                     <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" fill="none" r="46" stroke="rgba(255,255,255,0.08)" stroke-width="3.5"></circle>
                         <circle id="heroProgressCircle" class="transition-all duration-700 ease-out" cx="50" cy="50" fill="none" r="46" stroke="#00f0ff" stroke-dasharray="289" stroke-dashoffset="289" stroke-width="3.5" stroke-linecap="round"></circle>
@@ -290,24 +409,42 @@
                     </div>
                 </div>
 
-                <!-- Hero Meta & Live Subtitle -->
+                <!-- Hero Meta & Live Read-Along Display -->
                 <div class="flex-grow text-center md:text-left z-10 overflow-hidden w-full">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-container/10 border border-primary-container/25 text-primary-fixed font-label-caps text-[11px] font-semibold tracking-wider mb-2.5">
-                        <span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
-                        CONTINUE LISTENING
-                    </div>
-                    <h2 id="heroTitle" class="text-2xl md:text-4xl font-extrabold text-white mb-2 truncate">Select an Audiobook</h2>
-
-                    <!-- Live Subtitle Display -->
-                    <div class="p-3 rounded-xl bg-white/5 border border-white/10 mb-4 max-w-2xl text-left">
-                        <p class="text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-1" id="heroSubtitleHeader">Current Sentence</p>
-                        <p id="heroLiveSubtitle" class="text-on-surface text-sm md:text-base font-medium line-clamp-3 leading-relaxed ka-text">Ready to play...</p>
+                    <div class="flex items-center gap-2 justify-center md:justify-start mb-2.5 flex-wrap">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-container/10 border border-primary-container/25 text-primary-fixed font-label-caps text-[11px] font-semibold tracking-wider">
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
+                            ACTIVE AUDIOBOOK
+                        </div>
+                        <span id="heroGeorgianBadge" class="hidden px-2.5 py-0.5 rounded-full bg-georgian-gold/20 border border-georgian-gold/40 text-georgian-gold font-bold text-[10px]">
+                            🇬🇪 GEORGIAN TRANSLATED
+                        </span>
                     </div>
 
-                    <div class="flex items-center gap-4 justify-center md:justify-start">
-                        <span id="heroProgressText" class="text-xs font-semibold text-primary-fixed">0% Completed</span>
-                        <div class="w-36 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                            <div id="heroProgressBarInner" class="h-full bg-gradient-to-r from-primary-container to-secondary w-0 transition-all duration-500"></div>
+                    <h2 id="heroTitle" class="text-2xl md:text-3xl font-extrabold text-white mb-2 truncate">Select an Audiobook</h2>
+                    
+                    <!-- Live Spoken Subtitle Box with Click-to-Read Action -->
+                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 mb-4 max-w-2xl text-left">
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="text-xs font-semibold text-primary-fixed uppercase tracking-wider" id="heroSubtitleHeader">Live Narration</p>
+                            <button onclick="openCurrentBookInReader()" class="text-[11px] text-georgian-gold hover:underline flex items-center gap-1 font-semibold">
+                                <span class="material-symbols-outlined text-sm">menu_book</span> Open in Moon Reader
+                            </button>
+                        </div>
+                        <p id="heroLiveSubtitle" class="text-on-surface text-sm md:text-base font-medium line-clamp-3 leading-relaxed">Ready to play...</p>
+                    </div>
+                    
+                    <!-- Action Row: Read Book, Translate, Progress -->
+                    <div class="flex items-center gap-4 justify-center md:justify-start flex-wrap">
+                        <button onclick="openCurrentBookInReader()" class="px-4 py-2 rounded-xl bg-georgian-gold text-black font-bold text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(255,209,102,0.4)] hover:brightness-110 transition">
+                            <span class="material-symbols-outlined text-base">menu_book</span>
+                            <span>Read in Moon Reader</span>
+                        </button>
+                        <div class="flex items-center gap-3">
+                            <span id="heroProgressText" class="text-xs font-semibold text-primary-fixed">0% Completed</span>
+                            <div class="w-28 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div id="heroProgressBarInner" class="h-full bg-gradient-to-r from-primary-container to-secondary w-0 transition-all duration-500"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -318,9 +455,9 @@
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-4 mb-6">
                     <div>
                         <h3 class="text-xl md:text-2xl font-bold text-white tracking-tight">Your Digital Shelf</h3>
-                        <p class="text-xs text-on-surface-variant mt-0.5">Click any book to browse chapters and listen</p>
+                        <p class="text-xs text-on-surface-variant mt-0.5">Click any book to read or listen</p>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2.5">
                         <button onclick="openModal('voiceModal')" class="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 flex items-center gap-1.5 transition">
                             <span class="material-symbols-outlined text-sm text-primary-fixed">record_voice_over</span>
                             Change Voice
@@ -340,21 +477,29 @@
                         <span class="text-xs font-label-caps text-primary-fixed tracking-wider font-semibold">AUDIOBOOK CHAPTERS</span>
                         <h3 class="text-2xl font-bold text-white" id="activeBookTitle">Chapters</h3>
                     </div>
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <!-- ★ TRANSLATE BOOK BUTTON ★ -->
-                        <button id="btnTranslateBook" class="px-4 py-2.5 rounded-xl bg-georgian-gold/10 hover:bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 text-xs font-bold flex items-center gap-2 transition shadow-sm georgian-glow">
-                            <span class="text-base">🇬🇪</span>
-                            <span>Translate to Georgian</span>
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <!-- Translate Entire Book Button -->
+                        <button id="btnTranslateWholeBook" onclick="startWholeBookTranslation()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-georgian-gold/20 to-amber-500/20 hover:from-georgian-gold/30 hover:to-amber-500/30 text-georgian-gold border border-georgian-gold/40 text-xs font-bold flex items-center gap-2 transition shadow-sm">
+                            <span class="text-sm">🇬🇪</span>
+                            <span id="btnTranslateWholeBookText">Translate Whole Book to Georgian</span>
                         </button>
 
-                        <!-- Georgian badge (hidden until translated) -->
-                        <span id="translateBadge" class="hidden px-3 py-1 rounded-full bg-georgian-gold/15 text-georgian-gold text-[11px] font-bold border border-georgian-gold/25">
-                            ✅ Georgian Ready
-                        </span>
+                        <!-- Moon Reader Button -->
+                        <button onclick="openCurrentBookInReader()" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 text-xs font-semibold flex items-center gap-1.5 transition">
+                            <span class="material-symbols-outlined text-base text-georgian-gold">menu_book</span>
+                            <span>Open Reader</span>
+                        </button>
 
-                        <button id="btnDownloadAllZip" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-primary-container/15 text-primary-fixed border border-primary-fixed/30 text-xs font-semibold flex items-center gap-2 transition shadow-sm">
+                        <!-- Export PDF Button -->
+                        <button onclick="exportCurrentBookPDF()" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-primary-fixed border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition" title="Export formatted PDF">
+                            <span class="material-symbols-outlined text-base">picture_as_pdf</span>
+                            <span>PDF</span>
+                        </button>
+
+                        <!-- Download ZIP -->
+                        <button id="btnDownloadAllZip" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition" title="Download Text ZIP">
                             <span class="material-symbols-outlined text-base">inventory_2</span>
-                            <span id="btnDownloadAllZipText">Download (ZIP)</span>
+                            <span>ZIP</span>
                         </button>
                     </div>
                 </div>
@@ -369,7 +514,7 @@
         <div id="view-discover" class="hidden space-y-8">
             <div>
                 <h2 class="text-2xl md:text-3xl font-extrabold text-white">Discover Free Classics</h2>
-                <p class="text-sm text-on-surface-variant mt-1">Pre-loaded masterworks ready to listen instantly with AI narration.</p>
+                <p class="text-sm text-on-surface-variant mt-1">Pre-loaded masterworks ready to read & listen instantly in English and Georgian.</p>
             </div>
             <div id="discoverGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
                 <!-- Injected by JS -->
@@ -382,8 +527,9 @@
     <div id="playerDock" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] md:w-[86%] max-w-5xl z-50 flex items-center justify-between px-4 md:px-6 py-3 glass-dock rounded-2xl opacity-0 translate-y-12 transition-all duration-500 pointer-events-none">
         <!-- Left: Thumbnail & Info -->
         <div class="flex items-center gap-3.5 w-1/4 min-w-0">
-            <div class="w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 relative bg-surface-container border border-white/15">
+            <div class="w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 relative bg-surface-container border border-white/15 cursor-pointer" onclick="openCurrentBookInReader()" title="Open in Moon Reader">
                 <img id="dockCover" class="w-full h-full object-cover" src="" alt="Cover">
+                <!-- Mini Equalizer -->
                 <div id="dockVisualizer" class="absolute inset-0 bg-black/40 flex items-end justify-center gap-[2px] pb-1 hidden">
                     <div class="w-1 h-3 bg-primary-fixed rounded-t-sm animate-[bounce_0.8s_infinite_ease-in-out]"></div>
                     <div class="w-1 h-5 bg-primary-fixed rounded-t-sm animate-[bounce_1.1s_infinite_ease-in-out_0.2s]"></div>
@@ -391,7 +537,7 @@
                 </div>
             </div>
             <div class="overflow-hidden">
-                <p id="dockTitle" class="text-sm font-semibold text-white truncate">Chapter 1</p>
+                <p id="dockTitle" class="text-sm font-semibold text-white truncate cursor-pointer hover:text-primary-fixed" onclick="openCurrentBookInReader()">Chapter 1</p>
                 <p id="dockSubtitle" class="text-xs text-on-surface-variant truncate">No Book Selected</p>
             </div>
         </div>
@@ -410,7 +556,7 @@
                 </button>
             </div>
 
-            <!-- Progress Bar -->
+            <!-- Scrubbable Progress Bar -->
             <div class="w-full flex items-center gap-3">
                 <span id="playerCurrentTime" class="text-[11px] text-on-surface-variant font-mono w-10 text-right">0:00</span>
                 <div id="playerProgressContainer" class="flex-grow h-1.5 bg-white/10 rounded-full relative cursor-pointer group/prog overflow-hidden">
@@ -420,74 +566,222 @@
             </div>
         </div>
 
-        <!-- Right: Language Toggle, Voice & Speed -->
+        <!-- Right: Language Toggle, Reader, Voice & Speed -->
         <div class="flex items-center justify-end gap-2 w-1/4">
-            <!-- ★ LANGUAGE TOGGLE ★ -->
-            <button id="btnDockLangToggle" class="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold flex items-center gap-1.5 border border-white/10 transition" title="Switch between English and Georgian playback">
-                <span id="dockLangLabel" class="text-white">🇺🇸 EN</span>
+            <!-- Language Quick Switcher: EN / KA -->
+            <button onclick="togglePlaybackLanguage()" id="btnDockLangToggle" class="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold border border-white/10 transition flex items-center gap-1" title="Toggle English / Georgian audio">
+                <span id="dockLangBadge">🇺🇸 EN</span>
             </button>
 
-            <button onclick="openModal('voiceModal')" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-primary-fixed text-xs font-semibold flex items-center gap-1.5 border border-white/10 transition">
-                <span class="material-symbols-outlined text-base">tune</span>
-                <span class="hidden sm:inline">Voice</span>
+            <!-- Moon Reader Trigger -->
+            <button onclick="openCurrentBookInReader()" class="p-2 rounded-xl bg-georgian-gold/15 hover:bg-georgian-gold/25 text-georgian-gold text-xs font-semibold flex items-center gap-1 border border-georgian-gold/30 transition" title="Open Moon Reader">
+                <span class="material-symbols-outlined text-base">menu_book</span>
             </button>
-            <button onclick="cycleSpeed()" id="btnDockSpeed" class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-primary-fixed text-xs font-bold font-mono border border-white/10 transition">
+
+            <!-- Speed Cycler -->
+            <button onclick="cycleSpeed()" id="btnDockSpeed" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-primary-fixed text-xs font-bold font-mono border border-white/10 transition">
                 1.0x
             </button>
         </div>
     </div>
 
-    <!-- ════════════════ Voice & Translation Modal ════════════════ -->
+    <!-- ════════════════ MOON+ READER DEDICATED FULLSCREEN VIEW ════════════════ -->
+    <div id="readerView" class="reader-theme-dark">
+        <!-- Reader Top Navigation Bar -->
+        <header class="reader-toolbar px-4 md:px-8 py-3.5 border-b flex items-center justify-between flex-shrink-0 z-10">
+            <!-- Left: Back & Table of Contents -->
+            <div class="flex items-center gap-3">
+                <button onclick="closeReader()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition flex items-center gap-1.5 text-xs font-semibold" title="Exit Reader">
+                    <span class="material-symbols-outlined text-lg">arrow_back</span>
+                    <span class="hidden sm:inline">Shelf</span>
+                </button>
+                <div class="overflow-hidden max-w-[200px] md:max-w-xs">
+                    <h3 id="readerBookTitle" class="text-sm font-bold truncate">Book Title</h3>
+                    <p id="readerChapterTitle" class="text-xs opacity-75 truncate">Chapter 1</p>
+                </div>
+            </div>
+
+            <!-- Center: Language & Chapter Selector -->
+            <div class="flex items-center gap-2">
+                <!-- Language Toggle Button: Original / Georgian -->
+                <button onclick="toggleReaderLanguage()" id="btnReaderLangToggle" class="px-3 py-1.5 rounded-xl bg-georgian-gold/20 border border-georgian-gold/40 text-georgian-gold font-bold text-xs flex items-center gap-1.5 transition">
+                    <span class="text-sm">🇬🇪</span>
+                    <span id="readerLangLabel">Georgian (ქართული)</span>
+                </button>
+                
+                <!-- Chapter Selector Dropdown -->
+                <select id="readerChapterSelect" onchange="onReaderChapterChange(this.value)" class="reader-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 border border-white/15 outline-none max-w-[140px] md:max-w-xs truncate">
+                    <!-- Injected by JS -->
+                </select>
+            </div>
+
+            <!-- Right: Font & Theme Customization Bar -->
+            <div class="flex items-center gap-2">
+                <!-- Font Size Controls -->
+                <div class="hidden sm:flex items-center bg-white/10 rounded-xl p-0.5 border border-white/10">
+                    <button onclick="changeReaderFontSize(-2)" class="px-2 py-1 text-xs font-bold hover:bg-white/10 rounded-lg transition" title="Decrease Font Size">A-</button>
+                    <button onclick="changeReaderFontSize(2)" class="px-2 py-1 text-xs font-bold hover:bg-white/10 rounded-lg transition" title="Increase Font Size">A+</button>
+                </div>
+
+                <!-- Font Family Switcher -->
+                <select id="readerFontSelect" onchange="changeReaderFontFamily(this.value)" class="reader-btn hidden md:block px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-white/10 border border-white/15 outline-none">
+                    <option value="font-sans">Modern Sans</option>
+                    <option value="font-serif-reader">Editorial Serif</option>
+                    <option value="font-georgian-sans">Georgian Sans</option>
+                    <option value="font-georgian-serif">Georgian Serif</option>
+                </select>
+
+                <!-- Theme Switcher (Dark / Sepia / Light / OLED) -->
+                <div class="flex items-center bg-white/10 rounded-xl p-1 gap-1 border border-white/10">
+                    <button onclick="setReaderTheme('dark')" class="w-6 h-6 rounded-lg bg-[#0c1017] border border-cyan-400/40" title="Dark Nebula Theme"></button>
+                    <button onclick="setReaderTheme('sepia')" class="w-6 h-6 rounded-lg bg-[#f7eed8] border border-amber-800/30" title="Warm Sepia Paper"></button>
+                    <button onclick="setReaderTheme('light')" class="w-6 h-6 rounded-lg bg-[#ffffff] border border-gray-400/40" title="Editorial Light"></button>
+                    <button onclick="setReaderTheme('oled')" class="w-6 h-6 rounded-lg bg-[#000000] border border-white/30" title="OLED Pure Black"></button>
+                </div>
+
+                <!-- Export PDF -->
+                <button onclick="exportCurrentBookPDF()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition" title="Download Formatted PDF">
+                    <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Reader Scrollable Reading Surface -->
+        <div id="readerScrollContainer" class="flex-grow overflow-y-auto px-4 md:px-12 py-8 md:py-12 flex justify-center">
+            <article id="readerContentArea" class="max-w-3xl w-full leading-relaxed transition-all duration-200">
+                <!-- Injected paragraphs and interactive sentence spans -->
+            </article>
+        </div>
+
+        <!-- Reader Bottom Sticky Synchronized Playbar -->
+        <footer class="reader-toolbar px-4 md:px-8 py-3 border-t flex items-center justify-between flex-shrink-0 z-10">
+            <!-- Chapter Prev -->
+            <button onclick="readerPrevChapter()" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold flex items-center gap-1 transition">
+                <span class="material-symbols-outlined text-base">chevron_left</span>
+                <span class="hidden sm:inline">Prev Chapter</span>
+            </button>
+
+            <!-- Sync Speech Controls -->
+            <div class="flex items-center gap-4">
+                <button onclick="readerRewindSentence()" class="p-2 rounded-full hover:bg-white/10 transition" title="Previous Sentence">
+                    <span class="material-symbols-outlined text-xl">replay_10</span>
+                </button>
+                <button onclick="togglePlayPause()" id="btnReaderPlayPause" class="bg-primary-container text-on-primary-container w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition">
+                    <span class="material-symbols-outlined text-2xl" id="readerPlayIcon">play_arrow</span>
+                </button>
+                <button onclick="readerForwardSentence()" class="p-2 rounded-full hover:bg-white/10 transition" title="Next Sentence">
+                    <span class="material-symbols-outlined text-xl">forward_10</span>
+                </button>
+                <span id="readerReadingProgressText" class="text-xs font-mono opacity-75 hidden sm:inline">Sentence 1/1</span>
+            </div>
+
+            <!-- Chapter Next -->
+            <button onclick="readerNextChapter()" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold flex items-center gap-1 transition">
+                <span class="hidden sm:inline">Next Chapter</span>
+                <span class="material-symbols-outlined text-base">chevron_right</span>
+            </button>
+        </footer>
+    </div>
+
+    <!-- ════════════════ WHOLE BOOK TRANSLATION STUDIO MODAL ════════════════ -->
+    <div id="wholeBookTranslateModal" class="modal-overlay">
+        <div class="modal-content glass-panel p-6 md:p-8 rounded-3xl max-w-lg w-full border border-georgian-gold/30 shadow-2xl mx-4 space-y-5">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center border-b border-georgian-gold/20 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-georgian-gold/20 border border-georgian-gold/40 flex items-center justify-center text-xl">
+                        🇬🇪
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Full Book Translation Studio</h2>
+                        <p class="text-xs text-georgian-gold font-medium">სრული წიგნის მაღალხარისხიანი ქართული თარგმნა</p>
+                    </div>
+                </div>
+                <button onclick="cancelWholeBookTranslation()" class="px-3 py-1.5 rounded-lg bg-error/15 hover:bg-error/25 text-error text-xs font-semibold border border-error/30 transition">
+                    Stop / Pause
+                </button>
+            </div>
+
+            <!-- Progress Details -->
+            <div class="space-y-2">
+                <div class="flex justify-between text-xs font-semibold">
+                    <span id="wbChapterLabel" class="text-white">Translating Chapter 1 of 5...</span>
+                    <span id="wbProgressPct" class="font-mono text-georgian-gold font-bold">0%</span>
+                </div>
+                <div class="w-full h-3 rounded-full bg-white/10 overflow-hidden">
+                    <div id="wbProgressBar" class="h-full bg-gradient-to-r from-georgian-gold to-amber-400 w-0 transition-all duration-300"></div>
+                </div>
+                <div class="flex justify-between text-[11px] text-on-surface-variant">
+                    <span id="wbSentenceCounter">Sentence 0 / 0</span>
+                    <span id="wbCharCounter">0 characters translated</span>
+                </div>
+            </div>
+
+            <!-- Live Side-by-Side Sentence Preview -->
+            <div class="space-y-3 pt-2">
+                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] font-semibold text-primary-fixed uppercase tracking-wider mb-1">Original English Sentence</p>
+                    <p id="wbLiveOriginal" class="text-xs text-on-surface line-clamp-3 leading-relaxed">Waiting for batch translation...</p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-georgian-gold/10 border border-georgian-gold/20 shimmer-gold">
+                    <p class="text-[10px] font-semibold text-georgian-gold uppercase tracking-wider mb-1">Georgian Translation (ქართული)</p>
+                    <p id="wbLiveGeorgian" class="text-xs text-white font-medium line-clamp-3 leading-relaxed font-georgian-sans">მზადება თარგმნისთვის...</p>
+                </div>
+            </div>
+
+            <!-- Notice & Auto-save -->
+            <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2.5 text-xs text-on-surface-variant">
+                <span class="material-symbols-outlined text-georgian-gold text-base">cloud_sync</span>
+                <span>Auto-saved to your library after each chapter. You can pause and resume anytime!</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════ Voice & Narration Modal ════════════════ -->
     <div id="voiceModal" class="modal-overlay">
         <div class="modal-content glass-panel p-6 md:p-8 rounded-3xl max-w-md w-full border border-white/15 shadow-2xl mx-4 space-y-6">
             <div class="flex justify-between items-center border-b border-white/10 pb-4">
                 <div>
                     <h2 class="text-xl font-bold text-white flex items-center gap-2">
                         <span class="material-symbols-outlined text-primary-fixed">tune</span>
-                        Voice Studio
+                        Voice & Narration Studio
                     </h2>
-                    <p class="text-xs text-on-surface-variant mt-0.5">Configure narrator voice for English playback</p>
+                    <p class="text-xs text-on-surface-variant mt-0.5">Select narrator voices for English & Georgian playback</p>
                 </div>
                 <button onclick="closeModal('voiceModal')" class="p-1.5 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition">
                     <span class="material-symbols-outlined text-xl">close</span>
                 </button>
             </div>
 
-            <!-- English Voice Section -->
+            <!-- Voice Selection Dropdown -->
             <div>
                 <label class="block text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-2">
-                    🎙️ English Narrator Voice
+                    🎙️ Narrator Voice
                 </label>
                 <select id="voiceModalSelect" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
                     <optgroup label="👨 Male Narrators" id="optgroupMale"></optgroup>
                     <optgroup label="👩 Female Narrators" id="optgroupFemale"></optgroup>
-                    <optgroup label="🌍 International" id="optgroupOther"></optgroup>
+                    <optgroup label="🌍 Multilingual & International" id="optgroupOther"></optgroup>
                 </select>
             </div>
 
-            <!-- Test Buttons -->
-            <div class="grid grid-cols-2 gap-2">
-                <button onclick="testVoicePreview()" class="py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs font-semibold text-primary-fixed flex items-center justify-center gap-2 transition">
+            <!-- Test Voice Buttons -->
+            <div class="grid grid-cols-2 gap-2.5">
+                <button onclick="testVoicePreview()" class="py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs font-semibold text-primary-fixed flex items-center justify-center gap-1.5 transition">
                     <span class="material-symbols-outlined text-base">volume_up</span>
-                    Test English Voice
+                    Test English
                 </button>
-                <button onclick="testGeorgianVoicePreview()" class="py-2.5 rounded-xl bg-georgian-gold/10 hover:bg-georgian-gold/20 border border-georgian-gold/30 text-xs font-semibold text-georgian-gold flex items-center justify-center gap-2 transition">
+                <button onclick="testGeorgianVoicePreview()" class="py-2.5 rounded-xl bg-georgian-gold/15 hover:bg-georgian-gold/25 border border-georgian-gold/30 text-xs font-semibold text-georgian-gold flex items-center justify-center gap-1.5 transition">
                     <span>🇬🇪</span>
-                    Test Georgian Voice
+                    Test Georgian
                 </button>
             </div>
 
-            <!-- Georgian Voice Info -->
-            <div class="p-3 rounded-xl bg-georgian-gold/5 border border-georgian-gold/15">
-                <p class="text-xs text-georgian-gold font-semibold mb-1">🇬🇪 Georgian Voice</p>
-                <p class="text-[11px] text-on-surface-variant leading-relaxed">Georgian playback uses Google's native neural TTS engine — a real Georgian speaker, not a synthesized English voice reading Georgian text. First translate your book, then switch to 🇬🇪 in the player.</p>
-            </div>
-
-            <!-- Speed & Pitch -->
+            <!-- Speed & Pitch Sliders -->
             <div class="space-y-4 pt-2 border-t border-white/10">
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
-                        <span class="text-xs font-semibold text-white">Speed</span>
+                        <span class="text-xs font-semibold text-white">Playback Speed</span>
                         <span id="modalSpeedVal" class="text-xs font-mono text-primary-fixed font-bold">1.00x</span>
                     </div>
                     <input type="range" id="modalSpeedSlider" min="0.5" max="2.0" step="0.05" value="1.0" class="w-full">
@@ -507,67 +801,19 @@
         </div>
     </div>
 
-    <!-- ════════════════ Translation Progress Modal ════════════════ -->
-    <div id="translateModal" class="modal-overlay">
-        <div class="modal-content glass-panel p-6 md:p-8 rounded-3xl max-w-lg w-full border border-georgian-gold/20 shadow-2xl mx-4 space-y-5">
-            <!-- Header -->
-            <div class="flex justify-between items-center border-b border-georgian-gold/15 pb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                        <span class="text-xl">🇬🇪</span>
-                        Translating to Georgian
-                    </h2>
-                    <p class="text-xs text-on-surface-variant mt-0.5 ka-text">ქართულად თარგმნა მიმდინარეობს...</p>
-                </div>
-                <button onclick="cancelTranslation()" class="px-3 py-1.5 rounded-lg bg-error/10 hover:bg-error/20 text-error text-xs font-semibold border border-error/30 transition">
-                    Cancel
-                </button>
-            </div>
-
-            <!-- Chapter Progress -->
-            <div>
-                <p id="translateChapterLabel" class="text-sm font-semibold text-white mb-2">Preparing...</p>
-                <div class="w-full h-3 rounded-full bg-white/10 overflow-hidden shadow-inner">
-                    <div id="translateProgressBar" class="h-full bg-gradient-to-r from-georgian-gold to-amber-400 w-0 transition-all duration-300 rounded-full"></div>
-                </div>
-                <div class="flex justify-between mt-1.5">
-                    <p id="translateStatusText" class="text-xs text-on-surface-variant">Starting translation...</p>
-                    <p id="translatePctText" class="text-xs font-mono text-georgian-gold font-bold">0%</p>
-                </div>
-            </div>
-
-            <!-- Live Preview -->
-            <div class="space-y-3">
-                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
-                    <p class="text-[10px] font-semibold text-primary-fixed uppercase tracking-wider mb-1">English Original</p>
-                    <p id="translatePreviewOriginal" class="text-sm text-on-surface leading-relaxed line-clamp-2">Waiting...</p>
-                </div>
-                <div class="p-3 rounded-xl bg-georgian-gold/5 border border-georgian-gold/15 shimmer-bg">
-                    <p class="text-[10px] font-semibold text-georgian-gold uppercase tracking-wider mb-1">ქართული თარგმანი</p>
-                    <p id="translatePreviewGeorgian" class="text-sm text-on-surface leading-relaxed line-clamp-2 ka-text">მოლოდინი...</p>
-                </div>
-            </div>
-
-            <!-- Info -->
-            <p class="text-[11px] text-on-surface-variant text-center leading-relaxed">
-                Each sentence is professionally translated. Progress is saved — you can cancel and resume later.
-            </p>
-        </div>
-    </div>
-
     <!-- ════════════════ Upload PDF Modal ════════════════ -->
     <div id="uploadModal" class="modal-overlay">
         <div class="modal-content glass-panel p-8 rounded-3xl max-w-lg w-full border border-white/15 shadow-2xl mx-4">
             <div class="flex justify-between items-center mb-6">
                 <div>
                     <h2 class="text-2xl font-bold text-white">Upload Audiobook PDF</h2>
-                    <p class="text-xs text-on-surface-variant mt-0.5">Instant AI Chapterization & Cover Extraction</p>
+                    <p class="text-xs text-on-surface-variant mt-0.5">Instant AI Chapterization, Moon Reader & Cover Extraction</p>
                 </div>
                 <button onclick="closeModal('uploadModal')" class="p-2 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition">
                     <span class="material-symbols-outlined text-xl">close</span>
                 </button>
             </div>
-
+            
             <div id="dropZone" class="border-2 border-dashed border-white/20 hover:border-primary-container/60 rounded-2xl p-8 text-center transition-all cursor-pointer bg-surface/40 group" onclick="document.getElementById('fileInput').click()">
                 <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary-container/20 to-secondary/20 border border-white/10 flex items-center justify-center text-primary-fixed mx-auto mb-4 group-hover:scale-110 transition-transform">
                     <span class="material-symbols-outlined text-3xl">cloud_upload</span>
@@ -601,11 +847,11 @@
                     <span class="material-symbols-outlined text-xl">close</span>
                 </button>
             </div>
-
+            
             <div class="space-y-4">
                 <input type="email" id="authEmail" placeholder="name@example.com" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none">
                 <input type="password" id="authPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none">
-
+                
                 <div class="flex gap-2.5 pt-2">
                     <button id="btnAuthSignIn" class="flex-1 py-3 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 transition shadow-lg">Log In</button>
                     <button id="btnAuthRegister" class="flex-1 py-3 bg-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/15 transition border border-white/10">Register</button>
@@ -617,10 +863,13 @@
         </div>
     </div>
 
-    <!-- Mobile Navigation Bar -->
+    <!-- ════════════════ Mobile Navigation Bar ════════════════ -->
     <nav class="md:hidden flex items-center justify-between px-6 py-3 fixed bottom-4 left-1/2 -translate-x-1/2 w-[92%] rounded-2xl z-40 glass-dock shadow-2xl">
         <button onclick="navigate('library')" class="flex flex-col items-center gap-1 text-primary-fixed transition">
             <span class="material-symbols-outlined text-2xl">library_music</span>
+        </button>
+        <button onclick="openCurrentBookInReader()" class="flex flex-col items-center gap-1 text-georgian-gold transition">
+            <span class="material-symbols-outlined text-2xl">menu_book</span>
         </button>
         <button onclick="document.getElementById('btnNavUpload').click()" class="flex flex-col items-center justify-center w-12 h-12 rounded-full bg-primary-container text-on-primary-container shadow-[0_0_20px_rgba(0,240,255,0.5)] -mt-6 hover:scale-105 transition-transform active:scale-95 border-2 border-surface">
             <span class="material-symbols-outlined text-2xl font-bold">add</span>
