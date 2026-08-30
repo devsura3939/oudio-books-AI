@@ -1,4 +1,4 @@
-// AudioRead Studio Pro - Multi-Language (EN/KA), 0.05x Speed Stepper, Player Speed Controls & ZIP Exporter
+// AudioRead Studio Pro - Real-Time Translation, Studio Neural Voices & Mobile Audio Dock
 
 // Language Dictionary (English / Georgian)
 const I18N = {
@@ -10,7 +10,7 @@ const I18N = {
         newBook: "New Book",
         heroBadge: "100% Free AI Audiobook Converter",
         heroTitle: "Convert Any PDF eBook Into An Audiobook",
-        heroSubtitle: "Automatic chapter segmentation, smart header/footer cleaning, natural neural human voice narration, and 1-click audio downloads.",
+        heroSubtitle: "Automatic chapter segmentation, translation, studio voice narration, and 1-click audio downloads.",
         uploadTitle: "Select a PDF file or tap here to browse",
         uploadSubtitle: "Supports novels, textbooks, documents, and multi-chapter eBooks (.pdf)",
         smartDetection: "Chapter Splitting",
@@ -57,7 +57,7 @@ const I18N = {
         newBook: "ახალი",
         heroBadge: "100% უფასო AI აუდიოწიგნის შემქმნელი",
         heroTitle: "გადააქციეთ ნებისმიერი PDF აუდიოწიგნად",
-        heroSubtitle: "თავების ავტომატური ამოცნობა, ტექსტის გასუფთავება, ბუნებრივი გახმოვანება და 1-დაწკაპუნებით ჩამოტვირთვა.",
+        heroSubtitle: "თავების ავტომატური ამოცნობა, ქართულად თარგმნა, ბუნებრივი გახმოვანება და 1-დაწკაპუნებით ჩამოტვირთვა.",
         uploadTitle: "აირჩიეთ PDF ფაილი ან შეეხეთ აქ",
         uploadSubtitle: "მხარდაჭერილია რომანები, სახელმძღვანელოები, სტატიები და მრავალთავიანი წიგნები (.pdf)",
         smartDetection: "თავების დაყოფა",
@@ -103,6 +103,7 @@ let currentBook = null;
 let currentPlayingChapterId = null;
 let currentGlobalSpeed = 1.00;
 let activeModalChapterId = null;
+let isTranslating = false;
 
 // Player State
 let isPlaying = false;
@@ -111,6 +112,7 @@ let sentenceQueue = [];
 let currentSentenceIndex = 0;
 let secondsElapsed = 0;
 let audioTimer = null;
+let utteranceTimeout = null;
 
 // Global Utterance reference to prevent Chromium garbage collection bug
 window._activeUtterance = null;
@@ -123,6 +125,11 @@ const uploadSection = document.getElementById('uploadSection');
 const workspaceSection = document.getElementById('workspaceSection');
 const btnNewBook = document.getElementById('btnNewBook');
 const modeBadge = document.getElementById('modeBadge');
+const translationBanner = document.getElementById('translationBanner');
+const translationBannerText = document.getElementById('translationBannerText');
+const btnTranslateToggle = document.getElementById('btnTranslateToggle');
+const btnTranslateToggleText = document.getElementById('btnTranslateToggleText');
+const activeLangBadge = document.getElementById('activeLangBadge');
 
 // Book Stats Elements
 const bookTitle = document.getElementById('bookTitle');
@@ -203,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Language Switcher Function
-function setLanguage(lang) {
+async function setLanguage(lang) {
     currentLang = lang;
     
     const btnEn = document.getElementById('langBtn-en');
@@ -219,6 +226,18 @@ function setLanguage(lang) {
 
     applyLanguage(lang);
     populateVoiceList();
+
+    if (currentBook) {
+        if (lang === 'ka') {
+            if (!currentBook.is_translated_ka) {
+                await translateWholeBookToGeorgian();
+            } else {
+                switchBookLanguage('ka');
+            }
+        } else {
+            switchBookLanguage('en');
+        }
+    }
 }
 
 function applyLanguage(lang) {
@@ -261,7 +280,132 @@ function applyLanguage(lang) {
     }
 }
 
-// Voice Loading & Explicit English Default
+// ----------------------------------------------------
+// REAL-TIME HIGH ACCURACY TRANSLATION ENGINE
+// ----------------------------------------------------
+
+async function translateTextChunk(text, targetLang = 'ka') {
+    if (!text || !text.trim()) return '';
+    try {
+        const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${targetLang}&q=${encodeURIComponent(text.trim())}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+            return data.join(' ');
+        }
+        return data || text;
+    } catch (e) {
+        console.warn('Translation api fallback:', e);
+        return text;
+    }
+}
+
+async function translateWholeBookToGeorgian() {
+    if (!currentBook || isTranslating) return;
+    isTranslating = true;
+
+    if (translationBanner) translationBanner.classList.remove('hidden');
+    if (btnTranslateToggle) btnTranslateToggle.disabled = true;
+
+    try {
+        // Translate Book Title
+        const translatedTitle = await translateTextChunk(currentBook.title, 'ka');
+        currentBook.title_ka = translatedTitle || currentBook.title;
+
+        // Translate each chapter
+        for (let i = 0; i < currentBook.chapters.length; i++) {
+            const chap = currentBook.chapters[i];
+            if (translationBannerText) {
+                translationBannerText.textContent = `Translating Chapter ${i + 1} of ${currentBook.chapters.length} into fluent Georgian...`;
+            }
+
+            // Save original English text
+            if (!chap.text_en) chap.text_en = chap.text;
+            if (!chap.title_en) chap.title_en = chap.title;
+
+            // Translate title
+            const transTitle = await translateTextChunk(chap.title, 'ka');
+            chap.title_ka = transTitle || `თავი ${chap.id}`;
+
+            // Translate text in paragraphs / sentence chunks
+            const paragraphs = chap.text.split(/\n\s*\n/);
+            const translatedParagraphs = [];
+
+            for (let p of paragraphs) {
+                if (p.length > 500) {
+                    const sentences = p.split(/(?<=[.!?])\s+/);
+                    const transSentences = [];
+                    for (let s of sentences) {
+                        if (s.trim()) {
+                            const res = await translateTextChunk(s, 'ka');
+                            transSentences.push(res);
+                        }
+                    }
+                    translatedParagraphs.push(transSentences.join(' '));
+                } else if (p.trim()) {
+                    const res = await translateTextChunk(p, 'ka');
+                    translatedParagraphs.push(res);
+                }
+            }
+
+            chap.text_ka = translatedParagraphs.join('\n\n');
+        }
+
+        currentBook.is_translated_ka = true;
+        switchBookLanguage('ka');
+    } catch (err) {
+        alert('Translation error: ' + err.message);
+    } finally {
+        isTranslating = false;
+        if (translationBanner) translationBanner.classList.add('hidden');
+        if (btnTranslateToggle) btnTranslateToggle.disabled = false;
+    }
+}
+
+function switchBookLanguage(lang) {
+    if (!currentBook) return;
+    
+    currentBook.activeLang = lang;
+
+    if (lang === 'ka' && currentBook.is_translated_ka) {
+        currentBook.title = currentBook.title_ka || currentBook.title;
+        currentBook.chapters.forEach(c => {
+            c.title = c.title_ka || c.title;
+            c.text = c.text_ka || c.text;
+            c.word_count = c.text.split(/\s+/).filter(Boolean).length;
+            c.estimated_duration_sec = Math.round((c.word_count / 140) * 60);
+        });
+        if (activeLangBadge) activeLangBadge.textContent = '🇬🇪 ქართული';
+        if (btnTranslateToggleText) btnTranslateToggleText.textContent = '🇺🇸 Switch to English (ორიგინალი)';
+    } else {
+        currentBook.title = currentBook.filename.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+        currentBook.chapters.forEach(c => {
+            if (c.title_en) c.title = c.title_en;
+            if (c.text_en) c.text = c.text_en;
+            c.word_count = c.text.split(/\s+/).filter(Boolean).length;
+            c.estimated_duration_sec = Math.round((c.word_count / 150) * 60);
+        });
+        if (activeLangBadge) activeLangBadge.textContent = '🇺🇸 English';
+        if (btnTranslateToggleText) btnTranslateToggleText.textContent = '🇬🇪 Translate to Georgian (ქართულად)';
+    }
+
+    if (isPlaying) {
+        stopSpeech();
+    }
+    renderWorkspace();
+    populateVoiceList();
+}
+
+async function toggleBookTranslation() {
+    if (!currentBook) return;
+    if (currentBook.activeLang === 'ka') {
+        setLanguage('en');
+    } else {
+        setLanguage('ka');
+    }
+}
+
+// Voice Loading & Natural Quality Priority
 function populateVoiceList() {
     if (!('speechSynthesis' in window) || !voiceSelect) return;
 
@@ -287,7 +431,7 @@ function populateVoiceList() {
 
         if (langLower.startsWith('ka') || lower.includes('georgian') || lower.includes('eka') || lower.includes('giorgi')) {
             georgianVoices.push(v);
-        } else if (lower.includes('natural') || lower.includes('online') || lower.includes('google') || lower.includes('neural') || lower.includes('enhanced')) {
+        } else if (lower.includes('natural') || lower.includes('online') || lower.includes('google') || lower.includes('neural') || lower.includes('enhanced') || lower.includes('premium')) {
             if (langLower.startsWith('en')) {
                 englishNaturalVoices.push(v);
             } else {
@@ -302,21 +446,26 @@ function populateVoiceList() {
 
     // 1. Ultra-Natural English Voices (DEFAULT)
     const groupEnNatural = document.createElement('optgroup');
-    groupEnNatural.label = '⭐ Ultra-Natural English Voices (Recommended)';
+    groupEnNatural.label = '⭐ Ultra-Natural English Voices (Studio HD)';
     
     let defaultSelected = false;
 
     if (englishNaturalVoices.length > 0) {
+        // Sort to put Google US English or Microsoft Christopher / Jenny at top
+        englishNaturalVoices.sort((a, b) => {
+            if (a.name.includes('US English')) return -1;
+            if (b.name.includes('US English')) return 1;
+            if (a.name.includes('Christopher') || a.name.includes('Jenny') || a.name.includes('Guy')) return -1;
+            return 0;
+        });
+
         englishNaturalVoices.forEach((v, idx) => {
             const opt = document.createElement('option');
             opt.value = v.name;
             opt.textContent = `🌟 ${v.name} (${v.lang})`;
-            // Select Google US English or first natural English voice by default
             if (currentLang === 'en' && !defaultSelected) {
-                if (v.name.includes('US English') || v.lang === 'en-US' || idx === 0) {
-                    opt.selected = true;
-                    defaultSelected = true;
-                }
+                opt.selected = true;
+                defaultSelected = true;
             }
             groupEnNatural.appendChild(opt);
         });
@@ -325,7 +474,7 @@ function populateVoiceList() {
 
     // 2. Georgian Voices (ქართული ხმები)
     const groupKa = document.createElement('optgroup');
-    groupKa.label = '🇬🇪 ქართული ხმები (Georgian Voices)';
+    groupKa.label = '🇬🇪 ქართული ხმები (Georgian Studio Narrator)';
     
     if (georgianVoices.length > 0) {
         georgianVoices.forEach(v => {
@@ -339,10 +488,9 @@ function populateVoiceList() {
             groupKa.appendChild(opt);
         });
     } else {
-        // Fallback Georgian option that binds to ka-GE
         const opt = document.createElement('option');
         opt.value = 'Georgian-Natural-ka-GE';
-        opt.textContent = '🇬🇪 Georgian Narrator (ქართული - ka-GE)';
+        opt.textContent = '🇬🇪 Georgian Studio Narrator (ქართული ხმა - ka-GE)';
         if (currentLang === 'ka') opt.selected = true;
         groupKa.appendChild(opt);
     }
@@ -372,19 +520,6 @@ function populateVoiceList() {
             groupEn.appendChild(opt);
         });
         voiceSelect.appendChild(groupEn);
-    }
-
-    // 5. Other International Voices
-    if (otherVoices.length > 0) {
-        const groupOther = document.createElement('optgroup');
-        groupOther.label = '🌐 Other Languages';
-        otherVoices.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v.name;
-            opt.textContent = `${v.name} (${v.lang})`;
-            groupOther.appendChild(opt);
-        });
-        voiceSelect.appendChild(groupOther);
     }
 }
 
@@ -490,7 +625,7 @@ function setupEventListeners() {
             
             const sample = isKa 
                 ? "მოგესალმებით AudioRead Studio-ში. ვაქცევთ თქვენს წიგნებს მაღალი ხარისხის აუდიოწიგნებად."
-                : "Welcome to AudioRead Studio. Converting your PDF books into high quality audio.";
+                : "Welcome to AudioRead Studio. Converting your PDF books into high quality human narration.";
             
             window.speechSynthesis.cancel();
             const utter = new SpeechSynthesisUtterance(sample);
@@ -607,7 +742,7 @@ function updateVolumeIcon(vol) {
     if (window.lucide) lucide.createIcons();
 }
 
-// Split text into natural, safe sentences
+// Split text into natural, safe sentences with punctuation preservation
 function splitIntoNaturalSentences(text) {
     if (!text || !text.trim()) return [];
     const rawChunks = text.split(/(?<=[.!?։])\s+|\n+/);
@@ -617,11 +752,11 @@ function splitIntoNaturalSentences(text) {
         const trimmed = chunk.trim();
         if (!trimmed) return;
         
-        if (trimmed.length > 200) {
+        if (trimmed.length > 220) {
             const parts = trimmed.split(/([,;:]\s+)/);
             let buf = '';
             parts.forEach(p => {
-                if ((buf + p).length > 150) {
+                if ((buf + p).length > 160) {
                     if (buf.trim()) result.push(buf.trim());
                     buf = p;
                 } else {
@@ -775,7 +910,9 @@ async function handleFileUpload(file) {
             total_pages: totalPages,
             total_words: totalWords,
             estimated_total_duration_sec: totalDuration,
-            chapters: chapters
+            chapters: chapters,
+            activeLang: 'en',
+            is_translated_ka: false
         };
 
         renderWorkspace();
@@ -920,7 +1057,7 @@ function playChapterAudio(chapId) {
     renderChaptersList();
 }
 
-// Speak the current sentence with bug-free cancellation handling
+// Speak the current sentence with studio cadence and human breathing pauses
 function speakCurrentSentence() {
     if (!('speechSynthesis' in window) || !isPlaying || isPaused) return;
 
@@ -949,7 +1086,7 @@ function speakCurrentSentence() {
     const utter = new SpeechSynthesisUtterance(sentence);
     const selectedVoiceName = voiceSelect.value;
     
-    if (selectedVoiceName === 'Georgian-Natural-ka-GE') {
+    if (selectedVoiceName === 'Georgian-Natural-ka-GE' || currentLang === 'ka') {
         utter.lang = 'ka-GE';
     } else {
         const match = window.speechSynthesis.getVoices().find(v => v.name === selectedVoiceName);
@@ -964,19 +1101,25 @@ function speakCurrentSentence() {
     utter.pitch = 1 + pitchOffset / 50;
     utter.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
 
+    // Human Breath & Pacing Gap (350ms pause between sentences for realistic narration)
     utter.onend = () => {
         currentSentenceIndex++;
-        speakCurrentSentence();
+        if (utteranceTimeout) clearTimeout(utteranceTimeout);
+        utteranceTimeout = setTimeout(() => {
+            if (isPlaying && !isPaused) {
+                speakCurrentSentence();
+            }
+        }, 320);
     };
 
-    // CRITICAL FIX: Ignore deliberate cancellations on speed change or scrubber seek
+    // Ignore deliberate cancellations
     utter.onerror = (e) => {
         if (e.error === 'canceled' || e.error === 'interrupted') {
             return;
         }
         console.warn('Utterance error:', e);
         currentSentenceIndex++;
-        setTimeout(() => speakCurrentSentence(), 100);
+        setTimeout(() => speakCurrentSentence(), 150);
     };
 
     window._activeUtterance = utter; // Prevent GC
@@ -1030,6 +1173,10 @@ function stopSpeech() {
     isPaused = false;
     sentenceQueue = [];
     currentSentenceIndex = 0;
+    if (utteranceTimeout) {
+        clearTimeout(utteranceTimeout);
+        utteranceTimeout = null;
+    }
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
     }

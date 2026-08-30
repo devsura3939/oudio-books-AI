@@ -53,7 +53,7 @@
                 <div>
                     <h1 class="text-sm sm:text-lg font-extrabold tracking-tight flex items-center gap-1.5 sm:gap-2">
                         <span id="ui-appTitle" class="bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent">AudioRead</span>
-                        <span id="ui-studioPro" class="text-[9px] sm:text-[10px] uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">Studio</span>
+                        <span id="ui-studioPro" class="text-[9px] sm:text-[10px] uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">Studio Pro</span>
                     </h1>
                     <p id="ui-appSubtitle" class="hidden sm:block text-[11px] text-slate-400">PDF eBook to Studio Audiobook</p>
                 </div>
@@ -64,10 +64,10 @@
                 <!-- Language Toggle Pill -->
                 <div class="flex items-center bg-slate-900/90 border border-white/10 rounded-2xl p-0.5 sm:p-1 shadow-inner text-xs font-semibold">
                     <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 sm:px-2.5 py-1 rounded-xl bg-indigo-600 text-white shadow transition flex items-center gap-1">
-                        <span>🇺🇸</span> <span class="hidden xs:inline">EN</span>
+                        <span>🇺🇸</span> <span class="hidden xs:inline font-bold">EN</span>
                     </button>
                     <button onclick="setLanguage('ka')" id="langBtn-ka" class="px-2 sm:px-2.5 py-1 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-1">
-                        <span>🇬🇪</span> <span class="hidden xs:inline">ქარ</span>
+                        <span>🇬🇪</span> <span class="hidden xs:inline font-bold">ქარ</span>
                     </button>
                 </div>
 
@@ -93,7 +93,7 @@
                     Convert Any PDF eBook Into An Audiobook
                 </h2>
                 <p id="ui-heroSubtitle" class="text-slate-400 text-xs sm:text-base leading-relaxed">
-                    Automatic chapter segmentation, smart header/footer cleaning, natural neural human voice narration, and 1-click audio downloads.
+                    Automatic chapter segmentation, translation, studio voice narration, and 1-click audio downloads.
                 </p>
             </div>
 
@@ -130,6 +130,20 @@
         <!-- Studio Workspace (Loaded state) -->
         <section id="workspaceSection" class="hidden space-y-5 sm:space-y-6">
             
+            <!-- Translation Progress Banner (Active when translating) -->
+            <div id="translationBanner" class="hidden bento-card rounded-2xl p-4 bg-indigo-950/70 border border-indigo-500/40 flex items-center justify-between gap-3 animate-pulse">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
+                        <i data-lucide="languages" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h4 id="translationBannerText" class="text-xs sm:text-sm font-bold text-white">Translating chapters into Georgian...</h4>
+                        <p class="text-[11px] text-indigo-300">High accuracy translation engine</p>
+                    </div>
+                </div>
+                <div class="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+
             <!-- Bento Grid Row 1: Book Showcase & Metrics Matrix -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 
@@ -143,20 +157,31 @@
                             <span class="text-[8px] sm:text-[9px] uppercase tracking-wider font-mono font-bold">STUDIO</span>
                         </div>
                         <div class="space-y-1 min-w-0">
-                            <span id="ui-activeDoc" class="px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] uppercase font-bold tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Active Document</span>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span id="ui-activeDoc" class="px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] uppercase font-bold tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Active Document</span>
+                                <span id="activeLangBadge" class="px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider bg-slate-800 text-slate-300 border border-white/10">🇺🇸 EN</span>
+                            </div>
                             <h2 id="bookTitle" class="text-base sm:text-xl font-extrabold text-white tracking-tight leading-snug truncate">Book Title</h2>
                             <p class="text-xs text-slate-400 truncate font-mono" id="bookFilename">book.pdf</p>
                         </div>
                     </div>
 
-                    <div class="pt-4 sm:pt-6 flex flex-col sm:flex-row items-center gap-2.5 z-10">
-                        <button id="btnPlayAllFromStart" class="w-full sm:flex-1 py-3 px-4 rounded-2xl btn-stitch-primary text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xl active:scale-95">
-                            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-                            <span id="ui-listenStart">Listen from Beginning</span>
-                        </button>
-                        <button id="btnDownloadAllZip" class="w-full sm:w-auto py-3 px-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-semibold text-xs border border-white/10 flex items-center justify-center gap-2 transition active:scale-95 shadow-md">
-                            <i data-lucide="archive" class="w-4 h-4 text-indigo-400"></i>
-                            <span id="btnDownloadAllZipText">Download ZIP</span>
+                    <div class="pt-4 sm:pt-6 flex flex-col gap-2.5 z-10">
+                        <div class="flex flex-col sm:flex-row items-center gap-2">
+                            <button id="btnPlayAllFromStart" class="w-full sm:flex-1 py-3 px-4 rounded-2xl btn-stitch-primary text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xl active:scale-95">
+                                <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                                <span id="ui-listenStart">Listen from Beginning</span>
+                            </button>
+                            <button id="btnDownloadAllZip" class="w-full sm:w-auto py-3 px-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-semibold text-xs border border-white/10 flex items-center justify-center gap-2 transition active:scale-95 shadow-md">
+                                <i data-lucide="archive" class="w-4 h-4 text-indigo-400"></i>
+                                <span id="btnDownloadAllZipText">Download ZIP</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Translate to Georgian / Toggle Language CTA -->
+                        <button id="btnTranslateToggle" onclick="toggleBookTranslation()" class="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 hover:border-indigo-400 text-indigo-300 border border-indigo-500/30 text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-inner">
+                            <i data-lucide="languages" class="w-4 h-4 text-indigo-400"></i>
+                            <span id="btnTranslateToggleText">🇬🇪 Translate to Georgian (ქართულად)</span>
                         </button>
                     </div>
                 </div>
