@@ -1320,7 +1320,8 @@ async function startWholeBookTranslation() {
             let currentChunkSCount = 0;
             
             for (let i = 0; i < sentences.length; i++) {
-                if (currentChunk.length + sentences[i].length > 1000 && currentChunk.trim().length > 0) {
+                // MASSIVE Context Window (3000 chars) to force NMT into semantic translation mode
+                if (currentChunk.length + sentences[i].length > 3000 && currentChunk.trim().length > 0) {
                     chunks.push(currentChunk);
                     chunkSentenceCounts.push(currentChunkSCount);
                     currentChunk = sentences[i] + ' ';
@@ -1465,8 +1466,17 @@ async function speakCurrentSentence() {
     if (elevenLabsEnabled && elevenLabsApiKey) {
         speakElevenLabsSentence(cleanSentence);
     } else if (currentLang === 'ka' && (!hasNativeKaVoice || isCloudKaVoice)) {
+        // Advanced NLP pass to make Georgian TTS sound native and natural
+        let optimizedSentence = cleanSentence
+            .replace(/[""]/g, '') // Remove English quotes that confuse Georgian prosody
+            .replace(/[„“]/g, '') // Remove Georgian quotes
+            .replace(/ - /g, ', ') // Convert hyphens to commas for natural breathing pauses
+            .replace(/;/g, '.') // Treat semicolons as full stops
+            .replace(/\s+/g, ' ')
+            .trim();
+
         const voiceId = isCloudKaVoice ? selectedVoiceURI : 'ka-GE-GiorgiNeural - ka-GE (Male)';
-        speakFreeGeorgianNeural(cleanSentence, voiceId);
+        speakFreeGeorgianNeural(optimizedSentence, voiceId);
     } else {
         speakStandardSentence(cleanSentence, currentLang);
     }
