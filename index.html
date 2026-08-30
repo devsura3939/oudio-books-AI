@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lumina Audio - Premium AI Listening Studio</title>
+    <title>Lumina Audio - AI Audiobook Studio</title>
     
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -26,28 +26,24 @@
         theme: {
           extend: {
             colors: {
-                "surface": "#0b0e14",
-                "surface-container-lowest": "#06080c",
-                "surface-container-low": "#10141d",
-                "surface-container": "#161b26",
-                "surface-container-high": "#1e2433",
-                "surface-container-highest": "#283042",
+                "surface": "#080b11",
+                "surface-container": "#111622",
+                "surface-container-high": "#192030",
                 "primary-container": "#00f0ff",
                 "primary-fixed": "#7df4ff",
-                "primary-fixed-dim": "#00dbe9",
                 "primary": "#dbfcff",
                 "secondary-container": "#7701d0",
                 "secondary": "#dcb8ff",
-                "background": "#0b0e14",
+                "background": "#080b11",
                 "on-surface": "#f0f2f8",
                 "on-surface-variant": "#9aa4b8",
                 "on-primary-container": "#00363a",
-                "error": "#ff6b6b"
+                "error": "#ff6b6b",
+                "georgian-gold": "#ffd166"
             },
             fontFamily: {
                 "label-caps": ["Space Grotesk", "sans-serif"],
                 "headline-md": ["Inter", "sans-serif"],
-                "display-lg": ["Inter", "sans-serif"],
                 "body-md": ["Inter", "sans-serif"]
             }
           },
@@ -56,13 +52,13 @@
     </script>
     <style>
         :root {
-            --mesh-cyan: rgba(0, 240, 255, 0.12);
-            --mesh-purple: rgba(220, 184, 255, 0.12);
-            --mesh-violet: rgba(119, 1, 208, 0.14);
+            --mesh-cyan: rgba(0, 240, 255, 0.15);
+            --mesh-purple: rgba(220, 184, 255, 0.14);
+            --mesh-violet: rgba(119, 1, 208, 0.16);
         }
 
         body {
-            background-color: #0b0e14;
+            background-color: #080b11;
             color: #f0f2f8;
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
@@ -75,84 +71,77 @@
             top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: -1;
             background: 
-                radial-gradient(circle at 10% 20%, var(--mesh-cyan) 0%, transparent 45%),
-                radial-gradient(circle at 90% 25%, var(--mesh-purple) 0%, transparent 45%),
-                radial-gradient(circle at 50% 85%, var(--mesh-violet) 0%, transparent 55%);
+                radial-gradient(circle at 12% 18%, var(--mesh-cyan) 0%, transparent 45%),
+                radial-gradient(circle at 88% 22%, var(--mesh-purple) 0%, transparent 45%),
+                radial-gradient(circle at 50% 80%, var(--mesh-violet) 0%, transparent 55%);
             filter: blur(40px);
-            animation: mesh-float 18s ease-in-out infinite alternate;
+            animation: mesh-float 16s ease-in-out infinite alternate;
         }
 
         @keyframes mesh-float {
-            0% { transform: scale(1) translate(0, 0); opacity: 0.85; }
-            50% { transform: scale(1.08) translate(-15px, 20px); opacity: 1; }
-            100% { transform: scale(1) translate(15px, -15px); opacity: 0.85; }
+            0% { transform: scale(1) translate(0, 0); }
+            50% { transform: scale(1.06) translate(-10px, 15px); }
+            100% { transform: scale(1) translate(10px, -10px); }
         }
 
-        /* Glassmorphism Classes */
+        /* Glassmorphism Styles */
         .glass-nav {
-            background: rgba(16, 20, 29, 0.65);
-            backdrop-filter: blur(28px);
-            -webkit-backdrop-filter: blur(28px);
+            background: rgba(13, 17, 26, 0.72);
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
             border-right: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .glass-header {
-            background: rgba(11, 14, 20, 0.55);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            background: rgba(8, 11, 17, 0.65);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .glass-panel {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.015) 100%);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.09);
-        }
-
-        .glass-card {
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         
         .glass-card:hover {
-            border-color: rgba(0, 240, 255, 0.45);
-            box-shadow: 0 12px 35px rgba(0, 240, 255, 0.15), 0 0 0 1px rgba(0, 240, 255, 0.25);
-            transform: translateY(-5px);
+            border-color: rgba(0, 240, 255, 0.5);
+            box-shadow: 0 14px 40px rgba(0, 240, 255, 0.18);
+            transform: translateY(-4px);
         }
 
         .glass-dock {
-            background: rgba(22, 27, 38, 0.78);
-            backdrop-filter: blur(36px);
-            -webkit-backdrop-filter: blur(36px);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 240, 255, 0.12);
+            background: rgba(17, 22, 34, 0.82);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(0, 240, 255, 0.15);
         }
 
-        /* Glass Input */
         .glass-input {
-            background: rgba(255, 255, 255, 0.04) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
             color: #f0f2f8 !important;
             backdrop-filter: blur(12px);
         }
         .glass-input:focus {
-            border-color: rgba(0, 240, 255, 0.6) !important;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2) !important;
+            border-color: rgba(0, 240, 255, 0.7) !important;
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.25) !important;
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 9999px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.35); }
-        
         /* Modals */
         .modal-overlay {
-            position: fixed; inset: 0; background: rgba(4, 6, 10, 0.75); backdrop-filter: blur(16px);
+            position: fixed; inset: 0; background: rgba(4, 6, 10, 0.8); backdrop-filter: blur(16px);
             display: flex; justify-content: center; align-items: center; z-index: 100;
             opacity: 0; pointer-events: none; transition: all 0.3s ease;
         }
@@ -162,36 +151,21 @@
         }
         .modal-overlay.active .modal-content { transform: scale(1); }
 
-        /* Custom Range Slider */
-        input[type="range"] {
-            -webkit-appearance: none;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 9999px;
-            height: 6px;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #00f0ff;
-            box-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
-            cursor: pointer;
-            transition: transform 0.15s;
-        }
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.25);
-        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.4); }
     </style>
 </head>
-<body class="min-h-screen flex flex-col md:flex-row antialiased selection:bg-primary-container selection:text-on-primary-container">
+<body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
 
     <!-- SideNavBar (Desktop) -->
     <nav class="hidden md:flex flex-col h-full py-8 px-4 glass-nav w-64 fixed left-0 top-0 z-40">
-        <!-- Logo & Branding -->
+        <!-- Logo -->
         <div class="mb-8 px-3 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-secondary-container to-primary-container p-0.5 shadow-[0_0_20px_rgba(0,240,255,0.35)]">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-secondary-container to-primary-container p-0.5 shadow-[0_0_20px_rgba(0,240,255,0.4)]">
                 <div class="w-full h-full bg-surface rounded-[10px] flex items-center justify-center">
                     <span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
                 </div>
@@ -225,9 +199,9 @@
                 </button>
             </li>
             <li>
-                <button onclick="navigate('settings')" id="nav-settings" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all font-medium text-sm">
-                    <span class="material-symbols-outlined text-[20px]">tune</span>
-                    <span>Studio Voices</span>
+                <button onclick="openModal('voiceModal')" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all font-medium text-sm">
+                    <span class="material-symbols-outlined text-[20px]">record_voice_over</span>
+                    <span>Choose Narrator Voice</span>
                 </button>
             </li>
         </ul>
@@ -240,35 +214,37 @@
                 </div>
                 <div class="text-left overflow-hidden">
                     <p class="text-sm font-medium text-white truncate" id="sideNavUserName">Sign In</p>
-                    <p class="text-xs text-on-surface-variant">Cloud Sync Active</p>
+                    <p class="text-xs text-on-surface-variant">Sync your books</p>
                 </div>
             </button>
         </div>
     </nav>
 
-    <!-- TopNavBar -->
+    <!-- TopNavBar with Direct Voice & Translation Controls -->
     <header class="hidden md:flex justify-between items-center px-8 py-3.5 glass-header fixed top-0 right-0 w-[calc(100%-16rem)] z-30">
         <!-- Live Library Search -->
-        <div class="flex-grow max-w-lg">
+        <div class="flex-grow max-w-md">
             <div class="relative">
                 <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
-                <input id="searchInput" class="w-full glass-input rounded-full py-2 pl-10 pr-4 text-sm placeholder:text-on-surface-variant focus:outline-none" placeholder="Search your audiobooks or chapters..." type="text">
+                <input id="searchInput" class="w-full glass-input rounded-full py-2 pl-10 pr-4 text-sm placeholder:text-on-surface-variant focus:outline-none" placeholder="Search audiobooks..." type="text">
             </div>
         </div>
 
-        <!-- Quick Controls -->
-        <div class="flex items-center gap-4">
-            <!-- Language Quick Switcher -->
-            <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-                <span class="material-symbols-outlined text-sm text-primary-fixed">translate</span>
-                <select id="topLangSelect" class="bg-transparent text-xs text-white outline-none cursor-pointer">
-                    <option value="en" class="bg-surface text-white">English (Studio)</option>
-                    <option value="ka" class="bg-surface text-white">Georgian (ქართული)</option>
-                    <option value="es" class="bg-surface text-white">Spanish</option>
-                    <option value="fr" class="bg-surface text-white">French</option>
-                    <option value="de" class="bg-surface text-white">German</option>
-                </select>
-            </div>
+        <!-- Direct Voice & Translation Action Bar -->
+        <div class="flex items-center gap-3">
+            
+            <!-- Direct Voice Selector Button -->
+            <button onclick="openModal('voiceModal')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/12 text-xs font-semibold text-white transition shadow-sm">
+                <span class="material-symbols-outlined text-primary-fixed text-base">record_voice_over</span>
+                <span id="topVoiceBadge">Narrator: Male English</span>
+                <span class="material-symbols-outlined text-sm text-on-surface-variant">expand_more</span>
+            </button>
+
+            <!-- Direct One-Click Georgian Translate Toggle -->
+            <button onclick="toggleGeorgianMode()" id="btnTopGeorgianToggle" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/12 text-xs font-semibold text-white transition shadow-sm">
+                <span class="text-sm">🇬🇪</span>
+                <span id="topGeorgianBadge">Translate: OFF</span>
+            </button>
 
             <!-- Profile Button -->
             <button id="topProfileBtn" onclick="openModal('authModal')" class="p-1 rounded-full text-on-surface-variant hover:text-white transition flex items-center gap-2">
@@ -279,7 +255,7 @@
         </div>
     </header>
 
-    <!-- Main Content Area -->
+    <!-- Main Content Canvas -->
     <main class="flex-grow md:ml-64 relative min-h-screen pb-36 pt-6 md:pt-24 px-4 md:px-8 max-w-7xl mx-auto w-full">
         
         <!-- View: Library (Home) -->
@@ -303,14 +279,19 @@
                     </div>
                 </div>
 
-                <!-- Hero Meta -->
+                <!-- Hero Meta & Live Subtitle Display -->
                 <div class="flex-grow text-center md:text-left z-10 overflow-hidden w-full">
                     <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-container/10 border border-primary-container/25 text-primary-fixed font-label-caps text-[11px] font-semibold tracking-wider mb-2.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
                         CONTINUE LISTENING
                     </div>
                     <h2 id="heroTitle" class="text-2xl md:text-4xl font-extrabold text-white mb-2 truncate">Select an Audiobook</h2>
-                    <p id="heroSubtitle" class="text-on-surface-variant text-sm md:text-base mb-6 line-clamp-2 max-w-2xl">Upload a PDF or select from your shelf to start listening with studio AI voices.</p>
+                    
+                    <!-- Live Spoken Subtitle Box -->
+                    <div class="p-3 rounded-xl bg-white/5 border border-white/10 mb-4 max-w-2xl text-left">
+                        <p class="text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-1" id="heroSubtitleHeader">Current Sentence</p>
+                        <p id="heroLiveSubtitle" class="text-on-surface text-sm md:text-base font-medium line-clamp-3 leading-relaxed">Ready to play...</p>
+                    </div>
                     
                     <div class="flex items-center gap-4 justify-center md:justify-start">
                         <span id="heroProgressText" class="text-xs font-semibold text-primary-fixed">0% Completed</span>
@@ -328,21 +309,24 @@
                         <h3 class="text-xl md:text-2xl font-bold text-white tracking-tight">Your Digital Shelf</h3>
                         <p class="text-xs text-on-surface-variant mt-0.5">Click any book to browse chapters and listen</p>
                     </div>
-                    <div class="flex gap-1.5 p-1 rounded-xl bg-surface-container-high/60 border border-white/10">
-                        <button class="px-3.5 py-1.5 rounded-lg bg-white/10 text-primary-fixed font-medium text-xs shadow-sm">All Books</button>
+                    <div class="flex gap-2">
+                        <button onclick="openModal('voiceModal')" class="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 flex items-center gap-1.5 transition">
+                            <span class="material-symbols-outlined text-sm text-primary-fixed">record_voice_over</span>
+                            Change Voice
+                        </button>
                     </div>
                 </div>
 
                 <div id="booksGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
-                    <!-- Loaded dynamically by JS -->
+                    <!-- Injected dynamically -->
                 </div>
             </div>
 
-            <!-- Chapters Drawer (Shows below when a book is active) -->
+            <!-- Chapters Drawer -->
             <div id="chaptersContainer" class="hidden glass-panel rounded-2xl p-6 md:p-8 space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-4">
                     <div>
-                        <span class="text-xs font-label-caps text-primary-fixed tracking-wider font-semibold">BOOK CONTENTS</span>
+                        <span class="text-xs font-label-caps text-primary-fixed tracking-wider font-semibold">AUDIOBOOK CHAPTERS</span>
                         <h3 class="text-2xl font-bold text-white" id="activeBookTitle">Chapters</h3>
                     </div>
                     <div class="flex items-center gap-3">
@@ -367,77 +351,6 @@
             </div>
             <div id="discoverGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
                 <!-- Injected by JS -->
-            </div>
-        </div>
-
-        <!-- View: Settings (Voices & Translation) -->
-        <div id="view-settings" class="hidden max-w-3xl mx-auto space-y-8">
-            <div>
-                <h2 class="text-2xl md:text-3xl font-extrabold text-white">Studio Narration Settings</h2>
-                <p class="text-sm text-on-surface-variant mt-1">Fine-tune your AI voices, accents, translation, and pacing.</p>
-            </div>
-
-            <div class="glass-panel p-6 md:p-8 rounded-2xl space-y-6">
-                <!-- Translation Language -->
-                <div>
-                    <label class="block text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary-fixed text-lg">translate</span>
-                        Target Translation Language
-                    </label>
-                    <select id="langSelect" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
-                        <option value="en" class="bg-surface text-white">English (Original Source)</option>
-                        <option value="ka" class="bg-surface text-white">Georgian (ქართული - AI Translated)</option>
-                        <option value="es" class="bg-surface text-white">Spanish (Español)</option>
-                        <option value="fr" class="bg-surface text-white">French (Français)</option>
-                        <option value="de" class="bg-surface text-white">German (Deutsch)</option>
-                    </select>
-                    <p class="text-xs text-on-surface-variant mt-2">When set to Georgian or another language, every sentence is translated on-the-fly and spoken in native studio voice.</p>
-                </div>
-
-                <!-- Voice Selection -->
-                <div>
-                    <label class="block text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary-fixed text-lg">record_voice_over</span>
-                        Neural Studio Narrator
-                    </label>
-                    <select id="voiceSelect" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
-                        <option value="en-US-ChristopherNeural" class="bg-surface text-white">English (US) - Christopher (Deep Male Studio)</option>
-                        <option value="en-US-JennyNeural" class="bg-surface text-white">English (US) - Jenny (Natural Female Studio)</option>
-                        <option value="en-GB-RyanNeural" class="bg-surface text-white">English (UK) - Ryan (British Male Narrator)</option>
-                        <option value="en-GB-SoniaNeural" class="bg-surface text-white">English (UK) - Sonia (British Female Narrator)</option>
-                        <option value="Georgian-Natural-ka-GE" class="bg-surface text-white">Georgian (ქართული) - Natural Studio Google Voice</option>
-                        <option value="de-DE-KillianNeural" class="bg-surface text-white">German - Killian (Deutsch)</option>
-                        <option value="es-ES-AlvaroNeural" class="bg-surface text-white">Spanish - Alvaro (Castilian)</option>
-                        <option value="fr-FR-HenriNeural" class="bg-surface text-white">French - Henri (Français)</option>
-                    </select>
-                </div>
-
-                <!-- Playback Speed -->
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-sm font-semibold text-white flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary-fixed text-lg">speed</span>
-                            Narration Speed
-                        </label>
-                        <span id="speedVal" class="text-primary-fixed text-sm font-bold bg-primary-container/10 px-2.5 py-0.5 rounded-full border border-primary-container/30">1.00x</span>
-                    </div>
-                    <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.05" value="1.0" class="w-full">
-                    <div class="flex justify-between text-[11px] text-on-surface-variant mt-1.5">
-                        <span>0.5x</span><span>1.0x (Normal)</span><span>1.5x</span><span>2.0x</span>
-                    </div>
-                </div>
-
-                <!-- Voice Pitch -->
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-sm font-semibold text-white flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary-fixed text-lg">graphic_eq</span>
-                            Vocal Pitch
-                        </label>
-                        <span id="pitchVal" class="text-primary-fixed text-sm font-bold bg-primary-container/10 px-2.5 py-0.5 rounded-full border border-primary-container/30">0</span>
-                    </div>
-                    <input type="range" id="pitchSlider" min="-20" max="20" step="1" value="0" class="w-full">
-                </div>
             </div>
         </div>
 
@@ -486,13 +399,99 @@
             </div>
         </div>
 
-        <!-- Right: Speed & Settings -->
+        <!-- Right: Voice & Speed -->
         <div class="flex items-center justify-end gap-2.5 w-1/3">
+            <button onclick="openModal('voiceModal')" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-primary-fixed text-xs font-semibold flex items-center gap-1.5 border border-white/10 transition">
+                <span class="material-symbols-outlined text-base">tune</span>
+                <span class="hidden sm:inline">Voice</span>
+            </button>
             <button onclick="cycleSpeed()" id="btnDockSpeed" class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-primary-fixed text-xs font-bold font-mono border border-white/10 transition">
                 1.0x
             </button>
-            <button onclick="navigate('settings')" class="p-2 rounded-lg text-on-surface-variant hover:text-white hover:bg-white/5 transition hidden sm:block">
-                <span class="material-symbols-outlined text-xl">tune</span>
+        </div>
+    </div>
+
+    <!-- Voice & Translation Modal (Prominent & Dedicated) -->
+    <div id="voiceModal" class="modal-overlay">
+        <div class="modal-content glass-panel p-6 md:p-8 rounded-3xl max-w-md w-full border border-white/15 shadow-2xl mx-4 space-y-6">
+            <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary-fixed">tune</span>
+                        Voice & Translation Studio
+                    </h2>
+                    <p class="text-xs text-on-surface-variant mt-0.5">Select narrator gender, language, and speed</p>
+                </div>
+                <button onclick="closeModal('voiceModal')" class="p-1.5 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition">
+                    <span class="material-symbols-outlined text-xl">close</span>
+                </button>
+            </div>
+
+            <!-- Translation Language Picker -->
+            <div>
+                <label class="block text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-2">
+                    🌍 Target Translation Language
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="setLanguage('en')" id="langBtn_en" class="p-2.5 rounded-xl border border-primary-container bg-primary-container/15 text-white text-xs font-semibold flex items-center gap-2 transition">
+                        <span>🇺🇸</span> English (Original)
+                    </button>
+                    <button onclick="setLanguage('ka')" id="langBtn_ka" class="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-2 transition">
+                        <span>🇬🇪</span> Georgian (ქართული)
+                    </button>
+                    <button onclick="setLanguage('es')" id="langBtn_es" class="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-2 transition">
+                        <span>🇪🇸</span> Spanish (Español)
+                    </button>
+                    <button onclick="setLanguage('de')" id="langBtn_de" class="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-2 transition">
+                        <span>🇩🇪</span> German (Deutsch)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Voice Selection Dropdown -->
+            <div>
+                <label class="block text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-2">
+                    🎙️ Narrator Voice (Gender & Accent)
+                </label>
+                <select id="voiceModalSelect" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
+                    <optgroup label="👨 Male Narrators" id="optgroupMale">
+                        <!-- Populated by JS -->
+                    </optgroup>
+                    <optgroup label="👩 Female Narrators" id="optgroupFemale">
+                        <!-- Populated by JS -->
+                    </optgroup>
+                    <optgroup label="🌍 International & Georgian" id="optgroupOther">
+                        <!-- Populated by JS -->
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Test Voice Button -->
+            <button onclick="testVoicePreview()" class="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs font-semibold text-primary-fixed flex items-center justify-center gap-2 transition">
+                <span class="material-symbols-outlined text-base">volume_up</span>
+                <span>Play Voice Sample</span>
+            </button>
+
+            <!-- Speed & Pitch Sliders -->
+            <div class="space-y-4 pt-2 border-t border-white/10">
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-xs font-semibold text-white">Speed</span>
+                        <span id="modalSpeedVal" class="text-xs font-mono text-primary-fixed font-bold">1.00x</span>
+                    </div>
+                    <input type="range" id="modalSpeedSlider" min="0.5" max="2.0" step="0.05" value="1.0" class="w-full">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-xs font-semibold text-white">Pitch Offset</span>
+                        <span id="modalPitchVal" class="text-xs font-mono text-primary-fixed font-bold">0</span>
+                    </div>
+                    <input type="range" id="modalPitchSlider" min="-10" max="10" step="1" value="0" class="w-full">
+                </div>
+            </div>
+
+            <button onclick="closeModal('voiceModal')" class="w-full py-3 rounded-xl bg-primary-container text-on-primary-container font-bold text-sm shadow-lg hover:brightness-110 transition">
+                Save & Apply Settings
             </button>
         </div>
     </div>
@@ -567,11 +566,8 @@
         <button onclick="document.getElementById('btnNavUpload').click()" class="flex flex-col items-center justify-center w-12 h-12 rounded-full bg-primary-container text-on-primary-container shadow-[0_0_20px_rgba(0,240,255,0.5)] -mt-6 hover:scale-105 transition-transform active:scale-95 border-2 border-surface">
             <span class="material-symbols-outlined text-2xl font-bold">add</span>
         </button>
-        <button onclick="navigate('discover')" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-white transition">
-            <span class="material-symbols-outlined text-2xl">explore</span>
-        </button>
-        <button onclick="navigate('settings')" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-white transition">
-            <span class="material-symbols-outlined text-2xl">settings</span>
+        <button onclick="openModal('voiceModal')" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-white transition">
+            <span class="material-symbols-outlined text-2xl">tune</span>
         </button>
     </nav>
 
