@@ -802,6 +802,16 @@
                     <span id="readerLangLabel" class="hidden sm:inline">ქართული</span>
                 </button>
 
+                <button onclick="startWholeBookTranslation()" class="reader-btn px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition" title="Batch Translate Whole Book">
+                    <span class="material-symbols-outlined text-base">g_translate</span>
+                    <span class="hidden md:inline">Translate</span>
+                </button>
+
+                <button onclick="openModal('voiceModal')" class="reader-btn px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition text-primary-fixed border border-primary-fixed/20" title="TTS & Audio Settings">
+                    <span class="material-symbols-outlined text-base">record_voice_over</span>
+                    <span class="hidden md:inline">Voice Settings</span>
+                </button>
+
                 <button onclick="openToCDrawer()" class="reader-btn px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition" title="Table of Contents">
                     <span class="material-symbols-outlined text-base">format_list_bulleted</span>
                     <span class="hidden md:inline">Chapters</span>
