@@ -2741,16 +2741,35 @@ function splitIntoNaturalSentences(text) {
     const regex = /[^.!?…\n]+(?:[.!?…]+["„”'»)]*(?=\s+|$)|[\n]{2,}|$)/g;
     const matches = clean.match(regex);
 
-    if (!matches) return [text.trim()];
+    if (!matches) return chunkByWords(text.trim(), 40);
 
     const sentences = [];
     for (let i = 0; i < matches.length; i++) {
         const s = matches[i].replace(/__DOT__/g, '.').trim();
         if (s.length > 0) {
-            sentences.push(s);
+            if (s.split(/\s+/).length > 60) {
+                sentences.push(...chunkByWords(s, 50));
+            } else {
+                sentences.push(s);
+            }
         }
     }
-    return sentences.length > 0 ? sentences : [text.trim()];
+    return sentences.length > 0 ? sentences : chunkByWords(text.trim(), 40);
+}
+
+function chunkByWords(text, limit) {
+    const words = text.split(/\s+/);
+    const chunks = [];
+    let current = [];
+    for (let w of words) {
+        current.push(w);
+        if (current.length >= limit) {
+            chunks.push(current.join(' '));
+            current = [];
+        }
+    }
+    if (current.length > 0) chunks.push(current.join(' '));
+    return chunks;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
