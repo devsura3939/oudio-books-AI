@@ -13,6 +13,7 @@ let currentBook = null;
 let currentPlayingChapterId = null;
 let isPlaying = false;
 let isPaused = false;
+let isUserManuallyNavigating = false;
 let currentGlobalSpeed = 1.0;
 let currentPitch = 1.0;
 let currentLang = 'en'; // 'en' or 'ka'
@@ -1018,6 +1019,7 @@ function closeReader() {
 
 function onReaderChapterChange(targetChapId) {
     if (!readerBook) return;
+    isUserManuallyNavigating = true;
     const matched = readerBook.chapters.find(c => String(c.id) === String(targetChapId));
     if (!matched) return;
 
@@ -1294,6 +1296,7 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
 // ── Page Steppers ──────────────────────────────────────────────────────────
 function readerNextPage() {
     if (!readerBook) return;
+    isUserManuallyNavigating = true;
     const totalPages = readerPages.length;
 
     if (readerMode === 'scroll') {
@@ -1336,6 +1339,7 @@ function readerNextPage() {
 
 function readerPrevPage() {
     if (!readerBook) return;
+    isUserManuallyNavigating = true;
 
     if (readerMode === 'scroll') {
         if (DOM.readerScrollContainer) {
@@ -1400,6 +1404,7 @@ function showReaderToast(msg) {
 }
 
 function readerPrevChapter() {
+    isUserManuallyNavigating = true;
     if (!readerBook) {
         if (currentBook) readerBook = currentBook;
         else return;
@@ -1427,6 +1432,7 @@ function readerPrevChapter() {
 }
 
 function readerNextChapter() {
+    isUserManuallyNavigating = true;
     if (!readerBook) {
         if (currentBook) readerBook = currentBook;
         else return;
@@ -1449,6 +1455,7 @@ function readerNextChapter() {
 
 function onReaderSentenceClick(sentenceIdx) {
     if (!readerBook) return;
+    isUserManuallyNavigating = false;
     if (String(currentBook?.id) !== String(readerBook.id) || String(currentPlayingChapterId) !== String(readerChapterId)) {
         selectBook(readerBook.id, false);
         playChapterAudio(readerChapterId, sentenceIdx);
@@ -1458,8 +1465,12 @@ function onReaderSentenceClick(sentenceIdx) {
     speakCurrentSentence();
 }
 
-function highlightReaderSentence(sentenceIdx) {
-    if (readerActive && readerMode !== 'scroll' && readerSentenceToPageMap[sentenceIdx] !== undefined) {
+function highlightReaderSentence(sentenceIdx, forceSync = false) {
+    if (forceSync) {
+        isUserManuallyNavigating = false;
+    }
+
+    if (!isUserManuallyNavigating && readerActive && readerMode !== 'scroll' && readerSentenceToPageMap[sentenceIdx] !== undefined) {
         const targetPage = readerSentenceToPageMap[sentenceIdx] + 1;
         const isDual = readerMode === 'dual' && window.innerWidth >= 900;
 
@@ -1635,18 +1646,19 @@ async function translateWithGeminiAI(text, targetLang) {
     if (!geminiApiKey) return null;
     try {
         const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
-        const prompt = `You are a world-class literary translator and expert Audio Narration Director. 
-Your task is to translate the following text from English to ${langName}. 
+        const prompt = `You are an elite, world-class literary translator and expert Audio Narration Director. 
+Your ultimate goal is to translate the following text from English to ${langName} so perfectly that a native speaker would believe it was originally written in ${langName}.
 
-You MUST follow this precise Multi-Agent AI Checking process internally before responding:
-1. **Context & Tone Analysis (AI Pass 1):** Analyze the tone (is it a narrator, a character dialogue, an interrogation, a gentle thought?) and the pacing.
-2. **Literal Translation (AI Pass 2):** Perform a high-accuracy direct translation.
-3. **Idiom & Natural Phrasing Fix (AI Pass 3):** Edit your translation. If there are English idioms, DO NOT translate them literally. Find the exact equivalent native ${langName} literary idiom that captures the emotion perfectly.
-4. **Narration & TTS Optimization (AI Pass 4):** Adjust the grammar and punctuation to ensure a Text-To-Speech (TTS) engine reads it with perfect human prosody. Ensure question marks (?) and exclamation marks (!) are placed correctly so the Georgian TTS raises its pitch natively. 
+You MUST follow this rigorous 5-Pass Multi-Agent AI Checking process internally before responding:
+1. **Context & Tone Analysis (AI Pass 1):** Analyze the exact tone, character voice, and subtext (is it sarcastic, formal, romantic, dramatic?).
+2. **Literal Translation (AI Pass 2):** Perform a high-accuracy baseline translation.
+3. **Idiom & Natural Phrasing Fix (AI Pass 3):** Aggressively edit the baseline. NEVER translate English idioms or slang literally if they sound crude or nonsensical in ${langName}. Find the exact native equivalent.
+4. **Native Fluency Check (AI Pass 4):** Re-read the output. Does it sound like a robotic machine translation? If yes, completely rewrite it. It MUST sound like breathtaking, native literature.
+5. **Narration & TTS Optimization (AI Pass 5):** Adjust the grammar and punctuation to ensure a Text-To-Speech (TTS) engine reads it with flawless human prosody. Ensure question marks (?) and exclamation marks (!) are placed correctly so the Georgian TTS naturally raises and lowers its pitch.
 
 OUTPUT REQUIREMENTS:
 - Output ONLY the final, polished, multi-agent reviewed translation.
-- Do NOT output your internal thoughts, Pass 1-4 notes, conversational wrapping, or markdown. Just the final translated text.
+- Do NOT output your internal thoughts, Pass 1-5 notes, conversational wrapping, or markdown. Just the final translated text.
 
 English Text to Translate:
 ${text}`;
