@@ -1,0 +1,77 @@
+﻿/* Custom styling for AudioRead Studio */
+
+@keyframes spinSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+    animation: spinSlow 12s linear infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+}
+
+/* Slider styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #6366f1;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.25);
+    background: #818cf8;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #6366f1;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+}
+
+/* Glassmorphism Card Hover */
+.chapter-card {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chapter-card:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    background-color: rgba(30, 41, 59, 0.5);
+}
+
+.chapter-card.active-playing {
+    border-color: rgba(99, 102, 241, 0.8);
+    background-color: rgba(99, 102, 241, 0.1);
+}

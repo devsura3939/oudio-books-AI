@@ -1,0 +1,17 @@
+﻿__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+env/
+venv/
+data/uploads/*
+!data/uploads/.gitkeep
+data/audio/*
+!data/audio/.gitkeep
+data/test/*
+!data/test/.gitkeep
+*.tmp.mp3
+.DS_Store
+Thumbs.db
