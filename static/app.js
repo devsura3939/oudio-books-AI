@@ -1,4 +1,4 @@
-// AudioRead Studio Pro - Multi-Language (EN/KA), 0.05x Precision Speed & ZIP Audio Exporter
+// AudioRead Studio Pro - Multi-Language (EN/KA), 0.05x Speed Stepper, Player Speed Controls & ZIP Exporter
 
 // Language Dictionary (English / Georgian)
 const I18N = {
@@ -11,11 +11,11 @@ const I18N = {
         heroBadge: "100% Free AI Audiobook Converter",
         heroTitle: "Convert Any PDF eBook Into An Audiobook",
         heroSubtitle: "Automatic chapter segmentation, smart header/footer cleaning, natural neural human voice narration, and 1-click audio downloads.",
-        uploadTitle: "Select a PDF file or drag & drop here",
-        uploadSubtitle: "Supports full novels, textbooks, technical documents, and multi-chapter eBooks (.pdf)",
-        smartDetection: "Smart Chapter Detection",
-        naturalVoice: "Natural Human Voice",
-        zipExport: "ZIP & Audio Export",
+        uploadTitle: "Select a PDF file or tap here to browse",
+        uploadSubtitle: "Supports novels, textbooks, documents, and multi-chapter eBooks (.pdf)",
+        smartDetection: "Chapter Splitting",
+        naturalVoice: "Natural Voice",
+        zipExport: "ZIP Download",
         extracting: "Reading & structuring PDF chapters...",
         activeDoc: "Active Document",
         pages: "Pages",
@@ -23,13 +23,13 @@ const I18N = {
         words: "Words",
         listenTime: "listen time",
         listenStart: "Listen from Beginning",
-        downloadZip: "Download Audiobook (ZIP)",
+        downloadZip: "Download ZIP",
         packagingZip: "Packaging Audiobook ZIP...",
         compressing: "Compressing...",
         aiVoice: "AI Narrator Voice",
         testVoice: "Test Voice",
         testing: "Testing...",
-        speedControl: "Speed (0.05x Precision)",
+        speedControl: "Speed (0.05x Step)",
         pitchShift: "Pitch Shift",
         chaptersTitle: "Chapters & Sections",
         items: "Items",
@@ -40,7 +40,7 @@ const I18N = {
         downloadAudio: "Download Audio",
         readText: "Read Text",
         editChapter: "Chapter Text Inspector",
-        editSubtitle: "Read or edit text before speech synthesis",
+        editSubtitle: "Read or edit text",
         chapterTitle: "Chapter Title",
         textContent: "Text Content",
         close: "Close",
@@ -54,15 +54,15 @@ const I18N = {
         studioPro: "Studio Pro",
         appSubtitle: "PDF წიგნის ტრანსფორმაცია აუდიოწიგნად",
         modeText: "AI მთხრობელი ჩართულია",
-        newBook: "ახალი წიგნი",
+        newBook: "ახალი",
         heroBadge: "100% უფასო AI აუდიოწიგნის შემქმნელი",
         heroTitle: "გადააქციეთ ნებისმიერი PDF აუდიოწიგნად",
-        heroSubtitle: "თავების ავტომატური ამოცნობა, ტექსტის გასუფთავება, ბუნებრივი ხმოვანი გახმოვანება და 1-დაწკაპუნებით ჩამოტვირთვა.",
-        uploadTitle: "აირჩიეთ PDF ფაილი ან ჩააგდეთ აქ",
-        uploadSubtitle: "მხარდაჭერილია რომანები, სახელმძღვანელოები, სამეცნიერო სტატიები და მრავალთავიანი წიგნები (.pdf)",
-        smartDetection: "თავების ჭკვიანი დაყოფა",
-        naturalVoice: "ადამიანის ბუნებრივი ხმა",
-        zipExport: "ZIP და აუდიო ექსპორტი",
+        heroSubtitle: "თავების ავტომატური ამოცნობა, ტექსტის გასუფთავება, ბუნებრივი გახმოვანება და 1-დაწკაპუნებით ჩამოტვირთვა.",
+        uploadTitle: "აირჩიეთ PDF ფაილი ან შეეხეთ აქ",
+        uploadSubtitle: "მხარდაჭერილია რომანები, სახელმძღვანელოები, სტატიები და მრავალთავიანი წიგნები (.pdf)",
+        smartDetection: "თავების დაყოფა",
+        naturalVoice: "ბუნებრივი ხმა",
+        zipExport: "ZIP ექსპორტი",
         extracting: "PDF სტრუქტურის დამუშავება და თავების ამოცნობა...",
         activeDoc: "აქტიური დოკუმენტი",
         pages: "გვერდი",
@@ -70,13 +70,13 @@ const I18N = {
         words: "სიტყვა",
         listenTime: "მოსმენის დრო",
         listenStart: "თავიდან მოსმენა",
-        downloadZip: "აუდიოწიგნის ჩამოტვირთვა (ZIP)",
+        downloadZip: "ZIP ჩამოტვირთვა",
         packagingZip: "აუდიოწიგნის შეფუთვა ZIP-ში...",
         compressing: "შეკუმშვა...",
         aiVoice: "AI მთხრობელის ხმა",
-        testVoice: "ხმის შემოწმება",
+        testVoice: "ხმის ტესტი",
         testing: "მიმდინარეობს...",
-        speedControl: "სიჩქარე (0.05x სიზუსტით)",
+        speedControl: "სიჩქარე (0.05x ბიჯი)",
         pitchShift: "ტონის შეცვლა (Pitch)",
         chaptersTitle: "თავები და სექციები",
         items: "თავი",
@@ -171,6 +171,8 @@ const playerTotalTime = document.getElementById('playerTotalTime');
 const btnMute = document.getElementById('btnMute');
 const volumeIcon = document.getElementById('volumeIcon');
 const volumeSlider = document.getElementById('volumeSlider');
+const playerSpeedBadgeDesktop = document.getElementById('playerSpeedBadgeDesktop');
+const btnPlayerSpeedMobile = document.getElementById('btnPlayerSpeedMobile');
 
 // Prevent Window Drag-Drop Navigation
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -204,16 +206,15 @@ document.addEventListener('DOMContentLoaded', () => {
 function setLanguage(lang) {
     currentLang = lang;
     
-    // Update button styles
     const btnEn = document.getElementById('langBtn-en');
     const btnKa = document.getElementById('langBtn-ka');
     
     if (lang === 'ka') {
-        btnKa.className = 'px-2.5 py-1 rounded-xl bg-indigo-600 text-white shadow transition flex items-center gap-1.5';
-        btnEn.className = 'px-2.5 py-1 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-1.5';
+        btnKa.className = 'px-2 sm:px-2.5 py-1 rounded-xl bg-indigo-600 text-white shadow transition flex items-center gap-1';
+        btnEn.className = 'px-2 sm:px-2.5 py-1 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-1';
     } else {
-        btnEn.className = 'px-2.5 py-1 rounded-xl bg-indigo-600 text-white shadow transition flex items-center gap-1.5';
-        btnKa.className = 'px-2.5 py-1 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-1.5';
+        btnEn.className = 'px-2 sm:px-2.5 py-1 rounded-xl bg-indigo-600 text-white shadow transition flex items-center gap-1';
+        btnKa.className = 'px-2 sm:px-2.5 py-1 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-1';
     }
 
     applyLanguage(lang);
@@ -260,7 +261,7 @@ function applyLanguage(lang) {
     }
 }
 
-// Voice Loading & Prioritization
+// Voice Loading & Explicit English Default
 function populateVoiceList() {
     if (!('speechSynthesis' in window) || !voiceSelect) return;
 
@@ -274,9 +275,10 @@ function populateVoiceList() {
 
     voiceSelect.innerHTML = '';
 
+    const englishNaturalVoices = [];
+    const otherNaturalVoices = [];
     const georgianVoices = [];
-    const naturalVoices = [];
-    const englishVoices = [];
+    const standardEnglishVoices = [];
     const otherVoices = [];
 
     availableVoices.forEach(v => {
@@ -286,47 +288,84 @@ function populateVoiceList() {
         if (langLower.startsWith('ka') || lower.includes('georgian') || lower.includes('eka') || lower.includes('giorgi')) {
             georgianVoices.push(v);
         } else if (lower.includes('natural') || lower.includes('online') || lower.includes('google') || lower.includes('neural') || lower.includes('enhanced')) {
-            naturalVoices.push(v);
+            if (langLower.startsWith('en')) {
+                englishNaturalVoices.push(v);
+            } else {
+                otherNaturalVoices.push(v);
+            }
         } else if (langLower.startsWith('en')) {
-            englishVoices.push(v);
+            standardEnglishVoices.push(v);
         } else {
             otherVoices.push(v);
         }
     });
 
-    // 1. Georgian Voices (if Georgian selected or available)
+    // 1. Ultra-Natural English Voices (DEFAULT)
+    const groupEnNatural = document.createElement('optgroup');
+    groupEnNatural.label = '⭐ Ultra-Natural English Voices (Recommended)';
+    
+    let defaultSelected = false;
+
+    if (englishNaturalVoices.length > 0) {
+        englishNaturalVoices.forEach((v, idx) => {
+            const opt = document.createElement('option');
+            opt.value = v.name;
+            opt.textContent = `🌟 ${v.name} (${v.lang})`;
+            // Select Google US English or first natural English voice by default
+            if (currentLang === 'en' && !defaultSelected) {
+                if (v.name.includes('US English') || v.lang === 'en-US' || idx === 0) {
+                    opt.selected = true;
+                    defaultSelected = true;
+                }
+            }
+            groupEnNatural.appendChild(opt);
+        });
+    }
+    voiceSelect.appendChild(groupEnNatural);
+
+    // 2. Georgian Voices (ქართული ხმები)
+    const groupKa = document.createElement('optgroup');
+    groupKa.label = '🇬🇪 ქართული ხმები (Georgian Voices)';
+    
     if (georgianVoices.length > 0) {
-        const groupKa = document.createElement('optgroup');
-        groupKa.label = '🇬🇪 ქართული ხმები (Georgian Voices)';
         georgianVoices.forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.name;
             opt.textContent = `🇬🇪 ${v.name} (${v.lang})`;
-            if (currentLang === 'ka') opt.selected = true;
+            if (currentLang === 'ka') {
+                opt.selected = true;
+                defaultSelected = true;
+            }
             groupKa.appendChild(opt);
         });
-        voiceSelect.appendChild(groupKa);
+    } else {
+        // Fallback Georgian option that binds to ka-GE
+        const opt = document.createElement('option');
+        opt.value = 'Georgian-Natural-ka-GE';
+        opt.textContent = '🇬🇪 Georgian Narrator (ქართული - ka-GE)';
+        if (currentLang === 'ka') opt.selected = true;
+        groupKa.appendChild(opt);
     }
+    voiceSelect.appendChild(groupKa);
 
-    // 2. Natural AI Voices
-    if (naturalVoices.length > 0) {
-        const groupNatural = document.createElement('optgroup');
-        groupNatural.label = '⭐ Ultra-Natural HD Voices (Recommended)';
-        naturalVoices.forEach((v, idx) => {
+    // 3. Other Ultra-Natural International Voices
+    if (otherNaturalVoices.length > 0) {
+        const groupOtherNatural = document.createElement('optgroup');
+        groupOtherNatural.label = '🌐 Ultra-Natural International Voices';
+        otherNaturalVoices.forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.name;
             opt.textContent = `🌟 ${v.name} (${v.lang})`;
-            if (currentLang === 'en' && idx === 0 && !georgianVoices.length) opt.selected = true;
-            groupNatural.appendChild(opt);
+            groupOtherNatural.appendChild(opt);
         });
-        voiceSelect.appendChild(groupNatural);
+        voiceSelect.appendChild(groupOtherNatural);
     }
 
-    // 3. English Voices
-    if (englishVoices.length > 0) {
+    // 4. Standard English Voices
+    if (standardEnglishVoices.length > 0) {
         const groupEn = document.createElement('optgroup');
         groupEn.label = '🎙️ Standard English Narrators';
-        englishVoices.forEach(v => {
+        standardEnglishVoices.forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.name;
             opt.textContent = `${v.name} (${v.lang})`;
@@ -335,10 +374,10 @@ function populateVoiceList() {
         voiceSelect.appendChild(groupEn);
     }
 
-    // 4. International Voices
+    // 5. Other International Voices
     if (otherVoices.length > 0) {
         const groupOther = document.createElement('optgroup');
-        groupOther.label = '🌐 International Languages';
+        groupOther.label = '🌐 Other Languages';
         otherVoices.forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.name;
@@ -351,13 +390,28 @@ function populateVoiceList() {
 
 // Global Speed Selector (0.05x precision)
 function setGlobalSpeed(speed) {
-    currentGlobalSpeed = parseFloat(speed);
+    currentGlobalSpeed = Math.round(parseFloat(speed) * 100) / 100;
+    currentGlobalSpeed = Math.max(0.50, Math.min(2.50, currentGlobalSpeed));
+
     if (speedSlider) speedSlider.value = currentGlobalSpeed.toFixed(2);
     if (speedDisplayLabel) speedDisplayLabel.textContent = `${currentGlobalSpeed.toFixed(2)}x`;
+    if (playerSpeedBadgeDesktop) playerSpeedBadgeDesktop.textContent = `${currentGlobalSpeed.toFixed(2)}x`;
+    if (btnPlayerSpeedMobile) btnPlayerSpeedMobile.textContent = `${currentGlobalSpeed.toFixed(2)}x`;
 
     if (isPlaying && !isPaused) {
         speakCurrentSentence();
     }
+}
+
+function adjustSpeedByStep(delta) {
+    setGlobalSpeed(currentGlobalSpeed + delta);
+}
+
+function cyclePlayerSpeed() {
+    const cycleList = [0.75, 1.00, 1.25, 1.50, 1.75, 2.00];
+    const currentIndex = cycleList.findIndex(s => Math.abs(s - currentGlobalSpeed) < 0.04);
+    const nextIndex = (currentIndex + 1) % cycleList.length;
+    setGlobalSpeed(cycleList[nextIndex]);
 }
 
 // Setup Event Listeners
@@ -400,7 +454,6 @@ function setupEventListeners() {
 
     if (btnNewBook) {
         btnNewBook.addEventListener('click', () => {
-            const t = I18N[currentLang] || I18N.en;
             if (confirm(currentLang === 'ka' ? 'გსურთ ახალი წიგნის ატვირთვა?' : 'Upload a new book?')) {
                 stopSpeech();
                 uploadSection.classList.remove('hidden');
@@ -416,11 +469,7 @@ function setupEventListeners() {
     if (speedSlider) {
         speedSlider.addEventListener('input', (e) => {
             const val = parseFloat(e.target.value);
-            currentGlobalSpeed = val;
-            if (speedDisplayLabel) speedDisplayLabel.textContent = `${val.toFixed(2)}x`;
-            if (isPlaying && !isPaused) {
-                speakCurrentSentence();
-            }
+            setGlobalSpeed(val);
         });
     }
 
@@ -437,15 +486,24 @@ function setupEventListeners() {
         btnPreviewVoice.addEventListener('click', () => {
             const t = I18N[currentLang] || I18N.en;
             const selectedVoiceName = voiceSelect.value;
-            const sample = currentLang === 'ka' 
+            const isKa = selectedVoiceName.includes('ka') || selectedVoiceName.includes('Georgian') || currentLang === 'ka';
+            
+            const sample = isKa 
                 ? "მოგესალმებით AudioRead Studio-ში. ვაქცევთ თქვენს წიგნებს მაღალი ხარისხის აუდიოწიგნებად."
                 : "Welcome to AudioRead Studio. Converting your PDF books into high quality audio.";
             
             window.speechSynthesis.cancel();
             const utter = new SpeechSynthesisUtterance(sample);
             
-            const match = window.speechSynthesis.getVoices().find(v => v.name === selectedVoiceName);
-            if (match) utter.voice = match;
+            if (selectedVoiceName === 'Georgian-Natural-ka-GE') {
+                utter.lang = 'ka-GE';
+            } else {
+                const match = window.speechSynthesis.getVoices().find(v => v.name === selectedVoiceName);
+                if (match) {
+                    utter.voice = match;
+                    utter.lang = match.lang;
+                }
+            }
             
             utter.rate = currentGlobalSpeed;
             utter.pitch = 1 + parseInt(pitchSlider.value) / 50;
@@ -746,12 +804,12 @@ function renderWorkspace() {
 
     if (bookTitle) bookTitle.textContent = currentBook.title || 'Untitled Book';
     if (bookFilename) bookFilename.textContent = currentBook.filename;
-    if (statPages) statPages.textContent = `${currentBook.total_pages} ${t.pages}`;
-    if (statChapters) statChapters.textContent = `${currentBook.chapters.length} ${t.chapters}`;
-    if (statWords) statWords.textContent = `${currentBook.total_words.toLocaleString()} ${t.words}`;
+    if (statPages) statPages.textContent = currentBook.total_pages.toString();
+    if (statChapters) statChapters.textContent = currentBook.chapters.length.toString();
+    if (statWords) statWords.textContent = currentBook.total_words.toLocaleString();
     
     const estMins = Math.round(currentBook.estimated_total_duration_sec / 60);
-    if (statEstDuration) statEstDuration.textContent = `~${estMins} mins ${t.listenTime}`;
+    if (statEstDuration) statEstDuration.textContent = `~${estMins} mins`;
     if (chapterCountBadge) chapterCountBadge.textContent = `${currentBook.chapters.length} ${t.items}`;
 
     renderChaptersList();
@@ -771,32 +829,32 @@ function renderChaptersList() {
         const isPlayingThis = (currentPlayingChapterId === chap.id && isPlaying && !isPaused);
         const estMins = Math.max(1, Math.round(chap.estimated_duration_sec / 60));
 
-        row.className = `chapter-row glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 ${isPlayingThis ? 'active-playing ring-2 ring-indigo-500' : 'hover:border-indigo-500/40'}`;
+        row.className = `track-row bento-card rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 transition-all duration-200 ${isPlayingThis ? 'active-playing ring-2 ring-indigo-500' : 'hover:border-indigo-500/40'}`;
 
         let statusBadge = '';
         if (isPlayingThis) {
             statusBadge = `
-                <span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex items-center gap-2 animate-pulse">
-                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span> ${t.playing}
+                <span class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex items-center gap-1.5 sm:gap-2 animate-pulse">
+                    <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-indigo-400"></span> ${t.playing}
                 </span>`;
         } else {
             statusBadge = `
-                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
-                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> ${t.ready}
+                <span class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 sm:gap-1.5">
+                    <i data-lucide="check-circle" class="w-3 h-3 sm:w-3.5 sm:h-3.5"></i> ${t.ready}
                 </span>`;
         }
 
         row.innerHTML = `
-            <div class="flex items-start sm:items-center gap-4 min-w-0 flex-1">
-                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-950 to-slate-900 border border-indigo-500/30 flex items-center justify-center text-xs font-mono font-bold text-indigo-300 flex-shrink-0 shadow-inner">
+            <div class="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-indigo-950 to-slate-900 border border-indigo-500/30 flex items-center justify-center text-xs font-mono font-bold text-indigo-300 flex-shrink-0 shadow-inner">
                     ${chap.id < 10 ? '0' + chap.id : chap.id}
                 </div>
                 <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2.5 flex-wrap">
-                        <h4 class="text-sm sm:text-base font-bold text-white truncate max-w-md">${chap.title}</h4>
+                    <div class="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                        <h4 class="text-xs sm:text-base font-bold text-white truncate max-w-xs sm:max-w-md">${chap.title}</h4>
                         <span id="badge-status-${chap.id}">${statusBadge}</span>
                     </div>
-                    <div class="flex items-center gap-3 text-xs text-slate-400 pt-1 font-medium">
+                    <div class="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-slate-400 pt-0.5 sm:pt-1 font-medium">
                         <span>${chap.start_page}-${chap.end_page} ${t.pages}</span>
                         <span>•</span>
                         <span>${chap.word_count.toLocaleString()} ${t.words}</span>
@@ -807,21 +865,21 @@ function renderChaptersList() {
             </div>
 
             <!-- Chapter Action Buttons -->
-            <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 self-end sm:self-center">
                 <!-- Listen Button -->
-                <button onclick="playChapterAudio(${chap.id})" class="px-4 sm:px-5 py-2 rounded-2xl ${isPlayingThis ? 'bg-amber-600 hover:bg-amber-500' : 'btn-neon-glow'} text-white text-xs font-bold flex items-center gap-2 transition shadow-lg active:scale-95">
+                <button onclick="playChapterAudio(${chap.id})" class="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-2xl ${isPlayingThis ? 'bg-amber-600 hover:bg-amber-500' : 'btn-stitch-primary'} text-white text-xs font-bold flex items-center gap-1.5 sm:gap-2 transition shadow-lg active:scale-95">
                     <i data-lucide="${isPlayingThis ? 'pause' : 'play'}" class="w-3.5 h-3.5 fill-current"></i>
                     <span>${isPlayingThis ? t.pause : t.listen}</span>
                 </button>
 
                 <!-- Download Chapter Audio Button -->
-                <button onclick="downloadSingleChapterAudio(${chap.id})" class="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-indigo-400 border border-white/10 text-xs transition active:scale-95" title="${t.downloadAudio}">
-                    <i data-lucide="download" class="w-4 h-4"></i>
+                <button onclick="downloadSingleChapterAudio(${chap.id})" class="p-2 sm:p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-indigo-400 border border-white/10 text-xs transition active:scale-95" title="${t.downloadAudio}">
+                    <i data-lucide="download" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                 </button>
 
                 <!-- Read Text Button -->
-                <button onclick="openTextModal(${chap.id})" class="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 text-xs transition" title="${t.readText}">
-                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                <button onclick="openTextModal(${chap.id})" class="p-2 sm:p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 text-xs transition" title="${t.readText}">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                 </button>
             </div>
         `;
@@ -890,8 +948,16 @@ function speakCurrentSentence() {
 
     const utter = new SpeechSynthesisUtterance(sentence);
     const selectedVoiceName = voiceSelect.value;
-    const match = window.speechSynthesis.getVoices().find(v => v.name === selectedVoiceName);
-    if (match) utter.voice = match;
+    
+    if (selectedVoiceName === 'Georgian-Natural-ka-GE') {
+        utter.lang = 'ka-GE';
+    } else {
+        const match = window.speechSynthesis.getVoices().find(v => v.name === selectedVoiceName);
+        if (match) {
+            utter.voice = match;
+            utter.lang = match.lang;
+        }
+    }
 
     const pitchOffset = parseInt(pitchSlider.value);
     utter.rate = currentGlobalSpeed;
