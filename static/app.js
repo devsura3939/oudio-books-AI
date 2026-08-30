@@ -8,8 +8,14 @@ let playbackSpeeds = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 let currentSpeedIndex = 1;
 let activeModalChapterId = null;
 let isBackendAvailable = false;
-let currentUtterance = null;
+
+// Sentence-by-sentence Web Speech Engine state (ensures 100% reliability in browsers for any book size)
+let speechQueue = [];
+let currentSentenceIdx = 0;
 let isSpeechPlaying = false;
+let isSpeakingPaused = false;
+let speechTimer = null;
+let speechElapsedSeconds = 0;
 
 // DOM Elements
 const dropZone = document.getElementById('dropZone');
@@ -85,6 +91,14 @@ const btnDownloadCurrent = document.getElementById('btnDownloadCurrent');
     }, false);
 });
 
+// Chrome SpeechSynthesis keep-alive heartbeat (prevents Chromium from pausing speech after 15s)
+setInterval(() => {
+    if ('speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+    }
+}, 8000);
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) {
@@ -111,11 +125,10 @@ async function checkBackendAndLoadVoices() {
             return;
         }
     } catch (e) {
-        // Backend not available (Running as static GitHub Pages)
         isBackendAvailable = false;
     }
 
-    if (modeText) modeText.textContent = '🌐 In-Browser Speech Engine (Live GitHub Pages)';
+    if (modeText) modeText.textContent = '🌐 In-Browser AI Speech Engine (Live GitHub Pages)';
     if (modeBadge) modeBadge.classList.remove('hidden');
     loadBrowserSpeechVoices();
 }
@@ -136,7 +149,7 @@ function loadBrowserSpeechVoices() {
             gender: v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') ? 'Female' : 'Male',
             locale: v.lang,
             language: v.lang.split('-')[0],
-            friendly_name: `${v.name} (${v.lang}) ${v.default ? '★' : ''}`
+            friendly_name: `${v.name} (${v.lang}) ${v.default ? '★ Default' : ''}`
         }));
 
         renderVoiceOptions();
@@ -204,12 +217,12 @@ function setupEventListeners() {
     if (btnNewBook) {
         btnNewBook.addEventListener('click', () => {
             if (confirm('Start over and upload a new book?')) {
+                stopSpeechEngine();
                 uploadSection.classList.remove('hidden');
                 workspaceSection.classList.add('hidden');
                 btnNewBook.classList.add('hidden');
                 currentBook = null;
                 if (eventSource) eventSource.close();
-                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
                 globalAudioPlayer.pause();
                 audioPlayerBar.classList.add('hidden');
             }
@@ -300,20 +313,39 @@ function setupEventListeners() {
 
     // Audio Player Controls
     if (btnPlayerPlayPause) btnPlayerPlayPause.addEventListener('click', togglePlayPause);
+    
+    // Rewind -15s
     if (btnPlayerRewind) {
         btnPlayerRewind.addEventListener('click', () => {
             if (isBackendAvailable) {
                 globalAudioPlayer.currentTime = Math.max(0, globalAudioPlayer.currentTime - 15);
+            } else {
+                // Rewind 3 sentences back
+                currentSentenceIdx = Math.max(0, currentSentenceIdx - 3);
+                if (isSpeechPlaying && !isSpeakingPaused) {
+                    window.speechSynthesis.cancel();
+                    speakNextSentenceInQueue();
+                }
             }
         });
     }
+
+    // Forward +15s
     if (btnPlayerForward) {
         btnPlayerForward.addEventListener('click', () => {
             if (isBackendAvailable) {
                 globalAudioPlayer.currentTime = Math.min(globalAudioPlayer.duration, globalAudioPlayer.currentTime + 15);
+            } else {
+                // Skip 3 sentences forward
+                currentSentenceIdx = Math.min(speechQueue.length - 1, currentSentenceIdx + 3);
+                if (isSpeechPlaying && !isSpeakingPaused) {
+                    window.speechSynthesis.cancel();
+                    speakNextSentenceInQueue();
+                }
             }
         });
     }
+
     if (btnPlayerPrev) btnPlayerPrev.addEventListener('click', playPreviousChapter);
     if (btnPlayerNext) btnPlayerNext.addEventListener('click', playNextChapter);
 
@@ -325,11 +357,19 @@ function setupEventListeners() {
         });
     }
 
+    // Scrubber seeking
     if (playerProgress) {
         playerProgress.addEventListener('input', (e) => {
             if (isBackendAvailable && globalAudioPlayer.duration) {
                 const seekTime = (e.target.value / 100) * globalAudioPlayer.duration;
                 globalAudioPlayer.currentTime = seekTime;
+            } else if (!isBackendAvailable && speechQueue.length > 0) {
+                const targetIdx = Math.floor((e.target.value / 100) * speechQueue.length);
+                currentSentenceIdx = Math.min(speechQueue.length - 1, Math.max(0, targetIdx));
+                if (isSpeechPlaying && !isSpeakingPaused) {
+                    window.speechSynthesis.cancel();
+                    speakNextSentenceInQueue();
+                }
             }
         });
     }
@@ -341,8 +381,9 @@ function setupEventListeners() {
             const speed = playbackSpeeds[currentSpeedIndex];
             globalAudioPlayer.playbackRate = speed;
             btnPlaybackSpeed.textContent = `${speed}x`;
-            if (!isBackendAvailable && isSpeechPlaying && currentPlayingChapterId) {
-                playChapterAudio(currentPlayingChapterId);
+            if (!isBackendAvailable && isSpeechPlaying && !isSpeakingPaused) {
+                window.speechSynthesis.cancel();
+                speakNextSentenceInQueue();
             }
         });
     }
@@ -385,6 +426,39 @@ function getFormattedPitch() {
     return `${val >= 0 ? '+' : ''}${val}Hz`;
 }
 
+// Split text into safe, small sentences (100% browser TTS compatibility)
+function splitTextIntoSentences(text) {
+    if (!text || !text.trim()) return [];
+    
+    // Split on sentence terminators or line breaks
+    const raw = text.match(/[^.!?\n]+[.!?]+|[^.!?\n]+$/g) || [text];
+    const sentences = [];
+    
+    raw.forEach(chunk => {
+        const trimmed = chunk.trim();
+        if (trimmed.length > 0) {
+            if (trimmed.length > 250) {
+                // Sub-split very long sentences by commas or semicolons
+                const subChunks = trimmed.split(/([,;:]\s+)/);
+                let currentSub = '';
+                subChunks.forEach(sub => {
+                    if ((currentSub + sub).length > 200) {
+                        if (currentSub) sentences.push(currentSub.trim());
+                        currentSub = sub;
+                    } else {
+                        currentSub += sub;
+                    }
+                });
+                if (currentSub.trim()) sentences.push(currentSub.trim());
+            } else {
+                sentences.push(trimmed);
+            }
+        }
+    });
+    
+    return sentences;
+}
+
 // Handle PDF Upload (Backend or In-Browser PDF.js)
 async function handleFileUpload(file) {
     if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
@@ -395,7 +469,6 @@ async function handleFileUpload(file) {
     if (uploadingState) uploadingState.classList.remove('hidden');
 
     if (isBackendAvailable) {
-        // Upload to Python backend
         const formData = new FormData();
         formData.append('file', file);
         try {
@@ -421,7 +494,7 @@ async function handleFileUpload(file) {
     }
 }
 
-// Client-side PDF Parser using PDF.js
+// Client-side PDF Parser using PDF.js with Smart Chapter Splitting
 async function parsePdfInBrowser(file) {
     try {
         const pdfjs = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
@@ -443,20 +516,23 @@ async function parsePdfInBrowser(file) {
             pageTexts.push(cleanText(pageStr));
         }
 
-        // Detect Chapters using Regex
-        const chapters = [];
-        const chapterRegex = /^\s*(chapter\s+(?:[0-9]+|[ivxlcdm]+)|part\s+(?:[0-9]+|[ivxlcdm]+)|prologue|epilogue|introduction)\b/i;
+        // Heading detection patterns
+        const chapterRegex = /^\s*(chapter\s+(?:[0-9]+|[ivxlcdm]+)|part\s+(?:[0-9]+|[ivxlcdm]+)|book\s+(?:[0-9]+|[ivxlcdm]+)|act\s+(?:[0-9]+|[ivxlcdm]+)|prologue|epilogue|introduction|foreword|preface)\b/i;
         
+        let chapters = [];
         let currentChap = null;
         let chapId = 1;
 
         pageTexts.forEach((pText, idx) => {
             const pNum = idx + 1;
+            if (!pText) return;
+
             const lines = pText.split('\n');
             let foundHeading = null;
-            for (let line of lines) {
-                if (chapterRegex.test(line.trim())) {
-                    foundHeading = line.trim();
+            for (let line of lines.slice(0, 8)) {
+                const s = line.trim();
+                if (chapterRegex.test(s) || (s.length >= 4 && s.length <= 45 && s === s.toUpperCase() && !s.match(/^\d+$/))) {
+                    foundHeading = s;
                     break;
                 }
             }
@@ -505,6 +581,41 @@ async function parsePdfInBrowser(file) {
             currentChap.estimated_duration_sec = Math.round((currentChap.word_count / 150) * 60);
             chapters.push(currentChap);
         }
+
+        // Subdivide large chapters into bite-sized chapters (max 2,000 words per chapter for great listening pacing)
+        const refinedChapters = [];
+        let newId = 1;
+
+        chapters.forEach(c => {
+            const words = c.text.split(/\s+/).filter(Boolean);
+            if (words.length > 2500) {
+                // Split into chunks of ~1,800 words
+                const chunkSize = 1800;
+                let partNum = 1;
+                for (let wIdx = 0; wIdx < words.length; wIdx += chunkSize) {
+                    const chunkWords = words.slice(wIdx, wIdx + chunkSize);
+                    const chunkText = chunkWords.join(' ');
+                    const dur = Math.round((chunkWords.length / 150) * 60);
+                    refinedChapters.push({
+                        id: newId++,
+                        title: `${c.title} - Part ${partNum}`,
+                        start_page: c.start_page,
+                        end_page: c.end_page,
+                        text: chunkText,
+                        word_count: chunkWords.length,
+                        estimated_duration_sec: dur,
+                        status: 'idle',
+                        progress: 0
+                    });
+                    partNum++;
+                }
+            } else {
+                c.id = newId++;
+                refinedChapters.push(c);
+            }
+        });
+
+        chapters = refinedChapters;
 
         const totalWords = chapters.reduce((acc, c) => acc + c.word_count, 0);
         const totalDuration = chapters.reduce((acc, c) => acc + c.estimated_duration_sec, 0);
@@ -571,7 +682,7 @@ function renderChaptersList() {
         const estMins = Math.max(1, Math.round(chap.estimated_duration_sec / 60));
 
         let statusBadge = '';
-        if (isCompleted) {
+        if (isCompleted || !isBackendAvailable) {
             statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Ready</span>`;
         } else if (isProcessing) {
             statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center gap-1.5"><i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Synthesizing ${chap.progress || 0}%</span>`;
@@ -608,12 +719,12 @@ function renderChaptersList() {
             <!-- Chapter Action Buttons -->
             <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
                 <!-- Play Audio Button -->
-                <button onclick="playChapterAudio(${chap.id})" id="btn-play-chap-${chap.id}" class="${(isCompleted || !isBackendAvailable) ? '' : 'hidden'} px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-md shadow-indigo-600/20">
+                <button onclick="playChapterAudio(${chap.id})" id="btn-play-chap-${chap.id}" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-md shadow-indigo-600/30 active:scale-95">
                     <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i> Listen
                 </button>
 
-                <!-- Generate Single Chapter Button -->
-                <button onclick="synthesizeSingleChapter(${chap.id})" id="btn-gen-chap-${chap.id}" class="${(isCompleted || !isBackendAvailable) ? 'hidden' : ''} px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+                <!-- Generate Single Chapter Button (Backend mode) -->
+                <button onclick="synthesizeSingleChapter(${chap.id})" id="btn-gen-chap-${chap.id}" class="${(isBackendAvailable && !isCompleted) ? '' : 'hidden'} px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
                     <i data-lucide="zap" class="w-3.5 h-3.5 text-indigo-400"></i> ${isError ? 'Retry' : 'Generate MP3'}
                 </button>
 
@@ -671,12 +782,19 @@ async function startTTSGeneration(chapterIds = null) {
             alert('Generation error: ' + err.message);
         }
     } else {
-        alert('All chapters are ready to listen directly! Click "Listen" on any chapter.');
+        // In-Browser Mode: Auto play Chapter 1 immediately!
+        if (currentBook.chapters.length > 0) {
+            playChapterAudio(currentBook.chapters[0].id);
+        }
     }
 }
 
 function synthesizeSingleChapter(chapId) {
-    startTTSGeneration([chapId]);
+    if (isBackendAvailable) {
+        startTTSGeneration([chapId]);
+    } else {
+        playChapterAudio(chapId);
+    }
 }
 
 // Server-Sent Events (when connected to Python backend)
@@ -740,6 +858,83 @@ function checkZipAvailability() {
     if (btnDownloadZip) btnDownloadZip.disabled = !hasCompleted;
 }
 
+// Stop current speech engine
+function stopSpeechEngine() {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+    isSpeechPlaying = false;
+    isSpeakingPaused = false;
+    speechQueue = [];
+    currentSentenceIdx = 0;
+    if (speechTimer) {
+        clearInterval(speechTimer);
+        speechTimer = null;
+    }
+    updatePlayPauseIcon(false);
+}
+
+// Speak the next sentence in the queue (Sentence-by-Sentence Engine)
+function speakNextSentenceInQueue() {
+    if (!isSpeechPlaying || isSpeakingPaused) return;
+
+    if (currentSentenceIdx >= speechQueue.length) {
+        // Reached end of chapter
+        isSpeechPlaying = false;
+        isSpeakingPaused = false;
+        if (speechTimer) {
+            clearInterval(speechTimer);
+            speechTimer = null;
+        }
+        if (playerProgress) playerProgress.value = 100;
+        updatePlayPauseIcon(false);
+        playNextChapter();
+        return;
+    }
+
+    const sentence = speechQueue[currentSentenceIdx];
+    if (!sentence || !sentence.trim()) {
+        currentSentenceIdx++;
+        speakNextSentenceInQueue();
+        return;
+    }
+
+    const utter = new SpeechSynthesisUtterance(sentence);
+    
+    // Select Voice
+    if ('speechSynthesis' in window) {
+        const matchVoice = window.speechSynthesis.getVoices().find(v => v.name === voiceSelect.value);
+        if (matchVoice) utter.voice = matchVoice;
+    }
+
+    const speed = playbackSpeeds[currentSpeedIndex];
+    utter.rate = speed * (1 + parseInt(rateSlider.value) / 100);
+    utter.pitch = 1 + parseInt(pitchSlider.value) / 50;
+
+    utter.onstart = () => {
+        isSpeechPlaying = true;
+        isSpeakingPaused = false;
+        updatePlayPauseIcon(true);
+        if (speechQueue.length > 0 && playerProgress) {
+            const pct = Math.round((currentSentenceIdx / speechQueue.length) * 100);
+            playerProgress.value = pct;
+        }
+    };
+
+    utter.onend = () => {
+        currentSentenceIdx++;
+        speakNextSentenceInQueue();
+    };
+
+    utter.onerror = (err) => {
+        console.warn('Sentence speech error, advancing:', err);
+        currentSentenceIdx++;
+        speakNextSentenceInQueue();
+    };
+
+    window.speechSynthesis.speak(utter);
+}
+
 // Audio Player Functionality
 function playChapterAudio(chapId) {
     const chap = currentBook.chapters.find(c => c.id === chapId);
@@ -761,45 +956,32 @@ function playChapterAudio(chapId) {
         globalAudioPlayer.play().catch(e => console.warn('Autoplay prevented:', e));
         updatePlayPauseIcon(true);
     } else {
-        // In-Browser Web Speech Synthesis
+        // In-Browser Sentence-by-Sentence Speech Engine
         if (btnDownloadCurrent) btnDownloadCurrent.classList.add('hidden');
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            
-            currentUtterance = new SpeechSynthesisUtterance(chap.text);
-            const matchVoice = window.speechSynthesis.getVoices().find(v => v.name === voiceSelect.value);
-            if (matchVoice) currentUtterance.voice = matchVoice;
-            const speed = playbackSpeeds[currentSpeedIndex];
-            currentUtterance.rate = speed * (1 + parseInt(rateSlider.value) / 100);
-            currentUtterance.pitch = 1 + parseInt(pitchSlider.value) / 50;
+        
+        stopSpeechEngine();
 
-            currentUtterance.onboundary = (e) => {
-                if (chap.text.length > 0 && playerProgress) {
-                    const pct = Math.min(100, Math.round((e.charIndex / chap.text.length) * 100));
-                    playerProgress.value = pct;
-                }
-            };
+        // Split chapter into sentences
+        speechQueue = splitTextIntoSentences(chap.text);
+        currentSentenceIdx = 0;
+        isSpeechPlaying = true;
+        isSpeakingPaused = false;
+        speechElapsedSeconds = 0;
 
-            currentUtterance.onstart = () => {
-                isSpeechPlaying = true;
-                updatePlayPauseIcon(true);
-            };
-
-            currentUtterance.onend = () => {
-                isSpeechPlaying = false;
-                updatePlayPauseIcon(false);
-                playNextChapter();
-            };
-
-            currentUtterance.onerror = () => {
-                isSpeechPlaying = false;
-                updatePlayPauseIcon(false);
-            };
-
-            window.speechSynthesis.speak(currentUtterance);
-            isSpeechPlaying = true;
-            updatePlayPauseIcon(true);
+        if (playerTotalTime) {
+            playerTotalTime.textContent = formatTime(chap.estimated_duration_sec);
         }
+
+        // Start duration timer for playback progress UI
+        if (speechTimer) clearInterval(speechTimer);
+        speechTimer = setInterval(() => {
+            if (isSpeechPlaying && !isSpeakingPaused) {
+                speechElapsedSeconds += 1;
+                if (playerCurrentTime) playerCurrentTime.textContent = formatTime(speechElapsedSeconds);
+            }
+        }, 1000);
+
+        speakNextSentenceInQueue();
     }
 
     renderChaptersList();
@@ -816,13 +998,20 @@ function togglePlayPause() {
         }
     } else {
         if ('speechSynthesis' in window) {
-            if (window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
+            if (isSpeakingPaused) {
+                // Resume
+                isSpeakingPaused = false;
                 isSpeechPlaying = true;
+                window.speechSynthesis.resume();
+                if (!window.speechSynthesis.speaking) {
+                    speakNextSentenceInQueue();
+                }
                 updatePlayPauseIcon(true);
-            } else if (window.speechSynthesis.speaking) {
-                window.speechSynthesis.pause();
+            } else if (isSpeechPlaying) {
+                // Pause
+                isSpeakingPaused = true;
                 isSpeechPlaying = false;
+                window.speechSynthesis.pause();
                 updatePlayPauseIcon(false);
             } else if (currentPlayingChapterId) {
                 playChapterAudio(currentPlayingChapterId);

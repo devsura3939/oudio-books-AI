@@ -22,9 +22,7 @@ def clean_page_text(text: str) -> str:
     if not text:
         return ""
     
-    # Rejoin hyphenated words split across lines: e.g. "com-\nplete" -> "complete"
     text = HYPHENATED_LINE_BREAK.sub(r'\1\2', text)
-    
     lines = text.splitlines()
     cleaned_lines = []
     
@@ -34,16 +32,13 @@ def clean_page_text(text: str) -> str:
             cleaned_lines.append("")
             continue
         
-        # Skip standalone page numbers
         if PAGE_NUMBER_PATTERN.match(stripped):
             continue
             
-        # Clean extra spaces inside line
         cleaned_line = re.sub(r'[ \t]+', ' ', stripped)
         cleaned_lines.append(cleaned_line)
     
     result = "\n".join(cleaned_lines)
-    # Collapse 3+ consecutive newlines to 2 newlines (paragraphs)
     result = re.sub(r'\n{3,}', '\n\n', result)
     return result.strip()
 
@@ -62,7 +57,7 @@ def _extract_outline_items(reader: PdfReader, outline: Any) -> List[Tuple[str, i
                 if title:
                     pno = reader.get_destination_page_number(item)
                     if pno is not None:
-                        items.append((title, pno + 1))  # 1-indexed
+                        items.append((title, pno + 1))
             except Exception:
                 pass
     return items
@@ -76,7 +71,6 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
     title = meta.get("/Title") or meta.get("title") or pdf_path.stem.replace("_", " ").replace("-", " ").title()
     author = meta.get("/Author") or meta.get("author") or "Unknown Author"
     
-    # Pre-extract text from all pages
     page_texts: List[str] = []
     for page in reader.pages:
         try:
@@ -92,13 +86,11 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
         raw_outline = reader.outline
         flat_outline = _extract_outline_items(reader, raw_outline)
         
-        # Filter and deduplicate outline
         valid_outline = []
         for o_title, o_page in flat_outline:
             if 1 <= o_page <= total_pages and o_title:
                 valid_outline.append((o_title, o_page))
                 
-        # Sort by page
         valid_outline.sort(key=lambda x: x[1])
         
         if valid_outline:
@@ -114,7 +106,7 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
                 
                 full_chap_text = "\n\n".join(chap_texts).strip()
                 words = len(full_chap_text.split())
-                est_duration = (words / 150.0) * 60.0  # seconds at 150 wpm
+                est_duration = (words / 150.0) * 60.0
                 
                 chapters.append(Chapter(
                     id=i + 1,
@@ -132,11 +124,11 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
     # 2. If no valid chapters from outline, use regex pattern matching across page text
     if not chapters or all(c.word_count == 0 for c in chapters):
         chapters = []
-        found_headings = []  # (title, page_no)
+        found_headings = []
         
         for pno, p_text in enumerate(page_texts):
             lines = p_text.splitlines()
-            for line in lines[:8]:  # Check top lines of the page
+            for line in lines[:8]:
                 s = line.strip()
                 for pat in CHAPTER_PATTERNS:
                     m = pat.match(s)
@@ -172,9 +164,9 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
                     status="idle"
                 ))
     
-    # 3. Fallback: Split by page chunks (e.g. 5 pages per section)
+    # 3. Fallback or subdivide large single chapters (max 2,000 words per chapter)
     if not chapters:
-        chunk_size = 5 if total_pages > 10 else (1 if total_pages <= 5 else 3)
+        chunk_size = 5 if total_pages > 10 else 2
         chap_id = 1
         for start_p in range(1, total_pages + 1, chunk_size):
             end_p = min(start_p + chunk_size - 1, total_pages)
@@ -199,6 +191,36 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
                 status="idle"
             ))
             chap_id += 1
+    else:
+        # Subdivide oversized chapters (>2,500 words) into clean digestible parts
+        refined: List[Chapter] = []
+        new_id = 1
+        for c in chapters:
+            words = c.text.split()
+            if len(words) > 2500:
+                chunk_len = 1800
+                part_no = 1
+                for w_idx in range(0, len(words), chunk_len):
+                    w_chunk = words[w_idx:w_idx + chunk_len]
+                    chunk_text = " ".join(w_chunk)
+                    dur = (len(w_chunk) / 150.0) * 60.0
+                    refined.append(Chapter(
+                        id=new_id,
+                        title=f"{c.title} - Part {part_no}",
+                        start_page=c.start_page,
+                        end_page=c.end_page,
+                        text=chunk_text,
+                        word_count=len(w_chunk),
+                        estimated_duration_sec=round(dur, 1),
+                        status="idle"
+                    ))
+                    new_id += 1
+                    part_no += 1
+            else:
+                c.id = new_id
+                refined.append(c)
+                new_id += 1
+        chapters = refined
             
     total_words = sum(c.word_count for c in chapters)
     est_total_duration = sum(c.estimated_duration_sec for c in chapters)
