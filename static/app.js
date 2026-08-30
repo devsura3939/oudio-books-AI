@@ -1403,8 +1403,13 @@ async function speakCurrentSentence() {
         highlightReaderSentence(currentSentenceIndex);
     }
 
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    const hasNativeKaVoice = voices.some(v => v.lang.startsWith('ka'));
+
     if (elevenLabsEnabled && elevenLabsApiKey) {
         speakElevenLabsSentence(cleanSentence);
+    } else if (currentLang === 'ka' && !hasNativeKaVoice) {
+        speakFreeGeorgianNeural(cleanSentence);
     } else {
         speakStandardSentence(cleanSentence, currentLang);
     }
@@ -1483,6 +1488,71 @@ function speakStandardSentence(text, lang) {
     window._activeUtterance = utter;
     window.speechSynthesis.speak(utter);
     updatePlayerUIState(true);
+}
+
+async function speakFreeGeorgianNeural(text) {
+    stopCurrentSpeechAudio();
+    updatePlayerUIState(true);
+    
+    try {
+        const apiBase = "https://innoai-edge-tts-text-to-speech.hf.space/gradio_api";
+        const res = await fetch(apiBase + "/call/tts_interface", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                data: [text, 'ka-GE-EkaNeural - ka-GE (Female)', 0, 0]
+            })
+        });
+        
+        if (!res.ok) throw new Error("Free TTS API unavailable");
+        const json_res = await res.json();
+        const event_id = json_res.event_id;
+        
+        const audioUrl = await new Promise((resolve, reject) => {
+            const es = new EventSource(apiBase + "/call/tts_interface/" + event_id);
+            es.addEventListener("complete", (event) => {
+                es.close();
+                try {
+                    const parsed = JSON.parse(event.data);
+                    if (Array.isArray(parsed) && parsed[0] && parsed[0].url) {
+                        resolve(parsed[0].url);
+                    } else {
+                        reject("No URL returned");
+                    }
+                } catch (e) {
+                    reject(e);
+                }
+            });
+            es.addEventListener("error", (event) => {
+                es.close();
+                reject("Stream error");
+            });
+        });
+        
+        if (!isPlaying || isPaused) return;
+        
+        currentElevenAudio = new Audio(audioUrl);
+        currentElevenAudio.playbackRate = currentGlobalSpeed;
+        
+        currentElevenAudio.onended = () => {
+            if (!isPlaying || isPaused) return;
+            currentSentenceIndex++;
+            speakCurrentSentence();
+        };
+        
+        currentElevenAudio.onerror = () => {
+            console.error("Free TTS Audio Error");
+            currentSentenceIndex++;
+            speakCurrentSentence();
+        };
+        
+        await currentElevenAudio.play();
+        isSpeakingLock = false;
+        
+    } catch (e) {
+        console.error("Free Georgian TTS Failed:", e);
+        speakStandardSentence(text, 'ka');
+    }
 }
 
 async function speakElevenLabsSentence(text) {
