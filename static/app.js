@@ -302,7 +302,11 @@ async function init() {
         window.speechSynthesis.onvoiceschanged = populateVoiceList;
     }
 
-    await seedDefaultBooks();
+    if (!localStorage.getItem('lumina_seeded_v13')) {
+        await seedDefaultBooks();
+        localStorage.setItem('lumina_seeded_v13', 'true');
+    }
+
     await renderDigitalShelf();
     renderDiscoverClassics();
 
@@ -2165,25 +2169,30 @@ async function renderDigitalShelf(filterText = '') {
         div.onclick = () => selectBook(book.id, true);
 
         div.innerHTML = `
-            <div class="aspect-[2/3] rounded-2xl overflow-hidden mb-2 relative glass-card p-1.5 ${isSelected ? 'border-primary-container ring-2 ring-primary-container/30 shadow-[0_0_25px_rgba(0,240,255,0.25)]' : ''}">
-                <img src="${book.coverUrl}" class="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-500 bg-surface-container">
-                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl gap-2">
-                    <button onclick="event.stopPropagation(); selectBook('${book.id}', true);" class="w-10 h-10 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform" title="Listen Now">
-                        <span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
-                    </button>
-                    <button onclick="event.stopPropagation(); selectBook('${book.id}', false); openCurrentBookInReader();" class="w-10 h-10 bg-georgian-gold text-black rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform" title="Moon Reader">
-                        <span class="material-symbols-outlined text-lg">menu_book</span>
-                    </button>
+            <div class="aspect-[2/3] rounded-2xl overflow-hidden mb-2 relative glass-card p-1.5 ${isSelected ? 'border-primary-container ring-2 ring-primary-container/30 shadow-[0_0_25px_rgba(0,240,255,0.25)]' : 'border border-white/5'}">
+                <img src="${book.coverUrl}" class="w-full h-full object-cover rounded-xl group-hover:scale-[1.03] transition-transform duration-500 bg-surface-container">
+                
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center rounded-2xl gap-3">
+                    <div class="flex items-center gap-3">
+                        <button onclick="event.stopPropagation(); selectBook('${book.id}', true);" class="w-12 h-12 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,240,255,0.4)] transform hover:scale-110 transition-transform" title="Listen Now">
+                            <span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                        </button>
+                        <button onclick="event.stopPropagation(); selectBook('${book.id}', false); openCurrentBookInReader();" class="w-10 h-10 bg-white/20 backdrop-blur-md text-white border border-white/30 rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 hover:bg-white/30 transition-all" title="Moon Reader">
+                            <span class="material-symbols-outlined text-lg">menu_book</span>
+                        </button>
+                    </div>
                 </div>
+
+                <button onclick="deleteBook(event, '${book.id}')" class="absolute top-2 left-2 w-8 h-8 bg-black/60 backdrop-blur-md text-white/80 hover:text-error hover:bg-black/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-10" title="Delete Book">
+                    <span class="material-symbols-outlined text-[15px]">delete</span>
+                </button>
+
                 ${hasGeorgian ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold/90 text-[10px] font-bold text-black shadow-lg">🇬🇪 KA</div>' : ''}
                 ${book.progressPct > 0 ? `<div class="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-full h-1 overflow-hidden"><div class="h-full bg-primary-container" style="width: ${book.progressPct}%"></div></div>` : ''}
             </div>
             <h4 class="font-bold text-white text-xs sm:text-sm truncate group-hover:text-primary-fixed transition-colors">${book.title}</h4>
             <div class="flex justify-between items-center mt-0.5">
                 <p class="text-[10px] sm:text-[11px] text-on-surface-variant truncate">${stats.chaptersCount} Ch • ${stats.totalFormattedTime}</p>
-                <button onclick="deleteBook(event, '${book.id}')" class="text-on-surface-variant hover:text-error transition p-1" title="Delete Book">
-                    <span class="material-symbols-outlined text-sm">delete</span>
-                </button>
             </div>
         `;
         DOM.booksGrid.appendChild(div);
