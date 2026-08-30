@@ -589,6 +589,16 @@ function populateVoiceList() {
         }
     });
 
+    const freeKaFemale = document.createElement('option');
+    freeKaFemale.value = 'ka-GE-EkaNeural - ka-GE (Female)';
+    freeKaFemale.textContent = 'Eka (Georgian Female) [Cloud Free]';
+    if (DOM.optgroupFemale) DOM.optgroupFemale.appendChild(freeKaFemale);
+
+    const freeKaMale = document.createElement('option');
+    freeKaMale.value = 'ka-GE-GiorgiNeural - ka-GE (Male)';
+    freeKaMale.textContent = 'Giorgi (Georgian Male) [Cloud Free]';
+    if (DOM.optgroupMale) DOM.optgroupMale.appendChild(freeKaMale);
+
     if (savedVoice) {
         selectedVoiceURI = savedVoice;
     } else {
@@ -1214,6 +1224,27 @@ function readerForwardSentence() {
 // ██ 2. WHOLE-BOOK TRANSLATION STUDIO (Step-by-Step Batch Engine) ██
 // ══════════════════════════════════════════════════════════════════════════
 
+async function translateChunkContextually(text, targetLang = 'ka') {
+    if (!text || !text.trim()) return '';
+    try {
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+        const gRes = await fetch(gUrl);
+        if (gRes.ok) {
+            const data = await gRes.json();
+            if (data && data[0]) {
+                let fullTrans = '';
+                for (let i = 0; i < data[0].length; i++) {
+                    if (data[0][i][0]) fullTrans += data[0][i][0];
+                }
+                return normalizeGeorgian(fullTrans);
+            }
+        }
+    } catch (e) {
+        console.warn('Google chunk translate failed:', e);
+    }
+    return await translateSingleSentence(text, targetLang);
+}
+
 async function translateSingleSentence(text, targetLang = 'ka') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
@@ -1279,35 +1310,55 @@ async function startWholeBookTranslation() {
                 DOM.wbChapterLabel.textContent = `Translating Chapter ${chIdx + 1} of ${totalChapters}: ${chapter.title}`;
             }
 
-            for (let sIdx = 0; sIdx < sentences.length; sIdx++) {
+            const chunks = [];
+            let currentChunk = '';
+            let chunkSentenceCounts = [];
+            let currentChunkSCount = 0;
+            
+            for (let i = 0; i < sentences.length; i++) {
+                if (currentChunk.length + sentences[i].length > 1000 && currentChunk.trim().length > 0) {
+                    chunks.push(currentChunk);
+                    chunkSentenceCounts.push(currentChunkSCount);
+                    currentChunk = sentences[i] + ' ';
+                    currentChunkSCount = 1;
+                } else {
+                    currentChunk += sentences[i] + ' ';
+                    currentChunkSCount++;
+                }
+            }
+            if (currentChunk.trim().length > 0) {
+                chunks.push(currentChunk);
+                chunkSentenceCounts.push(currentChunkSCount);
+            }
+
+            for (let cIdx = 0; cIdx < chunks.length; cIdx++) {
                 if (cancelTranslationFlag) break;
 
-                const orig = sentences[sIdx].trim();
-                if (!orig) {
-                    translatedArr.push('');
-                    continue;
-                }
+                const orig = chunks[cIdx].trim();
+                if (!orig) continue;
 
                 if (DOM.wbLiveOriginal) DOM.wbLiveOriginal.textContent = orig;
+                
                 if (DOM.wbSentenceCounter) {
-                    DOM.wbSentenceCounter.textContent = `Sentence ${completedSentencesCount + 1} / ${totalSentencesCount}`;
+                    DOM.wbSentenceCounter.textContent = `Context Chunk ${cIdx + 1} / ${chunks.length} (Sentence ${completedSentencesCount} / ${totalSentencesCount})`;
                 }
 
-                const translated = await translateSingleSentence(orig, 'ka');
+                const translated = await translateChunkContextually(orig, 'ka');
                 translatedArr.push(translated);
                 totalCharsTranslated += translated.length;
 
                 if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = translated;
                 if (DOM.wbCharCounter) {
-                    DOM.wbCharCounter.textContent = `${totalCharsTranslated.toLocaleString()} characters translated`;
+                    DOM.wbCharCounter.textContent = `${totalCharsTranslated.toLocaleString()} chars translated`;
                 }
 
-                completedSentencesCount++;
+                completedSentencesCount += chunkSentenceCounts[cIdx];
                 const pct = Math.round((completedSentencesCount / totalSentencesCount) * 100);
+                
                 if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
                 if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
 
-                await new Promise(r => setTimeout(r, 140));
+                await new Promise(r => setTimeout(r, 200));
             }
 
             chapter.text_ka = translatedArr.join(' ');
@@ -1405,11 +1456,13 @@ async function speakCurrentSentence() {
 
     const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
     const hasNativeKaVoice = voices.some(v => v.lang.startsWith('ka'));
+    const isCloudKaVoice = selectedVoiceURI === 'ka-GE-EkaNeural - ka-GE (Female)' || selectedVoiceURI === 'ka-GE-GiorgiNeural - ka-GE (Male)';
 
     if (elevenLabsEnabled && elevenLabsApiKey) {
         speakElevenLabsSentence(cleanSentence);
-    } else if (currentLang === 'ka' && !hasNativeKaVoice) {
-        speakFreeGeorgianNeural(cleanSentence);
+    } else if (currentLang === 'ka' && (!hasNativeKaVoice || isCloudKaVoice)) {
+        const voiceId = isCloudKaVoice ? selectedVoiceURI : 'ka-GE-GiorgiNeural - ka-GE (Male)';
+        speakFreeGeorgianNeural(cleanSentence, voiceId);
     } else {
         speakStandardSentence(cleanSentence, currentLang);
     }
@@ -1490,7 +1543,7 @@ function speakStandardSentence(text, lang) {
     updatePlayerUIState(true);
 }
 
-async function speakFreeGeorgianNeural(text) {
+async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)') {
     stopCurrentSpeechAudio();
     updatePlayerUIState(true);
     
@@ -1500,7 +1553,7 @@ async function speakFreeGeorgianNeural(text) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                data: [text, 'ka-GE-EkaNeural - ka-GE (Female)', 0, 0]
+                data: [text, voiceId, 0, 0]
             })
         });
         
