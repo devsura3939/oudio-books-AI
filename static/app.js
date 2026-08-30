@@ -1551,13 +1551,17 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
     stopCurrentSpeechAudio();
     updatePlayerUIState(true);
     
+    // Convert global speed/pitch to Edge TTS relative parameters (Prosody Tuning for native feel)
+    const ratePct = Math.max(-50, Math.min(50, Math.round((currentGlobalSpeed - 1.0) * 100)));
+    const pitchHz = Math.max(-20, Math.min(20, Math.round((currentPitch - 1.0) * 40)));
+
     try {
         const apiBase = "https://innoai-edge-tts-text-to-speech.hf.space/gradio_api";
         const res = await fetch(apiBase + "/call/tts_interface", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                data: [text, voiceId, 0, 0]
+                data: [text, voiceId, ratePct, pitchHz]
             })
         });
         
