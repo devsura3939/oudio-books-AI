@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lumina Audio - AI Audiobook & Moon Reader Studio</title>
+    <title>Lumina Audio - AI Audiobook & Moon+ Reader Studio</title>
 
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -16,8 +16,8 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
-    <!-- Google Fonts: Space Grotesk, Inter, Noto Sans Georgian, Noto Serif Georgian, Merriweather -->
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Noto+Sans+Georgian:wght@300;400;500;600;700;800&family=Noto+Serif+Georgian:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Space Grotesk, Inter, Noto Sans Georgian, Noto Serif Georgian, Merriweather, Cinzel, Lora -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Cinzel:wght@600;700;800&family=Noto+Sans+Georgian:wght@300;400;500;600;700;800&family=Noto+Serif+Georgian:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
     <!-- Lucide Icons -->
@@ -49,9 +49,10 @@
                 "label-caps": ["Space Grotesk", "sans-serif"],
                 "headline-md": ["Inter", "sans-serif"],
                 "body-md": ["Inter", "sans-serif"],
-                "serif-reader": ["Merriweather", "Georgia", "serif"],
+                "serif-book": ["Lora", "Merriweather", "Georgia", "serif"],
+                "cinzel": ["Cinzel", "serif"],
                 "georgian-sans": ["Noto Sans Georgian", "Inter", "sans-serif"],
-                "georgian-serif": ["Noto Serif Georgian", "Merriweather", "serif"]
+                "georgian-serif": ["Noto Serif Georgian", "Lora", "serif"]
             }
           },
         },
@@ -122,7 +123,7 @@
             transform: translateY(-4px);
         }
         .glass-dock {
-            background: rgba(17, 22, 34, 0.84);
+            background: rgba(17, 22, 34, 0.88);
             backdrop-filter: blur(40px);
             -webkit-backdrop-filter: blur(40px);
             border: 1px solid rgba(255, 255, 255, 0.16);
@@ -151,7 +152,7 @@
         }
         .modal-overlay.active .modal-content { transform: scale(1); }
 
-        /* ════════════════ Moon+ Reader Theme Styles ════════════════ */
+        /* ════════════════ Moon+ Reader Authentic Book Styles ════════════════ */
         #readerView {
             position: fixed; inset: 0; z-index: 90;
             display: flex; flex-direction: column;
@@ -164,13 +165,77 @@
             opacity: 1; pointer-events: auto;
         }
 
-        /* Theme: Cyber Dark (Default) */
+        /* Simulated Book Paper Shadow & Page Spread */
+        .book-page-surface {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25), 0 0 1px rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            position: relative;
+        }
+        .book-page-surface::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0; width: 8px;
+            background: linear-gradient(to right, rgba(0,0,0,0.12), transparent);
+            border-radius: 12px 0 0 12px;
+            pointer-events: none;
+        }
+
+        /* Drop Cap for Book Typography */
+        .book-drop-cap::first-letter {
+            float: left;
+            font-size: 3.3em;
+            line-height: 0.82;
+            padding-top: 4px;
+            padding-right: 8px;
+            padding-bottom: 2px;
+            font-weight: 700;
+            font-family: 'Cinzel', 'Lora', serif;
+        }
+
+        /* 6 Moon+ Reader Color Themes */
+        /* 1. Sepia Paper */
+        .reader-theme-sepia {
+            background-color: #f5eedb;
+            color: #342718;
+        }
+        .reader-theme-sepia .book-page-surface {
+            background-color: #faf5e8;
+            color: #2c2012;
+            border: 1px solid rgba(160, 130, 90, 0.25);
+        }
+        .reader-theme-sepia .reader-toolbar {
+            background: rgba(240, 230, 208, 0.95);
+            border-color: rgba(140, 110, 75, 0.25);
+            color: #342718;
+        }
+        .reader-theme-sepia .reader-sentence:hover {
+            background-color: rgba(180, 140, 90, 0.18);
+        }
+        .reader-theme-sepia .reader-sentence.active-sentence {
+            background-color: rgba(212, 162, 55, 0.35);
+            color: #120b04;
+            border-bottom: 2px solid #b8860b;
+            box-shadow: 0 0 14px rgba(212, 162, 55, 0.3);
+            border-radius: 4px;
+        }
+        .reader-theme-sepia .reader-btn {
+            color: #342718 !important;
+            background: rgba(140, 110, 75, 0.12) !important;
+            border-color: rgba(140, 110, 75, 0.25) !important;
+        }
+
+        /* 2. Cyber Nebula Dark */
         .reader-theme-dark {
-            background-color: #0c1017;
+            background-color: #080c14;
             color: #e5eaf3;
         }
+        .reader-theme-dark .book-page-surface {
+            background-color: #101522;
+            color: #e5eaf3;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         .reader-theme-dark .reader-toolbar {
-            background: rgba(13, 18, 28, 0.88);
+            background: rgba(13, 18, 28, 0.92);
             border-color: rgba(255, 255, 255, 0.1);
         }
         .reader-theme-dark .reader-sentence:hover {
@@ -180,66 +245,81 @@
             background-color: rgba(0, 240, 255, 0.24);
             color: #ffffff;
             border-bottom: 2px solid #00f0ff;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
             border-radius: 4px;
         }
 
-        /* Theme: Warm Sepia */
-        .reader-theme-sepia {
-            background-color: #f7eed8;
-            color: #382c1e;
+        /* 3. Warm Mocha / Coffee */
+        .reader-theme-mocha {
+            background-color: #171311;
+            color: #eae0d5;
         }
-        .reader-theme-sepia .reader-toolbar {
-            background: rgba(240, 228, 202, 0.95);
-            border-color: rgba(140, 110, 75, 0.25);
-            color: #382c1e;
+        .reader-theme-mocha .book-page-surface {
+            background-color: #211c19;
+            color: #eae0d5;
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .reader-theme-sepia .reader-sentence:hover {
-            background-color: rgba(180, 140, 90, 0.18);
+        .reader-theme-mocha .reader-toolbar {
+            background: rgba(28, 23, 20, 0.95);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #eae0d5;
         }
-        .reader-theme-sepia .reader-sentence.active-sentence {
-            background-color: rgba(212, 162, 55, 0.35);
-            color: #1a1208;
-            border-bottom: 2px solid #b8860b;
-            box-shadow: 0 0 12px rgba(212, 162, 55, 0.25);
+        .reader-theme-mocha .reader-sentence:hover {
+            background-color: rgba(212, 162, 55, 0.15);
+        }
+        .reader-theme-mocha .reader-sentence.active-sentence {
+            background-color: rgba(212, 162, 55, 0.3);
+            color: #ffffff;
+            border-bottom: 2px solid #d4a237;
+            box-shadow: 0 0 14px rgba(212, 162, 55, 0.3);
             border-radius: 4px;
         }
-        .reader-theme-sepia .reader-btn {
-            color: #382c1e !important;
-            background: rgba(140, 110, 75, 0.12) !important;
-            border-color: rgba(140, 110, 75, 0.25) !important;
+        .reader-theme-mocha .reader-btn {
+            color: #eae0d5 !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
         }
 
-        /* Theme: Clean Light */
+        /* 4. Minimalist Ivory Light */
         .reader-theme-light {
-            background-color: #fafbfc;
-            color: #1b212d;
+            background-color: #f5f5f7;
+            color: #1c1c1e;
+        }
+        .reader-theme-light .book-page-surface {
+            background-color: #ffffff;
+            color: #1c1c1e;
+            border: 1px solid rgba(0, 0, 0, 0.08);
         }
         .reader-theme-light .reader-toolbar {
             background: rgba(255, 255, 255, 0.96);
             border-color: rgba(0, 0, 0, 0.1);
-            color: #1b212d;
+            color: #1c1c1e;
         }
         .reader-theme-light .reader-sentence:hover {
             background-color: rgba(0, 150, 255, 0.1);
         }
         .reader-theme-light .reader-sentence.active-sentence {
-            background-color: rgba(0, 150, 255, 0.2);
+            background-color: rgba(0, 150, 255, 0.22);
             color: #000000;
             border-bottom: 2px solid #0088cc;
-            box-shadow: 0 0 12px rgba(0, 150, 255, 0.2);
+            box-shadow: 0 0 12px rgba(0, 150, 255, 0.25);
             border-radius: 4px;
         }
         .reader-theme-light .reader-btn {
-            color: #1b212d !important;
+            color: #1c1c1e !important;
             background: rgba(0, 0, 0, 0.06) !important;
             border-color: rgba(0, 0, 0, 0.12) !important;
         }
 
-        /* Theme: OLED Black */
+        /* 5. OLED Pure Obsidian */
         .reader-theme-oled {
             background-color: #000000;
             color: #d8d8d8;
+        }
+        .reader-theme-oled .book-page-surface {
+            background-color: #080808;
+            color: #dedede;
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
         .reader-theme-oled .reader-toolbar {
             background: rgba(10, 10, 10, 0.95);
@@ -256,7 +336,33 @@
             border-radius: 4px;
         }
 
-        /* Sentence clickability */
+        /* 6. Nordic Forest */
+        .reader-theme-forest {
+            background-color: #0a1410;
+            color: #d4e8dd;
+        }
+        .reader-theme-forest .book-page-surface {
+            background-color: #121f19;
+            color: #d4e8dd;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .reader-theme-forest .reader-toolbar {
+            background: rgba(14, 24, 20, 0.95);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #d4e8dd;
+        }
+        .reader-theme-forest .reader-sentence:hover {
+            background-color: rgba(0, 230, 150, 0.12);
+        }
+        .reader-theme-forest .reader-sentence.active-sentence {
+            background-color: rgba(0, 230, 150, 0.25);
+            color: #ffffff;
+            border-bottom: 2px solid #00e696;
+            box-shadow: 0 0 14px rgba(0, 230, 150, 0.3);
+            border-radius: 4px;
+        }
+
+        /* Interactive Sentence Element */
         .reader-sentence {
             cursor: pointer;
             transition: all 0.2s ease;
@@ -332,7 +438,7 @@
             <li>
                 <button onclick="openModal('voiceModal')" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all font-medium text-sm">
                     <span class="material-symbols-outlined text-[20px]">record_voice_over</span>
-                    <span>Voice & Narration</span>
+                    <span>Voice & Studio TTS</span>
                 </button>
             </li>
         </ul>
@@ -460,7 +566,7 @@
                     <div class="flex gap-2.5">
                         <button onclick="openModal('voiceModal')" class="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 flex items-center gap-1.5 transition">
                             <span class="material-symbols-outlined text-sm text-primary-fixed">record_voice_over</span>
-                            Change Voice
+                            Voice Settings
                         </button>
                     </div>
                 </div>
@@ -544,15 +650,26 @@
 
         <!-- Center: Controls & Timeline -->
         <div class="flex flex-col items-center justify-center flex-grow max-w-md px-2">
-            <div class="flex items-center gap-3 md:gap-5 mb-1.5">
-                <button id="btnPlayerRewind" class="text-on-surface-variant hover:text-primary-fixed transition p-1.5 rounded-full hover:bg-white/5" title="Rewind Sentence">
-                    <span class="material-symbols-outlined text-2xl">replay_10</span>
+            <div class="flex items-center gap-2 md:gap-4 mb-1.5">
+                <!-- Chapter Prev -->
+                <button onclick="readerPrevChapter()" class="text-on-surface-variant hover:text-white transition p-1" title="Previous Chapter">
+                    <span class="material-symbols-outlined text-xl">skip_previous</span>
                 </button>
+                <!-- Sentence Rewind -->
+                <button id="btnPlayerRewind" class="text-on-surface-variant hover:text-primary-fixed transition p-1.5 rounded-full hover:bg-white/5" title="Rewind Sentence">
+                    <span class="material-symbols-outlined text-xl">replay_10</span>
+                </button>
+                <!-- Main Play/Pause -->
                 <button id="btnPlayerPlayPause" class="bg-primary-container text-on-primary-container rounded-full w-11 h-11 shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center">
                     <span class="material-symbols-outlined text-[26px]" id="dockPlayIcon" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                 </button>
+                <!-- Sentence Forward -->
                 <button id="btnPlayerForward" class="text-on-surface-variant hover:text-primary-fixed transition p-1.5 rounded-full hover:bg-white/5" title="Forward Sentence">
-                    <span class="material-symbols-outlined text-2xl">forward_10</span>
+                    <span class="material-symbols-outlined text-xl">forward_10</span>
+                </button>
+                <!-- Chapter Next -->
+                <button onclick="readerNextChapter()" class="text-on-surface-variant hover:text-white transition p-1" title="Next Chapter">
+                    <span class="material-symbols-outlined text-xl">skip_next</span>
                 </button>
             </div>
 
@@ -566,7 +683,7 @@
             </div>
         </div>
 
-        <!-- Right: Language Toggle, Reader, Voice & Speed -->
+        <!-- Right: Language Toggle, Reader, Speed -->
         <div class="flex items-center justify-end gap-2 w-1/4">
             <!-- Language Quick Switcher: EN / KA -->
             <button onclick="togglePlaybackLanguage()" id="btnDockLangToggle" class="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold border border-white/10 transition flex items-center gap-1" title="Toggle English / Georgian audio">
@@ -586,16 +703,16 @@
     </div>
 
     <!-- ════════════════ MOON+ READER DEDICATED FULLSCREEN VIEW ════════════════ -->
-    <div id="readerView" class="reader-theme-dark">
+    <div id="readerView" class="reader-theme-sepia">
         <!-- Reader Top Navigation Bar -->
         <header class="reader-toolbar px-4 md:px-8 py-3.5 border-b flex items-center justify-between flex-shrink-0 z-10">
             <!-- Left: Back & Table of Contents -->
             <div class="flex items-center gap-3">
-                <button onclick="closeReader()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition flex items-center gap-1.5 text-xs font-semibold" title="Exit Reader">
+                <button onclick="closeReader()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition flex items-center gap-1.5 text-xs font-semibold" title="Exit Reader">
                     <span class="material-symbols-outlined text-lg">arrow_back</span>
                     <span class="hidden sm:inline">Shelf</span>
                 </button>
-                <div class="overflow-hidden max-w-[200px] md:max-w-xs">
+                <div class="overflow-hidden max-w-[180px] md:max-w-xs">
                     <h3 id="readerBookTitle" class="text-sm font-bold truncate">Book Title</h3>
                     <p id="readerChapterTitle" class="text-xs opacity-75 truncate">Chapter 1</p>
                 </div>
@@ -625,18 +742,20 @@
 
                 <!-- Font Family Switcher -->
                 <select id="readerFontSelect" onchange="changeReaderFontFamily(this.value)" class="reader-btn hidden md:block px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-white/10 border border-white/15 outline-none">
-                    <option value="font-sans">Modern Sans</option>
-                    <option value="font-serif-reader">Editorial Serif</option>
-                    <option value="font-georgian-sans">Georgian Sans</option>
+                    <option value="font-serif-book">Classic Book Serif (Lora)</option>
+                    <option value="font-sans">Modern Sans (Inter)</option>
                     <option value="font-georgian-serif">Georgian Serif</option>
+                    <option value="font-georgian-sans">Georgian Sans</option>
                 </select>
 
-                <!-- Theme Switcher (Dark / Sepia / Light / OLED) -->
+                <!-- Theme Switcher (6 Themes) -->
                 <div class="flex items-center bg-white/10 rounded-xl p-1 gap-1 border border-white/10">
-                    <button onclick="setReaderTheme('dark')" class="w-6 h-6 rounded-lg bg-[#0c1017] border border-cyan-400/40" title="Dark Nebula Theme"></button>
-                    <button onclick="setReaderTheme('sepia')" class="w-6 h-6 rounded-lg bg-[#f7eed8] border border-amber-800/30" title="Warm Sepia Paper"></button>
-                    <button onclick="setReaderTheme('light')" class="w-6 h-6 rounded-lg bg-[#ffffff] border border-gray-400/40" title="Editorial Light"></button>
-                    <button onclick="setReaderTheme('oled')" class="w-6 h-6 rounded-lg bg-[#000000] border border-white/30" title="OLED Pure Black"></button>
+                    <button onclick="setReaderTheme('sepia')" class="w-6 h-6 rounded-lg bg-[#f5eedb] border border-amber-800/40" title="Sepia Warm Paper"></button>
+                    <button onclick="setReaderTheme('mocha')" class="w-6 h-6 rounded-lg bg-[#211c19] border border-amber-500/40" title="Warm Mocha Coffee"></button>
+                    <button onclick="setReaderTheme('dark')" class="w-6 h-6 rounded-lg bg-[#101522] border border-cyan-400/40" title="Cyber Dark Nebula"></button>
+                    <button onclick="setReaderTheme('light')" class="w-6 h-6 rounded-lg bg-[#ffffff] border border-gray-400/40" title="Editorial Ivory Light"></button>
+                    <button onclick="setReaderTheme('forest')" class="w-6 h-6 rounded-lg bg-[#121f19] border border-emerald-500/40" title="Nordic Forest Green"></button>
+                    <button onclick="setReaderTheme('oled')" class="w-6 h-6 rounded-lg bg-[#000000] border border-white/30" title="OLED Pure Obsidian"></button>
                 </div>
 
                 <!-- Export PDF -->
@@ -646,38 +765,41 @@
             </div>
         </header>
 
-        <!-- Reader Scrollable Reading Surface -->
-        <div id="readerScrollContainer" class="flex-grow overflow-y-auto px-4 md:px-12 py-8 md:py-12 flex justify-center">
-            <article id="readerContentArea" class="max-w-3xl w-full leading-relaxed transition-all duration-200">
-                <!-- Injected paragraphs and interactive sentence spans -->
-            </article>
+        <!-- Reader Scrollable Book Surface -->
+        <div id="readerScrollContainer" class="flex-grow overflow-y-auto px-3 sm:px-6 md:px-12 py-6 md:py-10 flex justify-center">
+            <!-- Simulated Book Page Spread -->
+            <div class="book-page-surface max-w-3xl w-full p-6 sm:p-10 md:p-14 transition-all duration-300">
+                <article id="readerContentArea" class="leading-relaxed font-serif-book">
+                    <!-- Injected book chapter headers, ornaments, drop cap, and sentence spans -->
+                </article>
+            </div>
         </div>
 
-        <!-- Reader Bottom Sticky Synchronized Playbar -->
+        <!-- Reader Bottom Sticky Synchronized Playbar (Moon+ Reader Signature Status) -->
         <footer class="reader-toolbar px-4 md:px-8 py-3 border-t flex items-center justify-between flex-shrink-0 z-10">
             <!-- Chapter Prev -->
-            <button onclick="readerPrevChapter()" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold flex items-center gap-1 transition">
+            <button onclick="readerPrevChapter()" class="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold flex items-center gap-1 transition">
                 <span class="material-symbols-outlined text-base">chevron_left</span>
-                <span class="hidden sm:inline">Prev Chapter</span>
+                <span>Prev Chapter</span>
             </button>
 
-            <!-- Sync Speech Controls -->
-            <div class="flex items-center gap-4">
-                <button onclick="readerRewindSentence()" class="p-2 rounded-full hover:bg-white/10 transition" title="Previous Sentence">
+            <!-- Sync Speech Controls & Reading Status -->
+            <div class="flex items-center gap-3 sm:gap-4">
+                <button onclick="readerRewindSentence()" class="p-1.5 sm:p-2 rounded-full hover:bg-white/10 transition" title="Previous Sentence">
                     <span class="material-symbols-outlined text-xl">replay_10</span>
                 </button>
                 <button onclick="togglePlayPause()" id="btnReaderPlayPause" class="bg-primary-container text-on-primary-container w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition">
                     <span class="material-symbols-outlined text-2xl" id="readerPlayIcon">play_arrow</span>
                 </button>
-                <button onclick="readerForwardSentence()" class="p-2 rounded-full hover:bg-white/10 transition" title="Next Sentence">
+                <button onclick="readerForwardSentence()" class="p-1.5 sm:p-2 rounded-full hover:bg-white/10 transition" title="Next Sentence">
                     <span class="material-symbols-outlined text-xl">forward_10</span>
                 </button>
-                <span id="readerReadingProgressText" class="text-xs font-mono opacity-75 hidden sm:inline">Sentence 1/1</span>
+                <span id="readerReadingProgressText" class="text-xs font-mono opacity-80 hidden md:inline">Sentence 1/1</span>
             </div>
 
             <!-- Chapter Next -->
-            <button onclick="readerNextChapter()" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold flex items-center gap-1 transition">
-                <span class="hidden sm:inline">Next Chapter</span>
+            <button onclick="readerNextChapter()" class="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold flex items-center gap-1 transition">
+                <span>Next Chapter</span>
                 <span class="material-symbols-outlined text-base">chevron_right</span>
             </button>
         </footer>
@@ -737,26 +859,58 @@
         </div>
     </div>
 
-    <!-- ════════════════ Voice & Narration Modal ════════════════ -->
+    <!-- ════════════════ Voice & Studio TTS Modal (With ElevenLabs Ultra-AI) ════════════════ -->
     <div id="voiceModal" class="modal-overlay">
-        <div class="modal-content glass-panel p-6 md:p-8 rounded-3xl max-w-md w-full border border-white/15 shadow-2xl mx-4 space-y-6">
+        <div class="modal-content glass-panel p-6 md:p-8 rounded-3xl max-w-lg w-full border border-white/15 shadow-2xl mx-4 space-y-5">
             <div class="flex justify-between items-center border-b border-white/10 pb-4">
                 <div>
                     <h2 class="text-xl font-bold text-white flex items-center gap-2">
                         <span class="material-symbols-outlined text-primary-fixed">tune</span>
-                        Voice & Narration Studio
+                        Voice & Studio TTS
                     </h2>
-                    <p class="text-xs text-on-surface-variant mt-0.5">Select narrator voices for English & Georgian playback</p>
+                    <p class="text-xs text-on-surface-variant mt-0.5">High-Fidelity Neural Speech & ElevenLabs Integration</p>
                 </div>
                 <button onclick="closeModal('voiceModal')" class="p-1.5 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition">
                     <span class="material-symbols-outlined text-xl">close</span>
                 </button>
             </div>
 
-            <!-- Voice Selection Dropdown -->
+            <!-- ElevenLabs Ultra-Neural Toggle & Key Section -->
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-secondary-container/20 to-primary-container/10 border border-primary-container/30 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">✨</span>
+                        <div>
+                            <p class="text-xs font-bold text-white">ElevenLabs Studio AI (Optional)</p>
+                            <p class="text-[10px] text-primary-fixed">Ultra-realistic emotional speech in English & Georgian</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="elevenLabsToggle" class="sr-only peer" onchange="toggleElevenLabsMode(this.checked)">
+                        <div class="w-9 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container"></div>
+                    </label>
+                </div>
+
+                <div id="elevenLabsKeySection" class="hidden space-y-2 pt-2 border-t border-white/10">
+                    <input type="password" id="elevenLabsApiKey" placeholder="Enter your ElevenLabs API Key (sk_...)" class="w-full glass-input rounded-xl p-2.5 text-xs text-white outline-none">
+                    <div class="flex gap-2">
+                        <select id="elevenLabsVoiceSelect" class="flex-grow glass-input rounded-xl p-2 text-xs text-white outline-none">
+                            <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Warm & Natural Female)</option>
+                            <option value="pNInz6obpgDQGcFmaJgB">Adam (Deep Male Narrator)</option>
+                            <option value="ErXwobaYiN019PkySvjV">Antoni (Energetic Storyteller)</option>
+                            <option value="JBFqnCBsd6RMkjVDRZzb">George (British Audiobook Voice)</option>
+                            <option value="EXAVITQu4vr4xnSDxMaL">Bella (Expressive Female)</option>
+                            <option value="VR6AewLTigWG4xSOukaG">Arnold (Crisp & Articulate)</option>
+                        </select>
+                        <button onclick="saveElevenLabsSettings()" class="px-3 py-2 bg-primary-container text-on-primary-container font-bold text-xs rounded-xl hover:brightness-110 transition">Save</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Built-in Browser Voice Selection -->
             <div>
                 <label class="block text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-2">
-                    🎙️ Narrator Voice
+                    🎙️ Standard Narrator Voice
                 </label>
                 <select id="voiceModalSelect" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
                     <optgroup label="👨 Male Narrators" id="optgroupMale"></optgroup>
@@ -769,11 +923,11 @@
             <div class="grid grid-cols-2 gap-2.5">
                 <button onclick="testVoicePreview()" class="py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs font-semibold text-primary-fixed flex items-center justify-center gap-1.5 transition">
                     <span class="material-symbols-outlined text-base">volume_up</span>
-                    Test English
+                    Test English Audio
                 </button>
                 <button onclick="testGeorgianVoicePreview()" class="py-2.5 rounded-xl bg-georgian-gold/15 hover:bg-georgian-gold/25 border border-georgian-gold/30 text-xs font-semibold text-georgian-gold flex items-center justify-center gap-1.5 transition">
                     <span>🇬🇪</span>
-                    Test Georgian
+                    Test Georgian Audio
                 </button>
             </div>
 
