@@ -686,8 +686,11 @@ function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         if (modalId === 'aiSettingsModal') {
-            document.getElementById('geminiApiKeyInput').value = geminiApiKey || '';
-            document.getElementById('geminiModelSelect').value = geminiModel || 'gemini-2.5-pro';
+            const keyInput = document.getElementById('geminiApiKeyInput');
+            if (keyInput) keyInput.value = geminiApiKey || '';
+            
+            const modelSelect = document.getElementById('geminiModelSelect');
+            if (modelSelect) modelSelect.value = geminiModel || 'gemini-2.5-pro';
         }
         modal.classList.add('active');
     }
@@ -699,8 +702,11 @@ function closeModal(modalId) {
 }
 
 function saveGeminiSettings() {
-    const key = document.getElementById('geminiApiKeyInput').value.trim();
-    const model = document.getElementById('geminiModelSelect').value;
+    const keyInput = document.getElementById('geminiApiKeyInput');
+    const key = keyInput ? keyInput.value.trim() : '';
+    
+    const modelSelect = document.getElementById('geminiModelSelect');
+    const model = modelSelect ? modelSelect.value : 'gemini-2.5-pro';
     
     if (key) {
         localStorage.setItem('geminiApiKey', key);
