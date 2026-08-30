@@ -249,6 +249,10 @@ function verbalizeGeorgianTextForTTS(text) {
     // 8. Natural breath pause before Georgian conjunctions
     out = out.replace(/([^,.;:!?])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|როდესაც|რომელიც)\b/g, '$1, $2');
 
+    // 9. Interrogative & Question Mark Acoustic Prosody
+    out = out.replace(/\s*\?\s*/g, '? ');
+    out = out.replace(/\s*!\s*/g, '! ');
+
     return out;
 }
 
@@ -257,7 +261,48 @@ function refineGeorgianGrammar(text) {
     if (!text) return '';
     let out = normalizeGeorgian(text);
 
-    // 1. Historical & Literary Name Localization
+    // 1. Critical Idiom, Metaphor & Vulgarity Filters from English MT artifacts
+    const idiomFixes = [
+        // "how anal I can get" -> "რამდენად პედანტური/დეტალური შემიძლია ვიყო"
+        [/\b(?:თუ\s+)?როგორი\s+ანალის\s+მიღება\s+შემიძლია\b/gi, 'თუ რამდენად პედანტური და ზედმიწევნითი შემიძლია ვიყო'],
+        [/\bანალის\s+მიღება\b/gi, 'ზედმიწევნითობა'],
+        [/\bროგორი\s+ანალი\b/gi, 'როგორი პედანტი'],
+
+        // "got to me" (moved to tears / affected me deeply) -> "ცრემლებამდე ამაღელვა"
+        [/\bეს\s+რომანები\s+მომივიდა\b/gi, 'ამ რომანებმა ცრემლებამდე ამაღელვა'],
+        [/\bმომივიდა\s+გულზე\b/gi, 'გულზე მომხვდა'],
+
+        // "choking up" -> "ცრემლებს ძლივს ვიკავებდი" (NOT "ვხრჩობდი")
+        [/\bვიჯექი\s+და\s+ვხრჩობდი\b/gi, 'ვიჯექი და ცრემლებს ძლივს ვიკავებდი'],
+        [/\bდა\s+ვხრჩობდი\b/gi, 'და ემოციებისგან ყელში ბურთი მებჯინებოდა'],
+
+        // "backs away / backwards" -> "უკან იხევს / აჭიანურებს"
+        [/\bუკუღმა\s+მოძრაობს\b/gi, 'უკან იხევს და საქმეს აჭიანურებს'],
+        [/\bუკუღმა\s+წავიკითხე\b/gi, 'თავიდან ბოლომდე, ერთი ამოსუნთქვით წავიკითხე'],
+
+        // "Resistance" (War of Art core theme) -> "შინაგანი წინააღმდეგობა"
+        [/\bსხვა\s+სიტყვებით\s+რომ\s+ვთქვათ,\s+წინააღმდეგობა\b/gi, 'სხვა სიტყვებით რომ ვთქვათ — შინაგანი წინააღმდეგობა'],
+
+        // "writer's block" / "the block" -> "შემოქმედებითი ბლოკი"
+        [/როგორც\s+„ბლოკი“,\s+დამბლა/gi, 'როგორც „შემოქმედებითი დამბლა“ და ბლოკი'],
+
+        // "Salvation Army" in clothing pile context -> "საქველმოქმედო გროვა"
+        [/ზამთარი,\s*ხსნის\s*არმია/gi, 'ზამთარი და საქველმოქმედო ყუთი'],
+
+        // General Idioms
+        [/\bერთხელ\s+დროში\b/gi, 'იყო და არა იყო რა'],
+        [/\bსხვა\s+მხრივ\b/gi, 'მეორეს მხრივ'],
+        [/\bყველაფერში\s+ყველაფერში\b/gi, 'საბოლოო ჯამში'],
+        [/\bსაქმის\s+ფაქტად\b/gi, 'სინამდვილეში'],
+        [/\bსხვა\s+სიტყვებით\b/gi, 'სხვა სიტყვებით რომ ვთქვათ'],
+        [/\bზედმეტია\s+იმის\s+თქმა\b/gi, 'რა თქმა უნდა'],
+        [/\bთავის\s+თავად\b/gi, 'თავისთავად']
+    ];
+    idiomFixes.forEach(([pattern, repl]) => {
+        out = out.replace(pattern, repl);
+    });
+
+    // 2. Historical & Literary Name Localization
     const nameReplacements = [
         [/\bსუნ\s+ცუ\b/gi, 'სუნ ძი'],
         [/\bსუნ\s+ტზუ\b/gi, 'სუნ ძი'],
@@ -268,7 +313,7 @@ function refineGeorgianGrammar(text) {
         out = out.replace(pat, repl);
     });
 
-    // 2. Fix Machine Translation Ergative Subject Errors (ის -> მან before transitive past verbs)
+    // 3. Fix Machine Translation Ergative Subject Errors (ის -> მან before transitive past verbs)
     const ergativeVerbs = [
         'თქვა', 'უპასუხა', 'ჰკითხა', 'დაწერა', 'გააკეთა', 'ნახა', 'იპოვა',
         'შეამჩნია', 'მოისმინა', 'წაიკითხა', 'დაინახა', 'მიიღო', 'გადაწყვიტა',
@@ -282,27 +327,13 @@ function refineGeorgianGrammar(text) {
         out = out.replace(new RegExp(`\\bის\\s+([ა-ჰ]+ად|[ა-ჰ]+ადვე|[ა-ჰ]+თ)\\s+(${verb})\\b`, 'g'), 'მან $1 $2');
     });
 
-    // 3. Format Authentic Georgian Literary Quotations: „...“
+    // 4. Format Authentic Georgian Literary Quotations: „...“
     out = out.replace(/(^|[\s(\[])["“]([^\s"”])/g, '$1„$2');
     out = out.replace(/([^\s"„])["”]([\s)\].,!?;:]|$)/g, '$1“$2');
 
-    // 4. Fix Machine Translation Spacing Artifacts Around Punctuation
+    // 5. Fix Machine Translation Spacing Artifacts Around Punctuation
     out = out.replace(/\s+([,.:;!?])/g, '$1');
     out = out.replace(/([,.:;!?])(?=[ა-ჰA-Za-z0-9])/g, '$1 ');
-
-    // 5. Polish Literary Idioms & Storytelling Openings
-    const idiomReplacements = [
-        [/\bერთხელ\s+დროში\b/gi, 'იყო და არა იყო რა'],
-        [/\bსხვა\s+მხრივ\b/gi, 'მეორეს მხრივ'],
-        [/\bყველაფერში\s+ყველაფერში\b/gi, 'საბოლოო ჯამში'],
-        [/\bსაქმის\s+ფაქტად\b/gi, 'სინამდვილეში'],
-        [/\bსხვა\s+სიტყვებით\b/gi, 'სხვა სიტყვებით რომ ვთქვათ'],
-        [/\bზედმეტია\s+იმის\s+თქმა\b/gi, 'რა თქმა უნდა'],
-        [/\bთავის\s+თავად\b/gi, 'თავისთავად']
-    ];
-    idiomReplacements.forEach(([pattern, repl]) => {
-        out = out.replace(pattern, repl);
-    });
 
     return out.trim();
 }
@@ -904,7 +935,14 @@ function openCurrentBookInReader() {
 async function openReader(bookId, chapterId, lang = 'en') {
     const books = await getAllBooks();
     readerBook = books.find(b => String(b.id) === String(bookId));
-    if (!readerBook) return;
+    if (!readerBook) {
+        if (currentBook && String(currentBook.id) === String(bookId)) {
+            readerBook = currentBook;
+        } else {
+            return;
+        }
+    }
+    currentBook = readerBook;
 
     readerChapterId = chapterId !== undefined ? chapterId : (readerBook.chapters[0] ? readerBook.chapters[0].id : 1);
     readerLang = lang;
@@ -1305,11 +1343,32 @@ function syncAudioToCurrentPage() {
     }
 }
 
+function showReaderToast(msg) {
+    let toast = document.getElementById('readerToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'readerToast';
+        toast.className = 'fixed top-16 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/85 text-white border border-white/20 rounded-2xl text-xs font-bold shadow-2xl z-50 transition-all duration-300 pointer-events-none opacity-0';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.remove('opacity-0', '-translate-y-2');
+    toast.classList.add('opacity-100', 'translate-y-0');
+    setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', '-translate-y-2');
+    }, 2200);
+}
+
 function readerPrevChapter() {
-    if (!readerBook) return;
+    if (!readerBook) {
+        if (currentBook) readerBook = currentBook;
+        else return;
+    }
     const curIdx = readerBook.chapters.findIndex(c => String(c.id) === String(readerChapterId));
     if (curIdx > 0) {
-        readerChapterId = readerBook.chapters[curIdx - 1].id;
+        const prevChap = readerBook.chapters[curIdx - 1];
+        readerChapterId = prevChap.id;
         paginateChapter();
         const isDual = readerMode === 'dual' && window.innerWidth >= 900;
         if (isDual) {
@@ -1322,20 +1381,30 @@ function readerPrevChapter() {
         if (isPlaying) {
             playChapterAudio(readerChapterId);
         }
+        showReaderToast(`📖 ${prevChap.title}`);
+    } else {
+        showReaderToast("✦ First Chapter ✦");
     }
 }
 
 function readerNextChapter() {
-    if (!readerBook) return;
+    if (!readerBook) {
+        if (currentBook) readerBook = currentBook;
+        else return;
+    }
     const curIdx = readerBook.chapters.findIndex(c => String(c.id) === String(readerChapterId));
     if (curIdx >= 0 && curIdx < readerBook.chapters.length - 1) {
-        readerChapterId = readerBook.chapters[curIdx + 1].id;
+        const nextChap = readerBook.chapters[curIdx + 1];
+        readerChapterId = nextChap.id;
         readerCurrentPage = 1;
         paginateChapter();
         renderCurrentPage();
         if (isPlaying) {
             playChapterAudio(readerChapterId);
         }
+        showReaderToast(`📖 ${nextChap.title}`);
+    } else {
+        showReaderToast("✦ End of Book Reached ✦");
     }
 }
 
@@ -1720,6 +1789,7 @@ async function startWholeBookTranslation() {
                 renderDigitalShelf();
                 if (DOM.heroGeorgianBadge) DOM.heroGeorgianBadge.classList.remove('hidden');
                 if (readerActive) {
+                    readerBook = currentBook;
                     readerLang = 'ka';
                     updateReaderLangUI();
                     paginateChapter();
