@@ -1,4 +1,4 @@
-// AudioRead Studio - Full Hybrid Frontend Application Logic (FastAPI Backend + GitHub Pages In-Browser Client)
+// AudioRead Studio - Robust Hybrid Audio Engine (Google Cloud TTS Stream + HTML5 Audio + WebSpeech Fallback)
 
 let currentBook = null;
 let voices = [];
@@ -9,13 +9,36 @@ let currentSpeedIndex = 1;
 let activeModalChapterId = null;
 let isBackendAvailable = false;
 
-// Sentence-by-sentence Web Speech Engine state (ensures 100% reliability in browsers for any book size)
-let speechQueue = [];
-let currentSentenceIdx = 0;
-let isSpeechPlaying = false;
-let isSpeakingPaused = false;
-let speechTimer = null;
-let speechElapsedSeconds = 0;
+// Audio Queue & State
+let sentenceQueue = [];
+let currentSentenceIndex = 0;
+let isAudioPlaying = false;
+let playbackMode = 'stream'; // 'stream' (Google MP3 Audio) or 'synth' (WebSpeech)
+let audioTimer = null;
+let audioSecondsElapsed = 0;
+
+// Prevent Chrome Garbage Collection bug for speech synthesis
+window._activeUtterance = null;
+
+// Curated Studio Voices (Google Stream + System)
+const CLOUD_STUDIO_VOICES = [
+    { short_name: 'google:en-US', name: 'google:en-US', locale: 'en-US', friendly_name: '🌟 Studio Natural Narrator (US English)' },
+    { short_name: 'google:en-GB', name: 'google:en-GB', locale: 'en-GB', friendly_name: '🌟 Studio British Narrator (UK English)' },
+    { short_name: 'google:en-AU', name: 'google:en-AU', locale: 'en-AU', friendly_name: '🌟 Studio Australian Narrator' },
+    { short_name: 'google:en-IN', name: 'google:en-IN', locale: 'en-IN', friendly_name: '🌟 Studio Indian English Narrator' },
+    { short_name: 'google:en-CA', name: 'google:en-CA', locale: 'en-CA', friendly_name: '🌟 Studio Canadian Narrator' },
+    { short_name: 'google:es-ES', name: 'google:es-ES', locale: 'es-ES', friendly_name: 'Spanish - España (Studio Voice)' },
+    { short_name: 'google:es-MX', name: 'google:es-MX', locale: 'es-MX', friendly_name: 'Spanish - México (Studio Voice)' },
+    { short_name: 'google:fr-FR', name: 'google:fr-FR', locale: 'fr-FR', friendly_name: 'French - Français (Studio Voice)' },
+    { short_name: 'google:de-DE', name: 'google:de-DE', locale: 'de-DE', friendly_name: 'German - Deutsch (Studio Voice)' },
+    { short_name: 'google:it-IT', name: 'google:it-IT', locale: 'it-IT', friendly_name: 'Italian - Italiano (Studio Voice)' },
+    { short_name: 'google:pt-BR', name: 'google:pt-BR', locale: 'pt-BR', friendly_name: 'Portuguese - Brasil (Studio Voice)' },
+    { short_name: 'google:ru-RU', name: 'google:ru-RU', locale: 'ru-RU', friendly_name: 'Russian - Русский (Studio Voice)' },
+    { short_name: 'google:ja-JP', name: 'google:ja-JP', locale: 'ja-JP', friendly_name: 'Japanese - 日本語 (Studio Voice)' },
+    { short_name: 'google:zh-CN', name: 'google:zh-CN', locale: 'zh-CN', friendly_name: 'Chinese - 中文 (Studio Voice)' },
+    { short_name: 'google:ar-SA', name: 'google:ar-SA', locale: 'ar-SA', friendly_name: 'Arabic - العربية (Studio Voice)' },
+    { short_name: 'google:hi-IN', name: 'google:hi-IN', locale: 'hi-IN', friendly_name: 'Hindi - हिन्दी (Studio Voice)' }
+];
 
 // DOM Elements
 const dropZone = document.getElementById('dropZone');
@@ -79,7 +102,7 @@ const volumeIcon = document.getElementById('volumeIcon');
 const volumeSlider = document.getElementById('volumeSlider');
 const btnDownloadCurrent = document.getElementById('btnDownloadCurrent');
 
-// 1. PREVENT DEFAULT ON WINDOW TO STOP BROWSER FROM OPENING DROPPED PDFS
+// 1. PREVENT WINDOW DRAG-DROP NAVIGATIONS
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
     window.addEventListener(eventName, (e) => {
         e.preventDefault();
@@ -91,7 +114,7 @@ const btnDownloadCurrent = document.getElementById('btnDownloadCurrent');
     }, false);
 });
 
-// Chrome SpeechSynthesis keep-alive heartbeat (prevents Chromium from pausing speech after 15s)
+// Chrome SpeechSynthesis heartbeat
 setInterval(() => {
     if ('speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
         window.speechSynthesis.pause();
@@ -99,20 +122,17 @@ setInterval(() => {
     }
 }, 8000);
 
-// Initialize on load
+// Initialize on Load
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.lucide) {
-        lucide.createIcons();
-    }
+    if (window.lucide) lucide.createIcons();
     setupEventListeners();
-    checkBackendAndLoadVoices();
+    initAudioEngines();
 });
 
-// Detect if running with Python FastAPI backend or as standalone GitHub Pages
-async function checkBackendAndLoadVoices() {
+async function initAudioEngines() {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const timeoutId = setTimeout(() => controller.abort(), 1800);
         const res = await fetch('/api/voices', { signal: controller.signal });
         clearTimeout(timeoutId);
 
@@ -121,54 +141,59 @@ async function checkBackendAndLoadVoices() {
             voices = await res.json();
             if (modeText) modeText.textContent = '🚀 Python Backend Active (Edge-TTS Studio Voices)';
             if (modeBadge) modeBadge.classList.remove('hidden');
-            renderVoiceOptions();
+            renderVoiceOptions(voices);
             return;
         }
     } catch (e) {
         isBackendAvailable = false;
     }
 
-    if (modeText) modeText.textContent = '🌐 In-Browser AI Speech Engine (Live GitHub Pages)';
+    if (modeText) modeText.textContent = '🌐 High-Definition Studio Voice Stream (100% Free)';
     if (modeBadge) modeBadge.classList.remove('hidden');
-    loadBrowserSpeechVoices();
+
+    // Combine Studio Cloud Stream Voices + Local Browser Voices
+    let allVoices = [...CLOUD_STUDIO_VOICES];
+
+    if ('speechSynthesis' in window) {
+        const browserVoices = window.speechSynthesis.getVoices();
+        browserVoices.forEach(v => {
+            allVoices.push({
+                short_name: `synth:${v.name}`,
+                name: v.name,
+                locale: v.lang,
+                friendly_name: `Device Voice: ${v.name} (${v.lang})`
+            });
+        });
+
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = () => {
+                const updated = window.speechSynthesis.getVoices();
+                allVoices = [...CLOUD_STUDIO_VOICES];
+                updated.forEach(v => {
+                    allVoices.push({
+                        short_name: `synth:${v.name}`,
+                        name: v.name,
+                        locale: v.lang,
+                        friendly_name: `Device Voice: ${v.name} (${v.lang})`
+                    });
+                });
+                renderVoiceOptions(allVoices);
+            };
+        }
+    }
+
+    voices = allVoices;
+    renderVoiceOptions(allVoices);
 }
 
-function loadBrowserSpeechVoices() {
-    if (!('speechSynthesis' in window)) {
-        if (voiceSelect) voiceSelect.innerHTML = '<option>Speech synthesis not supported in this browser</option>';
-        return;
-    }
-
-    function populate() {
-        const synthVoices = window.speechSynthesis.getVoices();
-        if (synthVoices.length === 0) return;
-
-        voices = synthVoices.map(v => ({
-            short_name: v.name,
-            name: v.name,
-            gender: v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') ? 'Female' : 'Male',
-            locale: v.lang,
-            language: v.lang.split('-')[0],
-            friendly_name: `${v.name} (${v.lang}) ${v.default ? '★ Default' : ''}`
-        }));
-
-        renderVoiceOptions();
-    }
-
-    populate();
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = populate;
-    }
-}
-
-function renderVoiceOptions() {
+function renderVoiceOptions(voiceList) {
     if (!voiceSelect) return;
     voiceSelect.innerHTML = '';
-    voices.forEach(v => {
+    voiceList.forEach(v => {
         const opt = document.createElement('option');
         opt.value = v.short_name;
         opt.textContent = v.friendly_name;
-        if (v.short_name.includes('Christopher') || v.short_name.includes('Natural') || v.short_name.includes('Google US English') || v.friendly_name.includes('★')) {
+        if (v.short_name === 'google:en-US' || v.short_name === 'en-US-ChristopherNeural') {
             opt.selected = true;
         }
         voiceSelect.appendChild(opt);
@@ -217,13 +242,12 @@ function setupEventListeners() {
     if (btnNewBook) {
         btnNewBook.addEventListener('click', () => {
             if (confirm('Start over and upload a new book?')) {
-                stopSpeechEngine();
+                stopAllAudio();
                 uploadSection.classList.remove('hidden');
                 workspaceSection.classList.add('hidden');
                 btnNewBook.classList.add('hidden');
                 currentBook = null;
                 if (eventSource) eventSource.close();
-                globalAudioPlayer.pause();
                 audioPlayerBar.classList.add('hidden');
             }
         });
@@ -235,6 +259,10 @@ function setupEventListeners() {
             const val = parseInt(e.target.value);
             const multiplier = (1 + val / 100).toFixed(2);
             if (rateLabel) rateLabel.textContent = `${multiplier}x`;
+            if (globalAudioPlayer) {
+                const speed = playbackSpeeds[currentSpeedIndex];
+                globalAudioPlayer.playbackRate = speed * parseFloat(multiplier);
+            }
         });
     }
 
@@ -246,42 +274,50 @@ function setupEventListeners() {
         });
     }
 
-    // Preview Voice
+    // Voice Preview
     if (btnPreviewVoice) {
         btnPreviewVoice.addEventListener('click', async () => {
-            const voiceName = voiceSelect.value;
-            const testText = "Welcome to your high quality AI audiobook studio. Reading your favorite books with natural voice.";
+            const voiceVal = voiceSelect.value;
+            const sampleText = "Welcome to AudioRead Studio. Converting your books into crystal clear audio.";
+            
+            btnPreviewVoice.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Playing...`;
+            if (window.lucide) lucide.createIcons();
 
-            if (isBackendAvailable) {
-                btnPreviewVoice.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Loading...`;
-                if (window.lucide) lucide.createIcons();
-                try {
+            try {
+                if (voiceVal.startsWith('google:')) {
+                    const lang = voiceVal.split(':')[1] || 'en';
+                    const streamUrl = getGoogleTTSUrl(sampleText, lang);
+                    previewAudioPlayer.src = streamUrl;
+                    await previewAudioPlayer.play();
+                } else if (isBackendAvailable) {
                     const res = await fetch('/api/voices/preview', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ voice: voiceName, rate: getFormattedRate(), pitch: getFormattedPitch() })
+                        body: JSON.stringify({ voice: voiceVal, rate: getFormattedRate(), pitch: getFormattedPitch() })
                     });
                     const data = await res.json();
                     if (data.preview_url) {
                         previewAudioPlayer.src = data.preview_url;
-                        previewAudioPlayer.play();
+                        await previewAudioPlayer.play();
                     }
-                } catch (err) {
-                    alert('Voice preview error: ' + err.message);
-                } finally {
-                    btnPreviewVoice.innerHTML = `<i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Test Voice`;
-                    if (window.lucide) lucide.createIcons();
-                }
-            } else {
-                if ('speechSynthesis' in window) {
+                } else {
+                    // SpeechSynthesis test
                     window.speechSynthesis.cancel();
-                    const utter = new SpeechSynthesisUtterance(testText);
-                    const matchVoice = window.speechSynthesis.getVoices().find(v => v.name === voiceName);
+                    const utter = new SpeechSynthesisUtterance(sampleText);
+                    const cleanName = voiceVal.replace('synth:', '');
+                    const matchVoice = window.speechSynthesis.getVoices().find(v => v.name === cleanName);
                     if (matchVoice) utter.voice = matchVoice;
                     utter.rate = 1 + parseInt(rateSlider.value) / 100;
-                    utter.pitch = 1 + parseInt(pitchSlider.value) / 50;
+                    window._activeUtterance = utter;
                     window.speechSynthesis.speak(utter);
                 }
+            } catch (err) {
+                console.warn('Preview error:', err);
+            } finally {
+                setTimeout(() => {
+                    btnPreviewVoice.innerHTML = `<i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Test Voice`;
+                    if (window.lucide) lucide.createIcons();
+                }, 1500);
             }
         });
     }
@@ -290,7 +326,14 @@ function setupEventListeners() {
     if (btnConvertAll) {
         btnConvertAll.addEventListener('click', () => {
             if (!currentBook) return;
-            startTTSGeneration();
+            if (isBackendAvailable) {
+                startTTSGeneration();
+            } else {
+                // Instantly start Chapter 1 in Browser Audio mode
+                if (currentBook.chapters.length > 0) {
+                    playChapterAudio(currentBook.chapters[0].id);
+                }
+            }
         });
     }
 
@@ -301,7 +344,7 @@ function setupEventListeners() {
             if (isBackendAvailable) {
                 window.location.href = `/api/download/zip/${currentBook.id}`;
             } else {
-                alert('ZIP download is enabled when running with the Python backend. In browser mode, you can play chapters directly in your player!');
+                alert('ZIP bundling is available with the Python backend server. In browser mode, click Listen to play chapters directly in high quality!');
             }
         });
     }
@@ -317,15 +360,11 @@ function setupEventListeners() {
     // Rewind -15s
     if (btnPlayerRewind) {
         btnPlayerRewind.addEventListener('click', () => {
-            if (isBackendAvailable) {
+            if (playbackMode === 'stream') {
+                currentSentenceIndex = Math.max(0, currentSentenceIndex - 2);
+                playNextSentenceStream();
+            } else if (isBackendAvailable) {
                 globalAudioPlayer.currentTime = Math.max(0, globalAudioPlayer.currentTime - 15);
-            } else {
-                // Rewind 3 sentences back
-                currentSentenceIdx = Math.max(0, currentSentenceIdx - 3);
-                if (isSpeechPlaying && !isSpeakingPaused) {
-                    window.speechSynthesis.cancel();
-                    speakNextSentenceInQueue();
-                }
             }
         });
     }
@@ -333,15 +372,11 @@ function setupEventListeners() {
     // Forward +15s
     if (btnPlayerForward) {
         btnPlayerForward.addEventListener('click', () => {
-            if (isBackendAvailable) {
+            if (playbackMode === 'stream') {
+                currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 2);
+                playNextSentenceStream();
+            } else if (isBackendAvailable) {
                 globalAudioPlayer.currentTime = Math.min(globalAudioPlayer.duration, globalAudioPlayer.currentTime + 15);
-            } else {
-                // Skip 3 sentences forward
-                currentSentenceIdx = Math.min(speechQueue.length - 1, currentSentenceIdx + 3);
-                if (isSpeechPlaying && !isSpeakingPaused) {
-                    window.speechSynthesis.cancel();
-                    speakNextSentenceInQueue();
-                }
             }
         });
     }
@@ -349,27 +384,15 @@ function setupEventListeners() {
     if (btnPlayerPrev) btnPlayerPrev.addEventListener('click', playPreviousChapter);
     if (btnPlayerNext) btnPlayerNext.addEventListener('click', playNextChapter);
 
-    if (globalAudioPlayer) {
-        globalAudioPlayer.addEventListener('timeupdate', updateAudioProgress);
-        globalAudioPlayer.addEventListener('ended', playNextChapter);
-        globalAudioPlayer.addEventListener('loadedmetadata', () => {
-            if (playerTotalTime) playerTotalTime.textContent = formatTime(globalAudioPlayer.duration);
-        });
-    }
-
     // Scrubber seeking
     if (playerProgress) {
         playerProgress.addEventListener('input', (e) => {
-            if (isBackendAvailable && globalAudioPlayer.duration) {
-                const seekTime = (e.target.value / 100) * globalAudioPlayer.duration;
-                globalAudioPlayer.currentTime = seekTime;
-            } else if (!isBackendAvailable && speechQueue.length > 0) {
-                const targetIdx = Math.floor((e.target.value / 100) * speechQueue.length);
-                currentSentenceIdx = Math.min(speechQueue.length - 1, Math.max(0, targetIdx));
-                if (isSpeechPlaying && !isSpeakingPaused) {
-                    window.speechSynthesis.cancel();
-                    speakNextSentenceInQueue();
-                }
+            const pct = parseFloat(e.target.value);
+            if (sentenceQueue.length > 0) {
+                currentSentenceIndex = Math.min(sentenceQueue.length - 1, Math.max(0, Math.floor((pct / 100) * sentenceQueue.length)));
+                playNextSentenceStream();
+            } else if (isBackendAvailable && globalAudioPlayer.duration) {
+                globalAudioPlayer.currentTime = (pct / 100) * globalAudioPlayer.duration;
             }
         });
     }
@@ -381,18 +404,15 @@ function setupEventListeners() {
             const speed = playbackSpeeds[currentSpeedIndex];
             globalAudioPlayer.playbackRate = speed;
             btnPlaybackSpeed.textContent = `${speed}x`;
-            if (!isBackendAvailable && isSpeechPlaying && !isSpeakingPaused) {
-                window.speechSynthesis.cancel();
-                speakNextSentenceInQueue();
-            }
         });
     }
 
     // Volume
     if (volumeSlider) {
         volumeSlider.addEventListener('input', (e) => {
-            globalAudioPlayer.volume = e.target.value;
-            updateVolumeIcon(e.target.value);
+            const vol = parseFloat(e.target.value);
+            globalAudioPlayer.volume = vol;
+            updateVolumeIcon(vol);
         });
     }
 
@@ -402,6 +422,10 @@ function setupEventListeners() {
             updateVolumeIcon(globalAudioPlayer.muted ? 0 : globalAudioPlayer.volume);
         });
     }
+
+    // HTML5 Audio events
+    globalAudioPlayer.addEventListener('ended', onSentenceAudioEnded);
+    globalAudioPlayer.addEventListener('error', onSentenceAudioError);
 }
 
 function updateVolumeIcon(vol) {
@@ -426,37 +450,44 @@ function getFormattedPitch() {
     return `${val >= 0 ? '+' : ''}${val}Hz`;
 }
 
-// Split text into safe, small sentences (100% browser TTS compatibility)
+// Google TTS URL generator (Free, crystal-clear MP3 stream)
+function getGoogleTTSUrl(text, lang = 'en') {
+    const cleanLang = lang.split('-')[0] || 'en';
+    const encoded = encodeURIComponent(text.trim());
+    return `https://translate.google.com/translate_tts?ie=UTF-8&tl=${cleanLang}&client=tw-ob&q=${encoded}`;
+}
+
+// Split text into safe, punchy sentences (under 180 chars for ultra-crisp audio streaming)
 function splitTextIntoSentences(text) {
     if (!text || !text.trim()) return [];
     
-    // Split on sentence terminators or line breaks
-    const raw = text.match(/[^.!?\n]+[.!?]+|[^.!?\n]+$/g) || [text];
-    const sentences = [];
+    // Split by punctuation or newlines
+    const rawChunks = text.split(/(?<=[.!?])\s+|\n+/);
+    const result = [];
     
-    raw.forEach(chunk => {
+    rawChunks.forEach(chunk => {
         const trimmed = chunk.trim();
-        if (trimmed.length > 0) {
-            if (trimmed.length > 250) {
-                // Sub-split very long sentences by commas or semicolons
-                const subChunks = trimmed.split(/([,;:]\s+)/);
-                let currentSub = '';
-                subChunks.forEach(sub => {
-                    if ((currentSub + sub).length > 200) {
-                        if (currentSub) sentences.push(currentSub.trim());
-                        currentSub = sub;
-                    } else {
-                        currentSub += sub;
-                    }
-                });
-                if (currentSub.trim()) sentences.push(currentSub.trim());
-            } else {
-                sentences.push(trimmed);
-            }
+        if (!trimmed) return;
+        
+        if (trimmed.length > 180) {
+            // Sub-divide long sentence by comma/semicolon/clause
+            const parts = trimmed.split(/([,;:]\s+)/);
+            let buf = '';
+            parts.forEach(p => {
+                if ((buf + p).length > 150) {
+                    if (buf.trim()) result.push(buf.trim());
+                    buf = p;
+                } else {
+                    buf += p;
+                }
+            });
+            if (buf.trim()) result.push(buf.trim());
+        } else {
+            result.push(trimmed);
         }
     });
     
-    return sentences;
+    return result;
 }
 
 // Handle PDF Upload (Backend or In-Browser PDF.js)
@@ -481,7 +512,7 @@ async function handleFileUpload(file) {
             renderWorkspace();
             initProgressSSE(currentBook.id);
         } catch (err) {
-            console.warn('Backend parse failed, falling back to browser PDF.js:', err);
+            console.warn('Backend upload failed, falling back to browser PDF.js:', err);
             await parsePdfInBrowser(file);
         } finally {
             if (uploadingState) uploadingState.classList.add('hidden');
@@ -494,12 +525,22 @@ async function handleFileUpload(file) {
     }
 }
 
-// Client-side PDF Parser using PDF.js with Smart Chapter Splitting
+// Clean text
+function cleanText(text) {
+    if (!text) return '';
+    // Rejoin hyphenated linebreaks: e.g. "con- tinue" -> "continue"
+    text = text.replace(/(\b\w+)-\s+(\w+\b)/g, '$1$2');
+    // Remove standalone page numbers
+    text = text.replace(/^\s*(?:page\s+)?\d+\s*$/gim, '');
+    return text.replace(/[ \t]+/g, ' ').trim();
+}
+
+// In-Browser PDF.js parsing with smart Chapter detection
 async function parsePdfInBrowser(file) {
     try {
         const pdfjs = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
         if (!pdfjs) {
-            throw new Error('PDF.js library is still loading, please try again in a moment.');
+            throw new Error('PDF.js library is still loading, please try again.');
         }
 
         const arrayBuffer = await file.arrayBuffer();
@@ -516,7 +557,6 @@ async function parsePdfInBrowser(file) {
             pageTexts.push(cleanText(pageStr));
         }
 
-        // Heading detection patterns
         const chapterRegex = /^\s*(chapter\s+(?:[0-9]+|[ivxlcdm]+)|part\s+(?:[0-9]+|[ivxlcdm]+)|book\s+(?:[0-9]+|[ivxlcdm]+)|act\s+(?:[0-9]+|[ivxlcdm]+)|prologue|epilogue|introduction|foreword|preface)\b/i;
         
         let chapters = [];
@@ -531,8 +571,8 @@ async function parsePdfInBrowser(file) {
             let foundHeading = null;
             for (let line of lines.slice(0, 8)) {
                 const s = line.trim();
-                if (chapterRegex.test(s) || (s.length >= 4 && s.length <= 45 && s === s.toUpperCase() && !s.match(/^\d+$/))) {
-                    foundHeading = s;
+                if (chapterRegex.test(s) || (s.length >= 4 && s.length <= 40 && s === s.toUpperCase() && !s.match(/^\d+$/))) {
+                    foundHeading = s.replace(/[:\-–—]+$/, '').trim();
                     break;
                 }
             }
@@ -562,7 +602,7 @@ async function parsePdfInBrowser(file) {
                 } else if (idx === 0) {
                     currentChap = {
                         id: chapId++,
-                        title: `Section 1 (Pages 1-${totalPages})`,
+                        title: `Chapter 1 (Pages 1-${totalPages})`,
                         start_page: 1,
                         end_page: pNum,
                         text: pText,
@@ -582,21 +622,20 @@ async function parsePdfInBrowser(file) {
             chapters.push(currentChap);
         }
 
-        // Subdivide large chapters into bite-sized chapters (max 2,000 words per chapter for great listening pacing)
-        const refinedChapters = [];
+        // Subdivide oversized chapters into digestible ~1,500 word parts
+        const refined = [];
         let newId = 1;
 
         chapters.forEach(c => {
             const words = c.text.split(/\s+/).filter(Boolean);
-            if (words.length > 2500) {
-                // Split into chunks of ~1,800 words
-                const chunkSize = 1800;
+            if (words.length > 2000) {
+                const chunkSize = 1500;
                 let partNum = 1;
                 for (let wIdx = 0; wIdx < words.length; wIdx += chunkSize) {
                     const chunkWords = words.slice(wIdx, wIdx + chunkSize);
                     const chunkText = chunkWords.join(' ');
                     const dur = Math.round((chunkWords.length / 150) * 60);
-                    refinedChapters.push({
+                    refined.push({
                         id: newId++,
                         title: `${c.title} - Part ${partNum}`,
                         start_page: c.start_page,
@@ -611,11 +650,11 @@ async function parsePdfInBrowser(file) {
                 }
             } else {
                 c.id = newId++;
-                refinedChapters.push(c);
+                refined.push(c);
             }
         });
 
-        chapters = refinedChapters;
+        chapters = refined;
 
         const totalWords = chapters.reduce((acc, c) => acc + c.word_count, 0);
         const totalDuration = chapters.reduce((acc, c) => acc + c.estimated_duration_sec, 0);
@@ -635,15 +674,6 @@ async function parsePdfInBrowser(file) {
     } catch (err) {
         alert('Failed to parse PDF: ' + err.message);
     }
-}
-
-function cleanText(text) {
-    if (!text) return '';
-    // Rejoin hyphenated linebreaks: e.g. "con- tinue" -> "continue"
-    text = text.replace(/(\b\w+)-\s+(\w+\b)/g, '$1$2');
-    // Remove standalone page numbers
-    text = text.replace(/^\s*(?:page\s+)?\d+\s*$/gim, '');
-    return text.replace(/[ \t]+/g, ' ').trim();
 }
 
 // Render Workspace
@@ -746,196 +776,31 @@ function renderChaptersList() {
     if (window.lucide) lucide.createIcons();
 }
 
-// TTS Generation
-async function startTTSGeneration(chapterIds = null) {
-    if (!currentBook) return;
-
-    if (isBackendAvailable) {
-        const voice = voiceSelect.value;
-        const rate = getFormattedRate();
-        const pitch = getFormattedPitch();
-
-        try {
-            const res = await fetch('/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    book_id: currentBook.id,
-                    chapter_ids: chapterIds,
-                    voice: voice,
-                    rate: rate,
-                    pitch: pitch
-                })
-            });
-
-            if (!res.ok) throw new Error('Failed to queue generation');
-
-            const targets = chapterIds ? currentBook.chapters.filter(c => chapterIds.includes(c.id)) : currentBook.chapters;
-            targets.forEach(c => {
-                if (c.status !== 'completed') {
-                    c.status = 'processing';
-                    c.progress = 0;
-                }
-            });
-            renderChaptersList();
-        } catch (err) {
-            alert('Generation error: ' + err.message);
-        }
-    } else {
-        // In-Browser Mode: Auto play Chapter 1 immediately!
-        if (currentBook.chapters.length > 0) {
-            playChapterAudio(currentBook.chapters[0].id);
-        }
-    }
-}
-
-function synthesizeSingleChapter(chapId) {
-    if (isBackendAvailable) {
-        startTTSGeneration([chapId]);
-    } else {
-        playChapterAudio(chapId);
-    }
-}
-
-// Server-Sent Events (when connected to Python backend)
-function initProgressSSE(bookId) {
-    if (eventSource) eventSource.close();
-    eventSource = new EventSource(`/api/progress/${bookId}`);
-
-    eventSource.onmessage = (e) => {
-        try {
-            const payload = JSON.parse(e.data);
-            handleProgressEvent(payload);
-        } catch (err) {
-            console.error('SSE parse error:', err);
-        }
-    };
-}
-
-function handleProgressEvent(data) {
-    if (data.event === 'chapter_start' || data.event === 'chapter_progress') {
-        const chap = currentBook.chapters.find(c => c.id === data.chapter_id);
-        if (chap) {
-            chap.status = 'processing';
-            chap.progress = data.progress;
-            
-            const badge = document.getElementById(`badge-status-${chap.id}`);
-            if (badge) {
-                badge.innerHTML = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center gap-1.5"><i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Synthesizing ${Math.round(data.progress)}%</span>`;
-                if (window.lucide) lucide.createIcons();
-            }
-
-            const wrap = document.getElementById(`progress-bar-wrap-${chap.id}`);
-            const bar = document.getElementById(`progress-bar-${chap.id}`);
-            if (wrap && bar) {
-                wrap.classList.remove('hidden');
-                bar.style.width = `${data.progress}%`;
-            }
-        }
-    } else if (data.event === 'chapter_completed') {
-        const chap = currentBook.chapters.find(c => c.id === data.chapter_id);
-        if (chap) {
-            chap.status = 'completed';
-            chap.progress = 100.0;
-            chap.audio_url = data.audio_url;
-            chap.audio_filename = data.audio_filename;
-            
-            renderChaptersList();
-            checkZipAvailability();
-        }
-    } else if (data.event === 'chapter_error') {
-        const chap = currentBook.chapters.find(c => c.id === data.chapter_id);
-        if (chap) {
-            chap.status = 'error';
-            chap.error = data.error;
-            renderChaptersList();
-        }
-    }
-}
-
 function checkZipAvailability() {
     const hasCompleted = currentBook && currentBook.chapters.some(c => c.status === 'completed');
     if (btnDownloadZip) btnDownloadZip.disabled = !hasCompleted;
 }
 
-// Stop current speech engine
-function stopSpeechEngine() {
+// Stop all audio playback safely
+function stopAllAudio() {
+    if (globalAudioPlayer) {
+        globalAudioPlayer.pause();
+        globalAudioPlayer.src = '';
+    }
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
     }
-    isSpeechPlaying = false;
-    isSpeakingPaused = false;
-    speechQueue = [];
-    currentSentenceIdx = 0;
-    if (speechTimer) {
-        clearInterval(speechTimer);
-        speechTimer = null;
+    isAudioPlaying = false;
+    sentenceQueue = [];
+    currentSentenceIndex = 0;
+    if (audioTimer) {
+        clearInterval(audioTimer);
+        audioTimer = null;
     }
     updatePlayPauseIcon(false);
 }
 
-// Speak the next sentence in the queue (Sentence-by-Sentence Engine)
-function speakNextSentenceInQueue() {
-    if (!isSpeechPlaying || isSpeakingPaused) return;
-
-    if (currentSentenceIdx >= speechQueue.length) {
-        // Reached end of chapter
-        isSpeechPlaying = false;
-        isSpeakingPaused = false;
-        if (speechTimer) {
-            clearInterval(speechTimer);
-            speechTimer = null;
-        }
-        if (playerProgress) playerProgress.value = 100;
-        updatePlayPauseIcon(false);
-        playNextChapter();
-        return;
-    }
-
-    const sentence = speechQueue[currentSentenceIdx];
-    if (!sentence || !sentence.trim()) {
-        currentSentenceIdx++;
-        speakNextSentenceInQueue();
-        return;
-    }
-
-    const utter = new SpeechSynthesisUtterance(sentence);
-    
-    // Select Voice
-    if ('speechSynthesis' in window) {
-        const matchVoice = window.speechSynthesis.getVoices().find(v => v.name === voiceSelect.value);
-        if (matchVoice) utter.voice = matchVoice;
-    }
-
-    const speed = playbackSpeeds[currentSpeedIndex];
-    utter.rate = speed * (1 + parseInt(rateSlider.value) / 100);
-    utter.pitch = 1 + parseInt(pitchSlider.value) / 50;
-
-    utter.onstart = () => {
-        isSpeechPlaying = true;
-        isSpeakingPaused = false;
-        updatePlayPauseIcon(true);
-        if (speechQueue.length > 0 && playerProgress) {
-            const pct = Math.round((currentSentenceIdx / speechQueue.length) * 100);
-            playerProgress.value = pct;
-        }
-    };
-
-    utter.onend = () => {
-        currentSentenceIdx++;
-        speakNextSentenceInQueue();
-    };
-
-    utter.onerror = (err) => {
-        console.warn('Sentence speech error, advancing:', err);
-        currentSentenceIdx++;
-        speakNextSentenceInQueue();
-    };
-
-    window.speechSynthesis.speak(utter);
-}
-
-// Audio Player Functionality
+// Master Audio Player function for a chapter
 function playChapterAudio(chapId) {
     const chap = currentBook.chapters.find(c => c.id === chapId);
     if (!chap) return;
@@ -946,77 +811,186 @@ function playChapterAudio(chapId) {
     if (playerTrackTitle) playerTrackTitle.textContent = `${chap.title}`;
     if (playerTrackSubtitle) playerTrackSubtitle.textContent = `${currentBook.title} • ${currentBook.author || 'AudioRead'}`;
 
+    stopAllAudio();
+
     if (isBackendAvailable && chap.audio_url) {
-        // Backend MP3 audio stream
+        // Backend MP3 audio file
+        playbackMode = 'backend';
         if (btnDownloadCurrent) {
             btnDownloadCurrent.href = chap.audio_url;
             btnDownloadCurrent.classList.remove('hidden');
         }
         globalAudioPlayer.src = chap.audio_url;
-        globalAudioPlayer.play().catch(e => console.warn('Autoplay prevented:', e));
-        updatePlayPauseIcon(true);
+        globalAudioPlayer.play().then(() => {
+            isAudioPlaying = true;
+            updatePlayPauseIcon(true);
+        }).catch(e => console.warn('Autoplay prevented:', e));
     } else {
-        // In-Browser Sentence-by-Sentence Speech Engine
+        // High-Quality Google Stream / In-Browser Audio Engine
         if (btnDownloadCurrent) btnDownloadCurrent.classList.add('hidden');
         
-        stopSpeechEngine();
-
-        // Split chapter into sentences
-        speechQueue = splitTextIntoSentences(chap.text);
-        currentSentenceIdx = 0;
-        isSpeechPlaying = true;
-        isSpeakingPaused = false;
-        speechElapsedSeconds = 0;
+        sentenceQueue = splitTextIntoSentences(chap.text);
+        currentSentenceIndex = 0;
+        isAudioPlaying = true;
+        audioSecondsElapsed = 0;
 
         if (playerTotalTime) {
             playerTotalTime.textContent = formatTime(chap.estimated_duration_sec);
         }
+        if (playerCurrentTime) {
+            playerCurrentTime.textContent = '00:00';
+        }
 
-        // Start duration timer for playback progress UI
-        if (speechTimer) clearInterval(speechTimer);
-        speechTimer = setInterval(() => {
-            if (isSpeechPlaying && !isSpeakingPaused) {
-                speechElapsedSeconds += 1;
-                if (playerCurrentTime) playerCurrentTime.textContent = formatTime(speechElapsedSeconds);
+        // Live seconds timer for the UI
+        audioTimer = setInterval(() => {
+            if (isAudioPlaying) {
+                audioSecondsElapsed += 1;
+                if (playerCurrentTime) playerCurrentTime.textContent = formatTime(audioSecondsElapsed);
             }
         }, 1000);
 
-        speakNextSentenceInQueue();
+        playNextSentenceStream();
     }
 
     renderChaptersList();
 }
 
-function togglePlayPause() {
-    if (isBackendAvailable) {
-        if (globalAudioPlayer.paused) {
-            globalAudioPlayer.play();
-            updatePlayPauseIcon(true);
-        } else {
-            globalAudioPlayer.pause();
-            updatePlayPauseIcon(false);
-        }
+// Plays the current sentence via Google Audio Stream or WebSpeech fallback
+function playNextSentenceStream() {
+    if (!isAudioPlaying) return;
+
+    if (currentSentenceIndex >= sentenceQueue.length) {
+        // Chapter complete -> auto advance to next chapter
+        stopAllAudio();
+        if (playerProgress) playerProgress.value = 100;
+        playNextChapter();
+        return;
+    }
+
+    const sentence = sentenceQueue[currentSentenceIndex];
+    if (!sentence || !sentence.trim()) {
+        currentSentenceIndex++;
+        playNextSentenceStream();
+        return;
+    }
+
+    // Update Progress Scrubber
+    if (sentenceQueue.length > 0 && playerProgress) {
+        const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
+        playerProgress.value = pct;
+    }
+
+    const voiceVal = voiceSelect.value;
+
+    if (voiceVal.startsWith('synth:')) {
+        // Device SpeechSynthesis mode
+        playbackMode = 'synth';
+        window.speechSynthesis.cancel();
+        
+        const utter = new SpeechSynthesisUtterance(sentence);
+        const cleanName = voiceVal.replace('synth:', '');
+        const matchVoice = window.speechSynthesis.getVoices().find(v => v.name === cleanName);
+        if (matchVoice) utter.voice = matchVoice;
+        
+        const speed = playbackSpeeds[currentSpeedIndex];
+        utter.rate = speed * (1 + parseInt(rateSlider.value) / 100);
+        utter.pitch = 1 + parseInt(pitchSlider.value) / 50;
+        utter.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
+
+        utter.onend = () => {
+            currentSentenceIndex++;
+            playNextSentenceStream();
+        };
+
+        utter.onerror = (e) => {
+            console.warn('Synth error, next sentence:', e);
+            currentSentenceIndex++;
+            playNextSentenceStream();
+        };
+
+        window._activeUtterance = utter; // PREVENT GC BUG
+        window.speechSynthesis.speak(utter);
+        updatePlayPauseIcon(true);
+
     } else {
-        if ('speechSynthesis' in window) {
-            if (isSpeakingPaused) {
-                // Resume
-                isSpeakingPaused = false;
-                isSpeechPlaying = true;
-                window.speechSynthesis.resume();
-                if (!window.speechSynthesis.speaking) {
-                    speakNextSentenceInQueue();
-                }
-                updatePlayPauseIcon(true);
-            } else if (isSpeechPlaying) {
-                // Pause
-                isSpeakingPaused = true;
-                isSpeechPlaying = false;
-                window.speechSynthesis.pause();
-                updatePlayPauseIcon(false);
-            } else if (currentPlayingChapterId) {
-                playChapterAudio(currentPlayingChapterId);
+        // Real Google Neural Stream MP3 Audio mode (100% Reliable Sound)
+        playbackMode = 'stream';
+        const lang = voiceVal.startsWith('google:') ? voiceVal.split(':')[1] : 'en';
+        const streamUrl = getGoogleTTSUrl(sentence, lang);
+
+        globalAudioPlayer.src = streamUrl;
+        
+        const speed = playbackSpeeds[currentSpeedIndex];
+        const rateMult = 1 + parseInt(rateSlider.value) / 100;
+        globalAudioPlayer.playbackRate = speed * rateMult;
+        globalAudioPlayer.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
+
+        globalAudioPlayer.play().then(() => {
+            updatePlayPauseIcon(true);
+        }).catch(err => {
+            console.warn('Stream play error, falling back to WebSpeech:', err);
+            // Seamless fallback to SpeechSynthesis
+            fallbackToWebSpeech(sentence);
+        });
+    }
+}
+
+function onSentenceAudioEnded() {
+    if (playbackMode === 'stream') {
+        currentSentenceIndex++;
+        playNextSentenceStream();
+    } else if (playbackMode === 'backend') {
+        playNextChapter();
+    }
+}
+
+function onSentenceAudioError(e) {
+    if (playbackMode === 'stream' && sentenceQueue.length > 0) {
+        console.warn('Audio stream decode error, advancing:', e);
+        currentSentenceIndex++;
+        playNextSentenceStream();
+    }
+}
+
+function fallbackToWebSpeech(sentence) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(sentence);
+    utter.rate = playbackSpeeds[currentSpeedIndex] * (1 + parseInt(rateSlider.value) / 100);
+    utter.onend = () => {
+        currentSentenceIndex++;
+        playNextSentenceStream();
+    };
+    window._activeUtterance = utter;
+    window.speechSynthesis.speak(utter);
+}
+
+function togglePlayPause() {
+    if (isAudioPlaying) {
+        // Pause
+        isAudioPlaying = false;
+        if (globalAudioPlayer) globalAudioPlayer.pause();
+        if ('speechSynthesis' in window) window.speechSynthesis.pause();
+        updatePlayPauseIcon(false);
+    } else {
+        // Resume / Play
+        isAudioPlaying = true;
+        if (playbackMode === 'stream') {
+            if (globalAudioPlayer.src) {
+                globalAudioPlayer.play().catch(() => playNextSentenceStream());
+            } else {
+                playNextSentenceStream();
             }
+        } else if (playbackMode === 'synth') {
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            } else {
+                playNextSentenceStream();
+            }
+        } else if (currentPlayingChapterId) {
+            playChapterAudio(currentPlayingChapterId);
         }
+        updatePlayPauseIcon(true);
     }
 }
 
@@ -1046,15 +1020,8 @@ function playPreviousChapter() {
     }
 }
 
-function updateAudioProgress() {
-    if (!globalAudioPlayer || !globalAudioPlayer.duration) return;
-    const percent = (globalAudioPlayer.currentTime / globalAudioPlayer.duration) * 100;
-    if (playerProgress) playerProgress.value = percent;
-    if (playerCurrentTime) playerCurrentTime.textContent = formatTime(globalAudioPlayer.currentTime);
-}
-
 function formatTime(seconds) {
-    if (isNaN(seconds)) return '00:00';
+    if (isNaN(seconds) || seconds < 0) return '00:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
