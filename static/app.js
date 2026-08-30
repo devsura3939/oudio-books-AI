@@ -1933,6 +1933,51 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
     return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
 }
 
+// ── Translation engine status indicator ─────────────────────────────────────
+// Tracks which engine produced each chunk so quality drops are visible
+// immediately instead of silently degrading to machine translation.
+const translationEngineStats = { gemini: 0, google: 0, mymemory: 0, failed: 0 };
+let translationEngineStatusEl = null;
+
+function setTranslationEngineStatusEl(el) {
+    translationEngineStatusEl = el;
+    renderTranslationEngineStatus();
+}
+
+function renderTranslationEngineStatus() {
+    if (!translationEngineStatusEl) return;
+    const s = translationEngineStats;
+    const total = s.gemini + s.google + s.mymemory + s.failed;
+    if (total === 0) {
+        translationEngineStatusEl.innerHTML = '<span class="text-on-surface-variant">Engine: waiting…</span>';
+        return;
+    }
+    const pct = n => total ? Math.round((n / total) * 100) : 0;
+    const geminiPct = pct(s.gemini);
+    const color = geminiPct >= 90 ? 'text-green-400'
+        : geminiPct >= 50 ? 'text-amber-400'
+        : 'text-red-400';
+    const label = geminiPct >= 90 ? 'Gemini AI (high quality)'
+        : geminiPct >= 50 ? 'Mixed — some chunks degraded'
+        : 'Machine translation (LOW QUALITY)';
+    translationEngineStatusEl.innerHTML =
+        `<span class="${color} font-semibold">${label}</span>` +
+        `<span class="text-on-surface-variant text-[11px] ml-2">` +
+        `Gemini ${geminiPct}% · Google ${pct(s.google)}% · MyMemory ${pct(s.mymemory)}` +
+        `${s.failed ? ` · failed ${pct(s.failed)}%` : ''}</span>`;
+    // Warn loudly the moment quality drops — this is the silent-failure
+    // guard the user asked for.
+    if (geminiPct < 50 && s.gemini > 0) {
+        console.warn(`[Translation] Quality degraded: only ${geminiPct}% of chunks used Gemini. ` +
+            'Check your Gemini API key, quota, and network.');
+    }
+}
+
+function recordEngineUse(engine) {
+    if (engine in translationEngineStats) translationEngineStats[engine]++;
+    renderTranslationEngineStatus();
+}
+
 async function translateChunkContextually(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
@@ -1940,8 +1985,12 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
     // Tier 0: Gemini AI Engine (multi-pass literary pipeline)
     if (geminiApiKey) {
         const geminiRes = await translateWithGeminiAI(clean, targetLang, contextBefore, contextAfter);
-        if (geminiRes) return geminiRes;
-        console.warn("Gemini AI Engine failed, falling back to traditional ML engines...");
+        if (geminiRes) {
+            recordEngineUse('gemini');
+            return geminiRes;
+        }
+        console.warn("Gemini AI Engine failed — FALLING BACK to machine translation. " +
+            "Result quality will drop. Check API key/quota.");
     }
 
     // Tier 1: Google Dict-Chrome-Ex Neural Engine (Ultra-stable, zero rate-limiting)
@@ -1959,6 +2008,7 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
                 }
                 const refined = refineGeorgianGrammar(fullTrans);
                 if (refined && refined.trim().length > 0) {
+                    recordEngineUse('google');
                     return refined;
                 }
             }
@@ -1982,6 +2032,7 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
                 }
                 const refined2 = refineGeorgianGrammar(fullTrans2);
                 if (refined2 && refined2.trim().length > 0) {
+                    recordEngineUse('google');
                     return refined2;
                 }
             }
@@ -1991,7 +2042,9 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
     }
 
     // Tier 3: Chunk-by-sentence fallback using MyMemory
-    return await translateSingleSentence(clean, targetLang);
+    const mm = await translateSingleSentence(clean, targetLang);
+    recordEngineUse(mm === clean ? 'failed' : 'mymemory');
+    return mm;
 }
 
 async function translateSingleSentence(text, targetLang = 'ka') {
@@ -2042,6 +2095,13 @@ async function startWholeBookTranslation() {
     isTranslatingWholeBook = true;
     cancelTranslationFlag = false;
     openModal('wholeBookTranslateModal');
+
+    // Reset engine stats for this run and wire the live indicator.
+    translationEngineStats.gemini = 0;
+    translationEngineStats.google = 0;
+    translationEngineStats.mymemory = 0;
+    translationEngineStats.failed = 0;
+    setTranslationEngineStatusEl(document.getElementById('wbEngineStatus'));
 
     const totalChapters = currentBook.chapters.length;
     let totalSentencesCount = 0;
