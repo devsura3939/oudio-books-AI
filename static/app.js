@@ -57,6 +57,7 @@ let cancelTranslationFlag = false;
 
 // Gemini AI State
 let geminiApiKey = localStorage.getItem('geminiApiKey') || '';
+let geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.5-pro';
 
 // ── Georgian Unicode & Advanced Linguistic Normalization ───────────────────
 function normalizeGeorgian(text) {
@@ -686,6 +687,7 @@ function openModal(modalId) {
     if (modal) {
         if (modalId === 'aiSettingsModal') {
             document.getElementById('geminiApiKeyInput').value = geminiApiKey || '';
+            document.getElementById('geminiModelSelect').value = geminiModel || 'gemini-2.5-pro';
         }
         modal.classList.add('active');
     }
@@ -698,14 +700,23 @@ function closeModal(modalId) {
 
 function saveGeminiSettings() {
     const key = document.getElementById('geminiApiKeyInput').value.trim();
+    const model = document.getElementById('geminiModelSelect').value;
+    
     if (key) {
         localStorage.setItem('geminiApiKey', key);
         geminiApiKey = key;
-        alert("Gemini AI Engine Key Saved!");
     } else {
         localStorage.removeItem('geminiApiKey');
         geminiApiKey = '';
-        alert("Gemini AI Engine disabled.");
+    }
+    
+    localStorage.setItem('geminiModel', model);
+    geminiModel = model;
+    
+    if (key) {
+        alert("Gemini AI Engine Settings Saved!");
+    } else {
+        alert("Gemini AI Engine disabled (no key). Model preference saved.");
     }
     closeModal('aiSettingsModal');
 }
@@ -1617,19 +1628,29 @@ function readerForwardSentence() {
 async function translateWithGeminiAI(text, targetLang) {
     if (!geminiApiKey) return null;
     try {
-        const prompt = `You are a world-class literary translator and editor. 
-Your task is to translate the following English text to ${targetLang === 'ka' ? 'Georgian' : targetLang}. 
-You must follow a precise double-check process:
-1. First, translate the text accurately, capturing the exact meaning and context.
-2. Second, review and fix your translation. Ensure it uses natural phrasing, high literary excellence, and correct idioms. Do not translate idioms literally if they sound crude or nonsensical in ${targetLang === 'ka' ? 'Georgian' : targetLang}.
-3. Finally, output ONLY the final, double-checked translated text without any conversational wrapping, quotes, markdown formatting, or explanations.\n\nEnglish Text: ${text}`;
+        const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
+        const prompt = `You are a world-class literary translator and expert Audio Narration Director. 
+Your task is to translate the following text from English to ${langName}. 
+
+You MUST follow this precise Multi-Agent AI Checking process internally before responding:
+1. **Context & Tone Analysis (AI Pass 1):** Analyze the tone (is it a narrator, a character dialogue, an interrogation, a gentle thought?) and the pacing.
+2. **Literal Translation (AI Pass 2):** Perform a high-accuracy direct translation.
+3. **Idiom & Natural Phrasing Fix (AI Pass 3):** Edit your translation. If there are English idioms, DO NOT translate them literally. Find the exact equivalent native ${langName} literary idiom that captures the emotion perfectly.
+4. **Narration & TTS Optimization (AI Pass 4):** Adjust the grammar and punctuation to ensure a Text-To-Speech (TTS) engine reads it with perfect human prosody. Ensure question marks (?) and exclamation marks (!) are placed correctly so the Georgian TTS raises its pitch natively. 
+
+OUTPUT REQUIREMENTS:
+- Output ONLY the final, polished, multi-agent reviewed translation.
+- Do NOT output your internal thoughts, Pass 1-4 notes, conversational wrapping, or markdown. Just the final translated text.
+
+English Text to Translate:
+${text}`;
         
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${geminiApiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.15 }
+                generationConfig: { temperature: 0.2 }
             })
         });
         
