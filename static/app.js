@@ -1624,12 +1624,12 @@ You must follow a precise double-check process:
 2. Second, review and fix your translation. Ensure it uses natural phrasing, high literary excellence, and correct idioms. Do not translate idioms literally if they sound crude or nonsensical in ${targetLang === 'ka' ? 'Georgian' : targetLang}.
 3. Finally, output ONLY the final, double-checked translated text without any conversational wrapping, quotes, markdown formatting, or explanations.\n\nEnglish Text: ${text}`;
         
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${geminiApiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.2 }
+                generationConfig: { temperature: 0.15 }
             })
         });
         
@@ -1943,6 +1943,27 @@ async function speakCurrentSentence() {
 
 let currentSpeechToken = 0;
 
+function playUltimateFallbackTTS(text, lang, token) {
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.slice(0, 200))}`;
+    const audio = new Audio(url);
+    audio.playbackRate = currentGlobalSpeed;
+    audio.onended = () => {
+        if (token !== currentSpeechToken || !isPlaying || isPaused) return;
+        currentSentenceIndex++;
+        speakCurrentSentence();
+    };
+    audio.onerror = () => {
+        if (token !== currentSpeechToken || !isPlaying || isPaused) return;
+        currentSentenceIndex++;
+        speakCurrentSentence();
+    };
+    audio.play().catch(e => {
+        if (token !== currentSpeechToken) return;
+        currentSentenceIndex++;
+        speakCurrentSentence();
+    });
+}
+
 function speakStandardSentence(text, lang) {
     if (!('speechSynthesis' in window)) return;
 
@@ -1965,7 +1986,7 @@ function speakStandardSentence(text, lang) {
             utter.voice = nativeKaVoice;
             utter.lang = nativeKaVoice.lang;
         } else {
-            speakFreeGeorgianNeural(text);
+            playUltimateFallbackTTS(normalized, 'ka', myToken);
             return;
         }
     } else {
