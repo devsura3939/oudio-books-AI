@@ -1233,7 +1233,8 @@ function onReaderSentenceClick(sentenceIdx) {
     if (!readerBook) return;
     if (String(currentBook?.id) !== String(readerBook.id) || String(currentPlayingChapterId) !== String(readerChapterId)) {
         selectBook(readerBook.id, false);
-        playChapterAudio(readerChapterId);
+        playChapterAudio(readerChapterId, sentenceIdx);
+        return;
     }
     currentSentenceIndex = sentenceIdx;
     speakCurrentSentence();
@@ -1416,9 +1417,9 @@ async function translateChunkContextually(text, targetLang = 'ka') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
 
-    // Tier 1: Google Translate GTX Neural Engine (Handles large contextual paragraphs)
+    // Tier 1: Google Dict-Chrome-Ex Neural Engine (Ultra-stable, zero rate-limiting)
     try {
-        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean)}`;
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean)}`;
         const gRes = await fetch(gUrl);
         if (gRes.ok) {
             const data = await gRes.json();
@@ -1436,25 +1437,30 @@ async function translateChunkContextually(text, targetLang = 'ka') {
             }
         }
     } catch (e) {
-        console.warn('Primary Google GTX translation failed:', e);
+        console.warn('Primary Google dict-chrome-ex translation failed:', e);
     }
 
-    // Tier 2: Secondary Google Translation Mirror
+    // Tier 2: Google GTX Neural Engine
     try {
-        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
+        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean)}`;
         const gRes2 = await fetch(gUrl2);
         if (gRes2.ok) {
             const data2 = await gRes2.json();
             if (data2 && data2[0] && Array.isArray(data2[0])) {
-                const trans2 = data2[0].map(item => item[0]).filter(Boolean).join('');
-                const normalized2 = normalizeGeorgian(trans2);
+                let fullTrans2 = '';
+                for (let i = 0; i < data2[0].length; i++) {
+                    if (data2[0][i] && data2[0][i][0]) {
+                        fullTrans2 += data2[0][i][0];
+                    }
+                }
+                const normalized2 = normalizeGeorgian(fullTrans2);
                 if (normalized2 && normalized2.trim().length > 0) {
                     return normalized2;
                 }
             }
         }
     } catch (e) {
-        console.warn('Secondary Google mirror failed:', e);
+        console.warn('Secondary Google GTX mirror failed:', e);
     }
 
     // Tier 3: Chunk-by-sentence fallback using MyMemory
@@ -1691,10 +1697,13 @@ async function speakCurrentSentence() {
     }
 }
 
+let currentSpeechToken = 0;
+
 function speakStandardSentence(text, lang) {
     if (!('speechSynthesis' in window)) return;
 
     stopCurrentSpeechAudio();
+    const myToken = currentSpeechToken;
 
     if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
@@ -1712,9 +1721,7 @@ function speakStandardSentence(text, lang) {
             utter.voice = nativeKaVoice;
             utter.lang = nativeKaVoice.lang;
         } else {
-            // No native Georgian voice found and ElevenLabs is not enabled.
-            stopSpeech();
-            alert("Native Georgian voice not found on this device!\n\nStandard browsers and operating systems do not support Georgian voices by default (even Google Translate doesn't have it).\n\nTo hear this book in high-quality Native Georgian, please click 'Voice Settings', enable 'ElevenLabs AI', and enter an API key.");
+            speakFreeGeorgianNeural(text);
             return;
         }
     } else {
@@ -1732,32 +1739,37 @@ function speakStandardSentence(text, lang) {
     utter.pitch = currentPitch;
 
     utter.onstart = () => {
+        if (myToken !== currentSpeechToken) {
+            window.speechSynthesis.cancel();
+            return;
+        }
         isSpeakingLock = true;
         updatePlayerUIState(true);
     };
 
     utter.onend = () => {
         isSpeakingLock = false;
-        if (!isPlaying || isPaused) return;
+        if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
         currentSentenceIndex++;
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
         utteranceTimeout = setTimeout(() => {
-            if (isPlaying && !isPaused) speakCurrentSentence();
-        }, 220);
+            if (myToken === currentSpeechToken && isPlaying && !isPaused) {
+                speakCurrentSentence();
+            }
+        }, 180);
     };
 
     utter.onerror = (e) => {
         isSpeakingLock = false;
-        if (e.error === 'canceled' || e.error === 'interrupted') return;
-        // Do NOT run away in a loop on error; gracefully retry once or stop
+        if (e.error === 'canceled' || e.error === 'interrupted' || myToken !== currentSpeechToken) return;
         console.warn('SpeechSynthesis error:', e.error);
         if (isPlaying && !isPaused) {
             setTimeout(() => {
-                if (isPlaying && !isPaused) {
+                if (myToken === currentSpeechToken && isPlaying && !isPaused) {
                     currentSentenceIndex++;
                     speakCurrentSentence();
                 }
-            }, 350);
+            }, 300);
         }
     };
 
@@ -1848,6 +1860,7 @@ function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
 
 async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)') {
     stopCurrentSpeechAudio();
+    const myToken = currentSpeechToken;
     updatePlayerUIState(true);
 
     const ratePct = Math.max(-50, Math.min(50, Math.round((currentGlobalSpeed - 1.0) * 100)));
@@ -1856,36 +1869,38 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
     try {
         let audioToPlay = null;
 
-        // Check if pre-fetched in lookahead buffer
+        // Check lookahead buffer
         if (georgianAudioPrefetchCache.has(currentSentenceIndex)) {
             audioToPlay = georgianAudioPrefetchCache.get(currentSentenceIndex);
             georgianAudioPrefetchCache.delete(currentSentenceIndex);
         } else {
             const audioUrl = await fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz);
+            if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             if (audioUrl) {
                 audioToPlay = new Audio(audioUrl);
             }
         }
 
+        if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+
         if (!audioToPlay) {
             throw new Error("Could not obtain Georgian Neural audio stream");
         }
 
-        if (!isPlaying || isPaused) return;
-
         currentElevenAudio = audioToPlay;
         currentElevenAudio.playbackRate = currentGlobalSpeed;
 
-        // Immediately trigger background prefetch for the NEXT sentence for 0ms transition
+        // Trigger prefetch for next sentence in background
         prefetchNextGeorgianSentence(currentSentenceIndex + 1, voiceId, ratePct, pitchHz);
 
         currentElevenAudio.onended = () => {
-            if (!isPlaying || isPaused) return;
+            if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             currentSentenceIndex++;
             speakCurrentSentence();
         };
 
         currentElevenAudio.onerror = () => {
+            if (myToken !== currentSpeechToken) return;
             console.error("Georgian Neural Audio Error");
             currentSentenceIndex++;
             speakCurrentSentence();
@@ -1895,6 +1910,7 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
         isSpeakingLock = false;
 
     } catch (e) {
+        if (myToken !== currentSpeechToken) return;
         console.error("Free Georgian TTS Failed:", e);
         speakStandardSentence(text, 'ka');
     }
@@ -1902,6 +1918,7 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
 
 async function speakElevenLabsSentence(text) {
     stopCurrentSpeechAudio();
+    const myToken = currentSpeechToken;
     updatePlayerUIState(true);
 
     try {
@@ -1928,51 +1945,73 @@ async function speakElevenLabsSentence(text) {
         if (!res.ok) throw new Error(`ElevenLabs API status ${res.status}`);
 
         const blob = await res.blob();
+        if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
         currentElevenAudio = audio;
         audio.playbackRate = currentGlobalSpeed;
 
         audio.onended = () => {
-            if (!isPlaying || isPaused) return;
+            if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             currentSentenceIndex++;
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
-                if (isPlaying && !isPaused) speakCurrentSentence();
-            }, 260);
+                if (myToken === currentSpeechToken && isPlaying && !isPaused) speakCurrentSentence();
+            }, 200);
         };
 
         audio.onerror = () => {
+            if (myToken !== currentSpeechToken) return;
             speakStandardSentence(text, currentLang);
         };
 
         await audio.play();
 
     } catch (err) {
+        if (myToken !== currentSpeechToken) return;
         speakStandardSentence(text, currentLang);
     }
 }
 
 function stopCurrentSpeechAudio() {
+    currentSpeechToken++; // Invalidate any running asynchronous audio fetches
+    if (utteranceTimeout) {
+        clearTimeout(utteranceTimeout);
+        utteranceTimeout = null;
+    }
     if (currentElevenAudio) {
-        currentElevenAudio.pause();
-        try { currentElevenAudio.src = ''; } catch(e) {}
+        try {
+            currentElevenAudio.pause();
+            currentElevenAudio.onended = null;
+            currentElevenAudio.onerror = null;
+            currentElevenAudio.src = '';
+            currentElevenAudio.load();
+        } catch(e) {}
         currentElevenAudio = null;
     }
     if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+        try {
+            window.speechSynthesis.cancel();
+        } catch(e) {}
     }
+    georgianAudioPrefetchCache.clear();
     isSpeakingLock = false;
 }
 
 // ── Playback Controls ───────────────────────────────────────────────────────
-function playChapterAudio(chapId) {
+function playChapterAudio(chapId, startSentenceIdx = 0) {
     if (!currentBook) return;
     const chap = currentBook.chapters.find(c => String(c.id) === String(chapId));
     if (!chap) return;
 
     if (String(currentPlayingChapterId) === String(chapId) && isPlaying) {
-        togglePlayPause();
+        if (startSentenceIdx > 0 && currentSentenceIndex !== startSentenceIdx) {
+            currentSentenceIndex = startSentenceIdx;
+            speakCurrentSentence();
+        } else {
+            togglePlayPause();
+        }
         return;
     }
 
@@ -1986,7 +2025,7 @@ function playChapterAudio(chapId) {
     }
 
     sentenceQueue = splitIntoNaturalSentences(textToRead);
-    currentSentenceIndex = 0;
+    currentSentenceIndex = Math.min(startSentenceIdx, Math.max(0, sentenceQueue.length - 1));
     secondsElapsed = 0;
     isPlaying = true;
     isPaused = false;
