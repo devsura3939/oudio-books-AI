@@ -257,34 +257,48 @@ function refineGeorgianGrammar(text) {
     if (!text) return '';
     let out = normalizeGeorgian(text);
 
-    // 1. Fix Machine Translation Ergative Subject Errors (ის -> მან before transitive past verbs)
+    // 1. Historical & Literary Name Localization
+    const nameReplacements = [
+        [/\bსუნ\s+ცუ\b/gi, 'სუნ ძი'],
+        [/\bსუნ\s+ტზუ\b/gi, 'სუნ ძი'],
+        [/\bალექსანდრე\s+დიდი\b/gi, 'ალექსანდრე მაკედონელი'],
+        [/\bიულიუს\s+ცეზარი\b/gi, 'იულიუს კეისარი']
+    ];
+    nameReplacements.forEach(([pat, repl]) => {
+        out = out.replace(pat, repl);
+    });
+
+    // 2. Fix Machine Translation Ergative Subject Errors (ის -> მან before transitive past verbs)
     const ergativeVerbs = [
         'თქვა', 'უპასუხა', 'ჰკითხა', 'დაწერა', 'გააკეთა', 'ნახა', 'იპოვა',
         'შეამჩნია', 'მოისმინა', 'წაიკითხა', 'დაინახა', 'მიიღო', 'გადაწყვიტა',
         'ჩაიდინა', 'გააცნობიერა', 'დატოვა', 'დაიწყო', 'დაასრულა', 'მოკლა',
-        'გახსნა', 'დახურა', 'გაიგონა', 'უამბო', 'აჩვენა'
+        'გახსნა', 'დახურა', 'გაიგონა', 'უამბო', 'აჩვენა', 'გაიგო', 'იგრძნო',
+        'გაიფიქრა', 'უბრძანა', 'შეეკითხა', 'სთხოვა', 'დაუძახა', 'გააღო',
+        'მოიტანა', 'წაიყვანა', 'მიატოვა', 'აირჩია', 'შექმნა', 'შეჭამა'
     ];
     ergativeVerbs.forEach(verb => {
         out = out.replace(new RegExp(`\\bის\\s+(${verb})\\b`, 'g'), 'მან $1');
         out = out.replace(new RegExp(`\\bის\\s+([ა-ჰ]+ად|[ა-ჰ]+ადვე|[ა-ჰ]+თ)\\s+(${verb})\\b`, 'g'), 'მან $1 $2');
     });
 
-    // 2. Format Authentic Georgian Literary Quotations: „...“
+    // 3. Format Authentic Georgian Literary Quotations: „...“
     out = out.replace(/(^|[\s(\[])["“]([^\s"”])/g, '$1„$2');
     out = out.replace(/([^\s"„])["”]([\s)\].,!?;:]|$)/g, '$1“$2');
 
-    // 3. Fix Machine Translation Spacing Artifacts Around Punctuation
+    // 4. Fix Machine Translation Spacing Artifacts Around Punctuation
     out = out.replace(/\s+([,.:;!?])/g, '$1');
     out = out.replace(/([,.:;!?])(?=[ა-ჰA-Za-z0-9])/g, '$1 ');
 
-    // 4. Polish Literary Idioms & Storytelling Openings
+    // 5. Polish Literary Idioms & Storytelling Openings
     const idiomReplacements = [
         [/\bერთხელ\s+დროში\b/gi, 'იყო და არა იყო რა'],
         [/\bსხვა\s+მხრივ\b/gi, 'მეორეს მხრივ'],
         [/\bყველაფერში\s+ყველაფერში\b/gi, 'საბოლოო ჯამში'],
         [/\bსაქმის\s+ფაქტად\b/gi, 'სინამდვილეში'],
         [/\bსხვა\s+სიტყვებით\b/gi, 'სხვა სიტყვებით რომ ვთქვათ'],
-        [/\bზედმეტია\s+იმის\s+თქმა\b/gi, 'რა თქმა უნდა']
+        [/\bზედმეტია\s+იმის\s+თქმა\b/gi, 'რა თქმა უნდა'],
+        [/\bთავის\s+თავად\b/gi, 'თავისთავად']
     ];
     idiomReplacements.forEach(([pattern, repl]) => {
         out = out.replace(pattern, repl);
@@ -1204,43 +1218,80 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
 function readerNextPage() {
     if (!readerBook) return;
     const totalPages = readerPages.length;
-    const isDual = readerMode === 'dual' && window.innerWidth >= 900;
-    const step = isDual ? 2 : 1;
 
-    if (readerCurrentPage + step <= totalPages) {
-        readerCurrentPage += step;
-        renderCurrentPage();
-        syncAudioToCurrentPage();
-    } else if (readerCurrentPage < totalPages) {
-        readerCurrentPage = totalPages;
-        renderCurrentPage();
-        syncAudioToCurrentPage();
+    if (readerMode === 'scroll') {
+        if (DOM.readerScrollContainer) {
+            const currentScroll = DOM.readerScrollContainer.scrollTop;
+            const maxScroll = DOM.readerScrollContainer.scrollHeight - DOM.readerScrollContainer.clientHeight;
+            if (currentScroll >= maxScroll - 50) {
+                readerNextChapter();
+            } else {
+                DOM.readerScrollContainer.scrollBy({ top: window.innerHeight * 0.75, behavior: 'smooth' });
+            }
+        }
+        return;
+    }
+
+    const isWidescreen = window.innerWidth >= 900;
+    const isDual = readerMode === 'dual' && isWidescreen;
+
+    if (isDual) {
+        // In dual mode, currentSpreadLeft is always odd (1, 3, 5...)
+        const currentLeft = readerCurrentPage % 2 === 0 ? readerCurrentPage - 1 : readerCurrentPage;
+        const nextLeft = currentLeft + 2;
+        if (nextLeft <= totalPages) {
+            readerCurrentPage = nextLeft;
+            renderCurrentPage();
+            syncAudioToCurrentPage();
+        } else {
+            readerNextChapter();
+        }
     } else {
-        readerNextChapter();
+        if (readerCurrentPage < totalPages) {
+            readerCurrentPage++;
+            renderCurrentPage();
+            syncAudioToCurrentPage();
+        } else {
+            readerNextChapter();
+        }
     }
 }
 
 function readerPrevPage() {
     if (!readerBook) return;
-    const isDual = readerMode === 'dual' && window.innerWidth >= 900;
-    const step = isDual ? 2 : 1;
 
-    if (readerCurrentPage - step >= 1) {
-        readerCurrentPage -= step;
-        renderCurrentPage();
-        syncAudioToCurrentPage();
-    } else if (readerCurrentPage > 1) {
-        readerCurrentPage = 1;
-        renderCurrentPage();
-        syncAudioToCurrentPage();
-    } else {
-        const curIdx = readerBook.chapters.findIndex(c => String(c.id) === String(readerChapterId));
-        if (curIdx > 0) {
-            readerChapterId = readerBook.chapters[curIdx - 1].id;
-            paginateChapter();
-            readerCurrentPage = readerPages.length;
+    if (readerMode === 'scroll') {
+        if (DOM.readerScrollContainer) {
+            const currentScroll = DOM.readerScrollContainer.scrollTop;
+            if (currentScroll <= 40) {
+                readerPrevChapter();
+            } else {
+                DOM.readerScrollContainer.scrollBy({ top: -window.innerHeight * 0.75, behavior: 'smooth' });
+            }
+        }
+        return;
+    }
+
+    const isWidescreen = window.innerWidth >= 900;
+    const isDual = readerMode === 'dual' && isWidescreen;
+
+    if (isDual) {
+        const currentLeft = readerCurrentPage % 2 === 0 ? readerCurrentPage - 1 : readerCurrentPage;
+        const prevLeft = currentLeft - 2;
+        if (prevLeft >= 1) {
+            readerCurrentPage = prevLeft;
             renderCurrentPage();
-            if (isPlaying) playChapterAudio(readerChapterId);
+            syncAudioToCurrentPage();
+        } else {
+            readerPrevChapter();
+        }
+    } else {
+        if (readerCurrentPage > 1) {
+            readerCurrentPage--;
+            renderCurrentPage();
+            syncAudioToCurrentPage();
+        } else {
+            readerPrevChapter();
         }
     }
 }
@@ -1258,7 +1309,19 @@ function readerPrevChapter() {
     if (!readerBook) return;
     const curIdx = readerBook.chapters.findIndex(c => String(c.id) === String(readerChapterId));
     if (curIdx > 0) {
-        onReaderChapterChange(readerBook.chapters[curIdx - 1].id);
+        readerChapterId = readerBook.chapters[curIdx - 1].id;
+        paginateChapter();
+        const isDual = readerMode === 'dual' && window.innerWidth >= 900;
+        if (isDual) {
+            const lastPage = readerPages.length;
+            readerCurrentPage = lastPage % 2 === 0 ? lastPage - 1 : lastPage;
+        } else {
+            readerCurrentPage = readerPages.length;
+        }
+        renderCurrentPage();
+        if (isPlaying) {
+            playChapterAudio(readerChapterId);
+        }
     }
 }
 
@@ -1266,7 +1329,13 @@ function readerNextChapter() {
     if (!readerBook) return;
     const curIdx = readerBook.chapters.findIndex(c => String(c.id) === String(readerChapterId));
     if (curIdx >= 0 && curIdx < readerBook.chapters.length - 1) {
-        onReaderChapterChange(readerBook.chapters[curIdx + 1].id);
+        readerChapterId = readerBook.chapters[curIdx + 1].id;
+        readerCurrentPage = 1;
+        paginateChapter();
+        renderCurrentPage();
+        if (isPlaying) {
+            playChapterAudio(readerChapterId);
+        }
     }
 }
 
