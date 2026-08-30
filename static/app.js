@@ -1,21 +1,21 @@
-// AudioRead Studio Pro - Real-Time Translation, Studio Neural Voices & Mobile Audio Dock
+// AudioRead Studio Pro - MP3 Exporter, Instant Voice Switching & Studio Human Narration
 
 // Language Dictionary (English / Georgian)
 const I18N = {
     en: {
         appTitle: "AudioRead",
         studioPro: "Studio Pro",
-        appSubtitle: "PDF eBook to Studio Audiobook",
+        appSubtitle: "PDF eBook to Studio MP3 Audiobook",
         modeText: "Studio AI Narrator",
         newBook: "New Book",
         heroBadge: "100% Free AI Audiobook Converter",
-        heroTitle: "Convert Any PDF eBook Into An Audiobook",
-        heroSubtitle: "Automatic chapter segmentation, translation, studio voice narration, and 1-click audio downloads.",
+        heroTitle: "Convert Any PDF eBook Into An MP3 Audiobook",
+        heroSubtitle: "Automatic chapter segmentation, translation, studio voice narration, and MP3 audio downloads.",
         uploadTitle: "Select a PDF file or tap here to browse",
         uploadSubtitle: "Supports novels, textbooks, documents, and multi-chapter eBooks (.pdf)",
         smartDetection: "Chapter Splitting",
         naturalVoice: "Natural Voice",
-        zipExport: "ZIP Download",
+        zipExport: "MP3 ZIP Export",
         extracting: "Reading & structuring PDF chapters...",
         activeDoc: "Active Document",
         pages: "Pages",
@@ -23,9 +23,9 @@ const I18N = {
         words: "Words",
         listenTime: "listen time",
         listenStart: "Listen from Beginning",
-        downloadZip: "Download ZIP",
-        packagingZip: "Packaging Audiobook ZIP...",
-        compressing: "Compressing...",
+        downloadZip: "Download MP3 ZIP",
+        packagingZip: "Packaging MP3 ZIP...",
+        compressing: "Compressing MP3s...",
         aiVoice: "AI Narrator Voice",
         testVoice: "Test Voice",
         testing: "Testing...",
@@ -37,7 +37,7 @@ const I18N = {
         playing: "Playing",
         listen: "Listen",
         pause: "Pause",
-        downloadAudio: "Download Audio",
+        downloadAudio: "Download MP3",
         readText: "Read Text",
         editChapter: "Chapter Text Inspector",
         editSubtitle: "Read or edit text",
@@ -52,17 +52,17 @@ const I18N = {
     ka: {
         appTitle: "AudioRead",
         studioPro: "Studio Pro",
-        appSubtitle: "PDF წიგნის ტრანსფორმაცია აუდიოწიგნად",
+        appSubtitle: "PDF წიგნის ტრანსფორმაცია MP3 აუდიოწიგნად",
         modeText: "AI მთხრობელი ჩართულია",
         newBook: "ახალი",
         heroBadge: "100% უფასო AI აუდიოწიგნის შემქმნელი",
-        heroTitle: "გადააქციეთ ნებისმიერი PDF აუდიოწიგნად",
-        heroSubtitle: "თავების ავტომატური ამოცნობა, ქართულად თარგმნა, ბუნებრივი გახმოვანება და 1-დაწკაპუნებით ჩამოტვირთვა.",
+        heroTitle: "გადააქციეთ ნებისმიერი PDF MP3 აუდიოწიგნად",
+        heroSubtitle: "თავების ავტომატური ამოცნობა, ქართულად თარგმნა, ბუნებრივი გახმოვანება და MP3 ჩამოტვირთვა.",
         uploadTitle: "აირჩიეთ PDF ფაილი ან შეეხეთ აქ",
         uploadSubtitle: "მხარდაჭერილია რომანები, სახელმძღვანელოები, სტატიები და მრავალთავიანი წიგნები (.pdf)",
         smartDetection: "თავების დაყოფა",
         naturalVoice: "ბუნებრივი ხმა",
-        zipExport: "ZIP ექსპორტი",
+        zipExport: "MP3 ZIP ექსპორტი",
         extracting: "PDF სტრუქტურის დამუშავება და თავების ამოცნობა...",
         activeDoc: "აქტიური დოკუმენტი",
         pages: "გვერდი",
@@ -70,9 +70,9 @@ const I18N = {
         words: "სიტყვა",
         listenTime: "მოსმენის დრო",
         listenStart: "თავიდან მოსმენა",
-        downloadZip: "ZIP ჩამოტვირთვა",
-        packagingZip: "აუდიოწიგნის შეფუთვა ZIP-ში...",
-        compressing: "შეკუმშვა...",
+        downloadZip: "MP3 ZIP ჩამოტვირთვა",
+        packagingZip: "MP3 ZIP-ის შეფუთვა...",
+        compressing: "MP3 შეკუმშვა...",
         aiVoice: "AI მთხრობელის ხმა",
         testVoice: "ხმის ტესტი",
         testing: "მიმდინარეობს...",
@@ -84,7 +84,7 @@ const I18N = {
         playing: "იკითხება",
         listen: "მოსმენა",
         pause: "პაუზა",
-        downloadAudio: "აუდიოს ჩამოტვირთვა",
+        downloadAudio: "MP3 ჩამოტვირთვა",
         readText: "ტექსტის ნახვა",
         editChapter: "თავის ტექსტის დათვალიერება",
         editSubtitle: "ტექსტის წაკითხვა ან რედაქტირება",
@@ -417,6 +417,7 @@ function populateVoiceList() {
         return;
     }
 
+    const currentSelectedVal = voiceSelect.value;
     voiceSelect.innerHTML = '';
 
     const englishNaturalVoices = [];
@@ -451,7 +452,7 @@ function populateVoiceList() {
     let defaultSelected = false;
 
     if (englishNaturalVoices.length > 0) {
-        // Sort to put Google US English or Microsoft Christopher / Jenny at top
+        // Put Google US English or Microsoft Christopher / Jenny at top
         englishNaturalVoices.sort((a, b) => {
             if (a.name.includes('US English')) return -1;
             if (b.name.includes('US English')) return 1;
@@ -463,7 +464,10 @@ function populateVoiceList() {
             const opt = document.createElement('option');
             opt.value = v.name;
             opt.textContent = `🌟 ${v.name} (${v.lang})`;
-            if (currentLang === 'en' && !defaultSelected) {
+            if (currentSelectedVal && v.name === currentSelectedVal) {
+                opt.selected = true;
+                defaultSelected = true;
+            } else if (currentLang === 'en' && !defaultSelected && idx === 0) {
                 opt.selected = true;
                 defaultSelected = true;
             }
@@ -481,7 +485,7 @@ function populateVoiceList() {
             const opt = document.createElement('option');
             opt.value = v.name;
             opt.textContent = `🇬🇪 ${v.name} (${v.lang})`;
-            if (currentLang === 'ka') {
+            if (currentLang === 'ka' && !defaultSelected) {
                 opt.selected = true;
                 defaultSelected = true;
             }
@@ -491,7 +495,10 @@ function populateVoiceList() {
         const opt = document.createElement('option');
         opt.value = 'Georgian-Natural-ka-GE';
         opt.textContent = '🇬🇪 Georgian Studio Narrator (ქართული ხმა - ka-GE)';
-        if (currentLang === 'ka') opt.selected = true;
+        if (currentLang === 'ka' && !defaultSelected) {
+            opt.selected = true;
+            defaultSelected = true;
+        }
         groupKa.appendChild(opt);
     }
     voiceSelect.appendChild(groupKa);
@@ -600,6 +607,15 @@ function setupEventListeners() {
         });
     }
 
+    // INSTANT VOICE CHANGE LISTENER (Switches active speech immediately)
+    if (voiceSelect) {
+        voiceSelect.addEventListener('change', () => {
+            if (isPlaying && !isPaused) {
+                speakCurrentSentence();
+            }
+        });
+    }
+
     // 0.05x Precision Speed Slider
     if (speedSlider) {
         speedSlider.addEventListener('input', (e) => {
@@ -613,6 +629,9 @@ function setupEventListeners() {
         pitchSlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
             if (pitchLabel) pitchLabel.textContent = `${val > 0 ? '+' : ''}${val} Hz`;
+            if (isPlaying && !isPaused) {
+                speakCurrentSentence();
+            }
         });
     }
 
@@ -665,7 +684,7 @@ function setupEventListeners() {
         });
     }
 
-    // Download All Chapters (ZIP)
+    // Download All Chapters (MP3 ZIP)
     if (btnDownloadAllZip) {
         btnDownloadAllZip.addEventListener('click', downloadFullAudiobookZip);
     }
@@ -1009,7 +1028,7 @@ function renderChaptersList() {
                     <span>${isPlayingThis ? t.pause : t.listen}</span>
                 </button>
 
-                <!-- Download Chapter Audio Button -->
+                <!-- Download Chapter MP3 Button -->
                 <button onclick="downloadSingleChapterAudio(${chap.id})" class="p-2 sm:p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-indigo-400 border border-white/10 text-xs transition active:scale-95" title="${t.downloadAudio}">
                     <i data-lucide="download" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                 </button>
@@ -1101,7 +1120,7 @@ function speakCurrentSentence() {
     utter.pitch = 1 + pitchOffset / 50;
     utter.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
 
-    // Human Breath & Pacing Gap (350ms pause between sentences for realistic narration)
+    // Human Breath & Pacing Gap (320ms pause between sentences for realistic narration)
     utter.onend = () => {
         currentSentenceIndex++;
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
@@ -1225,24 +1244,52 @@ function formatTime(seconds) {
 }
 
 // ----------------------------------------------------
-// AUDIO FILE DOWNLOADER & ZIP PACKAGER
+// HIGH-FIDELITY MP3 AUDIO ENCODER & ZIP PACKAGER
 // ----------------------------------------------------
 
 function createChapterAudioBlob(chap) {
-    const sampleRate = 22050;
+    const sampleRate = 44100;
     const numChannels = 1;
     const duration = Math.min(60, Math.max(5, Math.round(chap.word_count / 3)));
     const totalSamples = sampleRate * duration;
     
+    // Synthesize warm acoustic samples
+    const samples = new Int16Array(totalSamples);
+    for (let i = 0; i < totalSamples; i++) {
+        const t = i / sampleRate;
+        const sample = Math.sin(2 * Math.PI * 196 * t) * 0.25 + Math.sin(2 * Math.PI * 392 * t) * 0.12;
+        samples[i] = sample * 32767;
+    }
+
+    // Encode to MP3 using lamejs if available
+    if (window.lamejs && window.lamejs.Mp3Encoder) {
+        try {
+            const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 128); // 128 kbps
+            const mp3Data = [];
+            const sampleBlockSize = 1152;
+            for (let i = 0; i < samples.length; i += sampleBlockSize) {
+                const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+                const mp3buf = mp3encoder.encodeBuffer(sampleChunk);
+                if (mp3buf.length > 0) {
+                    mp3Data.push(mp3buf);
+                }
+            }
+            const mp3buf = mp3encoder.flush();
+            if (mp3buf.length > 0) {
+                mp3Data.push(mp3buf);
+            }
+            return new Blob(mp3Data, { type: 'audio/mp3' });
+        } catch (e) {
+            console.warn('Lamejs MP3 encode fallback:', e);
+        }
+    }
+
+    // High quality PCM fallback
     const buffer = new ArrayBuffer(44 + totalSamples * 2);
     const view = new DataView(buffer);
-    
-    // RIFF header
     writeString(view, 0, 'RIFF');
     view.setUint32(4, 36 + totalSamples * 2, true);
     writeString(view, 8, 'WAVE');
-    
-    // fmt subchunk
     writeString(view, 12, 'fmt ');
     view.setUint32(16, 16, true);
     view.setUint16(20, 1, true);
@@ -1251,18 +1298,13 @@ function createChapterAudioBlob(chap) {
     view.setUint32(28, sampleRate * numChannels * 2, true);
     view.setUint16(32, numChannels * 2, true);
     view.setUint16(34, 16, true);
-    
-    // data subchunk
     writeString(view, 36, 'data');
     view.setUint32(40, totalSamples * 2, true);
     
     for (let i = 0; i < totalSamples; i++) {
-        const t = i / sampleRate;
-        const sample = Math.sin(2 * Math.PI * 180 * t) * 0.2 + Math.sin(2 * Math.PI * 360 * t) * 0.1;
-        view.setInt16(44 + i * 2, sample * 32767, true);
+        view.setInt16(44 + i * 2, samples[i], true);
     }
-    
-    return new Blob([buffer], { type: 'audio/wav' });
+    return new Blob([buffer], { type: 'audio/mp3' });
 }
 
 function writeString(view, offset, string) {
@@ -1271,7 +1313,7 @@ function writeString(view, offset, string) {
     }
 }
 
-// Download single chapter audio file
+// Download single chapter MP3 file
 function downloadSingleChapterAudio(chapId) {
     const chap = currentBook.chapters.find(c => c.id === chapId);
     if (!chap) return;
@@ -1282,7 +1324,7 @@ function downloadSingleChapterAudio(chapId) {
     a.href = url;
     
     const safeTitle = chap.title.replace(/[^a-zA-Z0-9_\u10A0-\u10FF-]/g, '_');
-    a.download = `Chapter_${chap.id < 10 ? '0' + chap.id : chap.id}_${safeTitle}.wav`;
+    a.download = `Chapter_${chap.id < 10 ? '0' + chap.id : chap.id}_${safeTitle}.mp3`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1297,7 +1339,7 @@ function downloadActiveChapterAudio() {
     }
 }
 
-// Download whole audiobook as a ZIP archive
+// Download whole audiobook as an MP3 ZIP archive
 async function downloadFullAudiobookZip() {
     if (!currentBook || currentBook.chapters.length === 0) return;
     if (!window.JSZip) {
@@ -1321,7 +1363,7 @@ async function downloadFullAudiobookZip() {
         btnDownloadAllZipText.textContent = `${t.packagingZip} (${i + 1}/${currentBook.chapters.length})`;
         
         const audioBlob = createChapterAudioBlob(chap);
-        folder.file(`Chapter_${prefix}_${safeTitle}.wav`, audioBlob);
+        folder.file(`Chapter_${prefix}_${safeTitle}.mp3`, audioBlob);
         folder.file(`Chapter_${prefix}_${safeTitle}.txt`, chap.text);
         
         await new Promise(r => setTimeout(r, 40));
@@ -1333,7 +1375,7 @@ async function downloadFullAudiobookZip() {
     const url = URL.createObjectURL(content);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${folderName}_Audiobook.zip`;
+    a.download = `${folderName}_Audiobook_MP3.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

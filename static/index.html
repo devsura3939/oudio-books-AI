@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AudioRead Studio Pro - AI PDF eBook to Audiobook</title>
+    <title>AudioRead Studio Pro - AI PDF eBook to MP3 Audiobook</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -28,6 +28,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- JSZip for 1-Click Audiobook ZIP Packaging -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- LameJS for High Quality Client-Side MP3 Audio Encoding -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
     <!-- PDF.js CDN for in-browser client-side PDF parsing on GitHub Pages -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
@@ -55,7 +57,7 @@
                         <span id="ui-appTitle" class="bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent">AudioRead</span>
                         <span id="ui-studioPro" class="text-[9px] sm:text-[10px] uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">Studio Pro</span>
                     </h1>
-                    <p id="ui-appSubtitle" class="hidden sm:block text-[11px] text-slate-400">PDF eBook to Studio Audiobook</p>
+                    <p id="ui-appSubtitle" class="hidden sm:block text-[11px] text-slate-400">PDF eBook to Studio MP3 Audiobook</p>
                 </div>
             </div>
 
@@ -90,10 +92,10 @@
                     <span id="ui-heroBadge">100% Free AI Audiobook Converter</span>
                 </div>
                 <h2 id="ui-heroTitle" class="text-2xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent leading-tight">
-                    Convert Any PDF eBook Into An Audiobook
+                    Convert Any PDF eBook Into An MP3 Audiobook
                 </h2>
                 <p id="ui-heroSubtitle" class="text-slate-400 text-xs sm:text-base leading-relaxed">
-                    Automatic chapter segmentation, translation, studio voice narration, and 1-click audio downloads.
+                    Automatic chapter segmentation, translation, studio voice narration, and MP3 audio downloads.
                 </p>
             </div>
 
@@ -115,7 +117,7 @@
                     <div class="flex items-center gap-2 sm:gap-6 text-[11px] sm:text-xs text-slate-300 pt-2 flex-wrap justify-center font-medium">
                         <span class="flex items-center gap-1 bg-slate-900/80 px-2.5 sm:px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="ui-smartDetection">Chapter Splitting</span></span>
                         <span class="flex items-center gap-1 bg-slate-900/80 px-2.5 sm:px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="ui-naturalVoice">Natural Voice</span></span>
-                        <span class="flex items-center gap-1 bg-slate-900/80 px-2.5 sm:px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="ui-zipExport">ZIP Download</span></span>
+                        <span class="flex items-center gap-1 bg-slate-900/80 px-2.5 sm:px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="ui-zipExport">MP3 ZIP Export</span></span>
                     </div>
                 </div>
 
@@ -174,7 +176,7 @@
                             </button>
                             <button id="btnDownloadAllZip" class="w-full sm:w-auto py-3 px-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-semibold text-xs border border-white/10 flex items-center justify-center gap-2 transition active:scale-95 shadow-md">
                                 <i data-lucide="archive" class="w-4 h-4 text-indigo-400"></i>
-                                <span id="btnDownloadAllZipText">Download ZIP</span>
+                                <span id="btnDownloadAllZipText">Download MP3 ZIP</span>
                             </button>
                         </div>
                         
@@ -363,7 +365,7 @@
                     <button onclick="cyclePlayerSpeed()" id="btnPlayerSpeedMobile" class="px-2 py-1 rounded-xl bg-slate-900 border border-white/10 text-[11px] font-mono text-indigo-300 font-bold">
                         1.00x
                     </button>
-                    <button onclick="downloadActiveChapterAudio()" title="Download Chapter Audio" class="p-1.5 rounded-xl bg-slate-900 border border-white/10 text-slate-300">
+                    <button onclick="downloadActiveChapterAudio()" title="Download Chapter MP3" class="p-1.5 rounded-xl bg-slate-900 border border-white/10 text-slate-300">
                         <i data-lucide="download" class="w-3.5 h-3.5"></i>
                     </button>
                 </div>
@@ -408,7 +410,7 @@
                     <button onclick="adjustSpeedByStep(0.05)" class="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white font-mono">+</button>
                 </div>
 
-                <button onclick="downloadActiveChapterAudio()" title="Download Current Chapter Audio" class="p-2 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 hover:text-indigo-400 transition shadow-inner">
+                <button onclick="downloadActiveChapterAudio()" title="Download Current Chapter MP3" class="p-2 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 hover:text-indigo-400 transition shadow-inner">
                     <i data-lucide="download" class="w-4 h-4"></i>
                 </button>
                 <div class="flex items-center gap-1.5">
