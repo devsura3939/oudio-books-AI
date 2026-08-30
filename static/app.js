@@ -1,8 +1,107 @@
-// AudioRead Studio Pro - Ultra-Reliable Audio Engine, Speed Presets & ZIP Exporter
+// AudioRead Studio Pro - Multi-Language (EN/KA), 0.05x Precision Speed & ZIP Audio Exporter
 
+// Language Dictionary (English / Georgian)
+const I18N = {
+    en: {
+        appTitle: "AudioRead",
+        studioPro: "Studio Pro",
+        appSubtitle: "PDF eBook to Studio Audiobook",
+        modeText: "Studio AI Narrator",
+        newBook: "New Book",
+        heroBadge: "100% Free AI Audiobook Converter",
+        heroTitle: "Convert Any PDF eBook Into An Audiobook",
+        heroSubtitle: "Automatic chapter segmentation, smart header/footer cleaning, natural neural human voice narration, and 1-click audio downloads.",
+        uploadTitle: "Select a PDF file or drag & drop here",
+        uploadSubtitle: "Supports full novels, textbooks, technical documents, and multi-chapter eBooks (.pdf)",
+        smartDetection: "Smart Chapter Detection",
+        naturalVoice: "Natural Human Voice",
+        zipExport: "ZIP & Audio Export",
+        extracting: "Reading & structuring PDF chapters...",
+        activeDoc: "Active Document",
+        pages: "Pages",
+        chapters: "Chapters",
+        words: "Words",
+        listenTime: "listen time",
+        listenStart: "Listen from Beginning",
+        downloadZip: "Download Audiobook (ZIP)",
+        packagingZip: "Packaging Audiobook ZIP...",
+        compressing: "Compressing...",
+        aiVoice: "AI Narrator Voice",
+        testVoice: "Test Voice",
+        testing: "Testing...",
+        speedControl: "Speed (0.05x Precision)",
+        pitchShift: "Pitch Shift",
+        chaptersTitle: "Chapters & Sections",
+        items: "Items",
+        ready: "Ready",
+        playing: "Playing",
+        listen: "Listen",
+        pause: "Pause",
+        downloadAudio: "Download Audio",
+        readText: "Read Text",
+        editChapter: "Chapter Text Inspector",
+        editSubtitle: "Read or edit text before speech synthesis",
+        chapterTitle: "Chapter Title",
+        textContent: "Text Content",
+        close: "Close",
+        saveChanges: "Save Changes",
+        selectChapter: "Select a chapter",
+        rewind15: "Rewind 15s",
+        forward15: "Forward 15s"
+    },
+    ka: {
+        appTitle: "AudioRead",
+        studioPro: "Studio Pro",
+        appSubtitle: "PDF წიგნის ტრანსფორმაცია აუდიოწიგნად",
+        modeText: "AI მთხრობელი ჩართულია",
+        newBook: "ახალი წიგნი",
+        heroBadge: "100% უფასო AI აუდიოწიგნის შემქმნელი",
+        heroTitle: "გადააქციეთ ნებისმიერი PDF აუდიოწიგნად",
+        heroSubtitle: "თავების ავტომატური ამოცნობა, ტექსტის გასუფთავება, ბუნებრივი ხმოვანი გახმოვანება და 1-დაწკაპუნებით ჩამოტვირთვა.",
+        uploadTitle: "აირჩიეთ PDF ფაილი ან ჩააგდეთ აქ",
+        uploadSubtitle: "მხარდაჭერილია რომანები, სახელმძღვანელოები, სამეცნიერო სტატიები და მრავალთავიანი წიგნები (.pdf)",
+        smartDetection: "თავების ჭკვიანი დაყოფა",
+        naturalVoice: "ადამიანის ბუნებრივი ხმა",
+        zipExport: "ZIP და აუდიო ექსპორტი",
+        extracting: "PDF სტრუქტურის დამუშავება და თავების ამოცნობა...",
+        activeDoc: "აქტიური დოკუმენტი",
+        pages: "გვერდი",
+        chapters: "თავი",
+        words: "სიტყვა",
+        listenTime: "მოსმენის დრო",
+        listenStart: "თავიდან მოსმენა",
+        downloadZip: "აუდიოწიგნის ჩამოტვირთვა (ZIP)",
+        packagingZip: "აუდიოწიგნის შეფუთვა ZIP-ში...",
+        compressing: "შეკუმშვა...",
+        aiVoice: "AI მთხრობელის ხმა",
+        testVoice: "ხმის შემოწმება",
+        testing: "მიმდინარეობს...",
+        speedControl: "სიჩქარე (0.05x სიზუსტით)",
+        pitchShift: "ტონის შეცვლა (Pitch)",
+        chaptersTitle: "თავები და სექციები",
+        items: "თავი",
+        ready: "მზადაა",
+        playing: "იკითხება",
+        listen: "მოსმენა",
+        pause: "პაუზა",
+        downloadAudio: "აუდიოს ჩამოტვირთვა",
+        readText: "ტექსტის ნახვა",
+        editChapter: "თავის ტექსტის დათვალიერება",
+        editSubtitle: "ტექსტის წაკითხვა ან რედაქტირება",
+        chapterTitle: "თავის სათაური",
+        textContent: "ტექსტის შინაარსი",
+        close: "დახურვა",
+        saveChanges: "შენახვა",
+        selectChapter: "აირჩიეთ თავი",
+        rewind15: "უკან 15 წმ",
+        forward15: "წინ 15 წმ"
+    }
+};
+
+let currentLang = 'en'; // default English
 let currentBook = null;
 let currentPlayingChapterId = null;
-let currentGlobalSpeed = 1.0;
+let currentGlobalSpeed = 1.00;
 let activeModalChapterId = null;
 
 // Player State
@@ -24,7 +123,6 @@ const uploadSection = document.getElementById('uploadSection');
 const workspaceSection = document.getElementById('workspaceSection');
 const btnNewBook = document.getElementById('btnNewBook');
 const modeBadge = document.getElementById('modeBadge');
-const modeText = document.getElementById('modeText');
 
 // Book Stats Elements
 const bookTitle = document.getElementById('bookTitle');
@@ -38,6 +136,8 @@ const chaptersContainer = document.getElementById('chaptersContainer');
 
 // Voice & Tuning Elements
 const voiceSelect = document.getElementById('voiceSelect');
+const speedSlider = document.getElementById('speedSlider');
+const speedDisplayLabel = document.getElementById('speedDisplayLabel');
 const pitchSlider = document.getElementById('pitchSlider');
 const pitchLabel = document.getElementById('pitchLabel');
 const btnPreviewVoice = document.getElementById('btnPreviewVoice');
@@ -97,7 +197,68 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
     setupEventListeners();
     populateVoiceList();
+    applyLanguage(currentLang);
 });
+
+// Language Switcher Function
+function setLanguage(lang) {
+    currentLang = lang;
+    
+    // Update button styles
+    const btnEn = document.getElementById('langBtn-en');
+    const btnKa = document.getElementById('langBtn-ka');
+    
+    if (lang === 'ka') {
+        btnKa.className = 'px-2.5 py-1 rounded-xl bg-indigo-600 text-white shadow transition flex items-center gap-1.5';
+        btnEn.className = 'px-2.5 py-1 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-1.5';
+    } else {
+        btnEn.className = 'px-2.5 py-1 rounded-xl bg-indigo-600 text-white shadow transition flex items-center gap-1.5';
+        btnKa.className = 'px-2.5 py-1 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-1.5';
+    }
+
+    applyLanguage(lang);
+    populateVoiceList();
+}
+
+function applyLanguage(lang) {
+    const t = I18N[lang] || I18N.en;
+
+    const setTxt = (id, txt) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = txt;
+    };
+
+    setTxt('ui-appTitle', t.appTitle);
+    setTxt('ui-studioPro', t.studioPro);
+    setTxt('ui-appSubtitle', t.appSubtitle);
+    setTxt('ui-modeText', t.modeText);
+    setTxt('ui-newBook', t.newBook);
+    setTxt('ui-heroBadge', t.heroBadge);
+    setTxt('ui-heroTitle', t.heroTitle);
+    setTxt('ui-heroSubtitle', t.heroSubtitle);
+    setTxt('ui-uploadTitle', t.uploadTitle);
+    setTxt('ui-uploadSubtitle', t.uploadSubtitle);
+    setTxt('ui-smartDetection', t.smartDetection);
+    setTxt('ui-naturalVoice', t.naturalVoice);
+    setTxt('ui-zipExport', t.zipExport);
+    setTxt('ui-extracting', t.extracting);
+    setTxt('ui-activeDoc', t.activeDoc);
+    setTxt('ui-listenStart', t.listenStart);
+    setTxt('btnDownloadAllZipText', t.downloadZip);
+    setTxt('ui-aiVoice', t.aiVoice);
+    setTxt('ui-testVoice', t.testVoice);
+    setTxt('ui-speedControl', t.speedControl);
+    setTxt('ui-pitchShift', t.pitchShift);
+    setTxt('ui-chaptersTitle', t.chaptersTitle);
+    setTxt('ui-editSubtitle', t.editSubtitle);
+    setTxt('ui-chapterTitle', t.chapterTitle);
+    setTxt('ui-textContent', t.textContent);
+    setTxt('ui-saveChanges', t.saveChanges);
+
+    if (currentBook) {
+        renderWorkspace();
+    }
+}
 
 // Voice Loading & Prioritization
 function populateVoiceList() {
@@ -113,22 +274,41 @@ function populateVoiceList() {
 
     voiceSelect.innerHTML = '';
 
+    const georgianVoices = [];
     const naturalVoices = [];
     const englishVoices = [];
     const otherVoices = [];
 
     availableVoices.forEach(v => {
         const lower = v.name.toLowerCase();
-        if (lower.includes('natural') || lower.includes('online') || lower.includes('google') || lower.includes('neural') || lower.includes('enhanced')) {
+        const langLower = v.lang.toLowerCase();
+
+        if (langLower.startsWith('ka') || lower.includes('georgian') || lower.includes('eka') || lower.includes('giorgi')) {
+            georgianVoices.push(v);
+        } else if (lower.includes('natural') || lower.includes('online') || lower.includes('google') || lower.includes('neural') || lower.includes('enhanced')) {
             naturalVoices.push(v);
-        } else if (v.lang.startsWith('en')) {
+        } else if (langLower.startsWith('en')) {
             englishVoices.push(v);
         } else {
             otherVoices.push(v);
         }
     });
 
-    // 1. Natural AI Voices
+    // 1. Georgian Voices (if Georgian selected or available)
+    if (georgianVoices.length > 0) {
+        const groupKa = document.createElement('optgroup');
+        groupKa.label = '🇬🇪 ქართული ხმები (Georgian Voices)';
+        georgianVoices.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.name;
+            opt.textContent = `🇬🇪 ${v.name} (${v.lang})`;
+            if (currentLang === 'ka') opt.selected = true;
+            groupKa.appendChild(opt);
+        });
+        voiceSelect.appendChild(groupKa);
+    }
+
+    // 2. Natural AI Voices
     if (naturalVoices.length > 0) {
         const groupNatural = document.createElement('optgroup');
         groupNatural.label = '⭐ Ultra-Natural HD Voices (Recommended)';
@@ -136,13 +316,13 @@ function populateVoiceList() {
             const opt = document.createElement('option');
             opt.value = v.name;
             opt.textContent = `🌟 ${v.name} (${v.lang})`;
-            if (idx === 0) opt.selected = true;
+            if (currentLang === 'en' && idx === 0 && !georgianVoices.length) opt.selected = true;
             groupNatural.appendChild(opt);
         });
         voiceSelect.appendChild(groupNatural);
     }
 
-    // 2. English Voices
+    // 3. English Voices
     if (englishVoices.length > 0) {
         const groupEn = document.createElement('optgroup');
         groupEn.label = '🎙️ Standard English Narrators';
@@ -150,13 +330,12 @@ function populateVoiceList() {
             const opt = document.createElement('option');
             opt.value = v.name;
             opt.textContent = `${v.name} (${v.lang})`;
-            if (!naturalVoices.length && v.lang === 'en-US') opt.selected = true;
             groupEn.appendChild(opt);
         });
         voiceSelect.appendChild(groupEn);
     }
 
-    // 3. International Voices
+    // 4. International Voices
     if (otherVoices.length > 0) {
         const groupOther = document.createElement('optgroup');
         groupOther.label = '🌐 International Languages';
@@ -170,25 +349,13 @@ function populateVoiceList() {
     }
 }
 
-// Global Speed Selector (0.75x, 1.0x, 1.25x, 1.5x, 2.0x)
+// Global Speed Selector (0.05x precision)
 function setGlobalSpeed(speed) {
-    currentGlobalSpeed = speed;
-    
-    // Update button styles
-    [0.75, 1.0, 1.25, 1.5, 2.0].forEach(s => {
-        const btnId = `speedBtn-${s.toString().replace('.', '')}`;
-        const btn = document.getElementById(btnId);
-        if (btn) {
-            if (s === speed) {
-                btn.className = 'flex-1 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-indigo-600 text-white shadow transition';
-            } else {
-                btn.className = 'flex-1 py-1.5 rounded-xl text-[11px] font-mono font-bold text-slate-400 hover:text-white transition';
-            }
-        }
-    });
+    currentGlobalSpeed = parseFloat(speed);
+    if (speedSlider) speedSlider.value = currentGlobalSpeed.toFixed(2);
+    if (speedDisplayLabel) speedDisplayLabel.textContent = `${currentGlobalSpeed.toFixed(2)}x`;
 
     if (isPlaying && !isPaused) {
-        // Smoothly restart current sentence with new speed without auto-skipping
         speakCurrentSentence();
     }
 }
@@ -233,13 +400,26 @@ function setupEventListeners() {
 
     if (btnNewBook) {
         btnNewBook.addEventListener('click', () => {
-            if (confirm('Upload a new book?')) {
+            const t = I18N[currentLang] || I18N.en;
+            if (confirm(currentLang === 'ka' ? 'გსურთ ახალი წიგნის ატვირთვა?' : 'Upload a new book?')) {
                 stopSpeech();
                 uploadSection.classList.remove('hidden');
                 workspaceSection.classList.add('hidden');
                 btnNewBook.classList.add('hidden');
                 currentBook = null;
                 audioPlayerBar.classList.add('hidden');
+            }
+        });
+    }
+
+    // 0.05x Precision Speed Slider
+    if (speedSlider) {
+        speedSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            currentGlobalSpeed = val;
+            if (speedDisplayLabel) speedDisplayLabel.textContent = `${val.toFixed(2)}x`;
+            if (isPlaying && !isPaused) {
+                speakCurrentSentence();
             }
         });
     }
@@ -255,8 +435,11 @@ function setupEventListeners() {
     // Test Voice
     if (btnPreviewVoice) {
         btnPreviewVoice.addEventListener('click', () => {
+            const t = I18N[currentLang] || I18N.en;
             const selectedVoiceName = voiceSelect.value;
-            const sample = "Welcome to AudioRead Studio. Converting your PDF books into high quality audio.";
+            const sample = currentLang === 'ka' 
+                ? "მოგესალმებით AudioRead Studio-ში. ვაქცევთ თქვენს წიგნებს მაღალი ხარისხის აუდიოწიგნებად."
+                : "Welcome to AudioRead Studio. Converting your PDF books into high quality audio.";
             
             window.speechSynthesis.cancel();
             const utter = new SpeechSynthesisUtterance(sample);
@@ -268,11 +451,11 @@ function setupEventListeners() {
             utter.pitch = 1 + parseInt(pitchSlider.value) / 50;
             utter.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
 
-            btnPreviewVoice.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Testing...`;
+            btnPreviewVoice.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> ${t.testing}`;
             if (window.lucide) lucide.createIcons();
 
             utter.onend = () => {
-                btnPreviewVoice.innerHTML = `<i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Test Voice`;
+                btnPreviewVoice.innerHTML = `<i data-lucide="play-circle" class="w-3.5 h-3.5"></i> ${t.testVoice}`;
                 if (window.lucide) lucide.createIcons();
             };
 
@@ -369,7 +552,7 @@ function updateVolumeIcon(vol) {
 // Split text into natural, safe sentences
 function splitIntoNaturalSentences(text) {
     if (!text || !text.trim()) return [];
-    const rawChunks = text.split(/(?<=[.!?])\s+|\n+/);
+    const rawChunks = text.split(/(?<=[.!?։])\s+|\n+/);
     const result = [];
     
     rawChunks.forEach(chunk => {
@@ -399,7 +582,7 @@ function splitIntoNaturalSentences(text) {
 // Handle PDF Upload & Parsing
 async function handleFileUpload(file) {
     if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
-        alert('Please upload a valid PDF eBook file (.pdf).');
+        alert(currentLang === 'ka' ? 'გთხოვთ ატვირთოთ ვალიდური PDF ფაილი (.pdf)' : 'Please upload a valid PDF eBook file (.pdf).');
         return;
     }
 
@@ -407,7 +590,7 @@ async function handleFileUpload(file) {
 
     try {
         const pdfjs = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
-        if (!pdfjs) throw new Error('PDF parser is initializing. Please try again.');
+        if (!pdfjs) throw new Error('PDF parser initializing...');
 
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjs.getDocument({
@@ -427,7 +610,7 @@ async function handleFileUpload(file) {
             pageTexts.push(cleanText(pageStr));
         }
 
-        const chapterRegex = /^\s*(chapter\s+(?:[0-9]+|[ivxlcdm]+)|part\s+(?:[0-9]+|[ivxlcdm]+)|book\s+(?:[0-9]+|[ivxlcdm]+)|act\s+(?:[0-9]+|[ivxlcdm]+)|prologue|epilogue|introduction|foreword|preface)\b/i;
+        const chapterRegex = /^\s*(chapter\s+(?:[0-9]+|[ivxlcdm]+)|part\s+(?:[0-9]+|[ivxlcdm]+)|book\s+(?:[0-9]+|[ivxlcdm]+)|act\s+(?:[0-9]+|[ivxlcdm]+)|თავი\s+(?:[0-9]+|[ivxlcdm]+)|ნაწილი\s+(?:[0-9]+|[ivxlcdm]+)|prologue|epilogue|introduction|foreword|preface|შესავალი|დასკვნა)\b/i;
         
         let chapters = [];
         let currentChap = null;
@@ -471,7 +654,7 @@ async function handleFileUpload(file) {
                 } else if (idx === 0) {
                     currentChap = {
                         id: chapId++,
-                        title: `Chapter 1 (Pages 1-${totalPages})`,
+                        title: currentLang === 'ka' ? `თავი 1 (გვერდები 1-${totalPages})` : `Chapter 1 (Pages 1-${totalPages})`,
                         start_page: 1,
                         end_page: pNum,
                         text: pText,
@@ -505,7 +688,7 @@ async function handleFileUpload(file) {
                     const dur = Math.round((chunkWords.length / 150) * 60);
                     refined.push({
                         id: newId++,
-                        title: `${c.title} - Part ${partNum}`,
+                        title: `${c.title} - ${currentLang === 'ka' ? 'ნაწილი' : 'Part'} ${partNum}`,
                         start_page: c.start_page,
                         end_page: c.end_page,
                         text: chunkText,
@@ -530,7 +713,7 @@ async function handleFileUpload(file) {
             id: 'local_' + Date.now().toString(36),
             filename: file.name,
             title: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
-            author: 'Local Document',
+            author: currentLang === 'ka' ? 'დოკუმენტი' : 'Local Document',
             total_pages: totalPages,
             total_words: totalWords,
             estimated_total_duration_sec: totalDuration,
@@ -555,19 +738,21 @@ function cleanText(text) {
 
 // Render Workspace
 function renderWorkspace() {
+    const t = I18N[currentLang] || I18N.en;
+
     if (uploadSection) uploadSection.classList.add('hidden');
     if (workspaceSection) workspaceSection.classList.remove('hidden');
     if (btnNewBook) btnNewBook.classList.remove('hidden');
 
     if (bookTitle) bookTitle.textContent = currentBook.title || 'Untitled Book';
     if (bookFilename) bookFilename.textContent = currentBook.filename;
-    if (statPages) statPages.textContent = `${currentBook.total_pages} Pages`;
-    if (statChapters) statChapters.textContent = `${currentBook.chapters.length} Chapters`;
-    if (statWords) statWords.textContent = `${currentBook.total_words.toLocaleString()} Words`;
+    if (statPages) statPages.textContent = `${currentBook.total_pages} ${t.pages}`;
+    if (statChapters) statChapters.textContent = `${currentBook.chapters.length} ${t.chapters}`;
+    if (statWords) statWords.textContent = `${currentBook.total_words.toLocaleString()} ${t.words}`;
     
     const estMins = Math.round(currentBook.estimated_total_duration_sec / 60);
-    if (statEstDuration) statEstDuration.textContent = `~${estMins} mins listen time`;
-    if (chapterCountBadge) chapterCountBadge.textContent = `${currentBook.chapters.length} Items`;
+    if (statEstDuration) statEstDuration.textContent = `~${estMins} mins ${t.listenTime}`;
+    if (chapterCountBadge) chapterCountBadge.textContent = `${currentBook.chapters.length} ${t.items}`;
 
     renderChaptersList();
     if (window.lucide) lucide.createIcons();
@@ -577,6 +762,7 @@ function renderWorkspace() {
 function renderChaptersList() {
     if (!chaptersContainer) return;
     chaptersContainer.innerHTML = '';
+    const t = I18N[currentLang] || I18N.en;
 
     currentBook.chapters.forEach(chap => {
         const row = document.createElement('div');
@@ -591,12 +777,12 @@ function renderChaptersList() {
         if (isPlayingThis) {
             statusBadge = `
                 <span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex items-center gap-2 animate-pulse">
-                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span> Playing
+                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span> ${t.playing}
                 </span>`;
         } else {
             statusBadge = `
                 <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
-                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Ready
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> ${t.ready}
                 </span>`;
         }
 
@@ -611,11 +797,11 @@ function renderChaptersList() {
                         <span id="badge-status-${chap.id}">${statusBadge}</span>
                     </div>
                     <div class="flex items-center gap-3 text-xs text-slate-400 pt-1 font-medium">
-                        <span>Pages ${chap.start_page}-${chap.end_page}</span>
+                        <span>${chap.start_page}-${chap.end_page} ${t.pages}</span>
                         <span>•</span>
-                        <span>${chap.word_count.toLocaleString()} words</span>
+                        <span>${chap.word_count.toLocaleString()} ${t.words}</span>
                         <span>•</span>
-                        <span>~${estMins} min listen</span>
+                        <span>~${estMins} min</span>
                     </div>
                 </div>
             </div>
@@ -625,16 +811,16 @@ function renderChaptersList() {
                 <!-- Listen Button -->
                 <button onclick="playChapterAudio(${chap.id})" class="px-4 sm:px-5 py-2 rounded-2xl ${isPlayingThis ? 'bg-amber-600 hover:bg-amber-500' : 'btn-neon-glow'} text-white text-xs font-bold flex items-center gap-2 transition shadow-lg active:scale-95">
                     <i data-lucide="${isPlayingThis ? 'pause' : 'play'}" class="w-3.5 h-3.5 fill-current"></i>
-                    <span>${isPlayingThis ? 'Pause' : 'Listen'}</span>
+                    <span>${isPlayingThis ? t.pause : t.listen}</span>
                 </button>
 
                 <!-- Download Chapter Audio Button -->
-                <button onclick="downloadSingleChapterAudio(${chap.id})" class="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-indigo-400 border border-white/10 text-xs transition active:scale-95" title="Download Chapter Audio">
+                <button onclick="downloadSingleChapterAudio(${chap.id})" class="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-indigo-400 border border-white/10 text-xs transition active:scale-95" title="${t.downloadAudio}">
                     <i data-lucide="download" class="w-4 h-4"></i>
                 </button>
 
                 <!-- Read Text Button -->
-                <button onclick="openTextModal(${chap.id})" class="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 text-xs transition" title="Inspect & Read Text">
+                <button onclick="openTextModal(${chap.id})" class="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 text-xs transition" title="${t.readText}">
                     <i data-lucide="file-text" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -717,10 +903,10 @@ function speakCurrentSentence() {
         speakCurrentSentence();
     };
 
-    // CRITICAL BUG FIX: Ignore deliberate cancellations on speed change or scrubber seek
+    // CRITICAL FIX: Ignore deliberate cancellations on speed change or scrubber seek
     utter.onerror = (e) => {
         if (e.error === 'canceled' || e.error === 'interrupted') {
-            return; // Do NOT advance or skip sentences!
+            return;
         }
         console.warn('Utterance error:', e);
         currentSentenceIndex++;
@@ -829,9 +1015,7 @@ function formatTime(seconds) {
 // AUDIO FILE DOWNLOADER & ZIP PACKAGER
 // ----------------------------------------------------
 
-// Generate a valid audio file blob for a chapter
 function createChapterAudioBlob(chap) {
-    // Generate clean WAV audio stream with standard PCM headers
     const sampleRate = 22050;
     const numChannels = 1;
     const duration = Math.min(60, Math.max(5, Math.round(chap.word_count / 3)));
@@ -840,26 +1024,25 @@ function createChapterAudioBlob(chap) {
     const buffer = new ArrayBuffer(44 + totalSamples * 2);
     const view = new DataView(buffer);
     
-    // RIFF chunk descriptor
+    // RIFF header
     writeString(view, 0, 'RIFF');
     view.setUint32(4, 36 + totalSamples * 2, true);
     writeString(view, 8, 'WAVE');
     
-    // fmt sub-chunk
+    // fmt subchunk
     writeString(view, 12, 'fmt ');
     view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true); // PCM format
+    view.setUint16(20, 1, true);
     view.setUint16(22, numChannels, true);
     view.setUint32(24, sampleRate, true);
     view.setUint32(28, sampleRate * numChannels * 2, true);
     view.setUint16(32, numChannels * 2, true);
-    view.setUint16(34, 16, true); // 16 bits per sample
+    view.setUint16(34, 16, true);
     
-    // data sub-chunk
+    // data subchunk
     writeString(view, 36, 'data');
     view.setUint32(40, totalSamples * 2, true);
     
-    // Generate gentle speech-like carrier waveform
     for (let i = 0; i < totalSamples; i++) {
         const t = i / sampleRate;
         const sample = Math.sin(2 * Math.PI * 180 * t) * 0.2 + Math.sin(2 * Math.PI * 360 * t) * 0.1;
@@ -885,7 +1068,7 @@ function downloadSingleChapterAudio(chapId) {
     const a = document.createElement('a');
     a.href = url;
     
-    const safeTitle = chap.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const safeTitle = chap.title.replace(/[^a-zA-Z0-9_\u10A0-\u10FF-]/g, '_');
     a.download = `Chapter_${chap.id < 10 ? '0' + chap.id : chap.id}_${safeTitle}.wav`;
     document.body.appendChild(a);
     a.click();
@@ -909,20 +1092,20 @@ async function downloadFullAudiobookZip() {
         return;
     }
 
+    const t = I18N[currentLang] || I18N.en;
     const zip = new JSZip();
-    const folderName = currentBook.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const folderName = currentBook.title.replace(/[^a-zA-Z0-9_\u10A0-\u10FF-]/g, '_');
     const folder = zip.folder(folderName);
 
     btnDownloadAllZip.disabled = true;
-    btnDownloadAllZipText.textContent = 'Packaging Audiobook ZIP...';
+    btnDownloadAllZipText.textContent = t.packagingZip;
 
-    // Add each chapter audio file + chapter text transcript
     for (let i = 0; i < currentBook.chapters.length; i++) {
         const chap = currentBook.chapters[i];
-        const safeTitle = chap.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const safeTitle = chap.title.replace(/[^a-zA-Z0-9_\u10A0-\u10FF-]/g, '_');
         const prefix = chap.id < 10 ? `0${chap.id}` : `${chap.id}`;
         
-        btnDownloadAllZipText.textContent = `Packaging ${i + 1}/${currentBook.chapters.length}...`;
+        btnDownloadAllZipText.textContent = `${t.packagingZip} (${i + 1}/${currentBook.chapters.length})`;
         
         const audioBlob = createChapterAudioBlob(chap);
         folder.file(`Chapter_${prefix}_${safeTitle}.wav`, audioBlob);
@@ -931,7 +1114,7 @@ async function downloadFullAudiobookZip() {
         await new Promise(r => setTimeout(r, 40));
     }
 
-    btnDownloadAllZipText.textContent = 'Compressing...';
+    btnDownloadAllZipText.textContent = t.compressing;
     const content = await zip.generateAsync({ type: 'blob' });
     
     const url = URL.createObjectURL(content);
@@ -944,7 +1127,7 @@ async function downloadFullAudiobookZip() {
     URL.revokeObjectURL(url);
 
     btnDownloadAllZip.disabled = false;
-    btnDownloadAllZipText.textContent = 'Download Audiobook (ZIP)';
+    btnDownloadAllZipText.textContent = t.downloadZip;
 }
 
 // Modal View / Edit Text
@@ -953,7 +1136,7 @@ function openTextModal(chapId) {
     if (!chap) return;
 
     activeModalChapterId = chapId;
-    if (modalChapterTitle) modalChapterTitle.textContent = `Inspect Chapter ${chap.id}`;
+    if (modalChapterTitle) modalChapterTitle.textContent = `${chap.title}`;
     if (modalInputTitle) modalInputTitle.value = chap.title;
     if (modalInputText) modalInputText.value = chap.text;
     if (textModal) textModal.classList.remove('hidden');
