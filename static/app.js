@@ -753,7 +753,7 @@ function renderToCDrawerList() {
 
         btn.innerHTML = `
             <div class="overflow-hidden">
-                <p class="text-xs truncate">${idx + 1}. ${chap.title}</p>
+                <p class="text-xs truncate">${idx + 1}. ${escapeHtml(chap.title)}</p>
                 <p class="text-[10px] text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(chap.estimated_duration_sec)}</p>
             </div>
             ${hasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-georgian-gold/20 text-georgian-gold font-bold">🇬🇪</span>' : ''}
@@ -1164,7 +1164,7 @@ function renderCurrentPage() {
             <div class="book-page-card w-full max-w-4xl mx-auto">
                 <header class="mb-6 text-center border-b border-black/10 dark:border-white/10 pb-4 select-none">
                     <span class="text-xs font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${readerBook.title} ✦</span>
-                    <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold mt-1 mb-2 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${chap.title}</h1>
+                    <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold mt-1 mb-2 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${escapeHtml(chap.title)}</h1>
                     <div class="flex items-center justify-center gap-3 text-xs opacity-75">
                         <span>${chap.word_count} words</span>
                         <span>•</span>
@@ -1198,7 +1198,7 @@ function renderCurrentPage() {
                 </div>
                 <footer class="mt-10 pt-6 border-t border-black/10 dark:border-white/10 text-center opacity-60 text-xs select-none">
                     <p>── ❦ ──</p>
-                    <p class="mt-1">End of ${chap.title}</p>
+                    <p class="mt-1">End of ${escapeHtml(chap.title)}</p>
                 </footer>
             </div>
         `;
@@ -1220,7 +1220,7 @@ function renderCurrentPage() {
                 <div class="book-page-card book-spine-right hidden md:flex items-center justify-center text-center opacity-30 select-none">
                     <div>
                         <span class="text-4xl">❦</span>
-                        <p class="text-xs font-serif-book mt-3">End of ${chap.title}</p>
+                        <p class="text-xs font-serif-book mt-3">End of ${escapeHtml(chap.title)}</p>
                     </div>
                 </div>
             `;
@@ -1266,7 +1266,7 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
         cardHtml += `
             <header class="mb-5 text-center border-b border-black/10 dark:border-white/10 pb-3 select-none">
                 <span class="text-[10px] sm:text-[11px] font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${readerBook.title} ✦</span>
-                <h2 class="text-lg sm:text-2xl font-extrabold mt-1 mb-1 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${chap.title}</h2>
+                <h2 class="text-lg sm:text-2xl font-extrabold mt-1 mb-1 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${escapeHtml(chap.title)}</h2>
                 <div class="mt-1 text-xs opacity-60">── ❖ ──</div>
             </header>
         `;
@@ -1293,7 +1293,7 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
     cardHtml += `
         <div class="mt-6 pt-3 border-t border-black/10 dark:border-white/10 flex justify-between items-center text-[10px] sm:text-[11px] opacity-70 select-none font-mono">
             <span>Page ${pageNumber} of ${totalPages}</span>
-            <span class="truncate max-w-[140px]">${chap.title}</span>
+            <span class="truncate max-w-[140px]">${escapeHtml(chap.title)}</span>
         </div>
     </div>`;
 
@@ -2858,6 +2858,18 @@ function chunkByWords(text, limit) {
 // ██ 6. DIGITAL SHELF & DISCOVER RENDERING ██
 // ══════════════════════════════════════════════════════════════════════════
 
+// ── HTML escaping ───────────────────────────────────────────────────────────
+// Book titles/authors come from PDFs (attacker-controlled text). Every
+// innerHTML render path must pass them through this before interpolation.
+function escapeHtml(s) {
+    return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 async function renderDigitalShelf(filterText = '') {
     const books = await getAllBooks();
     DOM.booksGrid.innerHTML = '';
@@ -2912,7 +2924,7 @@ async function renderDigitalShelf(filterText = '') {
                 ${hasGeorgian ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold/90 text-[10px] font-bold text-black shadow-lg">🇬🇪 KA</div>' : ''}
                 ${book.progressPct > 0 ? `<div class="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-full h-1 overflow-hidden"><div class="h-full bg-primary-container" style="width: ${book.progressPct}%"></div></div>` : ''}
             </div>
-            <h4 class="font-bold text-white text-xs sm:text-sm truncate group-hover:text-primary-fixed transition-colors">${book.title}</h4>
+            <h4 class="font-bold text-white text-xs sm:text-sm truncate group-hover:text-primary-fixed transition-colors">${escapeHtml(book.title)}</h4>
             <div class="flex justify-between items-center mt-0.5">
                 <p class="text-[10px] sm:text-[11px] text-on-surface-variant truncate">${stats.chaptersCount} Ch • ${stats.totalFormattedTime}</p>
             </div>
@@ -2942,8 +2954,8 @@ function renderDiscoverClassics() {
                     <img src="${book.coverUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     <div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold text-[10px] font-bold text-black shadow">🇬🇪 Ready</div>
                 </div>
-                <h4 class="font-bold text-white text-base truncate">${book.title}</h4>
-                <p class="text-xs text-primary-fixed mt-0.5">${book.author}</p>
+                <h4 class="font-bold text-white text-base truncate">${escapeHtml(book.title)}</h4>
+                <p class="text-xs text-primary-fixed mt-0.5">${escapeHtml(book.author)}</p>
                 <p class="text-xs text-on-surface-variant mt-1">${stats.chaptersCount} Chapters • ${stats.totalWords.toLocaleString()} Words • ~${stats.totalFormattedTime}</p>
             </div>
             <button class="mt-4 w-full py-2.5 rounded-xl bg-white/5 group-hover:bg-primary-container group-hover:text-on-primary-container text-white text-xs font-semibold flex items-center justify-center gap-2 transition">
@@ -3035,7 +3047,7 @@ function renderChaptersList() {
                 </div>
                 <div class="overflow-hidden">
                     <h4 class="font-semibold text-white text-xs sm:text-base truncate flex items-center gap-2">
-                        ${chap.title}
+                        ${escapeHtml(chap.title)}
                         ${chapHasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 font-bold">🇬🇪</span>' : ''}
                     </h4>
                     <p class="text-[10px] sm:text-xs text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(chap.estimated_duration_sec)}</p>
