@@ -1,4 +1,6 @@
-﻿import json
+﻿import asyncio
+import json
+import os
 import zipfile
 import shutil
 from typing import Dict, Optional, List
@@ -12,12 +14,38 @@ from app.models import BookData, Chapter
 # In-memory store of book sessions (backed by json in data dir)
 _BOOKS_CACHE: Dict[str, BookData] = {}
 
+# Per-book write locks: serialize read-modify-write cycles so concurrent
+# requests (e.g. generate + chapter update) cannot drop each other's updates.
+_BOOK_LOCKS: Dict[str, asyncio.Lock] = {}
+
+def book_lock(book_id: str) -> asyncio.Lock:
+    """Return the write lock for a book session."""
+    lock = _BOOK_LOCKS.get(book_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _BOOK_LOCKS[book_id] = lock
+    return lock
+
 def save_book_session(book: BookData):
-    """Save book session in memory and to disk."""
+    """Save book session in memory and to disk (atomic tmp+rename)."""
     _BOOKS_CACHE[book.id] = book
     book_file = UPLOAD_DIR / f"{book.id}_meta.json"
-    with open(book_file, "w", encoding="utf-8") as f:
+    tmp_file = book_file.with_suffix(".json.tmp")
+    with open(tmp_file, "w", encoding="utf-8") as f:
         f.write(book.model_dump_json(indent=2))
+    # Atomic on POSIX and Windows: a crash mid-write cannot corrupt the meta.
+    os.replace(tmp_file, book_file)
+
+def recover_stale_chapters(book: BookData) -> bool:
+    """Reset chapters stuck in 'processing' (e.g. after a process restart) to
+    'error' so they can be retried. Returns True if anything changed."""
+    changed = False
+    for c in book.chapters:
+        if c.status == "processing":
+            c.status = "error"
+            c.error = "interrupted: server restarted during synthesis"
+            changed = True
+    return changed
 
 def get_book_session(book_id: str) -> Optional[BookData]:
     """Retrieve book session by ID."""
@@ -30,6 +58,11 @@ def get_book_session(book_id: str) -> Optional[BookData]:
             with open(book_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 book = BookData(**data)
+                # Cold load from disk = fresh process (the cache is never
+                # evicted). Exactly the case where a 'processing' chapter is
+                # stale: the synthesis died with the previous process.
+                if recover_stale_chapters(book):
+                    save_book_session(book)
                 _BOOKS_CACHE[book_id] = book
                 return book
         except Exception as e:

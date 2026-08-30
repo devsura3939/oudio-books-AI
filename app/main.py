@@ -24,7 +24,8 @@ from app.tts_engine import (
 )
 from app.storage import (
     save_book_session, get_book_session, tag_mp3_metadata,
-    create_book_zip_package, sanitize_filename
+    create_book_zip_package, sanitize_filename,
+    book_lock, recover_stale_chapters
 )
 
 app = FastAPI(
@@ -50,12 +51,24 @@ _PROGRESS_SUBSCRIBERS: Dict[str, List[asyncio.Queue]] = {}
 
 def broadcast_progress(book_id: str, payload: dict):
     """Broadcast progress update to all SSE listeners of book_id."""
-    if book_id in _PROGRESS_SUBSCRIBERS:
-        for q in _PROGRESS_SUBSCRIBERS[book_id]:
-            try:
-                q.put_nowait(payload)
-            except Exception:
-                pass
+    subs = _PROGRESS_SUBSCRIBERS.get(book_id)
+    if not subs:
+        return
+    dead = None
+    for q in subs:
+        try:
+            q.put_nowait(payload)
+        except Exception:
+            # Queue is closed or broken: drop the subscriber so the list
+            # cannot grow without bound across long-lived sessions.
+            if dead is None:
+                dead = []
+            dead.append(q)
+    if dead:
+        for q in dead:
+            subs.remove(q)
+        if not subs:
+            del _PROGRESS_SUBSCRIBERS[book_id]
 
 @app.get("/")
 async def serve_index():
@@ -111,22 +124,24 @@ async def get_book(book_id: str):
 @app.put("/api/book/{book_id}/chapter/{chapter_id}")
 async def update_chapter(book_id: str, chapter_id: int, req: ChapterUpdateRequest):
     """Edit chapter title or text before synthesis."""
-    book = get_book_session(book_id)
-    if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
-    
-    for c in book.chapters:
-        if c.id == chapter_id:
-            if req.title is not None:
-                c.title = req.title
-            if req.text is not None:
-                c.text = req.text
-                c.word_count = len(c.text.split())
-                c.estimated_duration_sec = round((c.word_count / 150.0) * 60.0, 1)
-            save_book_session(book)
-            return c
-            
-    raise HTTPException(status_code=404, detail="Chapter not found")
+    # Serialize read-modify-write with concurrent TTS workers on this book.
+    async with book_lock(book_id):
+        book = get_book_session(book_id)
+        if not book:
+            raise HTTPException(status_code=404, detail="Book not found")
+
+        for c in book.chapters:
+            if c.id == chapter_id:
+                if req.title is not None:
+                    c.title = req.title
+                if req.text is not None:
+                    c.text = req.text
+                    c.word_count = len(c.text.split())
+                    c.estimated_duration_sec = round((c.word_count / 150.0) * 60.0, 1)
+                save_book_session(book)
+                return c
+
+        raise HTTPException(status_code=404, detail="Chapter not found")
 
 async def _process_chapter_tts(
     book_id: str,
@@ -224,28 +239,42 @@ async def _process_chapter_tts(
 
 async def _batch_tts_runner(req: TTSGenerateRequest):
     """Run batch conversion across selected chapters sequentially/managed."""
-    book = get_book_session(req.book_id)
-    if not book:
-        return
-        
-    target_chapters = [
-        c for c in book.chapters
-        if req.chapter_ids is None or c.id in req.chapter_ids
-    ]
-    
-    total = len(book.chapters)
-    
-    for chap in target_chapters:
-        await _process_chapter_tts(
-            book_id=req.book_id,
-            chapter=chap,
-            total_chapters=total,
-            voice=req.voice,
-            rate=req.rate,
-            pitch=req.pitch,
-            volume=req.volume
-        )
-        
+    try:
+        # One lock for the whole batch: TTS workers on the same book must not
+        # interleave with each other or with chapter edits.
+        async with book_lock(req.book_id):
+            book = get_book_session(req.book_id)
+            if not book:
+                return
+
+            target_chapters = [
+                c for c in book.chapters
+                if req.chapter_ids is None or c.id in req.chapter_ids
+            ]
+
+            total = len(book.chapters)
+
+            for chap in target_chapters:
+                await _process_chapter_tts(
+                    book_id=req.book_id,
+                    chapter=chap,
+                    total_chapters=total,
+                    voice=req.voice,
+                    rate=req.rate,
+                    pitch=req.pitch,
+                    volume=req.volume
+                )
+    except Exception as e:
+        # A background task must never die silently: record the failure on the
+        # book so the UI can surface a retry instead of a stuck batch.
+        print(f"batch TTS runner failed for {req.book_id}: {e}")
+        broadcast_progress(req.book_id, {
+            "event": "batch_error",
+            "error": str(e),
+            "message": f"Batch generation failed: {str(e)}"
+        })
+        raise
+
     broadcast_progress(req.book_id, {
         "event": "batch_completed",
         "message": "All requested chapters synthesized successfully!"

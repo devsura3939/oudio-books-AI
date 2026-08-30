@@ -1,5 +1,11 @@
-﻿from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient
+
 from app.main import app
+from test_fixtures import create_sample_pdf, SAMPLE_PDF_PATH
+
+# Build the fixture if missing so a fresh clone can run this file directly.
+if not SAMPLE_PDF_PATH.exists():
+    create_sample_pdf()
 
 client = TestClient(app)
 
@@ -23,12 +29,15 @@ assert r.status_code == 200
 print('Preview URL:', r.json()['preview_url'])
 
 # 4. Test PDF upload endpoint
-with open('data/test/sample_story.pdf', 'rb') as f:
+with open(SAMPLE_PDF_PATH, 'rb') as f:
     r = client.post('/api/upload', files={'file': ('sample_story.pdf', f, 'application/pdf')})
 print('POST /api/upload Status:', r.status_code)
 assert r.status_code == 200
 book = r.json()
 print(f'Uploaded & parsed book: "{book["title"]}", {len(book["chapters"])} chapters.')
+assert len(book["chapters"]) > 0
+assert any("lighthouse" in c["text"].lower() for c in book["chapters"]), \
+    "chapter text should be extracted from the PDF"
 
 # 5. Test book retrieval
 r = client.get(f'/api/book/{book["id"]}')

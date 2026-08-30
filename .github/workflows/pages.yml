@@ -28,7 +28,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          # Ship only the frontend: publishing the whole repo would expose
+          # data/, test MP3s, and scripts that are not part of the site.
+          path: 'static'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

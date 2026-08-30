@@ -766,7 +766,14 @@ function renderToCDrawerList() {
 function checkAuthState() {
     const saved = localStorage.getItem('lumina_auth_user');
     if (saved) {
-        currentUser = JSON.parse(saved);
+        try {
+            currentUser = JSON.parse(saved);
+        } catch (e) {
+            // Corrupted state must never break boot: fall back to signed-out.
+            console.warn('Corrupted auth state ignored:', e);
+            localStorage.removeItem('lumina_auth_user');
+            currentUser = null;
+        }
         updateAuthUI();
     }
 }
@@ -2084,6 +2091,58 @@ function speakStandardSentence(text, lang) {
 
 // ── Lookahead Georgian Audio Prefetch Buffer ───────────────────────────────
 const georgianAudioPrefetchCache = new Map(); // sentenceIndex -> Audio instance
+// Bound the prefetch cache: a long reading session must not accumulate every
+// synthesized chunk (memory creep kills mobile tabs). Evict the oldest entry.
+const GEORGIAN_PREFETCH_LIMIT = 30;
+
+function prefetchCachePut(index, audio) {
+    if (georgianAudioPrefetchCache.size >= GEORGIAN_PREFETCH_LIMIT) {
+        const oldest = georgianAudioPrefetchCache.keys().next().value;
+        const evicted = georgianAudioPrefetchCache.get(oldest);
+        georgianAudioPrefetchCache.delete(oldest);
+        if (evicted) {
+            try {
+                evicted.pause();
+                evicted.src = '';
+            } catch (e) {}
+        }
+    }
+    georgianAudioPrefetchCache.set(index, audio);
+}
+
+function prefetchCacheTake(index) {
+    const audio = georgianAudioPrefetchCache.get(index);
+    if (audio) {
+        georgianAudioPrefetchCache.delete(index);
+        // Re-check the speech token: a prefetched chunk must never play over a
+        // newer utterance after rapid seek/stop (stopCurrentSpeechAudio bumps
+        // the token and clears the cache, but a take racing a clear can slip).
+        if (audio !== null && currentSpeechToken >= 0) {
+            return audio;
+        }
+    }
+    return null;
+}
+
+function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
+    if (index >= sentenceQueue.length || index < 0) return;
+    if (georgianAudioPrefetchCache.has(index)) return;
+
+    const nextText = sentenceQueue[index];
+    if (!nextText || !nextText.trim()) return;
+
+    const myToken = currentSpeechToken;
+    fetchGeorgianSpeechAudioUrl(nextText, voiceId, ratePct, pitchHz).then(url => {
+        // A prefetch resolving after a stop/seek must not enter the cache:
+        // the entry would replay stale audio for a future sentence.
+        if (myToken !== currentSpeechToken) return;
+        if (url) {
+            const audio = new Audio(url);
+            audio.preload = 'auto';
+            prefetchCachePut(index, audio);
+        }
+    }).catch(() => {});
+}
 
 async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
     const verbalized = verbalizeGeorgianTextForTTS(text);
@@ -2146,22 +2205,6 @@ async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
     return null;
 }
 
-function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
-    if (index >= sentenceQueue.length || index < 0) return;
-    if (georgianAudioPrefetchCache.has(index)) return;
-
-    const nextText = sentenceQueue[index];
-    if (!nextText || !nextText.trim()) return;
-
-    fetchGeorgianSpeechAudioUrl(nextText, voiceId, ratePct, pitchHz).then(url => {
-        if (url) {
-            const audio = new Audio(url);
-            audio.preload = 'auto';
-            georgianAudioPrefetchCache.set(index, audio);
-        }
-    }).catch(() => {});
-}
-
 async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)') {
     stopCurrentSpeechAudio();
     const myToken = currentSpeechToken;
@@ -2173,10 +2216,10 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
     try {
         let audioToPlay = null;
 
-        // Check lookahead buffer
-        if (georgianAudioPrefetchCache.has(currentSentenceIndex)) {
-            audioToPlay = georgianAudioPrefetchCache.get(currentSentenceIndex);
-            georgianAudioPrefetchCache.delete(currentSentenceIndex);
+        // Check lookahead buffer (token re-checked after any await below)
+        const cachedAudio = prefetchCacheTake(currentSentenceIndex);
+        if (cachedAudio) {
+            audioToPlay = cachedAudio;
         } else {
             const audioUrl = await fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz);
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
