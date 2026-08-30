@@ -252,6 +252,47 @@ function verbalizeGeorgianTextForTTS(text) {
     return out;
 }
 
+// ── Advanced Georgian Grammar & Literary Refinement Engine ─────────────────
+function refineGeorgianGrammar(text) {
+    if (!text) return '';
+    let out = normalizeGeorgian(text);
+
+    // 1. Fix Machine Translation Ergative Subject Errors (ის -> მან before transitive past verbs)
+    const ergativeVerbs = [
+        'თქვა', 'უპასუხა', 'ჰკითხა', 'დაწერა', 'გააკეთა', 'ნახა', 'იპოვა',
+        'შეამჩნია', 'მოისმინა', 'წაიკითხა', 'დაინახა', 'მიიღო', 'გადაწყვიტა',
+        'ჩაიდინა', 'გააცნობიერა', 'დატოვა', 'დაიწყო', 'დაასრულა', 'მოკლა',
+        'გახსნა', 'დახურა', 'გაიგონა', 'უამბო', 'აჩვენა'
+    ];
+    ergativeVerbs.forEach(verb => {
+        out = out.replace(new RegExp(`\\bის\\s+(${verb})\\b`, 'g'), 'მან $1');
+        out = out.replace(new RegExp(`\\bის\\s+([ა-ჰ]+ად|[ა-ჰ]+ადვე|[ა-ჰ]+თ)\\s+(${verb})\\b`, 'g'), 'მან $1 $2');
+    });
+
+    // 2. Format Authentic Georgian Literary Quotations: „...“
+    out = out.replace(/(^|[\s(\[])["“]([^\s"”])/g, '$1„$2');
+    out = out.replace(/([^\s"„])["”]([\s)\].,!?;:]|$)/g, '$1“$2');
+
+    // 3. Fix Machine Translation Spacing Artifacts Around Punctuation
+    out = out.replace(/\s+([,.:;!?])/g, '$1');
+    out = out.replace(/([,.:;!?])(?=[ა-ჰA-Za-z0-9])/g, '$1 ');
+
+    // 4. Polish Literary Idioms & Storytelling Openings
+    const idiomReplacements = [
+        [/\bერთხელ\s+დროში\b/gi, 'იყო და არა იყო რა'],
+        [/\bსხვა\s+მხრივ\b/gi, 'მეორეს მხრივ'],
+        [/\bყველაფერში\s+ყველაფერში\b/gi, 'საბოლოო ჯამში'],
+        [/\bსაქმის\s+ფაქტად\b/gi, 'სინამდვილეში'],
+        [/\bსხვა\s+სიტყვებით\b/gi, 'სხვა სიტყვებით რომ ვთქვათ'],
+        [/\bზედმეტია\s+იმის\s+თქმა\b/gi, 'რა თქმა უნდა']
+    ];
+    idiomReplacements.forEach(([pattern, repl]) => {
+        out = out.replace(pattern, repl);
+    });
+
+    return out.trim();
+}
+
 const GEORGIAN_TO_PHONETIC = {
     'ა': 'a', 'ბ': 'b', 'გ': 'g', 'დ': 'd', 'ე': 'e',
     'ვ': 'v', 'ზ': 'z', 'თ': 't', 'ი': 'i', 'კ': 'k',
@@ -1430,9 +1471,9 @@ async function translateChunkContextually(text, targetLang = 'ka') {
                         fullTrans += data[0][i][0];
                     }
                 }
-                const normalized = normalizeGeorgian(fullTrans);
-                if (normalized && normalized.trim().length > 0) {
-                    return normalized;
+                const refined = refineGeorgianGrammar(fullTrans);
+                if (refined && refined.trim().length > 0) {
+                    return refined;
                 }
             }
         }
@@ -1453,9 +1494,9 @@ async function translateChunkContextually(text, targetLang = 'ka') {
                         fullTrans2 += data2[0][i][0];
                     }
                 }
-                const normalized2 = normalizeGeorgian(fullTrans2);
-                if (normalized2 && normalized2.trim().length > 0) {
-                    return normalized2;
+                const refined2 = refineGeorgianGrammar(fullTrans2);
+                if (refined2 && refined2.trim().length > 0) {
+                    return refined2;
                 }
             }
         }
@@ -1478,7 +1519,7 @@ async function translateSingleSentence(text, targetLang = 'ka') {
         if (res.ok) {
             const data = await res.json();
             if (data && data.responseData && data.responseData.translatedText) {
-                const trans = normalizeGeorgian(data.responseData.translatedText);
+                const trans = refineGeorgianGrammar(data.responseData.translatedText);
                 if (trans && !trans.includes('MYMEMORY WARNING') && !trans.includes('QUERY LENGTH LIMIT')) {
                     return trans;
                 }
@@ -1496,7 +1537,7 @@ async function translateSingleSentence(text, targetLang = 'ka') {
             const gData = await gRes.json();
             if (gData && gData[0]) {
                 const trans = gData[0].map(item => item[0]).filter(Boolean).join('');
-                return normalizeGeorgian(trans);
+                return refineGeorgianGrammar(trans);
             }
         }
     } catch (e) {
