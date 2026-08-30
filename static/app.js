@@ -1066,6 +1066,9 @@ function highlightReaderSentence(sentenceIdx) {
     const targetEl = document.getElementById(`rsentence_${sentenceIdx}`);
     if (targetEl) {
         targetEl.classList.add('active-sentence');
+        if (readerMode === 'scroll') {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
 
     if (DOM.readerReadingProgressText && sentenceQueue.length > 0) {
