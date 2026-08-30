@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lumina Audio - AI Audiobook Studio</title>
-    
+
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -14,7 +14,9 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Fonts: Inter, Space Grotesk, Noto Sans Georgian (for native Georgian script) -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Georgian:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
     <!-- Lucide Icons -->
@@ -44,7 +46,8 @@
             fontFamily: {
                 "label-caps": ["Space Grotesk", "sans-serif"],
                 "headline-md": ["Inter", "sans-serif"],
-                "body-md": ["Inter", "sans-serif"]
+                "body-md": ["Inter", "sans-serif"],
+                "georgian": ["Noto Sans Georgian", "Inter", "sans-serif"]
             }
           },
         },
@@ -64,20 +67,19 @@
             overflow-x: hidden;
             min-height: 100vh;
         }
-        
-        /* Ultra Glassmorphic Mesh Background */
+
+        /* Animated Mesh Background */
         .bg-mesh {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: -1;
-            background: 
+            background:
                 radial-gradient(circle at 12% 18%, var(--mesh-cyan) 0%, transparent 45%),
                 radial-gradient(circle at 88% 22%, var(--mesh-purple) 0%, transparent 45%),
                 radial-gradient(circle at 50% 80%, var(--mesh-violet) 0%, transparent 55%);
             filter: blur(40px);
             animation: mesh-float 16s ease-in-out infinite alternate;
         }
-
         @keyframes mesh-float {
             0% { transform: scale(1) translate(0, 0); }
             50% { transform: scale(1.06) translate(-10px, 15px); }
@@ -91,21 +93,18 @@
             -webkit-backdrop-filter: blur(32px);
             border-right: 1px solid rgba(255, 255, 255, 0.08);
         }
-
         .glass-header {
             background: rgba(8, 11, 17, 0.65);
             backdrop-filter: blur(28px);
             -webkit-backdrop-filter: blur(28px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
-
         .glass-panel {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-
         .glass-card {
             background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
             backdrop-filter: blur(24px);
@@ -113,13 +112,11 @@
             border: 1px solid rgba(255, 255, 255, 0.12);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        
         .glass-card:hover {
             border-color: rgba(0, 240, 255, 0.5);
             box-shadow: 0 14px 40px rgba(0, 240, 255, 0.18);
             transform: translateY(-4px);
         }
-
         .glass-dock {
             background: rgba(17, 22, 34, 0.82);
             backdrop-filter: blur(40px);
@@ -127,7 +124,6 @@
             border: 1px solid rgba(255, 255, 255, 0.16);
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(0, 240, 255, 0.15);
         }
-
         .glass-input {
             background: rgba(255, 255, 255, 0.05) !important;
             border: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -151,7 +147,29 @@
         }
         .modal-overlay.active .modal-content { transform: scale(1); }
 
-        /* Custom Scrollbar */
+        /* Georgian text styling */
+        .ka-text {
+            font-family: 'Noto Sans Georgian', 'Inter', sans-serif;
+            line-height: 1.8;
+        }
+
+        /* Georgian gold glow */
+        .georgian-glow {
+            box-shadow: 0 0 20px rgba(255, 209, 102, 0.2);
+        }
+
+        /* Translation progress shimmer */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .shimmer-bg {
+            background: linear-gradient(90deg, transparent, rgba(255, 209, 102, 0.15), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+
+        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 9999px; }
@@ -161,7 +179,7 @@
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
 
-    <!-- SideNavBar (Desktop) -->
+    <!-- ════════════════ SideNavBar (Desktop) ════════════════ -->
     <nav class="hidden md:flex flex-col h-full py-8 px-4 glass-nav w-64 fixed left-0 top-0 z-40">
         <!-- Logo -->
         <div class="mb-8 px-3 flex items-center gap-3">
@@ -178,7 +196,7 @@
             </div>
         </div>
 
-        <!-- Upload PDF Primary Action -->
+        <!-- Upload PDF -->
         <button id="btnNavUpload" class="mb-6 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-semibold shadow-[0_0_25px_rgba(0,240,255,0.35)] hover:shadow-[0_0_35px_rgba(0,240,255,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 group">
             <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">upload_file</span>
             <span>Upload PDF</span>
@@ -201,12 +219,12 @@
             <li>
                 <button onclick="openModal('voiceModal')" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all font-medium text-sm">
                     <span class="material-symbols-outlined text-[20px]">record_voice_over</span>
-                    <span>Choose Narrator Voice</span>
+                    <span>Voice Settings</span>
                 </button>
             </li>
         </ul>
 
-        <!-- Bottom User Profile Section -->
+        <!-- User -->
         <div class="mt-auto pt-6 border-t border-white/10" id="userNavSection">
             <button onclick="openModal('authModal')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-on-surface-variant hover:text-white transition-all text-sm font-medium">
                 <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-primary-fixed">
@@ -220,9 +238,9 @@
         </div>
     </nav>
 
-    <!-- TopNavBar with Direct Voice & Translation Controls -->
+    <!-- ════════════════ TopNavBar ════════════════ -->
     <header class="hidden md:flex justify-between items-center px-8 py-3.5 glass-header fixed top-0 right-0 w-[calc(100%-16rem)] z-30">
-        <!-- Live Library Search -->
+        <!-- Search -->
         <div class="flex-grow max-w-md">
             <div class="relative">
                 <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
@@ -230,23 +248,16 @@
             </div>
         </div>
 
-        <!-- Direct Voice & Translation Action Bar -->
+        <!-- Action Bar -->
         <div class="flex items-center gap-3">
-            
-            <!-- Direct Voice Selector Button -->
+            <!-- Voice Button -->
             <button onclick="openModal('voiceModal')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/12 text-xs font-semibold text-white transition shadow-sm">
                 <span class="material-symbols-outlined text-primary-fixed text-base">record_voice_over</span>
-                <span id="topVoiceBadge">Narrator: Male English</span>
+                <span id="topVoiceBadge">🎙️ Default</span>
                 <span class="material-symbols-outlined text-sm text-on-surface-variant">expand_more</span>
             </button>
 
-            <!-- Direct One-Click Georgian Translate Toggle -->
-            <button onclick="toggleGeorgianMode()" id="btnTopGeorgianToggle" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/12 text-xs font-semibold text-white transition shadow-sm">
-                <span class="text-sm">🇬🇪</span>
-                <span id="topGeorgianBadge">Translate: OFF</span>
-            </button>
-
-            <!-- Profile Button -->
+            <!-- Profile -->
             <button id="topProfileBtn" onclick="openModal('authModal')" class="p-1 rounded-full text-on-surface-variant hover:text-white transition flex items-center gap-2">
                 <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-container/20 to-secondary/30 border border-white/15 flex items-center justify-center text-primary-fixed font-bold text-xs" id="topAvatarBadge">
                     G
@@ -255,17 +266,17 @@
         </div>
     </header>
 
-    <!-- Main Content Canvas -->
+    <!-- ════════════════ Main Content ════════════════ -->
     <main class="flex-grow md:ml-64 relative min-h-screen pb-36 pt-6 md:pt-24 px-4 md:px-8 max-w-7xl mx-auto w-full">
-        
-        <!-- View: Library (Home) -->
+
+        <!-- View: Library -->
         <div id="view-library" class="space-y-10">
-            
-            <!-- Hero Section: Continue Listening -->
+
+            <!-- Hero Section -->
             <section id="heroSection" class="glass-card rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-80 h-80 bg-primary-container/10 rounded-full blur-[90px] -translate-y-1/3 translate-x-1/3 pointer-events-none"></div>
-                
-                <!-- Rotating Vinyl Holographic Cover -->
+
+                <!-- Vinyl Cover -->
                 <div class="relative w-36 h-36 md:w-48 md:h-48 flex-shrink-0 cursor-pointer group" id="heroPlayBtn" title="Click to Play">
                     <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" fill="none" r="46" stroke="rgba(255,255,255,0.08)" stroke-width="3.5"></circle>
@@ -279,20 +290,20 @@
                     </div>
                 </div>
 
-                <!-- Hero Meta & Live Subtitle Display -->
+                <!-- Hero Meta & Live Subtitle -->
                 <div class="flex-grow text-center md:text-left z-10 overflow-hidden w-full">
                     <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-container/10 border border-primary-container/25 text-primary-fixed font-label-caps text-[11px] font-semibold tracking-wider mb-2.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
                         CONTINUE LISTENING
                     </div>
                     <h2 id="heroTitle" class="text-2xl md:text-4xl font-extrabold text-white mb-2 truncate">Select an Audiobook</h2>
-                    
-                    <!-- Live Spoken Subtitle Box -->
+
+                    <!-- Live Subtitle Display -->
                     <div class="p-3 rounded-xl bg-white/5 border border-white/10 mb-4 max-w-2xl text-left">
                         <p class="text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-1" id="heroSubtitleHeader">Current Sentence</p>
-                        <p id="heroLiveSubtitle" class="text-on-surface text-sm md:text-base font-medium line-clamp-3 leading-relaxed">Ready to play...</p>
+                        <p id="heroLiveSubtitle" class="text-on-surface text-sm md:text-base font-medium line-clamp-3 leading-relaxed ka-text">Ready to play...</p>
                     </div>
-                    
+
                     <div class="flex items-center gap-4 justify-center md:justify-start">
                         <span id="heroProgressText" class="text-xs font-semibold text-primary-fixed">0% Completed</span>
                         <div class="w-36 h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -329,10 +340,21 @@
                         <span class="text-xs font-label-caps text-primary-fixed tracking-wider font-semibold">AUDIOBOOK CHAPTERS</span>
                         <h3 class="text-2xl font-bold text-white" id="activeBookTitle">Chapters</h3>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <!-- ★ TRANSLATE BOOK BUTTON ★ -->
+                        <button id="btnTranslateBook" class="px-4 py-2.5 rounded-xl bg-georgian-gold/10 hover:bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 text-xs font-bold flex items-center gap-2 transition shadow-sm georgian-glow">
+                            <span class="text-base">🇬🇪</span>
+                            <span>Translate to Georgian</span>
+                        </button>
+
+                        <!-- Georgian badge (hidden until translated) -->
+                        <span id="translateBadge" class="hidden px-3 py-1 rounded-full bg-georgian-gold/15 text-georgian-gold text-[11px] font-bold border border-georgian-gold/25">
+                            ✅ Georgian Ready
+                        </span>
+
                         <button id="btnDownloadAllZip" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-primary-container/15 text-primary-fixed border border-primary-fixed/30 text-xs font-semibold flex items-center gap-2 transition shadow-sm">
                             <span class="material-symbols-outlined text-base">inventory_2</span>
-                            <span id="btnDownloadAllZipText">Download Full Audiobook (ZIP)</span>
+                            <span id="btnDownloadAllZipText">Download (ZIP)</span>
                         </button>
                     </div>
                 </div>
@@ -356,13 +378,12 @@
 
     </main>
 
-    <!-- Bottom Floating Player Dock -->
+    <!-- ════════════════ Bottom Floating Player Dock ════════════════ -->
     <div id="playerDock" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] md:w-[86%] max-w-5xl z-50 flex items-center justify-between px-4 md:px-6 py-3 glass-dock rounded-2xl opacity-0 translate-y-12 transition-all duration-500 pointer-events-none">
         <!-- Left: Thumbnail & Info -->
-        <div class="flex items-center gap-3.5 w-1/3 min-w-0">
+        <div class="flex items-center gap-3.5 w-1/4 min-w-0">
             <div class="w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 relative bg-surface-container border border-white/15">
                 <img id="dockCover" class="w-full h-full object-cover" src="" alt="Cover">
-                <!-- Mini Equalizer -->
                 <div id="dockVisualizer" class="absolute inset-0 bg-black/40 flex items-end justify-center gap-[2px] pb-1 hidden">
                     <div class="w-1 h-3 bg-primary-fixed rounded-t-sm animate-[bounce_0.8s_infinite_ease-in-out]"></div>
                     <div class="w-1 h-5 bg-primary-fixed rounded-t-sm animate-[bounce_1.1s_infinite_ease-in-out_0.2s]"></div>
@@ -389,7 +410,7 @@
                 </button>
             </div>
 
-            <!-- Scrubbable Progress Bar -->
+            <!-- Progress Bar -->
             <div class="w-full flex items-center gap-3">
                 <span id="playerCurrentTime" class="text-[11px] text-on-surface-variant font-mono w-10 text-right">0:00</span>
                 <div id="playerProgressContainer" class="flex-grow h-1.5 bg-white/10 rounded-full relative cursor-pointer group/prog overflow-hidden">
@@ -399,8 +420,13 @@
             </div>
         </div>
 
-        <!-- Right: Voice & Speed -->
-        <div class="flex items-center justify-end gap-2.5 w-1/3">
+        <!-- Right: Language Toggle, Voice & Speed -->
+        <div class="flex items-center justify-end gap-2 w-1/4">
+            <!-- ★ LANGUAGE TOGGLE ★ -->
+            <button id="btnDockLangToggle" class="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold flex items-center gap-1.5 border border-white/10 transition" title="Switch between English and Georgian playback">
+                <span id="dockLangLabel" class="text-white">🇺🇸 EN</span>
+            </button>
+
             <button onclick="openModal('voiceModal')" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-primary-fixed text-xs font-semibold flex items-center gap-1.5 border border-white/10 transition">
                 <span class="material-symbols-outlined text-base">tune</span>
                 <span class="hidden sm:inline">Voice</span>
@@ -411,68 +437,53 @@
         </div>
     </div>
 
-    <!-- Voice & Translation Modal (Prominent & Dedicated) -->
+    <!-- ════════════════ Voice & Translation Modal ════════════════ -->
     <div id="voiceModal" class="modal-overlay">
         <div class="modal-content glass-panel p-6 md:p-8 rounded-3xl max-w-md w-full border border-white/15 shadow-2xl mx-4 space-y-6">
             <div class="flex justify-between items-center border-b border-white/10 pb-4">
                 <div>
                     <h2 class="text-xl font-bold text-white flex items-center gap-2">
                         <span class="material-symbols-outlined text-primary-fixed">tune</span>
-                        Voice & Translation Studio
+                        Voice Studio
                     </h2>
-                    <p class="text-xs text-on-surface-variant mt-0.5">Select narrator gender, language, and speed</p>
+                    <p class="text-xs text-on-surface-variant mt-0.5">Configure narrator voice for English playback</p>
                 </div>
                 <button onclick="closeModal('voiceModal')" class="p-1.5 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition">
                     <span class="material-symbols-outlined text-xl">close</span>
                 </button>
             </div>
 
-            <!-- Translation Language Picker -->
+            <!-- English Voice Section -->
             <div>
                 <label class="block text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-2">
-                    🌍 Target Translation Language
-                </label>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="setLanguage('en')" id="langBtn_en" class="p-2.5 rounded-xl border border-primary-container bg-primary-container/15 text-white text-xs font-semibold flex items-center gap-2 transition">
-                        <span>🇺🇸</span> English (Original)
-                    </button>
-                    <button onclick="setLanguage('ka')" id="langBtn_ka" class="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-2 transition">
-                        <span>🇬🇪</span> Georgian (ქართული)
-                    </button>
-                    <button onclick="setLanguage('es')" id="langBtn_es" class="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-2 transition">
-                        <span>🇪🇸</span> Spanish (Español)
-                    </button>
-                    <button onclick="setLanguage('de')" id="langBtn_de" class="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-2 transition">
-                        <span>🇩🇪</span> German (Deutsch)
-                    </button>
-                </div>
-            </div>
-
-            <!-- Voice Selection Dropdown -->
-            <div>
-                <label class="block text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-2">
-                    🎙️ Narrator Voice (Gender & Accent)
+                    🎙️ English Narrator Voice
                 </label>
                 <select id="voiceModalSelect" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
-                    <optgroup label="👨 Male Narrators" id="optgroupMale">
-                        <!-- Populated by JS -->
-                    </optgroup>
-                    <optgroup label="👩 Female Narrators" id="optgroupFemale">
-                        <!-- Populated by JS -->
-                    </optgroup>
-                    <optgroup label="🌍 International & Georgian" id="optgroupOther">
-                        <!-- Populated by JS -->
-                    </optgroup>
+                    <optgroup label="👨 Male Narrators" id="optgroupMale"></optgroup>
+                    <optgroup label="👩 Female Narrators" id="optgroupFemale"></optgroup>
+                    <optgroup label="🌍 International" id="optgroupOther"></optgroup>
                 </select>
             </div>
 
-            <!-- Test Voice Button -->
-            <button onclick="testVoicePreview()" class="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs font-semibold text-primary-fixed flex items-center justify-center gap-2 transition">
-                <span class="material-symbols-outlined text-base">volume_up</span>
-                <span>Play Voice Sample</span>
-            </button>
+            <!-- Test Buttons -->
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="testVoicePreview()" class="py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs font-semibold text-primary-fixed flex items-center justify-center gap-2 transition">
+                    <span class="material-symbols-outlined text-base">volume_up</span>
+                    Test English Voice
+                </button>
+                <button onclick="testGeorgianVoicePreview()" class="py-2.5 rounded-xl bg-georgian-gold/10 hover:bg-georgian-gold/20 border border-georgian-gold/30 text-xs font-semibold text-georgian-gold flex items-center justify-center gap-2 transition">
+                    <span>🇬🇪</span>
+                    Test Georgian Voice
+                </button>
+            </div>
 
-            <!-- Speed & Pitch Sliders -->
+            <!-- Georgian Voice Info -->
+            <div class="p-3 rounded-xl bg-georgian-gold/5 border border-georgian-gold/15">
+                <p class="text-xs text-georgian-gold font-semibold mb-1">🇬🇪 Georgian Voice</p>
+                <p class="text-[11px] text-on-surface-variant leading-relaxed">Georgian playback uses Google's native neural TTS engine — a real Georgian speaker, not a synthesized English voice reading Georgian text. First translate your book, then switch to 🇬🇪 in the player.</p>
+            </div>
+
+            <!-- Speed & Pitch -->
             <div class="space-y-4 pt-2 border-t border-white/10">
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
@@ -496,7 +507,55 @@
         </div>
     </div>
 
-    <!-- Upload PDF Modal -->
+    <!-- ════════════════ Translation Progress Modal ════════════════ -->
+    <div id="translateModal" class="modal-overlay">
+        <div class="modal-content glass-panel p-6 md:p-8 rounded-3xl max-w-lg w-full border border-georgian-gold/20 shadow-2xl mx-4 space-y-5">
+            <!-- Header -->
+            <div class="flex justify-between items-center border-b border-georgian-gold/15 pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span class="text-xl">🇬🇪</span>
+                        Translating to Georgian
+                    </h2>
+                    <p class="text-xs text-on-surface-variant mt-0.5 ka-text">ქართულად თარგმნა მიმდინარეობს...</p>
+                </div>
+                <button onclick="cancelTranslation()" class="px-3 py-1.5 rounded-lg bg-error/10 hover:bg-error/20 text-error text-xs font-semibold border border-error/30 transition">
+                    Cancel
+                </button>
+            </div>
+
+            <!-- Chapter Progress -->
+            <div>
+                <p id="translateChapterLabel" class="text-sm font-semibold text-white mb-2">Preparing...</p>
+                <div class="w-full h-3 rounded-full bg-white/10 overflow-hidden shadow-inner">
+                    <div id="translateProgressBar" class="h-full bg-gradient-to-r from-georgian-gold to-amber-400 w-0 transition-all duration-300 rounded-full"></div>
+                </div>
+                <div class="flex justify-between mt-1.5">
+                    <p id="translateStatusText" class="text-xs text-on-surface-variant">Starting translation...</p>
+                    <p id="translatePctText" class="text-xs font-mono text-georgian-gold font-bold">0%</p>
+                </div>
+            </div>
+
+            <!-- Live Preview -->
+            <div class="space-y-3">
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] font-semibold text-primary-fixed uppercase tracking-wider mb-1">English Original</p>
+                    <p id="translatePreviewOriginal" class="text-sm text-on-surface leading-relaxed line-clamp-2">Waiting...</p>
+                </div>
+                <div class="p-3 rounded-xl bg-georgian-gold/5 border border-georgian-gold/15 shimmer-bg">
+                    <p class="text-[10px] font-semibold text-georgian-gold uppercase tracking-wider mb-1">ქართული თარგმანი</p>
+                    <p id="translatePreviewGeorgian" class="text-sm text-on-surface leading-relaxed line-clamp-2 ka-text">მოლოდინი...</p>
+                </div>
+            </div>
+
+            <!-- Info -->
+            <p class="text-[11px] text-on-surface-variant text-center leading-relaxed">
+                Each sentence is professionally translated. Progress is saved — you can cancel and resume later.
+            </p>
+        </div>
+    </div>
+
+    <!-- ════════════════ Upload PDF Modal ════════════════ -->
     <div id="uploadModal" class="modal-overlay">
         <div class="modal-content glass-panel p-8 rounded-3xl max-w-lg w-full border border-white/15 shadow-2xl mx-4">
             <div class="flex justify-between items-center mb-6">
@@ -508,7 +567,7 @@
                     <span class="material-symbols-outlined text-xl">close</span>
                 </button>
             </div>
-            
+
             <div id="dropZone" class="border-2 border-dashed border-white/20 hover:border-primary-container/60 rounded-2xl p-8 text-center transition-all cursor-pointer bg-surface/40 group" onclick="document.getElementById('fileInput').click()">
                 <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary-container/20 to-secondary/20 border border-white/10 flex items-center justify-center text-primary-fixed mx-auto mb-4 group-hover:scale-110 transition-transform">
                     <span class="material-symbols-outlined text-3xl">cloud_upload</span>
@@ -530,7 +589,7 @@
         </div>
     </div>
 
-    <!-- Auth Modal -->
+    <!-- ════════════════ Auth Modal ════════════════ -->
     <div id="authModal" class="modal-overlay">
         <div class="modal-content glass-panel p-8 rounded-3xl max-w-sm w-full border border-white/15 shadow-2xl mx-4">
             <div class="flex justify-between items-center mb-6">
@@ -542,11 +601,11 @@
                     <span class="material-symbols-outlined text-xl">close</span>
                 </button>
             </div>
-            
+
             <div class="space-y-4">
                 <input type="email" id="authEmail" placeholder="name@example.com" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none">
                 <input type="password" id="authPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none">
-                
+
                 <div class="flex gap-2.5 pt-2">
                     <button id="btnAuthSignIn" class="flex-1 py-3 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 transition shadow-lg">Log In</button>
                     <button id="btnAuthRegister" class="flex-1 py-3 bg-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/15 transition border border-white/10">Register</button>
