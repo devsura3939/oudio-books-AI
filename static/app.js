@@ -1112,6 +1112,7 @@ function speakCurrentSentence() {
         playerProgress.value = pct;
     }
 
+    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
     window.speechSynthesis.cancel();
 
     const utter = new SpeechSynthesisUtterance(cleanSentence);
@@ -1175,17 +1176,17 @@ function togglePlayPause() {
     }
 
     if (isPlaying && !isPaused) {
-        // BUG FIX: Chromium's .pause() is notoriously buggy and can freeze the engine. 
-        // We use .cancel() to stop immediately, and when playing resumes it will 
-        // naturally restart from the current sentence (perfect UX for audiobooks).
+        // BUG FIX: Chromium's engine can get permanently stuck if paused.
+        // Calling resume() right before cancel() flushes the stuck state safely.
         isPaused = true;
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
         window.speechSynthesis.cancel();
         stopTimer();
         updatePlayerUIState(false);
     } else if (isPlaying && isPaused) {
         isPaused = false;
-        // BUG FIX: Since we canceled above, we must start a new utterance
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
         speakCurrentSentence();
         startTimer();
         updatePlayerUIState(true);
@@ -1218,6 +1219,7 @@ function stopSpeech() {
         utteranceTimeout = null;
     }
     if ('speechSynthesis' in window) {
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
         window.speechSynthesis.cancel();
     }
     stopTimer();
