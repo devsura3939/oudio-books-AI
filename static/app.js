@@ -104,6 +104,7 @@ let currentPlayingChapterId = null;
 let currentGlobalSpeed = 1.00;
 let activeModalChapterId = null;
 let isTranslating = false;
+let userSelectedVoiceName = '';
 
 // Player State
 let isPlaying = false;
@@ -417,7 +418,7 @@ function populateVoiceList() {
         return;
     }
 
-    const currentSelectedVal = voiceSelect.value;
+    const currentSelectedVal = userSelectedVoiceName || voiceSelect.value;
     voiceSelect.innerHTML = '';
 
     const englishNaturalVoices = [];
@@ -445,33 +446,27 @@ function populateVoiceList() {
         }
     });
 
+    let matchedOption = false;
+
+    const appendOption = (group, v) => {
+        const opt = document.createElement('option');
+        opt.value = v.name;
+        opt.textContent = `🌟 ${v.name} (${v.lang})`;
+        if (currentSelectedVal && v.name === currentSelectedVal) {
+            opt.selected = true;
+            matchedOption = true;
+        }
+        group.appendChild(opt);
+        return opt;
+    };
+
     // 1. Ultra-Natural English Voices (DEFAULT)
     const groupEnNatural = document.createElement('optgroup');
     groupEnNatural.label = '⭐ Ultra-Natural English Voices (Studio HD)';
-    
-    let defaultSelected = false;
 
     if (englishNaturalVoices.length > 0) {
-        // Put Google US English or Microsoft Christopher / Jenny at top
-        englishNaturalVoices.sort((a, b) => {
-            if (a.name.includes('US English')) return -1;
-            if (b.name.includes('US English')) return 1;
-            if (a.name.includes('Christopher') || a.name.includes('Jenny') || a.name.includes('Guy')) return -1;
-            return 0;
-        });
-
-        englishNaturalVoices.forEach((v, idx) => {
-            const opt = document.createElement('option');
-            opt.value = v.name;
-            opt.textContent = `🌟 ${v.name} (${v.lang})`;
-            if (currentSelectedVal && v.name === currentSelectedVal) {
-                opt.selected = true;
-                defaultSelected = true;
-            } else if (currentLang === 'en' && !defaultSelected && idx === 0) {
-                opt.selected = true;
-                defaultSelected = true;
-            }
-            groupEnNatural.appendChild(opt);
+        englishNaturalVoices.forEach((v) => {
+            appendOption(groupEnNatural, v);
         });
     }
     voiceSelect.appendChild(groupEnNatural);
@@ -485,9 +480,12 @@ function populateVoiceList() {
             const opt = document.createElement('option');
             opt.value = v.name;
             opt.textContent = `🇬🇪 ${v.name} (${v.lang})`;
-            if (currentLang === 'ka' && !defaultSelected) {
+            if (currentSelectedVal && v.name === currentSelectedVal) {
                 opt.selected = true;
-                defaultSelected = true;
+                matchedOption = true;
+            } else if (!matchedOption && currentLang === 'ka') {
+                opt.selected = true;
+                matchedOption = true;
             }
             groupKa.appendChild(opt);
         });
@@ -495,9 +493,9 @@ function populateVoiceList() {
         const opt = document.createElement('option');
         opt.value = 'Georgian-Natural-ka-GE';
         opt.textContent = '🇬🇪 Georgian Studio Narrator (ქართული ხმა - ka-GE)';
-        if (currentLang === 'ka' && !defaultSelected) {
+        if (currentSelectedVal === 'Georgian-Natural-ka-GE' || (!matchedOption && currentLang === 'ka')) {
             opt.selected = true;
-            defaultSelected = true;
+            matchedOption = true;
         }
         groupKa.appendChild(opt);
     }
@@ -508,10 +506,7 @@ function populateVoiceList() {
         const groupOtherNatural = document.createElement('optgroup');
         groupOtherNatural.label = '🌐 Ultra-Natural International Voices';
         otherNaturalVoices.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v.name;
-            opt.textContent = `🌟 ${v.name} (${v.lang})`;
-            groupOtherNatural.appendChild(opt);
+            appendOption(groupOtherNatural, v);
         });
         voiceSelect.appendChild(groupOtherNatural);
     }
@@ -524,9 +519,19 @@ function populateVoiceList() {
             const opt = document.createElement('option');
             opt.value = v.name;
             opt.textContent = `${v.name} (${v.lang})`;
+            if (currentSelectedVal && v.name === currentSelectedVal) {
+                opt.selected = true;
+                matchedOption = true;
+            }
             groupEn.appendChild(opt);
         });
         voiceSelect.appendChild(groupEn);
+    }
+
+    // 5. If no option selected yet, pick first option in group
+    if (!matchedOption && voiceSelect.options.length > 0) {
+        voiceSelect.options[0].selected = true;
+        userSelectedVoiceName = voiceSelect.options[0].value;
     }
 }
 
@@ -609,9 +614,14 @@ function setupEventListeners() {
 
     // INSTANT VOICE CHANGE LISTENER (Switches active speech immediately)
     if (voiceSelect) {
-        voiceSelect.addEventListener('change', () => {
+        voiceSelect.addEventListener('change', (e) => {
+            userSelectedVoiceName = e.target.value;
+            console.log('Voice selected:', userSelectedVoiceName);
             if (isPlaying && !isPaused) {
-                speakCurrentSentence();
+                window.speechSynthesis.cancel();
+                setTimeout(() => {
+                    speakCurrentSentence();
+                }, 50);
             }
         });
     }
@@ -771,11 +781,11 @@ function splitIntoNaturalSentences(text) {
         const trimmed = chunk.trim();
         if (!trimmed) return;
         
-        if (trimmed.length > 220) {
+        if (trimmed.length > 200) {
             const parts = trimmed.split(/([,;:]\s+)/);
             let buf = '';
             parts.forEach(p => {
-                if ((buf + p).length > 160) {
+                if ((buf + p).length > 140) {
                     if (buf.trim()) result.push(buf.trim());
                     buf = p;
                 } else {
@@ -1076,7 +1086,7 @@ function playChapterAudio(chapId) {
     renderChaptersList();
 }
 
-// Speak the current sentence with studio cadence and human breathing pauses
+// Speak the current sentence with explicit voice binding and studio breathing pauses
 function speakCurrentSentence() {
     if (!('speechSynthesis' in window) || !isPlaying || isPaused) return;
 
@@ -1087,12 +1097,14 @@ function speakCurrentSentence() {
         return;
     }
 
-    const sentence = sentenceQueue[currentSentenceIndex];
-    if (!sentence || !sentence.trim()) {
+    const rawSentence = sentenceQueue[currentSentenceIndex];
+    if (!rawSentence || !rawSentence.trim()) {
         currentSentenceIndex++;
         speakCurrentSentence();
         return;
     }
+
+    const cleanSentence = rawSentence.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
 
     // Update Progress
     if (playerProgress && sentenceQueue.length > 0) {
@@ -1102,22 +1114,29 @@ function speakCurrentSentence() {
 
     window.speechSynthesis.cancel();
 
-    const utter = new SpeechSynthesisUtterance(sentence);
-    const selectedVoiceName = voiceSelect.value;
+    const utter = new SpeechSynthesisUtterance(cleanSentence);
     
-    if (selectedVoiceName === 'Georgian-Natural-ka-GE' || currentLang === 'ka') {
+    // Explicit Voice Lookup & Binding
+    const selectedVoiceName = userSelectedVoiceName || (voiceSelect ? voiceSelect.value : '');
+    const allVoices = window.speechSynthesis.getVoices();
+    
+    if (selectedVoiceName === 'Georgian-Natural-ka-GE') {
         utter.lang = 'ka-GE';
     } else {
-        const match = window.speechSynthesis.getVoices().find(v => v.name === selectedVoiceName);
+        const match = allVoices.find(v => v.name === selectedVoiceName);
         if (match) {
             utter.voice = match;
             utter.lang = match.lang;
+        } else if (currentLang === 'ka') {
+            utter.lang = 'ka-GE';
+        } else {
+            utter.lang = 'en-US';
         }
     }
 
-    const pitchOffset = parseInt(pitchSlider.value);
+    const pitchOffset = parseInt(pitchSlider ? pitchSlider.value : 0);
     utter.rate = currentGlobalSpeed;
-    utter.pitch = 1 + pitchOffset / 50;
+    utter.pitch = Math.max(0.5, Math.min(1.8, 1 + pitchOffset / 50));
     utter.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
 
     // Human Breath & Pacing Gap (320ms pause between sentences for realistic narration)
