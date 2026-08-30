@@ -2,427 +2,396 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AudioRead Studio Pro - AI PDF eBook to MP3 Audiobook</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#eef2ff',
-                            100: '#e0e7ff',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumina Audio - Premium AI Listening</title>
+    
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+
+    <!-- JSZip (for downloads) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- Tailwind & Fonts -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- JSZip for 1-Click Audiobook ZIP Packaging -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- LameJS for High Quality Client-Side MP3 Audio Encoding -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
-    <!-- PDF.js CDN for in-browser client-side PDF parsing on GitHub Pages -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>
-        if (window.pdfjsLib) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-        }
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+                "on-error-container": "#ffdad6",
+                "tertiary-container": "#ffccd6",
+                "surface-container-low": "#191c22",
+                "surface": "#10131a",
+                "primary-container": "#00f0ff",
+                "on-error": "#690005",
+                "primary-fixed-dim": "#00dbe9",
+                "surface-container": "#1d2026",
+                "surface-container-high": "#272a31",
+                "primary-fixed": "#7df4ff",
+                "background": "#10131a",
+                "on-surface": "#e1e2eb",
+                "on-primary-container": "#006970",
+                "secondary-container": "#7701d0",
+                "primary": "#dbfcff",
+                "secondary": "#dcb8ff",
+                "on-background": "#e1e2eb",
+                "on-surface-variant": "#b9cacb"
+            },
+            fontFamily: {
+                "label-caps": ["Space Grotesk"],
+                "headline-md": ["Inter"],
+                "display-lg": ["Inter"],
+                "body-md": ["Inter"]
+            }
+          },
+        },
+      }
     </script>
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="static/styles.css">
+    <style>
+        body {
+            background-color: #10131a;
+            color: #e1e2eb;
+            overflow-x: hidden;
+        }
+        
+        .bg-mesh {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            background: radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(220, 184, 255, 0.08) 0%, transparent 50%);
+            animation: pulse-glow 15s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .glass-panel {
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            border-color: rgba(0, 240, 255, 0.5);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+            transform: translateY(-4px);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        
+        /* Modals */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);
+            display: flex; justify-content: center; align-items: center; z-index: 100;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            transform: scale(0.95); transition: transform 0.3s;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+    </style>
 </head>
-<body class="bg-[#05070e] text-slate-100 min-h-screen font-['Plus_Jakarta_Sans',sans-serif] antialiased flex flex-col selection:bg-indigo-500 selection:text-white pb-40 sm:pb-36">
+<body class="font-body-md text-body-md min-h-screen flex flex-col md:flex-row">
+    <div class="bg-mesh"></div>
 
-    <!-- Top Glow Header -->
-    <header class="border-b border-white/[0.06] bg-slate-950/80 backdrop-blur-xl sticky top-0 z-40 shadow-lg shadow-black/40">
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-2.5 sm:gap-3">
-                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/30 ring-1 ring-white/20 flex-shrink-0">
-                    <i data-lucide="headphones" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
-                </div>
-                <div>
-                    <h1 class="text-sm sm:text-lg font-extrabold tracking-tight flex items-center gap-1.5 sm:gap-2">
-                        <span id="ui-appTitle" class="bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent">AudioRead</span>
-                        <span id="ui-studioPro" class="text-[9px] sm:text-[10px] uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">Studio Pro</span>
-                    </h1>
-                    <p id="ui-appSubtitle" class="hidden sm:block text-[11px] text-slate-400">PDF eBook to Studio MP3 Audiobook</p>
-                </div>
-            </div>
-
-            <!-- Language Switcher & Actions -->
-            <div class="flex items-center gap-2 sm:gap-3">
-                <!-- Language Toggle Pill -->
-                <div class="flex items-center bg-slate-900/90 border border-white/10 rounded-2xl p-0.5 sm:p-1 shadow-inner text-xs font-semibold">
-                    <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 sm:px-2.5 py-1 rounded-xl bg-indigo-600 text-white shadow transition flex items-center gap-1">
-                        <span>🇺🇸</span> <span class="hidden xs:inline font-bold">EN</span>
-                    </button>
-                    <button onclick="setLanguage('ka')" id="langBtn-ka" class="px-2 sm:px-2.5 py-1 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-1">
-                        <span>🇬🇪</span> <span class="hidden xs:inline font-bold">ქარ</span>
-                    </button>
-                </div>
-
-                <button id="btnNewBook" class="hidden px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold transition flex items-center gap-1.5 border border-white/10 text-white shadow-md active:scale-95">
-                    <i data-lucide="folder-plus" class="w-3.5 h-3.5 text-indigo-400"></i>
-                    <span id="ui-newBook">New</span>
+    <!-- SideNavBar (Desktop) -->
+    <nav class="hidden md:flex flex-col h-full py-8 px-4 bg-surface-container/60 backdrop-blur-[32px] w-64 fixed left-0 top-0 border-r border-white/15 shadow-[0_0_40px_rgba(0,240,255,0.1)] z-40">
+        <div class="mb-12 px-4">
+            <h1 class="font-headline-md text-2xl font-bold text-primary-container tracking-tight">Lumina Audio</h1>
+            <p class="text-on-surface-variant font-label-caps text-xs mt-1">Premium AI Listening</p>
+        </div>
+        <button id="btnNavUpload" class="mb-8 w-full py-3 px-4 rounded-lg bg-primary-container text-on-primary-container shadow-[0_0_20px_rgba(0,240,255,0.4)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group">
+            <span class="material-symbols-outlined group-hover:scale-110 transition-transform">upload_file</span>
+            Upload PDF
+        </button>
+        <ul class="flex flex-col gap-2 flex-grow">
+            <li>
+                <button onclick="navigate('library')" id="nav-library" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-primary-fixed-dim border-r-2 border-primary-fixed-dim bg-white/10 transition-all font-medium">
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">library_music</span>
+                    Library
                 </button>
+            </li>
+            <li>
+                <button onclick="navigate('settings')" id="nav-settings" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-white/10 hover:text-primary-fixed-dim transition-all font-medium">
+                    <span class="material-symbols-outlined">settings</span>
+                    Settings
+                </button>
+            </li>
+        </ul>
+        <div class="mt-auto pt-8 border-t border-white/10" id="userNavSection">
+            <!-- Will be populated by JS based on Auth state -->
+            <button onclick="openModal('authModal')" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-white/10 hover:text-primary-fixed-dim transition-all font-medium">
+                <span class="material-symbols-outlined">login</span>
+                Sign In / Register
+            </button>
+        </div>
+    </nav>
+
+    <!-- TopNavBar -->
+    <header class="hidden md:flex justify-between items-center px-10 py-4 bg-surface/10 backdrop-blur-[24px] fixed top-0 right-0 w-[calc(100%-16rem)] z-30 border-b border-white/15">
+        <div class="flex-grow max-w-xl mx-8">
+            <div class="relative focus-within:ring-2 focus-within:ring-primary-container rounded-full transition-shadow">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                <input id="searchInput" class="w-full bg-surface-container-highest/50 border border-white/10 rounded-full py-2 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary-fixed/50 glass-panel" placeholder="Search your library..." type="text">
             </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <button id="topProfileBtn" onclick="openModal('authModal')" class="p-2 rounded-full text-on-surface-variant hover:text-primary transition-colors hover:bg-white/5 flex items-center gap-2">
+                <span class="material-symbols-outlined">account_circle</span>
+                <span id="topProfileName" class="text-sm font-medium">Guest</span>
+            </button>
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8">
-
-        <!-- Welcome / Upload Section -->
-        <section id="uploadSection" class="transition-all duration-300 max-w-4xl mx-auto pt-4 sm:pt-8 pb-8 sm:pb-12">
-            <div class="text-center max-w-2xl mx-auto mb-6 sm:mb-10 space-y-2 sm:space-y-3 px-2">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-1 shadow-inner">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                    <span id="ui-heroBadge">100% Free AI Audiobook Converter</span>
-                </div>
-                <h2 id="ui-heroTitle" class="text-2xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent leading-tight">
-                    Convert Any PDF eBook Into An MP3 Audiobook
-                </h2>
-                <p id="ui-heroSubtitle" class="text-slate-400 text-xs sm:text-base leading-relaxed">
-                    Automatic chapter segmentation, translation, studio voice narration, and MP3 audio downloads.
-                </p>
-            </div>
-
-            <!-- Drag & Drop Zone -->
-            <label for="pdfFileInput" id="dropZone" class="relative group cursor-pointer block border border-dashed border-indigo-500/40 hover:border-indigo-400 rounded-3xl bento-card p-6 sm:p-14 text-center transition-all duration-300 shadow-2xl hover:shadow-indigo-500/15">
-                <input type="file" id="pdfFileInput" accept="application/pdf,.pdf" class="sr-only">
-                <div class="flex flex-col items-center justify-center space-y-4 sm:space-y-5 pointer-events-none">
-                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-indigo-600/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-xl shadow-indigo-600/20 p-3 sm:p-4">
-                        <i data-lucide="book-open-check" class="w-8 h-8 sm:w-10 sm:h-10"></i>
-                    </div>
-                    <div class="space-y-1">
-                        <p id="ui-uploadTitle" class="text-sm sm:text-xl font-bold text-white tracking-tight">
-                            Select a PDF file or tap here to browse
-                        </p>
-                        <p id="ui-uploadSubtitle" class="text-xs text-slate-400 max-w-sm mx-auto">
-                            Supports novels, textbooks, documents, and multi-chapter eBooks (.pdf)
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-2 sm:gap-6 text-[11px] sm:text-xs text-slate-300 pt-2 flex-wrap justify-center font-medium">
-                        <span class="flex items-center gap-1 bg-slate-900/80 px-2.5 sm:px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="ui-smartDetection">Chapter Splitting</span></span>
-                        <span class="flex items-center gap-1 bg-slate-900/80 px-2.5 sm:px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="ui-naturalVoice">Natural Voice</span></span>
-                        <span class="flex items-center gap-1 bg-slate-900/80 px-2.5 sm:px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="ui-zipExport">MP3 ZIP Export</span></span>
-                    </div>
-                </div>
-
-                <!-- Parsing Spinner Overlay -->
-                <div id="uploadingState" class="hidden absolute inset-0 bg-[#05070e]/90 rounded-3xl backdrop-blur-md flex flex-col items-center justify-center space-y-4 z-20 pointer-events-auto p-4">
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
-                    <p id="ui-extracting" class="text-xs sm:text-sm font-semibold text-indigo-300 animate-pulse text-center">Reading & structuring PDF chapters...</p>
-                </div>
-            </label>
-        </section>
-
-        <!-- Studio Workspace (Loaded state) -->
-        <section id="workspaceSection" class="hidden space-y-5 sm:space-y-6">
+    <!-- Main Content Area -->
+    <main class="flex-grow md:ml-64 relative min-h-screen pb-32 pt-24 md:pt-32 px-6 md:px-10">
+        
+        <!-- View: Library -->
+        <div id="view-library" class="max-w-7xl mx-auto space-y-12">
             
-            <!-- Translation Progress Banner (Active when translating) -->
-            <div id="translationBanner" class="hidden bento-card rounded-2xl p-4 bg-indigo-950/70 border border-indigo-500/40 flex items-center justify-between gap-3 animate-pulse">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
-                        <i data-lucide="languages" class="w-4 h-4"></i>
+            <!-- Hero Section: Continue Listening -->
+            <section id="heroSection" class="hidden glass-card rounded-2xl p-6 md:p-8 flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-primary-container/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4"></div>
+                <div class="relative w-32 h-32 md:w-48 md:h-48 flex-shrink-0 cursor-pointer" id="heroPlayBtn">
+                    <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" fill="none" r="45" stroke="rgba(255,255,255,0.1)" stroke-width="4"></circle>
+                        <circle id="heroProgressCircle" class="transition-all duration-1000 ease-out" cx="50" cy="50" fill="none" r="45" stroke="#00f0ff" stroke-dasharray="283" stroke-dashoffset="283" stroke-width="4"></circle>
+                    </svg>
+                    <div class="absolute inset-2 rounded-full overflow-hidden border-2 border-surface/50 shadow-lg bg-surface-container">
+                        <img id="heroCover" class="w-full h-full object-cover" src="" alt="Cover">
                     </div>
+                    <div class="absolute bottom-0 right-0 bg-primary-container text-on-primary-container p-3 rounded-full shadow-[0_0_20px_rgba(0,240,255,0.4)] hover:scale-105 transition-transform">
+                        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                    </div>
+                </div>
+                <div class="flex-grow text-center md:text-left z-10">
+                    <p class="font-label-caps text-xs text-primary-fixed mb-2 tracking-widest">CONTINUE LISTENING</p>
+                    <h2 id="heroTitle" class="text-3xl md:text-4xl font-bold text-on-surface mb-2 truncate max-w-full">Book Title</h2>
+                    <p id="heroSubtitle" class="text-on-surface-variant font-body-md mb-6 max-w-2xl line-clamp-2">Chapter info...</p>
+                    <div class="flex items-center gap-4 justify-center md:justify-start">
+                        <span id="heroProgressText" class="text-sm text-on-surface-variant">0% Completed</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Library Grid -->
+            <div>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 border-b border-white/10 pb-4 mb-6">
+                    <h3 class="text-2xl font-bold text-on-surface">Your Digital Shelf</h3>
+                </div>
+                <div id="booksGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    <!-- Books populated by JS -->
+                    <div class="col-span-full text-center py-12 text-on-surface-variant">
+                        No books yet. Upload a PDF to get started!
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chapters List (Visible when a book is active) -->
+            <div id="chaptersContainer" class="hidden">
+                <div class="flex justify-between items-end border-b border-white/10 pb-4 mb-6">
                     <div>
-                        <h4 id="translationBannerText" class="text-xs sm:text-sm font-bold text-white">Translating chapters into Georgian...</h4>
-                        <p class="text-[11px] text-indigo-300">High accuracy translation engine</p>
+                        <h3 class="text-2xl font-bold text-on-surface" id="activeBookTitle">Chapters</h3>
+                        <p class="text-on-surface-variant text-sm mt-1">Select a chapter to begin listening or download.</p>
                     </div>
+                    <button id="btnDownloadAllZip" class="text-primary-fixed-dim bg-primary-container/10 hover:bg-primary-container/20 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+                        <span class="material-symbols-outlined text-sm">inventory_2</span>
+                        <span id="btnDownloadAllZipText">Download ZIP</span>
+                    </button>
                 </div>
-                <div class="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                <div id="chaptersList" class="space-y-3">
+                    <!-- Chapters populated by JS -->
+                </div>
             </div>
+        </div>
 
-            <!-- Bento Grid Row 1: Book Showcase & Metrics Matrix -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <!-- View: Settings -->
+        <div id="view-settings" class="hidden max-w-3xl mx-auto space-y-8">
+            <h2 class="text-3xl font-bold text-on-surface mb-8">Studio Settings</h2>
+            
+            <div class="glass-panel p-6 rounded-xl space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-on-surface-variant mb-2">Translation Language</label>
+                    <select id="langSelect" class="w-full bg-surface border border-white/10 rounded-lg p-3 text-on-surface focus:ring-2 focus:ring-primary-fixed outline-none">
+                        <option value="en">English (Original)</option>
+                        <option value="ka">Georgian (ქართული)</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                    </select>
+                    <p class="text-xs text-on-surface-variant mt-2">Georgian translation uses Google Translate TTS fallback for playback.</p>
+                </div>
                 
-                <!-- Bento 1: 3D Book Cover & Master CTA -->
-                <div class="bento-card rounded-3xl p-5 sm:p-7 flex flex-col justify-between relative overflow-hidden group">
-                    <div class="absolute -right-20 -top-20 w-56 h-56 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
-                    
-                    <div class="flex items-start gap-4 z-10">
-                        <div class="w-16 h-22 sm:w-20 sm:h-28 bg-gradient-to-br from-indigo-600 via-indigo-900 to-slate-950 border border-indigo-400/40 rounded-2xl flex flex-col items-center justify-center p-2.5 sm:p-3 shadow-2xl flex-shrink-0 text-indigo-200 book-jacket ring-1 ring-white/10">
-                            <i data-lucide="book-open" class="w-7 h-7 sm:w-9 sm:h-9 mb-1 text-indigo-300"></i>
-                            <span class="text-[8px] sm:text-[9px] uppercase tracking-wider font-mono font-bold">STUDIO</span>
-                        </div>
-                        <div class="space-y-1 min-w-0">
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                <span id="ui-activeDoc" class="px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] uppercase font-bold tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Active Document</span>
-                                <span id="activeLangBadge" class="px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider bg-slate-800 text-slate-300 border border-white/10">🇺🇸 EN</span>
-                            </div>
-                            <h2 id="bookTitle" class="text-base sm:text-xl font-extrabold text-white tracking-tight leading-snug truncate">Book Title</h2>
-                            <p class="text-xs text-slate-400 truncate font-mono" id="bookFilename">book.pdf</p>
-                        </div>
-                    </div>
-
-                    <div class="pt-4 sm:pt-6 flex flex-col gap-2.5 z-10">
-                        <div class="flex flex-col sm:flex-row items-center gap-2">
-                            <button id="btnPlayAllFromStart" class="w-full sm:flex-1 py-3 px-4 rounded-2xl btn-stitch-primary text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xl active:scale-95">
-                                <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-                                <span id="ui-listenStart">Listen from Beginning</span>
-                            </button>
-                            <button id="btnDownloadAllZip" class="w-full sm:w-auto py-3 px-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-semibold text-xs border border-white/10 flex items-center justify-center gap-2 transition active:scale-95 shadow-md">
-                                <i data-lucide="archive" class="w-4 h-4 text-indigo-400"></i>
-                                <span id="btnDownloadAllZipText">Download MP3 ZIP</span>
-                            </button>
-                        </div>
-                        
-                        <!-- Translate to Georgian / Toggle Language CTA -->
-                        <button id="btnTranslateToggle" onclick="toggleBookTranslation()" class="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 hover:border-indigo-400 text-indigo-300 border border-indigo-500/30 text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-inner">
-                            <i data-lucide="languages" class="w-4 h-4 text-indigo-400"></i>
-                            <span id="btnTranslateToggleText">🇬🇪 Translate to Georgian (ქართულად)</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Bento 2: 4 High-Tech Matrix Counters -->
-                <div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                    <!-- Stat 1: Pages -->
-                    <div class="bento-card rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-2 sm:mb-4">
-                            <i data-lucide="layers" class="w-4 h-4 sm:w-5 sm:h-5"></i>
-                        </div>
-                        <div>
-                            <p id="ui-pagesLabel" class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Pages</p>
-                            <h3 id="statPages" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight font-mono">0</h3>
-                        </div>
-                    </div>
-
-                    <!-- Stat 2: Chapters -->
-                    <div class="bento-card rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-2 sm:mb-4">
-                            <i data-lucide="list-ordered" class="w-4 h-4 sm:w-5 sm:h-5"></i>
-                        </div>
-                        <div>
-                            <p id="ui-chaptersLabel" class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Chapters</p>
-                            <h3 id="statChapters" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight font-mono">0</h3>
-                        </div>
-                    </div>
-
-                    <!-- Stat 3: Words -->
-                    <div class="bento-card rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-2 sm:mb-4">
-                            <i data-lucide="file-text" class="w-4 h-4 sm:w-5 sm:h-5"></i>
-                        </div>
-                        <div>
-                            <p id="ui-wordsLabel" class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Words</p>
-                            <h3 id="statWords" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight font-mono">0</h3>
-                        </div>
-                    </div>
-
-                    <!-- Stat 4: Total Runtime -->
-                    <div class="bento-card rounded-3xl p-4 sm:p-5 flex flex-col justify-between bg-gradient-to-br from-indigo-950/40 to-slate-900/60 border border-indigo-500/30">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 mb-2 sm:mb-4">
-                            <i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5"></i>
-                        </div>
-                        <div>
-                            <p id="ui-listenTimeLabel" class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-indigo-300">Total Audio</p>
-                            <h3 id="statEstDuration" class="text-base sm:text-xl font-extrabold text-white tracking-tight">~0 mins</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bento Grid Row 2: Acoustic Voice & Synthesizer Tuning Deck -->
-            <div class="bento-card rounded-3xl p-5 sm:p-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 items-center">
-                <!-- Voice Selector -->
-                <div class="lg:col-span-2 space-y-1.5 sm:space-y-2">
-                    <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
-                        <span class="flex items-center gap-1.5"><i data-lucide="mic" class="w-3.5 h-3.5 text-indigo-400"></i> <span id="ui-aiVoice">AI Narrator Voice</span></span>
-                        <button id="btnPreviewVoice" class="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-bold transition">
-                            <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> <span id="ui-testVoice">Test Voice</span>
-                        </button>
-                    </label>
-                    <select id="voiceSelect" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-2xl px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 transition shadow-inner font-medium">
-                        <!-- Loaded dynamically -->
+                <div>
+                    <label class="block text-sm font-medium text-on-surface-variant mb-2">Narrator Voice</label>
+                    <select id="voiceSelect" class="w-full bg-surface border border-white/10 rounded-lg p-3 text-on-surface focus:ring-2 focus:ring-primary-fixed outline-none">
+                        <!-- Populated by JS -->
+                        <option value="">Loading studio voices...</option>
                     </select>
                 </div>
 
-                <!-- 0.05x Precision Speed Control -->
-                <div class="space-y-1.5 sm:space-y-2">
-                    <div class="flex justify-between items-center text-xs font-bold text-slate-300">
-                        <span class="flex items-center gap-1.5"><i data-lucide="gauge" class="w-3.5 h-3.5 text-indigo-400"></i> <span id="ui-speedControl">Speed (0.05x Step)</span></span>
-                        <span id="speedDisplayLabel" class="text-indigo-400 font-mono text-xs font-bold bg-indigo-950 px-2 py-0.5 rounded-lg border border-indigo-500/30">1.00x</span>
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-sm font-medium text-on-surface-variant">Playback Speed</label>
+                        <span id="speedVal" class="text-primary-fixed text-sm font-bold">1.00x</span>
                     </div>
-                    <input type="range" id="speedSlider" min="0.50" max="2.50" step="0.05" value="1.00" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-2">
-                    <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-                        <span onclick="setGlobalSpeed(0.75)" class="cursor-pointer hover:text-indigo-400">0.75x</span>
-                        <span onclick="setGlobalSpeed(1.00)" class="cursor-pointer hover:text-indigo-400 font-bold text-indigo-300">1.00x</span>
-                        <span onclick="setGlobalSpeed(1.25)" class="cursor-pointer hover:text-indigo-400">1.25x</span>
-                        <span onclick="setGlobalSpeed(1.50)" class="cursor-pointer hover:text-indigo-400">1.50x</span>
-                        <span onclick="setGlobalSpeed(2.00)" class="cursor-pointer hover:text-indigo-400">2.00x</span>
-                    </div>
+                    <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.05" value="1.0" class="w-full accent-primary-fixed">
                 </div>
-
-                <!-- Pitch Slider -->
-                <div class="space-y-1.5 sm:space-y-2">
-                    <div class="flex justify-between items-center text-xs font-bold text-slate-300">
-                        <span class="flex items-center gap-1.5"><i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400"></i> <span id="ui-pitchShift">Pitch Shift</span></span>
-                        <span id="pitchLabel" class="text-indigo-400 font-mono text-xs font-bold">0 Hz</span>
+                
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-sm font-medium text-on-surface-variant">Voice Pitch</label>
+                        <span id="pitchVal" class="text-primary-fixed text-sm font-bold">0</span>
                     </div>
-                    <input type="range" id="pitchSlider" min="-20" max="20" step="2" value="0" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-2">
+                    <input type="range" id="pitchSlider" min="-20" max="20" step="1" value="0" class="w-full accent-primary-fixed">
                 </div>
             </div>
-
-            <!-- Bento Grid Row 3: Chapter Tracks Table -->
-            <div class="space-y-3 sm:space-y-4">
-                <div class="flex items-center justify-between px-1">
-                    <h3 class="text-sm sm:text-lg font-extrabold text-white flex items-center gap-2">
-                        <i data-lucide="disc" class="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"></i>
-                        <span id="ui-chaptersTitle">Chapters & Sections</span>
-                    </h3>
-                    <span id="chapterCountBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-900 border border-white/5 text-slate-400 font-mono">0 Items</span>
-                </div>
-
-                <div id="chaptersContainer" class="space-y-2.5 sm:space-y-3">
-                    <!-- Chapter Rows injected via JS -->
-                </div>
-            </div>
-        </section>
+        </div>
 
     </main>
 
-    <!-- Chapter Text Drawer Modal -->
-    <div id="textModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-3 sm:p-4">
-        <div class="bento-card rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl border border-white/10 overflow-hidden">
-            <div class="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-slate-900/40">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                        <i data-lucide="file-text" class="w-4 h-4"></i>
-                    </div>
-                    <div>
-                        <h4 id="modalChapterTitle" class="text-sm sm:text-base font-bold text-white truncate max-w-xs sm:max-w-md">Chapter Text Inspector</h4>
-                        <p id="ui-editSubtitle" class="text-[11px] text-slate-400">Read or edit text</p>
-                    </div>
-                </div>
-                <button id="btnCloseModal" class="p-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            
-            <div class="p-4 sm:p-6 flex-1 overflow-y-auto space-y-4">
-                <div>
-                    <label id="ui-chapterTitle" class="block text-xs font-bold text-slate-400 mb-1.5">Chapter Title</label>
-                    <input type="text" id="modalInputTitle" class="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 font-medium">
-                </div>
-                <div>
-                    <label id="ui-textContent" class="block text-xs font-bold text-slate-400 mb-1.5">Text Content</label>
-                    <textarea id="modalInputText" rows="12" class="w-full bg-slate-950 border border-slate-700/80 rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm text-slate-200 font-mono focus:outline-none focus:border-indigo-500 leading-relaxed"></textarea>
+    <!-- BottomNavBar (Now Playing) -->
+    <div id="playerDock" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] md:w-[80%] max-w-5xl z-50 flex items-center justify-between px-4 md:px-6 py-3 bg-surface-container-high/60 backdrop-blur-[64px] border border-white/25 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-xl opacity-0 translate-y-10 transition-all duration-500 pointer-events-none">
+        <div class="flex items-center gap-4 w-1/3">
+            <div class="w-10 h-10 rounded-md overflow-hidden flex-shrink-0 relative hidden sm:block bg-surface-container">
+                <img id="dockCover" class="w-full h-full object-cover" src="" alt="Cover">
+                <!-- Mini visualizer overlay -->
+                <div id="dockVisualizer" class="absolute inset-0 bg-black/40 flex items-end justify-center gap-[2px] pb-1 hidden">
+                    <div class="w-1 h-3 bg-primary-fixed rounded-t-sm animate-[bounce_1s_infinite_ease-in-out]"></div>
+                    <div class="w-1 h-5 bg-primary-fixed rounded-t-sm animate-[bounce_1.2s_infinite_ease-in-out_0.2s]"></div>
+                    <div class="w-1 h-2 bg-primary-fixed rounded-t-sm animate-[bounce_0.8s_infinite_ease-in-out_0.4s]"></div>
                 </div>
             </div>
-
-            <div class="p-3 sm:p-4 border-t border-white/10 flex items-center justify-end gap-2 sm:gap-3 bg-slate-900/40">
-                <button id="btnCancelModal" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">Close</button>
-                <button id="btnSaveModal" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/30">
-                    <i data-lucide="check" class="w-4 h-4"></i> <span id="ui-saveChanges">Save Changes</span>
-                </button>
+            <div class="overflow-hidden">
+                <p id="dockTitle" class="text-sm font-medium text-on-surface truncate">No Book Selected</p>
+                <p id="dockSubtitle" class="text-xs text-on-surface-variant truncate">---</p>
             </div>
         </div>
-    </div>
-
-    <!-- Floating Mobile-Optimized Luxury Audio Player Dock -->
-    <div id="audioPlayerBar" class="hidden fixed bottom-2 inset-x-2 sm:bottom-4 sm:inset-x-8 max-w-6xl mx-auto player-dock rounded-2xl sm:rounded-3xl p-3 sm:p-4 z-50">
-        <audio id="globalAudioPlayer" preload="auto"></audio>
         
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
+        <div class="flex-grow flex items-center gap-2 md:gap-4 justify-center w-1/3">
+            <button id="btnPlayerRewind" class="text-on-surface-variant hover:text-primary-fixed transition-colors p-2 hidden sm:block">
+                <span class="material-symbols-outlined">skip_previous</span>
+            </button>
+            <button id="btnPlayerPlayPause" class="bg-primary-container text-on-primary-container rounded-full w-12 h-12 shadow-[0_0_15px_rgba(0,240,255,0.4)] active:scale-[0.98] transition-transform flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+            </button>
+            <button id="btnPlayerForward" class="text-on-surface-variant hover:text-primary-fixed transition-colors p-2 hidden sm:block">
+                <span class="material-symbols-outlined">skip_next</span>
+            </button>
+        </div>
+
+        <div class="flex items-center gap-4 justify-end w-1/3">
+            <progress id="playerProgress" value="0" max="100" class="h-1.5 rounded-full w-full max-w-[150px] overflow-hidden appearance-none bg-white/10 hidden md:block"></progress>
+        </div>
+    </div>
+    
+    <style>
+        progress::-webkit-progress-bar { background-color: rgba(255,255,255,0.1); }
+        progress::-webkit-progress-value { background: linear-gradient(90deg, #00dbe9, #dcb8ff); }
+        progress::-moz-progress-bar { background: linear-gradient(90deg, #00dbe9, #dcb8ff); }
+    </style>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal-overlay">
+        <div class="modal-content glass-panel p-8 rounded-2xl max-w-md w-full border border-white/20">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-on-surface">Upload PDF</h2>
+                <button onclick="closeModal('uploadModal')" class="text-on-surface-variant hover:text-white"><span class="material-symbols-outlined">close</span></button>
+            </div>
             
-            <!-- Top / Left: Currently Playing Info & Mobile Controls -->
-            <div class="flex items-center justify-between w-full sm:w-1/3 min-w-0">
-                <div class="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 flex-shrink-0 relative ring-1 ring-white/20">
-                        <i data-lucide="headphones" class="w-5 h-5 sm:w-6 sm:h-6"></i>
-                        <!-- Animated Soundwave Equalizer -->
-                        <div id="playerEqualizer" class="hidden absolute -top-1 -right-1 bg-indigo-600 px-1.5 py-0.5 rounded-full shadow-md">
-                            <div class="equalizer">
-                                <span class="equalizer-bar"></span>
-                                <span class="equalizer-bar"></span>
-                                <span class="equalizer-bar"></span>
-                                <span class="equalizer-bar"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="min-w-0">
-                        <h5 id="playerTrackTitle" class="text-xs sm:text-sm font-extrabold text-white truncate">Select a chapter</h5>
-                        <p id="playerTrackSubtitle" class="text-[10px] sm:text-[11px] text-indigo-300 font-medium truncate">AudioRead AI Studio</p>
-                    </div>
+            <div class="border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-primary-fixed/50 transition-colors cursor-pointer group" onclick="document.getElementById('fileInput').click()">
+                <div class="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center text-primary-fixed mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-3xl">cloud_upload</span>
                 </div>
-
-                <!-- Mobile Quick Speed & Download Pill -->
-                <div class="flex sm:hidden items-center gap-1.5 flex-shrink-0">
-                    <button onclick="cyclePlayerSpeed()" id="btnPlayerSpeedMobile" class="px-2 py-1 rounded-xl bg-slate-900 border border-white/10 text-[11px] font-mono text-indigo-300 font-bold">
-                        1.00x
-                    </button>
-                    <button onclick="downloadActiveChapterAudio()" title="Download Chapter MP3" class="p-1.5 rounded-xl bg-slate-900 border border-white/10 text-slate-300">
-                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                    </button>
-                </div>
+                <p class="text-on-surface font-medium">Click to browse or drag PDF here</p>
+                <p class="text-on-surface-variant text-sm mt-2">Maximum file size: 50MB</p>
+                <input type="file" id="fileInput" accept=".pdf" class="hidden">
             </div>
 
-            <!-- Central Player Controls & Scrubber -->
-            <div class="flex flex-col items-center w-full sm:w-2/3 space-y-1 sm:space-y-1.5">
-                <div class="flex items-center gap-3 sm:gap-4">
-                    <button id="btnPlayerPrev" title="Previous Chapter" class="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition">
-                        <i data-lucide="skip-back" class="w-4 h-4"></i>
-                    </button>
-                    <button id="btnPlayerRewind" title="Rewind 15s" class="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition">
-                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                    </button>
-                    <button id="btnPlayerPlayPause" title="Play / Pause" class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl btn-stitch-primary text-white flex items-center justify-center shadow-xl shadow-indigo-600/40 hover:scale-105 active:scale-95 transition">
-                        <i data-lucide="play" id="playIcon" class="w-5 h-5 fill-current"></i>
-                    </button>
-                    <button id="btnPlayerForward" title="Forward 15s" class="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition">
-                        <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-                    </button>
-                    <button id="btnPlayerNext" title="Next Chapter" class="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition">
-                        <i data-lucide="skip-forward" class="w-4 h-4"></i>
-                    </button>
-                </div>
-
-                <!-- Progress Bar & Timers -->
-                <div class="w-full flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-mono text-slate-400">
-                    <span id="playerCurrentTime" class="font-bold text-slate-300">00:00</span>
-                    <div class="relative flex-1 group">
-                        <input type="range" id="playerProgress" min="0" max="100" value="0" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-1.5 group-hover:h-2 transition-all">
-                    </div>
-                    <span id="playerTotalTime" class="font-bold text-slate-300">00:00</span>
-                </div>
-            </div>
-
-            <!-- Desktop Volume & Quick Speed Stepper -->
-            <div class="hidden sm:flex items-center justify-end gap-2.5 w-full sm:w-1/4">
-                <!-- Speed Stepper -->
-                <div class="flex items-center bg-slate-900/90 border border-white/10 rounded-xl p-0.5">
-                    <button onclick="adjustSpeedByStep(-0.05)" class="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white font-mono">-</button>
-                    <span id="playerSpeedBadgeDesktop" class="px-1.5 py-0.5 text-xs font-mono font-bold text-indigo-300">1.00x</span>
-                    <button onclick="adjustSpeedByStep(0.05)" class="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white font-mono">+</button>
-                </div>
-
-                <button onclick="downloadActiveChapterAudio()" title="Download Current Chapter MP3" class="p-2 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 hover:text-indigo-400 transition shadow-inner">
-                    <i data-lucide="download" class="w-4 h-4"></i>
-                </button>
-                <div class="flex items-center gap-1.5">
-                    <button id="btnMute" class="text-slate-400 hover:text-white transition">
-                        <i data-lucide="volume-2" id="volumeIcon" class="w-4 h-4"></i>
-                    </button>
-                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" class="w-16 accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-1.5">
-                </div>
+            <div id="uploadProgressContainer" class="hidden mt-6">
+                <p id="uploadStatusText" class="text-sm text-primary-fixed mb-2 font-medium text-center">Parsing PDF...</p>
+                <progress id="uploadProgressBar" value="0" max="100" class="w-full h-2 rounded-full appearance-none bg-white/10"></progress>
             </div>
         </div>
     </div>
 
+    <!-- Auth Modal (Real Login - Firebase placeholder) -->
+    <div id="authModal" class="modal-overlay">
+        <div class="modal-content glass-panel p-8 rounded-2xl max-w-sm w-full border border-white/20">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-on-surface" id="authTitle">Sign In / Register</h2>
+                <button onclick="closeModal('authModal')" class="text-on-surface-variant hover:text-white"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            
+            <div id="firebaseUiContainer" class="hidden">
+                <!-- Firebase UI will be injected here -->
+            </div>
+
+            <div id="authFormFields" class="space-y-4">
+                <input type="email" id="authEmail" placeholder="Email Address" class="w-full bg-surface/50 border border-white/10 rounded-lg p-3 text-on-surface outline-none focus:border-primary-fixed">
+                <input type="password" id="authPassword" placeholder="Password" class="w-full bg-surface/50 border border-white/10 rounded-lg p-3 text-on-surface outline-none focus:border-primary-fixed">
+                
+                <div class="flex gap-2 pt-2">
+                    <button id="btnAuthSignIn" class="flex-1 py-3 bg-white/10 text-primary-fixed-dim font-bold rounded-lg hover:bg-white/20 transition">Log In</button>
+                    <button id="btnAuthRegister" class="flex-1 py-3 bg-primary-container text-on-primary-container font-bold rounded-lg hover:brightness-110 transition">Register</button>
+                </div>
+                
+                <div class="relative py-2">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/10"></div></div>
+                    <div class="relative flex justify-center text-sm"><span class="px-2 bg-surface text-on-surface-variant">Or continue with</span></div>
+                </div>
+                
+                <button id="btnAuthGoogle" class="w-full py-3 bg-white/5 border border-white/10 text-white font-bold rounded-lg hover:bg-white/10 transition flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Google
+                </button>
+            </div>
+            <p class="text-center text-xs text-on-surface-variant mt-4" id="authErrorText"></p>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Nav -->
+    <nav class="md:hidden flex items-center justify-between px-6 py-3 fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] rounded-xl z-40 bg-surface-container-high/80 backdrop-blur-[64px] border border-white/25 shadow-xl">
+        <button onclick="navigate('library')" class="flex flex-col items-center gap-1 text-primary-fixed-dim transition-all">
+            <span class="material-symbols-outlined">library_music</span>
+        </button>
+        <button onclick="document.getElementById('btnNavUpload').click()" class="flex flex-col items-center justify-center w-12 h-12 rounded-full bg-primary-container text-on-primary-container shadow-[0_0_15px_rgba(0,240,255,0.4)] -mt-6 hover:scale-105 transition-transform active:scale-95 border-2 border-surface">
+            <span class="material-symbols-outlined">add</span>
+        </button>
+        <button onclick="navigate('settings')" class="flex flex-col items-center gap-1 text-on-surface-variant transition-all">
+            <span class="material-symbols-outlined">settings</span>
+        </button>
+    </nav>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
     <script src="static/app.js"></script>
 </body>
 </html>
