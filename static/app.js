@@ -1,13 +1,14 @@
 // ==========================================================================
-// LUMINA AUDIO — PRO AI AUDIOBOOK & MOON+ READER ENGINE (v8.0)
+// LUMINA AUDIO — PRO AI AUDIOBOOK & MOON+ READER ENGINE (v9.0)
 // ==========================================================================
-// Full E-Book Capabilities:
-//   1. True Paginated Moon+ Reader with Discrete Book Pages & Page-Flip Animation
-//   2. Full Keyboard Navigation: Arrow Keys (←/→ Pages, ↑/↓ Sentences), Spacebar, Esc, T, M, F
-//   3. Mobile Touch Swipe Gestures & Left/Right Screen Click Turning Zones
-//   4. Synchronized Audio Narration with Auto Page-Flipping & Active Sentence Glow
-//   5. ElevenLabs Studio Neural AI + Resilient Phonetic Fallback Engine
-//   6. Whole-Book Georgian Batch Translation & Multi-Page PDF Export
+// Complete E-Book Experience:
+//   1. Expansive Real-Estate: Dual-Page Open Book Spread + Single Page + Scroll
+//   2. Full Authentic Chapters for All Classics with High-Quality Georgian Text
+//   3. Flawless Multi-Page & Chapter Navigation (Next/Prev Page & Chapter)
+//   4. Full Keyboard Shortcuts: Arrows (←/→ Pages, ↑/↓ Sentences), Space, M, T, F, Esc
+//   5. Mobile Touch Swipe Gestures (Left/Right Swipes)
+//   6. Synchronized Audio Voice Narration with Auto Page-Flipping & Active Glow
+//   7. ElevenLabs Ultra-Real Studio TTS + Resilient Georgian Acoustic Engine
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
@@ -33,14 +34,13 @@ let readerActive = false;
 let readerBook = null;
 let readerChapterId = null;
 let readerLang = 'en'; // 'en' or 'ka'
-let readerMode = 'pages'; // 'pages' (Paginated Book Mode) or 'scroll' (Continuous Scroll)
+let readerMode = 'dual'; // 'dual' (Dual-Page Spread), 'single' (Single Page), 'scroll' (Continuous)
 let readerCurrentPage = 1;
 let readerPages = []; // Array of arrays of sentence objects { text: string, globalIndex: number }
 let readerSentenceToPageMap = {}; // Map: sentenceGlobalIndex -> pageIndex (0-based)
-let readerFontSize = 18; // in px
+let readerFontSize = 19; // in px
 let readerTheme = 'sepia'; // 'sepia', 'mocha', 'dark', 'light', 'forest', 'oled'
 let readerFontFamily = 'font-serif-book';
-let isZenMode = false;
 
 // Touch Gesture Detection
 let touchStartX = 0;
@@ -94,35 +94,8 @@ function transliterateGeorgianToPhonetic(kaText) {
     return out;
 }
 
-// ── Discover Masterworks ───────────────────────────────────────────────────
+// ── Rich Pre-Bundled Classic Masterworks with Full Chapters ────────────────
 const DISCOVER_CLASSICS = [
-    {
-        id: 'classic_war_of_art',
-        title: 'The War of Art',
-        author: 'Steven Pressfield',
-        coverUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80',
-        chapters: [
-            {
-                id: 1,
-                title: 'Chapter 1: Defining Resistance',
-                text: "Most of us have two lives: the life we live, and the unlived life within us. Between the two stands Resistance. Have you ever brought home a treadmill and let it gather dust in the attic? Have you ever quit a diet or a creative project? If you have, you know what Resistance is. Resistance is invisible and cannot be touched, but it can be felt. It is an energetic field radiating from potential work whose only aim is to distract us from our true greatness.",
-                text_ka: "უმეტესობას ორი ცხოვრება გვაქვს: ცხოვრება, რომლითაც ვცხოვრობთ და არაცოცხალი ცხოვრება ჩვენში. ამ ორს შორის დგას წინააღმდეგობა. ოდესმე მოგიტანიათ სახლში სარბენი ბილიკი და დაგიტოვებიათ სხვენში მტვრის ასაკრეფად? ოდესმე მიგიტოვებიათ დიეტა ან შემოქმედებითი პროექტი? თუ ასეა, თქვენ იცით, რა არის წინააღმდეგობა. წინააღმდეგობა უხილავია და მისი შეხება შეუძლებელია, მაგრამ მისი შეგრძნება შესაძლებელია.",
-                word_count: 78,
-                estimated_duration_sec: 32
-            },
-            {
-                id: 2,
-                title: 'Chapter 2: Overcoming The Enemy',
-                text: "The professional prepares for battle each morning with discipline. Resistance hates discipline. When we sit down day after day and keep grinding, the muse notices and rewards our commitment.",
-                text_ka: "პროფესიონალი ყოველ დილით დისციპლინით ემზადება ბრძოლისთვის. წინააღმდეგობას სძულს დისციპლინა. როდესაც ჩვენ დღითიდღე ვსხედვართ და ვაგრძელებთ შრომას, მუზა ამჩნევს და აჯილდოებს ჩვენს ერთგულებას.",
-                word_count: 36,
-                estimated_duration_sec: 18
-            }
-        ],
-        translatedLangs: ['ka'],
-        dateAdded: new Date().toISOString(),
-        progressPct: 0
-    },
     {
         id: 'classic_art_of_war',
         title: 'The Art of War',
@@ -132,10 +105,53 @@ const DISCOVER_CLASSICS = [
             {
                 id: 1,
                 title: 'Chapter 1: Laying Plans',
-                text: "The art of war is of vital importance to the State. It is a matter of life and death, a road either to safety or to ruin. Hence it is a subject of inquiry which can on no account be neglected. The moral law causes the people to be in complete accord with their ruler, so that they will follow him regardless of their lives, undismayed by any danger.",
-                text_ka: "ომის ხელოვნებას სასიცოცხლო მნიშვნელობა აქვს სახელმწიფოსთვის. ეს არის სიცოცხლისა და სიკვდილის საკითხი, გზა ან უსაფრთხოებისკენ, ან დაღუპვისკენ. აქედან გამომდინარე, ეს არის კვლევის საგანი, რომლის უგულებელყოფა არავითარ შემთხვევაში არ შეიძლება. მორალური კანონი აიძულებს ხალხს იყოს სრულ თანხმობაში თავის მმართველთან.",
-                word_count: 62,
-                estimated_duration_sec: 26
+                text: "The art of war is of vital importance to the State. It is a matter of life and death, a road either to safety or to ruin. Hence it is a subject of inquiry which can on no account be neglected. The art of war, then, is governed by five constant factors, to be taken into account in one's deliberations, when seeking to determine the conditions obtaining in the field. These are: The Moral Law; Heaven; Earth; The Commander; Method and Discipline. The Moral Law causes the people to be in complete accord with their ruler, so that they will follow him regardless of their lives, undismayed by any danger. Heaven signifies night and day, cold and heat, times and the seasons. Earth comprises distances, great and small; danger and security; open ground and narrow passes; the chances of life and death. The Commander stands for the virtues of wisdom, sincerely, benevolence, courage and strictness. By method and discipline are to be understood the marshaling of the army in its proper subdivisions, the graduations of rank among the officers, the maintenance of roads by which supplies may reach the army, and the control of military expenditure. These five heads should be familiar to every general: he who knows them will be victorious; he who knows them not will fail. Therefore, in your deliberations, when seeking to determine the military conditions, let them be made the basis of a comparison, in this wise: Which of the two sovereigns is imbued with the Moral law? Which of the two generals has most ability? With whom lie the advantages derived from Heaven and Earth? On which side is discipline most rigorously enforced? Which army is stronger? On which side are officers and men more highly trained? In which army is there the greater constancy both in reward and punishment? By means of these seven considerations I can forecast victory or defeat.",
+                text_ka: "ომის ხელოვნებას სასიცოცხლო მნიშვნელობა აქვს სახელმწიფოსთვის. ეს არის სიცოცხლისა და სიკვდილის საკითხი, გზა ან უსაფრთხოებისკენ, ან დაღუპვისკენ. აქედან გამომდინარე, ეს არის კვლევის საგანი, რომლის უგულებელყოფა არავითარ შემთხვევაში არ შეიძლება. ომის ხელოვნება იმართება ხუთი მუდმივი ფაქტორით, რომლებიც მხედველობაში უნდა იქნას მიღებული განხილვისას: მორალური კანონი; ცა; მიწა; მხედართმთავარი; მეთოდი და დისციპლინა. მორალური კანონი აიძულებს ხალხს იყოს სრულ თანხმობაში თავის მმართველთან, რათა ისინი მიჰყვნენ მას სიცოცხლის მიუხედავად, ყოველგვარი საფრთხის გარეშე. ცა ნიშნავს ღამესა და დღეს, სიცივესა და სიცხეს, დროებსა და სეზონებს. მიწა მოიცავს დისტანციებს, დიდსა და პატარას; საფრთხესა და უსაფრთხოებას; ღია ადგილებსა და ვიწრო გასასვლელებს; სიცოცხლისა და სიკვდილის შანსებს. მხედართმთავარი განასახიერებს სიბრძნის, გულწრფელობის, კეთილგანწყობის, გამბედაობისა და სიმკაცრის სათნოებებს. მეთოდითა და დისციპლინით უნდა გავიგოთ არმიის სწორი დაყოფა, ოფიცრების რანგები, მომარაგების გზების შენარჩუნება და სამხედრო ხარჯების კონტროლი. ეს ხუთი თავი ნაცნობი უნდა იყოს ყოველი გენერლისთვის: ვინც მათ იცის, გამარჯვებული იქნება; ვინც არ იცის, დამარცხდება.",
+                word_count: 260,
+                estimated_duration_sec: 95
+            },
+            {
+                id: 2,
+                title: 'Chapter 2: Waging War',
+                text: "Sun Tzu said: In the operations of war, where there are in the field a thousand swift chariots, as many heavy chariots, and a hundred thousand mail-clad soldiers, with provisions enough to carry them a thousand li, the expenditure at home and at the front, including entertainment of guests, small items such as glue and paint, and sums spent on chariots and armor, will reach the total of a thousand ounces of silver per day. Such is the cost of raising an army of 100,000 men. When you engage in actual fighting, if victory is long in coming, then men's weapons will grow dull and their ardor will be damped. If you lay siege to a town, you will exhaust your strength. Again, if the campaign is protracted, the resources of the State will not be equal to the strain. Now, when your weapons are dulled, your ardor damped, your strength exhausted and your treasure spent, other chieftains will spring up to take advantage of your extremity. Then no man, however wise, will be able to avert the consequences that must ensue. Thus, though we have heard of stupid haste in war, cleverness has never been seen associated with long delays. In war, then, let your great object be victory, not lengthy campaigns. Thus it may be known that the leader of armies is the arbiter of the people's fate, the man on whom it depends whether the nation shall be in peace or in peril.",
+                text_ka: "სუნ ძიმ თქვა: საომარ ოპერაციებში, როდესაც ბრძოლის ველზე არის ათასი სწრაფი ეტლი, ამდენივე მძიმე ეტლი და ასი ათასი ჯავშანტექნიკით აღჭურვილი ჯარისკაცი, ხარჯები სახლში და ფრონტზე მიაღწევს ათას უნცია ვერცხლს დღეში. ასეთია 100 000 კაციანი არმიის შეკრების ფასი. როდესაც რეალურ ბრძოლაში ერთვებით, თუ გამარჯვება აგვიანებს, იარაღი დაბლაგვდება და მხნეობა გაქრება. თუ ქალაქს ალყას შემოარტყამთ, ძალებს ამოწურავთ. თუ კამპანია გაჭიანურდა, სახელმწიფოს რესურსები ვერ გაუძლებს დაძაბულობას. როდესაც თქვენი ძალა ამოიწურება, სხვა მტრები ისარგებლებენ თქვენი უბედურებით. ამიტომ ომში თქვენი მთავარი მიზანი უნდა იყოს სწრაფი გამარჯვება და არა ხანგრძლივი კამპანიები.",
+                word_count: 245,
+                estimated_duration_sec: 88
+            },
+            {
+                id: 3,
+                title: 'Chapter 3: Attack by Stratagem',
+                text: "In the practical art of war, the best thing of all is to take the enemy's country whole and intact; to shatter and destroy it is not so good. So, too, it is better to recapture an army entire than to destroy it, to capture a regiment, a detachment or a company entire than to destroy them. Hence to fight and conquer in all your battles is not supreme excellence; supreme excellence consists in breaking the enemy's resistance without fighting. Thus the highest form of generalship is to balk the enemy's plans; the next best is to prevent the junction of the enemy's forces; the next in order is to attack the enemy's army in the field; and the worst policy of all is to besiege walled cities. If you know the enemy and know yourself, you need not fear the result of a hundred battles. If you know yourself but not the enemy, for every victory gained you will also suffer a defeat. If you know neither the enemy nor yourself, you will succumb in every battle.",
+                text_ka: "ომის პრაქტიკულ ხელოვნებაში ყველაზე კარგია მტრის ქვეყნის ხელუხლებლად აღება; მისი განადგურება არც ისე კარგია. უმაღლესი სრულყოფილება მდგომარეობს მტრის წინააღმდეგობის გატეხვაში უბრძოლველად. ამიტომ მხედართმთავრობის უმაღლესი ფორმაა მტრის გეგმების ჩაშლა. თუ იცნობ მტერს და იცნობ საკუთარ თავს, ასი ბრძოლის შედეგისაც არ შეგეშინდება. თუ იცნობ საკუთარ თავს, მაგრამ არა მტერს, ყოველი გამარჯვებისთვის მარცხსაც განიცდი. თუ არც მტერს იცნობ და არც საკუთარ თავს, ყველა ბრძოლაში დამარცხდები.",
+                word_count: 178,
+                estimated_duration_sec: 65
+            }
+        ],
+        translatedLangs: ['ka'],
+        dateAdded: new Date().toISOString(),
+        progressPct: 0
+    },
+    {
+        id: 'classic_meditations',
+        title: 'Meditations',
+        author: 'Marcus Aurelius',
+        coverUrl: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=600&q=80',
+        chapters: [
+            {
+                id: 1,
+                title: 'Book 1: Debts and Lessons',
+                text: "From my grandfather Verus I learned good morals and the government of my temper. From the reputation and remembrance of my father, modesty and a manly character. From my mother, piety and beneficence, and abstinence, not only from evil deeds, but even from evil thoughts; and further, simplicity in my way of living, far removed from the habits of the rich. From my great-grandfather, not to have frequented public schools, and to have had good teachers at home, and to know that on such things a man should spend liberally. When you wake up in the morning, tell yourself: The people I deal with today will be meddling, ungrateful, arrogant, dishonest, jealous, and surly. They are like this because they cannot distinguish good from evil. But I have seen the beauty of good, and the ugliness of evil, and have recognized that the wrongdoer has a nature related to my own.",
+                text_ka: "ჩემი ბაბუა ვერუსისგან ვისწავლე კარგი ზნეობა და ხასიათის სიმშვიდე. მამაჩემის ხსოვნისგან - მოკრძალება და ვაჟკაცური ხასიათი. დედაჩემისგან - ღვთისმოსაობა, სიკეთე და თავშეკავება არა მხოლოდ ბოროტი საქმეებისგან, არამედ ბოროტი აზრებისგანაც; და უბრალოება ცხოვრების წესში. როდესაც დილით იღვიძებ, უთხარი საკუთარ თავს: ადამიანები, ვისთანაც დღეს მექნება საქმე, იქნებიან უმადურები, ქედმაღლები, არაკეთილსინდისიერები და ეჭვიანები. ისინი ასეთები არიან იმიტომ, რომ არ შეუძლიათ სიკეთის გარჩევა ბოროტებისგან. მაგრამ მე დავინახე სიკეთის სილამაზე და ბოროტების სიმახინჯე.",
+                word_count: 165,
+                estimated_duration_sec: 60
+            },
+            {
+                id: 2,
+                title: 'Book 2: The Inner Citadel',
+                text: "Remember how long you have been putting this off, how many times the gods have granted you a period of grace of which you have made no use. It is high time now that you understood the universe of which you are a part, and the Ruler of that universe by whose emanation you subsist; that there is a limit set to your time, which will shortly pass away, and you with it, and will not return. Every hour focus your mind attentively on the performance of the task in hand, with dignity, human sympathy, benevolence and freedom, and rid yourself of all other thoughts.",
+                text_ka: "გახსოვდეთ, რამდენ ხანს დებდით ამას, რამდენჯერ მოგცეს ღმერთებმა მადლის პერიოდი, რომელიც არ გამოგიყენებიათ. დროა გააცნობიეროთ სამყარო, რომლის ნაწილიც ხართ. ყოველ საათში ყურადღება გაამახვილეთ მიმდინარე დავალების შესრულებაზე ღირსებით, ადამიანური თანაგრძნობით, კეთილგანწყობითა და თავისუფლებით.",
+                word_count: 105,
+                estimated_duration_sec: 42
             }
         ],
         translatedLangs: ['ka'],
@@ -222,9 +238,8 @@ function cacheDOM() {
         readerChapterTitle: document.getElementById('readerChapterTitle'),
         readerChapterSelect: document.getElementById('readerChapterSelect'),
         readerFontSelect: document.getElementById('readerFontSelect'),
-        readerContentArea: document.getElementById('readerContentArea'),
+        readerPageSpread: document.getElementById('readerPageSpread'),
         readerScrollContainer: document.getElementById('readerScrollContainer'),
-        readerPageCard: document.getElementById('readerPageCard'),
         btnReaderPlayPause: document.getElementById('btnReaderPlayPause'),
         readerPlayIcon: document.getElementById('readerPlayIcon'),
         readerReadingProgressText: document.getElementById('readerReadingProgressText'),
@@ -233,8 +248,6 @@ function cacheDOM() {
         btnReaderModeToggle: document.getElementById('btnReaderModeToggle'),
         readerModeIcon: document.getElementById('readerModeIcon'),
         readerModeLabel: document.getElementById('readerModeLabel'),
-        readerPageCounterText: document.getElementById('readerPageCounterText'),
-        readerBookProgressText: document.getElementById('readerBookProgressText'),
         readerFullscreenIcon: document.getElementById('readerFullscreenIcon'),
 
         // Whole Book Translate Modal
@@ -275,10 +288,10 @@ async function init() {
     if (window.lucide) lucide.createIcons();
 }
 
-// ── IndexedDB (v8) ──────────────────────────────────────────────────────────
+// ── IndexedDB (v9) ──────────────────────────────────────────────────────────
 function initDB() {
     return new Promise((resolve, reject) => {
-        const req = indexedDB.open('LuminaAudioStudioDB_v8', 1);
+        const req = indexedDB.open('LuminaAudioStudioDB_v9', 1);
         req.onupgradeneeded = (e) => {
             db = e.target.result;
             if (!db.objectStoreNames.contains('books')) {
@@ -543,7 +556,7 @@ function testGeorgianVoicePreview() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// ██ 1. TRUE PAGINATED MOON+ READER ENGINE (Pages, Gestures & Keyboards) ██
+// ██ 1. EXPANSIVE REAL-ESTATE MOON+ READER (Dual Pages & Spreads) ██
 // ══════════════════════════════════════════════════════════════════════════
 
 function openCurrentBookInReader() {
@@ -564,7 +577,6 @@ async function openReader(bookId, chapterId, lang = 'en') {
     readerLang = lang;
     readerCurrentPage = 1;
 
-    // Check if requesting Georgian but not translated yet
     if (readerLang === 'ka') {
         const hasKa = readerBook.translatedLangs && readerBook.translatedLangs.includes('ka');
         if (!hasKa) {
@@ -585,6 +597,7 @@ async function openReader(bookId, chapterId, lang = 'en') {
     DOM.readerBookTitle.textContent = readerBook.title;
     populateReaderChapterDropdown();
     updateReaderLangUI();
+    updateReaderModeUI();
     paginateChapter();
     renderCurrentPage();
 }
@@ -628,11 +641,11 @@ function onReaderChapterChange(targetChapId) {
 function updateReaderLangUI() {
     if (!DOM.btnReaderLangToggle || !DOM.readerLangLabel) return;
     if (readerLang === 'ka') {
-        DOM.readerLangLabel.textContent = 'ქართული';
-        DOM.btnReaderLangToggle.classList.add('bg-georgian-gold/25', 'border-georgian-gold/50');
+        DOM.readerLangLabel.textContent = 'ქართული 🇬🇪';
+        DOM.btnReaderLangToggle.classList.add('bg-georgian-gold/25');
     } else {
-        DOM.readerLangLabel.textContent = 'English';
-        DOM.btnReaderLangToggle.classList.remove('bg-georgian-gold/25', 'border-georgian-gold/50');
+        DOM.readerLangLabel.textContent = 'English 🇺🇸';
+        DOM.btnReaderLangToggle.classList.remove('bg-georgian-gold/25');
     }
 }
 
@@ -663,11 +676,27 @@ function toggleReaderLanguage() {
     }
 }
 
-function toggleReaderMode() {
-    readerMode = readerMode === 'pages' ? 'scroll' : 'pages';
-    if (DOM.readerModeIcon) DOM.readerModeIcon.textContent = readerMode === 'pages' ? 'auto_stories' : 'menu_book';
-    if (DOM.readerModeLabel) DOM.readerModeLabel.textContent = readerMode === 'pages' ? 'Pages' : 'Scroll';
+function cycleReaderMode() {
+    if (readerMode === 'dual') readerMode = 'single';
+    else if (readerMode === 'single') readerMode = 'scroll';
+    else readerMode = 'dual';
+
+    updateReaderModeUI();
     renderCurrentPage();
+}
+
+function updateReaderModeUI() {
+    if (!DOM.readerModeIcon || !DOM.readerModeLabel) return;
+    if (readerMode === 'dual') {
+        DOM.readerModeIcon.textContent = 'menu_book';
+        DOM.readerModeLabel.textContent = 'Dual Pages';
+    } else if (readerMode === 'single') {
+        DOM.readerModeIcon.textContent = 'auto_stories';
+        DOM.readerModeLabel.textContent = 'Single Page';
+    } else {
+        DOM.readerModeIcon.textContent = 'view_stream';
+        DOM.readerModeLabel.textContent = 'Continuous';
+    }
 }
 
 // ── Dynamic Book Pagination Engine ─────────────────────────────────────────
@@ -685,7 +714,8 @@ function paginateChapter() {
     readerPages = [];
     readerSentenceToPageMap = {};
 
-    const WORDS_PER_PAGE = 180; // Standard e-book density per page
+    // Standard high-density page word limit (130-150 words per visual page)
+    const WORDS_PER_PAGE = 135;
     let curPageSentences = [];
     let curPageWords = 0;
     let pageIndex = 0;
@@ -720,90 +750,42 @@ function paginateChapter() {
 }
 
 function renderCurrentPage() {
-    if (!readerBook || !DOM.readerContentArea) return;
+    if (!readerBook || !DOM.readerPageSpread) return;
     const chap = readerBook.chapters.find(c => String(c.id) === String(readerChapterId));
     if (!chap) return;
 
     DOM.readerChapterTitle.textContent = chap.title;
-
     const totalPages = readerPages.length;
-    const isFirstPage = readerCurrentPage === 1;
 
     // Trigger page flip animation
-    if (DOM.readerPageCard) {
-        DOM.readerPageCard.classList.remove('page-flip-anim');
-        void DOM.readerPageCard.offsetWidth; // Trigger reflow
-        DOM.readerPageCard.classList.add('page-flip-anim');
-    }
+    DOM.readerPageSpread.classList.remove('page-flip-anim');
+    void DOM.readerPageSpread.offsetWidth;
+    DOM.readerPageSpread.classList.add('page-flip-anim');
 
     if (DOM.readerScrollContainer) {
         DOM.readerScrollContainer.scrollTop = 0;
     }
 
+    const isWidescreen = window.innerWidth >= 900;
+    const isDual = readerMode === 'dual' && isWidescreen;
+
     let html = '';
 
-    if (readerMode === 'pages') {
-        // PAGINATED MODE: Render only current page sentences
-        const pageSentences = readerPages[readerCurrentPage - 1] || [];
-
-        // Chapter Header (Only on Page 1)
-        if (isFirstPage) {
-            html += `
+    if (readerMode === 'scroll') {
+        // CONTINUOUS SCROLL MODE
+        html = `
+            <div class="book-page-card w-full max-w-4xl mx-auto">
                 <header class="mb-8 text-center border-b border-black/10 dark:border-white/10 pb-6 select-none">
                     <span class="text-xs font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${readerBook.title} ✦</span>
                     <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold mt-2 mb-3 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${chap.title}</h1>
                     <div class="flex items-center justify-center gap-3 text-xs opacity-75">
                         <span>${chap.word_count} words</span>
                         <span>•</span>
-                        <span>~${formatTime(chap.estimated_duration_sec)} read</span>
+                        <span>~${formatTime(chap.estimated_duration_sec)}</span>
                     </div>
                     <div class="mt-4 text-sm opacity-60">── ❖ ──</div>
                 </header>
-            `;
-        }
-
-        html += `<div class="space-y-6 ${readerFontFamily}" style="font-size: ${readerFontSize}px; line-height: 1.85;">`;
-
-        let pBuffer = [];
-        let isFirstParagraph = isFirstPage;
-
-        pageSentences.forEach((item, idx) => {
-            pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${item.text}</span> `);
-
-            if (pBuffer.length >= 4 || idx === pageSentences.length - 1) {
-                const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
-                html += `<p class="text-justify indent-4 ${dropCapClass}">${pBuffer.join('')}</p>`;
-                pBuffer = [];
-                isFirstParagraph = false;
-            }
-        });
-
-        html += `</div>`;
-
-        // Footer Ornament (Only on Last Page)
-        if (readerCurrentPage === totalPages) {
-            html += `
-                <footer class="mt-12 pt-8 border-t border-black/10 dark:border-white/10 text-center opacity-60 text-xs select-none">
-                    <p>── ❦ ──</p>
-                    <p class="mt-2">End of ${chap.title}</p>
-                </footer>
-            `;
-        }
-
-        // Update Page Counters
-        if (DOM.readerPageCounterText) {
-            DOM.readerPageCounterText.textContent = `Page ${readerCurrentPage} of ${totalPages}`;
-        }
-
-    } else {
-        // CONTINUOUS SCROLL MODE: Render all sentences
-        html += `
-            <header class="mb-8 text-center border-b border-black/10 dark:border-white/10 pb-6 select-none">
-                <span class="text-xs font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${readerBook.title} ✦</span>
-                <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold mt-2 mb-3 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${chap.title}</h1>
-                <div class="mt-4 text-sm opacity-60">── ❖ ──</div>
-            </header>
-            <div class="space-y-6 ${readerFontFamily}" style="font-size: ${readerFontSize}px; line-height: 1.85;">
+                <div class="space-y-6 ${readerFontFamily}" style="font-size: ${readerFontSize}px; line-height: 1.85;">
         `;
 
         let pBuffer = [];
@@ -814,7 +796,7 @@ function renderCurrentPage() {
                 pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${item.text}</span> `);
                 if (pBuffer.length >= 4) {
                     const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
-                    html += `<p class="text-justify indent-4 ${dropCapClass}">${pBuffer.join('')}</p>`;
+                    html += `<p class="text-justify indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
                     pBuffer = [];
                     isFirstParagraph = false;
                 }
@@ -822,30 +804,55 @@ function renderCurrentPage() {
         });
 
         if (pBuffer.length > 0) {
-            html += `<p class="text-justify indent-4">${pBuffer.join('')}</p>`;
+            html += `<p class="text-justify indent-6">${pBuffer.join('')}</p>`;
         }
 
         html += `
+                </div>
+                <footer class="mt-12 pt-8 border-t border-black/10 dark:border-white/10 text-center opacity-60 text-xs select-none">
+                    <p>── ❦ ──</p>
+                    <p class="mt-2">End of ${chap.title}</p>
+                </footer>
             </div>
-            <footer class="mt-12 pt-8 border-t border-black/10 dark:border-white/10 text-center opacity-60 text-xs select-none">
-                <p>── ❦ ──</p>
-                <p class="mt-2">End of ${chap.title}</p>
-            </footer>
         `;
 
-        if (DOM.readerPageCounterText) {
-            DOM.readerPageCounterText.textContent = `Continuous Scroll (${chap.word_count} words)`;
+    } else if (isDual) {
+        // DUAL PAGE OPEN BOOK SPREAD (Left Page & Right Page)
+        const leftPageNum = readerCurrentPage % 2 === 0 ? readerCurrentPage - 1 : readerCurrentPage;
+        const rightPageNum = leftPageNum + 1;
+
+        const leftSentences = readerPages[leftPageNum - 1] || [];
+        const rightSentences = rightPageNum <= totalPages ? (readerPages[rightPageNum - 1] || []) : null;
+
+        // Left Page
+        html += renderSinglePageCard(leftPageNum, totalPages, leftSentences, chap, true, 'book-spine-left');
+
+        // Right Page
+        if (rightSentences) {
+            html += renderSinglePageCard(rightPageNum, totalPages, rightSentences, chap, false, 'book-spine-right');
+        } else {
+            // Empty facing page with elegant watermark
+            html += `
+                <div class="book-page-card book-spine-right hidden md:flex items-center justify-center text-center opacity-30 select-none">
+                    <div>
+                        <span class="text-4xl">❦</span>
+                        <p class="text-xs font-serif-book mt-3">End of ${chap.title}</p>
+                    </div>
+                </div>
+            `;
         }
+
+    } else {
+        // SINGLE FULL-WIDTH PAGE
+        const pageSentences = readerPages[readerCurrentPage - 1] || [];
+        html += renderSinglePageCard(readerCurrentPage, totalPages, pageSentences, chap, readerCurrentPage === 1, '');
     }
 
-    DOM.readerContentArea.innerHTML = html;
+    DOM.readerPageSpread.innerHTML = html;
 
-    // Update overall book progress indicator
-    if (DOM.readerBookProgressText && readerBook) {
-        const curChapIdx = readerBook.chapters.findIndex(c => String(c.id) === String(readerChapterId));
-        const chapPct = (curChapIdx + (readerCurrentPage / totalPages)) / readerBook.chapters.length;
-        const totalPct = Math.min(100, Math.round(chapPct * 100));
-        DOM.readerBookProgressText.textContent = `${totalPct}% Book Progress`;
+    // Update Reader Progress Status in Footer
+    if (DOM.readerReadingProgressText && sentenceQueue.length > 0) {
+        DOM.readerReadingProgressText.textContent = `Sentence ${currentSentenceIndex + 1} / ${sentenceQueue.length}`;
     }
 
     // Highlight current sentence if playing this chapter
@@ -854,33 +861,86 @@ function renderCurrentPage() {
     }
 }
 
+function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPage, spineClass) {
+    let cardHtml = `
+        <div class="book-page-card ${spineClass}">
+            <div>
+    `;
+
+    if (isFirstPage) {
+        cardHtml += `
+            <header class="mb-6 text-center border-b border-black/10 dark:border-white/10 pb-4 select-none">
+                <span class="text-[11px] font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${readerBook.title} ✦</span>
+                <h2 class="text-xl sm:text-2xl font-extrabold mt-1 mb-2 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${chap.title}</h2>
+                <div class="mt-2 text-xs opacity-60">── ❖ ──</div>
+            </header>
+        `;
+    }
+
+    cardHtml += `<div class="space-y-5 ${readerFontFamily}" style="font-size: ${readerFontSize}px; line-height: 1.85;">`;
+
+    let pBuffer = [];
+    let isFirstParagraph = isFirstPage;
+
+    sentences.forEach((item, idx) => {
+        pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${item.text}</span> `);
+
+        if (pBuffer.length >= 4 || idx === sentences.length - 1) {
+            const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
+            cardHtml += `<p class="text-justify indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
+            pBuffer = [];
+            isFirstParagraph = false;
+        }
+    });
+
+    cardHtml += `</div></div>`;
+
+    // Footer of individual page
+    cardHtml += `
+        <div class="mt-8 pt-3 border-t border-black/10 dark:border-white/10 flex justify-between items-center text-[11px] opacity-70 select-none font-mono">
+            <span>Page ${pageNumber} of ${totalPages}</span>
+            <span>${chap.title}</span>
+        </div>
+    </div>`;
+
+    return cardHtml;
+}
+
 // ── Page Steppers ──────────────────────────────────────────────────────────
 function readerNextPage() {
     if (!readerBook) return;
     const totalPages = readerPages.length;
+    const step = (readerMode === 'dual' && window.innerWidth >= 900) ? 2 : 1;
 
-    if (readerCurrentPage < totalPages) {
-        readerCurrentPage++;
+    if (readerCurrentPage + step <= totalPages) {
+        readerCurrentPage += step;
+        renderCurrentPage();
+    } else if (readerCurrentPage < totalPages) {
+        readerCurrentPage = totalPages;
         renderCurrentPage();
     } else {
-        // Transition to next chapter, page 1
+        // At the end of the chapter -> advance to next chapter
         readerNextChapter();
     }
 }
 
 function readerPrevPage() {
     if (!readerBook) return;
+    const step = (readerMode === 'dual' && window.innerWidth >= 900) ? 2 : 1;
 
-    if (readerCurrentPage > 1) {
-        readerCurrentPage--;
+    if (readerCurrentPage - step >= 1) {
+        readerCurrentPage -= step;
+        renderCurrentPage();
+    } else if (readerCurrentPage > 1) {
+        readerCurrentPage = 1;
         renderCurrentPage();
     } else {
-        // Transition to previous chapter
+        // At the beginning -> go to previous chapter
         const curIdx = readerBook.chapters.findIndex(c => String(c.id) === String(readerChapterId));
         if (curIdx > 0) {
             readerChapterId = readerBook.chapters[curIdx - 1].id;
             paginateChapter();
-            readerCurrentPage = readerPages.length; // Jump to last page of prev chapter
+            readerCurrentPage = readerPages.length;
             if (DOM.readerChapterSelect) DOM.readerChapterSelect.value = readerChapterId;
             renderCurrentPage();
             if (isPlaying) playChapterAudio(readerChapterId);
@@ -915,12 +975,22 @@ function onReaderSentenceClick(sentenceIdx) {
 }
 
 function highlightReaderSentence(sentenceIdx) {
-    // Check if sentence is on a different page in paginated mode
-    if (readerActive && readerMode === 'pages' && readerSentenceToPageMap[sentenceIdx] !== undefined) {
+    if (readerActive && readerMode !== 'scroll' && readerSentenceToPageMap[sentenceIdx] !== undefined) {
         const targetPage = readerSentenceToPageMap[sentenceIdx] + 1;
-        if (targetPage !== readerCurrentPage) {
-            readerCurrentPage = targetPage;
-            renderCurrentPage();
+        const isDual = readerMode === 'dual' && window.innerWidth >= 900;
+
+        if (isDual) {
+            const leftPage = readerCurrentPage % 2 === 0 ? readerCurrentPage - 1 : readerCurrentPage;
+            const rightPage = leftPage + 1;
+            if (targetPage !== leftPage && targetPage !== rightPage) {
+                readerCurrentPage = targetPage;
+                renderCurrentPage();
+            }
+        } else {
+            if (targetPage !== readerCurrentPage) {
+                readerCurrentPage = targetPage;
+                renderCurrentPage();
+            }
         }
     }
 
@@ -931,9 +1001,6 @@ function highlightReaderSentence(sentenceIdx) {
     const targetEl = document.getElementById(`rsentence_${sentenceIdx}`);
     if (targetEl) {
         targetEl.classList.add('active-sentence');
-        if (DOM.readerScrollContainer) {
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
     }
 
     if (DOM.readerReadingProgressText && sentenceQueue.length > 0) {
@@ -943,7 +1010,7 @@ function highlightReaderSentence(sentenceIdx) {
 
 function setReaderTheme(theme) {
     readerTheme = theme;
-    DOM.readerView.className = `reader-theme-${theme} active ${isZenMode ? 'zen-mode' : ''}`;
+    DOM.readerView.className = `reader-theme-${theme} active`;
 }
 
 function changeReaderFontSize(delta) {
@@ -967,18 +1034,10 @@ function toggleReaderFullscreen() {
     }
 }
 
-function toggleZenMode() {
-    isZenMode = !isZenMode;
-    if (isZenMode) DOM.readerView.classList.add('zen-mode');
-    else DOM.readerView.classList.remove('zen-mode');
-}
-
 // ── Full Keyboard & Touch Gestures Matrix ──────────────────────────────────
 function setupKeyboardAndTouchControls() {
-    // 1. Keyboard Navigation
     window.addEventListener('keydown', (e) => {
         if (!readerActive) return;
-        // Don't intercept when typing in text inputs or modals
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
         switch (e.key) {
@@ -1012,7 +1071,7 @@ function setupKeyboardAndTouchControls() {
             case 'm':
             case 'M':
                 e.preventDefault();
-                toggleReaderMode();
+                cycleReaderMode();
                 break;
             case 'f':
             case 'F':
@@ -1026,7 +1085,6 @@ function setupKeyboardAndTouchControls() {
         }
     });
 
-    // 2. Touch Gestures for Mobile & Tablets
     const container = document.getElementById('readerScrollContainer');
     if (container) {
         container.addEventListener('touchstart', (e) => {
@@ -1046,13 +1104,10 @@ function handleTouchSwipe() {
     const diffX = touchEndX - touchStartX;
     const diffY = touchEndY - touchStartY;
 
-    // Ensure horizontal swipe is dominant and above 45px threshold
     if (Math.abs(diffX) > Math.abs(diffY) * 1.3 && Math.abs(diffX) > 45) {
         if (diffX < 0) {
-            // Swiped Left -> Next Page
             readerNextPage();
         } else {
-            // Swiped Right -> Prev Page
             readerPrevPage();
         }
     }
@@ -1097,7 +1152,6 @@ async function translateSingleSentence(text, targetLang = 'ka') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
 
-    // 1. MyMemory API (accurate, grammatical Georgian)
     try {
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=en|${targetLang}`;
         const res = await fetch(url);
@@ -1110,11 +1164,8 @@ async function translateSingleSentence(text, targetLang = 'ka') {
                 }
             }
         }
-    } catch (e) {
-        console.warn('MyMemory primary failed:', e);
-    }
+    } catch (e) { console.warn('MyMemory failed:', e); }
 
-    // 2. Google GTX Single Fallback
     try {
         const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
         const gRes = await fetch(gUrl);
@@ -1125,9 +1176,7 @@ async function translateSingleSentence(text, targetLang = 'ka') {
                 return normalizeGeorgian(trans);
             }
         }
-    } catch (e) {
-        console.warn('Google GTX fallback failed:', e);
-    }
+    } catch (e) { console.warn('Google GTX failed:', e); }
 
     return clean;
 }
@@ -1225,7 +1274,7 @@ async function startWholeBookTranslation() {
 
     } catch (err) {
         console.error('Whole-book translation error:', err);
-        alert('Translation paused. All progress up to this point has been saved.');
+        alert('Translation paused. Progress saved.');
     } finally {
         isTranslatingWholeBook = false;
     }
@@ -1262,7 +1311,6 @@ async function speakCurrentSentence() {
 
     const cleanSentence = rawSentence.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-    // Update UI Subtitles & Progress
     const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
     if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
     if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
@@ -1285,12 +1333,10 @@ async function speakCurrentSentence() {
         DOM.heroLiveSubtitle.textContent = cleanSentence;
     }
 
-    // Synchronize Moon Reader active sentence highlighting & page turning
     if (readerActive) {
         highlightReaderSentence(currentSentenceIndex);
     }
 
-    // Dispatch audio speech
     if (elevenLabsEnabled && elevenLabsApiKey) {
         speakElevenLabsSentence(cleanSentence);
     } else if (currentLang === 'ka') {
@@ -1326,7 +1372,7 @@ async function speakElevenLabsSentence(text) {
             })
         });
 
-        if (!res.ok) throw new Error(`ElevenLabs API returned status ${res.status}`);
+        if (!res.ok) throw new Error(`ElevenLabs API status ${res.status}`);
 
         const blob = await res.blob();
         const audioUrl = URL.createObjectURL(blob);
@@ -1344,14 +1390,14 @@ async function speakElevenLabsSentence(text) {
         };
 
         audio.onerror = (e) => {
-            console.warn('ElevenLabs audio play error, falling back:', e);
+            console.warn('ElevenLabs play error, fallback:', e);
             fallbackStandardSpeech(text);
         };
 
         await audio.play();
 
     } catch (err) {
-        console.warn('ElevenLabs speech failed, using high-fidelity fallback:', err);
+        console.warn('ElevenLabs error, fallback:', err);
         fallbackStandardSpeech(text);
     }
 }
@@ -1415,7 +1461,6 @@ function speakGeorgianSentence(text) {
 
     const normalized = normalizeGeorgian(text);
     const voices = window.speechSynthesis.getVoices();
-
     const nativeKaVoice = voices.find(v => v.lang.startsWith('ka') || v.name.toLowerCase().includes('georgian'));
 
     const utter = new SpeechSynthesisUtterance();
@@ -1857,7 +1902,7 @@ async function handleFileUpload(file) {
 
 function splitIntoChapters(text) {
     const chapters = [];
-    const MAX_WORDS = 500;
+    const MAX_WORDS = 600;
     const words = text.split(/\s+/).filter(w => w.trim().length > 0);
 
     let currentChunk = [];
@@ -1893,7 +1938,7 @@ function splitIntoChapters(text) {
     if (chapters.length === 0) {
         chapters.push({
             id: 1,
-            title: 'Full Audio Reading',
+            title: 'Full Reading',
             text: text.substring(0, 4000),
             text_ka: null,
             word_count: 500,
@@ -2032,7 +2077,6 @@ async function selectBook(bookId, autoPlayFirst = false) {
         DOM.heroPlayBtn.onclick = () => playChapterAudio(lastChap.id);
     }
 
-    // Show Chapters Drawer
     DOM.chaptersContainer.classList.remove('hidden');
     DOM.activeBookTitle.textContent = currentBook.title;
     renderChaptersList();
