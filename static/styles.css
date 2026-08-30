@@ -1,12 +1,58 @@
-﻿/* Custom styling for AudioRead Studio */
+/* AudioRead Studio - Ultra-Modern Glassmorphic Dark Design System */
 
-@keyframes spinSlow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+:root {
+    --glass-bg: rgba(13, 18, 30, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-hover-border: rgba(99, 102, 241, 0.45);
+    --neon-indigo: #6366f1;
+    --neon-cyan: #06b6d4;
+    --neon-purple: #a855f7;
 }
 
-.animate-spin-slow {
-    animation: spinSlow 12s linear infinite;
+/* Ambient Radial Mesh Background */
+body {
+    background-color: #060911;
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.12) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 60%);
+    background-attachment: fixed;
+}
+
+/* Glass Card */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+}
+
+.glass-panel-hover {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel-hover:hover {
+    border-color: var(--glass-hover-border);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px -10px rgba(99, 102, 241, 0.25);
+}
+
+/* Glowing Button */
+.btn-neon-glow {
+    position: relative;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.35);
+    transition: all 0.25s ease;
+}
+
+.btn-neon-glow:hover {
+    box-shadow: 0 0 30px rgba(124, 58, 237, 0.6);
+    transform: translateY(-1px);
+}
+
+.btn-neon-glow:active {
+    transform: translateY(1px) scale(0.98);
 }
 
 /* Custom Scrollbar */
@@ -16,7 +62,7 @@
 }
 
 ::-webkit-scrollbar-track {
-    background: #090d16;
+    background: #060911;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -28,11 +74,13 @@
     background: #334155;
 }
 
-/* Slider styling */
+/* Custom Range Slider */
 input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
     outline: none;
+    background: #1e293b;
+    border-radius: 9999px;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -43,12 +91,12 @@ input[type="range"]::-webkit-slider-thumb {
     border-radius: 50%;
     background: #6366f1;
     cursor: pointer;
-    box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.8);
     transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.25);
+    transform: scale(1.3);
     background: #818cf8;
 }
 
@@ -58,20 +106,38 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 50%;
     background: #6366f1;
     cursor: pointer;
-    box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.8);
 }
 
-/* Glassmorphism Card Hover */
-.chapter-card {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* Animated Soundwave Equalizer */
+.equalizer {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 16px;
 }
 
-.chapter-card:hover {
-    border-color: rgba(99, 102, 241, 0.4);
-    background-color: rgba(30, 41, 59, 0.5);
+.equalizer-bar {
+    width: 3px;
+    background: #818cf8;
+    border-radius: 2px;
+    animation: eqPulse 1.2s ease-in-out infinite alternate;
 }
 
+.equalizer-bar:nth-child(1) { height: 40%; animation-delay: 0.1s; }
+.equalizer-bar:nth-child(2) { height: 90%; animation-delay: 0.3s; }
+.equalizer-bar:nth-child(3) { height: 60%; animation-delay: 0.2s; }
+.equalizer-bar:nth-child(4) { height: 100%; animation-delay: 0.4s; }
+.equalizer-bar:nth-child(5) { height: 50%; animation-delay: 0.15s; }
+
+@keyframes eqPulse {
+    0% { height: 20%; }
+    100% { height: 100%; }
+}
+
+/* Active Chapter Highlight */
 .chapter-card.active-playing {
-    border-color: rgba(99, 102, 241, 0.8);
-    background-color: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.7) !important;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(13, 18, 30, 0.85) 100%) !important;
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.2) !important;
 }

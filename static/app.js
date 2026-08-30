@@ -1,50 +1,22 @@
-// AudioRead Studio - Seamless Dual-Buffer Audio Engine & Ultra-Natural Neural Voices
+// AudioRead Studio Pro - Ultra-Reliable In-Browser Speech Engine & Background Generator
 
-// State
 let currentBook = null;
-let voices = [];
-let eventSource = null;
 let currentPlayingChapterId = null;
 let playbackSpeeds = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 let currentSpeedIndex = 1;
 let activeModalChapterId = null;
-let isBackendAvailable = false;
-let audioTimer = null;
+let isPreparingAll = false;
+
+// Player State
+let isPlaying = false;
+let isPaused = false;
+let sentenceQueue = [];
+let currentSentenceIndex = 0;
 let secondsElapsed = 0;
+let audioTimer = null;
 
-// Curated Ultra-Natural Studio Voices Catalog
-const NATURAL_STUDIO_VOICES = [
-    // US English
-    { id: 'en:us:natural', name: '🌟 Christopher (Authoritative & Deep)', lang: 'en-US', gender: 'Male', accent: 'US', provider: 'studio' },
-    { id: 'en:us:aria', name: '🌟 Aria (Expressive & Warm Female)', lang: 'en-US', gender: 'Female', accent: 'US', provider: 'studio' },
-    { id: 'en:us:guy', name: '🌟 Guy (Friendly & Natural Conversational)', lang: 'en-US', gender: 'Male', accent: 'US', provider: 'studio' },
-    { id: 'en:us:jenny', name: '🌟 Jenny (Clear & Professional Female)', lang: 'en-US', gender: 'Female', accent: 'US', provider: 'studio' },
-    { id: 'en:us:andrew', name: '🌟 Andrew (Rich & Smooth Male)', lang: 'en-US', gender: 'Male', accent: 'US', provider: 'studio' },
-    { id: 'en:us:ava', name: '🌟 Ava (Fluid & Melodic Female)', lang: 'en-US', gender: 'Female', accent: 'US', provider: 'studio' },
-    { id: 'en:us:brian', name: '🌟 Brian (Deep Resonant Narrator)', lang: 'en-US', gender: 'Male', accent: 'US', provider: 'studio' },
-    
-    // British & Commonwealth
-    { id: 'en:gb:ryan', name: '🌟 Ryan (Classic British Narrator)', lang: 'en-GB', gender: 'Male', accent: 'UK', provider: 'studio' },
-    { id: 'en:gb:sonia', name: '🌟 Sonia (Classic British Storyteller)', lang: 'en-GB', gender: 'Female', accent: 'UK', provider: 'studio' },
-    { id: 'en:gb:libby', name: '🌟 Libby (Warm British Female)', lang: 'en-GB', gender: 'Female', accent: 'UK', provider: 'studio' },
-    { id: 'en:au:natasha', name: '🌟 Natasha (Australian Female)', lang: 'en-AU', gender: 'Female', accent: 'AU', provider: 'studio' },
-    { id: 'en:au:william', name: '🌟 William (Australian Male)', lang: 'en-AU', gender: 'Male', accent: 'AU', provider: 'studio' },
-    { id: 'en:in:prabhat', name: '🌟 Prabhat (Indian English Male)', lang: 'en-IN', gender: 'Male', accent: 'IN', provider: 'studio' },
-    { id: 'en:in:neerja', name: '🌟 Neerja (Indian English Female)', lang: 'en-IN', gender: 'Female', accent: 'IN', provider: 'studio' },
-
-    // International Natural Voices
-    { id: 'es:es:natural', name: 'Spanish - Álvaro (Spain)', lang: 'es-ES', gender: 'Male', accent: 'ES', provider: 'studio' },
-    { id: 'es:mx:natural', name: 'Spanish - Jorge (Mexico)', lang: 'es-MX', gender: 'Male', accent: 'MX', provider: 'studio' },
-    { id: 'fr:fr:natural', name: 'French - Henri (France)', lang: 'fr-FR', gender: 'Male', accent: 'FR', provider: 'studio' },
-    { id: 'de:de:natural', name: 'German - Conrad (Germany)', lang: 'de-DE', gender: 'Male', accent: 'DE', provider: 'studio' },
-    { id: 'it:it:natural', name: 'Italian - Diego (Italy)', lang: 'it-IT', gender: 'Male', accent: 'IT', provider: 'studio' },
-    { id: 'pt:br:natural', name: 'Portuguese - Antonio (Brazil)', lang: 'pt-BR', gender: 'Male', accent: 'BR', provider: 'studio' },
-    { id: 'ru:ru:natural', name: 'Russian - Dmitry (Russia)', lang: 'ru-RU', gender: 'Male', accent: 'RU', provider: 'studio' },
-    { id: 'ja:jp:natural', name: 'Japanese - Keita (Japan)', lang: 'ja-JP', gender: 'Male', accent: 'JP', provider: 'studio' },
-    { id: 'zh:cn:natural', name: 'Chinese - Yunxi (Mandarin)', lang: 'zh-CN', gender: 'Male', accent: 'CN', provider: 'studio' },
-    { id: 'ar:sa:natural', name: 'Arabic - Hamed (Saudi)', lang: 'ar-SA', gender: 'Male', accent: 'SA', provider: 'studio' },
-    { id: 'hi:in:natural', name: 'Hindi - Madhur (India)', lang: 'hi-IN', gender: 'Male', accent: 'IN', provider: 'studio' }
-];
+// Global Utterance reference to prevent Chromium garbage collection bug
+window._activeUtterance = null;
 
 // DOM Elements
 const dropZone = document.getElementById('dropZone');
@@ -73,11 +45,8 @@ const rateLabel = document.getElementById('rateLabel');
 const pitchSlider = document.getElementById('pitchSlider');
 const pitchLabel = document.getElementById('pitchLabel');
 const btnPreviewVoice = document.getElementById('btnPreviewVoice');
-const previewAudioPlayer = document.getElementById('previewAudioPlayer');
-
-// Action Buttons
 const btnConvertAll = document.getElementById('btnConvertAll');
-const btnDownloadZip = document.getElementById('btnDownloadZip');
+const btnConvertAllText = document.getElementById('btnConvertAllText');
 
 // Modal Elements
 const textModal = document.getElementById('textModal');
@@ -90,7 +59,7 @@ const btnSaveModal = document.getElementById('btnSaveModal');
 
 // Audio Player Elements
 const audioPlayerBar = document.getElementById('audioPlayerBar');
-const globalAudioPlayer = document.getElementById('globalAudioPlayer');
+const playerEqualizer = document.getElementById('playerEqualizer');
 const playerTrackTitle = document.getElementById('playerTrackTitle');
 const playerTrackSubtitle = document.getElementById('playerTrackSubtitle');
 const btnPlayerPlayPause = document.getElementById('btnPlayerPlayPause');
@@ -106,9 +75,8 @@ const btnPlaybackSpeed = document.getElementById('btnPlaybackSpeed');
 const btnMute = document.getElementById('btnMute');
 const volumeIcon = document.getElementById('volumeIcon');
 const volumeSlider = document.getElementById('volumeSlider');
-const btnDownloadCurrent = document.getElementById('btnDownloadCurrent');
 
-// 1. PREVENT DRAG-DROP NAVIGATIONS
+// Prevent Window Drag-Drop Default Navigation
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
     window.addEventListener(eventName, (e) => {
         e.preventDefault();
@@ -120,352 +88,120 @@ const btnDownloadCurrent = document.getElementById('btnDownloadCurrent');
     }, false);
 });
 
-// Chrome SpeechSynthesis heartbeat
+// Chrome Speech Keep-Alive Heartbeat
 setInterval(() => {
     if ('speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
         window.speechSynthesis.pause();
         window.speechSynthesis.resume();
     }
-}, 8000);
+}, 7000);
 
-// ==========================================
-// SEAMLESS DUAL-BUFFER AUDIO QUEUE PLAYER
-// ==========================================
-class AudioReadPlayer {
-    constructor() {
-        this.audioA = new Audio();
-        this.audioB = new Audio();
-        this.activeIsA = true;
-        this.queue = [];
-        this.currentIndex = 0;
-        this.isPlaying = false;
-        this.isPaused = false;
-        this.currentChapter = null;
-        this.speed = 1.0;
-        this.volume = 1.0;
-        this.activeUtterance = null;
-        this.useWebSpeech = false;
+// Initialize App
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) lucide.createIcons();
+    setupEventListeners();
+    populateVoiceList();
+});
 
-        this.bindEvents(this.audioA, true);
-        this.bindEvents(this.audioB, false);
-    }
+// Voice Loading & Prioritization
+function populateVoiceList() {
+    if (!('speechSynthesis' in window) || !voiceSelect) return;
 
-    bindEvents(audioElement, isA) {
-        audioElement.addEventListener('ended', () => {
-            if ((isA && this.activeIsA) || (!isA && !this.activeIsA)) {
-                this.onSegmentEnded();
-            }
-        });
-
-        audioElement.addEventListener('error', (e) => {
-            if ((isA && this.activeIsA) || (!isA && !this.activeIsA)) {
-                console.warn('Audio stream error, smoothly advancing:', e);
-                setTimeout(() => this.onSegmentEnded(), 250);
-            }
-        });
-    }
-
-    startChapter(chapter, sentences) {
-        this.stop();
-        this.currentChapter = chapter;
-        this.queue = sentences.filter(s => s && s.trim().length > 0);
-        this.currentIndex = 0;
-        this.isPlaying = true;
-        this.isPaused = false;
-        secondsElapsed = 0;
-
-        if (this.queue.length === 0) {
-            alert('This chapter contains no text.');
-            return;
-        }
-
-        // Show player
-        if (audioPlayerBar) audioPlayerBar.classList.remove('hidden');
-        if (playerTrackTitle) playerTrackTitle.textContent = chapter.title;
-        if (playerTrackSubtitle) playerTrackSubtitle.textContent = `${currentBook.title} • ${currentBook.author || 'AudioRead'}`;
-        if (playerTotalTime) playerTotalTime.textContent = formatTime(chapter.estimated_duration_sec);
-        if (playerCurrentTime) playerCurrentTime.textContent = '00:00';
-        if (playerProgress) playerProgress.value = 0;
-
-        startTimer();
-        this.playCurrentSegment();
-    }
-
-    playCurrentSegment() {
-        if (!this.isPlaying || this.isPaused) return;
-
-        if (this.currentIndex >= this.queue.length) {
-            this.stop();
-            if (playerProgress) playerProgress.value = 100;
-            playNextChapter();
-            return;
-        }
-
-        const sentence = this.queue[this.currentIndex];
-        const nextSentence = (this.currentIndex + 1 < this.queue.length) ? this.queue[this.currentIndex + 1] : null;
-
-        if (playerProgress && this.queue.length > 0) {
-            const pct = Math.round((this.currentIndex / this.queue.length) * 100);
-            playerProgress.value = pct;
-        }
-
-        const voiceVal = voiceSelect.value;
-        const speedMultiplier = playbackSpeeds[currentSpeedIndex] * (1 + parseInt(rateSlider.value) / 100);
-
-        if (voiceVal.startsWith('synth:') || this.useWebSpeech) {
-            this.speakWebSpeech(sentence, voiceVal, speedMultiplier);
-        } else {
-            const activeAudio = this.activeIsA ? this.audioA : this.audioB;
-            const preloadAudio = this.activeIsA ? this.audioB : this.audioA;
-
-            const selectedVoice = NATURAL_STUDIO_VOICES.find(v => v.id === voiceVal) || NATURAL_STUDIO_VOICES[0];
-            const langCode = selectedVoice.lang.split('-')[0] || 'en';
-            
-            const currentUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(sentence)}`;
-            
-            activeAudio.src = currentUrl;
-            activeAudio.playbackRate = speedMultiplier;
-            activeAudio.volume = this.volume;
-
-            activeAudio.play().then(() => {
-                updatePlayPauseIcon(true);
-            }).catch(err => {
-                console.warn('Stream play blocked or errored, trying WebSpeech:', err);
-                this.speakWebSpeech(sentence, voiceVal, speedMultiplier);
-            });
-
-            if (nextSentence) {
-                const nextUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(nextSentence)}`;
-                preloadAudio.src = nextUrl;
-                preloadAudio.preload = 'auto';
-            }
-        }
-    }
-
-    speakWebSpeech(text, voiceVal, speedMultiplier) {
-        if (!('speechSynthesis' in window)) return;
-        window.speechSynthesis.cancel();
-
-        const utter = new SpeechSynthesisUtterance(text);
-        const cleanName = voiceVal.replace('synth:', '');
-        const matchVoice = window.speechSynthesis.getVoices().find(v => v.name === cleanName || v.name.includes(cleanName));
-        if (matchVoice) utter.voice = matchVoice;
-        
-        utter.rate = Math.max(0.5, Math.min(2.5, speedMultiplier));
-        utter.pitch = 1 + parseInt(pitchSlider.value) / 50;
-        utter.volume = this.volume;
-
-        utter.onend = () => {
-            this.onSegmentEnded();
+    let availableVoices = window.speechSynthesis.getVoices();
+    if (availableVoices.length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+            populateVoiceList();
         };
-
-        utter.onerror = (e) => {
-            console.warn('Utterance error, advancing:', e);
-            setTimeout(() => this.onSegmentEnded(), 200);
-        };
-
-        this.activeUtterance = utter;
-        window._activeUtterance = utter;
-        window.speechSynthesis.speak(utter);
-        updatePlayPauseIcon(true);
+        return;
     }
 
-    onSegmentEnded() {
-        if (!this.isPlaying || this.isPaused) return;
-        this.activeIsA = !this.activeIsA;
-        this.currentIndex++;
-        this.playCurrentSegment();
-    }
-
-    togglePlayPause() {
-        if (!this.currentChapter) {
-            if (currentBook && currentBook.chapters.length > 0) {
-                playChapterAudio(currentBook.chapters[0].id);
-            }
-            return;
-        }
-
-        if (this.isPaused) {
-            this.isPaused = false;
-            this.isPlaying = true;
-            const activeAudio = this.activeIsA ? this.audioA : this.audioB;
-            activeAudio.play().catch(() => this.playCurrentSegment());
-            if ('speechSynthesis' in window && window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
-            }
-            startTimer();
-            updatePlayPauseIcon(true);
-        } else if (this.isPlaying) {
-            this.isPaused = true;
-            this.isPlaying = false;
-            this.audioA.pause();
-            this.audioB.pause();
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.pause();
-            }
-            stopTimer();
-            updatePlayPauseIcon(false);
-        } else {
-            this.playCurrentSegment();
-        }
-    }
-
-    seek(percent) {
-        if (this.queue.length === 0) return;
-        const targetIdx = Math.min(this.queue.length - 1, Math.max(0, Math.floor((percent / 100) * this.queue.length)));
-        this.currentIndex = targetIdx;
-        this.playCurrentSegment();
-    }
-
-    skip(delta) {
-        if (this.queue.length === 0) return;
-        const targetIdx = Math.min(this.queue.length - 1, Math.max(0, this.currentIndex + delta));
-        this.currentIndex = targetIdx;
-        this.playCurrentSegment();
-    }
-
-    setSpeed(speedVal) {
-        this.speed = speedVal;
-        this.audioA.playbackRate = speedVal;
-        this.audioB.playbackRate = speedVal;
-    }
-
-    setVolume(volVal) {
-        this.volume = volVal;
-        this.audioA.volume = volVal;
-        this.audioB.volume = volVal;
-    }
-
-    stop() {
-        this.isPlaying = false;
-        this.isPaused = false;
-        this.audioA.pause();
-        this.audioA.src = '';
-        this.audioB.pause();
-        this.audioB.src = '';
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-        }
-        stopTimer();
-        updatePlayPauseIcon(false);
-    }
-}
-
-const studioPlayer = new AudioReadPlayer();
-
-function startTimer() {
-    if (audioTimer) clearInterval(audioTimer);
-    audioTimer = setInterval(() => {
-        if (studioPlayer.isPlaying && !studioPlayer.isPaused) {
-            secondsElapsed++;
-            if (playerCurrentTime) playerCurrentTime.textContent = formatTime(secondsElapsed);
-        }
-    }, 1000);
-}
-
-function stopTimer() {
-    if (audioTimer) {
-        clearInterval(audioTimer);
-        audioTimer = null;
-    }
-}
-
-function splitIntoNaturalSentences(text) {
-    if (!text || !text.trim()) return [];
-    const rawChunks = text.split(/(?<=[.!?])\s+|\n+/);
-    const result = [];
-    
-    rawChunks.forEach(chunk => {
-        const trimmed = chunk.trim();
-        if (!trimmed) return;
-        
-        if (trimmed.length > 175) {
-            const parts = trimmed.split(/([,;:]\s+)/);
-            let buf = '';
-            parts.forEach(p => {
-                if ((buf + p).length > 140) {
-                    if (buf.trim()) result.push(buf.trim());
-                    buf = p;
-                } else {
-                    buf += p;
-                }
-            });
-            if (buf.trim()) result.push(buf.trim());
-        } else {
-            result.push(trimmed);
-        }
-    });
-    
-    return result;
-}
-
-function initVoiceCatalog() {
-    renderVoiceOptions();
-    if ('speechSynthesis' in window) {
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = () => renderVoiceOptions();
-        }
-    }
-}
-
-function renderVoiceOptions() {
-    if (!voiceSelect) return;
     voiceSelect.innerHTML = '';
 
-    const groupStudio = document.createElement('optgroup');
-    groupStudio.label = '⚡ Studio Neural Narrators (Ultra-Natural HD)';
-    NATURAL_STUDIO_VOICES.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v.id;
-        opt.textContent = v.name;
-        if (v.id === 'en:us:natural') opt.selected = true;
-        groupStudio.appendChild(opt);
-    });
-    voiceSelect.appendChild(groupStudio);
+    // Group voices: Natural Online vs Standard
+    const naturalVoices = [];
+    const englishVoices = [];
+    const otherVoices = [];
 
-    if ('speechSynthesis' in window) {
-        const sysVoices = window.speechSynthesis.getVoices();
-        if (sysVoices.length > 0) {
-            const groupSys = document.createElement('optgroup');
-            groupSys.label = '💻 Device / OS Voices';
-            sysVoices.forEach(sv => {
-                const opt = document.createElement('option');
-                opt.value = `synth:${sv.name}`;
-                opt.textContent = `${sv.name} (${sv.lang})`;
-                groupSys.appendChild(opt);
-            });
-            voiceSelect.appendChild(groupSys);
+    availableVoices.forEach(v => {
+        const lower = v.name.toLowerCase();
+        if (lower.includes('natural') || lower.includes('online') || lower.includes('google') || lower.includes('neural') || lower.includes('enhanced')) {
+            naturalVoices.push(v);
+        } else if (v.lang.startsWith('en')) {
+            englishVoices.push(v);
+        } else {
+            otherVoices.push(v);
         }
+    });
+
+    // 1. Natural AI Voices
+    if (naturalVoices.length > 0) {
+        const groupNatural = document.createElement('optgroup');
+        groupNatural.label = '⭐ Ultra-Natural HD Voices (Recommended)';
+        naturalVoices.forEach((v, idx) => {
+            const opt = document.createElement('option');
+            opt.value = v.name;
+            opt.textContent = `🌟 ${v.name} (${v.lang})`;
+            if (idx === 0) opt.selected = true;
+            groupNatural.appendChild(opt);
+        });
+        voiceSelect.appendChild(groupNatural);
+    }
+
+    // 2. English Voices
+    if (englishVoices.length > 0) {
+        const groupEn = document.createElement('optgroup');
+        groupEn.label = '🎙️ Standard English Narrators';
+        englishVoices.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.name;
+            opt.textContent = `${v.name} (${v.lang})`;
+            if (!naturalVoices.length && v.lang === 'en-US') opt.selected = true;
+            groupEn.appendChild(opt);
+        });
+        voiceSelect.appendChild(groupEn);
+    }
+
+    // 3. International Voices
+    if (otherVoices.length > 0) {
+        const groupOther = document.createElement('optgroup');
+        groupOther.label = '🌐 International Languages';
+        otherVoices.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.name;
+            opt.textContent = `${v.name} (${v.lang})`;
+            groupOther.appendChild(opt);
+        });
+        voiceSelect.appendChild(groupOther);
     }
 }
 
 // Setup Event Listeners
 function setupEventListeners() {
-    initVoiceCatalog();
+    if (!dropZone || !pdfFileInput) return;
 
-    // Dropzone
+    // Dropzone Drag Events
     dropZone.addEventListener('dragenter', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropZone.classList.add('border-indigo-400', 'bg-indigo-950/40');
+        dropZone.classList.add('border-indigo-400', 'bg-indigo-950/30');
     });
 
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropZone.classList.add('border-indigo-400', 'bg-indigo-950/40');
+        dropZone.classList.add('border-indigo-400', 'bg-indigo-950/30');
     });
 
     dropZone.addEventListener('dragleave', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropZone.classList.remove('border-indigo-400', 'bg-indigo-950/40');
+        dropZone.classList.remove('border-indigo-400', 'bg-indigo-950/30');
     });
 
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropZone.classList.remove('border-indigo-400', 'bg-indigo-950/40');
+        dropZone.classList.remove('border-indigo-400', 'bg-indigo-950/30');
         if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             handleFileUpload(e.dataTransfer.files[0]);
         }
@@ -480,26 +216,23 @@ function setupEventListeners() {
 
     if (btnNewBook) {
         btnNewBook.addEventListener('click', () => {
-            if (confirm('Start over and upload a new book?')) {
-                studioPlayer.stop();
+            if (confirm('Upload a new book? Current progress will be saved in your session.')) {
+                stopSpeech();
                 uploadSection.classList.remove('hidden');
                 workspaceSection.classList.add('hidden');
                 btnNewBook.classList.add('hidden');
                 currentBook = null;
-                if (eventSource) eventSource.close();
                 audioPlayerBar.classList.add('hidden');
             }
         });
     }
 
-    // Rate Slider
+    // Rate / Speed Slider
     if (rateSlider) {
         rateSlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
             const multiplier = (1 + val / 100).toFixed(2);
             if (rateLabel) rateLabel.textContent = `${multiplier}x`;
-            const speed = playbackSpeeds[currentSpeedIndex];
-            studioPlayer.setSpeed(speed * parseFloat(multiplier));
         });
     }
 
@@ -511,87 +244,104 @@ function setupEventListeners() {
         });
     }
 
-    // Voice Preview
+    // Test Voice
     if (btnPreviewVoice) {
-        btnPreviewVoice.addEventListener('click', async () => {
-            const voiceVal = voiceSelect.value;
-            const sampleText = "Welcome to AudioRead Studio. Converting your books into crystal clear narration.";
+        btnPreviewVoice.addEventListener('click', () => {
+            const selectedVoiceName = voiceSelect.value;
+            const sample = "Welcome to AudioRead Studio. Converting your PDF books into high quality audio.";
             
-            btnPreviewVoice.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Playing...`;
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(sample);
+            
+            const match = window.speechSynthesis.getVoices().find(v => v.name === selectedVoiceName);
+            if (match) utter.voice = match;
+            
+            utter.rate = 1 + parseInt(rateSlider.value) / 100;
+            utter.pitch = 1 + parseInt(pitchSlider.value) / 50;
+            utter.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
+
+            btnPreviewVoice.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Testing...`;
             if (window.lucide) lucide.createIcons();
 
-            try {
-                if (voiceVal.startsWith('synth:')) {
-                    window.speechSynthesis.cancel();
-                    const utter = new SpeechSynthesisUtterance(sampleText);
-                    const cleanName = voiceVal.replace('synth:', '');
-                    const matchVoice = window.speechSynthesis.getVoices().find(v => v.name === cleanName);
-                    if (matchVoice) utter.voice = matchVoice;
-                    utter.rate = 1 + parseInt(rateSlider.value) / 100;
-                    window._activeUtterance = utter;
-                    window.speechSynthesis.speak(utter);
-                } else {
-                    const selectedVoice = NATURAL_STUDIO_VOICES.find(v => v.id === voiceVal) || NATURAL_STUDIO_VOICES[0];
-                    const langCode = selectedVoice.lang.split('-')[0] || 'en';
-                    const streamUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(sampleText)}`;
-                    previewAudioPlayer.src = streamUrl;
-                    await previewAudioPlayer.play();
-                }
-            } catch (err) {
-                console.warn('Preview error:', err);
-            } finally {
-                setTimeout(() => {
-                    btnPreviewVoice.innerHTML = `<i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Test Voice`;
-                    if (window.lucide) lucide.createIcons();
-                }, 1500);
-            }
+            utter.onend = () => {
+                btnPreviewVoice.innerHTML = `<i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Test Voice`;
+                if (window.lucide) lucide.createIcons();
+            };
+
+            window._activeUtterance = utter;
+            window.speechSynthesis.speak(utter);
         });
     }
 
-    // Convert All
+    // Prepare All Chapters (Background Generation)
     if (btnConvertAll) {
-        btnConvertAll.addEventListener('click', () => {
-            if (!currentBook) return;
-            if (currentBook.chapters.length > 0) {
-                playChapterAudio(currentBook.chapters[0].id);
+        btnConvertAll.addEventListener('click', async () => {
+            if (!currentBook || isPreparingAll) return;
+            isPreparingAll = true;
+
+            btnConvertAll.disabled = true;
+            btnConvertAllText.textContent = 'Preparing Chapters...';
+            
+            for (let i = 0; i < currentBook.chapters.length; i++) {
+                const chap = currentBook.chapters[i];
+                chap.sentences = splitIntoNaturalSentences(chap.text);
+                chap.status = 'ready';
+                
+                // Update button progress
+                btnConvertAllText.textContent = `Preparing ${i + 1}/${currentBook.chapters.length}...`;
+                renderChaptersList();
+                await new Promise(r => setTimeout(r, 60));
             }
+
+            isPreparingAll = false;
+            btnConvertAll.disabled = false;
+            btnConvertAllText.textContent = '✓ All Chapters Ready';
+            btnConvertAll.classList.remove('btn-neon-glow');
+            btnConvertAll.classList.add('bg-emerald-600', 'text-white');
+            
+            renderChaptersList();
         });
     }
 
-    // Modal
+    // Modal Events
     if (btnCloseModal) btnCloseModal.addEventListener('click', closeModal);
     if (btnCancelModal) btnCancelModal.addEventListener('click', closeModal);
     if (btnSaveModal) btnSaveModal.addEventListener('click', saveModalChapter);
 
-    // Audio Controls
-    if (btnPlayerPlayPause) {
-        btnPlayerPlayPause.addEventListener('click', () => {
-            studioPlayer.togglePlayPause();
-        });
-    }
-    
+    // Player Controls
+    if (btnPlayerPlayPause) btnPlayerPlayPause.addEventListener('click', togglePlayPause);
+
     // Rewind -15s
     if (btnPlayerRewind) {
         btnPlayerRewind.addEventListener('click', () => {
-            studioPlayer.skip(-2);
+            if (sentenceQueue.length > 0) {
+                currentSentenceIndex = Math.max(0, currentSentenceIndex - 2);
+                speakCurrentSentence();
+            }
         });
     }
 
     // Forward +15s
     if (btnPlayerForward) {
         btnPlayerForward.addEventListener('click', () => {
-            studioPlayer.skip(2);
+            if (sentenceQueue.length > 0) {
+                currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 2);
+                speakCurrentSentence();
+            }
         });
     }
 
     if (btnPlayerPrev) btnPlayerPrev.addEventListener('click', playPreviousChapter);
     if (btnPlayerNext) btnPlayerNext.addEventListener('click', playNextChapter);
 
-    // Scrubber seeking
+    // Scrubber
     if (playerProgress) {
         playerProgress.addEventListener('input', (e) => {
-            const pct = parseFloat(e.target.value);
-            studioPlayer.seek(pct);
+            if (sentenceQueue.length > 0) {
+                const pct = parseFloat(e.target.value);
+                currentSentenceIndex = Math.min(sentenceQueue.length - 1, Math.max(0, Math.floor((pct / 100) * sentenceQueue.length)));
+                speakCurrentSentence();
+            }
         });
     }
 
@@ -600,8 +350,10 @@ function setupEventListeners() {
         btnPlaybackSpeed.addEventListener('click', () => {
             currentSpeedIndex = (currentSpeedIndex + 1) % playbackSpeeds.length;
             const speed = playbackSpeeds[currentSpeedIndex];
-            studioPlayer.setSpeed(speed);
             btnPlaybackSpeed.textContent = `${speed}x`;
+            if (isPlaying && !isPaused) {
+                speakCurrentSentence();
+            }
         });
     }
 
@@ -609,17 +361,15 @@ function setupEventListeners() {
     if (volumeSlider) {
         volumeSlider.addEventListener('input', (e) => {
             const vol = parseFloat(e.target.value);
-            studioPlayer.setVolume(vol);
             updateVolumeIcon(vol);
         });
     }
 
     if (btnMute) {
         btnMute.addEventListener('click', () => {
-            const isMuted = studioPlayer.volume === 0;
-            const newVol = isMuted ? 1.0 : 0;
-            studioPlayer.setVolume(newVol);
-            if (volumeSlider) volumeSlider.value = newVol;
+            const currentVol = parseFloat(volumeSlider.value);
+            const newVol = currentVol > 0 ? 0 : 1.0;
+            volumeSlider.value = newVol;
             updateVolumeIcon(newVol);
         });
     }
@@ -637,10 +387,43 @@ function updateVolumeIcon(vol) {
     if (window.lucide) lucide.createIcons();
 }
 
-// Handle PDF Upload
+// Split text into natural, digestible sentences for speech synthesis
+function splitIntoNaturalSentences(text) {
+    if (!text || !text.trim()) return [];
+    
+    // Split on sentence terminators
+    const rawChunks = text.split(/(?<=[.!?])\s+|\n+/);
+    const result = [];
+    
+    rawChunks.forEach(chunk => {
+        const trimmed = chunk.trim();
+        if (!trimmed) return;
+        
+        if (trimmed.length > 200) {
+            // Sub-divide long sentence by comma/semicolon/clause
+            const parts = trimmed.split(/([,;:]\s+)/);
+            let buf = '';
+            parts.forEach(p => {
+                if ((buf + p).length > 150) {
+                    if (buf.trim()) result.push(buf.trim());
+                    buf = p;
+                } else {
+                    buf += p;
+                }
+            });
+            if (buf.trim()) result.push(buf.trim());
+        } else {
+            result.push(trimmed);
+        }
+    });
+    
+    return result;
+}
+
+// Handle PDF Upload & Parsing
 async function handleFileUpload(file) {
     if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
-        alert('Please select a valid PDF eBook file (.pdf).');
+        alert('Please upload a valid PDF eBook file (.pdf).');
         return;
     }
 
@@ -648,7 +431,7 @@ async function handleFileUpload(file) {
 
     try {
         const pdfjs = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
-        if (!pdfjs) throw new Error('PDF parser is initializing. Please try again.');
+        if (!pdfjs) throw new Error('PDF library is initializing. Please try again.');
 
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjs.getDocument({
@@ -703,8 +486,7 @@ async function handleFileUpload(file) {
                     text: pText,
                     word_count: 0,
                     estimated_duration_sec: 0,
-                    status: 'idle',
-                    progress: 0
+                    status: 'ready'
                 };
             } else {
                 if (currentChap) {
@@ -719,8 +501,7 @@ async function handleFileUpload(file) {
                         text: pText,
                         word_count: 0,
                         estimated_duration_sec: 0,
-                        status: 'idle',
-                        progress: 0
+                        status: 'ready'
                     };
                 }
             }
@@ -754,8 +535,7 @@ async function handleFileUpload(file) {
                         text: chunkText,
                         word_count: chunkWords.length,
                         estimated_duration_sec: dur,
-                        status: 'idle',
-                        progress: 0
+                        status: 'ready'
                     });
                     partNum++;
                 }
@@ -817,6 +597,7 @@ function renderWorkspace() {
     if (window.lucide) lucide.createIcons();
 }
 
+// Render Chapter Cards with Glassmorphism
 function renderChaptersList() {
     if (!chaptersContainer) return;
     chaptersContainer.innerHTML = '';
@@ -824,22 +605,32 @@ function renderChaptersList() {
     currentBook.chapters.forEach(chap => {
         const card = document.createElement('div');
         card.id = `chapter-card-${chap.id}`;
-        card.className = `chapter-card bg-slate-900/70 border border-slate-800/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 ${currentPlayingChapterId === chap.id ? 'active-playing' : ''}`;
-
-        const isPlayingThis = (currentPlayingChapterId === chap.id && studioPlayer.isPlaying);
+        
+        const isPlayingThis = (currentPlayingChapterId === chap.id && isPlaying && !isPaused);
         const estMins = Math.max(1, Math.round(chap.estimated_duration_sec / 60));
 
-        let statusBadge = isPlayingThis 
-            ? `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center gap-1.5 animate-pulse"><i data-lucide="volume-2" class="w-3.5 h-3.5"></i> Playing</span>`
-            : `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Ready</span>`;
+        card.className = `chapter-card glass-panel rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-300 ${isPlayingThis ? 'active-playing ring-2 ring-indigo-500/80' : 'hover:border-indigo-500/40'}`;
+
+        let statusBadge = '';
+        if (isPlayingThis) {
+            statusBadge = `
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex items-center gap-2 animate-pulse">
+                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span> Playing
+                </span>`;
+        } else {
+            statusBadge = `
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Ready
+                </span>`;
+        }
 
         card.innerHTML = `
-            <div class="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-                <div class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-mono font-bold text-indigo-400 flex-shrink-0">
+            <div class="flex items-start sm:items-center gap-4 min-w-0 flex-1">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-950 to-slate-900 border border-indigo-500/30 flex items-center justify-center text-xs font-mono font-bold text-indigo-300 flex-shrink-0 shadow-inner">
                     ${chap.id}
                 </div>
                 <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2 flex-wrap">
+                    <div class="flex items-center gap-2.5 flex-wrap">
                         <h4 class="text-sm sm:text-base font-bold text-white truncate max-w-md">${chap.title}</h4>
                         <span id="badge-status-${chap.id}">${statusBadge}</span>
                     </div>
@@ -854,15 +645,16 @@ function renderChaptersList() {
             </div>
 
             <!-- Chapter Action Buttons -->
-            <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
-                <!-- Play Audio Button -->
-                <button onclick="playChapterAudio(${chap.id})" class="px-4 py-2 rounded-xl ${isPlayingThis ? 'bg-amber-600 hover:bg-amber-500' : 'bg-indigo-600 hover:bg-indigo-500'} text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-md shadow-indigo-600/30 active:scale-95">
-                    <i data-lucide="${isPlayingThis ? 'pause' : 'play'}" class="w-3.5 h-3.5 fill-current"></i> ${isPlayingThis ? 'Pause' : 'Listen'}
+            <div class="flex items-center gap-2.5 flex-shrink-0 self-end sm:self-center">
+                <!-- Listen Button -->
+                <button onclick="playChapterAudio(${chap.id})" class="px-5 py-2 rounded-2xl ${isPlayingThis ? 'bg-amber-600 hover:bg-amber-500' : 'btn-neon-glow'} text-white text-xs font-bold flex items-center gap-2 transition shadow-lg active:scale-95">
+                    <i data-lucide="${isPlayingThis ? 'pause' : 'play'}" class="w-3.5 h-3.5 fill-current"></i>
+                    <span>${isPlayingThis ? 'Pause' : 'Listen'}</span>
                 </button>
 
-                <!-- Edit Text Button -->
-                <button onclick="openTextModal(${chap.id})" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs transition" title="Inspect & Edit Text">
-                    <i data-lucide="file-edit" class="w-4 h-4"></i>
+                <!-- Edit / Read Text Button -->
+                <button onclick="openTextModal(${chap.id})" class="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 text-xs transition" title="Inspect & Edit Text">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
                 </button>
             </div>
         `;
@@ -873,32 +665,144 @@ function renderChaptersList() {
     if (window.lucide) lucide.createIcons();
 }
 
-// Master Play Chapter function
+// Master Play Chapter Function
 function playChapterAudio(chapId) {
     const chap = currentBook.chapters.find(c => c.id === chapId);
     if (!chap) return;
 
-    if (currentPlayingChapterId === chapId && studioPlayer.isPlaying) {
-        studioPlayer.togglePlayPause();
-        renderChaptersList();
+    if (currentPlayingChapterId === chapId) {
+        togglePlayPause();
         return;
     }
 
     currentPlayingChapterId = chapId;
-    const sentences = splitIntoNaturalSentences(chap.text);
-    studioPlayer.startChapter(chap, sentences);
+    sentenceQueue = splitIntoNaturalSentences(chap.text);
+    currentSentenceIndex = 0;
+    secondsElapsed = 0;
+    isPlaying = true;
+    isPaused = false;
+
+    // Show Audio Dock
+    if (audioPlayerBar) audioPlayerBar.classList.remove('hidden');
+    if (playerTrackTitle) playerTrackTitle.textContent = chap.title;
+    if (playerTrackSubtitle) playerTrackSubtitle.textContent = `${currentBook.title} • ${chap.word_count.toLocaleString()} words`;
+    if (playerTotalTime) playerTotalTime.textContent = formatTime(chap.estimated_duration_sec);
+    if (playerCurrentTime) playerCurrentTime.textContent = '00:00';
+    if (playerProgress) playerProgress.value = 0;
+
+    startTimer();
+    speakCurrentSentence();
     renderChaptersList();
 }
 
-function updatePlayPauseIcon(isPlaying) {
-    if (!btnPlayerPlayPause) return;
-    if (isPlaying) {
-        btnPlayerPlayPause.innerHTML = `<i data-lucide="pause" class="w-5 h-5 fill-current"></i>`;
+// Speak the current sentence in the queue
+function speakCurrentSentence() {
+    if (!('speechSynthesis' in window) || !isPlaying || isPaused) return;
+
+    if (currentSentenceIndex >= sentenceQueue.length) {
+        // Chapter finished
+        stopSpeech();
+        if (playerProgress) playerProgress.value = 100;
+        playNextChapter();
+        return;
+    }
+
+    const sentence = sentenceQueue[currentSentenceIndex];
+    if (!sentence || !sentence.trim()) {
+        currentSentenceIndex++;
+        speakCurrentSentence();
+        return;
+    }
+
+    // Update Scrubber
+    if (playerProgress && sentenceQueue.length > 0) {
+        const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
+        playerProgress.value = pct;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const utter = new SpeechSynthesisUtterance(sentence);
+    const selectedVoiceName = voiceSelect.value;
+    const match = window.speechSynthesis.getVoices().find(v => v.name === selectedVoiceName);
+    if (match) utter.voice = match;
+
+    const baseSpeed = playbackSpeeds[currentSpeedIndex];
+    const pitchOffset = parseInt(pitchSlider.value);
+    
+    utter.rate = baseSpeed * (1 + parseInt(rateSlider.value) / 100);
+    utter.pitch = 1 + pitchOffset / 50;
+    utter.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
+
+    utter.onend = () => {
+        currentSentenceIndex++;
+        speakCurrentSentence();
+    };
+
+    utter.onerror = (e) => {
+        console.warn('Speech synthesis error:', e);
+        currentSentenceIndex++;
+        setTimeout(() => speakCurrentSentence(), 100);
+    };
+
+    window._activeUtterance = utter; // Prevent GC
+    window.speechSynthesis.speak(utter);
+    updatePlayerUIState(true);
+}
+
+function togglePlayPause() {
+    if (!currentPlayingChapterId) {
+        if (currentBook && currentBook.chapters.length > 0) {
+            playChapterAudio(currentBook.chapters[0].id);
+        }
+        return;
+    }
+
+    if (isPlaying && !isPaused) {
+        // Pause
+        isPaused = true;
+        window.speechSynthesis.pause();
+        stopTimer();
+        updatePlayerUIState(false);
+    } else if (isPlaying && isPaused) {
+        // Resume
+        isPaused = false;
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        } else {
+            speakCurrentSentence();
+        }
+        startTimer();
+        updatePlayerUIState(true);
     } else {
-        btnPlayerPlayPause.innerHTML = `<i data-lucide="play" class="w-5 h-5 fill-current"></i>`;
+        playChapterAudio(currentPlayingChapterId);
+    }
+}
+
+function updatePlayerUIState(isSpeaking) {
+    if (playIcon) {
+        playIcon.setAttribute('data-lucide', isSpeaking ? 'pause' : 'play');
+    }
+    if (btnPlayerPlayPause) {
+        btnPlayerPlayPause.innerHTML = `<i data-lucide="${isSpeaking ? 'pause' : 'play'}" class="w-5 h-5 fill-current"></i>`;
+    }
+    if (playerEqualizer) {
+        playerEqualizer.classList.toggle('hidden', !isSpeaking);
     }
     if (window.lucide) lucide.createIcons();
     if (currentBook) renderChaptersList();
+}
+
+function stopSpeech() {
+    isPlaying = false;
+    isPaused = false;
+    sentenceQueue = [];
+    currentSentenceIndex = 0;
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+    stopTimer();
+    updatePlayerUIState(false);
 }
 
 function playNextChapter() {
@@ -917,6 +821,23 @@ function playPreviousChapter() {
     }
 }
 
+function startTimer() {
+    if (audioTimer) clearInterval(audioTimer);
+    audioTimer = setInterval(() => {
+        if (isPlaying && !isPaused) {
+            secondsElapsed++;
+            if (playerCurrentTime) playerCurrentTime.textContent = formatTime(secondsElapsed);
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    if (audioTimer) {
+        clearInterval(audioTimer);
+        audioTimer = null;
+    }
+}
+
 function formatTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return '00:00';
     const mins = Math.floor(seconds / 60);
@@ -924,13 +845,13 @@ function formatTime(seconds) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Modal Edit
+// Modal View / Edit Text
 function openTextModal(chapId) {
     const chap = currentBook.chapters.find(c => c.id === chapId);
     if (!chap) return;
 
     activeModalChapterId = chapId;
-    if (modalChapterTitle) modalChapterTitle.textContent = `Edit Chapter ${chap.id}`;
+    if (modalChapterTitle) modalChapterTitle.textContent = `Inspect Chapter ${chap.id}`;
     if (modalInputTitle) modalInputTitle.value = chap.title;
     if (modalInputText) modalInputText.value = chap.text;
     if (textModal) textModal.classList.remove('hidden');
@@ -941,7 +862,7 @@ function closeModal() {
     activeModalChapterId = null;
 }
 
-async function saveModalChapter() {
+function saveModalChapter() {
     if (!currentBook || !activeModalChapterId) return;
 
     const newTitle = modalInputTitle.value.trim();
@@ -957,9 +878,3 @@ async function saveModalChapter() {
     renderWorkspace();
     closeModal();
 }
-
-// DOMContentLoaded bootstrap
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.lucide) lucide.createIcons();
-    setupEventListeners();
-});
