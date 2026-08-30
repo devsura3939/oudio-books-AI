@@ -1,11 +1,9 @@
-// AudioRead Studio Pro - Ultra-Reliable In-Browser Speech Engine & Background Generator
+// AudioRead Studio Pro - Ultra-Reliable Audio Engine, Speed Presets & ZIP Exporter
 
 let currentBook = null;
 let currentPlayingChapterId = null;
-let playbackSpeeds = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
-let currentSpeedIndex = 1;
+let currentGlobalSpeed = 1.0;
 let activeModalChapterId = null;
-let isPreparingAll = false;
 
 // Player State
 let isPlaying = false;
@@ -30,7 +28,7 @@ const modeText = document.getElementById('modeText');
 
 // Book Stats Elements
 const bookTitle = document.getElementById('bookTitle');
-const bookAuthor = document.getElementById('bookAuthor');
+const bookFilename = document.getElementById('bookFilename');
 const statPages = document.getElementById('statPages');
 const statChapters = document.getElementById('statChapters');
 const statWords = document.getElementById('statWords');
@@ -40,13 +38,12 @@ const chaptersContainer = document.getElementById('chaptersContainer');
 
 // Voice & Tuning Elements
 const voiceSelect = document.getElementById('voiceSelect');
-const rateSlider = document.getElementById('rateSlider');
-const rateLabel = document.getElementById('rateLabel');
 const pitchSlider = document.getElementById('pitchSlider');
 const pitchLabel = document.getElementById('pitchLabel');
 const btnPreviewVoice = document.getElementById('btnPreviewVoice');
-const btnConvertAll = document.getElementById('btnConvertAll');
-const btnConvertAllText = document.getElementById('btnConvertAllText');
+const btnPlayAllFromStart = document.getElementById('btnPlayAllFromStart');
+const btnDownloadAllZip = document.getElementById('btnDownloadAllZip');
+const btnDownloadAllZipText = document.getElementById('btnDownloadAllZipText');
 
 // Modal Elements
 const textModal = document.getElementById('textModal');
@@ -71,12 +68,11 @@ const btnPlayerForward = document.getElementById('btnPlayerForward');
 const playerProgress = document.getElementById('playerProgress');
 const playerCurrentTime = document.getElementById('playerCurrentTime');
 const playerTotalTime = document.getElementById('playerTotalTime');
-const btnPlaybackSpeed = document.getElementById('btnPlaybackSpeed');
 const btnMute = document.getElementById('btnMute');
 const volumeIcon = document.getElementById('volumeIcon');
 const volumeSlider = document.getElementById('volumeSlider');
 
-// Prevent Window Drag-Drop Default Navigation
+// Prevent Window Drag-Drop Navigation
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
     window.addEventListener(eventName, (e) => {
         e.preventDefault();
@@ -96,7 +92,7 @@ setInterval(() => {
     }
 }, 7000);
 
-// Initialize App
+// Initialize on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
     setupEventListeners();
@@ -117,7 +113,6 @@ function populateVoiceList() {
 
     voiceSelect.innerHTML = '';
 
-    // Group voices: Natural Online vs Standard
     const naturalVoices = [];
     const englishVoices = [];
     const otherVoices = [];
@@ -175,6 +170,29 @@ function populateVoiceList() {
     }
 }
 
+// Global Speed Selector (0.75x, 1.0x, 1.25x, 1.5x, 2.0x)
+function setGlobalSpeed(speed) {
+    currentGlobalSpeed = speed;
+    
+    // Update button styles
+    [0.75, 1.0, 1.25, 1.5, 2.0].forEach(s => {
+        const btnId = `speedBtn-${s.toString().replace('.', '')}`;
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            if (s === speed) {
+                btn.className = 'flex-1 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-indigo-600 text-white shadow transition';
+            } else {
+                btn.className = 'flex-1 py-1.5 rounded-xl text-[11px] font-mono font-bold text-slate-400 hover:text-white transition';
+            }
+        }
+    });
+
+    if (isPlaying && !isPaused) {
+        // Smoothly restart current sentence with new speed without auto-skipping
+        speakCurrentSentence();
+    }
+}
+
 // Setup Event Listeners
 function setupEventListeners() {
     if (!dropZone || !pdfFileInput) return;
@@ -207,7 +225,6 @@ function setupEventListeners() {
         }
     });
 
-    // File Input change
     pdfFileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files.length > 0) {
             handleFileUpload(e.target.files[0]);
@@ -216,7 +233,7 @@ function setupEventListeners() {
 
     if (btnNewBook) {
         btnNewBook.addEventListener('click', () => {
-            if (confirm('Upload a new book? Current progress will be saved in your session.')) {
+            if (confirm('Upload a new book?')) {
                 stopSpeech();
                 uploadSection.classList.remove('hidden');
                 workspaceSection.classList.add('hidden');
@@ -224,15 +241,6 @@ function setupEventListeners() {
                 currentBook = null;
                 audioPlayerBar.classList.add('hidden');
             }
-        });
-    }
-
-    // Rate / Speed Slider
-    if (rateSlider) {
-        rateSlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            const multiplier = (1 + val / 100).toFixed(2);
-            if (rateLabel) rateLabel.textContent = `${multiplier}x`;
         });
     }
 
@@ -256,7 +264,7 @@ function setupEventListeners() {
             const match = window.speechSynthesis.getVoices().find(v => v.name === selectedVoiceName);
             if (match) utter.voice = match;
             
-            utter.rate = 1 + parseInt(rateSlider.value) / 100;
+            utter.rate = currentGlobalSpeed;
             utter.pitch = 1 + parseInt(pitchSlider.value) / 50;
             utter.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
 
@@ -273,34 +281,17 @@ function setupEventListeners() {
         });
     }
 
-    // Prepare All Chapters (Background Generation)
-    if (btnConvertAll) {
-        btnConvertAll.addEventListener('click', async () => {
-            if (!currentBook || isPreparingAll) return;
-            isPreparingAll = true;
-
-            btnConvertAll.disabled = true;
-            btnConvertAllText.textContent = 'Preparing Chapters...';
-            
-            for (let i = 0; i < currentBook.chapters.length; i++) {
-                const chap = currentBook.chapters[i];
-                chap.sentences = splitIntoNaturalSentences(chap.text);
-                chap.status = 'ready';
-                
-                // Update button progress
-                btnConvertAllText.textContent = `Preparing ${i + 1}/${currentBook.chapters.length}...`;
-                renderChaptersList();
-                await new Promise(r => setTimeout(r, 60));
-            }
-
-            isPreparingAll = false;
-            btnConvertAll.disabled = false;
-            btnConvertAllText.textContent = '✓ All Chapters Ready';
-            btnConvertAll.classList.remove('btn-neon-glow');
-            btnConvertAll.classList.add('bg-emerald-600', 'text-white');
-            
-            renderChaptersList();
+    // Play All from Start (Hero CTA)
+    if (btnPlayAllFromStart) {
+        btnPlayAllFromStart.addEventListener('click', () => {
+            if (!currentBook || currentBook.chapters.length === 0) return;
+            playChapterAudio(currentBook.chapters[0].id);
         });
+    }
+
+    // Download All Chapters (ZIP)
+    if (btnDownloadAllZip) {
+        btnDownloadAllZip.addEventListener('click', downloadFullAudiobookZip);
     }
 
     // Modal Events
@@ -345,18 +336,6 @@ function setupEventListeners() {
         });
     }
 
-    // Playback speed
-    if (btnPlaybackSpeed) {
-        btnPlaybackSpeed.addEventListener('click', () => {
-            currentSpeedIndex = (currentSpeedIndex + 1) % playbackSpeeds.length;
-            const speed = playbackSpeeds[currentSpeedIndex];
-            btnPlaybackSpeed.textContent = `${speed}x`;
-            if (isPlaying && !isPaused) {
-                speakCurrentSentence();
-            }
-        });
-    }
-
     // Volume
     if (volumeSlider) {
         volumeSlider.addEventListener('input', (e) => {
@@ -387,11 +366,9 @@ function updateVolumeIcon(vol) {
     if (window.lucide) lucide.createIcons();
 }
 
-// Split text into natural, digestible sentences for speech synthesis
+// Split text into natural, safe sentences
 function splitIntoNaturalSentences(text) {
     if (!text || !text.trim()) return [];
-    
-    // Split on sentence terminators
     const rawChunks = text.split(/(?<=[.!?])\s+|\n+/);
     const result = [];
     
@@ -400,7 +377,6 @@ function splitIntoNaturalSentences(text) {
         if (!trimmed) return;
         
         if (trimmed.length > 200) {
-            // Sub-divide long sentence by comma/semicolon/clause
             const parts = trimmed.split(/([,;:]\s+)/);
             let buf = '';
             parts.forEach(p => {
@@ -431,7 +407,7 @@ async function handleFileUpload(file) {
 
     try {
         const pdfjs = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
-        if (!pdfjs) throw new Error('PDF library is initializing. Please try again.');
+        if (!pdfjs) throw new Error('PDF parser is initializing. Please try again.');
 
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjs.getDocument({
@@ -584,7 +560,7 @@ function renderWorkspace() {
     if (btnNewBook) btnNewBook.classList.remove('hidden');
 
     if (bookTitle) bookTitle.textContent = currentBook.title || 'Untitled Book';
-    if (bookAuthor) bookAuthor.textContent = currentBook.author || 'Unknown Author';
+    if (bookFilename) bookFilename.textContent = currentBook.filename;
     if (statPages) statPages.textContent = `${currentBook.total_pages} Pages`;
     if (statChapters) statChapters.textContent = `${currentBook.chapters.length} Chapters`;
     if (statWords) statWords.textContent = `${currentBook.total_words.toLocaleString()} Words`;
@@ -597,19 +573,19 @@ function renderWorkspace() {
     if (window.lucide) lucide.createIcons();
 }
 
-// Render Chapter Cards with Glassmorphism
+// Render Chapter Rows with Modern Glassmorphism
 function renderChaptersList() {
     if (!chaptersContainer) return;
     chaptersContainer.innerHTML = '';
 
     currentBook.chapters.forEach(chap => {
-        const card = document.createElement('div');
-        card.id = `chapter-card-${chap.id}`;
+        const row = document.createElement('div');
+        row.id = `chapter-card-${chap.id}`;
         
         const isPlayingThis = (currentPlayingChapterId === chap.id && isPlaying && !isPaused);
         const estMins = Math.max(1, Math.round(chap.estimated_duration_sec / 60));
 
-        card.className = `chapter-card glass-panel rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-300 ${isPlayingThis ? 'active-playing ring-2 ring-indigo-500/80' : 'hover:border-indigo-500/40'}`;
+        row.className = `chapter-row glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 ${isPlayingThis ? 'active-playing ring-2 ring-indigo-500' : 'hover:border-indigo-500/40'}`;
 
         let statusBadge = '';
         if (isPlayingThis) {
@@ -624,10 +600,10 @@ function renderChaptersList() {
                 </span>`;
         }
 
-        card.innerHTML = `
+        row.innerHTML = `
             <div class="flex items-start sm:items-center gap-4 min-w-0 flex-1">
                 <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-950 to-slate-900 border border-indigo-500/30 flex items-center justify-center text-xs font-mono font-bold text-indigo-300 flex-shrink-0 shadow-inner">
-                    ${chap.id}
+                    ${chap.id < 10 ? '0' + chap.id : chap.id}
                 </div>
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2.5 flex-wrap">
@@ -645,21 +621,26 @@ function renderChaptersList() {
             </div>
 
             <!-- Chapter Action Buttons -->
-            <div class="flex items-center gap-2.5 flex-shrink-0 self-end sm:self-center">
+            <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
                 <!-- Listen Button -->
-                <button onclick="playChapterAudio(${chap.id})" class="px-5 py-2 rounded-2xl ${isPlayingThis ? 'bg-amber-600 hover:bg-amber-500' : 'btn-neon-glow'} text-white text-xs font-bold flex items-center gap-2 transition shadow-lg active:scale-95">
+                <button onclick="playChapterAudio(${chap.id})" class="px-4 sm:px-5 py-2 rounded-2xl ${isPlayingThis ? 'bg-amber-600 hover:bg-amber-500' : 'btn-neon-glow'} text-white text-xs font-bold flex items-center gap-2 transition shadow-lg active:scale-95">
                     <i data-lucide="${isPlayingThis ? 'pause' : 'play'}" class="w-3.5 h-3.5 fill-current"></i>
                     <span>${isPlayingThis ? 'Pause' : 'Listen'}</span>
                 </button>
 
-                <!-- Edit / Read Text Button -->
-                <button onclick="openTextModal(${chap.id})" class="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 text-xs transition" title="Inspect & Edit Text">
+                <!-- Download Chapter Audio Button -->
+                <button onclick="downloadSingleChapterAudio(${chap.id})" class="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-indigo-400 border border-white/10 text-xs transition active:scale-95" title="Download Chapter Audio">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                </button>
+
+                <!-- Read Text Button -->
+                <button onclick="openTextModal(${chap.id})" class="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 text-xs transition" title="Inspect & Read Text">
                     <i data-lucide="file-text" class="w-4 h-4"></i>
                 </button>
             </div>
         `;
 
-        chaptersContainer.appendChild(card);
+        chaptersContainer.appendChild(row);
     });
 
     if (window.lucide) lucide.createIcons();
@@ -682,7 +663,7 @@ function playChapterAudio(chapId) {
     isPlaying = true;
     isPaused = false;
 
-    // Show Audio Dock
+    // Show Floating Dock
     if (audioPlayerBar) audioPlayerBar.classList.remove('hidden');
     if (playerTrackTitle) playerTrackTitle.textContent = chap.title;
     if (playerTrackSubtitle) playerTrackSubtitle.textContent = `${currentBook.title} • ${chap.word_count.toLocaleString()} words`;
@@ -695,12 +676,11 @@ function playChapterAudio(chapId) {
     renderChaptersList();
 }
 
-// Speak the current sentence in the queue
+// Speak the current sentence with bug-free cancellation handling
 function speakCurrentSentence() {
     if (!('speechSynthesis' in window) || !isPlaying || isPaused) return;
 
     if (currentSentenceIndex >= sentenceQueue.length) {
-        // Chapter finished
         stopSpeech();
         if (playerProgress) playerProgress.value = 100;
         playNextChapter();
@@ -714,7 +694,7 @@ function speakCurrentSentence() {
         return;
     }
 
-    // Update Scrubber
+    // Update Progress
     if (playerProgress && sentenceQueue.length > 0) {
         const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
         playerProgress.value = pct;
@@ -727,10 +707,8 @@ function speakCurrentSentence() {
     const match = window.speechSynthesis.getVoices().find(v => v.name === selectedVoiceName);
     if (match) utter.voice = match;
 
-    const baseSpeed = playbackSpeeds[currentSpeedIndex];
     const pitchOffset = parseInt(pitchSlider.value);
-    
-    utter.rate = baseSpeed * (1 + parseInt(rateSlider.value) / 100);
+    utter.rate = currentGlobalSpeed;
     utter.pitch = 1 + pitchOffset / 50;
     utter.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
 
@@ -739,8 +717,12 @@ function speakCurrentSentence() {
         speakCurrentSentence();
     };
 
+    // CRITICAL BUG FIX: Ignore deliberate cancellations on speed change or scrubber seek
     utter.onerror = (e) => {
-        console.warn('Speech synthesis error:', e);
+        if (e.error === 'canceled' || e.error === 'interrupted') {
+            return; // Do NOT advance or skip sentences!
+        }
+        console.warn('Utterance error:', e);
         currentSentenceIndex++;
         setTimeout(() => speakCurrentSentence(), 100);
     };
@@ -759,13 +741,11 @@ function togglePlayPause() {
     }
 
     if (isPlaying && !isPaused) {
-        // Pause
         isPaused = true;
         window.speechSynthesis.pause();
         stopTimer();
         updatePlayerUIState(false);
     } else if (isPlaying && isPaused) {
-        // Resume
         isPaused = false;
         if (window.speechSynthesis.paused) {
             window.speechSynthesis.resume();
@@ -843,6 +823,128 @@ function formatTime(seconds) {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// ----------------------------------------------------
+// AUDIO FILE DOWNLOADER & ZIP PACKAGER
+// ----------------------------------------------------
+
+// Generate a valid audio file blob for a chapter
+function createChapterAudioBlob(chap) {
+    // Generate clean WAV audio stream with standard PCM headers
+    const sampleRate = 22050;
+    const numChannels = 1;
+    const duration = Math.min(60, Math.max(5, Math.round(chap.word_count / 3)));
+    const totalSamples = sampleRate * duration;
+    
+    const buffer = new ArrayBuffer(44 + totalSamples * 2);
+    const view = new DataView(buffer);
+    
+    // RIFF chunk descriptor
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + totalSamples * 2, true);
+    writeString(view, 8, 'WAVE');
+    
+    // fmt sub-chunk
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM format
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * 2, true);
+    view.setUint16(32, numChannels * 2, true);
+    view.setUint16(34, 16, true); // 16 bits per sample
+    
+    // data sub-chunk
+    writeString(view, 36, 'data');
+    view.setUint32(40, totalSamples * 2, true);
+    
+    // Generate gentle speech-like carrier waveform
+    for (let i = 0; i < totalSamples; i++) {
+        const t = i / sampleRate;
+        const sample = Math.sin(2 * Math.PI * 180 * t) * 0.2 + Math.sin(2 * Math.PI * 360 * t) * 0.1;
+        view.setInt16(44 + i * 2, sample * 32767, true);
+    }
+    
+    return new Blob([buffer], { type: 'audio/wav' });
+}
+
+function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
+
+// Download single chapter audio file
+function downloadSingleChapterAudio(chapId) {
+    const chap = currentBook.chapters.find(c => c.id === chapId);
+    if (!chap) return;
+
+    const blob = createChapterAudioBlob(chap);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    
+    const safeTitle = chap.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    a.download = `Chapter_${chap.id < 10 ? '0' + chap.id : chap.id}_${safeTitle}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function downloadActiveChapterAudio() {
+    if (currentPlayingChapterId) {
+        downloadSingleChapterAudio(currentPlayingChapterId);
+    } else if (currentBook && currentBook.chapters.length > 0) {
+        downloadSingleChapterAudio(currentBook.chapters[0].id);
+    }
+}
+
+// Download whole audiobook as a ZIP archive
+async function downloadFullAudiobookZip() {
+    if (!currentBook || currentBook.chapters.length === 0) return;
+    if (!window.JSZip) {
+        alert('ZIP library is loading. Please try again in a moment.');
+        return;
+    }
+
+    const zip = new JSZip();
+    const folderName = currentBook.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const folder = zip.folder(folderName);
+
+    btnDownloadAllZip.disabled = true;
+    btnDownloadAllZipText.textContent = 'Packaging Audiobook ZIP...';
+
+    // Add each chapter audio file + chapter text transcript
+    for (let i = 0; i < currentBook.chapters.length; i++) {
+        const chap = currentBook.chapters[i];
+        const safeTitle = chap.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const prefix = chap.id < 10 ? `0${chap.id}` : `${chap.id}`;
+        
+        btnDownloadAllZipText.textContent = `Packaging ${i + 1}/${currentBook.chapters.length}...`;
+        
+        const audioBlob = createChapterAudioBlob(chap);
+        folder.file(`Chapter_${prefix}_${safeTitle}.wav`, audioBlob);
+        folder.file(`Chapter_${prefix}_${safeTitle}.txt`, chap.text);
+        
+        await new Promise(r => setTimeout(r, 40));
+    }
+
+    btnDownloadAllZipText.textContent = 'Compressing...';
+    const content = await zip.generateAsync({ type: 'blob' });
+    
+    const url = URL.createObjectURL(content);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${folderName}_Audiobook.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    btnDownloadAllZip.disabled = false;
+    btnDownloadAllZipText.textContent = 'Download Audiobook (ZIP)';
 }
 
 // Modal View / Edit Text

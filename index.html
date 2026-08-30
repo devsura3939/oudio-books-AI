@@ -26,6 +26,8 @@
     </script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- JSZip for 1-Click ZIP Packaging of All Audiobook Chapters -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- PDF.js CDN for in-browser client-side PDF parsing on GitHub Pages -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
@@ -36,13 +38,13 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="static/styles.css">
 </head>
 <body class="bg-[#060911] text-slate-100 min-h-screen font-['Plus_Jakarta_Sans',sans-serif] antialiased flex flex-col selection:bg-indigo-500 selection:text-white pb-36">
 
-    <!-- Top Glow Header -->
-    <header class="border-b border-white/[0.06] bg-slate-950/70 backdrop-blur-xl sticky top-0 z-40 shadow-lg shadow-black/20">
+    <!-- Navbar -->
+    <header class="border-b border-white/[0.06] bg-slate-950/70 backdrop-blur-xl sticky top-0 z-40 shadow-lg shadow-black/30">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/30 ring-1 ring-white/20">
@@ -50,17 +52,17 @@
                 </div>
                 <div>
                     <h1 class="text-base sm:text-lg font-extrabold tracking-tight flex items-center gap-2">
-                        <span class="bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">AudioRead</span>
+                        <span class="bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent">AudioRead</span>
                         <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">Studio Pro</span>
                     </h1>
-                    <p class="text-[11px] text-slate-400">PDF eBook to High-Definition Audiobook</p>
+                    <p class="text-[11px] text-slate-400">PDF eBook to Studio Audiobook</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-3">
-                <div id="modeBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs font-medium text-slate-300 shadow-inner">
+                <div id="modeBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-white/10 text-xs font-medium text-slate-300 shadow-inner">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span id="modeText">AI Neural Studio Audio</span>
+                    <span id="modeText">Studio AI Narrator Active</span>
                 </div>
                 <button id="btnNewBook" class="hidden px-3.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold transition flex items-center gap-1.5 border border-white/10 text-white shadow-md active:scale-95">
                     <i data-lucide="folder-plus" class="w-3.5 h-3.5 text-indigo-400"></i>
@@ -74,39 +76,39 @@
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
         <!-- Welcome / Upload Section -->
-        <section id="uploadSection" class="transition-all duration-300 max-w-4xl mx-auto pt-6 pb-12">
+        <section id="uploadSection" class="transition-all duration-300 max-w-4xl mx-auto pt-8 pb-12">
             <div class="text-center max-w-2xl mx-auto mb-10 space-y-3">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-2">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-2 shadow-inner">
                     <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                    <span>Studio Quality AI Narration</span>
+                    <span>100% Free AI Audiobook Converter</span>
                 </div>
                 <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent leading-tight">
-                    Transform Any PDF Into A Studio Audiobook
+                    Convert Any PDF eBook Into An Audiobook
                 </h2>
                 <p class="text-slate-400 text-sm sm:text-base leading-relaxed">
-                    Automatic chapter segmentation, intelligent noise stripping, and ultra-natural human voice narration in your browser.
+                    Automatic chapter segmentation, smart header/footer cleaning, natural neural human voice narration, and 1-click audio downloads.
                 </p>
             </div>
 
             <!-- Drag & Drop Zone -->
-            <label for="pdfFileInput" id="dropZone" class="relative group cursor-pointer block border border-dashed border-indigo-500/40 hover:border-indigo-400 rounded-3xl glass-panel p-10 sm:p-14 text-center transition-all duration-300 shadow-2xl hover:shadow-indigo-500/10">
+            <label for="pdfFileInput" id="dropZone" class="relative group cursor-pointer block border border-dashed border-indigo-500/40 hover:border-indigo-400 rounded-3xl glass-panel p-10 sm:p-14 text-center transition-all duration-300 shadow-2xl hover:shadow-indigo-500/15">
                 <input type="file" id="pdfFileInput" accept="application/pdf,.pdf" class="sr-only">
                 <div class="flex flex-col items-center justify-center space-y-5 pointer-events-none">
-                    <div class="w-18 h-18 rounded-3xl bg-indigo-600/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-xl shadow-indigo-600/20 p-4">
-                        <i data-lucide="book-open-check" class="w-9 h-9"></i>
+                    <div class="w-20 h-20 rounded-3xl bg-indigo-600/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-xl shadow-indigo-600/20 p-4">
+                        <i data-lucide="book-open-check" class="w-10 h-10"></i>
                     </div>
                     <div class="space-y-1.5">
-                        <p class="text-base sm:text-lg font-bold text-white tracking-tight">
-                            Choose a PDF file or drag & drop here
+                        <p class="text-base sm:text-xl font-bold text-white tracking-tight">
+                            Select a PDF file or drag & drop here
                         </p>
                         <p class="text-xs text-slate-400 max-w-sm mx-auto">
-                            Supports full novels, eBooks, textbooks, papers, and multi-chapter documents
+                            Supports full novels, textbooks, technical documents, and multi-chapter eBooks (.pdf)
                         </p>
                     </div>
-                    <div class="flex items-center gap-3 sm:gap-6 text-xs text-slate-300 pt-2 flex-wrap justify-center font-medium">
-                        <span class="flex items-center gap-1.5 bg-slate-900/60 px-3 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Smart Chapter Splitting</span>
-                        <span class="flex items-center gap-1.5 bg-slate-900/60 px-3 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Noise Cleaning</span>
-                        <span class="flex items-center gap-1.5 bg-slate-900/60 px-3 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Natural Voices</span>
+                    <div class="flex items-center gap-3 sm:gap-6 text-xs text-slate-300 pt-3 flex-wrap justify-center font-medium">
+                        <span class="flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Smart Chapter Detection</span>
+                        <span class="flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Natural Human Voice</span>
+                        <span class="flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> ZIP & Audio Export</span>
                     </div>
                 </div>
 
@@ -121,30 +123,35 @@
         <!-- Studio Workspace (Hidden initially) -->
         <section id="workspaceSection" class="hidden space-y-8">
             
-            <!-- Book Details & Top Stats Card -->
-            <div class="glass-panel rounded-3xl p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
-                <div class="absolute -right-20 -top-20 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
-                <div class="flex items-start gap-4 z-10">
-                    <div class="w-14 h-18 bg-gradient-to-br from-indigo-900/60 to-slate-900 border border-indigo-500/30 rounded-2xl flex items-center justify-center p-3 shadow-inner flex-shrink-0 text-indigo-400">
-                        <i data-lucide="book-open" class="w-7 h-7"></i>
+            <!-- Book Hero Showcase Card -->
+            <div class="glass-panel rounded-3xl p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
+                <div class="absolute -right-24 -top-24 w-72 h-72 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="flex items-start sm:items-center gap-5 z-10">
+                    <!-- 3D Book Spine Cover Art -->
+                    <div class="w-16 h-22 sm:w-20 sm:h-28 bg-gradient-to-br from-indigo-700 via-indigo-900 to-slate-900 border border-indigo-400/30 rounded-2xl flex flex-col items-center justify-center p-3 shadow-2xl flex-shrink-0 text-indigo-300 relative ring-1 ring-white/10 group">
+                        <i data-lucide="book-marked" class="w-8 h-8 sm:w-10 sm:h-10 mb-1"></i>
+                        <span class="text-[9px] uppercase tracking-wider font-mono font-bold text-indigo-200">EBOOK</span>
                     </div>
-                    <div class="space-y-1.5">
-                        <h2 id="bookTitle" class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Book Title</h2>
-                        <p id="bookAuthor" class="text-xs text-slate-400 font-medium">Local Document</p>
-                        <div class="flex flex-wrap items-center gap-2 pt-2 text-xs text-slate-300">
-                            <span class="bg-slate-900/80 px-3 py-1 rounded-xl border border-white/5 flex items-center gap-1.5 font-medium">
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Active Document</span>
+                            <span class="text-xs text-slate-400" id="bookFilename">book.pdf</span>
+                        </div>
+                        <h2 id="bookTitle" class="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">Book Title</h2>
+                        <div class="flex flex-wrap items-center gap-2.5 pt-1 text-xs text-slate-300 font-medium">
+                            <span class="bg-slate-900/90 px-3 py-1 rounded-xl border border-white/5 flex items-center gap-1.5">
                                 <i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-400"></i>
                                 <span id="statPages">0 Pages</span>
                             </span>
-                            <span class="bg-slate-900/80 px-3 py-1 rounded-xl border border-white/5 flex items-center gap-1.5 font-medium">
+                            <span class="bg-slate-900/90 px-3 py-1 rounded-xl border border-white/5 flex items-center gap-1.5">
                                 <i data-lucide="list-ordered" class="w-3.5 h-3.5 text-indigo-400"></i>
                                 <span id="statChapters">0 Chapters</span>
                             </span>
-                            <span class="bg-slate-900/80 px-3 py-1 rounded-xl border border-white/5 flex items-center gap-1.5 font-medium">
+                            <span class="bg-slate-900/90 px-3 py-1 rounded-xl border border-white/5 flex items-center gap-1.5">
                                 <i data-lucide="file-text" class="w-3.5 h-3.5 text-indigo-400"></i>
                                 <span id="statWords">0 Words</span>
                             </span>
-                            <span class="bg-indigo-500/10 text-indigo-300 px-3 py-1 rounded-xl border border-indigo-500/20 flex items-center gap-1.5 font-semibold">
+                            <span class="bg-indigo-500/10 text-indigo-300 px-3 py-1 rounded-xl border border-indigo-500/20 flex items-center gap-1.5 font-bold">
                                 <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i>
                                 <span id="statEstDuration">~0 mins listen time</span>
                             </span>
@@ -154,42 +161,51 @@
 
                 <!-- Global Action Controls -->
                 <div class="flex flex-wrap items-center gap-3 z-10">
-                    <button id="btnConvertAll" class="px-5 py-2.5 rounded-2xl btn-neon-glow text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg">
-                        <i data-lucide="sparkles" class="w-4 h-4"></i>
-                        <span id="btnConvertAllText">⚡ Prepare All Chapters</span>
+                    <button id="btnPlayAllFromStart" class="px-5 py-3 rounded-2xl btn-neon-glow text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition active:scale-95 shadow-xl">
+                        <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                        <span>Listen from Beginning</span>
+                    </button>
+                    <button id="btnDownloadAllZip" class="px-4 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold text-xs sm:text-sm border border-white/10 flex items-center gap-2 transition active:scale-95 shadow-lg">
+                        <i data-lucide="archive" class="w-4 h-4 text-indigo-400"></i>
+                        <span id="btnDownloadAllZipText">Download Audiobook (ZIP)</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Voice & Speech Studio Tuning Bar -->
-            <div class="glass-panel rounded-3xl p-5 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-5 items-center shadow-xl">
+            <!-- Narrator & Speech Studio Tuning Bar -->
+            <div class="glass-panel rounded-3xl p-5 sm:p-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-5 items-center shadow-xl">
                 <!-- Voice Selector -->
-                <div class="lg:col-span-2 space-y-1.5">
+                <div class="lg:col-span-2 space-y-2">
                     <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
                         <span class="flex items-center gap-1.5"><i data-lucide="mic" class="w-3.5 h-3.5 text-indigo-400"></i> AI Narrator Voice</span>
-                        <button id="btnPreviewVoice" class="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold transition">
+                        <button id="btnPreviewVoice" class="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-bold transition">
                             <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Test Voice
                         </button>
                     </label>
-                    <select id="voiceSelect" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 transition shadow-inner font-medium">
+                    <select id="voiceSelect" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 transition shadow-inner font-medium">
                         <!-- Loaded dynamically -->
                     </select>
                 </div>
 
-                <!-- Speed / Rate Slider -->
-                <div class="space-y-1.5">
+                <!-- Speed Multiplier Buttons -->
+                <div class="space-y-2">
                     <div class="flex justify-between items-center text-xs font-bold text-slate-300">
-                        <span class="flex items-center gap-1.5"><i data-lucide="gauge" class="w-3.5 h-3.5 text-indigo-400"></i> Narration Speed</span>
-                        <span id="rateLabel" class="text-indigo-400 font-mono text-xs">1.0x</span>
+                        <span class="flex items-center gap-1.5"><i data-lucide="gauge" class="w-3.5 h-3.5 text-indigo-400"></i> Speed Preset</span>
                     </div>
-                    <input type="range" id="rateSlider" min="-30" max="40" step="5" value="0" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-2">
+                    <div class="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-2xl border border-white/5">
+                        <button onclick="setGlobalSpeed(0.75)" id="speedBtn-075" class="flex-1 py-1.5 rounded-xl text-[11px] font-mono font-bold text-slate-400 hover:text-white transition">0.75x</button>
+                        <button onclick="setGlobalSpeed(1.0)" id="speedBtn-100" class="flex-1 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-indigo-600 text-white shadow transition">1.0x</button>
+                        <button onclick="setGlobalSpeed(1.25)" id="speedBtn-125" class="flex-1 py-1.5 rounded-xl text-[11px] font-mono font-bold text-slate-400 hover:text-white transition">1.25x</button>
+                        <button onclick="setGlobalSpeed(1.5)" id="speedBtn-150" class="flex-1 py-1.5 rounded-xl text-[11px] font-mono font-bold text-slate-400 hover:text-white transition">1.5x</button>
+                        <button onclick="setGlobalSpeed(2.0)" id="speedBtn-200" class="flex-1 py-1.5 rounded-xl text-[11px] font-mono font-bold text-slate-400 hover:text-white transition">2.0x</button>
+                    </div>
                 </div>
 
                 <!-- Pitch Slider -->
-                <div class="space-y-1.5">
+                <div class="space-y-2">
                     <div class="flex justify-between items-center text-xs font-bold text-slate-300">
                         <span class="flex items-center gap-1.5"><i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400"></i> Pitch Shift</span>
-                        <span id="pitchLabel" class="text-indigo-400 font-mono text-xs">0 Hz</span>
+                        <span id="pitchLabel" class="text-indigo-400 font-mono text-xs font-bold">0 Hz</span>
                     </div>
                     <input type="range" id="pitchSlider" min="-20" max="20" step="2" value="0" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-2">
                 </div>
@@ -202,28 +218,28 @@
                         <i data-lucide="layers" class="w-5 h-5 text-indigo-400"></i>
                         <span>Chapters & Sections</span>
                     </h3>
-                    <span id="chapterCountBadge" class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-900 border border-white/5 text-slate-400">0 Items</span>
+                    <span id="chapterCountBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-900 border border-white/5 text-slate-400">0 Items</span>
                 </div>
 
-                <div id="chaptersContainer" class="space-y-3.5">
-                    <!-- Chapter Cards injected via JS -->
+                <div id="chaptersContainer" class="space-y-3">
+                    <!-- Chapter Rows injected via JS -->
                 </div>
             </div>
         </section>
 
     </main>
 
-    <!-- Chapter Text Editor / Viewer Modal -->
+    <!-- Chapter Text Drawer Modal -->
     <div id="textModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4">
         <div class="glass-panel rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl border border-white/10 overflow-hidden">
             <div class="p-5 border-b border-white/10 flex items-center justify-between bg-slate-900/40">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                        <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
                     </div>
                     <div>
-                        <h4 id="modalChapterTitle" class="text-sm sm:text-base font-bold text-white">Edit Chapter</h4>
-                        <p class="text-xs text-slate-400">Review or edit extracted text before speech synthesis</p>
+                        <h4 id="modalChapterTitle" class="text-sm sm:text-base font-bold text-white">Chapter Text Inspector</h4>
+                        <p class="text-xs text-slate-400">Read or edit text</p>
                     </div>
                 </div>
                 <button id="btnCloseModal" class="p-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition">
@@ -243,7 +259,7 @@
             </div>
 
             <div class="p-4 border-t border-white/10 flex items-center justify-end gap-3 bg-slate-900/40">
-                <button id="btnCancelModal" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">Cancel</button>
+                <button id="btnCancelModal" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">Close</button>
                 <button id="btnSaveModal" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/30">
                     <i data-lucide="check" class="w-4 h-4"></i> Save Changes
                 </button>
@@ -252,18 +268,19 @@
     </div>
 
     <!-- Floating Luxury Glass Audio Player Dock -->
-    <div id="audioPlayerBar" class="hidden fixed bottom-4 inset-x-4 sm:inset-x-8 max-w-6xl mx-auto glass-panel rounded-3xl p-3.5 sm:p-4 z-50 shadow-2xl border border-indigo-500/30 backdrop-blur-2xl">
+    <div id="audioPlayerBar" class="hidden fixed bottom-4 inset-x-4 sm:inset-x-8 max-w-6xl mx-auto glass-dock rounded-3xl p-3.5 sm:p-4 z-50">
         <audio id="globalAudioPlayer" preload="auto"></audio>
         
         <div class="flex flex-col md:flex-row items-center justify-between gap-4">
             
             <!-- Currently Playing Info -->
             <div class="flex items-center gap-3.5 w-full md:w-1/3 min-w-0">
-                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 flex-shrink-0 relative">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 flex-shrink-0 relative ring-1 ring-white/20">
                     <i data-lucide="headphones" class="w-6 h-6"></i>
                     <!-- Animated Soundwave Equalizer -->
-                    <div id="playerEqualizer" class="hidden absolute -top-1 -right-1 bg-indigo-500 px-1.5 py-0.5 rounded-full shadow-md">
+                    <div id="playerEqualizer" class="hidden absolute -top-1 -right-1 bg-indigo-600 px-1.5 py-0.5 rounded-full shadow-md">
                         <div class="equalizer">
+                            <span class="equalizer-bar"></span>
                             <span class="equalizer-bar"></span>
                             <span class="equalizer-bar"></span>
                             <span class="equalizer-bar"></span>
@@ -271,8 +288,8 @@
                     </div>
                 </div>
                 <div class="min-w-0">
-                    <h5 id="playerTrackTitle" class="text-xs sm:text-sm font-bold text-white truncate">Select a chapter</h5>
-                    <p id="playerTrackSubtitle" class="text-[11px] text-indigo-300 truncate">AudioRead AI Studio</p>
+                    <h5 id="playerTrackTitle" class="text-xs sm:text-sm font-extrabold text-white truncate">Select a chapter</h5>
+                    <p id="playerTrackSubtitle" class="text-[11px] text-indigo-300 font-medium truncate">AudioRead AI Studio</p>
                 </div>
             </div>
 
@@ -285,7 +302,7 @@
                     <button id="btnPlayerRewind" title="Rewind 15s" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition">
                         <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                     </button>
-                    <button id="btnPlayerPlayPause" title="Play / Pause" class="w-11 h-11 rounded-2xl btn-neon-glow text-white flex items-center justify-center shadow-xl shadow-indigo-600/40 hover:scale-105 active:scale-95 transition">
+                    <button id="btnPlayerPlayPause" title="Play / Pause" class="w-12 h-12 rounded-2xl btn-neon-glow text-white flex items-center justify-center shadow-xl shadow-indigo-600/40 hover:scale-105 active:scale-95 transition">
                         <i data-lucide="play" id="playIcon" class="w-5 h-5 fill-current"></i>
                     </button>
                     <button id="btnPlayerForward" title="Forward 15s" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition">
@@ -298,18 +315,18 @@
 
                 <!-- Progress Bar & Timers -->
                 <div class="w-full flex items-center gap-3 text-xs font-mono text-slate-400">
-                    <span id="playerCurrentTime">00:00</span>
+                    <span id="playerCurrentTime" class="font-bold text-slate-300">00:00</span>
                     <div class="relative flex-1 group">
                         <input type="range" id="playerProgress" min="0" max="100" value="0" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-1.5 group-hover:h-2 transition-all">
                     </div>
-                    <span id="playerTotalTime">00:00</span>
+                    <span id="playerTotalTime" class="font-bold text-slate-300">00:00</span>
                 </div>
             </div>
 
-            <!-- Volume & Speed Controls -->
+            <!-- Volume & Download Current Controls -->
             <div class="hidden lg:flex items-center justify-end gap-3 w-full md:w-1/4">
-                <button id="btnPlaybackSpeed" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-xs font-mono text-indigo-300 transition shadow-inner">
-                    1.0x
+                <button onclick="downloadActiveChapterAudio()" title="Download Current Chapter Audio" class="p-2 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 hover:text-indigo-400 transition shadow-inner">
+                    <i data-lucide="download" class="w-4 h-4"></i>
                 </button>
                 <div class="flex items-center gap-2">
                     <button id="btnMute" class="text-slate-400 hover:text-white transition">
@@ -320,9 +337,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Hidden audio element for voice preview -->
-    <audio id="previewAudioPlayer" class="hidden"></audio>
 
     <script src="static/app.js"></script>
 </body>
