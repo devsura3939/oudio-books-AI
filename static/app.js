@@ -761,8 +761,10 @@ function paginateChapter() {
     readerPages = [];
     readerSentenceToPageMap = {};
 
-    // Density: 80 words per page on mobile (responsive flipping), 135 on desktop
-    const WORDS_PER_PAGE = window.innerWidth < 640 ? 80 : 135;
+    // Density: dynamically adjust based on font size. Base font size is 18.
+    let baseWords = window.innerWidth < 640 ? 80 : 135;
+    const fontRatio = 18 / readerFontSize;
+    const WORDS_PER_PAGE = Math.max(30, Math.floor(baseWords * fontRatio * fontRatio));
     let curPageSentences = [];
     let curPageWords = 0;
     let pageIndex = 0;
@@ -917,8 +919,8 @@ function renderCurrentPage() {
 
 function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPage, spineClass) {
     let cardHtml = `
-        <div class="book-page-card ${spineClass}">
-            <div>
+        <div class="book-page-card ${spineClass}" style="height: max-content; min-height: 100%;">
+            <div class="flex-grow">
     `;
 
     if (isFirstPage) {
