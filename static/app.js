@@ -1431,17 +1431,10 @@ function speakStandardSentence(text, lang) {
             utter.voice = nativeKaVoice;
             utter.lang = nativeKaVoice.lang;
         } else {
-            // Phonetic Georgian with high-clarity voice
-            utter.text = transliterateGeorgianToPhonetic(normalized);
-            const clearVoice = voices.find(v => v.lang.startsWith('it') || v.lang.startsWith('es') || v.lang.startsWith('el') || v.lang.startsWith('pt')) ||
-                               voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI) ||
-                               voices[0];
-            if (clearVoice) {
-                utter.voice = clearVoice;
-                utter.lang = clearVoice.lang;
-            } else {
-                utter.lang = 'en-US';
-            }
+            // No native Georgian voice found and ElevenLabs is not enabled.
+            stopSpeech();
+            alert("Native Georgian voice not found on this device!\n\nStandard browsers and operating systems do not support Georgian voices by default (even Google Translate doesn't have it).\n\nTo hear this book in high-quality Native Georgian, please click 'Voice Settings', enable 'ElevenLabs AI', and enter an API key.");
+            return;
         }
     } else {
         utter.text = text;
