@@ -1086,9 +1086,9 @@ function playChapterAudio(chapId) {
     renderChaptersList();
 }
 
-// Speak the current sentence with explicit voice binding and studio breathing pauses
-function speakCurrentSentence() {
-    if (!('speechSynthesis' in window) || !isPlaying || isPaused) return;
+// Speak the current sentence using High-Fidelity Edge TTS / Google TTS Audio Blobs
+async function speakCurrentSentence() {
+    if (!isPlaying || isPaused) return;
 
     if (currentSentenceIndex >= sentenceQueue.length) {
         stopSpeech();
@@ -1112,59 +1112,58 @@ function speakCurrentSentence() {
         playerProgress.value = pct;
     }
 
-    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-    window.speechSynthesis.cancel();
-
-    const utter = new SpeechSynthesisUtterance(cleanSentence);
-    
-    // Explicit Voice Lookup & Binding
-    const selectedVoiceName = userSelectedVoiceName || (voiceSelect ? voiceSelect.value : '');
-    const allVoices = window.speechSynthesis.getVoices();
-    
-    if (selectedVoiceName === 'Georgian-Natural-ka-GE') {
-        utter.lang = 'ka-GE';
-    } else {
-        const match = allVoices.find(v => v.name === selectedVoiceName);
-        if (match) {
-            utter.voice = match;
-            utter.lang = match.lang;
-        } else if (currentLang === 'ka') {
-            utter.lang = 'ka-GE';
-        } else {
-            utter.lang = 'en-US';
-        }
+    if (window._activeAudioElement) {
+        window._activeAudioElement.pause();
+        window._activeAudioElement = null;
     }
 
-    const pitchOffset = parseInt(pitchSlider ? pitchSlider.value : 0);
-    utter.rate = currentGlobalSpeed;
-    utter.pitch = Math.max(0.5, Math.min(1.8, 1 + pitchOffset / 50));
-    utter.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1.0;
-
-    // Human Breath & Pacing Gap (320ms pause between sentences for realistic narration)
-    utter.onend = () => {
-        if (!isPlaying || isPaused) return; // Prevent skipping sentence if canceled via pause
-        currentSentenceIndex++;
-        if (utteranceTimeout) clearTimeout(utteranceTimeout);
-        utteranceTimeout = setTimeout(() => {
-            if (isPlaying && !isPaused) {
-                speakCurrentSentence();
-            }
-        }, 320);
-    };
-
-    // Ignore deliberate cancellations
-    utter.onerror = (e) => {
-        if (e.error === 'canceled' || e.error === 'interrupted') {
-            return;
+    try {
+        const voiceName = userSelectedVoiceName || (voiceSelect ? voiceSelect.value : '');
+        const edgeVoice = mapToEdgeVoice(voiceName);
+        let mp3Blob;
+        
+        if (edgeVoice === 'fallback_ka' || currentLang === 'ka') {
+            mp3Blob = await synthesizeGoogleTTSChunk(cleanSentence, 'ka');
+        } else {
+            mp3Blob = await synthesizeEdgeTTSChunk(cleanSentence, edgeVoice);
         }
-        console.warn('Utterance error:', e);
-        currentSentenceIndex++;
-        setTimeout(() => speakCurrentSentence(), 150);
-    };
 
-    window._activeUtterance = utter; // Prevent GC
-    window.speechSynthesis.speak(utter);
-    updatePlayerUIState(true);
+        if (!isPlaying || isPaused) return; // User stopped/paused during generation
+
+        const audioUrl = URL.createObjectURL(mp3Blob);
+        const audio = new Audio(audioUrl);
+        window._activeAudioElement = audio;
+
+        // Apply speed if using Google TTS (Edge TTS already has speed embedded in SSML)
+        if (edgeVoice === 'fallback_ka' || currentLang === 'ka') {
+            audio.playbackRate = currentGlobalSpeed;
+        }
+
+        audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            if (!isPlaying || isPaused) return;
+            currentSentenceIndex++;
+            if (utteranceTimeout) clearTimeout(utteranceTimeout);
+            utteranceTimeout = setTimeout(() => {
+                if (isPlaying && !isPaused) speakCurrentSentence();
+            }, 320); // Natural breath pause
+        };
+
+        audio.onerror = (e) => {
+            console.error("Audio playback error", e);
+            URL.revokeObjectURL(audioUrl);
+            currentSentenceIndex++;
+            speakCurrentSentence();
+        };
+
+        audio.play().catch(e => console.warn("Play interrupted:", e));
+        updatePlayerUIState(true);
+
+    } catch (err) {
+        console.error("TTS Generator Error", err);
+        currentSentenceIndex++;
+        speakCurrentSentence();
+    }
 }
 
 function togglePlayPause() {
@@ -1176,18 +1175,20 @@ function togglePlayPause() {
     }
 
     if (isPlaying && !isPaused) {
-        // BUG FIX: Chromium's engine can get permanently stuck if paused.
-        // Calling resume() right before cancel() flushes the stuck state safely.
         isPaused = true;
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
-        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-        window.speechSynthesis.cancel();
+        if (window._activeAudioElement) {
+            window._activeAudioElement.pause();
+        }
         stopTimer();
         updatePlayerUIState(false);
     } else if (isPlaying && isPaused) {
         isPaused = false;
-        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-        speakCurrentSentence();
+        if (window._activeAudioElement) {
+            window._activeAudioElement.play().catch(e => console.warn(e));
+        } else {
+            speakCurrentSentence();
+        }
         startTimer();
         updatePlayerUIState(true);
     } else {
@@ -1218,9 +1219,9 @@ function stopSpeech() {
         clearTimeout(utteranceTimeout);
         utteranceTimeout = null;
     }
-    if ('speechSynthesis' in window) {
-        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-        window.speechSynthesis.cancel();
+    if (window._activeAudioElement) {
+        window._activeAudioElement.pause();
+        window._activeAudioElement = null;
     }
     stopTimer();
     updatePlayerUIState(false);
@@ -1329,17 +1330,13 @@ async function synthesizeEdgeTTSChunk(text, edgeVoiceName) {
                     resolve(new Blob(audioBuffers, { type: 'audio/mp3' }));
                 }
             } else if (e.data instanceof Blob) {
+                // Edge TTS binary format: 2-byte header length, followed by header string, followed by MP3 data
                 const arrayBuffer = await e.data.arrayBuffer();
-                const view = new Uint8Array(arrayBuffer);
-                let headerEnd = -1;
-                for (let i = 0; i < view.length - 3; i++) {
-                    if (view[i] === 13 && view[i+1] === 10 && view[i+2] === 13 && view[i+3] === 10) {
-                        headerEnd = i + 4;
-                        break;
-                    }
-                }
-                if (headerEnd !== -1) {
-                    audioBuffers.push(arrayBuffer.slice(headerEnd));
+                const view = new DataView(arrayBuffer);
+                const headerLen = view.getUint16(0);
+                const audioDataStart = 2 + headerLen;
+                if (audioDataStart < arrayBuffer.byteLength) {
+                    audioBuffers.push(arrayBuffer.slice(audioDataStart));
                 }
             }
         };
@@ -1410,8 +1407,17 @@ async function downloadSingleChapterAudio(chapId) {
 
     // Optional: show some loading UI
     const originalTitle = chap.title;
-    chap.title = 'Downloading...';
+    chap.title = 'Generating MP3...';
     renderChaptersList();
+
+    // Show spinner on the button itself if it exists in the DOM
+    const btn = document.querySelector(`button[onclick="downloadSingleChapterAudio(${chapId})"]`);
+    let originalHtml = '';
+    if (btn) {
+        originalHtml = btn.innerHTML;
+        btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>`;
+        lucide.createIcons();
+    }
 
     try {
         const blob = await createChapterAudioBlob(chap);
@@ -1430,6 +1436,9 @@ async function downloadSingleChapterAudio(chapId) {
         alert('Failed to generate MP3. Please try again.');
     } finally {
         chap.title = originalTitle;
+        if (btn) {
+            btn.innerHTML = originalHtml;
+        }
         renderChaptersList();
     }
 }
