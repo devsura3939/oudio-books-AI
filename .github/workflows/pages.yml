@@ -28,9 +28,10 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Ship only the frontend: publishing the whole repo would expose
-          # data/, test MP3s, and scripts that are not part of the site.
-          path: 'static'
+          # Ship the repo root: the NEW app (Lumina Audio) lives in the root
+          # index.html and loads static/app.js. Publishing 'static' alone
+          # would serve the OLD AudioRead Studio page (static/index.html).
+          path: '.'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
