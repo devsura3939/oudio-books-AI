@@ -55,7 +55,7 @@ let currentElevenAudio = null;
 let isTranslatingWholeBook = false;
 let cancelTranslationFlag = false;
 
-// ── Georgian Unicode Normalization ─────────────────────────────────────────
+// ── Georgian Unicode & Advanced Linguistic Normalization ───────────────────
 function normalizeGeorgian(text) {
     if (!text) return '';
     const res = [];
@@ -68,6 +68,188 @@ function normalizeGeorgian(text) {
         }
     }
     return res.join('');
+}
+
+// ── Complete Georgian Number Verbalizer (0 to 999,999,999) ─────────────────
+function georgianNumberToWords(num) {
+    const units = ['', 'ერთი', 'ორი', 'სამი', 'ოთხი', 'ხუთი', 'ექვსი', 'შვიდი', 'რვა', 'ცხრა'];
+    const teens = ['ათი', 'თერთმეტი', 'თორმეტი', 'ცამეტი', 'თოთხმეტი', 'თხუთმეტი', 'თექვსმეტი', 'ჩვიდმეტი', 'თვრამეტი', 'ცხრამეტი'];
+
+    num = parseInt(num, 10);
+    if (isNaN(num)) return '';
+    if (num === 0) return 'ნული';
+    if (num < 0) return 'მინუს ' + georgianNumberToWords(-num);
+
+    function convertUnder100(n) {
+        if (n < 10) return units[n];
+        if (n < 20) return teens[n - 10];
+
+        const score = Math.floor(n / 20);
+        const rem = n % 20;
+        const scorePrefixes = { 1: 'ოც', 2: 'ორმოც', 3: 'სამოც', 4: 'ოთხმოც' };
+        const base = scorePrefixes[score] || '';
+
+        if (rem === 0) {
+            return base + 'ი';
+        } else {
+            return base + 'და' + (rem < 10 ? units[rem] : teens[rem - 10]);
+        }
+    }
+
+    function convertUnder1000(n) {
+        if (n < 100) return convertUnder100(n);
+        const h = Math.floor(n / 100);
+        const rem = n % 100;
+
+        const hundredNames = {
+            1: 'ას', 2: 'ორას', 3: 'სამას', 4: 'ოთხას',
+            5: 'ხუთას', 6: 'ექვსას', 7: 'შვიდას', 8: 'რვაას', 9: 'ცხრაას'
+        };
+        const base = hundredNames[h] || '';
+        if (rem === 0) {
+            return base + 'ი';
+        } else {
+            return base + ' ' + convertUnder100(rem);
+        }
+    }
+
+    function convertLarge(n) {
+        if (n < 1000) return convertUnder1000(n);
+        if (n < 1000000) {
+            const th = Math.floor(n / 1000);
+            const rem = n % 1000;
+            const thStr = th === 1 ? 'ათას' : convertUnder1000(th) + ' ათას';
+            if (rem === 0) {
+                return thStr + 'ი';
+            } else {
+                return thStr + ' ' + convertUnder1000(rem);
+            }
+        }
+        if (n < 1000000000) {
+            const m = Math.floor(n / 1000000);
+            const rem = n % 1000000;
+            const mStr = m === 1 ? 'მილიონ' : convertUnder1000(m) + ' მილიონ';
+            if (rem === 0) {
+                return mStr + 'ი';
+            } else {
+                return mStr + ' ' + convertLarge(rem);
+            }
+        }
+        return n.toString();
+    }
+
+    return convertLarge(num);
+}
+
+function georgianOrdinalToWords(n) {
+    n = parseInt(n, 10);
+    if (isNaN(n)) return '';
+    const ordinals1To10 = {
+        1: 'პირველი', 2: 'მეორე', 3: 'მესამე', 4: 'მეოთხე', 5: 'მეხუთე',
+        6: 'მეექვსე', 7: 'მეშვიდე', 8: 'მერვე', 9: 'მეცხრე', 10: 'მეათე'
+    };
+    if (ordinals1To10[n]) return ordinals1To10[n];
+    const teensStem = {
+        11: 'მეთერთმეტე', 12: 'მეთორმეტე', 13: 'მეცამეტე', 14: 'მეთოთხმეტე', 15: 'მეთხუთმეტე',
+        16: 'მეთექვსმეტე', 17: 'მეჩვიდმეტე', 18: 'მეთვრამეტე', 19: 'მეცხრამეტე'
+    };
+    if (teensStem[n]) return teensStem[n];
+    if (n === 20) return 'მეოცე';
+    if (n === 100) return 'მეასე';
+    if (n === 1000) return 'მეათასე';
+
+    const last20 = n % 20;
+    const base = Math.floor(n / 20) * 20;
+    const baseWords = { 20: 'ოცდა', 40: 'ორმოცდა', 60: 'სამოცდა', 80: 'ოთხმოცდა' };
+    if (baseWords[base] && last20 > 0) {
+        const subOrd = last20 <= 10 ? ordinals1To10[last20] : (teensStem[last20] || `მე-${last20}`);
+        return baseWords[base] + subOrd;
+    }
+    return `მე-${georgianNumberToWords(n)}`;
+}
+
+// ── Advanced Georgian Linguistic Verbalizer for Flawless Native Speech ───────
+function verbalizeGeorgianTextForTTS(text) {
+    if (!text) return '';
+    let out = normalizeGeorgian(text);
+
+    // 1. Roman Numerals in chapters, titles, books
+    const romanToGeorgian = {
+        'I': 'პირველი', 'II': 'მეორე', 'III': 'მესამე', 'IV': 'მეოთხე', 'V': 'მეხუთე',
+        'VI': 'მეექვსე', 'VII': 'მეშვიდე', 'VIII': 'მერვე', 'IX': 'მეცხრე', 'X': 'მეათე',
+        'XI': 'მეთერთმეტე', 'XII': 'მეთორმეტე', 'XIII': 'მეცამეტე', 'XIV': 'მეთოთხმეტე',
+        'XV': 'მეთხუთმეტე', 'XVI': 'მეთექვსმეტე', 'XVII': 'მეჩვიდმეტე', 'XVIII': 'მეთვრამეტე',
+        'XIX': 'მეცხრამეტე', 'XX': 'მეოცე'
+    };
+    out = out.replace(/\b(თავი|ნაწილი|წიგნი|ტომი|კარი)\s+([IVXLCDM]+)\b/gi, (match, prefix, roman) => {
+        const upper = roman.toUpperCase();
+        return `${prefix} ${romanToGeorgian[upper] || roman}`;
+    });
+
+    // 2. Georgian Ordinals: 1-ლი, 2-ე, 3-ე, etc.
+    out = out.replace(/(\d+)-(ლი|ე|ში|მა|ად)/g, (match, num, suffix) => {
+        const ord = georgianOrdinalToWords(parseInt(num, 10));
+        if (suffix === 'ში') return ord + 'ში';
+        if (suffix === 'მა') return ord + 'მ';
+        return ord;
+    });
+
+    // 3. Percentages: 50% -> ორმოცდაათი პროცენტი
+    out = out.replace(/(\d+)\s*%/g, (match, num) => {
+        return georgianNumberToWords(parseInt(num, 10)) + ' პროცენტი';
+    });
+
+    // 4. Currencies: $100, 100₾, 100€
+    out = out.replace(/\$(\d+[\d,]*)/g, (match, num) => {
+        const n = parseInt(num.replace(/,/g, ''), 10);
+        return georgianNumberToWords(n) + ' დოლარი';
+    });
+    out = out.replace(/(\d+[\d,]*)\s*₾/g, (match, num) => {
+        const n = parseInt(num.replace(/,/g, ''), 10);
+        return georgianNumberToWords(n) + ' ლარი';
+    });
+    out = out.replace(/€(\d+[\d,]*)/g, (match, num) => {
+        const n = parseInt(num.replace(/,/g, ''), 10);
+        return georgianNumberToWords(n) + ' ევრო';
+    });
+
+    // 5. Common Abbreviations
+    const abbrevMap = [
+        [/\bდა\s*ა\.შ\./g, 'და ასე შემდეგ'],
+        [/\bე\.ი\./g, 'ესე იგი'],
+        [/\bე\.წ\./g, 'ეგრეთ წოდებული'],
+        [/\bმაგ\./g, 'მაგალითად'],
+        [/\bბ-ნი\b/g, 'ბატონი'],
+        [/\bქ-ნი\b/g, 'ქალბატონი'],
+        [/\bდოქტ\./g, 'დოქტორი'],
+        [/\bპროფ\./g, 'პროფესორი'],
+        [/\bწ\./g, 'წელი'],
+        [/\bსს\./g, 'საუკუნე']
+    ];
+    abbrevMap.forEach(([regex, repl]) => {
+        out = out.replace(regex, repl);
+    });
+
+    // 6. Standalone numbers: 1984 -> ათას ცხრაას ოთხმოცდაოთხი
+    out = out.replace(/\b(\d{1,9})\b/g, (match, num) => {
+        return georgianNumberToWords(parseInt(num, 10));
+    });
+
+    // 7. Dialogue & Punctuation cadence
+    out = out
+        .replace(/[""„“«»]/g, '')
+        .replace(/\s*—\s*/g, ', ')
+        .replace(/\s*–\s*/g, ', ')
+        .replace(/\s*-\s*/g, ', ')
+        .replace(/;/g, '.')
+        .replace(/:/g, ',')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    // 8. Natural breath pause before Georgian conjunctions
+    out = out.replace(/([^,.;:!?])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|როდესაც|რომელიც)\b/g, '$1, $2');
+
+    return out;
 }
 
 const GEORGIAN_TO_PHONETIC = {
@@ -645,8 +827,10 @@ function testVoicePreview() {
 }
 
 function testGeorgianVoicePreview() {
-    const text = "გამარჯობა! მოგესალმებით ლუმინას ქართულ აუდიო და მთვარის წამკითხველში.";
-    speakStandardSentence(text, 'ka');
+    const text = "გამარჯობა! მოგესალმებით ლუმინას ქართულ აუდიო და მთვარის წამკითხველში. ომის ხელოვნება 25 თავისგან შედგება.";
+    const isCloudKaVoice = selectedVoiceURI === 'ka-GE-EkaNeural - ka-GE (Female)' || selectedVoiceURI === 'ka-GE-GiorgiNeural - ka-GE (Male)';
+    const voiceId = isCloudKaVoice ? selectedVoiceURI : 'ka-GE-GiorgiNeural - ka-GE (Male)';
+    speakFreeGeorgianNeural(text, voiceId);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1230,43 +1414,75 @@ function readerForwardSentence() {
 
 async function translateChunkContextually(text, targetLang = 'ka') {
     if (!text || !text.trim()) return '';
+    const clean = text.trim();
+
+    // Tier 1: Google Translate GTX Neural Engine (Handles large contextual paragraphs)
     try {
-        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean)}`;
         const gRes = await fetch(gUrl);
         if (gRes.ok) {
             const data = await gRes.json();
-            if (data && data[0]) {
+            if (data && data[0] && Array.isArray(data[0])) {
                 let fullTrans = '';
                 for (let i = 0; i < data[0].length; i++) {
-                    if (data[0][i][0]) fullTrans += data[0][i][0];
+                    if (data[0][i] && data[0][i][0]) {
+                        fullTrans += data[0][i][0];
+                    }
                 }
-                return normalizeGeorgian(fullTrans);
+                const normalized = normalizeGeorgian(fullTrans);
+                if (normalized && normalized.trim().length > 0) {
+                    return normalized;
+                }
             }
         }
     } catch (e) {
-        console.warn('Google chunk translate failed:', e);
+        console.warn('Primary Google GTX translation failed:', e);
     }
-    return await translateSingleSentence(text, targetLang);
+
+    // Tier 2: Secondary Google Translation Mirror
+    try {
+        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
+        const gRes2 = await fetch(gUrl2);
+        if (gRes2.ok) {
+            const data2 = await gRes2.json();
+            if (data2 && data2[0] && Array.isArray(data2[0])) {
+                const trans2 = data2[0].map(item => item[0]).filter(Boolean).join('');
+                const normalized2 = normalizeGeorgian(trans2);
+                if (normalized2 && normalized2.trim().length > 0) {
+                    return normalized2;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Secondary Google mirror failed:', e);
+    }
+
+    // Tier 3: Chunk-by-sentence fallback using MyMemory
+    return await translateSingleSentence(clean, targetLang);
 }
 
 async function translateSingleSentence(text, targetLang = 'ka') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
 
+    // Try MyMemory
     try {
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=en|${targetLang}`;
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.slice(0, 480))}&langpair=en|${targetLang}`;
         const res = await fetch(url);
         if (res.ok) {
             const data = await res.json();
             if (data && data.responseData && data.responseData.translatedText) {
                 const trans = normalizeGeorgian(data.responseData.translatedText);
-                if (trans && !trans.includes('MYMEMORY WARNING')) {
+                if (trans && !trans.includes('MYMEMORY WARNING') && !trans.includes('QUERY LENGTH LIMIT')) {
                     return trans;
                 }
             }
         }
-    } catch (e) { console.warn('MyMemory failed:', e); }
+    } catch (e) {
+        console.warn('MyMemory fallback failed:', e);
+    }
 
+    // Direct Google GTX minimal fallback
     try {
         const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
         const gRes = await fetch(gUrl);
@@ -1277,7 +1493,9 @@ async function translateSingleSentence(text, targetLang = 'ka') {
                 return normalizeGeorgian(trans);
             }
         }
-    } catch (e) { console.warn('Google GTX failed:', e); }
+    } catch (e) {
+        console.warn('Minimal Google GTX failed:', e);
+    }
 
     return clean;
 }
@@ -1466,17 +1684,8 @@ async function speakCurrentSentence() {
     if (elevenLabsEnabled && elevenLabsApiKey) {
         speakElevenLabsSentence(cleanSentence);
     } else if (currentLang === 'ka' && (!hasNativeKaVoice || isCloudKaVoice)) {
-        // Advanced NLP pass to make Georgian TTS sound native and natural
-        let optimizedSentence = cleanSentence
-            .replace(/[""]/g, '') // Remove English quotes that confuse Georgian prosody
-            .replace(/[„“]/g, '') // Remove Georgian quotes
-            .replace(/ - /g, ', ') // Convert hyphens to commas for natural breathing pauses
-            .replace(/;/g, '.') // Treat semicolons as full stops
-            .replace(/\s+/g, ' ')
-            .trim();
-
         const voiceId = isCloudKaVoice ? selectedVoiceURI : 'ka-GE-GiorgiNeural - ka-GE (Male)';
-        speakFreeGeorgianNeural(optimizedSentence, voiceId);
+        speakFreeGeorgianNeural(cleanSentence, voiceId);
     } else {
         speakStandardSentence(cleanSentence, currentLang);
     }
@@ -1557,69 +1766,134 @@ function speakStandardSentence(text, lang) {
     updatePlayerUIState(true);
 }
 
+// ── Lookahead Georgian Audio Prefetch Buffer ───────────────────────────────
+const georgianAudioPrefetchCache = new Map(); // sentenceIndex -> Audio instance
+
+async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
+    const verbalized = verbalizeGeorgianTextForTTS(text);
+    if (!verbalized || !verbalized.trim()) return null;
+
+    const mirrors = [
+        "https://innoai-edge-tts-text-to-speech.hf.space/gradio_api",
+        "https://r3gm-edge-tts.hf.space/gradio_api"
+    ];
+
+    for (const apiBase of mirrors) {
+        try {
+            const res = await fetch(apiBase + "/call/tts_interface", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data: [verbalized, voiceId, ratePct, pitchHz]
+                })
+            });
+
+            if (!res.ok) continue;
+            const json_res = await res.json();
+            const event_id = json_res.event_id;
+            if (!event_id) continue;
+
+            const audioUrl = await new Promise((resolve, reject) => {
+                const es = new EventSource(apiBase + "/call/tts_interface/" + event_id);
+                const timer = setTimeout(() => {
+                    try { es.close(); } catch(e){}
+                    reject(new Error("Timeout"));
+                }, 10000);
+
+                es.addEventListener("complete", (event) => {
+                    clearTimeout(timer);
+                    try { es.close(); } catch(e){}
+                    try {
+                        const parsed = JSON.parse(event.data);
+                        if (Array.isArray(parsed) && parsed[0] && parsed[0].url) {
+                            resolve(parsed[0].url);
+                        } else {
+                            reject(new Error("No URL"));
+                        }
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+
+                es.addEventListener("error", () => {
+                    clearTimeout(timer);
+                    try { es.close(); } catch(e){}
+                    reject(new Error("SSE Error"));
+                });
+            });
+
+            if (audioUrl) return audioUrl;
+        } catch (e) {
+            console.warn(`Mirror ${apiBase} failed:`, e);
+        }
+    }
+    return null;
+}
+
+function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
+    if (index >= sentenceQueue.length || index < 0) return;
+    if (georgianAudioPrefetchCache.has(index)) return;
+
+    const nextText = sentenceQueue[index];
+    if (!nextText || !nextText.trim()) return;
+
+    fetchGeorgianSpeechAudioUrl(nextText, voiceId, ratePct, pitchHz).then(url => {
+        if (url) {
+            const audio = new Audio(url);
+            audio.preload = 'auto';
+            georgianAudioPrefetchCache.set(index, audio);
+        }
+    }).catch(() => {});
+}
+
 async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)') {
     stopCurrentSpeechAudio();
     updatePlayerUIState(true);
-    
-    // Convert global speed/pitch to Edge TTS relative parameters (Prosody Tuning for native feel)
+
     const ratePct = Math.max(-50, Math.min(50, Math.round((currentGlobalSpeed - 1.0) * 100)));
     const pitchHz = Math.max(-20, Math.min(20, Math.round((currentPitch - 1.0) * 40)));
 
     try {
-        const apiBase = "https://innoai-edge-tts-text-to-speech.hf.space/gradio_api";
-        const res = await fetch(apiBase + "/call/tts_interface", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                data: [text, voiceId, ratePct, pitchHz]
-            })
-        });
-        
-        if (!res.ok) throw new Error("Free TTS API unavailable");
-        const json_res = await res.json();
-        const event_id = json_res.event_id;
-        
-        const audioUrl = await new Promise((resolve, reject) => {
-            const es = new EventSource(apiBase + "/call/tts_interface/" + event_id);
-            es.addEventListener("complete", (event) => {
-                es.close();
-                try {
-                    const parsed = JSON.parse(event.data);
-                    if (Array.isArray(parsed) && parsed[0] && parsed[0].url) {
-                        resolve(parsed[0].url);
-                    } else {
-                        reject("No URL returned");
-                    }
-                } catch (e) {
-                    reject(e);
-                }
-            });
-            es.addEventListener("error", (event) => {
-                es.close();
-                reject("Stream error");
-            });
-        });
-        
+        let audioToPlay = null;
+
+        // Check if pre-fetched in lookahead buffer
+        if (georgianAudioPrefetchCache.has(currentSentenceIndex)) {
+            audioToPlay = georgianAudioPrefetchCache.get(currentSentenceIndex);
+            georgianAudioPrefetchCache.delete(currentSentenceIndex);
+        } else {
+            const audioUrl = await fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz);
+            if (audioUrl) {
+                audioToPlay = new Audio(audioUrl);
+            }
+        }
+
+        if (!audioToPlay) {
+            throw new Error("Could not obtain Georgian Neural audio stream");
+        }
+
         if (!isPlaying || isPaused) return;
-        
-        currentElevenAudio = new Audio(audioUrl);
+
+        currentElevenAudio = audioToPlay;
         currentElevenAudio.playbackRate = currentGlobalSpeed;
-        
+
+        // Immediately trigger background prefetch for the NEXT sentence for 0ms transition
+        prefetchNextGeorgianSentence(currentSentenceIndex + 1, voiceId, ratePct, pitchHz);
+
         currentElevenAudio.onended = () => {
             if (!isPlaying || isPaused) return;
             currentSentenceIndex++;
             speakCurrentSentence();
         };
-        
+
         currentElevenAudio.onerror = () => {
-            console.error("Free TTS Audio Error");
+            console.error("Georgian Neural Audio Error");
             currentSentenceIndex++;
             speakCurrentSentence();
         };
-        
+
         await currentElevenAudio.play();
         isSpeakingLock = false;
-        
+
     } catch (e) {
         console.error("Free Georgian TTS Failed:", e);
         speakStandardSentence(text, 'ka');
@@ -2140,10 +2414,39 @@ function splitIntoChapters(text) {
 }
 
 function splitIntoNaturalSentences(text) {
-    if (!text) return [];
-    const regex = /[^.!?։]+[.!?։]+["']?|[^.!?։]+$/g;
-    const matches = text.match(regex);
-    return matches ? matches.map(s => s.trim()).filter(s => s.length > 0) : [text];
+    if (!text || !text.trim()) return [];
+
+    // 1. Clean PDF broken hyphenations: "con- \n tinue" -> "continue"
+    let clean = text.replace(/(\b[a-zA-Zა-ჰ]+)-\s*[\r\n]+\s*([a-zA-Zა-ჰ]+\b)/g, '$1$2');
+    clean = clean.replace(/[ \t\f]+/g, ' ');
+
+    // 2. Protect standard title abbreviations
+    const titles = '(?:Mr|Mrs|Ms|Dr|Prof|Gen|Col|Capt|Lt|Sr|Jr|St|Rev|Hon|No|Vol|Ch|p|pp)';
+    clean = clean.replace(new RegExp(`\\b(${titles})\\.\\s*(?=[A-Z0-9ა-ჰ])`, 'gi'), '$1__DOT__ ');
+
+    // 3. Protect Latin abbreviations: e.g., i.e., etc., vs.
+    clean = clean.replace(/\b(e\.g\.|i\.e\.|etc\.|vs\.)/gi, (m) => m.replace(/\./g, '__DOT__'));
+
+    // 4. Protect Georgian abbreviations
+    clean = clean.replace(/\b(ე\.ი\.|ე\.წ\.|და\s*ა\.შ\.|და\s*სხვ\.)/g, (m) => m.replace(/\./g, '__DOT__'));
+
+    // 5. Protect decimals and currency
+    clean = clean.replace(/(\d+)\.(\d+)/g, '$1__DOT__$2');
+
+    // 6. Split along sentence boundaries (respecting quotes, brackets, em-dashes)
+    const regex = /[^.!?…\n]+(?:[.!?…]+["„”'»)]*(?=\s+|$)|[\n]{2,}|$)/g;
+    const matches = clean.match(regex);
+
+    if (!matches) return [text.trim()];
+
+    const sentences = [];
+    for (let i = 0; i < matches.length; i++) {
+        const s = matches[i].replace(/__DOT__/g, '.').trim();
+        if (s.length > 0) {
+            sentences.push(s);
+        }
+    }
+    return sentences.length > 0 ? sentences : [text.trim()];
 }
 
 // ══════════════════════════════════════════════════════════════════════════
