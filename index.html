@@ -227,10 +227,29 @@
         @media (max-width: 640px) {
             .book-page-spread {
                 min-height: calc(100vh - 160px);
+                gap: 0;
             }
             .book-page-card {
                 padding: 16px 14px;
                 border-radius: 8px;
+            }
+            .book-drop-cap::first-letter {
+                font-size: 2.6em;
+                padding-right: 6px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .book-page-spread {
+                min-height: calc(100vh - 140px);
+            }
+            .book-page-card {
+                padding: 12px 10px;
+                border-radius: 6px;
+            }
+            .book-drop-cap::first-letter {
+                font-size: 2.2em;
+                padding-right: 4px;
             }
         }
 

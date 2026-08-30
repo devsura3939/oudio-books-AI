@@ -1159,10 +1159,19 @@ function paginateChapter() {
     readerPages = [];
     readerSentenceToPageMap = {};
 
-    // Density: dynamically adjust based on font size. Base font size is 18.
-    let baseWords = window.innerWidth < 640 ? 80 : 135;
+    // Density: dynamically adjust based on font size AND screen width.
+    // Narrow screens hold fewer words per line, so cap words per page lower
+    // to keep page count sane and text readable on phones.
+    const vw = window.innerWidth;
+    let baseWords;
+    if (vw < 480)       baseWords = 55;
+    else if (vw < 640)  baseWords = 75;
+    else if (vw < 900)  baseWords = 110;
+    else if (vw < 1300) baseWords = 135;
+    else                baseWords = 150;
+
     const fontRatio = 18 / readerFontSize;
-    const WORDS_PER_PAGE = Math.max(30, Math.floor(baseWords * fontRatio * fontRatio));
+    const WORDS_PER_PAGE = Math.max(25, Math.floor(baseWords * fontRatio * fontRatio));
     let curPageSentences = [];
     let curPageWords = 0;
     let pageIndex = 0;
@@ -1358,6 +1367,27 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
 
     return cardHtml;
 }
+
+// ── Page Steppers ──────────────────────────────────────────────────────────
+// ── Responsive re-pagination ────────────────────────────────────────────────
+// Re-flow pages when the viewport changes (resize / device rotation) so the
+// text always fits the current screen. Debounced to avoid thrashing during
+// continuous resize drags.
+let readerResizeTimer = null;
+let lastReaderVw = window.innerWidth;
+window.addEventListener('resize', () => {
+    if (!readerActive || !readerBook) return;
+    const vw = window.innerWidth;
+    if (vw === lastReaderVw) return;
+    lastReaderVw = vw;
+    clearTimeout(readerResizeTimer);
+    readerResizeTimer = setTimeout(() => {
+        if (!readerActive || !readerBook) return;
+        if (readerMode === 'scroll') return; // scroll mode flows naturally
+        paginateChapter();
+        renderCurrentPage();
+    }, 180);
+});
 
 // ── Page Steppers ──────────────────────────────────────────────────────────
 function readerNextPage() {
