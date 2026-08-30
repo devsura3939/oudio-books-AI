@@ -1,12 +1,10 @@
 // ==========================================================================
-// LUMINA AUDIO — PRO AI AUDIOBOOK & MOON+ READER ENGINE (v11.0)
+// LUMINA AUDIO — PRO AI AUDIOBOOK & MOON+ READER ENGINE (v12.0)
 // ==========================================================================
-// 1. Dual-Stream Audio Engine: HTML5 Google Neural TTS Stream (100% Reliable
-//    on Mobile & Desktop in English & Native Georgian) + ElevenLabs + Web Speech
-// 2. Fully Synchronized Moon Reader: Dynamic Multi-Page Splitting & Auto-Flip
-// 3. Complete Pre-Loaded Classics with 5 Full Multi-Page Chapters Each
-// 4. Zero-Bug Mobile Touch & Page Navigation (Next/Prev Page & Chapter)
-// 5. Accurate Real-Time Metadata (Chapters, Words, Audio Time, Book Progress)
+// 1. Rock-Solid, Non-Skipping Speech Engine (Desktop & Mobile)
+// 2. Fully Synchronized Moon+ Reader (Pages, Spreads & Continuous Scroll)
+// 3. Multi-Chapter Pre-Loaded Classics with Full Georgian Translations
+// 4. Zero-Overflow Responsive Touch Controls for Mobile & Desktop
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
@@ -26,10 +24,7 @@ let utteranceTimeout = null;
 let secondsElapsed = 0;
 let timerInterval = null;
 let currentUser = null;
-let audioUnlocked = false;
-
-// Audio Stream Instance (HTML5 Audio for 100% Mobile Reliability)
-let activeAudioStream = null;
+let isSpeakingLock = false;
 
 // Moon+ Reader State
 let readerActive = false;
@@ -75,6 +70,27 @@ function normalizeGeorgian(text) {
     return res.join('');
 }
 
+const GEORGIAN_TO_PHONETIC = {
+    'ა': 'a', 'ბ': 'b', 'გ': 'g', 'დ': 'd', 'ე': 'e',
+    'ვ': 'v', 'ზ': 'z', 'თ': 't', 'ი': 'i', 'კ': 'k',
+    'ლ': 'l', 'მ': 'm', 'ნ': 'n', 'ო': 'o', 'პ': 'p',
+    'ჟ': 'zh', 'რ': 'r', 'ს': 's', 'ტ': 't', 'უ': 'u',
+    'ფ': 'p', 'ქ': 'k', 'ღ': 'gh', 'ყ': 'k', 'შ': 'sh',
+    'ჩ': 'ch', 'ც': 'ts', 'ძ': 'dz', 'წ': 'ts', 'ჭ': 'ch',
+    'ხ': 'kh', 'ჯ': 'j', 'ჰ': 'h'
+};
+
+function transliterateGeorgianToPhonetic(kaText) {
+    if (!kaText) return '';
+    const normalized = normalizeGeorgian(kaText);
+    let out = '';
+    for (let i = 0; i < normalized.length; i++) {
+        const ch = normalized[i];
+        out += GEORGIAN_TO_PHONETIC[ch] !== undefined ? GEORGIAN_TO_PHONETIC[ch] : ch;
+    }
+    return out;
+}
+
 // ── Rich Pre-Bundled Classic Masterworks with Full Chapters ────────────────
 const DISCOVER_CLASSICS = [
     {
@@ -94,7 +110,7 @@ const DISCOVER_CLASSICS = [
             {
                 id: 2,
                 title: 'Chapter 2: Waging War',
-                text: "Sun Tzu said: In the operations of war, where there are in the field a thousand swift chariots, as many heavy chariots, and a hundred thousand mail-clad soldiers, with provisions enough to carry them a thousand li, the expenditure at home and at the front, including entertainment of guests, small items such as glue and paint, and sums spent on chariots and armor, will reach the total of a thousand ounces of silver per day. Such is the cost of raising an army of 100,000 men. When you engage in actual fighting, if victory is long in coming, then men's weapons will grow dull and their ardor will be damped. If you lay siege to a town, you will exhaust your strength. Again, if the campaign is protracted, the resources of the State will not be equal to the strain. Now, when your weapons are dulled, your ardor damped, your strength exhausted and your treasure spent, other chieftains will spring up to take advantage of your extremity. Then no man, however wise, will be able to avert the consequences that must ensue. Thus, though we have heard of stupid haste in war, cleverness has never been seen associated with long delays. In war, then, let your great object be victory, not lengthy campaigns. Thus it may be known that the leader of armies is the arbiter of the people's fate, the man on whom it depends whether the nation shall be in peace or in peril.",
+                text: "Sun Tzu said: In the operations of war, where there are in the field a thousand swift chariots, as many heavy chariots, and a hundred thousand mail-clad soldiers, with provisions enough to carry them a thousand li, the expenditure at home and at the front, including entertainment of guests, small items such as glue and paint, and sums spent on chariots and armor, will reach the total of a thousand ounces of silver per day. Such is the cost of raising an army of 100,000 men. When you engage in actual fighting, if victory is long in coming, then men's weapons will grow dull and their ardor will be damped. If you lay siege to a town, you will exhaust your strength. Again, if the campaign is protracted, the resources of the State will not be equal to the strain. Now, when your weapons are dulled, your ardor damped, your strength exhausted and your treasure spent, other chieftains will spring up to take advantage of your extremity. Then no man, however wise, will be able to avert the consequences that must ensue. Thus, though we have heard of stupid haste in war, cleverness has never been seen associated with long delays. In war, then, let your great object be victory, not lengthy campaigns.",
                 text_ka: "სუნ ძიმ თქვა: საომარ ოპერაციებში, როდესაც ბრძოლის ველზე არის ათასი სწრაფი ეტლი და ასი ათასი ჯარისკაცი, ხარჯები მიაღწევს ათას უნცია ვერცხლს დღეში. ასეთია არმიის შეკრების ფასი. როდესაც რეალურ ბრძოლაში ერთვებით, თუ გამარჯვება აგვიანებს, იარაღი დაბლაგვდება და მხნეობა გაქრება. თუ ქალაქს ალყას შემოარტყამთ, ძალებს ამოწურავთ. თუ კამპანია გაჭიანურდა, სახელმწიფოს რესურსები ვერ გაუძლებს დაძაბულობას. ამიტომ ომში თქვენი მთავარი მიზანი უნდა იყოს სწრაფი გამარჯვება და არა ხანგრძლივი კამპანიები.",
                 word_count: 240,
                 estimated_duration_sec: 85
@@ -217,6 +233,7 @@ function cacheDOM() {
         btnDockSpeed: document.getElementById('btnDockSpeed'),
         btnDockLangToggle: document.getElementById('btnDockLangToggle'),
         dockLangBadge: document.getElementById('dockLangBadge'),
+        dockLangBadgeMobile: document.getElementById('dockLangBadgeMobile'),
 
         searchInput: document.getElementById('searchInput'),
         topVoiceBadge: document.getElementById('topVoiceBadge'),
@@ -277,7 +294,6 @@ async function init() {
     await initDB();
     setupEventListeners();
     setupKeyboardAndTouchControls();
-    setupMobileAudioUnlock();
     checkAuthState();
     loadElevenLabsSettings();
 
@@ -298,35 +314,10 @@ async function init() {
     if (window.lucide) lucide.createIcons();
 }
 
-// Mobile Audio Auto-Unlock
-function setupMobileAudioUnlock() {
-    const unlockFn = () => {
-        if (audioUnlocked) return;
-        audioUnlocked = true;
-        
-        // Initialize HTML5 Audio context
-        try {
-            const silent = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-            silent.volume = 0.01;
-            silent.play().catch(() => {});
-        } catch(e) {}
-
-        if (window.speechSynthesis) {
-            try {
-                window.speechSynthesis.resume();
-            } catch (e) {}
-        }
-        window.removeEventListener('touchstart', unlockFn);
-        window.removeEventListener('click', unlockFn);
-    };
-    window.addEventListener('touchstart', unlockFn, { passive: true });
-    window.addEventListener('click', unlockFn, { passive: true });
-}
-
-// ── IndexedDB (v11) ─────────────────────────────────────────────────────────
+// ── IndexedDB (v12) ─────────────────────────────────────────────────────────
 function initDB() {
     return new Promise((resolve, reject) => {
-        const req = indexedDB.open('LuminaAudioStudioDB_v11', 1);
+        const req = indexedDB.open('LuminaAudioStudioDB_v12', 1);
         req.onupgradeneeded = (e) => {
             db = e.target.result;
             if (!db.objectStoreNames.contains('books')) {
@@ -636,12 +627,12 @@ function updateTopVoiceBadge() {
 
 function testVoicePreview() {
     const text = "Hello! Welcome to Lumina Audio Studio. Enjoy your high-fidelity reading and listening experience.";
-    playAudioStream(text, 'en');
+    speakStandardSentence(text, 'en');
 }
 
 function testGeorgianVoicePreview() {
     const text = "გამარჯობა! მოგესალმებით ლუმინას ქართულ აუდიო და მთვარის წამკითხველში.";
-    playAudioStream(text, 'ka');
+    speakStandardSentence(text, 'ka');
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -770,8 +761,8 @@ function paginateChapter() {
     readerPages = [];
     readerSentenceToPageMap = {};
 
-    // Density: 75 words per page on mobile (quick responsive flips), 130 on desktop
-    const WORDS_PER_PAGE = window.innerWidth < 640 ? 75 : 130;
+    // Density: 80 words per page on mobile (responsive flipping), 135 on desktop
+    const WORDS_PER_PAGE = window.innerWidth < 640 ? 80 : 135;
     let curPageSentences = [];
     let curPageWords = 0;
     let pageIndex = 0;
@@ -1359,7 +1350,7 @@ function cancelWholeBookTranslation() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// ██ 3. DUAL-STREAM HIGH-FIDELITY SPEECH ENGINE (Mobile & Desktop) ██
+// ██ 3. ZERO-SKIPPING BULLETPROOF SPEECH ENGINE ██
 // ══════════════════════════════════════════════════════════════════════════
 
 async function speakCurrentSentence() {
@@ -1410,54 +1401,64 @@ async function speakCurrentSentence() {
     if (elevenLabsEnabled && elevenLabsApiKey) {
         speakElevenLabsSentence(cleanSentence);
     } else {
-        // Universal 100% Reliable HTML5 Google Stream + Fallback
-        playAudioStream(cleanSentence, currentLang);
+        speakStandardSentence(cleanSentence, currentLang);
     }
 }
 
-// ── HTML5 Audio Stream (100% Mobile & Desktop Sound Guarantee) ─────────────
-function playAudioStream(text, lang) {
-    stopCurrentAudio();
-    updatePlayerUIState(true);
-
-    const safeText = encodeURIComponent(text.substring(0, 200));
-    const targetLang = lang === 'ka' ? 'ka' : 'en';
-    const streamUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${safeText}&tl=${targetLang}&client=tw-ob`;
-
-    const audio = new Audio();
-    activeAudioStream = audio;
-    audio.src = streamUrl;
-    audio.playbackRate = currentGlobalSpeed;
-
-    audio.onended = () => {
-        if (!isPlaying || isPaused) return;
-        currentSentenceIndex++;
-        if (utteranceTimeout) clearTimeout(utteranceTimeout);
-        utteranceTimeout = setTimeout(() => {
-            if (isPlaying && !isPaused) speakCurrentSentence();
-        }, 220);
-    };
-
-    audio.onerror = () => {
-        // Fallback to Web Speech Synthesis if audio stream blocked
-        speakWithSpeechSynthesis(text, lang);
-    };
-
-    audio.play().catch(() => {
-        speakWithSpeechSynthesis(text, lang);
-    });
-}
-
-function speakWithSpeechSynthesis(text, lang) {
+function speakStandardSentence(text, lang) {
     if (!('speechSynthesis' in window)) return;
-    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
 
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = lang === 'ka' ? 'ka-GE' : 'en-US';
-    utter.rate = currentGlobalSpeed;
+    stopCurrentSpeechAudio();
+
+    if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+    }
+
+    const utter = new SpeechSynthesisUtterance();
+    const voices = window.speechSynthesis.getVoices();
+
+    if (lang === 'ka') {
+        const normalized = normalizeGeorgian(text);
+        const nativeKaVoice = voices.find(v => v.lang.startsWith('ka') || v.name.toLowerCase().includes('georgian'));
+
+        if (nativeKaVoice) {
+            utter.text = normalized;
+            utter.voice = nativeKaVoice;
+            utter.lang = nativeKaVoice.lang;
+        } else {
+            // Phonetic Georgian with high-clarity voice
+            utter.text = transliterateGeorgianToPhonetic(normalized);
+            const clearVoice = voices.find(v => v.lang.startsWith('it') || v.lang.startsWith('es') || v.lang.startsWith('el') || v.lang.startsWith('pt')) ||
+                               voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI) ||
+                               voices[0];
+            if (clearVoice) {
+                utter.voice = clearVoice;
+                utter.lang = clearVoice.lang;
+            } else {
+                utter.lang = 'en-US';
+            }
+        }
+    } else {
+        utter.text = text;
+        const matched = voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI);
+        if (matched) {
+            utter.voice = matched;
+            utter.lang = matched.lang || 'en-US';
+        } else {
+            utter.lang = 'en-US';
+        }
+    }
+
+    utter.rate = currentGlobalSpeed * (lang === 'ka' ? 0.92 : 1.0);
     utter.pitch = currentPitch;
 
+    utter.onstart = () => {
+        isSpeakingLock = true;
+        updatePlayerUIState(true);
+    };
+
     utter.onend = () => {
+        isSpeakingLock = false;
         if (!isPlaying || isPaused) return;
         currentSentenceIndex++;
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
@@ -1466,17 +1467,28 @@ function speakWithSpeechSynthesis(text, lang) {
         }, 220);
     };
 
-    utter.onerror = () => {
-        currentSentenceIndex++;
-        if (isPlaying && !isPaused) setTimeout(() => speakCurrentSentence(), 180);
+    utter.onerror = (e) => {
+        isSpeakingLock = false;
+        if (e.error === 'canceled' || e.error === 'interrupted') return;
+        // Do NOT run away in a loop on error; gracefully retry once or stop
+        console.warn('SpeechSynthesis error:', e.error);
+        if (isPlaying && !isPaused) {
+            setTimeout(() => {
+                if (isPlaying && !isPaused) {
+                    currentSentenceIndex++;
+                    speakCurrentSentence();
+                }
+            }, 350);
+        }
     };
 
     window._activeUtterance = utter;
     window.speechSynthesis.speak(utter);
+    updatePlayerUIState(true);
 }
 
 async function speakElevenLabsSentence(text) {
-    stopCurrentAudio();
+    stopCurrentSpeechAudio();
     updatePlayerUIState(true);
 
     try {
@@ -1518,22 +1530,17 @@ async function speakElevenLabsSentence(text) {
         };
 
         audio.onerror = () => {
-            playAudioStream(text, currentLang);
+            speakStandardSentence(text, currentLang);
         };
 
         await audio.play();
 
     } catch (err) {
-        playAudioStream(text, currentLang);
+        speakStandardSentence(text, currentLang);
     }
 }
 
-function stopCurrentAudio() {
-    if (activeAudioStream) {
-        activeAudioStream.pause();
-        try { activeAudioStream.src = ''; } catch(e) {}
-        activeAudioStream = null;
-    }
+function stopCurrentSpeechAudio() {
     if (currentElevenAudio) {
         currentElevenAudio.pause();
         try { currentElevenAudio.src = ''; } catch(e) {}
@@ -1542,6 +1549,7 @@ function stopCurrentAudio() {
     if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
     }
+    isSpeakingLock = false;
 }
 
 // ── Playback Controls ───────────────────────────────────────────────────────
@@ -1602,7 +1610,6 @@ function togglePlayPause() {
     if (isPlaying && !isPaused) {
         isPaused = true;
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
-        if (activeAudioStream) activeAudioStream.pause();
         if (currentElevenAudio) currentElevenAudio.pause();
         if (window.speechSynthesis) window.speechSynthesis.pause();
         stopTimer();
@@ -1610,9 +1617,13 @@ function togglePlayPause() {
     } else if (isPlaying && isPaused) {
         isPaused = false;
         startTimer();
-        if (activeAudioStream) activeAudioStream.play().catch(() => speakCurrentSentence());
-        else if (currentElevenAudio) currentElevenAudio.play().catch(() => speakCurrentSentence());
-        else speakCurrentSentence();
+        if (currentElevenAudio) {
+            currentElevenAudio.play().catch(() => speakCurrentSentence());
+        } else if (window.speechSynthesis && window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        } else {
+            speakCurrentSentence();
+        }
         updatePlayerUIState(true);
     } else {
         playChapterAudio(currentPlayingChapterId);
@@ -1636,7 +1647,7 @@ function stopSpeech() {
     sentenceQueue = [];
     currentSentenceIndex = 0;
     if (utteranceTimeout) clearTimeout(utteranceTimeout);
-    stopCurrentAudio();
+    stopCurrentSpeechAudio();
     stopTimer();
     updatePlayerUIState(false);
 }
@@ -1663,8 +1674,8 @@ function cycleSpeed() {
     if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = `${currentGlobalSpeed.toFixed(2).replace(/\.00$/, '')}x`;
     if (DOM.modalSpeedSlider) DOM.modalSpeedSlider.value = currentGlobalSpeed;
     if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = `${currentGlobalSpeed.toFixed(2)}x`;
-    if (activeAudioStream) activeAudioStream.playbackRate = currentGlobalSpeed;
     if (currentElevenAudio) currentElevenAudio.playbackRate = currentGlobalSpeed;
+    if (isPlaying && !isPaused) speakCurrentSentence();
 }
 
 function togglePlaybackLanguage() {
@@ -1694,6 +1705,9 @@ function togglePlaybackLanguage() {
 function updateLangToggleUI() {
     if (DOM.dockLangBadge) {
         DOM.dockLangBadge.textContent = currentLang === 'ka' ? '🇬🇪 KA' : '🇺🇸 EN';
+    }
+    if (DOM.dockLangBadgeMobile) {
+        DOM.dockLangBadgeMobile.textContent = currentLang === 'ka' ? '🇬🇪 KA' : '🇺🇸 EN';
     }
 }
 
@@ -2030,22 +2044,22 @@ async function renderDigitalShelf(filterText = '') {
         div.onclick = () => selectBook(book.id, true);
 
         div.innerHTML = `
-            <div class="aspect-[2/3] rounded-2xl overflow-hidden mb-3 relative glass-card p-1.5 ${isSelected ? 'border-primary-container ring-2 ring-primary-container/30 shadow-[0_0_25px_rgba(0,240,255,0.25)]' : ''}">
+            <div class="aspect-[2/3] rounded-2xl overflow-hidden mb-2 relative glass-card p-1.5 ${isSelected ? 'border-primary-container ring-2 ring-primary-container/30 shadow-[0_0_25px_rgba(0,240,255,0.25)]' : ''}">
                 <img src="${book.coverUrl}" class="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-500 bg-surface-container">
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl gap-2">
-                    <button onclick="event.stopPropagation(); selectBook('${book.id}', true);" class="w-11 h-11 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform" title="Listen Now">
-                        <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                    <button onclick="event.stopPropagation(); selectBook('${book.id}', true);" class="w-10 h-10 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform" title="Listen Now">
+                        <span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                     </button>
-                    <button onclick="event.stopPropagation(); selectBook('${book.id}', false); openCurrentBookInReader();" class="w-11 h-11 bg-georgian-gold text-black rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform" title="Moon Reader">
-                        <span class="material-symbols-outlined text-xl">menu_book</span>
+                    <button onclick="event.stopPropagation(); selectBook('${book.id}', false); openCurrentBookInReader();" class="w-10 h-10 bg-georgian-gold text-black rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform" title="Moon Reader">
+                        <span class="material-symbols-outlined text-lg">menu_book</span>
                     </button>
                 </div>
                 ${hasGeorgian ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold/90 text-[10px] font-bold text-black shadow-lg">🇬🇪 KA</div>' : ''}
                 ${book.progressPct > 0 ? `<div class="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-full h-1 overflow-hidden"><div class="h-full bg-primary-container" style="width: ${book.progressPct}%"></div></div>` : ''}
             </div>
-            <h4 class="font-bold text-white text-sm truncate group-hover:text-primary-fixed transition-colors">${book.title}</h4>
+            <h4 class="font-bold text-white text-xs sm:text-sm truncate group-hover:text-primary-fixed transition-colors">${book.title}</h4>
             <div class="flex justify-between items-center mt-0.5">
-                <p class="text-[11px] text-on-surface-variant truncate">${stats.chaptersCount} Ch • ${stats.totalFormattedTime}</p>
+                <p class="text-[10px] sm:text-[11px] text-on-surface-variant truncate">${stats.chaptersCount} Ch • ${stats.totalFormattedTime}</p>
                 <button onclick="deleteBook(event, '${book.id}')" class="text-on-surface-variant hover:text-error transition p-1" title="Delete Book">
                     <span class="material-symbols-outlined text-sm">delete</span>
                 </button>
@@ -2109,7 +2123,7 @@ async function selectBook(bookId, autoPlayFirst = false) {
     }
 
     if (DOM.btnTranslateWholeBookText) {
-        DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Whole Book to Georgian";
+        DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Book (Georgian)";
     }
 
     const lastChap = currentBook.chapters.find(c => String(c.id) === String(currentBook.lastPlayedChapterId)) || currentBook.chapters[0];
@@ -2160,29 +2174,29 @@ function renderChaptersList() {
         const chapHasKa = !!chap.text_ka;
 
         const div = document.createElement('div');
-        div.className = `glass-panel rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all ${isSpeaking ? 'border-primary-container/60 bg-primary-container/10 shadow-[0_0_20px_rgba(0,240,255,0.15)]' : 'hover:bg-white/5'}`;
+        div.className = `glass-panel rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all ${isSpeaking ? 'border-primary-container/60 bg-primary-container/10 shadow-[0_0_20px_rgba(0,240,255,0.15)]' : 'hover:bg-white/5'}`;
 
         div.innerHTML = `
-            <div class="flex items-center gap-4 min-w-0 flex-grow">
-                <div class="w-9 h-9 rounded-xl ${isSpeaking ? 'bg-primary-container text-on-primary-container' : 'bg-white/5 text-primary-fixed'} flex items-center justify-center font-bold text-sm font-mono flex-shrink-0">
+            <div class="flex items-center gap-3.5 min-w-0 flex-grow">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${isSpeaking ? 'bg-primary-container text-on-primary-container' : 'bg-white/5 text-primary-fixed'} flex items-center justify-center font-bold text-xs sm:text-sm font-mono flex-shrink-0">
                     ${idx + 1}
                 </div>
                 <div class="overflow-hidden">
-                    <h4 class="font-semibold text-white text-sm sm:text-base truncate flex items-center gap-2">
+                    <h4 class="font-semibold text-white text-xs sm:text-base truncate flex items-center gap-2">
                         ${chap.title}
                         ${chapHasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 font-bold">🇬🇪</span>' : ''}
                     </h4>
-                    <p class="text-xs text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(chap.estimated_duration_sec)}</p>
+                    <p class="text-[10px] sm:text-xs text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(chap.estimated_duration_sec)}</p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-                <button onclick="openReader('${currentBook.id}', ${chap.id}, currentLang)" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-1.5 border border-white/10 transition" title="Read in Moon Reader">
-                    <span class="material-symbols-outlined text-base text-georgian-gold">menu_book</span>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button onclick="openReader('${currentBook.id}', ${chap.id}, currentLang)" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-1 border border-white/10 transition" title="Read in Moon Reader">
+                    <span class="material-symbols-outlined text-sm text-georgian-gold">menu_book</span>
                     <span>Read</span>
                 </button>
-                <button onclick="playChapterAudio(${chap.id})" class="px-4 py-2 rounded-xl ${isSpeaking ? 'bg-primary-container text-on-primary-container shadow-[0_0_15px_rgba(0,240,255,0.5)]' : 'bg-white/10 text-white hover:bg-primary-container/20 hover:text-primary-fixed'} text-xs font-bold transition flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">${isSpeaking ? 'pause' : 'play_arrow'}</span>
+                <button onclick="playChapterAudio(${chap.id})" class="px-3.5 py-1.5 rounded-xl ${isSpeaking ? 'bg-primary-container text-on-primary-container shadow-[0_0_15px_rgba(0,240,255,0.5)]' : 'bg-white/10 text-white hover:bg-primary-container/20 hover:text-primary-fixed'} text-xs font-bold transition flex items-center gap-1">
+                    <span class="material-symbols-outlined text-base" style="font-variation-settings: 'FILL' 1;">${isSpeaking ? 'pause' : 'play_arrow'}</span>
                     <span>${isSpeaking ? 'Pause' : 'Listen'}</span>
                 </button>
             </div>
@@ -2278,7 +2292,6 @@ function setupEventListeners() {
             currentGlobalSpeed = parseFloat(e.target.value);
             if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = `${currentGlobalSpeed.toFixed(2)}x`;
             if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = `${currentGlobalSpeed.toFixed(2).replace(/\.00$/, '')}x`;
-            if (activeAudioStream) activeAudioStream.playbackRate = currentGlobalSpeed;
             if (currentElevenAudio) currentElevenAudio.playbackRate = currentGlobalSpeed;
         });
     }

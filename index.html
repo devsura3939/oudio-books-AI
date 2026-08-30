@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Lumina Audio - AI Audiobook & Moon+ Reader Studio</title>
 
     <!-- PDF.js -->
@@ -16,7 +16,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
-    <!-- Google Fonts: Space Grotesk, Inter, Noto Sans Georgian, Noto Serif Georgian, Merriweather, Cinzel, Lora, EB Garamond -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Cinzel:wght@600;700;800&family=Noto+Sans+Georgian:wght@300;400;500;600;700;800&family=Noto+Serif+Georgian:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
@@ -124,11 +124,11 @@
             transform: translateY(-4px);
         }
         .glass-dock {
-            background: rgba(17, 22, 34, 0.92);
+            background: rgba(17, 22, 34, 0.94);
             backdrop-filter: blur(40px);
             -webkit-backdrop-filter: blur(40px);
             border: 1px solid rgba(255, 255, 255, 0.16);
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(0, 240, 255, 0.15);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(0, 240, 255, 0.15);
         }
         .glass-input {
             background: rgba(255, 255, 255, 0.05) !important;
@@ -155,7 +155,7 @@
 
         /* Slide-out Drawer */
         .drawer-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px);
             z-index: 110; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
         }
         .drawer-overlay.active { opacity: 1; pointer-events: auto; }
@@ -184,7 +184,7 @@
             width: 100%;
             max-width: 1300px;
             margin: 0 auto;
-            min-height: 78vh;
+            min-height: 75vh;
             display: flex;
             gap: 24px;
             transition: all 0.3s ease;
@@ -226,7 +226,7 @@
 
         @media (max-width: 640px) {
             .book-page-spread {
-                min-height: calc(100vh - 145px);
+                min-height: calc(100vh - 160px);
             }
             .book-page-card {
                 padding: 16px 14px;
@@ -268,7 +268,7 @@
             border: 1px solid rgba(150, 115, 75, 0.25);
         }
         .reader-theme-sepia .reader-toolbar {
-            background: rgba(235, 222, 196, 0.96);
+            background: rgba(235, 222, 196, 0.98);
             border-color: rgba(150, 115, 75, 0.28);
             color: #2c2013;
         }
@@ -276,7 +276,7 @@
             background-color: rgba(180, 135, 80, 0.18);
         }
         .reader-theme-sepia .reader-sentence.active-sentence {
-            background-color: rgba(200, 145, 45, 0.35);
+            background-color: rgba(200, 145, 45, 0.38);
             color: #120b04;
             border-bottom: 2px solid #a67215;
             box-shadow: 0 0 14px rgba(200, 145, 45, 0.35);
@@ -284,8 +284,8 @@
         }
         .reader-theme-sepia .reader-btn {
             color: #2c2013 !important;
-            background: rgba(150, 115, 75, 0.14) !important;
-            border: 1px solid rgba(150, 115, 75, 0.3) !important;
+            background: rgba(150, 115, 75, 0.16) !important;
+            border: 1px solid rgba(150, 115, 75, 0.35) !important;
         }
         .reader-theme-sepia .reader-btn-primary {
             background: #a67215 !important;
@@ -304,7 +304,7 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
         .reader-theme-mocha .reader-toolbar {
-            background: rgba(26, 21, 18, 0.96);
+            background: rgba(26, 21, 18, 0.98);
             border-color: rgba(255, 255, 255, 0.1);
             color: #eae0d5;
         }
@@ -312,7 +312,7 @@
             background-color: rgba(212, 162, 55, 0.15);
         }
         .reader-theme-mocha .reader-sentence.active-sentence {
-            background-color: rgba(212, 162, 55, 0.3);
+            background-color: rgba(212, 162, 55, 0.32);
             color: #ffffff;
             border-bottom: 2px solid #d4a237;
             box-shadow: 0 0 14px rgba(212, 162, 55, 0.3);
@@ -339,7 +339,7 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .reader-theme-dark .reader-toolbar {
-            background: rgba(11, 16, 25, 0.94);
+            background: rgba(11, 16, 25, 0.96);
             border-color: rgba(255, 255, 255, 0.1);
             color: #e5eaf3;
         }
@@ -347,7 +347,7 @@
             background-color: rgba(0, 240, 255, 0.12);
         }
         .reader-theme-dark .reader-sentence.active-sentence {
-            background-color: rgba(0, 240, 255, 0.24);
+            background-color: rgba(0, 240, 255, 0.25);
             color: #ffffff;
             border-bottom: 2px solid #00f0ff;
             box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
@@ -374,7 +374,7 @@
             border: 1px solid rgba(0, 0, 0, 0.1);
         }
         .reader-theme-light .reader-toolbar {
-            background: rgba(255, 255, 255, 0.96);
+            background: rgba(255, 255, 255, 0.98);
             border-color: rgba(0, 0, 0, 0.1);
             color: #18191c;
         }
@@ -409,7 +409,7 @@
             border: 1px solid rgba(255, 255, 255, 0.12);
         }
         .reader-theme-oled .reader-toolbar {
-            background: rgba(10, 10, 10, 0.96);
+            background: rgba(10, 10, 10, 0.98);
             border-color: rgba(255, 255, 255, 0.12);
             color: #d8d8d8;
         }
@@ -417,7 +417,7 @@
             background-color: rgba(255, 255, 255, 0.1);
         }
         .reader-theme-oled .reader-sentence.active-sentence {
-            background-color: rgba(255, 209, 102, 0.25);
+            background-color: rgba(255, 209, 102, 0.28);
             color: #ffffff;
             border-bottom: 2px solid #ffd166;
             box-shadow: 0 0 16px rgba(255, 209, 102, 0.35);
@@ -444,7 +444,7 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
         .reader-theme-forest .reader-toolbar {
-            background: rgba(12, 22, 17, 0.96);
+            background: rgba(12, 22, 17, 0.98);
             border-color: rgba(255, 255, 255, 0.1);
             color: #d4e8dd;
         }
@@ -452,7 +452,7 @@
             background-color: rgba(0, 230, 150, 0.12);
         }
         .reader-theme-forest .reader-sentence.active-sentence {
-            background-color: rgba(0, 230, 150, 0.25);
+            background-color: rgba(0, 230, 150, 0.28);
             color: #ffffff;
             border-bottom: 2px solid #00e696;
             box-shadow: 0 0 14px rgba(0, 230, 150, 0.3);
@@ -578,16 +578,16 @@
     </header>
 
     <!-- ════════════════ Main Content Canvas ════════════════ -->
-    <main class="flex-grow md:ml-64 relative min-h-screen pb-36 pt-6 md:pt-24 px-4 md:px-8 max-w-7xl mx-auto w-full">
+    <main class="flex-grow md:ml-64 relative min-h-screen pb-44 pt-4 md:pt-24 px-3 sm:px-6 md:px-8 max-w-7xl mx-auto w-full">
         
         <!-- View: Library (Home) -->
-        <div id="view-library" class="space-y-10">
+        <div id="view-library" class="space-y-8">
             
             <!-- Hero Section: Continue Listening & Reading -->
-            <section id="heroSection" class="glass-card rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+            <section id="heroSection" class="glass-card rounded-2xl p-5 md:p-8 flex flex-col md:flex-row items-center gap-6 md:gap-8 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-80 h-80 bg-primary-container/10 rounded-full blur-[90px] -translate-y-1/3 translate-x-1/3 pointer-events-none"></div>
                 
-                <div class="relative w-36 h-36 md:w-48 md:h-48 flex-shrink-0 cursor-pointer group" id="heroPlayBtn" title="Click to Play / Pause">
+                <div class="relative w-32 h-32 md:w-48 md:h-48 flex-shrink-0 cursor-pointer group" id="heroPlayBtn" title="Click to Play / Pause">
                     <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" fill="none" r="46" stroke="rgba(255,255,255,0.08)" stroke-width="3.5"></circle>
                         <circle id="heroProgressCircle" class="transition-all duration-700 ease-out" cx="50" cy="50" fill="none" r="46" stroke="#00f0ff" stroke-dasharray="289" stroke-dashoffset="289" stroke-width="3.5" stroke-linecap="round"></circle>
@@ -595,14 +595,14 @@
                     <div class="absolute inset-2.5 rounded-full overflow-hidden border-2 border-white/20 shadow-2xl bg-surface-container-high group-hover:scale-[1.03] transition-transform duration-300">
                         <img id="heroCover" class="w-full h-full object-cover" src="" alt="Book Cover">
                     </div>
-                    <div class="absolute bottom-1 right-1 bg-primary-container text-on-primary-container p-3 rounded-full shadow-[0_0_20px_rgba(0,240,255,0.5)] group-hover:scale-110 transition-transform">
-                        <span class="material-symbols-outlined text-2xl" id="heroPlayIcon" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                    <div class="absolute bottom-1 right-1 bg-primary-container text-on-primary-container p-2.5 md:p-3 rounded-full shadow-[0_0_20px_rgba(0,240,255,0.5)] group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-xl md:text-2xl" id="heroPlayIcon" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                     </div>
                 </div>
 
                 <div class="flex-grow text-center md:text-left z-10 overflow-hidden w-full">
-                    <div class="flex items-center gap-2 justify-center md:justify-start mb-2.5 flex-wrap">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-container/10 border border-primary-container/25 text-primary-fixed font-label-caps text-[11px] font-semibold tracking-wider">
+                    <div class="flex items-center gap-2 justify-center md:justify-start mb-2 flex-wrap">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-container/10 border border-primary-container/25 text-primary-fixed font-label-caps text-[10px] md:text-[11px] font-semibold tracking-wider">
                             <span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
                             ACTIVE AUDIOBOOK
                         </div>
@@ -611,26 +611,26 @@
                         </span>
                     </div>
 
-                    <h2 id="heroTitle" class="text-2xl md:text-3xl font-extrabold text-white mb-2 truncate">Select an Audiobook</h2>
+                    <h2 id="heroTitle" class="text-xl md:text-3xl font-extrabold text-white mb-2 truncate">Select an Audiobook</h2>
                     
-                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 mb-4 max-w-2xl text-left">
+                    <div class="p-3 rounded-xl bg-white/5 border border-white/10 mb-4 max-w-2xl text-left">
                         <div class="flex justify-between items-center mb-1">
-                            <p class="text-xs font-semibold text-primary-fixed uppercase tracking-wider" id="heroSubtitleHeader">Live Narration</p>
+                            <p class="text-[11px] font-semibold text-primary-fixed uppercase tracking-wider" id="heroSubtitleHeader">Live Narration</p>
                             <button onclick="openCurrentBookInReader()" class="text-[11px] text-georgian-gold hover:underline flex items-center gap-1 font-semibold">
                                 <span class="material-symbols-outlined text-sm">menu_book</span> Open in Moon Reader
                             </button>
                         </div>
-                        <p id="heroLiveSubtitle" class="text-on-surface text-sm md:text-base font-medium line-clamp-3 leading-relaxed">Ready to play...</p>
+                        <p id="heroLiveSubtitle" class="text-on-surface text-xs md:text-base font-medium line-clamp-3 leading-relaxed">Ready to play...</p>
                     </div>
                     
-                    <div class="flex items-center gap-4 justify-center md:justify-start flex-wrap">
+                    <div class="flex items-center gap-3 justify-center md:justify-start flex-wrap">
                         <button onclick="openCurrentBookInReader()" class="px-4 py-2 rounded-xl bg-georgian-gold text-black font-bold text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(255,209,102,0.4)] hover:brightness-110 transition">
                             <span class="material-symbols-outlined text-base">menu_book</span>
                             <span>Read in Moon Reader</span>
                         </button>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2.5">
                             <span id="heroProgressText" class="text-xs font-semibold text-primary-fixed">0% Completed</span>
-                            <div class="w-28 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div class="w-24 md:w-28 h-1.5 bg-white/10 rounded-full overflow-hidden">
                                 <div id="heroProgressBarInner" class="h-full bg-gradient-to-r from-primary-container to-secondary w-0 transition-all duration-500"></div>
                             </div>
                         </div>
@@ -640,55 +640,51 @@
 
             <!-- Digital Shelf -->
             <div>
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-4 mb-6">
+                <div class="flex justify-between items-center gap-4 border-b border-white/10 pb-3 mb-5">
                     <div>
-                        <h3 class="text-xl md:text-2xl font-bold text-white tracking-tight">Your Digital Shelf</h3>
-                        <p class="text-xs text-on-surface-variant mt-0.5" id="shelfMetaText">Browse and read your complete library</p>
+                        <h3 class="text-lg md:text-2xl font-bold text-white tracking-tight">Your Digital Shelf</h3>
+                        <p class="text-[11px] md:text-xs text-on-surface-variant mt-0.5" id="shelfMetaText">Browse and read your complete library</p>
                     </div>
-                    <div class="flex gap-2.5">
-                        <button onclick="openModal('voiceModal')" class="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 flex items-center gap-1.5 transition">
-                            <span class="material-symbols-outlined text-sm text-primary-fixed">record_voice_over</span>
-                            Voice Settings
-                        </button>
-                    </div>
+                    <button onclick="openModal('voiceModal')" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 flex items-center gap-1.5 transition">
+                        <span class="material-symbols-outlined text-sm text-primary-fixed">record_voice_over</span>
+                        <span class="hidden sm:inline">Voice Settings</span>
+                    </button>
                 </div>
 
-                <div id="booksGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+                <div id="booksGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 md:gap-5">
                     <!-- Injected dynamically -->
                 </div>
             </div>
 
             <!-- Chapters Drawer -->
-            <div id="chaptersContainer" class="hidden glass-panel rounded-2xl p-6 md:p-8 space-y-6">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-4">
+            <div id="chaptersContainer" class="hidden glass-panel rounded-2xl p-4 md:p-8 space-y-5">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/10 pb-4">
                     <div>
-                        <span class="text-xs font-label-caps text-primary-fixed tracking-wider font-semibold">AUDIOBOOK CHAPTERS</span>
-                        <h3 class="text-2xl font-bold text-white" id="activeBookTitle">Chapters</h3>
-                        <p class="text-xs text-on-surface-variant mt-1" id="activeBookMetaDetail">0 Chapters • 0 Words</p>
+                        <span class="text-[11px] font-label-caps text-primary-fixed tracking-wider font-semibold">AUDIOBOOK CHAPTERS</span>
+                        <h3 class="text-xl md:text-2xl font-bold text-white" id="activeBookTitle">Chapters</h3>
+                        <p class="text-xs text-on-surface-variant mt-0.5" id="activeBookMetaDetail">0 Chapters • 0 Words</p>
                     </div>
-                    <div class="flex items-center gap-2.5 flex-wrap">
-                        <button id="btnTranslateWholeBook" onclick="startWholeBookTranslation()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-georgian-gold/20 to-amber-500/20 hover:from-georgian-gold/30 hover:to-amber-500/30 text-georgian-gold border border-georgian-gold/40 text-xs font-bold flex items-center gap-2 transition shadow-sm">
+                    <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                        <button id="btnTranslateWholeBook" onclick="startWholeBookTranslation()" class="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-gradient-to-r from-georgian-gold/20 to-amber-500/20 hover:from-georgian-gold/30 hover:to-amber-500/30 text-georgian-gold border border-georgian-gold/40 text-xs font-bold flex items-center justify-center gap-2 transition shadow-sm">
                             <span class="text-sm">🇬🇪</span>
-                            <span id="btnTranslateWholeBookText">Translate Whole Book to Georgian</span>
+                            <span id="btnTranslateWholeBookText">Translate Book (Georgian)</span>
                         </button>
 
-                        <button onclick="openCurrentBookInReader()" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 text-xs font-semibold flex items-center gap-1.5 transition">
+                        <button onclick="openCurrentBookInReader()" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 text-xs font-semibold flex items-center gap-1.5 transition">
                             <span class="material-symbols-outlined text-base text-georgian-gold">menu_book</span>
-                            <span>Open Reader</span>
+                            <span>Reader</span>
                         </button>
 
-                        <button onclick="exportCurrentBookPDF()" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-primary-fixed border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition" title="Export formatted PDF">
+                        <button onclick="exportCurrentBookPDF()" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-primary-fixed border border-white/10 text-xs font-semibold transition" title="Export formatted PDF">
                             <span class="material-symbols-outlined text-base">picture_as_pdf</span>
-                            <span>PDF</span>
                         </button>
 
-                        <button id="btnDownloadAllZip" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition" title="Download Text ZIP">
+                        <button id="btnDownloadAllZip" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-semibold transition" title="Download Text ZIP">
                             <span class="material-symbols-outlined text-base">inventory_2</span>
-                            <span>ZIP</span>
                         </button>
                     </div>
                 </div>
-                <div id="chaptersList" class="space-y-3">
+                <div id="chaptersList" class="space-y-2.5">
                     <!-- Chapters injected dynamically -->
                 </div>
             </div>
@@ -696,12 +692,12 @@
         </div>
 
         <!-- View: Discover Classics -->
-        <div id="view-discover" class="hidden space-y-8">
+        <div id="view-discover" class="hidden space-y-6">
             <div>
-                <h2 class="text-2xl md:text-3xl font-extrabold text-white">Discover Free Classics</h2>
-                <p class="text-sm text-on-surface-variant mt-1">Pre-loaded masterworks ready to read & listen instantly in English and Georgian.</p>
+                <h2 class="text-xl md:text-3xl font-extrabold text-white">Discover Free Classics</h2>
+                <p class="text-xs md:text-sm text-on-surface-variant mt-0.5">Pre-loaded masterworks ready to read & listen instantly in English and Georgian.</p>
             </div>
-            <div id="discoverGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div id="discoverGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 <!-- Injected by JS -->
             </div>
         </div>
@@ -709,51 +705,68 @@
     </main>
 
     <!-- ════════════════ Bottom Floating Player Dock ════════════════ -->
-    <div id="playerDock" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] md:w-[86%] max-w-5xl z-50 flex items-center justify-between px-4 md:px-6 py-3 glass-dock rounded-2xl opacity-0 translate-y-12 transition-all duration-500 pointer-events-none">
-        <div class="flex items-center gap-3.5 w-1/4 min-w-0">
-            <div class="w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 relative bg-surface-container border border-white/15 cursor-pointer" onclick="openCurrentBookInReader()" title="Open in Moon Reader">
-                <img id="dockCover" class="w-full h-full object-cover" src="" alt="Cover">
-                <div id="dockVisualizer" class="absolute inset-0 bg-black/40 flex items-end justify-center gap-[2px] pb-1 hidden">
-                    <div class="w-1 h-3 bg-primary-fixed rounded-t-sm animate-[bounce_0.8s_infinite_ease-in-out]"></div>
-                    <div class="w-1 h-5 bg-primary-fixed rounded-t-sm animate-[bounce_1.1s_infinite_ease-in-out_0.2s]"></div>
-                    <div class="w-1 h-2.5 bg-primary-fixed rounded-t-sm animate-[bounce_0.9s_infinite_ease-in-out_0.4s]"></div>
+    <div id="playerDock" class="fixed bottom-3 md:bottom-6 left-1/2 -translate-x-1/2 w-[95%] md:w-[86%] max-w-5xl z-50 p-3 md:px-6 md:py-3 glass-dock rounded-2xl opacity-0 translate-y-12 transition-all duration-500 pointer-events-none flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+        
+        <!-- Mobile Top Row / Desktop Left -->
+        <div class="flex items-center justify-between md:justify-start gap-3 w-full md:w-1/4 min-w-0">
+            <div class="flex items-center gap-3 min-w-0 overflow-hidden cursor-pointer" onclick="openCurrentBookInReader()" title="Open in Moon Reader">
+                <div class="w-10 h-10 md:w-11 md:h-11 rounded-lg overflow-hidden flex-shrink-0 relative bg-surface-container border border-white/15">
+                    <img id="dockCover" class="w-full h-full object-cover" src="" alt="Cover">
+                    <div id="dockVisualizer" class="absolute inset-0 bg-black/40 flex items-end justify-center gap-[2px] pb-1 hidden">
+                        <div class="w-1 h-3 bg-primary-fixed rounded-t-sm animate-[bounce_0.8s_infinite_ease-in-out]"></div>
+                        <div class="w-1 h-5 bg-primary-fixed rounded-t-sm animate-[bounce_1.1s_infinite_ease-in-out_0.2s]"></div>
+                        <div class="w-1 h-2.5 bg-primary-fixed rounded-t-sm animate-[bounce_0.9s_infinite_ease-in-out_0.4s]"></div>
+                    </div>
+                </div>
+                <div class="overflow-hidden">
+                    <p id="dockTitle" class="text-xs md:text-sm font-semibold text-white truncate">Chapter 1</p>
+                    <p id="dockSubtitle" class="text-[10px] md:text-xs text-on-surface-variant truncate">No Book Selected</p>
                 </div>
             </div>
-            <div class="overflow-hidden">
-                <p id="dockTitle" class="text-sm font-semibold text-white truncate cursor-pointer hover:text-primary-fixed" onclick="openCurrentBookInReader()">Chapter 1</p>
-                <p id="dockSubtitle" class="text-xs text-on-surface-variant truncate">No Book Selected</p>
+
+            <!-- Mobile Quick Actions -->
+            <div class="flex md:hidden items-center gap-2 flex-shrink-0">
+                <button onclick="togglePlaybackLanguage()" id="btnDockLangToggleMobile" class="px-2 py-1 rounded-lg bg-white/10 text-[10px] font-bold text-georgian-gold border border-georgian-gold/30">
+                    <span id="dockLangBadgeMobile">🇬🇪 KA</span>
+                </button>
+                <button onclick="openCurrentBookInReader()" class="p-1.5 rounded-lg bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30">
+                    <span class="material-symbols-outlined text-base">menu_book</span>
+                </button>
             </div>
         </div>
 
-        <div class="flex flex-col items-center justify-center flex-grow max-w-md px-2">
-            <div class="flex items-center gap-2 md:gap-4 mb-1.5">
+        <!-- Center: Controls & Progress Bar -->
+        <div class="flex flex-col items-center justify-center w-full md:flex-grow md:max-w-md">
+            <div class="flex items-center justify-center gap-3 sm:gap-4 mb-1">
                 <button onclick="playPrevChapter()" class="text-on-surface-variant hover:text-white transition p-1" title="Previous Chapter">
-                    <span class="material-symbols-outlined text-xl">skip_previous</span>
+                    <span class="material-symbols-outlined text-xl md:text-2xl">skip_previous</span>
                 </button>
-                <button id="btnPlayerRewind" class="text-on-surface-variant hover:text-primary-fixed transition p-1.5 rounded-full hover:bg-white/5" title="Rewind Sentence">
-                    <span class="material-symbols-outlined text-xl">replay_10</span>
+                <button id="btnPlayerRewind" class="text-on-surface-variant hover:text-primary-fixed transition p-1 rounded-full" title="Rewind Sentence">
+                    <span class="material-symbols-outlined text-xl md:text-2xl">replay_10</span>
                 </button>
-                <button id="btnPlayerPlayPause" class="bg-primary-container text-on-primary-container rounded-full w-11 h-11 shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center">
-                    <span class="material-symbols-outlined text-[26px]" id="dockPlayIcon" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                <button id="btnPlayerPlayPause" class="bg-primary-container text-on-primary-container rounded-full w-10 h-10 md:w-11 md:h-11 shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-[24px] md:text-[26px]" id="dockPlayIcon" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                 </button>
-                <button id="btnPlayerForward" class="text-on-surface-variant hover:text-primary-fixed transition p-1.5 rounded-full hover:bg-white/5" title="Forward Sentence">
-                    <span class="material-symbols-outlined text-xl">forward_10</span>
+                <button id="btnPlayerForward" class="text-on-surface-variant hover:text-primary-fixed transition p-1 rounded-full" title="Forward Sentence">
+                    <span class="material-symbols-outlined text-xl md:text-2xl">forward_10</span>
                 </button>
                 <button onclick="playNextChapter()" class="text-on-surface-variant hover:text-white transition p-1" title="Next Chapter">
-                    <span class="material-symbols-outlined text-xl">skip_next</span>
+                    <span class="material-symbols-outlined text-xl md:text-2xl">skip_next</span>
                 </button>
             </div>
 
-            <div class="w-full flex items-center gap-3">
-                <span id="playerCurrentTime" class="text-[11px] text-on-surface-variant font-mono w-10 text-right">0:00</span>
-                <div id="playerProgressContainer" class="flex-grow h-1.5 bg-white/10 rounded-full relative cursor-pointer group/prog overflow-hidden">
-                    <div id="playerProgressBar" class="h-full bg-gradient-to-r from-primary-container to-secondary w-0 transition-all duration-300"></div>
+            <!-- Scrubbable Progress Bar -->
+            <div class="w-full flex items-center gap-2.5">
+                <span id="playerCurrentTime" class="text-[10px] text-on-surface-variant font-mono w-8 text-right">0:00</span>
+                <div id="playerProgressContainer" class="flex-grow h-1.5 bg-white/15 rounded-full relative cursor-pointer overflow-hidden">
+                    <div id="playerProgressBar" class="h-full bg-gradient-to-r from-primary-container to-secondary w-0 transition-all duration-200"></div>
                 </div>
-                <span id="playerTotalTime" class="text-[11px] text-on-surface-variant font-mono w-10">0:00</span>
+                <span id="playerTotalTime" class="text-[10px] text-on-surface-variant font-mono w-8">0:00</span>
             </div>
         </div>
 
-        <div class="flex items-center justify-end gap-2 w-1/4">
+        <!-- Desktop Right Actions -->
+        <div class="hidden md:flex items-center justify-end gap-2 w-1/4">
             <button onclick="togglePlaybackLanguage()" id="btnDockLangToggle" class="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold border border-white/10 transition flex items-center gap-1" title="Toggle English / Georgian audio">
                 <span id="dockLangBadge">🇺🇸 EN</span>
             </button>
@@ -768,7 +781,7 @@
 
     <!-- ════════════════ MOON+ READER RESPONSIVE VIEW ════════════════ -->
     <div id="readerView" class="reader-theme-sepia">
-        <!-- Top Toolbar (Optimized for Mobile & Desktop) -->
+        <!-- Top Toolbar -->
         <header class="reader-toolbar px-3 sm:px-6 py-2.5 border-b flex items-center justify-between flex-shrink-0 z-30 shadow-sm">
             <!-- Left: Back & Title -->
             <div class="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -784,31 +797,27 @@
 
             <!-- Right Actions: Language, Table of Contents, Themes, Fullscreen -->
             <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                <!-- Language Toggle -->
                 <button onclick="toggleReaderLanguage()" id="btnReaderLangToggle" class="reader-btn px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition" title="Switch Language (Key: T)">
                     <span class="text-sm">🇬🇪</span>
                     <span id="readerLangLabel" class="hidden sm:inline">ქართული</span>
                 </button>
 
-                <!-- Table of Contents Drawer Button -->
                 <button onclick="openToCDrawer()" class="reader-btn px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition" title="Table of Contents">
                     <span class="material-symbols-outlined text-base">format_list_bulleted</span>
                     <span class="hidden md:inline">Chapters</span>
                 </button>
 
-                <!-- Font & Theme Controls Sheet Trigger -->
                 <button onclick="openModal('readerThemeModal')" class="reader-btn p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition" title="Typography & Themes">
                     <span class="material-symbols-outlined text-base">format_size</span>
                 </button>
 
-                <!-- Fullscreen Toggle (Desktop) -->
                 <button onclick="toggleReaderFullscreen()" class="reader-btn hidden sm:block p-1.5 rounded-xl hover:opacity-80 transition" title="Toggle Fullscreen (Key: F)">
                     <span class="material-symbols-outlined text-base" id="readerFullscreenIcon">fullscreen</span>
                 </button>
             </div>
         </header>
 
-        <!-- Reader Canvas (Fills Screen Real Estate Wisely) -->
+        <!-- Reader Canvas -->
         <div id="readerScrollContainer" class="flex-grow overflow-y-auto px-2 sm:px-6 md:px-12 py-3 sm:py-6 flex flex-col justify-start relative select-text">
             <div id="readerPageSpread" class="book-page-spread page-flip-anim">
                 <!-- Left Page & Right Page injected by JavaScript -->
@@ -824,7 +833,7 @@
                     <span>Prev Page</span>
                 </button>
 
-                <!-- Center: Audio Play/Pause & Live Read-Along Sync -->
+                <!-- Center: Audio Controls -->
                 <div class="flex items-center gap-2 sm:gap-3">
                     <button onclick="readerRewindSentence()" class="p-1.5 sm:p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition" title="Previous Sentence">
                         <span class="material-symbols-outlined text-lg sm:text-xl">replay_10</span>
@@ -1119,22 +1128,6 @@
             </p>
         </div>
     </div>
-
-    <!-- ════════════════ Mobile Navigation Bar ════════════════ -->
-    <nav class="md:hidden flex items-center justify-between px-6 py-3 fixed bottom-4 left-1/2 -translate-x-1/2 w-[92%] rounded-2xl z-40 glass-dock shadow-2xl">
-        <button onclick="navigate('library')" class="flex flex-col items-center gap-1 text-primary-fixed transition">
-            <span class="material-symbols-outlined text-2xl">library_music</span>
-        </button>
-        <button onclick="openCurrentBookInReader()" class="flex flex-col items-center gap-1 text-georgian-gold transition">
-            <span class="material-symbols-outlined text-2xl">menu_book</span>
-        </button>
-        <button onclick="document.getElementById('btnNavUpload').click()" class="flex flex-col items-center justify-center w-12 h-12 rounded-full bg-primary-container text-on-primary-container shadow-[0_0_20px_rgba(0,240,255,0.5)] -mt-6 hover:scale-105 transition-transform active:scale-95 border-2 border-surface">
-            <span class="material-symbols-outlined text-2xl font-bold">add</span>
-        </button>
-        <button onclick="openModal('voiceModal')" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-white transition">
-            <span class="material-symbols-outlined text-2xl">tune</span>
-        </button>
-    </nav>
 
     <script src="static/app.js"></script>
 </body>
