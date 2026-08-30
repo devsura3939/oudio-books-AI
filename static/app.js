@@ -50,6 +50,7 @@ let touchEndY = 0;
 let elevenLabsEnabled = false;
 let elevenLabsApiKey = '';
 let elevenLabsVoiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam
+let elevenLabsModelId = localStorage.getItem('lumina_el_model') || 'eleven_multilingual_v2';
 let currentElevenAudio = null;
 
 // Whole Book Translation State
@@ -59,6 +60,10 @@ let cancelTranslationFlag = false;
 // Gemini AI State
 let geminiApiKey = localStorage.getItem('geminiApiKey') || '';
 let geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.5-pro';
+// Translation depth: 1 = draft only, 2 = draft + AI review, 3 = full pipeline
+// (draft → structured critique → refinement → final QA). Default: full.
+let geminiPasses = parseInt(localStorage.getItem('geminiPasses') || '3', 10);
+if (![1, 2, 3].includes(geminiPasses)) geminiPasses = 3;
 
 // ── Georgian Unicode & Advanced Linguistic Normalization ───────────────────
 function normalizeGeorgian(text) {
@@ -258,6 +263,51 @@ function verbalizeGeorgianTextForTTS(text) {
     out = out.replace(/\s*\?\s*/g, '? ');
     out = out.replace(/\s*!\s*/g, '! ');
 
+    return out;
+}
+
+// ── Sentence-type detection for expressive TTS ──────────────────────────────
+// Classifies a sentence so the narration engine can apply the right prosody:
+// questions rise, exclamations carry energy, dialogue gets a distinct voice
+// colour, quotes breathe. Detection runs on the ORIGINAL text (before
+// punctuation normalization strips the signals).
+function detectSentenceType(text) {
+    const t = String(text || '').trim();
+    if (!t) return 'statement';
+
+    if (/[?]\s*$/.test(t) || /^(ვინ|რა|სად|როდის|როგორ|რატომ|რამდენი|რომელ|ხომ|განა|ნუთუ)\b/i.test(t)) return 'question';
+    if (/[!]\s*$/.test(t)) return 'exclamation';
+    if (/^["“„«][^"”“»]{2,}["””»]/.test(t) || /^—\s?\S/.test(t) || /^–\s?\S/.test(t)) return 'dialogue';
+    if (/^(დიახ|არა|კი)\b[.,!]?$/i.test(t)) return 'short';
+    if (t.split(/\s+/).length <= 3) return 'short';
+    return 'statement';
+}
+
+// Apply sentence-type-specific prosody to the verbalized Georgian text.
+// edge-tts (ka-GE-Giorgi/Eka Neural) responds to punctuation cadence, so we
+// shape pauses and emphasis with punctuation — never with SSML (the HF
+// mirrors pass plain text).
+function applyGeorgianProsody(text, sentenceType) {
+    let out = text;
+    switch (sentenceType) {
+        case 'question':
+            // Slight lead-in pause, then the rising terminal.
+            out = out.replace(/\?$/, '?');
+            break;
+        case 'exclamation':
+            // Emphatic terminal — keep energy, no trailing silence.
+            out = out.replace(/!+$/, '!');
+            break;
+        case 'dialogue':
+            // Breathing pause after the opening quote/dash mark.
+            out = out.replace(/^([“„«—–]\s*)/, '$1, ');
+            break;
+        case 'short':
+            // Punchy delivery: no comma inserted, crisp ending.
+            break;
+        default:
+            break;
+    }
     return out;
 }
 
@@ -692,6 +742,9 @@ function openModal(modalId) {
             
             const modelSelect = document.getElementById('geminiModelSelect');
             if (modelSelect) modelSelect.value = geminiModel || 'gemini-2.5-pro';
+
+            const passesSelect = document.getElementById('geminiPassesSelect');
+            if (passesSelect) passesSelect.value = String(geminiPasses || 3);
         }
         modal.classList.add('active');
     }
@@ -705,10 +758,13 @@ function closeModal(modalId) {
 function saveGeminiSettings() {
     const keyInput = document.getElementById('geminiApiKeyInput');
     const key = keyInput ? keyInput.value.trim() : '';
-    
+
     const modelSelect = document.getElementById('geminiModelSelect');
     const model = modelSelect ? modelSelect.value : 'gemini-2.5-pro';
-    
+
+    const passesSelect = document.getElementById('geminiPassesSelect');
+    const passes = passesSelect ? parseInt(passesSelect.value, 10) : 3;
+
     if (key) {
         localStorage.setItem('geminiApiKey', key);
         geminiApiKey = key;
@@ -716,9 +772,12 @@ function saveGeminiSettings() {
         localStorage.removeItem('geminiApiKey');
         geminiApiKey = '';
     }
-    
+
     localStorage.setItem('geminiModel', model);
     geminiModel = model;
+
+    localStorage.setItem('geminiPasses', String([1, 2, 3].includes(passes) ? passes : 3));
+    geminiPasses = [1, 2, 3].includes(passes) ? passes : 3;
     
     if (key) {
         alert("Gemini AI Engine Settings Saved!");
@@ -1649,59 +1708,208 @@ function readerForwardSentence() {
 // ██ 2. WHOLE-BOOK TRANSLATION STUDIO (Step-by-Step Batch Engine) ██
 // ══════════════════════════════════════════════════════════════════════════
 
-async function translateWithGeminiAI(text, targetLang) {
+// ── Gemini call helper ──────────────────────────────────────────────────────
+// One JSON-mode call to the Gemini API. Returns parsed JSON or null.
+// Retries transient failures (429/5xx) with linear backoff — the whole-book
+// batch sends hundreds of calls, so a single blip must not degrade a chunk
+// to the ML fallback tier.
+async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
     if (!geminiApiKey) return null;
-    try {
-        const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
-        const prompt = `You are an elite, world-class literary translator and expert Audio Narration Director. 
-Your ultimate goal is to translate the following text from English to ${langName} so perfectly that a native speaker would believe it was originally written in ${langName}.
 
-You MUST follow this rigorous 5-Pass Multi-Agent AI Checking process internally before responding:
-1. **Context & Tone Analysis (AI Pass 1):** Analyze the exact tone, character voice, and subtext (is it sarcastic, formal, romantic, dramatic?).
-2. **Literal Translation (AI Pass 2):** Perform a high-accuracy baseline translation.
-3. **Idiom & Natural Phrasing Fix (AI Pass 3):** Aggressively edit the baseline. NEVER translate English idioms or slang literally if they sound crude or nonsensical in ${langName}. Find the exact native equivalent.
-4. **Native Fluency Check (AI Pass 4):** Re-read the output. Does it sound like a robotic machine translation? If yes, completely rewrite it. It MUST sound like breathtaking, native literature.
-5. **Narration & TTS Optimization (AI Pass 5):** Adjust the grammar and punctuation to ensure a Text-To-Speech (TTS) engine reads it with flawless human prosody. Ensure question marks (?) and exclamation marks (!) are placed correctly so the Georgian TTS naturally raises and lowers its pitch.
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature,
+                        maxOutputTokens: maxTokens,
+                        responseMimeType: 'application/json'
+                    }
+                })
+            });
 
-OUTPUT REQUIREMENTS:
-- Output ONLY the final, polished, multi-agent reviewed translation.
-- Do NOT output your internal thoughts, Pass 1-5 notes, conversational wrapping, or markdown. Just the final translated text.
+            if (response.status === 429 || response.status >= 500) {
+                if (attempt < retries) {
+                    await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+                    continue;
+                }
+                return null;
+            }
+            if (!response.ok) {
+                console.warn('Gemini API error:', response.status);
+                return null;
+            }
 
-English Text to Translate:
-${text}`;
-        
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.2 }
-            })
-        });
-        
-        if (!response.ok) {
-            console.warn("Gemini AI Engine error:", response.status, await response.text());
-            return null;
+            const data = await response.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) return null;
+            return JSON.parse(text);
+        } catch (e) {
+            if (attempt >= retries) {
+                console.warn('Gemini call failed:', e);
+                return null;
+            }
+            await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
         }
-        const data = await response.json();
-        if (data.candidates && data.candidates[0].content.parts[0].text) {
-            let res = data.candidates[0].content.parts[0].text.trim();
-            if (targetLang === 'ka') res = refineGeorgianGrammar(res);
-            return res;
-        }
-    } catch (e) {
-        console.warn("Gemini AI translation failed:", e);
     }
     return null;
 }
 
-async function translateChunkContextually(text, targetLang = 'ka') {
+// Extract a clean Georgian translation from a model answer: strip markdown
+// fences and conversational wrapping the model may add despite instructions.
+function extractTranslation(raw) {
+    if (!raw) return '';
+    let out = String(raw).trim();
+    out = out.replace(/^```(?:[a-zA-Z]*)\s*\n?/, '').replace(/\n?```\s*$/, '');
+    const lower = out.toLowerCase();
+    for (const prefix of ['translation:', 'übersetzung:', 'თარგმანი:']) {
+        if (lower.startsWith(prefix)) {
+            out = out.slice(prefix.length).trim();
+            break;
+        }
+    }
+    return out.trim();
+}
+
+// Stage 1 — literary draft translation. Receives neighbouring sentences as
+// context so pronouns, tense and terminology stay coherent across chunk
+// boundaries (the draft never sees a sentence in isolation).
+async function geminiDraftTranslate(text, targetLang, contextBefore = '', contextAfter = '') {
+    const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
+    const ctxBefore = contextBefore ? `\n\n[PRECEDING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextBefore.slice(-600)}` : '';
+    const ctxAfter = contextAfter ? `\n\n[FOLLOWING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextAfter.slice(0, 600)}` : '';
+
+    const prompt = `You are an elite literary translator (English → ${langName}). Your translations read like the book was originally written in ${langName} — the register of a respected literary publishing house, not a machine.
+
+Process:
+1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
+2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
+3. Replace idioms with their natural ${langName} equivalents; never translate them literally.
+4. Write flowing native prose — no translationese.
+
+TTS note: this translation will be narrated aloud. Use correct terminal punctuation (? ! .) so the voice produces natural prosody.
+
+Answer as JSON: {"translation": "..."} — the ${langName} translation ONLY, no notes, no markdown fences.
+
+English text:
+${text}${ctxBefore}${ctxAfter}`;
+
+    const data = await callGeminiJSON(prompt, { temperature: 0.25 });
+    const translation = extractTranslation(data?.translation);
+    return translation || null;
+}
+
+// Stage 2 — structured critique (MQM-inspired). Separate call, separate
+// persona: the reviewer must actively hunt for errors, not rubber-stamp.
+// Returns a machine-readable error list; empty list = approved.
+async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
+    const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
+
+    const prompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer. Compare the SOURCE (English) against the TRANSLATION (${langName}) and find every real defect.
+
+Check, in order of severity:
+1. Accuracy: omissions, additions, reversed meaning, lost negation, changed names/numbers/units.
+2. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.
+3. Grammar & spelling: ${langName} case endings, verb conjugation, agreement, orthography.
+4. Style: unnatural phrasing, robotic word order, broken idiom.
+5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols).
+
+Be demanding: an accurate but stilted translation still gets flagged under style. If the translation is genuinely publication-ready, return an empty error list. Never invent problems.
+
+Answer as JSON:
+{"errors": [{"severity": "critical|major|minor", "type": "accuracy|terminology|grammar|style|tts", "issue": "...", "fix": "concrete instruction"}], "verdict": "approved|needs_revision"}
+
+SOURCE:
+${sourceText}
+
+TRANSLATION:
+${translation}`;
+
+    const data = await callGeminiJSON(prompt, { temperature: 0.1 });
+    if (!data || !Array.isArray(data.errors)) return null;
+    return data;
+}
+
+// Stage 3 — targeted refinement. The revision sees ONLY the confirmed error
+// list plus the surrounding text — not the reviewer's general opinion — and
+// must return the complete corrected translation.
+async function geminiRefineTranslation(sourceText, translation, errors, targetLang) {
+    const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
+    const errorList = errors
+        .map((e, i) => `${i + 1}. [${e.severity || 'major'}/${e.type || 'style'}] ${e.issue}\n   → ${e.fix || 'fix it'}`)
+        .join('\n');
+
+    const prompt = `You are the final editor of a ${langName} literary translation. A reviewer found the following defects. Apply EVERY fix precisely while keeping everything that was already correct. Do not re-translate from scratch — surgically correct the listed problems and polish only where a fix demands it.
+
+Keep: meaning, names, numbers, length roughly proportional, natural literary ${langName}, TTS-friendly punctuation.
+
+Answer as JSON: {"translation": "..."} — the complete corrected ${langName} text, no notes.
+
+SOURCE (English):
+${sourceText}
+
+CURRENT TRANSLATION (${langName}):
+${translation}
+
+CONFIRMED DEFECTS:
+${errorList}`;
+
+    const data = await callGeminiJSON(prompt, { temperature: 0.2 });
+    const refined = extractTranslation(data?.translation);
+    return refined || null;
+}
+
+// Full pipeline for one chunk. geminiPasses gates the depth:
+//   1 → draft only
+//   2 → draft + critique (refine only on critical/major errors)
+//   3 → draft + critique + refine + final QA (verify the revision, keep the
+//       better of the two — a bad refinement can never make things worse)
+async function translateWithGeminiAI(text, targetLang, contextBefore = '', contextAfter = '') {
+    if (!geminiApiKey) return null;
+
+    const draft = await geminiDraftTranslate(text, targetLang, contextBefore, contextAfter);
+    if (!draft) return null;
+    if (geminiPasses < 2) return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+
+    const critique = await geminiCritiqueTranslation(text, draft, targetLang);
+    if (!critique) return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+
+    const blocking = critique.errors.filter(e => e.severity === 'critical' || e.severity === 'major');
+    if (critique.verdict === 'approved' || blocking.length === 0) {
+        return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+    }
+
+    if (geminiPasses < 3) {
+        const quick = await geminiRefineTranslation(text, draft, blocking, targetLang);
+        const result = quick || draft;
+        return targetLang === 'ka' ? refineGeorgianGrammar(result) : result;
+    }
+
+    const revised = await geminiRefineTranslation(text, draft, blocking, targetLang);
+    if (!revised) return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+
+    // Final QA: re-review the revision; keep it only if it is genuinely
+    // better than the draft — a bad refinement can never make things worse.
+    const revisedAudit = await geminiCritiqueTranslation(text, revised, targetLang);
+    const revisedBlocking = revisedAudit
+        ? revisedAudit.errors.filter(e => e.severity === 'critical' || e.severity === 'major').length
+        : blocking.length;
+    if (revisedBlocking < blocking.length || revisedAudit?.verdict === 'approved') {
+        return targetLang === 'ka' ? refineGeorgianGrammar(revised) : revised;
+    }
+    return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+}
+
+async function translateChunkContextually(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
 
-    // Tier 0: Gemini AI Engine (Double-Checked Literary Translation)
+    // Tier 0: Gemini AI Engine (multi-pass literary pipeline)
     if (geminiApiKey) {
-        const geminiRes = await translateWithGeminiAI(clean, targetLang);
+        const geminiRes = await translateWithGeminiAI(clean, targetLang, contextBefore, contextAfter);
         if (geminiRes) return geminiRes;
         console.warn("Gemini AI Engine failed, falling back to traditional ML engines...");
     }
@@ -1861,7 +2069,11 @@ async function startWholeBookTranslation() {
                     DOM.wbSentenceCounter.textContent = `Context Chunk ${cIdx + 1} / ${chunks.length} (Sentence ${completedSentencesCount} / ${totalSentencesCount})`;
                 }
 
-                const translated = await translateChunkContextually(orig, 'ka');
+                const translated = await translateChunkContextually(
+                    orig, 'ka',
+                    cIdx > 0 ? chunks[cIdx - 1].trim() : '',
+                    cIdx < chunks.length - 1 ? chunks[cIdx + 1].trim() : ''
+                );
                 translatedArr.push(translated);
                 totalCharsTranslated += translated.length;
 
@@ -2145,7 +2357,16 @@ function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
 }
 
 async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
-    const verbalized = verbalizeGeorgianTextForTTS(text);
+    const sentenceType = detectSentenceType(text);
+    // Expressive modulation: questions lift slightly, exclamations carry a
+    // touch more energy, dialogue gets a subtle intimate drop. Small deltas —
+    // the base rate/pitch from the player controls still dominate.
+    const typeRate = { question: 0, exclamation: 4, dialogue: -2, short: 3, statement: 0 }[sentenceType] ?? 0;
+    const typePitch = { question: 3, exclamation: 4, dialogue: -3, short: 1, statement: 0 }[sentenceType] ?? 0;
+    const rate = Math.max(-50, Math.min(50, ratePct + typeRate));
+    const pitch = Math.max(-20, Math.min(20, pitchHz + typePitch));
+
+    const verbalized = applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), sentenceType);
     if (!verbalized || !verbalized.trim()) return null;
 
     const mirrors = [
@@ -2159,7 +2380,7 @@ async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    data: [verbalized, voiceId, ratePct, pitchHz]
+                    data: [verbalized, voiceId, rate, pitch]
                 })
             });
 
@@ -2263,6 +2484,37 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
     }
 }
 
+// ElevenLabs: per-sentence expressive delivery. v3 (eleven_v3) understands
+// inline audio tags like [whispers], [curious]; the multilingual v2 model
+// gets the same intent via voice_settings tuning instead. Sentence-type
+// detection drives both, so questions audibly rise and dialogue sounds
+// spoken rather than read.
+const ELEVEN_V3_STYLE_TAGS = {
+    question: '[curious]',
+    exclamation: '[excited]',
+    dialogue: '[whispers]',
+    short: '[decisive]',
+    statement: ''
+};
+
+function elevenLabsExpressiveText(text, modelId) {
+    if (modelId !== 'eleven_v3') return text;
+    const tag = ELEVEN_V3_STYLE_TAGS[detectSentenceType(text)];
+    return tag ? `${tag} ${text}` : text;
+}
+
+function elevenLabsVoiceSettings(modelId, sentenceType) {
+    if (modelId === 'eleven_v3') {
+        // v3: lower stability = more expressive variance; dialogue gets the
+        // most freedom, statements stay composed for long-form listening.
+        const stability = { dialogue: 0.3, exclamation: 0.35, question: 0.4, short: 0.5, statement: 0.55 }[sentenceType] ?? 0.5;
+        return { stability, similarity_boost: 0.8 };
+    }
+    // multilingual v2: stability 0.35 keeps long narration natural without
+    // drifting; slightly higher similarity preserves the chosen voice.
+    return { stability: 0.35, similarity_boost: 0.85, style: sentenceType === 'exclamation' ? 0.45 : 0.25, use_speaker_boost: true };
+}
+
 async function speakElevenLabsSentence(text) {
     stopCurrentSpeechAudio();
     const myToken = currentSpeechToken;
@@ -2270,6 +2522,7 @@ async function speakElevenLabsSentence(text) {
 
     try {
         const voiceId = elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB';
+        const modelId = elevenLabsModelId || 'eleven_multilingual_v2';
         const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
 
         const res = await fetch(url, {
@@ -2280,12 +2533,9 @@ async function speakElevenLabsSentence(text) {
                 'Accept': 'audio/mpeg'
             },
             body: JSON.stringify({
-                text: text,
-                model_id: 'eleven_multilingual_v2',
-                voice_settings: {
-                    stability: 0.5,
-                    similarity_boost: 0.8
-                }
+                text: elevenLabsExpressiveText(text, modelId),
+                model_id: modelId,
+                voice_settings: elevenLabsVoiceSettings(modelId, detectSentenceType(text))
             })
         });
 
