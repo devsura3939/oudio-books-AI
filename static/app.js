@@ -55,6 +55,9 @@ let currentElevenAudio = null;
 let isTranslatingWholeBook = false;
 let cancelTranslationFlag = false;
 
+// Gemini AI State
+let geminiApiKey = localStorage.getItem('geminiApiKey') || '';
+
 // ── Georgian Unicode & Advanced Linguistic Normalization ───────────────────
 function normalizeGeorgian(text) {
     if (!text) return '';
@@ -680,12 +683,31 @@ function navigate(viewId) {
 
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.add('active');
+    if (modal) {
+        if (modalId === 'aiSettingsModal') {
+            document.getElementById('geminiApiKeyInput').value = geminiApiKey || '';
+        }
+        modal.classList.add('active');
+    }
 }
 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) modal.classList.remove('active');
+}
+
+function saveGeminiSettings() {
+    const key = document.getElementById('geminiApiKeyInput').value.trim();
+    if (key) {
+        localStorage.setItem('geminiApiKey', key);
+        geminiApiKey = key;
+        alert("Gemini AI Engine Key Saved!");
+    } else {
+        localStorage.removeItem('geminiApiKey');
+        geminiApiKey = '';
+        alert("Gemini AI Engine disabled.");
+    }
+    closeModal('aiSettingsModal');
 }
 
 function openToCDrawer() {
@@ -1592,9 +1614,51 @@ function readerForwardSentence() {
 // ██ 2. WHOLE-BOOK TRANSLATION STUDIO (Step-by-Step Batch Engine) ██
 // ══════════════════════════════════════════════════════════════════════════
 
+async function translateWithGeminiAI(text, targetLang) {
+    if (!geminiApiKey) return null;
+    try {
+        const prompt = `You are a world-class literary translator and editor. 
+Your task is to translate the following English text to ${targetLang === 'ka' ? 'Georgian' : targetLang}. 
+You must follow a precise double-check process:
+1. First, translate the text accurately, capturing the exact meaning and context.
+2. Second, review and fix your translation. Ensure it uses natural phrasing, high literary excellence, and correct idioms. Do not translate idioms literally if they sound crude or nonsensical in ${targetLang === 'ka' ? 'Georgian' : targetLang}.
+3. Finally, output ONLY the final, double-checked translated text without any conversational wrapping, quotes, markdown formatting, or explanations.\n\nEnglish Text: ${text}`;
+        
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.2 }
+            })
+        });
+        
+        if (!response.ok) {
+            console.warn("Gemini AI Engine error:", response.status, await response.text());
+            return null;
+        }
+        const data = await response.json();
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            let res = data.candidates[0].content.parts[0].text.trim();
+            if (targetLang === 'ka') res = refineGeorgianGrammar(res);
+            return res;
+        }
+    } catch (e) {
+        console.warn("Gemini AI translation failed:", e);
+    }
+    return null;
+}
+
 async function translateChunkContextually(text, targetLang = 'ka') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
+
+    // Tier 0: Gemini AI Engine (Double-Checked Literary Translation)
+    if (geminiApiKey) {
+        const geminiRes = await translateWithGeminiAI(clean, targetLang);
+        if (geminiRes) return geminiRes;
+        console.warn("Gemini AI Engine failed, falling back to traditional ML engines...");
+    }
 
     // Tier 1: Google Dict-Chrome-Ex Neural Engine (Ultra-stable, zero rate-limiting)
     try {
