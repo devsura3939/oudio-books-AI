@@ -1141,6 +1141,7 @@ function speakCurrentSentence() {
 
     // Human Breath & Pacing Gap (320ms pause between sentences for realistic narration)
     utter.onend = () => {
+        if (!isPlaying || isPaused) return; // Prevent skipping sentence if canceled via pause
         currentSentenceIndex++;
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
         utteranceTimeout = setTimeout(() => {
@@ -1174,17 +1175,18 @@ function togglePlayPause() {
     }
 
     if (isPlaying && !isPaused) {
+        // BUG FIX: Chromium's .pause() is notoriously buggy and can freeze the engine. 
+        // We use .cancel() to stop immediately, and when playing resumes it will 
+        // naturally restart from the current sentence (perfect UX for audiobooks).
         isPaused = true;
-        window.speechSynthesis.pause();
+        if (utteranceTimeout) clearTimeout(utteranceTimeout);
+        window.speechSynthesis.cancel();
         stopTimer();
         updatePlayerUIState(false);
     } else if (isPlaying && isPaused) {
         isPaused = false;
-        if (window.speechSynthesis.paused) {
-            window.speechSynthesis.resume();
-        } else {
-            speakCurrentSentence();
-        }
+        // BUG FIX: Since we canceled above, we must start a new utterance
+        speakCurrentSentence();
         startTimer();
         updatePlayerUIState(true);
     } else {
