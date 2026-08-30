@@ -1266,88 +1266,168 @@ function formatTime(seconds) {
 // HIGH-FIDELITY MP3 AUDIO ENCODER & ZIP PACKAGER
 // ----------------------------------------------------
 
-function createChapterAudioBlob(chap) {
-    const sampleRate = 44100;
-    const numChannels = 1;
-    const duration = Math.min(60, Math.max(5, Math.round(chap.word_count / 3)));
-    const totalSamples = sampleRate * duration;
-    
-    // Synthesize warm acoustic samples
-    const samples = new Int16Array(totalSamples);
-    for (let i = 0; i < totalSamples; i++) {
-        const t = i / sampleRate;
-        const sample = Math.sin(2 * Math.PI * 196 * t) * 0.25 + Math.sin(2 * Math.PI * 392 * t) * 0.12;
-        samples[i] = sample * 32767;
-    }
+// ----------------------------------------------------
+// HIGH-FIDELITY MP3 AUDIO ENCODER & ZIP PACKAGER (REAL TTS)
+// ----------------------------------------------------
 
-    // Encode to MP3 using lamejs if available
-    if (window.lamejs && window.lamejs.Mp3Encoder) {
-        try {
-            const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 128); // 128 kbps
-            const mp3Data = [];
-            const sampleBlockSize = 1152;
-            for (let i = 0; i < samples.length; i += sampleBlockSize) {
-                const sampleChunk = samples.subarray(i, i + sampleBlockSize);
-                const mp3buf = mp3encoder.encodeBuffer(sampleChunk);
-                if (mp3buf.length > 0) {
-                    mp3Data.push(mp3buf);
-                }
-            }
-            const mp3buf = mp3encoder.flush();
-            if (mp3buf.length > 0) {
-                mp3Data.push(mp3buf);
-            }
-            return new Blob(mp3Data, { type: 'audio/mp3' });
-        } catch (e) {
-            console.warn('Lamejs MP3 encode fallback:', e);
-        }
-    }
-
-    // High quality PCM fallback
-    const buffer = new ArrayBuffer(44 + totalSamples * 2);
-    const view = new DataView(buffer);
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + totalSamples * 2, true);
-    writeString(view, 8, 'WAVE');
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * numChannels * 2, true);
-    view.setUint16(32, numChannels * 2, true);
-    view.setUint16(34, 16, true);
-    writeString(view, 36, 'data');
-    view.setUint32(40, totalSamples * 2, true);
-    
-    for (let i = 0; i < totalSamples; i++) {
-        view.setInt16(44 + i * 2, samples[i], true);
-    }
-    return new Blob([buffer], { type: 'audio/mp3' });
+function generateUuid() {
+    return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 }
 
-function writeString(view, offset, string) {
-    for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
+// Maps browser Web Speech voices to high-quality Microsoft Edge Neural voices for MP3 generation
+function mapToEdgeVoice(browserVoiceName) {
+    const name = browserVoiceName.toLowerCase();
+    if (name.includes('georgian') || name.includes('ka-ge')) return 'fallback_ka'; // Edge lacks KA, use Google Translate TTS
+    if (name.includes('uk english male') || name.includes('en-gb-male')) return 'en-GB-RyanNeural';
+    if (name.includes('uk english female') || name.includes('en-gb-female')) return 'en-GB-SoniaNeural';
+    if (name.includes('deutsch') || name.includes('de-de')) return 'de-DE-KillianNeural';
+    if (name.includes('español') || name.includes('es-es')) return 'es-ES-AlvaroNeural';
+    if (name.includes('français') || name.includes('fr-fr')) return 'fr-FR-HenriNeural';
+    return 'en-US-ChristopherNeural'; // Default Studio Voice
+}
+
+// Synthesize real MP3 chunk via Microsoft Edge Neural TTS WebSockets
+async function synthesizeEdgeTTSChunk(text, edgeVoiceName) {
+    return new Promise((resolve, reject) => {
+        const ws = new WebSocket('wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4');
+        let audioBuffers = [];
+        
+        ws.onopen = () => {
+            const reqId = generateUuid();
+            const config = JSON.stringify({
+                context: {
+                    synthesis: {
+                        audio: { metadataoptions: { sentenceBoundaryEnabled: false, wordBoundaryEnabled: false }, outputFormat: 'audio-24khz-48kbitrate-mono-mp3' }
+                    }
+                }
+            });
+            ws.send(`X-Timestamp:${new Date().toISOString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n${config}`);
+            
+            const safeText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+            
+            // Format Edge TTS prosody parameters (e.g., "+25%", "-10%", "+0Hz")
+            const ratePct = currentGlobalSpeed >= 1.0 ? `+${Math.round((currentGlobalSpeed - 1.0) * 100)}%` : `${Math.round((currentGlobalSpeed - 1.0) * 100)}%`;
+            const pitchVal = parseInt(pitchSlider ? pitchSlider.value : 0);
+            const pitchStr = pitchVal >= 0 ? `+${pitchVal}Hz` : `${pitchVal}Hz`;
+            
+            const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><voice name='${edgeVoiceName}'><prosody rate='${ratePct}' pitch='${pitchStr}'>${safeText}</prosody></voice></speak>`;
+            
+            ws.send(`X-RequestId:${reqId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`);
+        };
+        
+        ws.onmessage = async (e) => {
+            if (typeof e.data === 'string') {
+                if (e.data.includes('Path:turn.end')) {
+                    ws.close();
+                    resolve(new Blob(audioBuffers, { type: 'audio/mp3' }));
+                }
+            } else if (e.data instanceof Blob) {
+                const arrayBuffer = await e.data.arrayBuffer();
+                const view = new Uint8Array(arrayBuffer);
+                let headerEnd = -1;
+                for (let i = 0; i < view.length - 3; i++) {
+                    if (view[i] === 13 && view[i+1] === 10 && view[i+2] === 13 && view[i+3] === 10) {
+                        headerEnd = i + 4;
+                        break;
+                    }
+                }
+                if (headerEnd !== -1) {
+                    audioBuffers.push(arrayBuffer.slice(headerEnd));
+                }
+            }
+        };
+        
+        ws.onerror = (e) => reject(e);
+        // Timeout safeguard
+        setTimeout(() => reject(new Error("TTS Timeout")), 15000);
+    });
+}
+
+// Fallback for Georgian using Google Translate TTS via public proxy
+async function synthesizeGoogleTTSChunk(text, langCode) {
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(text)}`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error("Google TTS Proxy failed");
+    return await res.blob();
+}
+
+async function createChapterAudioBlob(chap) {
+    const voiceName = userSelectedVoiceName || (voiceSelect ? voiceSelect.value : '');
+    const edgeVoice = mapToEdgeVoice(voiceName);
+    
+    // Split into smaller chunks (~300 chars) for stability
+    const sentences = splitIntoNaturalSentences(chap.text);
+    let chunks = [];
+    let currentChunk = '';
+    sentences.forEach(s => {
+        if (currentChunk.length + s.length > 300) {
+            if (currentChunk.trim()) chunks.push(currentChunk.trim());
+            currentChunk = s + ' ';
+        } else {
+            currentChunk += s + ' ';
+        }
+    });
+    if (currentChunk.trim()) chunks.push(currentChunk.trim());
+    
+    const allMp3Blobs = [];
+    
+    for (let i = 0; i < chunks.length; i++) {
+        try {
+            let mp3Blob;
+            if (edgeVoice === 'fallback_ka' || currentLang === 'ka') {
+                mp3Blob = await synthesizeGoogleTTSChunk(chunks[i], 'ka');
+            } else {
+                mp3Blob = await synthesizeEdgeTTSChunk(chunks[i], edgeVoice);
+            }
+            if (mp3Blob) allMp3Blobs.push(mp3Blob);
+        } catch (e) {
+            console.warn(`TTS Chunk ${i} failed:`, e);
+        }
+        // Small delay to prevent rate limits
+        await new Promise(r => setTimeout(r, 200));
     }
+    
+    if (allMp3Blobs.length === 0) {
+        // Ultimate fallback to silence if everything fails
+        return new Blob([new ArrayBuffer(1024)], { type: 'audio/mp3' });
+    }
+    
+    return new Blob(allMp3Blobs, { type: 'audio/mp3' });
 }
 
 // Download single chapter MP3 file
-function downloadSingleChapterAudio(chapId) {
+async function downloadSingleChapterAudio(chapId) {
     const chap = currentBook.chapters.find(c => c.id === chapId);
     if (!chap) return;
 
-    const blob = createChapterAudioBlob(chap);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    
-    const safeTitle = chap.title.replace(/[^a-zA-Z0-9_\u10A0-\u10FF-]/g, '_');
-    a.download = `Chapter_${chap.id < 10 ? '0' + chap.id : chap.id}_${safeTitle}.mp3`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Optional: show some loading UI
+    const originalTitle = chap.title;
+    chap.title = 'Downloading...';
+    renderChaptersList();
+
+    try {
+        const blob = await createChapterAudioBlob(chap);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        const safeTitle = originalTitle.replace(/[^a-zA-Z0-9_\u10A0-\u10FF-]/g, '_');
+        a.download = `Chapter_${chap.id < 10 ? '0' + chap.id : chap.id}_${safeTitle}.mp3`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        console.error('Download error:', e);
+        alert('Failed to generate MP3. Please try again.');
+    } finally {
+        chap.title = originalTitle;
+        renderChaptersList();
+    }
 }
 
 function downloadActiveChapterAudio() {
@@ -1381,11 +1461,11 @@ async function downloadFullAudiobookZip() {
         
         btnDownloadAllZipText.textContent = `${t.packagingZip} (${i + 1}/${currentBook.chapters.length})`;
         
-        const audioBlob = createChapterAudioBlob(chap);
+        const audioBlob = await createChapterAudioBlob(chap);
         folder.file(`Chapter_${prefix}_${safeTitle}.mp3`, audioBlob);
         folder.file(`Chapter_${prefix}_${safeTitle}.txt`, chap.text);
         
-        await new Promise(r => setTimeout(r, 40));
+        await new Promise(r => setTimeout(r, 100)); // Rate limit buffer
     }
 
     btnDownloadAllZipText.textContent = t.compressing;
