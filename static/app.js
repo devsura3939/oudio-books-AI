@@ -120,6 +120,14 @@ const btnDownloadCurrent = document.getElementById('btnDownloadCurrent');
     }, false);
 });
 
+// Chrome SpeechSynthesis heartbeat
+setInterval(() => {
+    if ('speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+    }
+}, 8000);
+
 // ==========================================
 // SEAMLESS DUAL-BUFFER AUDIO QUEUE PLAYER
 // ==========================================
@@ -151,7 +159,7 @@ class AudioReadPlayer {
 
         audioElement.addEventListener('error', (e) => {
             if ((isA && this.activeIsA) || (!isA && !this.activeIsA)) {
-                console.warn('Audio segment error, smoothly continuing:', e);
+                console.warn('Audio stream error, smoothly advancing:', e);
                 setTimeout(() => this.onSegmentEnded(), 250);
             }
         });
@@ -187,7 +195,6 @@ class AudioReadPlayer {
         if (!this.isPlaying || this.isPaused) return;
 
         if (this.currentIndex >= this.queue.length) {
-            // Chapter complete
             this.stop();
             if (playerProgress) playerProgress.value = 100;
             playNextChapter();
@@ -197,7 +204,6 @@ class AudioReadPlayer {
         const sentence = this.queue[this.currentIndex];
         const nextSentence = (this.currentIndex + 1 < this.queue.length) ? this.queue[this.currentIndex + 1] : null;
 
-        // Progress UI
         if (playerProgress && this.queue.length > 0) {
             const pct = Math.round((this.currentIndex / this.queue.length) * 100);
             playerProgress.value = pct;
@@ -207,10 +213,8 @@ class AudioReadPlayer {
         const speedMultiplier = playbackSpeeds[currentSpeedIndex] * (1 + parseInt(rateSlider.value) / 100);
 
         if (voiceVal.startsWith('synth:') || this.useWebSpeech) {
-            // WebSpeech Engine
             this.speakWebSpeech(sentence, voiceVal, speedMultiplier);
         } else {
-            // High-Definition Neural Stream
             const activeAudio = this.activeIsA ? this.audioA : this.audioB;
             const preloadAudio = this.activeIsA ? this.audioB : this.audioA;
 
@@ -226,11 +230,10 @@ class AudioReadPlayer {
             activeAudio.play().then(() => {
                 updatePlayPauseIcon(true);
             }).catch(err => {
-                console.warn('Stream play error, falling back to WebSpeech:', err);
+                console.warn('Stream play blocked or errored, trying WebSpeech:', err);
                 this.speakWebSpeech(sentence, voiceVal, speedMultiplier);
             });
 
-            // Preload next segment in the secondary audio buffer
             if (nextSentence) {
                 const nextUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(nextSentence)}`;
                 preloadAudio.src = nextUrl;
@@ -257,19 +260,19 @@ class AudioReadPlayer {
         };
 
         utter.onerror = (e) => {
-            console.warn('Utterance error, next sentence:', e);
+            console.warn('Utterance error, advancing:', e);
             setTimeout(() => this.onSegmentEnded(), 200);
         };
 
         this.activeUtterance = utter;
-        window._activeUtterance = utter; // Prevent GC bug
+        window._activeUtterance = utter;
         window.speechSynthesis.speak(utter);
         updatePlayPauseIcon(true);
     }
 
     onSegmentEnded() {
         if (!this.isPlaying || this.isPaused) return;
-        this.activeIsA = !this.activeIsA; // Swap buffers
+        this.activeIsA = !this.activeIsA;
         this.currentIndex++;
         this.playCurrentSegment();
     }
@@ -283,7 +286,6 @@ class AudioReadPlayer {
         }
 
         if (this.isPaused) {
-            // Resume
             this.isPaused = false;
             this.isPlaying = true;
             const activeAudio = this.activeIsA ? this.audioA : this.audioB;
@@ -294,7 +296,6 @@ class AudioReadPlayer {
             startTimer();
             updatePlayPauseIcon(true);
         } else if (this.isPlaying) {
-            // Pause
             this.isPaused = true;
             this.isPlaying = false;
             this.audioA.pause();
@@ -369,11 +370,8 @@ function stopTimer() {
     }
 }
 
-// Split text into safe, punchy sentences
 function splitIntoNaturalSentences(text) {
     if (!text || !text.trim()) return [];
-    
-    // Split on sentence terminators or line breaks
     const rawChunks = text.split(/(?<=[.!?])\s+|\n+/);
     const result = [];
     
@@ -382,7 +380,6 @@ function splitIntoNaturalSentences(text) {
         if (!trimmed) return;
         
         if (trimmed.length > 175) {
-            // Sub-divide long sentence by comma/semicolon/clause
             const parts = trimmed.split(/([,;:]\s+)/);
             let buf = '';
             parts.forEach(p => {
@@ -402,10 +399,8 @@ function splitIntoNaturalSentences(text) {
     return result;
 }
 
-// Initialize Voice Catalog
 function initVoiceCatalog() {
     renderVoiceOptions();
-    
     if ('speechSynthesis' in window) {
         if (speechSynthesis.onvoiceschanged !== undefined) {
             speechSynthesis.onvoiceschanged = () => renderVoiceOptions();
@@ -417,7 +412,6 @@ function renderVoiceOptions() {
     if (!voiceSelect) return;
     voiceSelect.innerHTML = '';
 
-    // 1. Studio Neural Voices Group
     const groupStudio = document.createElement('optgroup');
     groupStudio.label = '⚡ Studio Neural Narrators (Ultra-Natural HD)';
     NATURAL_STUDIO_VOICES.forEach(v => {
@@ -429,7 +423,6 @@ function renderVoiceOptions() {
     });
     voiceSelect.appendChild(groupStudio);
 
-    // 2. Device System Voices Group
     if ('speechSynthesis' in window) {
         const sysVoices = window.speechSynthesis.getVoices();
         if (sysVoices.length > 0) {
@@ -577,14 +570,14 @@ function setupEventListeners() {
         });
     }
     
-    // Rewind -15s (2 sentences back)
+    // Rewind -15s
     if (btnPlayerRewind) {
         btnPlayerRewind.addEventListener('click', () => {
             studioPlayer.skip(-2);
         });
     }
 
-    // Forward +15s (2 sentences forward)
+    // Forward +15s
     if (btnPlayerForward) {
         btnPlayerForward.addEventListener('click', () => {
             studioPlayer.skip(2);
@@ -655,10 +648,14 @@ async function handleFileUpload(file) {
 
     try {
         const pdfjs = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
-        if (!pdfjs) throw new Error('PDF parser is initializing. Please try again in 1 second.');
+        if (!pdfjs) throw new Error('PDF parser is initializing. Please try again.');
 
         const arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+        const loadingTask = pdfjs.getDocument({
+            data: arrayBuffer,
+            cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/cmaps/',
+            cMapPacked: true
+        });
         const pdfDoc = await loadingTask.promise;
         
         const totalPages = pdfDoc.numPages;
@@ -882,7 +879,6 @@ function playChapterAudio(chapId) {
     if (!chap) return;
 
     if (currentPlayingChapterId === chapId && studioPlayer.isPlaying) {
-        // Toggle pause if already playing this chapter
         studioPlayer.togglePlayPause();
         renderChaptersList();
         return;
@@ -961,3 +957,9 @@ async function saveModalChapter() {
     renderWorkspace();
     closeModal();
 }
+
+// DOMContentLoaded bootstrap
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) lucide.createIcons();
+    setupEventListeners();
+});
