@@ -778,9 +778,30 @@ function saveGeminiSettings() {
 
     localStorage.setItem('geminiPasses', String([1, 2, 3].includes(passes) ? passes : 3));
     geminiPasses = [1, 2, 3].includes(passes) ? passes : 3;
-    
+
     if (key) {
-        alert("Gemini AI Engine Settings Saved!");
+        // Probe the key right away so a bad key is caught HERE, not silently
+        // during a 2-hour batch translation that degrades to machine output.
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: 'Reply with exactly: OK' }] }],
+                generationConfig: { maxOutputTokens: 8 }
+            })
+        }).then(r => {
+            if (r.ok) {
+                alert('Gemini API key verified — all translation stages are active!');
+            } else if (r.status === 400 || r.status === 403) {
+                alert('Key saved, but Gemini rejected it (status ' + r.status + ').\n\nTranslation will fall back to machine quality.\nCheck the key is a valid Google AI Studio API key.');
+            } else if (r.status === 429) {
+                alert('Key saved, but quota is exhausted (429).\n\nTranslation will fall back to machine quality until quota resets.');
+            } else {
+                alert('Key saved, but Gemini returned status ' + r.status + '. Translation may fall back to machine quality.');
+            }
+        }).catch(() => {
+            alert('Key saved, but could not reach Gemini (network error).\nTranslation will use fallback engines until connection is restored.');
+        });
     } else {
         alert("Gemini AI Engine disabled (no key). Model preference saved.");
     }
