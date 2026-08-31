@@ -48,6 +48,18 @@
 // (ბუზების თვლა, თვალი ეჭრება, ცეცხლზე ნავთის დასხმა, შენი ჭირიმე...).
 // QA rules 3.40-3.42 (possessive_economy, singular_they, discourse_starvation),
 // auto-fix 4.33 (drop redundant possessive before body parts).
+// v1.8.0 expansion (grammar deep-dive, 10 new web sources): KA_VERSION_MARKERS
+// (pre-radical vowels უ/ი/ა semantics, causative co-occurrence, passive -დ-/-ი-,
+// PFSF Series-I-only, full verb template order), KA_MASDARS (verbal noun
+// formation -ა/suppletive, gerund/infinitive rendering, უნდა+masdar chain),
+// KA_SUBORDINATION (რომ/რათა/სანამ/თუ/რადგან..., declined რომელიც + postposition
+// infixing, participle preference, NO English tense backshift, polypersonalism
+// incl. მიყვარხარ), KA_ONOMATOPOEIA (native sound-imitation lexicon: animals,
+// impact, laughter intensity set), KA_NUMBERS_TTS (spell-out vs digits decision
+// table, ordinals მე-...-ე, vigesimal examples, decimal comma, space thousands).
+// QA rules 3.43-3.46 (digit_in_dialogue, decimal_point_ka, english_ordinal,
+// missing_rom), auto-fixes 4.34-4.36 (EN ordinal → KA ordinal, decimal point →
+// comma, small digit + quantity noun → spelled-out).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -749,6 +761,126 @@ TACTIC 6 — SELF-CHECK ORDER (before answering):
 4. Idioms nativized? 5. Pronouns/possessives pruned? 6. Discourse markers present but not stacked?
 7. Punctuation Georgian („…“, —, ।)? 8. Register consistent?`;
 
+const KA_VERSION_MARKERS = `
+VERSION MARKERS (pre-radical vowels) — the vowel BEFORE the verb root changes meaning (v1.8.0, wikibooks/zmnebi):
+• Neutral (no vowel): ვწერ (I write it) — plain action on the object.
+• უ- (objective version = "for someone"): დაუწერა (wrote it FOR him), მაუწერია.
+  Rule: English "V for someone" → insert -უ-. Never confuse with უნდა.
+• ი- (subjective version = "for oneself" / reflexive / middle voice):
+  დაიწერა (got written), იშენებს (earns/keeps for oneself), იცინის (laughs).
+  English reflexive "V oneself" often → just the ი- version, no თავს.
+• ა- (superessive/locative): action on a surface: ახატავს (paints ON it).
+  Also verbifies adjectives: დიდი → ადიდებს (makes bigger).
+• ა- + causative: ა-...-ებ / -ინებ / -ევ makes someone do X:
+  წერს → აწერინებს (makes him write); ჭამს → აჭმევს (feeds him);
+  ჭამს → აჭმევინებს (has him fed). Causative ALWAYS co-occurs with version -ა-.
+  English "make/let someone V" → causative form, NOT a separate "make" verb.
+• Passive: add -დ- to root or version -ი-: იწერება (is being written);
+  გაწერს → გაწითლდი (blushed: წითელი red → -წითლ-დ-).
+• PFSF (present-future stem formant: -ებ-, -ავ-, -ობ-...) exists ONLY in Series I;
+  it disappears in Series II/III: წერს → დაწერა (aorist drops -ებ-).
+• Verb template order: preverb + person + version + ROOT + passive + {thematic suffix}
+  + causative + imperfective(-დ-/-ოდ-) + suffixal person + auxiliary + plural.`;
+
+const KA_MASDARS = `
+MASDARS (VERBAL NOUNS) & NON-FINITE FORMS (v1.8.0, georgian.se/zmnebi):
+Masdars are verbal nouns; they decline like NOUNS and are the natural way to render
+English gerunds/infinitives as subjects or objects.
+
+FORMATION:
+• Most masdars = verb stem + -ა: კეთება (doing), წერა (writing), ჭამა (eating),
+  წაკითხვა (reading), ლოდინი (waiting), დაჯდომა (sitting).
+• Many are suppletive/irregular: სიყვარული (love), სიცილი (laughter), სიკვდილი (death),
+  სიარული (walking), სიზმარი (dream).
+• Masdars decline like NOUNS: წერაში (in writing), წერის (of writing), წერამ (by writing).
+
+USAGE RULES:
+• English gerund subject → masdar: "Swimming is fun" → ცურვა სასიამოვნოა.
+• English infinitive purpose → masdar + dative: "to read books" → წიგნების წასაკითხად.
+• "keep doing X" → გააგრძელებს + masdar: გააგრძელებს ლაპარაკს.
+• Attributive უნდა + masdar chain is CORRECT — never insert რომ after უნდა:
+  "მთავარი მიზანი უნდა იყოს სწრაფი გამარჯვება."
+• Masdar as subject takes NOMINATIVE; the copula agrees with the masdar, not the English gerund.
+• "on the verge of V-ing" → ე- -ებოდეს construction: ვაპირებდი წასვლას / მივდიოდი.`;
+
+const KA_SUBORDINATION = `
+SUBORDINATORS & COMPLEX SENTENCES (v1.8.0, georgian.se grammar):
+Georgian subordination uses CONJUNCTION + INDICATIVE (no English-style tense backshift).
+
+CORE SUBORDINATORS:
+• რომ — that (complement): ვიცი, რომ ის მოვა. NEVER omit რომ after think/know/say verbs.
+• რათა — so that (purpose, takes optative/future): ვწერ რათა გავიხსენდე.
+• სანამ — while/until: სანამ ცოცხალი ვარ...
+• თუ — if: თუ მოვა, დამირეკე.
+• თუმცა — although; მიუხედავად იმისა, რომ — despite the fact that.
+• რადგან / ვინაიდან — because/since; რადგანაც — colloquial because.
+• სანამ ... არ — until (negative until): სანამ არ დაბრუნდები, არ წავხვდები.
+• როგორც კი — as soon as: როგორც კი მოვიდა, დავიწყეთ.
+• სადაც — where: სადაც წავხდი, იქ დავრჩი.
+• როგორც — as: როგორც მე ვთქვი...
+
+RELATIVE CLAUSES:
+• Use the DECLINED რომელიც + case: კაცი, რომელსაც ვხედავ (the man whom I see),
+  წიგნი, რომელშიც წერ (the book in which I write). The case ending goes on რომელიც,
+  and any postposition infixed BEFORE ც: რომელშიც, რომელთანაც, რომელზეც.
+• Prefer PARTICIPLES over relative clauses for compact prose:
+  "the man who is standing there" → იქ მდგომი კაცი (standing-there man).
+
+SEQUENCE OF TENSES — NO ENGLISH BACKSHIFT:
+• "He said he was tired" → თქვა, რომ დაღლილია (PRESENT stays present after თქვა, რომ).
+• Only shift tense when the original meaning demands it.
+
+SUBJECT/OBJECT MARKER ORDER (polypersonalism):
+• One verb can encode subject AND object: დავწერე (I wrote it), დავუწერე (I wrote it to him).
+• მიყვარხარ = I love you (object marked with the PRS "to be" form ხარ).
+• Interpersonal emotion verbs are მ-class with dative experiencer: მიყვარს, მძულს, მსმენია.
+• Reflexive = თავი + verb or ი- version: გ-ხედავს თავს → იხედავს (sees himself).`;
+
+const KA_ONOMATOPOEIA = `
+ONOMATOPOEIA & SOUND WORDS — GEORGIAN NATIVE SOUND-IMITATION (v1.8.0, cross-linguistic research):
+Never translate English sound words literally — use the native Georgian form.
+
+ANIMAL SOUNDS:
+• dog bark → ჰაუ-ჰაუ  • rooster → ყიყლიყო  • hen cluck → კაკანი / კუ-კუ
+• goose → ყიყინი  • turkey → ყურყლუტი  • cat meow → მიაუ
+• bee/wing buzz → ბზზ-ბზზ / ბუზბუზი  • cow → მუ-მუ
+
+HUMAN / IMPACT SOUNDS:
+• knocking → ტკა-ტკა  • laughter (giggle) → კისკისი  • loud laughter → თქართქარი
+• whisper rustle → თხართხარი  • snoring → ხრიალი  • clap → ტაში
+• glass clink → ჟღალ-ჟღალ  • door slam → ბამ-ბამ  • gunshot → ფამ-ფამ
+• wind howl → შშშ / უუ (poetic)  • footsteps → თრთხარი
+
+LAUGHTER LEXEMES (rich Georgian set — pick by intensity):
+• სიცილი (laughter, general)  • კისკისი (giggle/snicker)  • თხართხარი (loud cackle)
+• თქარცალი (guffaw)  • ფრუსტუნი (chuckle)  • ფხუკუნი (suppressed laugh)
+• ლხენა (mirth/delight)  • დაოსება (burst out laughing)
+
+RULE: In narration, prefer a Georgian onomatopoeia or the laughter lexeme set over a literal
+translation of the English sound word. In dialogue quotes, keep the speaker's own words intact.`;
+
+const KA_NUMBERS_TTS = `
+NUMBER NORMALIZATION FOR TTS NARRATION (v1.8.0):
+Text-to-speech engines read digits awkwardly in Georgian. Normalize before narration.
+
+SPELL OUT in dialogue/narration:
+• Small counts: 2 → ორი, 5 → ხუთი, 12 → თორმეტი (ორი საათი, NOT "2 საათი").
+• Ordinals: 1st → პირველი (irregular), 2nd → მეორე, 3rd → მესამე (circfix მე-...-ე;
+  -e replaces the final vowel: მეოთხე, მეხუთე; after the -და- infix: მეოცდამეათე = 21st).
+• Fractions: half → ნახევარი, quarter → მეოთხედი.
+
+KEEP DIGITS for:
+• Dates, years, stats, prices, IDs: 2024, $5, 87%.
+• Large numbers the voice handles fine: 1000, 25000.
+
+VIGESIMAL RULE (Georgia counts in twenties):
+• 40 = ორმოცი, 50 = ორმოცდაათი, 87 = ოთხმოცდაშვიდი (4×20 + 7), 93 = ოთხმოცდაცამეტი.
+• After numerals 2+ the noun stays SINGULAR: ოცი კაცი, NOT *ოცი კაცები.
+
+MIXED TEXT:
+• 3,14 not 3.14 (decimal comma). Thousands separator is a space: 10 000.
+• Don't mix spelled-out and digits for the same quantity in one sentence.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -778,6 +910,11 @@ function getKaKnowledgeBase() {
         KA_DISCOURSE,
         KA_PRONOUN_ECONOMY,
         KA_TACTICS,
+        KA_VERSION_MARKERS,
+        KA_MASDARS,
+        KA_SUBORDINATION,
+        KA_ONOMATOPOEIA,
+        KA_NUMBERS_TTS,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -1118,6 +1255,39 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'discourse_starvation', message: 'Long passage with zero discourse markers (კი/ხომ/თუმცა/მაშინ/თურმე...) — reads as translationese; natural Georgian prose uses them for flow and stance.' });
     }
 
+    // ── v1.8.0 additions: grammar deep-dive (version markers, masdars, TTS numbers) ──
+
+    // 3.43 Digits in dialogue (TTS): spelled-out small counts read better.
+    //     Flag digit 2-12 followed by a time/quantity noun inside quotes or narration.
+    const dlgDigitRe = /(?<![\u10A0-\u10FF])([2-9]|1[0-2])\s+(საათი|საათს|წუთი|წუთს|დღე|დღეს|კვირა|თვე|თვეს|წელი|წელს|კაცი|კაცს|ლარი|ლარს|დოლარი)(?![\u10A0-\u10FF])/g;
+    let m16;
+    let digitCount = 0;
+    while ((m16 = dlgDigitRe.exec(text)) !== null) { digitCount++; }
+    if (digitCount > 0) {
+        issues.push({ rule: 'digit_in_dialogue', message: `${digitCount}x small digit + quantity noun (e.g. "2 საათი") — for TTS narration spell it out: ორი საათი. Keep digits only for dates/stats/IDs.` });
+    }
+
+    // 3.44 English decimal point in numbers → Georgian decimal comma
+    if (/\d\.\d/.test(text) && /[\u10A0-\u10FF]/.test(text)) {
+        issues.push({ rule: 'decimal_point_ka', message: 'Decimal point found in numbers — Georgian uses a decimal COMMA: 3,14 not 3.14; thousands separator is a space: 10 000.' });
+    }
+
+    // 3.45 Ordinal "Nth" left as digit + English suffix or bare digit before noun
+    //     ("1st", "2nd", "3rd" leak through machine output)
+    if (/(?<![\u10A0-\u10FF])\d{1,3}(st|nd|rd|th)(?![\u10A0-\u10FF])/i.test(text)) {
+        issues.push({ rule: 'english_ordinal', message: 'English ordinal suffix found ("1st/2nd/3rd") — Georgian ordinals are მე-...-ე: პირველი, მეორე, მესამე, მეოთხე.' });
+    }
+
+    // 3.46 Missing რომ after speech/thought verb (complement clause without conjunction):
+    //     "თქვა:" is fine with a colon, but "თქვა ის მოვა" (no რომ, no colon) is a calque.
+    if (/(?<![\u10A0-\u10FF])(თქვა|იცოდა|იცის|ფიქრობს|იფიქრა)\s+[^.,;:!?…\n]{2,}(?<![:])/g.test(text)) {
+        // heuristic: speech verb followed by lowercase clause WITHOUT colon/comma → likely missing რომ
+        const m17 = text.match(/(?<![\u10A0-\u10FF])(თქვა|იცოდა|იცის|ფიქრობს|იფიქრა)\s+([ა-ჰ][^.!?…\n]{10,})/);
+        if (m17 && !/[:,]/.test(m17[0]) && !m17[2].startsWith('რომ') && !m17[2].startsWith('რომელ')) {
+            issues.push({ rule: 'missing_rom', message: `"${m17[1]} ${m17[2].slice(0, 30)}..." — complement clause likely missing რომ ("თქვა, რომ ...") or needs a colon after the speech verb.` });
+        }
+    }
+
     return issues;
 }
 
@@ -1146,7 +1316,7 @@ function correctGeorgianMorphology(text) {
 
     // 4.5 Spacing artifacts
     out = out.replace(/\s+([,.:;!?])/g, '$1');
-    out = out.replace(/([,.:;!?])(?=[ა-ჰA-Za-z0-9])/g, '$1 ');
+    out = out.replace(/([,.:;!?])(?!\d)(?=[ა-ჰA-Za-z])/g, '$1 ');
 
     // 4.6 Sentence-start capital letters (calque from English) — Georgian has none
     out = out.replace(/(^|[.!?…]\s+)([A-Z])([a-z]{2,})/g, (m, p1, p2, p3) => p1 + p2.toLowerCase() + p3);
@@ -1174,8 +1344,8 @@ function correctGeorgianMorphology(text) {
     // 4.12 Remove space before punctuation marks
     out = out.replace(/([\u10A0-\u10FF])\s+([,.:;!?…])/g, '$1$2');
 
-    // 4.13 Ensure space after punctuation (but not at string end)
-    out = out.replace(/([,.:;!?…])(?=[\u10A0-\u10FF])/g, '$1 ');
+    // 4.13 Ensure space after punctuation (but not at string end; don't split decimals like 3.14)
+    out = out.replace(/([,.:;!?…])(?![\d])(?=[\u10A0-\u10FF])/g, '$1 ');
 
     // 4.14 Collapse adjacent tautology: same word repeated (≥3 chars, not hyphenated reduplication)
     out = out.replace(/(?<![\u10A0-\u10FF])([ა-ჰ]{3,})\s+\1(?![\u10A0-\u10FF])/g, '$1');
@@ -1272,16 +1442,35 @@ function correctGeorgianMorphology(text) {
         '$2'
     );
 
+    // ── v1.8.0 additions: TTS number & grammar normalization ──
+
+    // 4.34 English ordinal suffix → Georgian ordinal (common small ordinals only)
+    const KA_ORDINALS = { '1st': 'პირველი', '2nd': 'მეორე', '3rd': 'მესამე', '4th': 'მეოთხე', '5th': 'მეხუთე', '6th': 'მეექვსე', '7th': 'მეშვიდე', '8th': 'მერვე', '9th': 'მეცხრე', '10th': 'მეათე' };
+    out = out.replace(/(?<![\u10A0-\u10FF])(\d{1,3})(st|nd|rd|th)(?![\u10A0-\u10FF])/gi, (m, num, suf) => {
+        const key = num + suf.toLowerCase();
+        return KA_ORDINALS[key] || m;
+    });
+
+    // 4.35 Decimal point → decimal comma between digits (Georgian convention)
+    out = out.replace(/(\d)\.(\d)/g, '$1,$2');
+
+    // 4.36 Small digit + quantity noun → spelled-out number for TTS (2-12 only, deterministic)
+    const KA_SMALL_NUMS = { '2': 'ორი', '3': 'სამი', '4': 'ოთხი', '5': 'ხუთი', '6': 'ექვსი', '7': 'შვიდი', '8': 'რვა', '9': 'ცხრა', '10': 'ათი', '11': 'თერთმეტი', '12': 'თორმეტი' };
+    out = out.replace(
+        /(?<![\u10A0-\u10FF\d])([2-9]|1[0-2])\s+(საათი|საათს|წუთი|წუთს|დღე|დღეს|კვირა|თვე|თვეს|წელი|წელს|კაცი|კაცს|ლარი|ლარს)(?![\u10A0-\u10FF])/g,
+        (m, num, noun) => `${KA_SMALL_NUMS[num]} ${noun}`
+    );
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.7.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.8.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 31,
-    qaRules: 42,
-    autoFixes: 33,
-    researchSources: 61
+    promptBlocks: 36,
+    qaRules: 46,
+    autoFixes: 36,
+    researchSources: 71
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
