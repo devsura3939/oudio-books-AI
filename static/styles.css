@@ -266,3 +266,221 @@ body.modal-open {
         max-width: 560px;
     }
 }
+
+/* ===== API Settings Modal Polish (aiSettingsModal) ===== */
+
+/* Sticky header so the close button is always reachable in long forms */
+#aiSettingsModal .modal-content > div:first-child {
+    position: sticky;
+    top: -20px;
+    z-index: 2;
+    background: inherit;
+    margin: -20px -20px 0;
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Sticky footer so Save/Cancel never scroll out of view */
+#aiSettingsModal .modal-content > div:last-child {
+    position: sticky;
+    bottom: -20px;
+    z-index: 2;
+    background: inherit;
+    margin: 0 -20px -20px;
+    padding: 16px 20px 20px;
+}
+
+/* Form controls: larger touch targets on touch devices */
+@media (pointer: coarse) {
+    #aiSettingsModal input,
+    #aiSettingsModal select,
+    #voiceModal input,
+    #voiceModal select {
+        min-height: 44px;
+        font-size: 16px; /* prevents iOS zoom-on-focus */
+    }
+}
+
+/* Tighter label/field rhythm on small screens */
+@media (max-width: 639px) {
+    #aiSettingsModal .modal-content {
+        padding: 16px;
+    }
+
+    #aiSettingsModal .modal-content > div:first-child {
+        top: -16px;
+        margin: -16px -16px 0;
+        padding: 16px 16px 12px;
+    }
+
+    #aiSettingsModal .modal-content > div:last-child {
+        bottom: -16px;
+        margin: 0 -16px -16px;
+        padding: 12px 16px 16px;
+    }
+
+    #aiSettingsModal p {
+        font-size: 10px;
+    }
+}
+
+/* ===== Dashboard Responsiveness Polish ===== */
+
+/* Bento grid: guarantee min cell width on narrow viewports */
+.bento-card {
+    min-width: 0;
+}
+
+/* Book grid: fluid columns without overflow */
+.book-jacket {
+    max-width: 100%;
+}
+
+/* Horizontal scroll containers: touch-friendly momentum scrolling */
+.overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+/* Prevent long unbroken strings (API keys, file names) from breaking layout */
+.break-all-safe {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Focus visibility for keyboard users across the dashboard */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.8);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ===== Translation Progress Panel & Mini Dock ===== */
+
+/* Floating minimized pill */
+#translationMiniDock {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+#translationMiniDock:hover {
+    transform: scale(1.05);
+}
+
+#translationMiniDock:active {
+    transform: scale(0.97);
+}
+
+/* Live chunk feed rows */
+#wbChunkLog > div {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    animation: chunkRowIn 0.2s ease;
+}
+
+#wbChunkLog > div:nth-child(odd) {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+#wbChunkLog .chunk-idx {
+    color: #64748b;
+    flex-shrink: 0;
+    min-width: 28px;
+}
+
+#wbChunkLog .chunk-engine {
+    flex-shrink: 0;
+    font-weight: 700;
+}
+
+#wbChunkLog .chunk-engine.local { color: #34d399; }
+#wbChunkLog .chunk-engine.ai { color: #818cf8; }
+#wbChunkLog .chunk-engine.fail { color: #f87171; }
+
+#wbChunkLog .chunk-text {
+    color: #94a3b8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+@keyframes chunkRowIn {
+    from { opacity: 0; transform: translateY(3px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Chapter queue rows */
+#wbChapterQueue > div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+#wbChapterQueue .ch-status-icon {
+    flex-shrink: 0;
+    font-size: 12px;
+    line-height: 1;
+}
+
+#wbChapterQueue .ch-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    color: #cbd5e1;
+}
+
+#wbChapterQueue .ch-pct {
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+}
+
+#wbChapterQueue > div.ch-done .ch-title { color: #6ee7b7; }
+#wbChapterQueue > div.ch-active { background: rgba(99, 102, 241, 0.12); }
+#wbChapterQueue > div.ch-active .ch-title { color: #a5b4fc; font-weight: 700; }
+
+/* Scrollbar for inner feeds */
+#wbChunkLog::-webkit-scrollbar,
+#wbChapterQueue::-webkit-scrollbar {
+    width: 3px;
+}
+
+#wbChunkLog::-webkit-scrollbar-thumb,
+#wbChapterQueue::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.3);
+    border-radius: 2px;
+}
+
+/* Small screens: panel + dock adjustments */
+@media (max-width: 639px) {
+    #translationMiniDock {
+        bottom: 20px;
+        right: 12px;
+    }
+
+    #wbChunkLog {
+        max-height: 28vh !important;
+    }
+
+    #wbChapterQueue {
+        max-height: 20vh !important;
+    }
+}
+
+/* Landscape phones: keep dock above player controls */
+@media (max-height: 480px) {
+    #translationMiniDock {
+        bottom: 12px;
+        right: 12px;
+    }
+}

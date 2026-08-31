@@ -926,6 +926,12 @@ function cacheDOM() {
         wbCharCounter: document.getElementById('wbCharCounter'),
         wbLiveOriginal: document.getElementById('wbLiveOriginal'),
         wbLiveGeorgian: document.getElementById('wbLiveGeorgian'),
+        wbChunkLog: document.getElementById('wbChunkLog'),
+        wbChunkRate: document.getElementById('wbChunkRate'),
+        wbChapterQueue: document.getElementById('wbChapterQueue'),
+        translationMiniDock: document.getElementById('translationMiniDock'),
+        miniDockLabel: document.getElementById('miniDockLabel'),
+        miniDockPct: document.getElementById('miniDockPct'),
     };
 }
 
@@ -1080,12 +1086,16 @@ function openModal(modalId) {
             probeAiKeyStatus();
         }
         modal.classList.add('active');
+        document.body.classList.add('modal-open');
     }
 }
 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) modal.classList.remove('active');
+    if (!document.querySelector('.modal-overlay.active')) {
+        document.body.classList.remove('modal-open');
+    }
 }
 
 function saveGeminiSettings() {
@@ -2069,6 +2079,15 @@ function toggleReaderFullscreen() {
 // ── Full Keyboard & Touch Gestures Matrix ──────────────────────────────────
 function setupKeyboardAndTouchControls() {
     window.addEventListener('keydown', (e) => {
+        // ESC closes the topmost open modal (API settings, voice, upload, translation panel)
+        if (e.key === 'Escape') {
+            const openModal = document.querySelector('.modal-overlay.active');
+            if (openModal && !openModal.id.startsWith('wholeBook')) {
+                closeModal(openModal.id);
+                e.preventDefault();
+                return;
+            }
+        }
         if (!readerActive) return;
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
@@ -2833,6 +2852,88 @@ function setTranslationBudgetMode(mode) {
     renderTranslationBudgetModeUI();
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// ██ TRANSLATION PROGRESS PANEL — minimize/restore + detailed live feed ██
+// ══════════════════════════════════════════════════════════════════════════
+let translationPanelMinimized = false;
+let translationStartTime = 0;
+let translationChunkTimestamps = [];
+
+function minimizeTranslationPanel() {
+    translationPanelMinimized = true;
+    const panel = document.getElementById('wholeBookTranslateModal');
+    const dock = DOM.translationMiniDock;
+    if (panel) panel.classList.remove('active');
+    if (dock) dock.classList.remove('hidden');
+    updateMiniDock();
+}
+
+function restoreTranslationPanel() {
+    translationPanelMinimized = false;
+    const panel = document.getElementById('wholeBookTranslateModal');
+    const dock = DOM.translationMiniDock;
+    if (panel) panel.classList.add('active');
+    if (dock) dock.classList.add('hidden');
+}
+
+function updateMiniDock() {
+    if (!translationPanelMinimized) return;
+    const label = DOM.miniDockLabel;
+    const pct = DOM.miniDockPct;
+    if (label && DOM.wbChapterLabel) label.textContent = DOM.wbChapterLabel.textContent;
+    if (pct && DOM.wbProgressPct) pct.textContent = DOM.wbProgressPct.textContent;
+}
+
+function appendChunkLog(idx, engine, preview) {
+    if (!DOM.wbChunkLog) return;
+    const row = document.createElement('div');
+    const engineClass = engine === 'local' ? 'local' : (engine === 'fail' ? 'fail' : 'ai');
+    const engineLabel = engine === 'local' ? 'LOC' : (engine === 'fail' ? 'ERR' : 'AI');
+    row.innerHTML = `<span class="chunk-idx">#${idx}</span><span class="chunk-engine ${engineClass}">${engineLabel}</span><span class="chunk-text">${escapeHtml(preview)}</span>`;
+    DOM.wbChunkLog.appendChild(row);
+    // Keep only the last 50 rows
+    while (DOM.wbChunkLog.children.length > 50) {
+        DOM.wbChunkLog.removeChild(DOM.wbChunkLog.firstChild);
+    }
+    DOM.wbChunkLog.scrollTop = DOM.wbChunkLog.scrollHeight;
+}
+
+function updateChunkRate() {
+    if (!DOM.wbChunkRate) return;
+    const now = Date.now();
+    translationChunkTimestamps.push(now);
+    // Keep only timestamps from the last 60 seconds
+    translationChunkTimestamps = translationChunkTimestamps.filter(t => now - t < 60000);
+    DOM.wbChunkRate.textContent = `${translationChunkTimestamps.length} chunks/min`;
+}
+
+function buildChapterQueue() {
+    if (!DOM.wbChapterQueue || !currentBook) return;
+    DOM.wbChapterQueue.innerHTML = '';
+    currentBook.chapters.forEach((chap, idx) => {
+        const row = document.createElement('div');
+        row.dataset.chapterIdx = idx;
+        const hasKa = !!chap.text_ka;
+        row.innerHTML = `<span class="ch-status-icon">${hasKa ? '✅' : '⏳'}</span><span class="ch-title">${escapeHtml(chap.title)}</span><span class="ch-pct">${hasKa ? '100%' : '—'}</span>`;
+        DOM.wbChapterQueue.appendChild(row);
+    });
+}
+
+function updateChapterQueueStatus(activeIdx, doneIdx) {
+    if (!DOM.wbChapterQueue) return;
+    const rows = DOM.wbChapterQueue.children;
+    if (doneIdx >= 0 && rows[doneIdx]) {
+        rows[doneIdx].className = 'ch-done';
+        rows[doneIdx].querySelector('.ch-status-icon').textContent = '✅';
+        rows[doneIdx].querySelector('.ch-pct').textContent = '100%';
+    }
+    if (activeIdx >= 0 && rows[activeIdx]) {
+        rows[activeIdx].className = 'ch-active';
+        rows[activeIdx].querySelector('.ch-status-icon').textContent = '⏳';
+    }
+}
+}
+
 function renderTranslationBudgetModeUI() {
     const budgetBtn = document.getElementById('wbModeBudget');
     const qualityBtn = document.getElementById('wbModeQuality');
@@ -3178,6 +3279,9 @@ async function startWholeBookTranslation() {
     isTranslatingWholeBook = true;
     cancelTranslationFlag = false;
     openModal('wholeBookTranslateModal');
+    translationPanelMinimized = false;
+    translationStartTime = Date.now();
+    translationChunkTimestamps = [];
 
     // Reset engine stats for this run and wire the live indicator.
     translationEngineStats.gemini = 0;
@@ -3185,6 +3289,11 @@ async function startWholeBookTranslation() {
     translationEngineStats.mymemory = 0;
     translationEngineStats.failed = 0;
     setTranslationEngineStatusEl(document.getElementById('wbEngineStatus'));
+
+    // Reset and build the detailed progress UI
+    if (DOM.wbChunkLog) DOM.wbChunkLog.innerHTML = '';
+    if (DOM.wbChunkRate) DOM.wbChunkRate.textContent = '0 chunks/min';
+    buildChapterQueue();
 
     const totalChapters = currentBook.chapters.length;
     let totalSentencesCount = 0;
@@ -3207,6 +3316,8 @@ async function startWholeBookTranslation() {
             if (DOM.wbChapterLabel) {
                 DOM.wbChapterLabel.textContent = `Translating Chapter ${chIdx + 1} of ${totalChapters}: ${chapter.title}`;
             }
+            updateChapterQueueStatus(chIdx, -1);
+            updateMiniDock();
 
             const chunks = [];
             let currentChunk = '';
@@ -3252,16 +3363,21 @@ async function startWholeBookTranslation() {
                     aiRunning++;
                 }
 
+                let engineUsed = 'local';
                 try {
                     const before = idx > 0 ? chunks[idx - 1].trim() : '';
                     const after = idx < chunks.length - 1 ? chunks[idx + 1].trim() : '';
                     chunkResults[idx] = await translateChunkSmart(orig, 'ka', before, after);
+                    if (isComplex) engineUsed = 'ai';
                 } catch (e) {
                     console.warn(`Chunk ${idx} translation error:`, e);
                     chunkResults[idx] = await translateChunkLocal(orig, 'ka');
+                    engineUsed = 'fail';
                 } finally {
                     if (isComplex) aiRunning--;
                 }
+                appendChunkLog(idx, engineUsed, orig.slice(0, 60));
+                updateChunkRate();
             }
 
             const workers = [];
@@ -3282,6 +3398,9 @@ async function startWholeBookTranslation() {
                         if (DOM.wbLiveGeorgian && chunkResults[idx]) {
                             DOM.wbLiveGeorgian.textContent = chunkResults[idx];
                         }
+                        if (DOM.wbLiveOriginal && chunks[idx]) {
+                            DOM.wbLiveOriginal.textContent = chunks[idx].trim().slice(0, 200);
+                        }
                         if (DOM.wbCharCounter) {
                             DOM.wbCharCounter.textContent = `${totalCharsTranslated.toLocaleString()} chars translated`;
                         }
@@ -3292,18 +3411,24 @@ async function startWholeBookTranslation() {
                         const pct = Math.round((completedSentencesCount / totalSentencesCount) * 100);
                         if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
                         if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
+                        updateMiniDock();
                     }
                 })());
             }
             await Promise.all(workers);
 
-
+            // Chapter finished: mark queue status, refresh the chapter list
+            // so the just-completed chapter is immediately readable/listenable,
+            // and persist progress so the reader can pick it up mid-run.
+            updateChapterQueueStatus(-1, chIdx);
             chapter.text_ka = translatedArr.join(' ');
             if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
             if (!currentBook.translatedLangs.includes('ka')) {
                 currentBook.translatedLangs.push('ka');
             }
             await saveBookToDB(currentBook);
+            renderChaptersList();
+            updateMiniDock();
         }
 
         if (!cancelTranslationFlag) {
@@ -3338,6 +3463,8 @@ async function startWholeBookTranslation() {
 function cancelWholeBookTranslation() {
     cancelTranslationFlag = true;
     closeModal('wholeBookTranslateModal');
+    if (DOM.translationMiniDock) DOM.translationMiniDock.classList.add('hidden');
+    translationPanelMinimized = false;
     isTranslatingWholeBook = false;
     renderChaptersList();
     renderDigitalShelf();
@@ -4493,6 +4620,7 @@ function renderChaptersList() {
         const isCurrent = String(currentPlayingChapterId) === String(chap.id);
         const isSpeaking = isCurrent && isPlaying && !isPaused;
         const chapHasKa = !!chap.text_ka;
+        const isCurrentlyTranslating = isTranslatingWholeBook && !chapHasKa;
 
         const div = document.createElement('div');
         div.className = `glass-panel rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all ${isSpeaking ? 'border-primary-container/60 bg-primary-container/10 shadow-[0_0_20px_rgba(0,240,255,0.15)]' : 'hover:bg-white/5'}`;
@@ -4506,6 +4634,7 @@ function renderChaptersList() {
                     <h4 class="font-semibold text-white text-xs sm:text-base truncate flex items-center gap-2">
                         ${escapeHtml(chap.title)}
                         ${chapHasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 font-bold">🇬🇪</span>' : ''}
+                        ${isCurrentlyTranslating ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold animate-pulse">⏳ Translating</span>' : ''}
                     </h4>
                     <p class="text-[10px] sm:text-xs text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(chap.estimated_duration_sec)}</p>
                 </div>
