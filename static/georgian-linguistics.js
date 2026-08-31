@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.4.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.5.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -14,6 +14,13 @@
 // English period, apostrophes, semicolons, space before punct), 11 new
 // auto-fixes (comma removal/insertion, punctuation collapse, tautology
 // collapse, terminal punct enforcement).
+// v1.4.0 expansion: KA_WORDBANK block (high-frequency vocabulary tables,
+// formal→plain substitutions, pronoun+postposition rules), QA rules
+// 3.28 (pronoun_postpos_s) & 3.29 (decimal_point), auto-fix 4.20.
+// v1.5.0 expansion: KA_PREVERBS block (9 preverbs with direction+aspect
+// meanings, Series I/II aspect rule, EN→preverb mapping, narrative prose
+// features, plural rules). QA rule 3.30 (tha_redundant: *ჩვენთაგან →
+// ჩვენგან per Proton rule), auto-fix 4.21.
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -330,6 +337,49 @@ PRONOUN + POSTPOSITION RULES (Proton Guidance):
 • Possessive pronoun + noun → -s REQUIRED on the pronoun: ჩემს მეგობარს, ჩემს სახლს.
 • When მე is used with another personal pronoun, მე comes first: მე და შენ.`;
 
+// 1m. Preverbs & aspect system (v1.4.0).
+// Sources: Tbilisi Linguistics Institute preverbs paper, Grokipedia Georgian conjugation,
+// Wiktionary Appendix:Georgian verbs.
+const KA_PREVERBS = `
+GEORGIAN PREVERBS — DIRECTION + ASPECT MARKERS (critical for natural verb forms):
+
+9 SIMPLE PREVERBS (direction → aspect):
+• ა- (upward): ავიდა (went up). შე- and ა- can overlap; prefer შე- for "enter".
+• ჩა- (downward): ჩავიდა (went down), ჩაწერა (wrote down/recorded).
+• გა- (inside→out): გავიდა (went out), გააკეთა (did/made, completive).
+• შე- (outside→in): შევიდა (went in/entered), შექმნა (created).
+• გადა- (across): გადავიდა (crossed over), გადაწერა (copied/rewrote).
+• მი- (away from speaker): მივიდა (went thither), მიუთითა (pointed).
+• მო- (toward speaker): მოვიდა (came hither), მოიტანა (brought here).
+• წა- (away, momentary): წავიდა (went off/departed), წაიღო (took away).
+• და- (down onto, completive): დაწერა (wrote down/completed), დააყენა (placed).
+
+ASPECT RULE (CRITICAL):
+• Series I (present/future) → NO preverb: ვწერ (I write), დავწერ (I will write).
+• Series II (aorist) → PREVERB REQUIRED for perfective: დავწერე (I wrote it).
+  Without preverb in aorist: ვწერე (I was writing it — imperfective aorist).
+• Preverb + verb can completely change meaning:
+  მიდის (goes there) vs მოდის (comes here) vs გადადის (crosses over).
+• და- marks completion/result: ვწერ (I write) → დავწერე (I wrote it, done).
+• შე- marks entry/creation: შექმნა (created), შევიდა (entered).
+• მო- marks toward-speaker: მოვიდა (came), მოიტანა (brought here).
+
+ENGLISH → PREVERB MAPPING (decision aid):
+• "went in/entered" → შევიდა  • "went out" → გავიდა
+• "went up" → ავიდა  • "went down" → ჩავიდა
+• "came here" → მოვიდა  • "went there" → მივიდა  • "left/departed" → წავიდა
+• "crossed" → გადავიდა  • "wrote (completed)" → დაწერა  • "was writing" → წერდა
+
+NARRATIVE PROSE FEATURES (from Georgian literary linguistics research):
+• Contextual synonymous pairs for emphasis: ცოცხალი და ჯანმრთელი (alive and well).
+• Artistic parallelisms: repeated sentence structures for rhetorical effect.
+• Temporal markers open paragraphs: დილით (in the morning), საღამოს (in the evening),
+  ერთ დღეს (one day), მაშინ (then/at that time).
+• Modern Georgian prose (Morchiladze, Turashvili, Jandieri) uses colloquial modern
+  Georgian even in historical settings — do NOT archaize.
+• PLURAL RULES: Most nouns pluralize with -ები (წიგნი→წიგნები). After numerals
+  2+, use SINGULAR (ორი კაცი, NOT *ორი კაცები). Collective -ობა is rare.`;
+
 // 1j. EN→KA decision table: input feature → output rule (v1.2.0).
 const KA_DECISION_TABLE = `
 EN→KA DECISION TABLE — INPUT FEATURE → OUTPUT RULE (apply in order):
@@ -366,6 +416,7 @@ function getKaKnowledgeBase() {
         KA_IDIOMS,
         KA_PUNCTUATION,
         KA_WORDBANK,
+        KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
         KA_DECISION_TABLE,
@@ -375,7 +426,7 @@ function getKaKnowledgeBase() {
 
 // Compact rule set for refinement stages (targeted, smaller).
 function getKaCompactRules() {
-    return [KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK].join('\n');
+    return [KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS].join('\n');
 }
 
 // Focused set for QA repair passes (small, defect-driven).
@@ -605,6 +656,13 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'decimal_point', message: 'Decimal number uses English period — Georgian uses comma (3,14 not 3.14).' });
     }
 
+    // 3.30 Redundant -თა- infix in pronoun + გან/დან postpositions (Proton rule v1.5.0)
+    // *ჩვენთაგან → ჩვენგან, *მათთადან → მათდან. (თან forms like ჩვენთან are CORRECT — only გან/დან take the bare stem.)
+    const thaRedundant = text.match(/(?<![\u10A0-\u10FF])(ჩვენ|მათ|თქვენ)თა(გან|დან)(?![\u10A0-\u10FF])/g);
+    if (thaRedundant) {
+        issues.push({ rule: 'tha_redundant', message: `Redundant -თა- infix: ${thaRedundant.join(', ')} — drop it (ჩვენგან not ჩვენთაგან; თან forms like ჩვენთან stay unchanged).` });
+    }
+
     return issues;
 }
 
@@ -698,16 +756,25 @@ function correctGeorgianMorphology(text) {
         }
     );
 
+    // ── v1.5.0 additions ──
+
+    // 4.21 Redundant -თა- infix: *ჩვენთაგან → ჩვენგან, *მათთადან → მათდან
+    // (Only გან/დან forms; თან forms like ჩვენთან are correct and untouched.)
+    out = out.replace(
+        /(?<![\u10A0-\u10FF])(ჩვენ|მათ|თქვენ)თა(გან|დან)(?![\u10A0-\u10FF])/g,
+        '$1$2'
+    );
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.4.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.5.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 12,
-    qaRules: 29,
-    autoFixes: 20,
-    researchSources: 38
+    promptBlocks: 13,
+    qaRules: 30,
+    autoFixes: 21,
+    researchSources: 44
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
