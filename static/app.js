@@ -2616,10 +2616,18 @@ function georgianQaRepairPrompt(text, issues) {
     const list = issues
         .map((it, i) => `${i + 1}. [${it.rule}] ${it.message}`)
         .join('\n');
+    // v1.2.0: inject the focused defect/evidentiality/politeness rules so the
+    // repair pass fixes the flagged defect with the correct native pattern
+    // instead of guessing (e.g. არ→ნუ imperative, aorist→perfect for hearsay).
+    let kaRules = '';
+    if (typeof getKaRepairRules === 'function') {
+        try { kaRules = `\n\nGEORGIAN CORRECTION RULES (apply when relevant):\n${getKaRepairRules()}`; } catch (e) { /* ignore */ }
+    }
     return `You are a Georgian language proofreader. The following Georgian text was flagged by a rule-based grammar validator. Fix ONLY the listed problems — do not re-translate, do not change word order, keep every other word identical.
 
 RULE VIOLATIONS:
 ${list}
+${kaRules}
 
 TEXT (Georgian):
 ${text}
