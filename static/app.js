@@ -2880,6 +2880,41 @@ function setTranslationBudgetMode(mode) {
 let translationPanelMinimized = false;
 let translationStartTime = 0;
 let translationChunkTimestamps = [];
+// Live progress state shared between workers; updated at most every 250ms
+// to keep the UI smooth without causing layout thrash on every chunk.
+let wbProgressState = {
+    completedInChapter: 0,
+    totalChunks: 0,
+    totalSentences: 0,
+    completedSentences: 0,
+    totalChars: 0,
+    lastUiUpdate: 0,
+};
+
+function renderWbProgress() {
+    const now = Date.now();
+    // Throttle UI updates to 4/sec so frequent chunk completions don't
+    // cause layout thrash; the final state is always flushed.
+    if (now - wbProgressState.lastUiUpdate < 250) return;
+    wbProgressState.lastUiUpdate = now;
+    const { completedInChapter, totalChunks, completedSentences, totalSentences, totalChars } = wbProgressState;
+    if (DOM.wbSentenceCounter) {
+        DOM.wbSentenceCounter.textContent = `Chunk ${completedInChapter} / ${totalChunks} (Sentence ${completedSentences} / ${totalSentences}) [Easy: ${smartRoutingStats.easy} | AI: ${smartRoutingStats.complex}]`;
+    }
+    if (DOM.wbCharCounter) {
+        DOM.wbCharCounter.textContent = `${totalChars.toLocaleString()} chars translated`;
+    }
+    const pct = totalSentences > 0 ? Math.round((completedSentences / totalSentences) * 100) : 0;
+    if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
+    if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
+    updateMiniDock();
+}
+
+function flushWbProgress() {
+    // Force an immediate UI refresh (bypasses the throttle).
+    wbProgressState.lastUiUpdate = 0;
+    renderWbProgress();
+}
 
 function minimizeTranslationPanel() {
     translationPanelMinimized = true;
@@ -3372,6 +3407,14 @@ async function startWholeBookTranslation() {
             let completedInChapter = 0;
             const chunkResults = new Array(chunks.length).fill(null);
 
+            // Reset shared progress state for this chapter
+            wbProgressState.completedInChapter = 0;
+            wbProgressState.totalChunks = chunks.length;
+            wbProgressState.totalSentences = totalSentencesCount;
+            wbProgressState.completedSentences = completedSentencesCount;
+            wbProgressState.totalChars = totalCharsTranslated;
+            flushWbProgress();
+
             async function processChunk(idx) {
                 const orig = chunks[idx].trim();
                 if (!orig) { chunkResults[idx] = ''; return; }
@@ -3416,27 +3459,29 @@ async function startWholeBookTranslation() {
                             completedSentencesCount += chunkSentenceCounts[idx];
                         }
 
+                        // Update shared progress state, then refresh the UI
+                        // (throttled to 4/sec to avoid layout thrash).
+                        wbProgressState.completedInChapter = completedInChapter;
+                        wbProgressState.completedSentences = completedSentencesCount;
+                        wbProgressState.totalChars = totalCharsTranslated;
                         if (DOM.wbLiveGeorgian && chunkResults[idx]) {
                             DOM.wbLiveGeorgian.textContent = chunkResults[idx];
                         }
                         if (DOM.wbLiveOriginal && chunks[idx]) {
                             DOM.wbLiveOriginal.textContent = chunks[idx].trim().slice(0, 200);
                         }
-                        if (DOM.wbCharCounter) {
-                            DOM.wbCharCounter.textContent = `${totalCharsTranslated.toLocaleString()} chars translated`;
-                        }
-                        if (DOM.wbSentenceCounter) {
-                            DOM.wbSentenceCounter.textContent = `Chunk ${completedInChapter} / ${chunks.length} (Sentence ${completedSentencesCount} / ${totalSentencesCount}) [Easy: ${smartRoutingStats.easy} | AI: ${smartRoutingStats.complex}]`;
-                        }
-
-                        const pct = Math.round((completedSentencesCount / totalSentencesCount) * 100);
-                        if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
-                        if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
-                        updateMiniDock();
+                        renderWbProgress();
                     }
                 })());
             }
             await Promise.all(workers);
+
+            // Force a final UI flush for this chapter (bypasses throttle)
+            // and roll the book-level counters into the next chapter.
+            wbProgressState.completedInChapter = completedInChapter;
+            wbProgressState.completedSentences = completedSentencesCount;
+            wbProgressState.totalChars = totalCharsTranslated;
+            flushWbProgress();
 
             // Chapter finished: mark queue status, refresh the chapter list
             // so the just-completed chapter is immediately readable/listenable,
