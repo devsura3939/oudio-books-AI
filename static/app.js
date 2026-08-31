@@ -195,6 +195,135 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
     return null;
 }
 
+// ── Groq + Mistral provider chain ───────────────────────────────────────────
+// Two more free AI tiers between Gemini and OpenRouter. Both are
+// OpenAI-compatible JSON endpoints callable straight from the browser:
+//   • Groq  — CORS-enabled (confirmed). llama-3.1-8b-instant alone allows
+//     ~500K tokens/DAY and 14.4K requests/day free — enough to carry an
+//     entire whole-book run by itself when Gemini's quota runs dry.
+//   • Mistral — free Experiment plan (~1B tokens/month), but its CORS
+//     headers are inconsistent for direct browser calls, so failures are
+//     detected at runtime and the provider is parked briefly instead of
+//     stalling every chunk on a preflight error.
+let groqApiKey = localStorage.getItem('groqApiKey') || '';
+let mistralApiKey = localStorage.getItem('mistralApiKey') || '';
+
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+const GROQ_MODEL_COOLDOWN_MS = 60_000;
+const groqModelCooldown = {}; // model -> earliest ms it may be retried
+
+const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
+const MISTRAL_MODELS = ['mistral-small-latest'];
+const MISTRAL_MODEL_COOLDOWN_MS = 60_000;
+const MISTRAL_CORS_COOLDOWN_MS = 10 * 60_000; // parked 10 min after CORS failures
+const mistralModelCooldown = {};
+let mistralCorsFailures = 0;
+let mistralCorsBlockedUntil = 0;
+
+function setGroqApiKey(key) {
+    groqApiKey = key || '';
+    if (groqApiKey) localStorage.setItem('groqApiKey', groqApiKey);
+    else localStorage.removeItem('groqApiKey');
+    groqModelCooldownClear();
+}
+function groqModelCooldownClear() { for (const k of Object.keys(groqModelCooldown)) delete groqModelCooldown[k]; }
+
+function setMistralApiKey(key) {
+    mistralApiKey = key || '';
+    if (mistralApiKey) localStorage.setItem('mistralApiKey', mistralApiKey);
+    else localStorage.removeItem('mistralApiKey');
+    mistralCorsFailures = 0;
+    mistralCorsBlockedUntil = 0;
+    for (const k of Object.keys(mistralModelCooldown)) delete mistralModelCooldown[k];
+}
+
+// Generic OpenAI-compatible JSON-mode call with model rotation. Used by both
+// Groq and Mistral (identical request shape). Returns parsed JSON or null.
+async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs, apiKey, prompt, { temperature = 0.2, maxTokens = 8192, providerLabel = 'provider' } = {}) {
+    const now = Date.now();
+    const candidates = models.filter(m => (cooldownMap[m] || 0) <= now);
+    if (!candidates.length) return null;
+
+    for (const model of candidates) {
+        try {
+            const response = await fetch(baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model,
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature,
+                    max_tokens: maxTokens,
+                    response_format: { type: 'json_object' },
+                }),
+            });
+
+            if (response.status === 429 || response.status >= 500) {
+                cooldownMap[model] = Date.now() + cooldownMs;
+                console.warn(`[${providerLabel}] ${model} rate-limited (${response.status}) — cooling down`);
+                continue; // next model in chain
+            }
+            if (response.status === 404 || response.status === 400) {
+                cooldownMap[model] = Date.now() + 5 * 60_000;
+                console.warn(`[${providerLabel}] ${model} unavailable (${response.status}) — skipping`);
+                continue;
+            }
+            if (!response.ok) {
+                console.warn(`[${providerLabel}] API error:`, response.status, model);
+                cooldownMap[model] = Date.now() + cooldownMs;
+                continue;
+            }
+
+            const data = await response.json();
+            const text = data?.choices?.[0]?.message?.content;
+            if (!text) {
+                cooldownMap[model] = Date.now() + cooldownMs;
+                continue;
+            }
+            const parsed = parseModelJSON(text);
+            if (parsed) return parsed;
+            console.warn(`[${providerLabel}] returned unparseable JSON from`, model);
+            cooldownMap[model] = Date.now() + cooldownMs;
+        } catch (e) {
+            // TypeError from fetch here is usually a CORS preflight failure —
+            // the browser cannot read the response, so retrying immediately
+            // would just burn time on every subsequent chunk.
+            console.warn(`[${providerLabel}] network error:`, e?.message || e);
+            cooldownMap[model] = Date.now() + cooldownMs;
+            return null;
+        }
+    }
+    return null;
+}
+
+async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+    if (!groqApiKey) return null;
+    return callOpenAICompatibleJSON(GROQ_API_URL, GROQ_MODELS, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, groqApiKey, prompt, { temperature, maxTokens, providerLabel: 'Groq' });
+}
+
+async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+    if (!mistralApiKey) return null;
+    if (Date.now() < mistralCorsBlockedUntil) return null; // CORS parked — fail fast to the next tier
+    const result = await callOpenAICompatibleJSON(MISTRAL_API_URL, MISTRAL_MODELS, mistralModelCooldown, MISTRAL_MODEL_COOLDOWN_MS, mistralApiKey, prompt, { temperature, maxTokens, providerLabel: 'Mistral' });
+    if (result) {
+        mistralCorsFailures = 0; // healthy again
+    } else {
+        // result null with a configured key: either cooldowns or CORS. Count a
+        // CORS strike — two consecutive dead calls park the provider briefly.
+        mistralCorsFailures++;
+        if (mistralCorsFailures >= 2) {
+            mistralCorsBlockedUntil = Date.now() + MISTRAL_CORS_COOLDOWN_MS;
+            console.warn('[Mistral] unreachable — parking provider for 10 min (likely CORS block)');
+            mistralCorsFailures = 0;
+        }
+    }
+    return result;
+}
+
 // ── Georgian Unicode & Advanced Linguistic Normalization ───────────────────
 function normalizeGeorgian(text) {
     if (!text) return '';
@@ -888,6 +1017,12 @@ function openModal(modalId) {
             const orModelSelect = document.getElementById('openRouterModelSelect');
             if (orModelSelect) orModelSelect.value = openRouterModel || '';
 
+            const groqKeyInput = document.getElementById('groqApiKeyInput');
+            if (groqKeyInput) groqKeyInput.value = groqApiKey || '';
+
+            const mistralKeyInput = document.getElementById('mistralApiKeyInput');
+            if (mistralKeyInput) mistralKeyInput.value = mistralApiKey || '';
+
             renderAiKeyStatusPanel();
             probeAiKeyStatus();
         }
@@ -916,6 +1051,12 @@ function saveGeminiSettings() {
     const orModelSelect = document.getElementById('openRouterModelSelect');
     const orModel = orModelSelect ? orModelSelect.value : '';
 
+    const groqKeyInput = document.getElementById('groqApiKeyInput');
+    const groqKey = groqKeyInput ? groqKeyInput.value.trim() : '';
+
+    const mistralKeyInput = document.getElementById('mistralApiKeyInput');
+    const mistralKey = mistralKeyInput ? mistralKeyInput.value.trim() : '';
+
     if (orKey) {
         localStorage.setItem('openRouterApiKey', orKey);
         openRouterApiKey = orKey;
@@ -926,6 +1067,57 @@ function saveGeminiSettings() {
 
     localStorage.setItem('openRouterModel', orModel);
     openRouterModel = orModel;
+
+    setGroqApiKey(groqKey);
+    setMistralApiKey(mistralKey);
+
+    if (groqKey) {
+        // Probe Groq right away: bad keys must surface at save time, not
+        // silently degrade a 2-hour batch translation.
+        fetch(GROQ_API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${groqKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: GROQ_MODELS[0],
+                messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                max_tokens: 8,
+            }),
+        }).then(r => {
+            if (r.ok) alert('Groq API key verified — free-tier fallback engine is active.');
+            else if (r.status === 401 || r.status === 403) alert('Groq key saved, but it was rejected (status ' + r.status + ').\nCheck the key at console.groq.com/keys.');
+            else if (r.status === 429) alert('Groq key saved and valid, but the model is rate-limited right now (429).\nThe chain will retry automatically.');
+            else alert('Groq key saved, but the probe returned status ' + r.status + '.');
+        }).catch(() => {
+            alert('Groq key saved, but could not reach api.groq.com (network error).');
+        });
+    }
+    if (mistralKey) {
+        // Same save-time probe for Mistral. A CORS-style network failure is
+        // reported distinctly so the user knows the key may still work
+        // in non-browser contexts but not from this page.
+        fetch(MISTRAL_API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${mistralKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: MISTRAL_MODELS[0],
+                messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                max_tokens: 8,
+            }),
+        }).then(r => {
+            if (r.ok) alert('Mistral API key verified — free-tier fallback engine is active.');
+            else if (r.status === 401 || r.status === 403) alert('Mistral key saved, but it was rejected (status ' + r.status + ').\nCheck the key at console.mistral.ai.');
+            else if (r.status === 429) alert('Mistral key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
+            else alert('Mistral key saved, but the probe returned status ' + r.status + '.');
+        }).catch(() => {
+            alert('Mistral key saved, but the browser could not reach api.mistral.ai.\nThis is usually a CORS restriction — Mistral will be skipped automatically and the chain continues with the other providers.');
+        });
+    }
 
     if (key) {
         localStorage.setItem('geminiApiKey', key);
@@ -1953,10 +2145,12 @@ function readerForwardSentence() {
 // ██ 2. WHOLE-BOOK TRANSLATION STUDIO (Step-by-Step Batch Engine) ██
 // ══════════════════════════════════════════════════════════════════════════
 
-// ── Gemini call helper ──────────────────────────────────────────────────────
-// One JSON-mode call to the AI tier. Tries the Gemini API first; if Gemini is
-// not configured (or the call fails), falls back to the OpenRouter free-model
-// engine. Returns parsed JSON or null.
+// ── AI call funnel ──────────────────────────────────────────────────────────
+// One JSON-mode call to the AI tier, routed through the provider chain:
+//   Gemini → Groq → Mistral → OpenRouter free models.
+// Each tier is skipped when its key is absent, in cooldown, or CORS-blocked,
+// so a whole-book batch keeps running on AI quality even when one or two
+// providers exhaust their free quota mid-run. Returns parsed JSON or null.
 // Retries transient failures (429/5xx) with linear backoff — the whole-book
 // batch sends hundreds of calls, so a single blip must not degrade a chunk
 // to the ML fallback tier.
@@ -1964,7 +2158,17 @@ async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, ret
     if (geminiApiKey) {
         const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries });
         if (res !== null) return res;
-        console.warn('Gemini tier failed — falling back to OpenRouter free models.');
+        console.warn('Gemini tier failed — trying Groq free tier.');
+    }
+    if (groqApiKey) {
+        const res = await callGroqJSON(prompt, { temperature, maxTokens });
+        if (res !== null) return res;
+        console.warn('Groq tier failed — trying Mistral free tier.');
+    }
+    if (mistralApiKey) {
+        const res = await callMistralJSON(prompt, { temperature, maxTokens });
+        if (res !== null) return res;
+        console.warn('Mistral tier failed — falling back to OpenRouter free models.');
     }
     return callOpenRouterJSON(prompt, { temperature, maxTokens, retries: retries + 1 });
 }
@@ -2239,7 +2443,7 @@ ${errorList}`;
 //   3 → draft + critique + refine + final QA (verify the revision, keep the
 //       better of the two — a bad refinement can never make things worse)
 async function translateWithGeminiAI(text, targetLang, contextBefore = '', contextAfter = '') {
-    if (!geminiApiKey && !openRouterApiKey) return null;
+    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey) return null;
 
     const draft = await geminiDraftTranslate(text, targetLang, contextBefore, contextAfter);
     if (!draft) return null;
@@ -2289,7 +2493,7 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
 // spends a second call ONLY when that self-check reports critical/major
 // defects. Typical cost: 1 call per chunk instead of 3-4.
 async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', contextAfter = '') {
-    if (!geminiApiKey && !openRouterApiKey) return null;
+    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey) return null;
     const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
     const ctxBefore = contextBefore ? `\n\n[PRECEDING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextBefore.slice(-600)}` : '';
     const ctxAfter = contextAfter ? `\n\n[FOLLOWING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextAfter.slice(0, 600)}` : '';
@@ -2479,7 +2683,7 @@ function renderAiKeyStatusPanel() {
 
     if (aiKeyStatusProbeBusy) return; // keep previous content while probing
 
-    if (!geminiApiKey && !openRouterApiKey) {
+    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey) {
         list.innerHTML = '<p class="text-on-surface-variant">No AI keys configured — translation uses free machine engines (Google / MyMemory).</p>';
         return;
     }
@@ -2488,6 +2692,16 @@ function renderAiKeyStatusPanel() {
     rows.push(geminiApiKey
         ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(geminiApiKey))}</span><br><span class="text-on-surface-variant">Model: ${escapeHtml(geminiModel)} · ${geminiPasses}-stage literary pipeline</span></div></div>`
         : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Gemini</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
+
+    const groqCooling = GROQ_MODELS.filter(m => (groqModelCooldown[m] || 0) > Date.now());
+    rows.push(groqApiKey
+        ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">Groq (free tier)</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(groqApiKey))}</span><br><span class="text-on-surface-variant">Fallback #2 · ${GROQ_MODELS.length} models${groqCooling.length ? ` · ${groqCooling.length} cooling down` : ' · all ready'}</span></div></div>`
+        : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Groq (free tier)</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
+
+    const mistralParked = Date.now() < mistralCorsBlockedUntil;
+    rows.push(mistralApiKey
+        ? `<div class="flex items-start gap-2"><span class="${mistralParked ? 'text-yellow-400' : 'text-green-400'}">●</span><div><span class="font-semibold text-white">Mistral (free tier)</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(mistralApiKey))}</span><br><span class="text-on-surface-variant">Fallback #3${mistralParked ? ' · parked 10 min (browser CORS block)' : ' · ready'}</span></div></div>`
+        : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Mistral (free tier)</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
 
     const cooling = OPENROUTER_FREE_MODELS.filter(m => (openRouterModelCooldown[m] || 0) > Date.now());
     rows.push(openRouterApiKey
@@ -2504,7 +2718,7 @@ async function probeAiKeyStatus() {
     if (!list || aiKeyStatusProbeBusy) return;
     aiKeyStatusProbeBusy = true;
     try {
-        const results = { gemini: null, openrouter: null };
+        const results = { gemini: null, groq: null, mistral: null, openrouter: null };
 
         const tasks = [];
         if (geminiApiKey) {
@@ -2513,6 +2727,34 @@ async function probeAiKeyStatus() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with exactly: OK' }] }], generationConfig: { maxOutputTokens: 8 } })
             }).then(r => { results.gemini = r.ok; }).catch(() => { results.gemini = false; }));
+        }
+        if (groqApiKey) {
+            tasks.push(fetch(GROQ_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${groqApiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: GROQ_MODELS[0],
+                    messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                    max_tokens: 8,
+                }),
+            }).then(r => { results.groq = r.ok; }).catch(() => { results.groq = false; }));
+        }
+        if (mistralApiKey) {
+            tasks.push(fetch(MISTRAL_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${mistralApiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: MISTRAL_MODELS[0],
+                    messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                    max_tokens: 8,
+                }),
+            }).then(r => { results.mistral = r.ok; }).catch(() => { results.mistral = false; }));
         }
         if (openRouterApiKey) {
             tasks.push(fetch(OPENROUTER_API_URL, {
@@ -2541,6 +2783,8 @@ async function probeAiKeyStatus() {
 
         const rows = [];
         rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${geminiApiKey ? escapeHtml(maskKey(geminiApiKey)) + ' · ' + escapeHtml(geminiModel) : ''}</span> ${geminiApiKey ? badge(results.gemini) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Groq (free tier)</span> <span class="text-on-surface-variant">${groqApiKey ? escapeHtml(maskKey(groqApiKey)) + ' · ' + GROQ_MODELS.join(', ') : ''}</span> ${groqApiKey ? badge(results.groq) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Mistral (free tier)</span> <span class="text-on-surface-variant">${mistralApiKey ? escapeHtml(maskKey(mistralApiKey)) + ' · ' + MISTRAL_MODELS.join(', ') : ''}</span> ${mistralApiKey ? badge(results.mistral) : badge(null)}</div>`);
         rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">OpenRouter free models</span> <span class="text-on-surface-variant">${openRouterApiKey ? escapeHtml(maskKey(openRouterApiKey)) + ' · ' + OPENROUTER_FREE_MODELS.length + ' models in rotation' : ''}</span> ${openRouterApiKey ? badge(results.openrouter) : badge(null)}</div>`);
         rows.push(`<div class="text-on-surface-variant pt-1 border-t border-white/10">Free models in rotation: ${OPENROUTER_FREE_MODELS.map(m => `<span class="inline-block px-1.5 py-0.5 rounded bg-white/10 mr-1 mt-1">${escapeHtml(m)}</span>`).join('')}</div>`);
 
@@ -2579,9 +2823,9 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
     if (!text || !text.trim()) return '';
     const clean = text.trim();
 
-    // Tier 0: AI Engine (multi-pass literary pipeline — Gemini first, then
-    // OpenRouter free models as fallback inside callGeminiJSON)
-    if (geminiApiKey || openRouterApiKey) {
+    // Tier 0: AI Engine (multi-pass literary pipeline — provider chain inside
+    // callGeminiJSON: Gemini → Groq → Mistral → OpenRouter free models)
+    if (geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey) {
         const pipeline = translationBudgetMode === 'budget' && typeof translateWithGeminiAIBatch === 'function'
             ? translateWithGeminiAIBatch
             : translateWithGeminiAI;
