@@ -506,6 +506,64 @@
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
 
+    <!-- ════════════════ Mobile Top Bar (visible < md) ════════════════ -->
+    <header class="md:hidden glass-header fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4">
+        <button onclick="openMobileNav()" class="p-2 -ml-2 rounded-xl text-white hover:bg-white/10 transition" aria-label="Open menu" title="Menu">
+            <span class="material-symbols-outlined text-2xl">menu</span>
+        </button>
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
+            <span class="font-label-caps font-bold tracking-tight text-white">Lumina <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">PRO</span></span>
+        </div>
+        <button onclick="openModal('uploadModal')" class="p-2 -mr-2 rounded-xl text-primary-fixed hover:bg-white/10 transition" aria-label="Upload PDF" title="Upload PDF">
+            <span class="material-symbols-outlined text-2xl">upload_file</span>
+        </button>
+    </header>
+
+    <!-- ════════════════ Mobile Nav Drawer ════════════════ -->
+    <div id="mobileNavDrawer" class="drawer-overlay" onclick="closeMobileNav()">
+        <div class="drawer-content glass-panel flex flex-col bg-[#111622] text-white" onclick="event.stopPropagation()" role="dialog" aria-label="Navigation menu">
+            <div class="flex items-center justify-between p-4 border-b border-white/10">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-secondary-container to-primary-container p-0.5">
+                        <div class="w-full h-full bg-surface rounded-[9px] flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary-fixed text-lg" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
+                        </div>
+                    </div>
+                    <span class="font-label-caps font-bold text-white">Lumina <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">PRO</span></span>
+                </div>
+                <button onclick="closeMobileNav()" class="p-1.5 rounded-lg hover:bg-white/10 transition" aria-label="Close menu">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <nav class="flex-grow overflow-y-auto p-3 space-y-1.5">
+                <button onclick="navigate('library');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
+                    <span class="material-symbols-outlined text-[20px]">library_music</span><span>My Library</span>
+                </button>
+                <button onclick="navigate('discover');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
+                    <span class="material-symbols-outlined text-[20px]">explore</span><span>Discover Classics</span>
+                </button>
+                <button onclick="openCurrentBookInReader();closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-georgian-gold hover:bg-georgian-gold/10 transition">
+                    <span class="material-symbols-outlined text-[20px]">menu_book</span><span>Moon Reader Mode</span>
+                </button>
+                <button onclick="openModal('voiceModal');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
+                    <span class="material-symbols-outlined text-[20px]">record_voice_over</span><span>Voice & Studio TTS</span>
+                </button>
+                <button onclick="openModal('aiSettingsModal');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-primary-fixed hover:bg-white/5 transition">
+                    <span class="material-symbols-outlined text-[20px]">smart_toy</span><span>Gemini AI Engine</span>
+                </button>
+                <button onclick="openModal('authModal');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
+                    <span class="material-symbols-outlined text-[20px]">person</span><span id="mobileNavUserName">Sign In</span>
+                </button>
+            </nav>
+            <div class="p-4 border-t border-white/10">
+                <button onclick="openModal('uploadModal');closeMobileNav()" class="w-full py-3 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-semibold shadow-[0_0_25px_rgba(0,240,255,0.35)] flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_35px_rgba(0,240,255,0.6)] active:scale-[0.98]">
+                    <span class="material-symbols-outlined">upload_file</span> Upload PDF Book
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ════════════════ SideNavBar (Desktop) ════════════════ -->
     <nav class="hidden md:flex flex-col h-full py-8 px-4 glass-nav w-64 fixed left-0 top-0 z-40">
         <div class="mb-8 px-3 flex items-center gap-3">
@@ -603,7 +661,7 @@
     </header>
 
     <!-- ════════════════ Main Content Canvas ════════════════ -->
-    <main class="flex-grow md:ml-64 relative min-h-screen pb-44 pt-4 md:pt-24 px-3 sm:px-6 md:px-8 max-w-7xl mx-auto w-full">
+    <main class="flex-grow md:ml-64 relative min-h-screen pb-44 pt-20 md:pt-24 px-3 sm:px-6 md:px-8 max-w-7xl mx-auto w-full">
         
         <!-- View: Library (Home) -->
         <div id="view-library" class="space-y-8">

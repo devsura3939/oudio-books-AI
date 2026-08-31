@@ -1243,6 +1243,22 @@ function closeToCDrawer() {
     if (DOM.tocDrawer) DOM.tocDrawer.classList.remove('active');
 }
 
+function openMobileNav() {
+    const drawer = document.getElementById('mobileNavDrawer');
+    if (drawer) {
+        drawer.classList.add('active');
+        document.body.classList.add('modal-open');
+    }
+}
+
+function closeMobileNav() {
+    const drawer = document.getElementById('mobileNavDrawer');
+    if (drawer) drawer.classList.remove('active');
+    if (!document.querySelector('.modal-overlay.active')) {
+        document.body.classList.remove('modal-open');
+    }
+}
+
 function renderToCDrawerList() {
     if (!DOM.tocDrawerList || !readerBook) return;
     DOM.tocDrawerList.innerHTML = '';
@@ -2079,11 +2095,17 @@ function toggleReaderFullscreen() {
 // ── Full Keyboard & Touch Gestures Matrix ──────────────────────────────────
 function setupKeyboardAndTouchControls() {
     window.addEventListener('keydown', (e) => {
-        // ESC closes the topmost open modal (API settings, voice, upload, translation panel)
+        // ESC closes the topmost open modal or mobile nav drawer
         if (e.key === 'Escape') {
-            const openModal = document.querySelector('.modal-overlay.active');
-            if (openModal && !openModal.id.startsWith('wholeBook')) {
-                closeModal(openModal.id);
+            const openDrawer = document.getElementById('mobileNavDrawer');
+            if (openDrawer && openDrawer.classList.contains('active')) {
+                closeMobileNav();
+                e.preventDefault();
+                return;
+            }
+            const openModalEl = document.querySelector('.modal-overlay.active');
+            if (openModalEl && !openModalEl.id.startsWith('wholeBook')) {
+                closeModal(openModalEl.id);
                 e.preventDefault();
                 return;
             }
@@ -2931,7 +2953,6 @@ function updateChapterQueueStatus(activeIdx, doneIdx) {
         rows[activeIdx].className = 'ch-active';
         rows[activeIdx].querySelector('.ch-status-icon').textContent = '⏳';
     }
-}
 }
 
 function renderTranslationBudgetModeUI() {
