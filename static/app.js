@@ -65,6 +65,123 @@ let geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.5-pro';
 let geminiPasses = parseInt(localStorage.getItem('geminiPasses') || '3', 10);
 if (![1, 2, 3].includes(geminiPasses)) geminiPasses = 3;
 
+// ── OpenRouter free-model AI engine ─────────────────────────────────────────
+// One OpenRouter key gives access to every free model on the platform. Used as
+// the AI tier when Gemini is absent/failing, and as the reviewer in the
+// multi-pass literary pipeline. Free models are rate-limited per-model, so the
+// engine rotates through a fallback chain and remembers which model is alive.
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_FREE_MODELS = [
+    'google/gemma-4-31b-it:free',
+    'z-ai/glm-5.2:free',
+    'minimax/minimax-m3:free',
+    'nvidia/nemotron-3-super-120b-a12b:free',
+    'openrouter/free',
+];
+let openRouterApiKey = localStorage.getItem('openRouterApiKey') || '';
+let openRouterModel = localStorage.getItem('openRouterModel') || '';
+// Monotonic index into OPENROUTER_FREE_MODELS — the first model with no recent
+// failure is tried first. A 429/5xx marks the model dead for a cool-off window
+// so the batch loop does not hammer a rate-limited provider.
+let openRouterModelIndex = 0;
+const OPENROUTER_MODEL_COOLDOWN_MS = 60_000;
+const openRouterModelCooldown = {}; // model id -> earliest retry timestamp
+
+function openRouterNextModel() {
+    const now = Date.now();
+    for (let i = 0; i < OPENROUTER_FREE_MODELS.length; i++) {
+        const idx = (openRouterModelIndex + i) % OPENROUTER_FREE_MODELS.length;
+        const model = OPENROUTER_FREE_MODELS[idx];
+        if ((openRouterModelCooldown[model] || 0) <= now) return { model, idx };
+    }
+    // Everything is cooling down — return the next model anyway; the request
+    // will 429 and be retried later by the caller's backoff.
+    const idx = openRouterModelIndex % OPENROUTER_FREE_MODELS.length;
+    return { model: OPENROUTER_FREE_MODELS[idx], idx };
+}
+
+function openRouterMarkModelFailed(model) {
+    openRouterModelCooldown[model] = Date.now() + OPENROUTER_MODEL_COOLDOWN_MS;
+    // Advance the rotation so the next call starts past the dead model.
+    const idx = OPENROUTER_FREE_MODELS.indexOf(model);
+    if (idx >= 0) openRouterModelIndex = (idx + 1) % OPENROUTER_FREE_MODELS.length;
+}
+
+// One JSON-mode call to a free OpenRouter model. Returns parsed JSON or null.
+// Retries transient failures across the model chain with linear backoff.
+async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 3 } = {}) {
+    if (!openRouterApiKey) return null;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        const { model, idx } = openRouterNextModel();
+        openRouterModelIndex = (idx + 1) % OPENROUTER_FREE_MODELS.length;
+        const preferred = openRouterModel && (openRouterModelCooldown[openRouterModel] || 0) <= Date.now()
+            ? openRouterModel
+            : model;
+
+        try {
+            const response = await fetch(OPENROUTER_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${openRouterApiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': location.origin,
+                    'X-Title': 'Lumina Audio',
+                },
+                body: JSON.stringify({
+                    model: preferred,
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature,
+                    max_tokens: maxTokens,
+                    response_format: { type: 'json_object' },
+                }),
+            });
+
+            if (response.status === 429 || response.status >= 500) {
+                openRouterMarkModelFailed(preferred);
+                if (attempt < retries) {
+                    await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+                    continue;
+                }
+                return null;
+            }
+            if (!response.ok) {
+                console.warn('OpenRouter API error:', response.status, preferred);
+                openRouterMarkModelFailed(preferred);
+                return null;
+            }
+
+            const data = await response.json();
+            const text = data?.choices?.[0]?.message?.content;
+            if (!text) {
+                openRouterMarkModelFailed(preferred);
+                return null;
+            }
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                // Some free models wrap JSON in markdown fences despite
+                // response_format — strip and retry once.
+                const stripped = extractTranslation(text);
+                try {
+                    return JSON.parse(stripped);
+                } catch (e2) {
+                    console.warn('OpenRouter returned unparseable JSON from', preferred);
+                    openRouterMarkModelFailed(preferred);
+                    return null;
+                }
+            }
+        } catch (e) {
+            if (attempt >= retries) {
+                console.warn('OpenRouter call failed:', e);
+                return null;
+            }
+            await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+        }
+    }
+    return null;
+}
+
 // ── Georgian Unicode & Advanced Linguistic Normalization ───────────────────
 function normalizeGeorgian(text) {
     if (!text) return '';
@@ -745,6 +862,15 @@ function openModal(modalId) {
 
             const passesSelect = document.getElementById('geminiPassesSelect');
             if (passesSelect) passesSelect.value = String(geminiPasses || 3);
+
+            const orKeyInput = document.getElementById('openRouterApiKeyInput');
+            if (orKeyInput) orKeyInput.value = openRouterApiKey || '';
+
+            const orModelSelect = document.getElementById('openRouterModelSelect');
+            if (orModelSelect) orModelSelect.value = openRouterModel || '';
+
+            renderAiKeyStatusPanel();
+            probeAiKeyStatus();
         }
         modal.classList.add('active');
     }
@@ -764,6 +890,23 @@ function saveGeminiSettings() {
 
     const passesSelect = document.getElementById('geminiPassesSelect');
     const passes = passesSelect ? parseInt(passesSelect.value, 10) : 3;
+
+    const orKeyInput = document.getElementById('openRouterApiKeyInput');
+    const orKey = orKeyInput ? orKeyInput.value.trim() : '';
+
+    const orModelSelect = document.getElementById('openRouterModelSelect');
+    const orModel = orModelSelect ? orModelSelect.value : '';
+
+    if (orKey) {
+        localStorage.setItem('openRouterApiKey', orKey);
+        openRouterApiKey = orKey;
+    } else {
+        localStorage.removeItem('openRouterApiKey');
+        openRouterApiKey = '';
+    }
+
+    localStorage.setItem('openRouterModel', orModel);
+    openRouterModel = orModel;
 
     if (key) {
         localStorage.setItem('geminiApiKey', key);
@@ -805,6 +948,38 @@ function saveGeminiSettings() {
     } else {
         alert("Gemini AI Engine disabled (no key). Model preference saved.");
     }
+    if (orKey) {
+        // Probe the OpenRouter key the same way: a bad key must surface here,
+        // not silently degrade a batch translation to machine output.
+        fetch(OPENROUTER_API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${orKey}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': location.origin,
+                'X-Title': 'Lumina Audio',
+            },
+            body: JSON.stringify({
+                model: orModel || OPENROUTER_FREE_MODELS[0],
+                messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                max_tokens: 8,
+            }),
+        }).then(r => {
+            if (r.ok) {
+                alert('OpenRouter API key verified — free-model engine is active.');
+            } else if (r.status === 401 || r.status === 403) {
+                alert('OpenRouter key saved, but it was rejected (status ' + r.status + ').\nCheck the key at openrouter.ai/keys.');
+            } else if (r.status === 429) {
+                alert('OpenRouter key saved and valid, but the free model is rate-limited right now (429).\nThe engine will retry other free models automatically.');
+            } else {
+                alert('OpenRouter key saved, but the probe returned status ' + r.status + '.');
+            }
+        }).catch(() => {
+            alert('OpenRouter key saved, but could not reach openrouter.ai (network error).');
+        });
+    }
+    // Re-probe the panel with the just-saved keys so the status is fresh.
+    setTimeout(probeAiKeyStatus, 0);
     closeModal('aiSettingsModal');
 }
 
@@ -1760,11 +1935,22 @@ function readerForwardSentence() {
 // ══════════════════════════════════════════════════════════════════════════
 
 // ── Gemini call helper ──────────────────────────────────────────────────────
-// One JSON-mode call to the Gemini API. Returns parsed JSON or null.
+// One JSON-mode call to the AI tier. Tries the Gemini API first; if Gemini is
+// not configured (or the call fails), falls back to the OpenRouter free-model
+// engine. Returns parsed JSON or null.
 // Retries transient failures (429/5xx) with linear backoff — the whole-book
 // batch sends hundreds of calls, so a single blip must not degrade a chunk
 // to the ML fallback tier.
 async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
+    if (geminiApiKey) {
+        const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries });
+        if (res !== null) return res;
+        console.warn('Gemini tier failed — falling back to OpenRouter free models.');
+    }
+    return callOpenRouterJSON(prompt, { temperature, maxTokens, retries: retries + 1 });
+}
+
+async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
     if (!geminiApiKey) return null;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
@@ -1919,7 +2105,7 @@ ${errorList}`;
 //   3 → draft + critique + refine + final QA (verify the revision, keep the
 //       better of the two — a bad refinement can never make things worse)
 async function translateWithGeminiAI(text, targetLang, contextBefore = '', contextAfter = '') {
-    if (!geminiApiKey) return null;
+    if (!geminiApiKey && !openRouterApiKey) return null;
 
     const draft = await geminiDraftTranslate(text, targetLang, contextBefore, contextAfter);
     if (!draft) return null;
@@ -1999,19 +2185,110 @@ function recordEngineUse(engine) {
     renderTranslationEngineStatus();
 }
 
+// ── AI Engine Status Panel ──────────────────────────────────────────────────
+// Shows which API keys are configured and live, and which models are in the
+// active rotation. Probed lazily when the AI settings modal opens so we never
+// spend a request unless the user is actually looking at the panel.
+let aiKeyStatusProbeBusy = false;
+
+function maskKey(key) {
+    if (!key) return '';
+    return key.length <= 12 ? key.slice(0, 4) + '••••' : key.slice(0, 8) + '••••' + key.slice(-4);
+}
+
+function renderAiKeyStatusPanel() {
+    const panel = document.getElementById('aiKeyStatusPanel');
+    const list = document.getElementById('aiKeyStatusList');
+    if (!panel || !list) return;
+    panel.classList.remove('hidden');
+
+    if (aiKeyStatusProbeBusy) return; // keep previous content while probing
+
+    if (!geminiApiKey && !openRouterApiKey) {
+        list.innerHTML = '<p class="text-on-surface-variant">No AI keys configured — translation uses free machine engines (Google / MyMemory).</p>';
+        return;
+    }
+
+    const rows = [];
+    rows.push(geminiApiKey
+        ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(geminiApiKey))}</span><br><span class="text-on-surface-variant">Model: ${escapeHtml(geminiModel)} · ${geminiPasses}-stage literary pipeline</span></div></div>`
+        : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Gemini</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
+
+    const cooling = OPENROUTER_FREE_MODELS.filter(m => (openRouterModelCooldown[m] || 0) > Date.now());
+    rows.push(openRouterApiKey
+        ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">OpenRouter (free models)</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(openRouterApiKey))}</span><br><span class="text-on-surface-variant">Rotation: ${openRouterModel ? escapeHtml(openRouterModel) + ' → ' : ''}${OPENROUTER_FREE_MODELS.length} free models${cooling.length ? ` · ${cooling.length} cooling down` : ' · all ready'}</span></div></div>`
+        : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">OpenRouter (free models)</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
+
+    list.innerHTML = rows.join('');
+}
+
+// Live probe: verifies each configured key with a minimal real request and
+// re-renders the panel with ACTIVE / FAILED status. Never blocks saving.
+async function probeAiKeyStatus() {
+    const list = document.getElementById('aiKeyStatusList');
+    if (!list || aiKeyStatusProbeBusy) return;
+    aiKeyStatusProbeBusy = true;
+    try {
+        const results = { gemini: null, openrouter: null };
+
+        const tasks = [];
+        if (geminiApiKey) {
+            tasks.push(fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with exactly: OK' }] }], generationConfig: { maxOutputTokens: 8 } })
+            }).then(r => { results.gemini = r.ok; }).catch(() => { results.gemini = false; }));
+        }
+        if (openRouterApiKey) {
+            tasks.push(fetch(OPENROUTER_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${openRouterApiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': location.origin,
+                    'X-Title': 'Lumina Audio',
+                },
+                body: JSON.stringify({
+                    model: openRouterModel || OPENROUTER_FREE_MODELS[0],
+                    messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                    max_tokens: 8,
+                }),
+            }).then(r => { results.openrouter = r.ok; }).catch(() => { results.openrouter = false; }));
+        }
+
+        await Promise.all(tasks);
+
+        const badge = ok => ok === null
+            ? '<span class="text-on-surface-variant">— not configured</span>'
+            : ok
+                ? '<span class="text-green-400 font-bold">● ACTIVE</span>'
+                : '<span class="text-red-400 font-bold">● FAILED</span>';
+
+        const rows = [];
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${geminiApiKey ? escapeHtml(maskKey(geminiApiKey)) + ' · ' + escapeHtml(geminiModel) : ''}</span> ${geminiApiKey ? badge(results.gemini) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">OpenRouter free models</span> <span class="text-on-surface-variant">${openRouterApiKey ? escapeHtml(maskKey(openRouterApiKey)) + ' · ' + OPENROUTER_FREE_MODELS.length + ' models in rotation' : ''}</span> ${openRouterApiKey ? badge(results.openrouter) : badge(null)}</div>`);
+        rows.push(`<div class="text-on-surface-variant pt-1 border-t border-white/10">Free models in rotation: ${OPENROUTER_FREE_MODELS.map(m => `<span class="inline-block px-1.5 py-0.5 rounded bg-white/10 mr-1 mt-1">${escapeHtml(m)}</span>`).join('')}</div>`);
+
+        list.innerHTML = rows.join('');
+    } finally {
+        aiKeyStatusProbeBusy = false;
+    }
+}
+
 async function translateChunkContextually(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
 
-    // Tier 0: Gemini AI Engine (multi-pass literary pipeline)
-    if (geminiApiKey) {
-        const geminiRes = await translateWithGeminiAI(clean, targetLang, contextBefore, contextAfter);
-        if (geminiRes) {
+    // Tier 0: AI Engine (multi-pass literary pipeline — Gemini first, then
+    // OpenRouter free models as fallback inside callGeminiJSON)
+    if (geminiApiKey || openRouterApiKey) {
+        const aiRes = await translateWithGeminiAI(clean, targetLang, contextBefore, contextAfter);
+        if (aiRes) {
             recordEngineUse('gemini');
-            return geminiRes;
+            return aiRes;
         }
-        console.warn("Gemini AI Engine failed — FALLING BACK to machine translation. " +
-            "Result quality will drop. Check API key/quota.");
+        console.warn("AI Engine failed — FALLING BACK to machine translation. " +
+            "Result quality will drop. Check API keys/quota.");
     }
 
     // Tier 1: Google Dict-Chrome-Ex Neural Engine (Ultra-stable, zero rate-limiting)
