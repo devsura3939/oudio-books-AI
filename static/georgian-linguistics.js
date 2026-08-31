@@ -39,6 +39,15 @@
 // style defects, punctuation rules). Auto-fixes 4.27-4.32: doubled terminal
 // marks, en-dash/minus normalization, ellipsis normalization + spacing,
 // straight-quote → „…“ conversion, whitespace collapse for TTS narration.
+// v1.7.0 expansion (deeper Georgian dive): KA_DISCOURSE (discourse markers:
+// კი, -ც, არც, ხომ, განა, თურმე, მგონია, ალბათ, ვითარცა, მერე, ჯერ...),
+// KA_PRONOUN_ECONOMY (subject/possessive dropping, generic-they → ის),
+// KA_TACTICS (EN→KA decision procedure: register matching, MS Style Guide
+// everyday word preference, cultural substitution, structural rebuilds,
+// TTS-driven choices, self-check order). 10 new idioms in KA_IDIOMS
+// (ბუზების თვლა, თვალი ეჭრება, ცეცხლზე ნავთის დასხმა, შენი ჭირიმე...).
+// QA rules 3.40-3.42 (possessive_economy, singular_they, discourse_starvation),
+// auto-fix 4.33 (drop redundant possessive before body parts).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -250,6 +259,15 @@ IDIOM SUBSTITUTION TABLE — TRANSLATE THE MEANING, NEVER THE WORDS:
 • "Two heads are better than one" → ერთი თავით საქმე არ კეთდება.
 • "Every cloud has a silver lining" → ყოველ ბოროტებაში კეთილიაც არის.
 • "When in Rome..." → ქალაქში შედი, ქალაქისა იყავი / მგელთან ერთად უროდ ყივილე.
+• "Counting flies" (idling) → ბუზების თვლა (native, same image).
+• "Fate at my doorstep" (great luck) → ბედი კარზე მომდგომია (native).
+• "Caught red-handed" → საქმეზე დაიჭირეს (unpack: caught in the act; literal bloody-hands image is foreign).
+• "Green with envy" → თვალი ეჭრება (native: the eye "breaks" with envy).
+• "Add fuel to the fire" → ცეცხლზე ნავთის დასხმა (native: kerosene, not fuel).
+• "He's in his element" → თევზი წყალშია და თევზაობს (native).
+• "Pushing his luck" → სისხლი გაუდგა თავში (native: the blood rushed to his head).
+• "A weight off one's mind" → გულიდან ამოგლჯა / გულიდან ამოღება (native heart idioms).
+• "Softening a request / calling someone dear" → შენი ჭირიმე / გეთაყვა (native endearments, no English equivalent).
 RULE: if the English idiom has a listed native equivalent, USE IT. If not, unpack the meaning in plain natural Georgian. Never transliterate the metaphor.`;
 
 // 1k. Georgian punctuation: sentence boundaries, terminal marks, commas, dashes (v1.3.0).
@@ -637,6 +655,100 @@ PRODUCTION CORPUS DEFECTS — REAL PATTERNS OBSERVED IN TRANSLATED CHAPTERS. AVO
 • ხოლო contrast chains are fine but vary with მაგრამ/თუმცა to avoid monotony.
 • Punctuation discipline: one ។ per sentence; no space before ។ , ; :; single space after.`;
 
+const KA_DISCOURSE = `
+DISCOURSE MARKERS & PARTICLES — WHAT MAKES PROSE FLOW LIKE NATIVE GEORGIAN (v1.7.0 research):
+Translationese prose has ZERO discourse markers. Natural Georgian uses them constantly.
+
+FOCUS / CONTRAST:
+• კი — contrastive focus particle, AFTER the focused word: ეს მართალია, მაგრამ რთულია კი.
+  "X does Y, but..." → X-მა კი ... Also: მივდივარ კი, მაგრამ გვიანით (I AM going, but late).
+• -ც (enclitic = too/also/even): attaches to the word: მეც (me too), ისიც (him too), მაშინაც (even then).
+• არც / არც ერთი — not even: არც ერთმა მიპასუხა (not a single one answered).
+• ხოლო — formal contrast (whereas): ხოლო მტერი უფრო ძლიერი იყო.
+
+STANCE / EVIDENCE (critical for narrative voice):
+• თურმე — hearsay ("apparently/it turns out"): ის თურმე მწერალია. Use in narration for reported info.
+• მგონი(ა) — "I guess/I think": მგონი სახლშია.
+• ალბათ — probably: ალბათ გვიან დაბრუნდება.
+• როგორც ჩანს — it seems: როგორც ჩანს, წვიმს.
+• ვითარცა / ვით — as if (literary): ვითარცა სიზმარში.
+
+QUESTION / RHETORIC:
+• ხომ — right?/isn't it (seeking agreement): კარგი ხომ?
+• განა — rhetorical disbelief: განა შესაძლებელია? (surely it's not possible?)
+• თუ — if / whether in questions: იცი თუ არა...
+• ნუთუ — could it be that (doubt): ნუთუ მართალია?
+
+SEQUENCE / TIME FLOW:
+• მერე — then/afterwards: ჯერ ვჭამეთ, მერე წავედით.
+• ჯერ — yet/still/first: ჯერ ადრეა (it's still early).
+• კვლავ / ისევ — again/still (ისევ colloquial, კვლავ literary): ისევ წვიმს / კვლავ გამეორა.
+• შემდეგ — next/after: შემდეგ რა მოხდა?
+• ამიტომ / ამიტომაც — therefore: ამიტომ არ მოვედი.
+
+RULE: In any 400+ character passage, use at least 2-3 of these naturally. Never stack more
+than one stance marker per clause. Particles come AFTER the word they modify, never sentence-initial
+(except მერე/შემდეგ/ამიტომ as connectors).`;
+
+const KA_PRONOUN_ECONOMY = `
+PRONOUN & POSSESSIVE ECONOMY — GEORGIAN DROPS WHAT THE VERB ALREADY SAYS (v1.7.0, MS Style Guide + corpus):
+The verb encodes person and number. Repeating pronouns/possessives is the #1 translationese tell.
+
+SUBJECT PRONOUNS:
+• Drop მე/შენ/ის/ჩვენ/თქვენ/ისინი before a conjugated verb unless contrast is intended.
+  Wrong: *მე წავედი. Right: წავედი. (Only keep მე for contrast: "ME I went, but you stayed.")
+• Never use ის as a dummy subject. Georgian has no "it": წვიმს (it rains), ცივა (it's cold).
+
+POSSESSIVE ECONOMY (drop your/his/my before):
+• Body parts: თავი მტკივა (my head hurts — NOT *ჩემი თავი), ხელი ავიღე (I took his hand).
+• Kinship: დედა მოვიდა (my mother came), context carries the possessor.
+• In imperatives/instructions: თვალები დახუჭე (close your eyes — NOT *შენი თვალები).
+• Keep the possessive ONLY when contrast or ambiguity demands it: ჩემი ხელი, არა შენი.
+
+GENERIC REFERENTS:
+• English generic "they/their" → ის/მისი (SINGULAR): "if a user forgets, they lose data" →
+  თუ მომხმარებელი დაივიწყებს, ის კარგავს მონაცემებს. NEVER ისინი/მათი for one generic person.
+
+RULE: After drafting, scan for თქვენი/შენი/მისი/ჩემი + body-part or kinship noun — delete the
+possessive unless contrast demands it. Scan for subject pronouns before verbs — delete them.`;
+
+const KA_TACTICS = `
+EN→GEORGIAN TRANSLATION TACTICS — DECISION PROCEDURE, NOT JUST RULES (v1.7.0):
+
+TACTIC 1 — REGISTER MATCHING (decide FIRST, before translating):
+• Literary narration → literary lexicon (კვლავ not ისევ; ვითარცა not როგორც; თუმცა fine).
+• Dialogue (casual) → colloquial (ისევ, მგონი, ხომ, short clauses, dropped pronouns).
+• Instructions/UI → short imperative + everyday words (MS guide: short and warm).
+• Never mix registers inside one passage. Detect the register from the English source's texture.
+
+TACTIC 2 — EVERYDAY WORD PREFERENCE (MS Georgian Style Guide):
+• აღემატება → მეტია; მომდევნო → შემდეგი; დამატებით → ასევე;
+  დაყოვნების გარეშე → დაუყოვნებლად; შანსის ქონა → საშუალების ქონა.
+• Choose the shorter, everyday word when both are correct.
+
+TACTIC 3 — CULTURAL SUBSTITUTION for idioms (see IDIOM SUBSTITUTION TABLE):
+• Native equivalent exists → use it (kill two birds → ორი კურდღელი ერთი ტყვიით).
+• No native equivalent → unpack the MEANING in plain Georgian; never transliterate the image.
+• Softeners/endearments: dear → შენი ჭირიმე / გეთაყვა (context-dependent).
+
+TACTIC 4 — STRUCTURAL REBUILDS (rebuild, don't mirror):
+• English "It is X that Y" clefts → plain SOV: ეს წიგნი ბავშვობაში წავიკითხე.
+• English passive → Georgian active or impersonal: "the city was destroyed" → ქალაქი დაანგრიეს
+  (they destroyed it) or ქალაქი დაინგრა (intransitive).
+• English gerund subjects → masdar or clause: "swimming is fun" → ცურვა სასიამოვნოა.
+• Long English relative chains → split into two Georgian sentences. Georgian tolerates shorter
+  sentences than English; splitting is almost always an improvement for TTS.
+
+TACTIC 5 — TTS-DRIVEN CHOICES:
+• Prefer და-chaining over semicolons (the voice pauses better at და).
+• One clause = one breath group. If a sentence needs 3+ breaths, split it.
+• Numbers: write out small numbers in dialogue (ორი საათი), keep digits for dates/stats.
+
+TACTIC 6 — SELF-CHECK ORDER (before answering):
+1. Verb-final everywhere? 2. Negation type correct (არ/ვერ/ნუ)? 3. Case alignment per series?
+4. Idioms nativized? 5. Pronouns/possessives pruned? 6. Discourse markers present but not stacked?
+7. Punctuation Georgian („…“, —, ।)? 8. Register consistent?`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -663,6 +775,9 @@ function getKaKnowledgeBase() {
         KA_FALSE_FRIENDS,
         KA_INTERJECTIONS,
         KA_CORPUS_DEFECTS,
+        KA_DISCOURSE,
+        KA_PRONOUN_ECONOMY,
+        KA_TACTICS,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -971,6 +1086,38 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'chunk_truncation', message: `Truncated word "${m13[1]}" — likely a chunk-boundary cut; restore the full word (e.g. მხედართმთავარი, მეთოდი, დისციპლინა, გენერალი).` });
     }
 
+    // ── v1.7.0 additions: discourse, pronoun economy, possessive economy ──
+
+    // 3.40 Over-explicit possessive (MS Style Guide): "your/its + noun" before a
+    //      body part, kinship noun, or in an imperative/instructional clause usually
+    //      translates to NOTHING. Heuristic: თქვენი/შენი/მისი + თავი/ხელი/თვალი/გული
+    //      or თქვენი/შენი immediately after an imperative verb (pro-drop context).
+    const possEcoRe = /(?<![\u10A0-\u10FF])(თქვენი|შენი|მისი)\s+(თავი|თავს|ხელი|ხელს|თვალი|თვალს|გული|გულს|დედა|მამა|ოჯახი)(?![\u10A0-\u10FF])/g;
+    let m14;
+    let possEcoCount = 0;
+    while ((m14 = possEcoRe.exec(text)) !== null) { possEcoCount++; }
+    if (possEcoCount > 0) {
+        issues.push({ rule: 'possessive_economy', message: `Possessive likely redundant ${possEcoCount}x ("${possEcoRe.source.slice(0, 20)}...") — Georgian drops your/his before body parts & kin (თავი მტკივა, NOT *შენი თავი მტკივა); verify each.` });
+    }
+
+    // 3.41 Singular they calque (MS Style Guide): English generic "they/their" must
+    //      map to ის/მისი (singular), never ისინი/მათი. Heuristic: მათი/ისინი + a
+    //      singular verb or singular noun phrase is suspicious, but full parsing is
+    //      out of scope — flag ისინი/მათი when the same clause contains a singular
+    //      copula არის/იყო (generic-person pattern "if a user... they...").
+    const theyCalqueRe = /(?<![\u10A0-\u10FF])(ისინი|მათი)(?![\u10A0-\u10FF])([^.!?…]{0,60}?)(არის|იყო)(?![\u10A0-\u10FF])/g;
+    let m15;
+    while ((m15 = theyCalqueRe.exec(text)) !== null) {
+        issues.push({ rule: 'singular_they', message: `"${m15[1]} ... ${m15[3]}" — English singular-they calque suspected: generic referent maps to ის/მისი (singular), not ისინი/მათი. Verify the referent's number.` });
+    }
+
+    // 3.42 Discourse-marker starvation: long text with zero contrastive/discourse
+    //      particles reads as translationese. Flag if ≥400 chars AND none of
+    //      კი/ხომ/თუმცა/მაგრამ/ასევე/მაშინ/თურმე/მგონია present.
+    if (text.length >= 400 && !/(?<![\u10A0-\u10FF])(კი|ხომ|თუმცა|მაგრამ|ასევე|მაშინ|თურმე|მგონია)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'discourse_starvation', message: 'Long passage with zero discourse markers (კი/ხომ/თუმცა/მაშინ/თურმე...) — reads as translationese; natural Georgian prose uses them for flow and stance.' });
+    }
+
     return issues;
 }
 
@@ -1116,16 +1263,25 @@ function correctGeorgianMorphology(text) {
     // 4.32 Collapse whitespace runs (incl. \r) to single space, trim ends
     out = out.replace(/\s+/g, ' ').trim();
 
+    // ── v1.7.0 additions: pronoun & possessive economy ──
+
+    // 4.33 Drop redundant possessive before body parts (deterministic, corpus+guide-backed)
+    // *შენი თავი მტკივა → თავი მტკივა; *თქვენი ხელი → ხელი (verb already encodes person)
+    out = out.replace(
+        /(?<![\u10A0-\u10FF])(თქვენი|შენი)\s+(თავი|თავს|ხელი|ხელს|თვალი|თვალს|გული|გულს)(?![\u10A0-\u10FF])/g,
+        '$2'
+    );
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.6.2';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.7.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 28,
-    qaRules: 39,
-    autoFixes: 32,
-    researchSources: 53
+    promptBlocks: 31,
+    qaRules: 42,
+    autoFixes: 33,
+    researchSources: 61
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
