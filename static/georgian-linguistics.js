@@ -29,6 +29,10 @@
 // KA_TIME_EXPR, KA_IMPERSONAL (weather/experiencer dative frames),
 // KA_NUMERALS (vigesimal system), KA_PARTICLES (კი, -ც, არც, ხომ, თუ...),
 // KA_FALSE_FRIENDS (Russian-era loanword traps), KA_INTERJECTIONS.
+// v1.6.1 expansion (corpus mining): KA_CORPUS_DEFECTS block built from REAL
+// translated chapters (Sun Tzu / Marcus Aurelius run mined from the app's
+// IndexedDB). QA rules 3.37-3.39 (hyphen-as-dash, magram comma, chunk
+// truncation), auto-fixes 4.25-4.26 (em dash, truncation repair).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -606,6 +610,27 @@ INTERJECTIONS & EMOTIONAL EXPRESSIONS — NATIVE VOICE FOR DIALOGUE:
   untranslated or calqued — pick the matching Georgian interjection.
 • Oaths: დედის ტომბაზე! "on my mother's grave!", სიკვდილამდე! "until death!".`;
 
+// 1k15. Corpus-mined production defects (v1.6.1: patterns observed in real
+// translated chapters — Sun Tzu / Marcus Aurelius run).
+const KA_CORPUS_DEFECTS = `
+PRODUCTION CORPUS DEFECTS — REAL PATTERNS OBSERVED IN TRANSLATED CHAPTERS. AVOID ALL OF THESE:
+• Hyphen as dash: "თავდასხმა - ძალების სიჭარბეზე" — WRONG. Georgian dash is "—" (em dash) with
+  no space before it: თავდასხმა — ძალების სიჭარბეზე. Never write " - " between clauses.
+• Broken word at chunk boundary: "*ხედართმთავარი" for მხედართმთავარი — never emit a truncated word
+  at the start of a chunk; if the chunk starts mid-word, complete it from context.
+• "ეს არის X" as a plain copula — prefer ეს X-ა/-აა (ეს სიცოცხლისა და სიკვდილის საკითხაა) or
+  inversion: X არის ეს. Reserve "ეს არის" for genuine definitions ("this is the study of...").
+• Semicolons stacking parallel clauses — Georgian prose prefers და-chaining or ។ breaks.
+• Over-literal "have": "ომის ხელოვნებას მნიშვნელობა აქვს" is fine (inversion), but
+  "სახელმწიფოს აქვს ომის ხელოვნება" (SVO have) is a calque — keep აქვს/არის final.
+• მაგრამ needs a comma BEFORE it when joining clauses: ..., მაგრამ ....
+• Attributive უნდა + masdar chain: "მთავარი მიზანი უნდა იყოს სწრაფი გამარჯვება" is correct;
+  do not insert რომ after უნდა.
+• Speech attribution: "სუნ ძიმ თქვა:" — native books use სუნ ძიმ თქვა: with the colon kept,
+  or სუნ ძიმის სიტყვებით. Keep proper-noun agreement: სუნ ძის (genitive), სუნ ძისგან.
+• ხოლო contrast chains are fine but vary with მაგრამ/თუმცა to avoid monotony.
+• Punctuation discipline: one ។ per sentence; no space before ។ , ; :; single space after.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -631,6 +656,7 @@ function getKaKnowledgeBase() {
         KA_PARTICLES,
         KA_FALSE_FRIENDS,
         KA_INTERJECTIONS,
+        KA_CORPUS_DEFECTS,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -917,6 +943,28 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'false_friend_actual', message: 'აქტუალური means "topical/relevant" — for "actual" use რეალური / სინამდვილეში არსებული.' });
     }
 
+    // ── v1.6.1 additions: corpus-mined production defects ──
+
+    // 3.37 Hyphen used as a dash between clauses (seen in real output:
+    //      "თავდასხმა - ძალების სიჭარბეზე"). Georgian dash is "—".
+    if (/[\u10A0-\u10FF]\s-\s[\u10A0-\u10FF]/.test(text)) {
+        issues.push({ rule: 'hyphen_dash', message: 'Hyphen used as a dash between clauses — use an em dash "—" with no space before it (თავდასხმა — ძალების სიჭარბეზე).' });
+    }
+
+    // 3.38 Comma missing before clause-joining მაგრამ (corpus: "თავს, მაგრამ" ok,
+    //      but "...X მაგრამ Y" without comma is a defect).
+    if (/(?<![,;:\u10A0-\u10FF]) [\u10A0-\u10FF]+ მაგრამ [ა-ჰ]/.test(text)) {
+        issues.push({ rule: 'magram_comma', message: 'მაგრამ joining clauses needs a comma BEFORE it: ..., მაგრამ ...' });
+    }
+
+    // 3.39 Chunk-boundary truncation: word-initial fragment that matches a known
+    //      word with its first syllable missing (corpus: "*ხედართმთავარი" < მხედართმთავარი).
+    const truncRe = /(?<![\u10A0-\u10FF])(ხედართმთავარი|ეთოდი|ისციპლინა|ენერალი)(?![\u10A0-\u10FF])/g;
+    let m13;
+    while ((m13 = truncRe.exec(text)) !== null) {
+        issues.push({ rule: 'chunk_truncation', message: `Truncated word "${m13[1]}" — likely a chunk-boundary cut; restore the full word (e.g. მხედართმთავარი, მეთოდი, დისციპლინა, გენერალი).` });
+    }
+
     return issues;
 }
 
@@ -1030,18 +1078,27 @@ function correctGeorgianMorphology(text) {
     // 4.24 False friend აქტუალური → რეალური ("actual", not "topical")
     out = out.replace(/(?<![\u10A0-\u10FF])აქტუალური(?![\u10A0-\u10FF])/g, 'რეალური');
 
+    // ── v1.6.1 additions: corpus-mined production defects ──
+
+    // 4.25 Hyphen-as-dash → em dash, no space before it
+    // "თავდასხმა - ძალების" → "თავდასხმა — ძალების"
+    out = out.replace(/([\u10A0-\u10FF])\s+-\s+([\u10A0-\u10FF])/g, '$1 — $2');
+
+    // 4.26 Known chunk-boundary truncations (corpus-mined)
+    out = out.replace(/(?<![\u10A0-\u10FF])ხედართმთავარი(?![\u10A0-\u10FF])/g, 'მხედართმთავარი');
+
     // (No auto-fix for "ეს არის X" — it is grammatical emphatic Georgian; QA rule 3.33 flags it for review only.)
 
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.6.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.6.1';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 27,
-    qaRules: 30,
-    autoFixes: 21,
-    researchSources: 52
+    promptBlocks: 28,
+    qaRules: 39,
+    autoFixes: 27,
+    researchSources: 53
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
