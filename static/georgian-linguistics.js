@@ -21,6 +21,14 @@
 // meanings, Series I/II aspect rule, EN→preverb mapping, narrative prose
 // features, plural rules). QA rule 3.30 (tha_redundant: *ჩვენთაგან →
 // ჩვენგან per Proton rule), auto-fix 4.21.
+// v1.6.0 expansion (deep web research): KA_CASE_SYSTEM (Series I/II/III
+// alignment + inversion), KA_NEGATION (არ/არა/ვერ/ნუ), KA_CONJUNCTIONS,
+// KA_VOICE (active preference, passive/causative), KA_RELATIVES (რომელიც
+// declension, participial preference), KA_SPEECH_VERBS (speech/mental/
+// perception verb grid, დაიწყო/შეძლო/ხოლმე frames), KA_COLLOCATIONS,
+// KA_TIME_EXPR, KA_IMPERSONAL (weather/experiencer dative frames),
+// KA_NUMERALS (vigesimal system), KA_PARTICLES (კი, -ც, არც, ხომ, თუ...),
+// KA_FALSE_FRIENDS (Russian-era loanword traps), KA_INTERJECTIONS.
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -404,18 +412,225 @@ EN→KA DECISION TABLE — INPUT FEATURE → OUTPUT RULE (apply in order):
 19. English "the + noun" — Georgian has no article: drop it entirely.
 20. English "one" as pronoun → ის / generic pro-drop: "one never knows" → არავინ იცის / ვერავინ იცის.`;
 
+// 1k2. Screeve-series × case system (v1.6.0 research).
+const KA_CASE_SYSTEM = `
+SCREEVE SERIES × CASE SYSTEM (critical, obey exactly):
+• Series I (present/future): transitive subject NOM, object DAT. კაცი კითხულობს წიგნს.
+• Series II (aorist): transitive subject ERG -ma, object NOM. კაცმა წაიკითხა წიგნი.
+  Intransitive (Class 1/2) subject stays NOM in ALL series: კაცი წავიდა (never *კაცმა წავიდა for intransitive).
+• Series III (perfect/pluperfect/evidential): INVERSION — subject DAT, object NOM.
+  კაცს წაუკითხავს წიგნი. "The man has read the book."
+• Same lexical verb changes alignment across series — check the screeve FIRST, then assign cases.
+• v-set = subject agreement in Series I/II (ვ-, ხ-, -ს, -თ, -ენ). In Series III the v-set marks the OBJECT
+  and the m-set (მ-, გ-, უ-, -ს) marks the subject/experiencer: მიყვარს (I love [it]), უყვარს (he loves).
+• Series III habitual/evidential forms: წასულა, მოსულა, ნახავს, უთქვამს, გაუკეთებია.
+  Subject goes DATIVE: მას წასულა (NOT *ის წასულა).
+• "Have" is inversion-based in all tenses: მას აქვს (he has), მას ჰქონდა (he had), მას ექნება (he will have).
+  Possessed thing is NOM: მას აქვს წიგნი.`;
+
+// 1k3. Negation system (v1.6.0 research).
+const KA_NEGATION = `
+GEORGIAN NEGATION — FOUR MARKERS, NEVER MIXED UP:
+• არ = standard declarative negation (present/future/imperfect): არ ვიცი, არ მოვა.
+• არა = standalone "no" (answer word), or negates non-verb words: არა, ეს არასწორია.
+• ვერ = "cannot / fails to" (ability/achievement failure): ვერ ვიპოვე "I couldn't find it", ვერ მოვა "he won't make it".
+• ნუ = prohibitive (negative imperative ONLY): ნუ მიდის, ნუ აკეთებ this. NEVER არ for commands.
+• One negator per clause. Double negation (არ...ვერ / არავინ...არაფერი არ) is UNGRAMMATICAL.
+• Negative pronouns already carry negation: არავინ "nobody", არაფერი "nothing", არასდროს "never".
+  With a verb they take არ once: არავინ არ მოვიდა is wrong; native: არავინ არ მოსულა → prefer არავინ მოსულა (pro-drop negation) or single არ.
+• ვერ + aorist = failed attempt: ვერ გავაკეთე "I failed to do it". არ + aorist = didn't do it (choice/not).
+• ნუთუ = rhetorical "surely not / don't tell me": ნუთუ არ იცი? "Don't you know?"`;
+
+// 1k4. Conjunction & connector system (v1.6.0 research).
+const KA_CONJUNCTIONS = `
+GEORGIAN CONJUNCTIONS — USE THE NATIVE CONNECTOR, NOT ENGLISH CALQUES:
+• და "and" — no comma before it joining clauses.
+• მაგრამ "but" — comma BEFORE it. თუმცა "although/however" — comma BEFORE it, slightly more formal.
+• ხოლო "whereas/while" — contrast between parallel facts, literary.
+• რადგან "because" — comma BEFORE it. ვინაიდან "since/seeing that" — formal/literary because.
+• თუ "if" — NO comma before it in conditionals (unlike English "if" clauses): თუ მოვა, ვნახავთ.
+• ან...ან "either...or", არც...არც "neither...nor".
+• არამედ "but rather" — after a negation: არა მხოლოდ X, არამედ Y.
+• შემდეგ "then/after" — sequence, not a true conjunction; prefer და-chaining in narration.
+• კი — focus particle "as for / indeed", placed AFTER the focused word: ეს კი მართალია.
+• -ც "too/even" — enclitic on the focused word: მეც "me too", აფხაზებმაც "even the Abkhaz".
+• არც ერთი "not a single one".
+• Literary narration prefers და-chaining and participles over stacked რომელიც/რადგან chains.`;
+
+// 1k5. Voice: passive & causative preference (v1.6.0 research).
+const KA_VOICE = `
+VOICE — GEORGIAN PREFERS ACTIVE; USE PASSIVE ONLY WHEN AGENT IS UNKNOWN/IRRELEVANT:
+• Passive -დ- infix (Series I): იწერება "is being written", გაკეთდება "will get done".
+• Passive perfect: დაწერილია "has been written" (Series III, agent usually omitted).
+• -ება/-ობა masdar passive nouns: წერა/კეთება.
+• English "The book was written by X" → native Georgian: X-მა წიგნი დაწერა (ACTIVE aorist) unless X is unknown.
+• "It is said that..." → ამბობენ, რომ... / თქვან, რომ... (impersonal plural) — NOT a passive calque.
+• "get + V-ed" (adversative) → გაურბენია? No: use დაემართა / -დ- passive: დაიჭრა "got wounded".
+• Causative -ებინებს/-ინებს: აკეთებინებს "makes [someone] do". Use when English says "had/made someone do X".
+• Impersonal constructions are native for weather/feelings: წვიმს, ცივა, მშია, მსურს, მიყვარს, მეშინია.`;
+
+// 1k6. Relative clauses & complementizers (v1.6.0 research).
+const KA_RELATIVES = `
+RELATIVE CLAUSES & COMPLEMENTIZERS:
+• რომელიც = declinable relative pronoun "which/who" — takes case of its role in the relative clause:
+  წიგნი, რომელიც წავიკითხე (which I read — NOM object of Series I), კაცი, რომელმაც დაწერა (who wrote — ERG),
+  სახლი, რომელშიც ცხოვრობს (in which he lives — postposition inside).
+• რომ = universal complementizer "that" after mental/speech verbs: ვფიქრობ, რომ... / თქვა, რომ...
+• NO comma before რომ after იმედი მაქვს / ვფიქრობ / ვიცი in modern prose.
+• Participial modification (გაშენებული ქალაქი, დაწერილი წიგნი) is MORE literary than რომელიც chains.
+  Prefer a participle when the relative clause is short and adjectival.
+• რომელიც agrees in case, NOT in number: წიგნები, რომლებიც... (plural -ებ- inside რომელიც).
+• Indirect questions keep statement order: მკითხა, სად მივდიოდი (NOT *სადაც მივდიოდი მკითხა).`;
+
+// 1k7. Speech & mental verb grid (v1.6.0 research).
+const KA_SPEECH_VERBS = `
+SPEECH & MENTAL VERBS — PICK THE EXACT NATIVE VERB:
+• თქვა "said (words)" vs უთხრა "said TO someone" vs მითხრა "said to ME".
+  "He said to her" → უთხრა მას. "He said that..." → თქვა, რომ...
+• წამოიწყო "began to speak", ახსენა "mentioned", დაამატა "added", გაიძახოდა/გაიძახა "shouted",
+  ჩაიჩურჩულა "whispered/muttered", ღრმად ამოისუნთქა "sighed deeply".
+• Mental: იფიქრა "thought (momentary)", ფიქრობდა "was thinking (continuous)", დაფიქრდა "pondered",
+  მიხვდა "realized", გაუგია "has heard/learned (evidential)", იცოდა "knew (imperfect)", იცის "knows (present)",
+  გაუკვირდა "was surprised (experiencer dative)", უნდოდა "wanted (imperfect)", შეეძლო "could (aorist)".
+• Perception: დაინახა "saw (aorist)", ხედავს "sees", მოესმა "heard (aorist)", მოესმოდა "could be heard",
+  იგრძნო "felt", შეამჩნია "noticed", დააკვირდა "observed/watched".
+• Experiencer-subject verbs take DATIVE subject in ALL series: მას სურდა, მას უყვარდა, მას ახსოვდა.
+• "began to V" → დაიწყო + masdar: დაიწყო სიარული / დაიწყო ლაპარაკი.
+• "managed to V" → შეძლო / მოახერხა + masdar: მოახერხა გაქცევა.
+• "used to V" → ხოლმე + imperfect: ხოლმე დადიოდა "used to go".`;
+
+// 1k8. Collocations & natural pairs (v1.6.0 research).
+const KA_COLLOCATIONS = `
+NATURAL COLLOCATIONS — USE THESE PAIRS, NOT WORD-BY-WORD CALQUES:
+• ღრმა სუნთქვა "deep breath", აიღო ღრმა ამოსუნთქვა → prefer ღრმად ამოისუნთქა.
+• ცივი ოფლი "cold sweat": ცივმა ოფლმა დაასხა.
+• მძიმე სიჩუმე "heavy silence": დადგა მძიმე სიჩუმე.
+• გული გაუცივდა "his heart went cold", სისხლი გაუყინა "blood froze".
+• თვალები დაახამა "narrowed his eyes", თვალები გაუფართოვდა "eyes widened".
+• ხელი აიღო "raised his hand", თავი დაქანა "tilted his head", მხრები აიჩეჩა "shrugged".
+• ნელ-ნელა მიუახლოვდა "slowly approached", უკან დაიხია "stepped back".
+• გული ეცა "heart sank", სული აერია "got scared/out of breath".
+• პირი გაუღიმა "smile spread", აცინა "made laugh".
+• Time-of-day frame: დილას ადრე "early in the morning", საღამოს მიდამოებში "toward evening".
+• ერთხელ "once (upon a time)", ერთ დღეს "one day" — narrative openers.`;
+
+// 1k9. Time & aspect adverbials (v1.6.0 research).
+const KA_TIME_EXPR = `
+TIME EXPRESSIONS — NATIVE FORMS FOR ENGLISH TEMPORAL PHRASES:
+• "in the morning" → დილას (NOT *დილაში). "in the evening" → საღამოს. "at night" → ღამით.
+• "yesterday" → გუშინ. "today" → დღეს. "tomorrow" → ხვალ. "the day after tomorrow" → ეჭამადში.
+• "two hours later" → ორი საათის შემდეგ. "after a while" → ცოტა ხნის შემდეგ.
+• "for a long time" → დიდხანს / დიდ ხნის განმავლობაში. "shortly" → მალე.
+• "since X" → X-დან. "until X" → X-მდე. "by X" → X-ისთვის.
+• "every day" → ყოველდღიურად / ყოველ დღე. "once a week" → კვირაში ერთხელ.
+• "long ago" → დიდი ხნის წინ. "recently" → ბოლო ხანში / ახლახანს.
+• "just (now)" → ახლახანს / ამ წამს. "immediately" → დაუყოვნებლივ / მაშინვე.
+• Narrative openers: ერთ დღეს, ერთხელ, ერთ საღამოს, მაშინ, იმ დროს.
+• "while V-ing" → -დე/-რე აწმყო მიმდინარე: მიდიოდა რაც ლაპარაკობდა → prefer მიდოდა და ლაპარაკობდა (და-chaining).`;
+
+// 1k10. Impersonal & experiential frames (v1.6.0 research).
+const KA_IMPERSONAL = `
+IMPERSONAL & EXPERIENCER FRAMES — NO ENGLISH SUBJECT CALQUES:
+• Weather: წვიმს "it's raining", თოვს "it's snowing", ქარია "it's windy", მზიანია "it's sunny".
+• Temperature/feeling: ცივა "is cold (to me)", მშია "I'm hungry", მწყურია "I'm thirsty", მძინავს "I'm sleepy".
+• Likes/preferences: მომწონს "I like (it)", მიყვარს "I love", მსურს "I want", მინდა "I want (casual)".
+• Fear/worry: მეშინია "I'm afraid", მეშინია, რომ... / მეშინია X-ის (genitive object).
+• "It seems" → ჩანს / როგორც ჩანს. "I think" → მგონია / ვფიქრობ. "Apparently" → თურმე.
+• "I wonder" → გასაკვირია / ვგონებ...; rhetorical: ნუთუ...?
+• "It is necessary" → საჭიროა / უნდა. "It is possible" → შეიძლება.
+• Experiencer is DATIVE, stimulus is NOM: მას ცივა, მას მოსწონს ეს ფილმი.
+• "It happened that..." → მოხდა ისე, რომ...; "it turned out" → აღმოჩნდა, რომ...
+• English dummy subjects ("it is", "there is") → NO dummy: წიგნი მაგიდაზეა (the book is on the table).`;
+
+// 1k11. Numerals & quantity (v1.6.0 research).
+const KA_NUMERALS = `
+GEORGIAN NUMERALS — VIGESIMAL SYSTEM (base-20):
+• 1-10: ერთი, ორი, სამი, ოთხი, ხუთი, ექვსი, შვიდი, რვა, ცხრა, ათი.
+• 20 = ოცი. 40 = ორმოცი (2×20). 60 = სამოცი (3×20). 80 = ოთხმოცი (4×20). 100 = ასი.
+• 21 = ოცდაერთი, 35 = ოცდათხუთმეტი, 47 = ორმოცდაშვიდი, 63 = სამოცდასამი, 99 = ოთხმოცდაცხრამეტი.
+  Pattern: [base]და[units] — და is the linker INSIDE compound numerals.
+• 11-19: თერთმეტი, თორმეტი, ცამეტი, თოთხმეტი, თხუთმეტი, თექვსმეტი, ჩვიდმეტი, თვრამეტი, ცხრამეტი.
+• Ordinals: პირველი, მეორე, მესამე, მეოთხე... (მე- prefix from 4th on).
+• Fractions: ნახევარი "half", მეოთხედი "quarter".
+• Distributive: ორ-ორი "two each", სამ-სამი "three each".
+• "once" → ერთხელ, "twice" → ორჯერ (-ჯერ for times).
+• After numerals 2+, noun is SINGULAR: ოცი კაცი (NOT *ოცი კაცები).`;
+
+// 1k12. Particles & focus (v1.6.0 research).
+const KA_PARTICLES = `
+FOCUS & MODAL PARTICLES — SMALL WORDS, BIG MEANING:
+• კი — "as for / indeed / but (contrastive focus)": ეს კი სწორია. Placed AFTER focused word.
+• -ც — "too/also/even": მეც, ისიც, ბავშვებმაც. Attaches directly to the word.
+• არც — "not even / neither": არც კი იცის "he doesn't even know".
+• თუ — conditional "if" AND question particle in yes/no questions: მოხვალ თუ? (colloquial).
+• ხომ — "right? / you know" (seeking agreement): ხომ იცი? "You do know, right?"
+• განა — rhetorical question marker "surely not...?": განა არ იცი?
+• ვითარებ / ვით — "as if / seemingly" (literary).
+• თურმე — hearsay "apparently/they say" (pairs with perfect screeve).
+• მგონია / მგონი — "I guess / I think".
+• ალბათ — "probably". რა თქმა უნდა — "of course". რასაკვირვალა — "naturally".
+• ჯერ — "yet/still/first": ჯერ არ მოსულა. კვლავ / ისევ — "again/still" (კვლავ literary).`;
+
+// 1k13. False friends & calque traps (v1.6.0 research).
+const KA_FALSE_FRIENDS = `
+FALSE FRIENDS — RUSSIAN-ERA LOANWORDS THAT DO NOT MEAN WHAT ENGLISH SUGGESTS:
+• მიტინგი ≠ "meeting" (appointment). It means "protest rally". Appointment → შეხვედრა.
+• აქტუალური ≠ "actual". It means "topical/relevant". Actual → რეალური / სინამდვილეში არსებული.
+• სიმპათიური ≠ "sympathetic (compassionate)". It means "cute/pretty". Compassionate → თანამგრძნობი.
+• ანეკდოტი ≠ "anecdote (short story)". It means "joke". Anecdote → შემთხვევა / ამბავი.
+• ფაბრიკა ≠ "fabric". It means "factory". Fabric → ქსოვილი / ტკაცა.
+• ბალონი ≠ "balloon". It means "tire". Balloon → ბუშტი.
+• ბლანკი ≠ "blank (empty)". It means "form (document)". Blank → ცარიელი.
+• კაბინეტი ≠ "cabinet (furniture/cupboard)". It means "office/study room". Cupboard → კარადა.
+• ნოველა ≠ "novel (long fiction)". It means "novella/short story". Novel → რომანი.
+• სპექტაკლი ≠ "spectacle". It means "theater play". Spectacle → სანახაობა.
+• ინტელიგენტი ≠ "intelligent (smart)". It means "intellectual (social class)". Smart → ჭკვიანი.
+• პრეზერვატივი ≠ "preservative". It means "condom" — NEVER use it for food preservation. Preservative → კონსერვანტი.
+• Verb calque traps: realize → მიხვდა (NOT *რეალიზება for "understand"), decide → გადაწყვიტა,
+  become → გახდა/იქცა, achieve → მიაღწია, challenge → გამოწვევა, support → მხარდაჭერა.
+• When unsure, prefer the native Georgian word over the loanword in literary prose.`;
+
+// 1k14. Interjections & emotional register (v1.6.0 research).
+const KA_INTERJECTIONS = `
+INTERJECTIONS & EMOTIONAL EXPRESSIONS — NATIVE VOICE FOR DIALOGUE:
+• Surprise: ვაჰ! აჰ! ოჰ! რა-ა?! კაი საქმეა! (casual "well well").
+• Pain/distress: აუ! ვაი! ვაიმე! აფსუს! (alas/too bad).
+• Admiration: ვაშა! ურა! ყოჩაღ! (bravo/well done), ბიჭოს! (wow, colloquial).
+• Gratitude/blessing: ბარაქალა! (well done/bless you), ღმერთმანი! (God bless — invocation),
+  ღმერთმა დაგიფაროს! "May God protect you".
+• Affection: ჩემმა მზემ! "my sun!", გენაცვალე! "may I die for you (dear)", გეთაყვა "please/dear",
+  დედაშვილობამ! "by my motherhood!" (oath of sincerity).
+• Frustration: აფსუს! ვაი შენს თავს! "woe to you!", ღმერთო! "O God!".
+• Hesitation: ა... ე... (um/er), კაი... (well...).
+• Dialogue register: these are ESSENTIAL for natural dialogue; never leave English "Oh!/Wow!/Alas!"
+  untranslated or calqued — pick the matching Georgian interjection.
+• Oaths: დედის ტომბაზე! "on my mother's grave!", სიკვდილამდე! "until death!".`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
-// Full knowledge base for draft translation (11 blocks, richer v1.3.0 set).
+// Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
     return [
         KA_MORPHOLOGY,
         KA_VERBS,
         KA_SYNTAX,
+        KA_CASE_SYSTEM,
+        KA_NEGATION,
+        KA_CONJUNCTIONS,
+        KA_VOICE,
+        KA_RELATIVES,
+        KA_SPEECH_VERBS,
         KA_EVIDENTIALITY,
         KA_POLITENESS,
         KA_IDIOMS,
         KA_PUNCTUATION,
         KA_WORDBANK,
+        KA_COLLOCATIONS,
+        KA_TIME_EXPR,
+        KA_IMPERSONAL,
+        KA_NUMERALS,
+        KA_PARTICLES,
+        KA_FALSE_FRIENDS,
+        KA_INTERJECTIONS,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -426,7 +641,7 @@ function getKaKnowledgeBase() {
 
 // Compact rule set for refinement stages (targeted, smaller).
 function getKaCompactRules() {
-    return [KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS].join('\n');
+    return [KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
 }
 
 // Focused set for QA repair passes (small, defect-driven).
@@ -663,6 +878,45 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'tha_redundant', message: `Redundant -თა- infix: ${thaRedundant.join(', ')} — drop it (ჩვენგან not ჩვენთაგან; თან forms like ჩვენთან stay unchanged).` });
     }
 
+    // ── v1.6.0 additions: series alignment, არის overuse, false friends ──
+
+    // 3.31 Inverted subject in aorist: ერგატივი + პერფექტი (Series III) marker.
+    //      ERG subject -მა + perfect screeve marker (ულა/ავს→no; heuristic -ულა/-ია endings
+    //      on the following verb) — Series III takes DAT subject, not -მა.
+    const ergPerfectRe2 = /([ა-ჰ]+)მა\s+([ა-ჰ]+(ულა|ია|ავს|ებია|ოდა))(?![\u10A0-\u10FF])/g;
+    let m12;
+    while ((m12 = ergPerfectRe2.exec(text)) !== null) {
+        issues.push({ rule: 'erg_perfect', message: `Ergative subject with perfect screeve: "${m12[0]}" — Series III inverts: subject goes DATIVE (მას ... წასულა), drop -მა.` });
+    }
+
+    // 3.32 არის overuse: more than 2 "არის" per 100 chars — native prose drops
+    //      copula or uses -ა/-აა endings (დღეს მშვიდობაა, ეს კარგია) or inversion frames.
+    const arisMatches = text.match(/(?<![\u10A0-\u10FF])არის(?![\u10A0-\u10FF])/g) || [];
+    if (text.length > 200 && arisMatches.length > 2 && (arisMatches.length * 100) / text.length > 1.2) {
+        issues.push({ rule: 'aris_overuse', message: `არიس used ${arisMatches.length}x — native prose prefers copula drop / -ა ending (ეს კარგია, დღეს მშვიდობაა) or inversion frames (მას აქვს).` });
+    }
+
+    // 3.33 English "is/are" calque: "ეს არის X" for a simple identification —
+    //      native: ეს X-ა/-აა. (არის is fine in definitions/emphasis.)
+    if (/(?<![\u10A0-\u10FF])ეს არის(?![\u10A0-\u10FF])/g.test(text)) {
+        issues.push({ rule: 'es_aris_calque', message: '"ეს არის X" calque — for simple identification native prose prefers ეს X-ა/-აა (ეს კარგია).' });
+    }
+
+    // 3.34 False friend პრეზერვატივი used for "preservative/conservative" — serious register error.
+    if (/(?<![\u10A0-\u10FF])პრეზერვატივი(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'false_friend_preservative', message: 'პრეზერვატივი means "condom" in Georgian — for preservative use კონსერვანტი, for conservative use კონსერვატიული.' });
+    }
+
+    // 3.35 False friend მიტინიგი used for "meeting" (appointment) — it means protest rally.
+    if (/(?<![\u10A0-\u10FF])მიტინგი(?![\u10A0-\u10FF])/.test(text) && /შეხვედრ|სამიტინგი/.test(text) === false) {
+        issues.push({ rule: 'false_friend_meeting', message: 'მიტინიგი means "protest rally" — for a meeting/appointment use შეხვედრა.' });
+    }
+
+    // 3.36 False friend აქტუალური used for "actual" — it means topical/relevant.
+    if (/(?<![\u10A0-\u10FF])აქტუალური(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'false_friend_actual', message: 'აქტუალური means "topical/relevant" — for "actual" use რეალური / სინამდვილეში არსებული.' });
+    }
+
     return issues;
 }
 
@@ -765,16 +1019,29 @@ function correctGeorgianMorphology(text) {
         '$1$2'
     );
 
+    // ── v1.6.0 additions ──
+
+    // 4.22 False friend პრეზერვატივი → კონსერვანტი (preservative context)
+    out = out.replace(/(?<![\u10A0-\u10FF])პრეზერვატივი(?![\u10A0-\u10FF])/g, 'კონსერვანტი');
+
+    // 4.23 False friend მიტინიგი → შეხვედრა (appointment/meeting, not protest rally)
+    out = out.replace(/(?<![\u10A0-\u10FF])მიტინიგი(?![\u10A0-\u10FF])/g, 'შეხვედრა');
+
+    // 4.24 False friend აქტუალური → რეალური ("actual", not "topical")
+    out = out.replace(/(?<![\u10A0-\u10FF])აქტუალური(?![\u10A0-\u10FF])/g, 'რეალური');
+
+    // (No auto-fix for "ეს არის X" — it is grammatical emphatic Georgian; QA rule 3.33 flags it for review only.)
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.5.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.6.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 13,
+    promptBlocks: 27,
     qaRules: 30,
     autoFixes: 21,
-    researchSources: 44
+    researchSources: 52
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
