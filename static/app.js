@@ -198,9 +198,9 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
 // ── Groq + Mistral provider chain ───────────────────────────────────────────
 // Two more free AI tiers between Gemini and OpenRouter. Both are
 // OpenAI-compatible JSON endpoints callable straight from the browser:
-//   • Groq  — CORS-enabled (confirmed). llama-3.1-8b-instant alone allows
-//     ~500K tokens/DAY and 14.4K requests/day free — enough to carry an
-//     entire whole-book run by itself when Gemini's quota runs dry.
+//   • Groq  — CORS-enabled (confirmed). The free tier allows ~500K tokens/DAY
+//     and 14.4K requests/day — enough to carry an entire whole-book run by
+//     itself when Gemini's quota runs dry.
 //   • Mistral — free Experiment plan (~1B tokens/month), but its CORS
 //     headers are inconsistent for direct browser calls, so failures are
 //     detected at runtime and the provider is parked briefly instead of
@@ -209,7 +209,11 @@ let groqApiKey = localStorage.getItem('groqApiKey') || '';
 let mistralApiKey = localStorage.getItem('mistralApiKey') || '';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+// Groq retired its llama-3.x models; these are the current production
+// catalog entries (verified live: /models 200 + chat completions 200 with
+// JSON mode). All are reasoning-capable, so we send reasoning_effort:'low'
+// to keep reasoning tokens from eating the translation output budget.
+const GROQ_MODELS = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
 const GROQ_MODEL_COOLDOWN_MS = 60_000;
 const groqModelCooldown = {}; // model -> earliest ms it may be retried
 
@@ -258,6 +262,10 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
                     messages: [{ role: 'user', content: prompt }],
                     temperature,
                     max_tokens: maxTokens,
+                    // Both Groq catalog models are reasoning models — keep
+                    // reasoning minimal so the output budget stays available
+                    // for the actual translation JSON.
+                    reasoning_effort: 'low',
                     response_format: { type: 'json_object' },
                 }),
             });
@@ -322,6 +330,39 @@ async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192 } =
         }
     }
     return result;
+}
+
+// Shared save-time probe for OpenAI-compatible providers. Tries every model
+// in the provider's catalog before declaring failure — this way a single
+// retired/renamed model (e.g. Groq removing llama-3.x) can never make a
+// perfectly valid key report as broken.
+async function probeOpenAICompatibleKey(url, apiKey, models) {
+    let lastStatus = 0;
+    for (const model of models) {
+        try {
+            const r = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model,
+                    messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                    max_tokens: 8,
+                }),
+            });
+            if (r.ok) return { ok: true, status: r.status };
+            lastStatus = r.status;
+            // 401/403 means the key itself is bad — no point trying other models.
+            if (r.status === 401 || r.status === 403) return { ok: false, status: r.status };
+            // 404 = model not found (retired/renamed) — try the next model.
+            // 429/5xx = temporary — the chain retries automatically later.
+        } catch (e) {
+            return { ok: false, status: 0 }; // network/CORS error — stop immediately
+        }
+    }
+    return { ok: false, status: lastStatus };
 }
 
 // ── Georgian Unicode & Advanced Linguistic Normalization ───────────────────
@@ -1073,49 +1114,26 @@ function saveGeminiSettings() {
 
     if (groqKey) {
         // Probe Groq right away: bad keys must surface at save time, not
-        // silently degrade a 2-hour batch translation.
-        fetch(GROQ_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${groqKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: GROQ_MODELS[0],
-                messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
-                max_tokens: 8,
-            }),
-        }).then(r => {
-            if (r.ok) alert('Groq API key verified — free-tier fallback engine is active.');
-            else if (r.status === 401 || r.status === 403) alert('Groq key saved, but it was rejected (status ' + r.status + ').\nCheck the key at console.groq.com/keys.');
-            else if (r.status === 429) alert('Groq key saved and valid, but the model is rate-limited right now (429).\nThe chain will retry automatically.');
-            else alert('Groq key saved, but the probe returned status ' + r.status + '.');
-        }).catch(() => {
-            alert('Groq key saved, but could not reach api.groq.com (network error).');
+        // silently degrade a 2-hour batch translation. The probe walks the
+        // whole model catalog, so a retired model can't fail a valid key.
+        probeOpenAICompatibleKey(GROQ_API_URL, groqKey, GROQ_MODELS).then(res => {
+            if (res.ok) alert('Groq API key verified — free-tier fallback engine is active.');
+            else if (res.status === 401 || res.status === 403) alert('Groq key saved, but it was rejected (status ' + res.status + ').\nCheck the key at console.groq.com/keys.');
+            else if (res.status === 429) alert('Groq key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
+            else if (res.status === 0) alert('Groq key saved, but could not reach api.groq.com (network error).');
+            else alert('Groq key saved, but the probe returned status ' + res.status + '.');
         });
     }
     if (mistralKey) {
         // Same save-time probe for Mistral. A CORS-style network failure is
         // reported distinctly so the user knows the key may still work
         // in non-browser contexts but not from this page.
-        fetch(MISTRAL_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${mistralKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: MISTRAL_MODELS[0],
-                messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
-                max_tokens: 8,
-            }),
-        }).then(r => {
-            if (r.ok) alert('Mistral API key verified — free-tier fallback engine is active.');
-            else if (r.status === 401 || r.status === 403) alert('Mistral key saved, but it was rejected (status ' + r.status + ').\nCheck the key at console.mistral.ai.');
-            else if (r.status === 429) alert('Mistral key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
-            else alert('Mistral key saved, but the probe returned status ' + r.status + '.');
-        }).catch(() => {
-            alert('Mistral key saved, but the browser could not reach api.mistral.ai.\nThis is usually a CORS restriction — Mistral will be skipped automatically and the chain continues with the other providers.');
+        probeOpenAICompatibleKey(MISTRAL_API_URL, mistralKey, MISTRAL_MODELS).then(res => {
+            if (res.ok) alert('Mistral API key verified — free-tier fallback engine is active.');
+            else if (res.status === 401 || res.status === 403) alert('Mistral key saved, but it was rejected (status ' + res.status + ').\nCheck the key at console.mistral.ai.');
+            else if (res.status === 429) alert('Mistral key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
+            else if (res.status === 0) alert('Mistral key saved, but the browser could not reach api.mistral.ai.\nThis is usually a CORS restriction — Mistral will be skipped automatically and the chain continues with the other providers.');
+            else alert('Mistral key saved, but the probe returned status ' + res.status + '.');
         });
     }
 
@@ -2729,32 +2747,10 @@ async function probeAiKeyStatus() {
             }).then(r => { results.gemini = r.ok; }).catch(() => { results.gemini = false; }));
         }
         if (groqApiKey) {
-            tasks.push(fetch(GROQ_API_URL, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${groqApiKey}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    model: GROQ_MODELS[0],
-                    messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
-                    max_tokens: 8,
-                }),
-            }).then(r => { results.groq = r.ok; }).catch(() => { results.groq = false; }));
+            tasks.push(probeOpenAICompatibleKey(GROQ_API_URL, groqApiKey, GROQ_MODELS).then(res => { results.groq = res.ok; }));
         }
         if (mistralApiKey) {
-            tasks.push(fetch(MISTRAL_API_URL, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${mistralApiKey}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    model: MISTRAL_MODELS[0],
-                    messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
-                    max_tokens: 8,
-                }),
-            }).then(r => { results.mistral = r.ok; }).catch(() => { results.mistral = false; }));
+            tasks.push(probeOpenAICompatibleKey(MISTRAL_API_URL, mistralApiKey, MISTRAL_MODELS).then(res => { results.mistral = res.ok; }));
         }
         if (openRouterApiKey) {
             tasks.push(fetch(OPENROUTER_API_URL, {
