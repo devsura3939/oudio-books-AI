@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.3.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.4.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -276,6 +276,60 @@ WHAT NEVER APPEARS IN GEORGIAN TEXT:
 • Apostrophes ' → Georgian has no apostrophes in native words (only in transliterated foreign names).
 • Capital letters → Georgian Mkhedruli has none.`;
 
+// 1l. High-frequency word bank + style-guide vocabulary rules (v1.4.0).
+// Sources: commonlyusedwords.com 2000-most-common-georgian-words,
+// 1000mostcommonwords.com, Microsoft Georgian Style Guide, Proton Guidance.
+const KA_WORDBANK = `
+GEORGIAN WORD BANK — HIGH-FREQUENCY VOCABULARY (prefer these in translations):
+
+CORE CONNECTORS (use these exact forms):
+• and=და  or=ან  but=მაგრამ  though/however=თუმცა  because=რადგან  since=რადგან
+• if=თუ  when=როდესაც  while=ხოლო  until=სანამ  before=ადრე/წინ  after=შემდეგ
+• also=ასევე  so=ასე რომ  never=არასდროს  always=ყველაფთვის  already=უკვე
+• very=ძალიან  again=კიდევ ერთხელ  only=მხოლოდ  just=უბრალოდ  now=ახლა
+• suddenly=მოულოდნელად  finally=საბოლოოდ  slowly=ნელა  quickly=სწრაფად
+
+PRONOUNS & DETERMINERS:
+• I=მე  you=შენ/თქვეน(formal)  he/she=ის  we=ჩვენ  they=ისინი
+• my=ჩემი  your=შენი/თქვენი  his/her=მისი  our=ჩვენი  their=მათი
+• this=ეს  that=ის  these=ესენი  those=იმ  who=ვინ  what=რა  where=სადაც
+• all=ყველა  every=ყველა  some=ზოგიერთი  any=ნებისმიერი  nothing=არაფერი
+• someone=ვინმე  something=რაღაც  everything=ყველაფერი  each=თითოეული
+
+TOP VERBS (infinitive/nominal form; conjugate per KA_VERBS):
+• be=ყოფნა/არის  have=აქვს  do=კეთება  say=თქმა  go=წასვლა  come=მოსვლა
+• see=ნახვა  know=ცოდნა  think=ფიქრი  want=გინდოდეს/უნდა  take=აღება
+• give=მიცემა  make=გაკეთება  find=პოვნა  ask=თხოვნა  feel=გრძნობა
+• love=სიყვარული/მიყვარს  help=შველა  speak=ლაპარაკი  read=წაკითხვა
+• write=წერა  eat=ჭამა  drink=დალევა  sleep=ძილი  die=სიკვდილი  kill=მოკვლა
+• run=გაქცევა  walk=ფეხით  sit=დაჯდომა  stand=დგომა  laugh=სიცილი  cry=ტირილი
+• open=გახსნა  close=ჩაკეტვა  lose=დაკარგვა  wait=ლოდინი  return=დაბრუნება
+
+COMMON NOUNS:
+• man=კაცი  woman=ქალი  child=ბავშვი  friend=მეგობარი  father=მამა  mother=დედა
+• brother=ძმა  sister=და  wife=ცოლი  husband=მეუღლე  son=შვილი  daughter=ქალიშვილი
+• house=სახლი  door=კარი  room=ოთახი  table=მაგიდა  chair=სკამი  bed=საწოლი
+• day=დღე  night=ღამე  morning=დილა  evening=საღამო  year=წელი  week=კვირა
+• time=დრო  hour=საათი  minute=წუთი  water=წყალი  fire=ცეცხლი  book=წიგნი
+• heart=გული  eye=თვალი  hand=ხელი  head=თავი  mouth=პირი  street=ქუჩა
+
+COMMON ADJECTIVES:
+• good=კარგი  bad=ცუდი  big=დიდი  small=პატარა  new=ახალი  old=ძველი
+• long=ხანგრძლივი  short=მოკლე  high=მაღალი  low=დაბალი  deep=ღრმა
+• beautiful=ლამაზი  happy=ბედნიერი  strong=ძლიერი  cold=ცივი  hot=ცხელი
+
+STYLE-GUIDE VOCABULARY RULES (Microsoft Georgian Style Guide — prefer the plainer word):
+• აღემატება (formal "exceeds") → მეტია in everyday prose.
+• მომდევნო (formal "following") → შემდეგი.
+• დამატებით (formal "additionally") → ასევე.
+• Prefer the everyday word over the bureaucratic/churchy register in narrative prose.
+• Decimal separator in Georgian is a COMMA: 3,14 — never the English 3.14.
+
+PRONOUN + POSTPOSITION RULES (Proton Guidance):
+• Personal pronoun + postposition → DROP the -ს: ჩემკენ (NOT *ჩემსკენ), შენგან, მასთან.
+• Possessive pronoun + noun → -s REQUIRED on the pronoun: ჩემს მეგობარს, ჩემს სახლს.
+• When მე is used with another personal pronoun, მე comes first: მე და შენ.`;
+
 // 1j. EN→KA decision table: input feature → output rule (v1.2.0).
 const KA_DECISION_TABLE = `
 EN→KA DECISION TABLE — INPUT FEATURE → OUTPUT RULE (apply in order):
@@ -311,6 +365,7 @@ function getKaKnowledgeBase() {
         KA_POLITENESS,
         KA_IDIOMS,
         KA_PUNCTUATION,
+        KA_WORDBANK,
         KA_DEFECTS,
         KA_REGISTER,
         KA_DECISION_TABLE,
@@ -320,12 +375,12 @@ function getKaKnowledgeBase() {
 
 // Compact rule set for refinement stages (targeted, smaller).
 function getKaCompactRules() {
-    return [KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION].join('\n');
+    return [KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK].join('\n');
 }
 
 // Focused set for QA repair passes (small, defect-driven).
 function getKaRepairRules() {
-    return [KA_DEFECTS, KA_EVIDENTIALITY, KA_POLITENESS, KA_PUNCTUATION].join('\n');
+    return [KA_DEFECTS, KA_EVIDENTIALITY, KA_POLITENESS, KA_PUNCTUATION, KA_WORDBANK].join('\n');
 }
 
 // ── 3. MORPHOLOGICAL QA VALIDATOR ───────────────────────────────────────────
@@ -537,6 +592,19 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'space_before_punct', message: 'Space before punctuation mark — remove the space (word। not word ।).' });
     }
 
+    // 3.28 Personal pronoun + postposition with incorrect -s (Proton rule v1.4.0)
+    // Personal pronouns (მე/შენ/ის/ჩვენ/ისინი) fused with postpositions should NOT
+    // carry the dative -ს marker. e.g. *ჩემსკენ → ჩემკენ, *შენსგან → შენგან.
+    const pronounPostposErrors = text.match(/(?<![\u10A0-\u10FF])(ჩემს|შენს|მის|ჩვენს|მათს)(კენ|გან|თან|ზე|ში|დან)(?![\u10A0-\u10FF])/g);
+    if (pronounPostposErrors) {
+        issues.push({ rule: 'pronoun_postpos_s', message: `Personal pronoun + postposition should not carry -ს: found ${pronounPostposErrors.join(', ')} — drop the -s (e.g. ჩემკენ not ჩემსკენ).` });
+    }
+
+    // 3.29 English decimal point in numbers (should be Georgian comma per MS Style Guide v1.4.0)
+    if (/[\u10A0-\u10FF]\s*\d+\.\d+/.test(text) || /\d+\.\d+(?=\s*[\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'decimal_point', message: 'Decimal number uses English period — Georgian uses comma (3,14 not 3.14).' });
+    }
+
     return issues;
 }
 
@@ -617,16 +685,29 @@ function correctGeorgianMorphology(text) {
         out = out.trim() + '।';
     }
 
+    // ── v1.4.0 additions ──
+
+    // 4.20 Personal pronoun + postposition: drop incorrect -s
+    // *ჩემსკენ → ჩემკენ  *შენსგან → შენგან  *მისთან → მისთან  etc.
+    out = out.replace(
+        /(?<![\u10A0-\u10FF])(ჩემს|შენს|მისს?|ჩვენს|მათს)(კენ|გან|თან)(?![\u10A0-\u10FF])/g,
+        (m, pron, post) => {
+            // მის is already without -ს in genitive; only fix when it's მისს
+            const stem = pron === 'მისს' ? 'მის' : pron.slice(0, -1);
+            return stem + post;
+        }
+    );
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.3.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.4.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 11,
-    qaRules: 27,
-    autoFixes: 19,
-    researchSources: 34
+    promptBlocks: 12,
+    qaRules: 29,
+    autoFixes: 20,
+    researchSources: 38
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
