@@ -2844,12 +2844,220 @@ function renderTranslationBudgetModeUI() {
 }
 renderTranslationBudgetModeUI();
 
+// ══════════════════════════════════════════════════════════════════════════
+// ██ SMART ROUTING ENGINE ██
+// Scores each chunk's linguistic complexity. Easy chunks (short dialogue,
+// common vocabulary, simple syntax) are routed to the fast local engine
+// (Google/MyMemory + in-house Georgian morphology auto-fixes). Complex or
+// error-prone chunks (rare vocabulary, long sentences, dense syntax, quoted
+// speech) are routed through the full AI pipeline with critique + refinement.
+// This grows the in-house engine while preserving quality where it matters.
+// ══════════════════════════════════════════════════════════════════════════
+
+// Common high-frequency English words that machine translation handles well.
+const EASY_WORDS = new Set([
+    'the', 'a', 'an', 'and', 'or', 'but', 'is', 'are', 'was', 'were', 'be',
+    'been', 'to', 'of', 'in', 'on', 'at', 'for', 'with', 'from', 'by', 'as',
+    'it', 'he', 'she', 'they', 'we', 'you', 'i', 'his', 'her', 'their', 'its',
+    'this', 'that', 'these', 'those', 'not', 'no', 'yes', 'so', 'if', 'then',
+    'up', 'down', 'out', 'off', 'over', 'under', 'into', 'onto', 'about',
+    'after', 'before', 'again', 'very', 'just', 'now', 'here', 'there', 'all',
+    'some', 'any', 'one', 'two', 'man', 'woman', 'boy', 'girl', 'day', 'night',
+    'go', 'went', 'come', 'came', 'get', 'got', 'make', 'made', 'take', 'took',
+    'see', 'saw', 'look', 'looked', 'say', 'said', 'tell', 'told', 'ask',
+    'asked', 'think', 'thought', 'know', 'knew', 'want', 'wanted', 'like',
+    'love', 'good', 'bad', 'big', 'small', 'old', 'new', 'long', 'short',
+    'time', 'year', 'hand', 'eye', 'head', 'door', 'room', 'water', 'fire',
+    'what', 'when', 'where', 'who', 'why', 'how', 'well', 'back', 'still',
+    'even', 'only', 'much', 'many', 'more', 'most', 'other', 'own', 'him',
+    'did', 'do', 'does', 'done', 'have', 'has', 'had', 'will', 'would', 'can',
+    'could', 'should', 'shall', 'may', 'might', 'must', 'let', 'put', 'give',
+    'gave', 'walk', 'walked', 'run', 'ran', 'sit', 'sat', 'stand', 'stood',
+    'eat', 'ate', 'drink', 'drank', 'sleep', 'slept', 'wake', 'woke', 'cry',
+    'cried', 'laugh', 'laughed', 'smile', 'smiled', 'open', 'opened', 'close',
+    'closed', 'turn', 'turned', 'stop', 'stopped', 'start', 'started', 'wait',
+    'waited', 'find', 'found', 'hold', 'held', 'keep', 'kept', 'left',
+    'right', 'little', 'great', 'high', 'low', 'light', 'dark', 'white',
+    'black', 'red', 'blue', 'green', 'yellow', 'cold', 'warm', 'hot',
+    'voice', 'words', 'book', 'books', 'mother', 'father', 'friend', 'friends'
+]);
+
+// Complexity scorer for a chunk (0 = trivially easy, 100 = maximally complex).
+// Easy chunks are safe to hand to the local engine + in-house morphology
+// auto-fixes; complex chunks carry rare vocabulary, long sentences, dense
+// syntax, or quoted dialogue and go through the full AI pipeline.
+function scoreChunkComplexity(text) {
+    if (!text) return 0;
+    const clean = text.trim();
+    let score = 0;
+
+    // Length: longer chunks are harder to get right without deep context.
+    if (clean.length > 2500) score += 35;
+    else if (clean.length > 1500) score += 22;
+    else if (clean.length > 800) score += 12;
+    else if (clean.length > 400) score += 6;
+
+    // Sentence length: long sentences mean nested clauses and tricky syntax.
+    const sentences = clean.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    if (sentences.length > 0) {
+        const avgLen = clean.length / sentences.length;
+        if (avgLen > 160) score += 20;
+        else if (avgLen > 100) score += 12;
+        else if (avgLen > 60) score += 6;
+    }
+
+    // Rare vocabulary: words outside the easy-word set.
+    const words = clean.toLowerCase().match(/[a-z']+/g) || [];
+    if (words.length > 0) {
+        let rare = 0;
+        for (const w of words) {
+            if (!EASY_WORDS.has(w)) rare++;
+        }
+        const rareRatio = rare / words.length;
+        if (rareRatio > 0.45) score += 25;
+        else if (rareRatio > 0.3) score += 15;
+        else if (rareRatio > 0.18) score += 8;
+    }
+
+    // Quoted dialogue: speaker attribution, tone, register shifts.
+    const quotes = (clean.match(/["""]/g) || []).length;
+    if (quotes >= 6) score += 15;
+    else if (quotes >= 2) score += 8;
+
+    // Dense punctuation: semicolons, em-dashes, nested quotes, ellipses.
+    const densePunct = (clean.match(/[;:—–…]/g) || []).length;
+    if (densePunct > 4) score += 10;
+    else if (densePunct > 1) score += 5;
+
+    // Digits, unusual capitalization, foreign fragments.
+    if (/\d/.test(clean)) score += 4;
+    if (/\b[A-Z]{2,}\b/.test(clean)) score += 4;
+
+    return Math.min(100, score);
+}
+
+// Threshold below which a chunk is considered "easy" enough for the local
+// engine. Tuned so that simple narrative/dialogue skips the AI pipeline
+// entirely (massive speedup) while anything risky still gets AI treatment.
+const SMART_ROUTE_EASY_THRESHOLD = 25;
+
+// Per-chunk routing stats for the status panel.
+const smartRoutingStats = { easy: 0, complex: 0 };
+
+function isEasyChunk(text) {
+    return scoreChunkComplexity(text) <= SMART_ROUTE_EASY_THRESHOLD;
+}
+
+// Local engine path: Google neural engines + in-house morphology auto-fixes.
+// Used for easy chunks instead of the AI pipeline — this is how the in-house
+// engine grows: it handles more and more of the book on its own.
+async function translateChunkLocal(clean, targetLang) {
+    // Google Dict-Chrome-Ex first (ultra-stable, zero rate-limiting)
+    try {
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean)}`;
+        const gRes = await fetch(gUrl);
+        if (gRes.ok) {
+            const data = await gRes.json();
+            if (data && data[0] && Array.isArray(data[0])) {
+                let fullTrans = '';
+                for (let i = 0; i < data[0].length; i++) {
+                    if (data[0][i] && data[0][i][0]) {
+                        fullTrans += data[0][i][0];
+                    }
+                }
+                const refined = refineGeorgianGrammar(fullTrans);
+                if (refined && refined.trim().length > 0) {
+                    recordEngineUse('google');
+                    return refined;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Local engine: Google dict-chrome-ex failed:', e);
+    }
+
+    // Google GTX mirror
+    try {
+        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean)}`;
+        const gRes2 = await fetch(gUrl2);
+        if (gRes2.ok) {
+            const data2 = await gRes2.json();
+            if (data2 && data2[0] && Array.isArray(data2[0])) {
+                let fullTrans2 = '';
+                for (let i = 0; i < data2[0].length; i++) {
+                    if (data2[0][i] && data2[0][i][0]) {
+                        fullTrans2 += data2[0][i][0];
+                    }
+                }
+                const refined2 = refineGeorgianGrammar(fullTrans2);
+                if (refined2 && refined2.trim().length > 0) {
+                    recordEngineUse('google');
+                    return refined2;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Local engine: Google GTX mirror failed:', e);
+    }
+
+    // MyMemory last resort inside the local path
+    const mm = await translateSingleSentence(clean, targetLang);
+    recordEngineUse(mm === clean ? 'failed' : 'mymemory');
+    return mm;
+}
+
+// Full AI pipeline path: multi-pass literary translation + Georgian QA gate.
+async function translateChunkAI(clean, targetLang, contextBefore, contextAfter) {
+    const pipeline = translationBudgetMode === 'budget' && typeof translateWithGeminiAIBatch === 'function'
+        ? translateWithGeminiAIBatch
+        : translateWithGeminiAI;
+    const aiRes = await pipeline(clean, targetLang, contextBefore, contextAfter);
+    if (aiRes) {
+        recordEngineUse('gemini');
+        if (targetLang === 'ka' && typeof applyGeorgianQaGate === 'function') {
+            return await applyGeorgianQaGate(aiRes);
+        }
+        return aiRes;
+    }
+    console.warn("AI Engine failed — FALLING BACK to machine translation. " +
+        "Result quality will drop. Check API keys/quota.");
+    return null;
+}
+
+// Smart router: easy chunks go to the local engine (the in-house engine we
+// are training and growing), questionable/complex/error-prone chunks go
+// through the AI pipeline and get refined more.
+async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
+    if (!text || !text.trim()) return '';
+    const clean = text.trim();
+    const score = scoreChunkComplexity(clean);
+
+    if (score <= SMART_ROUTE_EASY_THRESHOLD) {
+        smartRoutingStats.easy++;
+        // Easy chunk: local engine + in-house morphology auto-fixes.
+        return await translateChunkLocal(clean, targetLang);
+    }
+
+    smartRoutingStats.complex++;
+    // Complex/questionable chunk: full AI pipeline with refinement.
+    const aiRes = await translateChunkAI(clean, targetLang, contextBefore, contextAfter);
+    if (aiRes) return aiRes;
+    // AI failed for a complex chunk — fall back to the local engine rather
+    // than returning nothing.
+    return await translateChunkLocal(clean, targetLang);
+}
+
 async function translateChunkContextually(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
 
-    // Tier 0: AI Engine (multi-pass literary pipeline — provider chain inside
-    // callGeminiJSON: OpenRouter free models → Groq → Mistral → Gemini)
+    // Smart routing: easy chunks skip the AI pipeline entirely; complex or
+    // error-prone chunks get the full AI pipeline with refinement.
+    if (typeof translateChunkSmart === 'function') {
+        return await translateChunkSmart(clean, targetLang, contextBefore, contextAfter);
+    }
+
+    // Fallback: original sequential tier funnel (if smart router unavailable)
     if (geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey) {
         const pipeline = translationBudgetMode === 'budget' && typeof translateWithGeminiAIBatch === 'function'
             ? translateWithGeminiAIBatch
@@ -3022,39 +3230,73 @@ async function startWholeBookTranslation() {
                 chunkSentenceCounts.push(currentChunkSCount);
             }
 
-            for (let cIdx = 0; cIdx < chunks.length; cIdx++) {
-                if (cancelTranslationFlag) break;
+            // ══ PARALLEL BATCH TRANSLATION ══
+            // Worker pool: local-engine chunks run freely; AI-routed chunks
+            // are throttled to CONCURRENT_AI_LIMIT to respect rate limits.
+            // Removes the sequential bottleneck and the per-chunk 200ms delay.
+            const CONCURRENT_AI_LIMIT = 3;
+            let aiRunning = 0;
+            let nextChunkIdx = 0;
+            let completedInChapter = 0;
+            const chunkResults = new Array(chunks.length).fill(null);
 
-                const orig = chunks[cIdx].trim();
-                if (!orig) continue;
+            async function processChunk(idx) {
+                const orig = chunks[idx].trim();
+                if (!orig) { chunkResults[idx] = ''; return; }
 
-                if (DOM.wbLiveOriginal) DOM.wbLiveOriginal.textContent = orig;
-                
-                if (DOM.wbSentenceCounter) {
-                    DOM.wbSentenceCounter.textContent = `Context Chunk ${cIdx + 1} / ${chunks.length} (Sentence ${completedSentencesCount} / ${totalSentencesCount})`;
+                const isComplex = scoreChunkComplexity(orig) > SMART_ROUTE_EASY_THRESHOLD;
+                if (isComplex) {
+                    while (aiRunning >= CONCURRENT_AI_LIMIT) {
+                        await new Promise(r => setTimeout(r, 100));
+                    }
+                    aiRunning++;
                 }
 
-                const translated = await translateChunkContextually(
-                    orig, 'ka',
-                    cIdx > 0 ? chunks[cIdx - 1].trim() : '',
-                    cIdx < chunks.length - 1 ? chunks[cIdx + 1].trim() : ''
-                );
-                translatedArr.push(translated);
-                totalCharsTranslated += translated.length;
-
-                if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = translated;
-                if (DOM.wbCharCounter) {
-                    DOM.wbCharCounter.textContent = `${totalCharsTranslated.toLocaleString()} chars translated`;
+                try {
+                    const before = idx > 0 ? chunks[idx - 1].trim() : '';
+                    const after = idx < chunks.length - 1 ? chunks[idx + 1].trim() : '';
+                    chunkResults[idx] = await translateChunkSmart(orig, 'ka', before, after);
+                } catch (e) {
+                    console.warn(`Chunk ${idx} translation error:`, e);
+                    chunkResults[idx] = await translateChunkLocal(orig, 'ka');
+                } finally {
+                    if (isComplex) aiRunning--;
                 }
-
-                completedSentencesCount += chunkSentenceCounts[cIdx];
-                const pct = Math.round((completedSentencesCount / totalSentencesCount) * 100);
-                
-                if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
-                if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
-
-                await new Promise(r => setTimeout(r, 200));
             }
+
+            const workers = [];
+            for (let w = 0; w < CONCURRENT_AI_LIMIT; w++) {
+                workers.push((async () => {
+                    while (nextChunkIdx < chunks.length) {
+                        if (cancelTranslationFlag) return;
+                        const idx = nextChunkIdx++;
+                        await processChunk(idx);
+
+                        if (chunkResults[idx]) {
+                            translatedArr[idx] = chunkResults[idx];
+                            totalCharsTranslated += chunkResults[idx].length;
+                            completedInChapter++;
+                            completedSentencesCount += chunkSentenceCounts[idx];
+                        }
+
+                        if (DOM.wbLiveGeorgian && chunkResults[idx]) {
+                            DOM.wbLiveGeorgian.textContent = chunkResults[idx];
+                        }
+                        if (DOM.wbCharCounter) {
+                            DOM.wbCharCounter.textContent = `${totalCharsTranslated.toLocaleString()} chars translated`;
+                        }
+                        if (DOM.wbSentenceCounter) {
+                            DOM.wbSentenceCounter.textContent = `Chunk ${completedInChapter} / ${chunks.length} (Sentence ${completedSentencesCount} / ${totalSentencesCount}) [Easy: ${smartRoutingStats.easy} | AI: ${smartRoutingStats.complex}]`;
+                        }
+
+                        const pct = Math.round((completedSentencesCount / totalSentencesCount) * 100);
+                        if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
+                        if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
+                    }
+                })());
+            }
+            await Promise.all(workers);
+
 
             chapter.text_ka = translatedArr.join(' ');
             if (!currentBook.translatedLangs) currentBook.translatedLangs = [];

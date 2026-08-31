@@ -162,3 +162,107 @@ input[type="range"]::-moz-range-thumb {
 ::-webkit-scrollbar-thumb:hover {
     background: #334155;
 }
+
+/* ===== Responsive Modal System ===== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 7, 14, 0.82);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 12px;
+}
+
+.modal-content {
+    background: rgba(12, 17, 29, 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: 24px;
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px;
+    transform: scale(0.96);
+    opacity: 0;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.modal-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.4);
+    border-radius: 2px;
+}
+
+/* Prevent body scroll when modal open */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* ===== Responsive Media Queries ===== */
+
+/* Small phones (<375px) */
+@media (max-width: 374px) {
+    .modal-content {
+        padding: 14px;
+        border-radius: 16px;
+    }
+
+    .player-dock {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* Phones (<640px) */
+@media (max-width: 639px) {
+    body {
+        background-attachment: scroll;
+    }
+
+    .bento-card {
+        border-radius: 14px;
+    }
+
+    .book-jacket {
+        transform: none;
+    }
+
+    .book-jacket:hover {
+        transform: scale(1.02);
+    }
+}
+
+/* Landscape phones - constrain modal height */
+@media (max-height: 480px) {
+    .modal-content {
+        max-height: calc(100vh - 16px);
+        padding: 12px;
+    }
+}
+
+/* Large screens - cap modal width for readability */
+@media (min-width: 1024px) {
+    .modal-content {
+        max-width: 560px;
+    }
+}
