@@ -65,6 +65,15 @@ let geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.5-pro';
 let geminiPasses = parseInt(localStorage.getItem('geminiPasses') || '3', 10);
 if (![1, 2, 3].includes(geminiPasses)) geminiPasses = 3;
 
+// Gemini fallback chain: when the preferred model is rate-limited (429) or
+// unavailable, cheaper/speedier models in the same key's free tier take over
+// instead of the whole AI tier failing to machine translation. Flash models
+// carry much larger free-tier quotas than Pro — this alone rescues most
+// whole-book runs that currently die at "Gemini 0%".
+const GEMINI_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+const geminiModelCooldown = {}; // model -> earliest ms it may be retried
+const GEMINI_MODEL_COOLDOWN_MS = 60_000;
+
 // ── OpenRouter free-model AI engine ─────────────────────────────────────────
 // One OpenRouter key gives access to every free model on the platform. Used as
 // the AI tier when Gemini is absent/failing, and as the reviewer in the
@@ -1963,46 +1972,68 @@ async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, ret
 async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
     if (!geminiApiKey) return null;
 
-    for (let attempt = 0; attempt <= retries; attempt++) {
-        try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        temperature,
-                        maxOutputTokens: maxTokens,
-                        responseMimeType: 'application/json'
+    // Build the candidate model chain: preferred model first, then fallbacks
+    // that aren't in cooldown, ordered by descending capability.
+    const now = Date.now();
+    const candidates = [geminiModel, ...GEMINI_FALLBACK_MODELS.filter(m => m !== geminiModel)]
+        .filter(m => (geminiModelCooldown[m] || 0) <= now);
+    if (!candidates.length) return null;
+
+    for (const model of candidates) {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            temperature,
+                            maxOutputTokens: maxTokens,
+                            responseMimeType: 'application/json'
+                        }
+                    })
+                });
+
+                if (response.status === 429 || response.status >= 500) {
+                    // Model-level quota exhaustion → blacklist briefly and try
+                    // the next model in the chain immediately.
+                    if (response.status === 429) {
+                        geminiModelCooldown[model] = Date.now() + GEMINI_MODEL_COOLDOWN_MS;
+                        console.warn(`[Gemini] ${model} rate-limited — cooling down, trying next model`);
+                        break;
                     }
-                })
-            });
-
-            if (response.status === 429 || response.status >= 500) {
-                if (attempt < retries) {
-                    await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
-                    continue;
+                    if (attempt < retries) {
+                        await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+                        continue;
+                    }
+                    break;
                 }
-                return null;
-            }
-            if (!response.ok) {
-                console.warn('Gemini API error:', response.status);
-                return null;
-            }
+                if (response.status === 404 || response.status === 400) {
+                    // Model unavailable for this key — blacklist for longer.
+                    geminiModelCooldown[model] = Date.now() + 5 * 60_000;
+                    console.warn(`[Gemini] ${model} unavailable (${response.status}) — skipping`);
+                    break;
+                }
+                if (!response.ok) {
+                    console.warn('Gemini API error:', response.status);
+                    break;
+                }
 
-            const data = await response.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!text) return null;
-            const parsed = parseModelJSON(text);
-            if (parsed) return parsed;
-            console.warn('Gemini returned unparseable JSON');
-            return null;
-        } catch (e) {
-            if (attempt >= retries) {
-                console.warn('Gemini call failed:', e);
-                return null;
+                const data = await response.json();
+                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!text) break;
+                const parsed = parseModelJSON(text);
+                if (parsed) return parsed;
+                console.warn('Gemini returned unparseable JSON');
+                break;
+            } catch (e) {
+                if (attempt >= retries) {
+                    console.warn('Gemini call failed:', e);
+                    break;
+                }
+                await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
             }
-            await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
         }
     }
     return null;
@@ -2250,6 +2281,58 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
     return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
 }
 
+// Budget pipeline for whole-book jobs. Whole books translate ~120k+ chars in
+// 3000-char chunks; the interactive 3-4 call pipeline per chunk exhausts
+// free-tier quotas within the first chapter and the rest silently degrades
+// to machine translation. This variant fuses draft + self-critique into ONE
+// call (the model audits its own draft against the same grammar rules), and
+// spends a second call ONLY when that self-check reports critical/major
+// defects. Typical cost: 1 call per chunk instead of 3-4.
+async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', contextAfter = '') {
+    if (!geminiApiKey && !openRouterApiKey) return null;
+    const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
+    const ctxBefore = contextBefore ? `\n\n[PRECEDING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextBefore.slice(-600)}` : '';
+    const ctxAfter = contextAfter ? `\n\n[FOLLOWING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextAfter.slice(0, 600)}` : '';
+
+    const kaKnowledge = targetLang === 'ka' && typeof getKaKnowledgeBase === 'function'
+        ? getKaKnowledgeBase() : '';
+    const kaBlock = kaKnowledge
+        ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
+
+    const prompt = `You are an elite literary translator (English → ${langName}). Translate the passage below, then audit and correct your own translation BEFORE answering.
+
+Process:
+1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
+2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
+3. Replace idioms with their natural ${langName} equivalents; never translate them literally.
+4. Write flowing native prose — no translationese. Check case alignment, verb screeves and agreement in EVERY sentence.${kaBlock}
+5. Self-audit: review your draft for omissions, wrong verb forms (especially ergative aorists), agreement errors, broken idiom and translationese. Fix every defect you find, then report in "self_check" ONLY the significant defects you corrected (or could not fully fix). If the final text is publication-ready, return an empty errors list.
+
+TTS note: the translation will be narrated aloud — use correct terminal punctuation (? ! .).
+
+Answer as JSON exactly:
+{"translation": "...", "self_check": {"errors": [{"severity": "critical|major|minor", "type": "accuracy|grammar|style", "issue": "...", "fix": "..."}], "verdict": "approved|needs_revision"}}
+
+English text:
+${text}${ctxBefore}${ctxAfter}`;
+
+    const data = await callGeminiJSON(prompt, { temperature: 0.25, maxTokens: 16384 });
+    let result = extractTranslation(data?.translation);
+    if (!result) return null;
+
+    // Spend a refine call only when the fused self-check reports significant
+    // defects — the same targeted surgical editor as the interactive pipeline.
+    const errors = Array.isArray(data?.self_check?.errors) ? data.self_check.errors : [];
+    const blocking = errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major'));
+    if (blocking.length && typeof geminiRefineTranslation === 'function') {
+        console.log(`[Batch] self-check flagged ${blocking.length} defect(s) — one refine pass`);
+        const refined = await geminiRefineTranslation(text, result, blocking, targetLang);
+        if (refined && !textHasMarkupLeak(refined)) result = refined;
+    }
+
+    return targetLang === 'ka' ? refineGeorgianGrammar(result) : result;
+}
+
 // ── Georgian morphological QA gate ──────────────────────────────────────────
 // The AI pipeline can still emit morphology violations (research shows
 // ergative marking is THE weakest point of LLM Georgian — Leipzig treebank
@@ -2467,6 +2550,31 @@ async function probeAiKeyStatus() {
     }
 }
 
+// Translation budget mode for bulk jobs. 'quality' = full interactive
+// pipeline (draft → critique → refine → final QA). 'budget' = fused
+// translate+self-audit call, refine only on flagged defects — designed for
+// whole-book runs where 3-4 calls per chunk would exhaust free quotas and
+// silently degrade everything to machine translation.
+let translationBudgetMode = localStorage.getItem('translationBudgetMode') || 'budget';
+
+function setTranslationBudgetMode(mode) {
+    if (mode !== 'budget' && mode !== 'quality') return;
+    translationBudgetMode = mode;
+    localStorage.setItem('translationBudgetMode', mode);
+    renderTranslationBudgetModeUI();
+}
+
+function renderTranslationBudgetModeUI() {
+    const budgetBtn = document.getElementById('wbModeBudget');
+    const qualityBtn = document.getElementById('wbModeQuality');
+    if (!budgetBtn || !qualityBtn) return;
+    const active = 'bg-georgian-gold/20 border-georgian-gold text-white';
+    const idle = 'bg-white/5 border-white/10 text-on-surface-variant hover:bg-white/10';
+    budgetBtn.className = `px-2 py-2 rounded-lg text-[11px] font-semibold border transition ${translationBudgetMode === 'budget' ? active : idle}`;
+    qualityBtn.className = `px-2 py-2 rounded-lg text-[11px] font-semibold border transition ${translationBudgetMode === 'quality' ? active : idle}`;
+}
+renderTranslationBudgetModeUI();
+
 async function translateChunkContextually(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
@@ -2474,7 +2582,10 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
     // Tier 0: AI Engine (multi-pass literary pipeline — Gemini first, then
     // OpenRouter free models as fallback inside callGeminiJSON)
     if (geminiApiKey || openRouterApiKey) {
-        const aiRes = await translateWithGeminiAI(clean, targetLang, contextBefore, contextAfter);
+        const pipeline = translationBudgetMode === 'budget' && typeof translateWithGeminiAIBatch === 'function'
+            ? translateWithGeminiAIBatch
+            : translateWithGeminiAI;
+        const aiRes = await pipeline(clean, targetLang, contextBefore, contextAfter);
         if (aiRes) {
             recordEngineUse('gemini');
             // Georgian morphological QA gate: rule-based validation + one

@@ -989,6 +989,17 @@
             </div>
 
             <div class="space-y-2">
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] font-semibold text-primary-fixed uppercase tracking-wider mb-2">Engine mode</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="wbModeBudget" onclick="setTranslationBudgetMode('budget')" class="px-2 py-2 rounded-lg text-[11px] font-semibold border transition">
+                            ⚡ Budget<br><span class="font-normal opacity-70">1 AI call/chunk — survives whole books on free quota</span>
+                        </button>
+                        <button id="wbModeQuality" onclick="setTranslationBudgetMode('quality')" class="px-2 py-2 rounded-lg text-[11px] font-semibold border transition">
+                            💎 Max Quality<br><span class="font-normal opacity-70">3-4 AI calls/chunk — needs paid quota for long books</span>
+                        </button>
+                    </div>
+                </div>
                 <div class="flex justify-between text-xs font-semibold">
                     <span id="wbChapterLabel" class="text-white">Translating Chapter 1 of 5...</span>
                     <span id="wbProgressPct" class="font-mono text-georgian-gold font-bold">0%</span>
