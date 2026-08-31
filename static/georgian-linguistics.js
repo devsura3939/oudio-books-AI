@@ -33,6 +33,12 @@
 // translated chapters (Sun Tzu / Marcus Aurelius run mined from the app's
 // IndexedDB). QA rules 3.37-3.39 (hyphen-as-dash, magram comma, chunk
 // truncation), auto-fixes 4.25-4.26 (em dash, truncation repair).
+// v1.6.2 expansion (pipeline + TTS hardening): target-lang-specific guidance
+// injected into the 3-pass pipeline prompts in app.js (draft + critique
+// stages get Georgian series alignment, negation, false friends, production
+// style defects, punctuation rules). Auto-fixes 4.27-4.32: doubled terminal
+// marks, en-dash/minus normalization, ellipsis normalization + spacing,
+// straight-quote → „…“ conversion, whitespace collapse for TTS narration.
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1089,15 +1095,36 @@ function correctGeorgianMorphology(text) {
 
     // (No auto-fix for "ეს არის X" — it is grammatical emphatic Georgian; QA rule 3.33 flags it for review only.)
 
+    // ── v1.6.2 additions: TTS punctuation & spacing normalization ──
+
+    // 4.27 Doubled terminal marks → single mark ("?!?!!" → "?", "..." → "…")
+    out = out.replace(/([?!.])\1{1,}/g, '$1');
+
+    // 4.28 En dash / minus used as dash → em dash (corpus showed " - "; also normalize – and -)
+    out = out.replace(/([\u10A0-\u10FF])\s+[–\-−]\s+([\u10A0-\u10FF])/g, '$1 — $2');
+
+    // 4.29 Normalize ellipsis: 3+ dots → single "…" (TTS prosody)
+    out = out.replace(/\.{3,}/g, '…');
+
+    // 4.30 Normalize ellipsis spacing: "…word" → "… word", "word …" → "word … "
+    out = out.replace(/([\u10A0-\u10FF])…([\u10A0-\u10FF])/g, '$1… $2');
+    out = out.replace(/…\s*([,.:;!?])/g, '$1');
+
+    // 4.31 Straight ASCII quotes around Georgian text → „…“
+    out = out.replace(/"([^"\n]*[\u10A0-\u10FF][^"\n]*)"/g, '„$1“');
+
+    // 4.32 Collapse whitespace runs (incl. \r) to single space, trim ends
+    out = out.replace(/\s+/g, ' ').trim();
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.6.1';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.6.2';
 const GEORGIAN_KNOWLEDGE_STATS = {
     promptBlocks: 28,
     qaRules: 39,
-    autoFixes: 27,
+    autoFixes: 32,
     researchSources: 53
 };
 

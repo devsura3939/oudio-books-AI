@@ -2419,10 +2419,10 @@ Process:
 1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
 2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
 3. Replace idioms with their natural ${langName} equivalents; never translate them literally.
-4. Write flowing native prose — no translationese.
+4. Write flowing native prose — no translationese.${targetLang === 'ka' ? '\n   Georgian word order is verb-FINAL: subject/object first, verb last (კაცმა წიგნი წაიკითხა). Weather/feelings are impersonal (წვიმს, ცივა, მშია, მოსწონს) — never invent a dummy subject. Numerals are vigesimal (ორმოცი=40, ოთხმოცდაშვიდი=87); after numerals 2+ the noun stays SINGULAR (ოცი კაცი).' : ''}
 5. Before answering, silently verify every sentence against the grammar rules below (case alignment, verb screeves, agreement).${kaBlock}
 
-TTS note: this translation will be narrated aloud. Use correct terminal punctuation (? ! .) so the voice produces natural prosody.
+TTS note: this translation will be narrated aloud. Use correct terminal punctuation (? ! .) so the voice produces natural prosody.${targetLang === 'ka' ? ' Use Georgian punctuation: „…“ for quotes, । or . for sentence end, — for dashes (never " - ").' : ''}
 
 Answer as JSON: {"translation": "..."} — the ${langName} translation ONLY, no notes, no markdown fences.
 
@@ -2452,10 +2452,10 @@ async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
 
 Check, in order of severity:
 1. Accuracy: omissions, additions, reversed meaning, lost negation, changed names/numbers/units.
-2. Grammar & morphology: ${langName} case endings, ergative alignment (aorist transitive subjects take -მა; present takes nominative), verb conjugation/screeves, agreement, postpositions.
-3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.
-4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.
-5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${kaChecklist}
+2. Grammar & morphology: ${langName} case endings, ergative alignment (aorist transitive subjects take -მა; present takes nominative), verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment: Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Negation: აר (declarative), ვერ (failed ability), ნუ (prohibitive — never არ for commands), one negator per clause.' : ''}
+3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart).' : ''}
+4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb).' : ''}
+5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before । , ; : punctuation, exactly one terminal mark per sentence, no doubled punctuation.' : ''}${kaChecklist}
 
 Be demanding: an accurate but stilted translation still gets flagged under style. If the translation is genuinely publication-ready, return an empty error list. Never invent problems.
 
