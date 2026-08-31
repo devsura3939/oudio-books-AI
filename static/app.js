@@ -108,11 +108,19 @@ function openRouterMarkModelFailed(model) {
 }
 
 // One JSON-mode call to a free OpenRouter model. Returns parsed JSON or null.
-// Retries transient failures across the model chain with linear backoff.
-async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 3 } = {}) {
-    if (!openRouterApiKey) return null;
+// Patient rotation: free models are frequently ALL rate-limited simultaneously,
+// so the call waits (bounded) for the earliest cooldown window to expire
+// instead of giving up and dropping the chunk to low-quality machine
+// translation. Any single model failure (404/5xx/bad JSON) rotates to the
+// next model rather than aborting the whole call.
+const OPENROUTER_CALL_DEADLINE_MS = 45_000;
+const OPENROUTER_CALL_MAX_ATTEMPTS = 14;
 
-    for (let attempt = 0; attempt <= retries; attempt++) {
+async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+    if (!openRouterApiKey) return null;
+    const started = Date.now();
+
+    for (let attempt = 0; attempt < OPENROUTER_CALL_MAX_ATTEMPTS; attempt++) {
         const { model, idx } = openRouterNextModel();
         openRouterModelIndex = (idx + 1) % OPENROUTER_FREE_MODELS.length;
         const preferred = openRouterModel && (openRouterModelCooldown[openRouterModel] || 0) <= Date.now()
@@ -139,44 +147,40 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192,
 
             if (response.status === 429 || response.status >= 500) {
                 openRouterMarkModelFailed(preferred);
-                if (attempt < retries) {
-                    await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
-                    continue;
+                // All models cooling down? Wait for the earliest window to
+                // reopen (bounded by the overall deadline), then rotate again.
+                const now = Date.now();
+                const expiries = OPENROUTER_FREE_MODELS
+                    .map(m => openRouterModelCooldown[m] || 0)
+                    .filter(t => t > now);
+                if (expiries.length && Date.now() - started < OPENROUTER_CALL_DEADLINE_MS) {
+                    const waitMs = Math.min(Math.max(Math.min(...expiries) - now, 1200), 20_000);
+                    console.warn(`OpenRouter: all free models cooling down — waiting ${Math.round(waitMs / 1000)}s for ${OPENROUTER_FREE_MODELS.find(m => (openRouterModelCooldown[m] || 0) === Math.min(...expiries)) || 'next window'}`);
+                    await new Promise(r => setTimeout(r, waitMs));
                 }
-                return null;
+                continue;
             }
             if (!response.ok) {
                 console.warn('OpenRouter API error:', response.status, preferred);
                 openRouterMarkModelFailed(preferred);
-                return null;
+                continue;
             }
 
             const data = await response.json();
             const text = data?.choices?.[0]?.message?.content;
             if (!text) {
                 openRouterMarkModelFailed(preferred);
-                return null;
+                continue;
             }
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                // Some free models wrap JSON in markdown fences despite
-                // response_format — strip and retry once.
-                const stripped = extractTranslation(text);
-                try {
-                    return JSON.parse(stripped);
-                } catch (e2) {
-                    console.warn('OpenRouter returned unparseable JSON from', preferred);
-                    openRouterMarkModelFailed(preferred);
-                    return null;
-                }
-            }
+            const parsed = parseModelJSON(text);
+            if (parsed) return parsed;
+            console.warn('OpenRouter returned unparseable JSON from', preferred);
+            openRouterMarkModelFailed(preferred);
+            continue;
         } catch (e) {
-            if (attempt >= retries) {
-                console.warn('OpenRouter call failed:', e);
-                return null;
-            }
-            await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+            console.warn('OpenRouter network error:', e);
+            if (Date.now() - started > OPENROUTER_CALL_DEADLINE_MS) return null;
+            await new Promise(r => setTimeout(r, 1500));
         }
     }
     return null;
@@ -431,6 +435,12 @@ function applyGeorgianProsody(text, sentenceType) {
 // ── Advanced Georgian Grammar & Literary Refinement Engine ─────────────────
 function refineGeorgianGrammar(text) {
     if (!text) return '';
+    // Layer 1: research-derived deterministic morphology fixes (plural after
+    // numerals, -ოის genitive, name vocatives, caps calques) from
+    // static/georgian-linguistics.js — applied to every engine's output.
+    if (typeof correctGeorgianMorphology === 'function') {
+        try { text = correctGeorgianMorphology(text); } catch (e) { /* non-fatal */ }
+    }
     let out = normalizeGeorgian(text);
 
     // 1. Critical Idiom, Metaphor & Vulgarity Filters from English MT artifacts
@@ -1983,7 +1993,10 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
             const data = await response.json();
             const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!text) return null;
-            return JSON.parse(text);
+            const parsed = parseModelJSON(text);
+            if (parsed) return parsed;
+            console.warn('Gemini returned unparseable JSON');
+            return null;
         } catch (e) {
             if (attempt >= retries) {
                 console.warn('Gemini call failed:', e);
@@ -1991,6 +2004,64 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
             }
             await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
         }
+    }
+    return null;
+}
+
+// Detect leaked model markup/tool-call tokens (e.g. </tool_call>, <think>…)
+// or other garbage that should never appear in user-visible narration text.
+// Used as a safety net on every refine/QA output before user display.
+function textHasMarkupLeak(s) {
+    if (!s) return false;
+    return /<\/?[a-z][\w-]*(\s[^<>]{0,80})?>|<\/?[A-Z][\w-]*>/i.test(s);
+}
+
+// Robust parser for model JSON replies. Free models frequently wrap JSON in
+// conversational prose or markdown fences, use smart quotes, emit trailing
+// commas, or get truncated mid-object by the token limit. This tries
+// progressively more aggressive recovery strategies before giving up, so a
+// 90%-complete answer is salvaged instead of throwing the whole call away.
+function parseModelJSON(raw) {
+    if (!raw) return null;
+    if (typeof raw === 'object') return raw;
+    let text = String(raw).trim();
+    if (!text) return null;
+    // 1. Direct parse — the well-behaved case.
+    try { return JSON.parse(text); } catch { /* continue */ }
+    // 2. Strip markdown fences (```json … ```) and retry.
+    const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fence && fence[1].trim()) {
+        try { return JSON.parse(fence[1].trim()); } catch { text = fence[1].trim(); }
+    }
+    // 3. Extract the outermost {…} block from surrounding prose.
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+        try { return JSON.parse(text.slice(start, end + 1)); } catch { /* continue */ }
+    }
+    // 4. Truncated-JSON repair: close the open string, strip dangling
+    //    separators, then close every still-open bracket/brace in order.
+    if (start >= 0) {
+        const s = text.slice(start);
+        let inStr = false, esc = false;
+        const stack = [];
+        for (let i = 0; i < s.length; i++) {
+            const ch = s[i];
+            if (esc) { esc = false; continue; }
+            if (ch === '\\') { if (inStr) esc = true; continue; }
+            if (ch === '"') { inStr = !inStr; continue; }
+            if (inStr) continue;
+            if (ch === '{' || ch === '[') stack.push(ch);
+            else if (ch === '}' || ch === ']') stack.pop();
+        }
+        let candidate = s;
+        if (inStr) candidate += '"';
+        candidate = candidate.replace(/,\s*$/, '').replace(/:\s*$/, '');
+        while (stack.length) {
+            const open = stack.pop();
+            candidate += open === '{' ? '}' : ']';
+        }
+        try { return JSON.parse(candidate); } catch { /* give up */ }
     }
     return null;
 }
@@ -2019,6 +2090,14 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
     const ctxBefore = contextBefore ? `\n\n[PRECEDING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextBefore.slice(-600)}` : '';
     const ctxAfter = contextAfter ? `\n\n[FOLLOWING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextAfter.slice(0, 600)}` : '';
 
+    // Georgian-native quality: inject the research-derived linguistic
+    // knowledge base (morphology, screeves, syntax, defect list, authentic
+    // style exemplars from classic and modern Georgian prose).
+    const kaKnowledge = targetLang === 'ka' && typeof getKaKnowledgeBase === 'function'
+        ? getKaKnowledgeBase() : '';
+    const kaBlock = kaKnowledge
+        ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
+
     const prompt = `You are an elite literary translator (English → ${langName}). Your translations read like the book was originally written in ${langName} — the register of a respected literary publishing house, not a machine.
 
 Process:
@@ -2026,6 +2105,7 @@ Process:
 2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
 3. Replace idioms with their natural ${langName} equivalents; never translate them literally.
 4. Write flowing native prose — no translationese.
+5. Before answering, silently verify every sentence against the grammar rules below (case alignment, verb screeves, agreement).${kaBlock}
 
 TTS note: this translation will be narrated aloud. Use correct terminal punctuation (? ! .) so the voice produces natural prosody.
 
@@ -2045,14 +2125,22 @@ ${text}${ctxBefore}${ctxAfter}`;
 async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
     const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
 
+    // Georgian reviewer gets the defect catalog + compact grammar rules so it
+    // hunts for the exact errors LLMs actually make (ergativity, screeves,
+    // agreement, postpositions, punctuation calques).
+    const kaReviewerRules = targetLang === 'ka' && typeof getKaCompactRules === 'function'
+        ? getKaCompactRules() : '';
+    const kaChecklist = kaReviewerRules
+        ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===${kaReviewerRules}\n=== END CHECKLIST ===\nAny violation of the checklist is at least a "major" grammar error.` : '';
+
     const prompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer. Compare the SOURCE (English) against the TRANSLATION (${langName}) and find every real defect.
 
 Check, in order of severity:
 1. Accuracy: omissions, additions, reversed meaning, lost negation, changed names/numbers/units.
-2. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.
-3. Grammar & spelling: ${langName} case endings, verb conjugation, agreement, orthography.
-4. Style: unnatural phrasing, robotic word order, broken idiom.
-5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols).
+2. Grammar & morphology: ${langName} case endings, ergative alignment (aorist transitive subjects take -მა; present takes nominative), verb conjugation/screeves, agreement, postpositions.
+3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.
+4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.
+5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${kaChecklist}
 
 Be demanding: an accurate but stilted translation still gets flagged under style. If the translation is genuinely publication-ready, return an empty error list. Never invent problems.
 
@@ -2079,9 +2167,16 @@ async function geminiRefineTranslation(sourceText, translation, errors, targetLa
         .map((e, i) => `${i + 1}. [${e.severity || 'major'}/${e.type || 'style'}] ${e.issue}\n   → ${e.fix || 'fix it'}`)
         .join('\n');
 
+    // The reviser also sees the compact grammar rules so its surgical fixes
+    // don't introduce NEW morphology violations (the classic refinement trap).
+    const kaReviserRules = targetLang === 'ka' && typeof getKaCompactRules === 'function'
+        ? getKaCompactRules() : '';
+    const kaBlock = kaReviserRules
+        ? `\n\n=== GEORGIAN GRAMMAR RULES (your fixes must obey these) ===${kaReviserRules}\n=== END RULES ===` : '';
+
     const prompt = `You are the final editor of a ${langName} literary translation. A reviewer found the following defects. Apply EVERY fix precisely while keeping everything that was already correct. Do not re-translate from scratch — surgically correct the listed problems and polish only where a fix demands it.
 
-Keep: meaning, names, numbers, length roughly proportional, natural literary ${langName}, TTS-friendly punctuation.
+Keep: meaning, names, numbers, length roughly proportional, natural literary ${langName}, TTS-friendly punctuation.${kaBlock}
 
 Answer as JSON: {"translation": "..."} — the complete corrected ${langName} text, no notes.
 
@@ -2096,6 +2191,14 @@ ${errorList}`;
 
     const data = await callGeminiJSON(prompt, { temperature: 0.2 });
     const refined = extractTranslation(data?.translation);
+    if (textHasMarkupLeak(refined)) {
+        console.warn('[Refine] markup leak detected in refined text — rejecting rewrite');
+        return null;
+    }
+    if (refined && refined.length > 40 && refined.length < translation.length * 0.5) {
+        console.warn('[Refine] output suspiciously short vs current translation — rejecting rewrite');
+        return null;
+    }
     return refined || null;
 }
 
@@ -2112,7 +2215,14 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
     if (geminiPasses < 2) return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
 
     const critique = await geminiCritiqueTranslation(text, draft, targetLang);
-    if (!critique) return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+    if (!critique) {
+        // Critique unavailable (rate limits) — the deterministic QA gate still
+        // catches high-confidence defects so a corrupted draft never ships.
+        if (targetLang === 'ka' && typeof applyGeorgianQaGate === 'function') {
+            return await applyGeorgianQaGate(refineGeorgianGrammar(draft));
+        }
+        return draft;
+    }
 
     const blocking = critique.errors.filter(e => e.severity === 'critical' || e.severity === 'major');
     if (critique.verdict === 'approved' || blocking.length === 0) {
@@ -2138,6 +2248,88 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
         return targetLang === 'ka' ? refineGeorgianGrammar(revised) : revised;
     }
     return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+}
+
+// ── Georgian morphological QA gate ──────────────────────────────────────────
+// The AI pipeline can still emit morphology violations (research shows
+// ergative marking is THE weakest point of LLM Georgian — Leipzig treebank
+// study). This gate runs the rule-based validator on the final Georgian
+// text and, when fixable defects are found, asks the LLM for one targeted
+// correction pass. Deterministic fixes run afterwards regardless.
+const georgianQaStats = { checked: 0, violations: 0, repaired: 0 };
+
+// Decide whether an LLM repair result is safe to accept. Free models
+// sometimes corrupt correct text while "fixing" it (hallucinated words,
+// leaked markup like </tool_call>, aggressive rewrites). The repair is only
+// accepted if the original rule violations were actually addressed AND the
+// text did not degrade (no markup garbage, Georgian-letter share not down,
+// length not collapsed).
+function georgianRepairIsAcceptable(original, repaired, issues) {
+    if (!repaired || !repaired.trim()) return false;
+    // Markup/HTML leakage is an instant reject.
+    if (/<\/?[a-z_][\w-]*\s*\/?>/i.test(repaired)) return false;
+    // Latin-letter noise introduced into Georgian script text is a reject.
+    const latinRe = /[a-zA-Z]{3,}/;
+    if (latinRe.test(original) === false && latinRe.test(repaired)) return false;
+    // Georgian-letter share must not drop significantly.
+    const geoShare = s => {
+        const letters = (s.match(/[\u10A0-\u10FF]/g) || []).length;
+        return s.length ? letters / s.length : 0;
+    };
+    if (geoShare(repaired) < geoShare(original) - 0.05) return false;
+    // Length must not collapse (repair should be roughly the same text).
+    if (repaired.length < original.length * 0.6) return false;
+    if (repaired.length > original.length * 2) return false;
+    // The specific flagged violations should be resolved.
+    const remaining = validateGeorgianTranslation(repaired);
+    if (remaining.length >= issues.length) return false;
+    return true;
+}
+
+function georgianQaRepairPrompt(text, issues) {
+    const list = issues
+        .map((it, i) => `${i + 1}. [${it.rule}] ${it.message}`)
+        .join('\n');
+    return `You are a Georgian language proofreader. The following Georgian text was flagged by a rule-based grammar validator. Fix ONLY the listed problems — do not re-translate, do not change word order, keep every other word identical.
+
+RULE VIOLATIONS:
+${list}
+
+TEXT (Georgian):
+${text}
+
+Answer as JSON: {"translation": "..."} — the corrected Georgian text, no notes.`;
+}
+
+async function applyGeorgianQaGate(text) {
+    if (!text || typeof validateGeorgianTranslation !== 'function') return text;
+    let issues = [];
+    try { issues = validateGeorgianTranslation(text); } catch (e) { return text; }
+    georgianQaStats.checked++;
+    if (!issues.length) return text;
+
+    georgianQaStats.violations++;
+    console.warn(`[Georgian QA] ${issues.length} rule violation(s): ${issues.map(i => i.rule).join(', ')}`);
+
+    // One targeted LLM repair pass (cheap, surgical). Any key source works —
+    // callGeminiJSON dispatches to Gemini or OpenRouter free models. The
+    // result is only accepted if it passes the degradation guard — free
+    // models sometimes corrupt correct text while "fixing" it.
+    try {
+        const prompt = georgianQaRepairPrompt(text, issues);
+        const data = await callGeminiJSON(prompt, { temperature: 0.1, maxTokens: 4096 });
+        const repaired = extractTranslation(data?.translation);
+        if (georgianRepairIsAcceptable(text, repaired, issues)) {
+            georgianQaStats.repaired++;
+            return repaired;
+        }
+        if (repaired) {
+            console.warn('[Georgian QA] LLM repair rejected by acceptance check — keeping original text');
+        }
+    } catch (e) {
+        console.warn('[Georgian QA] LLM repair pass failed, keeping deterministic fixes only:', e);
+    }
+    return text;
 }
 
 // ── Translation engine status indicator ─────────────────────────────────────
@@ -2285,6 +2477,11 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
         const aiRes = await translateWithGeminiAI(clean, targetLang, contextBefore, contextAfter);
         if (aiRes) {
             recordEngineUse('gemini');
+            // Georgian morphological QA gate: rule-based validation + one
+            // targeted LLM repair pass when the validator flags violations.
+            if (targetLang === 'ka' && typeof applyGeorgianQaGate === 'function') {
+                return await applyGeorgianQaGate(aiRes);
+            }
             return aiRes;
         }
         console.warn("AI Engine failed — FALLING BACK to machine translation. " +
