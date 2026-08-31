@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.2.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.3.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -8,6 +8,12 @@
 // v1.2.0 expansion: evidentiality block, politeness/honorifics block,
 // idiom substitution table, EN→KA decision table, expanded verb grid,
 // 5 extra QA rules, 2 extra auto-fixes.
+// v1.3.0 expansion: punctuation block (sentence boundaries, comma rules,
+// dash rules, tautology avoidance), 9 new QA rules (tautology, comma
+// before და, missing comma before contrast connectors, doubled punctuation,
+// English period, apostrophes, semicolons, space before punct), 11 new
+// auto-fixes (comma removal/insertion, punctuation collapse, tautology
+// collapse, terminal punct enforcement).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -221,6 +227,55 @@ IDIOM SUBSTITUTION TABLE — TRANSLATE THE MEANING, NEVER THE WORDS:
 • "When in Rome..." → ქალაქში შედი, ქალაქისა იყავი / მგელთან ერთად უროდ ყივილე.
 RULE: if the English idiom has a listed native equivalent, USE IT. If not, unpack the meaning in plain natural Georgian. Never transliterate the metaphor.`;
 
+// 1k. Georgian punctuation: sentence boundaries, terminal marks, commas, dashes (v1.3.0).
+const KA_PUNCTUATION = `
+GEORGIAN PUNCTUATION — NATIVE RULES (obey exactly, never copy English punctuation habits):
+
+SENTENCE BOUNDARIES:
+• A Georgian sentence ends with ។ — NOT the English period "."
+• ។ replaces ALL English periods at sentence end.
+• Question sentences end with ? (same as English).
+• Exclamation sentences end with ! (same as English).
+• Trailing thought / hesitation / unfinished sentence → … (ellipsis, three dots).
+• NEVER leave a sentence without terminal punctuation — TTS prosody depends on it.
+• A new sentence starts after ។ / ? / ! / … followed by one space.
+• Do NOT insert a comma or dash where a sentence should end — if the thought is complete, use ។
+
+COMMA RULES (dramatically different from English):
+• NO comma before და (and) joining two clauses — even if English would put one there.
+  Wrong: *მე წავედი, და ის დარჩა.  Right: მე წავედი და ის დარჩა.
+• Comma BEFORE contrast/concession connectors: მაგრამ, თუმცა, ხოლო, რადგან, ვინაიდან, თუ.
+  მე წავედი, მაგრამ ის დარჩა.
+• Comma between items in a list (like English).
+• NO comma between subject and verb, ever.
+• NO comma between verb and its direct object, ever.
+• Comma after introductory phrases (როგორც ჩანს, თურმე, საბოლოოდ ჯამში).
+• Comma around parenthetical insertions (— like this —).
+
+DASH RULES:
+• Dialogue speaker turns: leading em-dash — (— დრო გამოიცვალა, — იტყოდა).
+• Parenthetical: spaced en-dash – (word – insert – word).
+• Ranges: 1918–1921 (en-dash, no spaces).
+• DO NOT use em-dash as a sentence-internal pause where a comma belongs.
+
+TAUTOLOGY (AVOID):
+• Never repeat the same meaning in two words side by side.
+  Wrong: *დიდი დიდი სახლი (unless intentional reduplication for style).
+  Wrong: *წავიდა წასვლა. Right: წავიდა.
+• Acceptable literary reduplication (NOT tautology): ნელ-ნელა, თანდათან, დღე-ღამე, ფეხ-ფეხით.
+• If two adjacent words mean the same thing, delete one.
+
+SEMICOLONS & COLONS:
+• Semicolon (;) — use sparingly, only between closely related independent clauses. Most English semicolons should become ។ in Georgian.
+• Colon (:) — before lists, explanations, or quoted material. Rare in narrative prose.
+
+WHAT NEVER APPEARS IN GEORGIAN TEXT:
+• English straight quotes " " → use „ … “
+• English period . at sentence end → use ។
+• Semicolons in dialogue → replace with ។ or comma.
+• Apostrophes ' → Georgian has no apostrophes in native words (only in transliterated foreign names).
+• Capital letters → Georgian Mkhedruli has none.`;
+
 // 1j. EN→KA decision table: input feature → output rule (v1.2.0).
 const KA_DECISION_TABLE = `
 EN→KA DECISION TABLE — INPUT FEATURE → OUTPUT RULE (apply in order):
@@ -246,7 +301,7 @@ EN→KA DECISION TABLE — INPUT FEATURE → OUTPUT RULE (apply in order):
 20. English "one" as pronoun → ის / generic pro-drop: "one never knows" → არავინ იცის / ვერავინ იცის.`;
 
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
-// Full knowledge base for draft translation (10 blocks, richer v1.2.0 set).
+// Full knowledge base for draft translation (11 blocks, richer v1.3.0 set).
 function getKaKnowledgeBase() {
     return [
         KA_MORPHOLOGY,
@@ -255,6 +310,7 @@ function getKaKnowledgeBase() {
         KA_EVIDENTIALITY,
         KA_POLITENESS,
         KA_IDIOMS,
+        KA_PUNCTUATION,
         KA_DEFECTS,
         KA_REGISTER,
         KA_DECISION_TABLE,
@@ -264,12 +320,12 @@ function getKaKnowledgeBase() {
 
 // Compact rule set for refinement stages (targeted, smaller).
 function getKaCompactRules() {
-    return [KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE].join('\n');
+    return [KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION].join('\n');
 }
 
 // Focused set for QA repair passes (small, defect-driven).
 function getKaRepairRules() {
-    return [KA_DEFECTS, KA_EVIDENTIALITY, KA_POLITENESS].join('\n');
+    return [KA_DEFECTS, KA_EVIDENTIALITY, KA_POLITENESS, KA_PUNCTUATION].join('\n');
 }
 
 // ── 3. MORPHOLOGICAL QA VALIDATOR ───────────────────────────────────────────
@@ -421,6 +477,66 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'pro_drop', message: `Over-explicit pronoun: "${m8[0].trim()}..." — drop მე unless contrast/emphasis (verb already encodes person).` });
     }
 
+    // ── v1.3.0 additions: punctuation, tautology, syntax ──
+
+    // 3.20 English-style period at sentence end: Georgian narrative prose uses
+    //      ។ in the target house style. Flag Latin full stops directly after
+    //      a Georgian word (sentence-final position).
+    if (/(?<=[\u10A0-\u10FF])\.(?=\s|$)/.test(text)) {
+        issues.push({ rule: 'latin_period', message: 'English-style period "." after a Georgian word — the house style ends sentences with ។ (or ? ! …).' });
+    }
+
+    // 3.21 Comma before და joining clauses (English calque). Flag ", და" but
+    //      allow list commas ("a, b, და c" pattern is list-final, still
+    //      flagged softly). Heuristic: comma + space + და + space + word.
+    const commaDaRe = /(?<=[\u10A0-\u10FF]),\s+და\s+(?=[\u10A0-\u10FF])/g;
+    let m9;
+    let commaDaCount = 0;
+    while ((m9 = commaDaRe.exec(text)) !== null) { commaDaCount++; }
+    if (commaDaCount > 0) {
+        issues.push({ rule: 'comma_before_da', message: `Comma before და found (${commaDaCount}x) — native Georgian omits the comma before და joining clauses (verify list-final usage).` });
+    }
+
+    // 3.22 Missing comma before contrast connectors: მაგრამ/თუმცა/ხოლო/რადგან
+    //      should be preceded by a comma when joining clauses.
+    const noCommaContrastRe = /(?<=[\u10A0-\u10FF])\s+(მაგრამ|თუმცა|ხოლო|რადგან|ვინაიდან)\s+(?=[\u10A0-\u10FF])/g;
+    let m10;
+    while ((m10 = noCommaContrastRe.exec(text)) !== null) {
+        const before = text.slice(Math.max(0, m10.index - 1), m10.index);
+        if (before !== ',') {
+            issues.push({ rule: 'missing_comma_contrast', message: `Missing comma before "${m10[1]}" — contrast/concession connectors take a comma: ..., მაგრაม ...` });
+            break;
+        }
+    }
+
+    // 3.23 Doubled punctuation: "..", "!!", "??"", ",,", "..!" etc.
+    if (/([.!?…])\1/.test(text) || /[,;:]{2,}/.test(text)) {
+        issues.push({ rule: 'doubled_punct', message: 'Doubled punctuation found — collapse to a single mark (Georgian prose does not double terminal marks).' });
+    }
+
+    // 3.24 Tautology: same word repeated adjacently (not literary reduplication
+    //      with hyphen like ნელ-ნელა). Flag "word word" for words >= 3 chars.
+    const tautologyRe = /(?<![\u10A0-\u10FF])([ა-ჰ]{3,})\s+\1(?![\u10A0-\u10FF])/g;
+    let m11;
+    while ((m11 = tautologyRe.exec(text)) !== null) {
+        issues.push({ rule: 'tautology', message: `Possible tautology: "${m11[0]}" — same word repeated adjacently. Delete one unless it is intentional literary reduplication.` });
+    }
+
+    // 3.25 English apostrophe inside/after Georgian words (calque artifact).
+    if (/[\u10A0-\u10FF]'[\u10A0-\u10FF]/.test(text)) {
+        issues.push({ rule: 'apostrophe', message: "Apostrophe inside a Georgian word — native words don't take apostrophes (check transliteration or remove)." });
+    }
+
+    // 3.26 Semicolon inside Georgian narrative (English habit; rare in native prose).
+    if (/[\u10A0-\u10FF]\s*;/.test(text)) {
+        issues.push({ rule: 'semicolon', message: 'Semicolon in Georgian prose — native style prefers ។ or a comma; replace unless clearly needed.' });
+    }
+
+    // 3.27 Space before punctuation (typo artifact): "word ." / "word ,"
+    if (/[\u10A0-\u10FF]\s+([,.:;!?…])/.test(text)) {
+        issues.push({ rule: 'space_before_punct', message: 'Space before punctuation mark — remove the space (word। not word ।).' });
+    }
+
     return issues;
 }
 
@@ -462,15 +578,54 @@ function correctGeorgianMorphology(text) {
     // 4.8 Calqued idiom → native equivalent (highest-frequency hallucination)
     out = out.replace(/კატები და ძაღლები(სავით|ვით)?\s*წვიმს/g, 'უროსავით წვიმს');
 
+    // ── v1.3.0 additions: punctuation & tautology auto-fixes ──
+
+    // 4.9 Remove comma before და (English calque — native Georgian omits it)
+    out = out.replace(/(?<=[\u10A0-\u10FF]),\s+და\s+(?=[\u10A0-\u10FF])/g, ' და ');
+
+    // 4.10 Insert comma before contrast connectors if missing
+    out = out.replace(/(?<=[\u10A0-\u10FF])\s+(მაგრამ|თუმცა|ხოლო|რადგან|ვინაიდან)\s+/g, ', $1 ');
+
+    // 4.11 Collapse doubled punctuation to single mark
+    out = out.replace(/([.!?…])\1+/g, '$1');
+    out = out.replace(/[,;:]{2,}/g, m => m[0]);
+
+    // 4.12 Remove space before punctuation marks
+    out = out.replace(/([\u10A0-\u10FF])\s+([,.:;!?…])/g, '$1$2');
+
+    // 4.13 Ensure space after punctuation (but not at string end)
+    out = out.replace(/([,.:;!?…])(?=[\u10A0-\u10FF])/g, '$1 ');
+
+    // 4.14 Collapse adjacent tautology: same word repeated (≥3 chars, not hyphenated reduplication)
+    out = out.replace(/(?<![\u10A0-\u10FF])([ა-ჰ]{3,})\s+\1(?![\u10A0-\u10FF])/g, '$1');
+
+    // 4.15 Replace English period at sentence end with Georgian ।
+    out = out.replace(/(?<=[\u10A0-\u10FF])\.(?=\s|$)/g, '।');
+
+    // 4.16 Remove apostrophe inside Georgian words
+    out = out.replace(/([\u10A0-\u10FF])'([\u10A0-\u10FF])/g, '$1$2');
+
+    // 4.17 Replace semicolons in Georgian narrative with period
+    out = out.replace(/([\u10A0-\u10FF])\s*;(?=\s|$)/g, '$1।');
+
+    // 4.18 Fix ", ," or " ," artifacts
+    out = out.replace(/\s+,/g, ',');
+    out = out.replace(/,\s*,/g, ',');
+
+    // 4.19 Ensure terminal punctuation at end of text
+    if (out.trim().length > 0 && !/[.!?…।]$/.test(out.trim())) {
+        out = out.trim() + '।';
+    }
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.2.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.3.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 10,
-    qaRules: 18,
-    autoFixes: 8,
+    promptBlocks: 11,
+    qaRules: 27,
+    autoFixes: 19,
     researchSources: 34
 };
 
