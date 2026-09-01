@@ -3494,6 +3494,36 @@ the day before yesterday→გუშინწინ · day before yesterday→�
 day after tomorrow→ზეგ · right now→ახლავე · tonight→ამაღამ ·
 now→ახლა · later→მოგვიანებით (longest-first)`;
 
+// KA-110 v1.28.0 — Possessive determiners: unambiguous EN possessives →
+//                  Georgian carriers (extends KA_POSSESSION's declension
+//                  table with the deterministic EN-side mapping).
+const KA_POSSESSIVE_DET = `
+POSSESSIVE DETERMINERS — EN DETERMINER → KA CARRIER (fr.wikipedia
+"Déclinaisons géorgiennes" Adjectifs possessifs: full paradigm ჩემი/
+შენი/მისი/ჩვენი/თქვენი/მათი — they decline like consonant-stem
+adjectives; 1st/2nd person take -ს in dative+adverbial (ჩემს, შენს,
+ჩვენს, თქვენს) while 3rd person takes ZERO (მის, მათ); app2brain:
+His, Hers, Its → მისი — ONE form, Georgian has no 3rd-person gender;
+en.wiktionary მე-entry: genitive ჩემ/შენ/მის/მათ stems):
+• DETERMINISTIC (unambiguous, auto-fixable): my → ჩემი · our → ჩვენი ·
+  their → მათი · his → მისი · its → მისი (NOT a calque per person:
+  its and his COLLAPSE into მისი — never *მისი vs *მის by gender).
+• CONTEXT-GATED (QA-only, AI-pass decides): your → შენი (informal)
+  vs თქვენი (formal/plural) — register choice per KA-52 T–V rules,
+  never flattened deterministically; her → მისი (possessive "her
+  book") vs მას (object "saw her") — polysemous, needs syntax.
+• REFLEXIVE OVERWRITE: when the possessor is the clause subject,
+  his/her must become თავისი (KA_POSSESSION/KA_SELF_REFERENCE;
+  მან ... მისი → მან ... თავისი repair lives in fix 4.54).
+• ECONOMY INTERACTION: after mapping, fixes 4.33 / QA 3.40 drop the
+  carrier before body parts & kin (თავი მტკივა, NOT *ჩემი თავი).
+• NEVER map: mine/theirs/ours/hers standalone pronouns (coal-mine
+  polysemy; contrastive contexts need AI), myself-series (-self →
+  თავი + case, context-dependent case ending).
+MAPPING: my→ჩემი · our→ჩვენი · their→მათი · his→მისი · its→მისი ·
+your→შენი|თქვენი (QA-gated) · her→მისი|მას (QA-gated) ·
+1st/2nd-dat → ჩემს/შენს/ჩვენს/თქვენს · 3rd-dat → მის/მათ (zero -ს)`;
+
 
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
@@ -3602,6 +3632,7 @@ function getKaKnowledgeBase() {
         KA_HABITUAL_HORTATIVE,
         KA_NEGATION_CARRIERS,
         KA_TIME_DEICTIC,
+        KA_POSSESSIVE_DET,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4588,6 +4619,19 @@ function validateGeorgianTranslation(text) {
     }
     if (/\b(?:right\s+now|tonight)\b/i.test(text) && !/ახლავე(?![\u10A0-\u10FF])|ამაღამ(?![\u10A0-\u10FF])/.test(text)) {
         issues.push({ rule: 'time_deictic_untranslated', message: 'English "right now"/"tonight" untranslated → ახლავე (fused ახლა+ვე) / ამაღამ (fused ამ+ა+ღამე). "right now" consumes BEFORE bare "now" → ახლა.' });
+    }
+
+    // 3.109 Possessive-determiner residue: context-gated EN possessives
+    //      surviving into Georgian output (KA-110). your → შენი|თქვენი is
+    //      register-dependent (KA-52) and her → მისი|მას is syntactically
+    //      polysemous — deliberately NOT auto-fixed, flagged for the AI
+    //      pass. The deterministic set (my/our/their/his/its) never
+    //      reaches here because fix 4.95 consumes it first.
+    if (/\byour\b/i.test(text) && !/(?<![\u10A0-\u10FF])(შენი|თქვენი)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'possessive_det_untranslated', message: 'English "your" untranslated → შენი (informal) or თქვენი (formal/plural) per the T–V register rules (KA-52). The choice propagates: შენი წიგნი vs თქვენი წიგნი — match the English register, never flatten.' });
+    }
+    if (/\bher\b/i.test(text) && !/(?<![\u10A0-\u10FF])(მისი|მას)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'possessive_det_untranslated', message: 'English "her" untranslated → მისი (possessive: her book → მისი წიგნი) or მას (object: saw her → დაინახა მას). Polysemous — decide from syntax. If the possessor is the clause subject, use თავისი (reflexive) instead.' });
     }
 
     return issues;
@@ -5729,16 +5773,34 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bnow\b/gi, 'ახლა');
     out = out.replace(/\blater\b/gi, 'მოგვიანებით');
 
+    // 4.95 Possessive determiners (KA-110). FUNCTION TAIL — after every
+    //      frame rule that keys on longer tokens ("my own" collocations,
+    //      4.88's "loves me" frames, 4.90's ask/tell frames). Only the
+    //      DETERMINISTIC set maps; your (T–V register) and her (possessive
+    //      vs object) are deliberately left for QA 3.109 + the AI pass.
+    //      \b guards against the standalone-pronoun hazard: mine/theirs/
+    //      ours/hers never match (\bmy\b cannot match inside "mine" —
+    //      no word boundary before the n). Standalone possessive
+    //      pronouns stay for the AI pass (coal-mine polysemy).
+    //      its → მისი mapped FIRST (\bits\b and any bare-\bit\b rule are
+    //      disjoint, but order documents intent).
+    //      his → მისი (app2brain: His, Hers, Its → მისი, no gender split).
+    out = out.replace(/\bits\b/gi, 'მისი');
+    out = out.replace(/\bhis\b/gi, 'მისი');
+    out = out.replace(/\bmy\b/gi, 'ჩემი');
+    out = out.replace(/\bour\b/gi, 'ჩვენი');
+    out = out.replace(/\btheir\b/gi, 'მათი');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.27.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.28.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 110,
-    qaRules: 109,
-    autoFixes: 94,
-    researchSources: 285
+    promptBlocks: 111,
+    qaRules: 110,
+    autoFixes: 95,
+    researchSources: 288
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
