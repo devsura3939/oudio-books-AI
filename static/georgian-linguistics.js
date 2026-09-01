@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.11.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.12.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -102,6 +102,20 @@
 // detached_quotative, additive_untranslated), auto-fixes 4.42-4.46 (attach
 // detached -ც, hyphenate detached თქო/მეთქი, drop redundant beneficiary,
 // straight quotes → „", EN also/moreover → ასევე/გარდა ამისა).
+// v1.12.0 expansion (EN↔KA book comparison: postposition case government,
+// masdars deep, purpose clauses, historical present, kinship/vocatives,
+// demonstratives, 20 new web sources incl. Wikibooks Adpositions table +
+// zmnebi.com verb guide + parryc.com grammar reference): KA_POSTPOSITIONS_CASE
+// (16 postpositions w/ case govt + letter-drop rules + fused pronouns + ზე
+// motion-purpose), KA_MASDARS_DEEP (formation, EN infinitive/gerund mapping),
+// KA_PURPOSE_CLAUSES (სა-...-ად, რათა + optative, ზე motion-purpose, სა-...-ელი),
+// KA_HISTORICAL_PRESENT (EN vivid-present → KA aorist normalization),
+// KA_KINSHIP_ADDRESS (family nouns, vocatives მამავ/ბატონო, მამაო=priest trap),
+// KA_DEMONSTRATIVES_DEEP (ეს/ეგ/ის three-way, ამ/მაგ/იმ obliques).
+// QA rules 3.61-3.65 (postposition_case, detached_dan_mde, purpose_untranslated,
+// vocative_mamao, historical_present), auto-fixes 4.47-4.51 (fuse detached
+// -დან/-მდე/-გან, EN in-order-to/so-that → რათა, მამაო → მამავ, historical
+// present → aorist).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1410,6 +1424,162 @@ TACTIC: run this checklist on final output — wrong quote marks and
 un-dropped possessives are the two most visible "translated-ese" flags in
 Georgian audiobooks.`;
 
+const KA_POSTPOSITIONS_CASE = `KA-55 POSTPOSITION CASE GOVERNMENT (v1.12.0, Wikibooks/Adpositions + talkinggeorgian.com):
+Georgian postpositions REQUIRE a specific case on the noun they follow.
+Getting the case wrong is the single most common postposition error.
+
+DATIVE (-ს) government:
+• -ზე (on/about): მაგიდაზე (on the table), პირველი საათზე (at 1 o'clock)
+• -ში (in/into): ქალაქში (in the city) — noun drops final -ს first: ქალაქს → ქალაქში
+• -თან (at, near, with a person): მეგობართან (with the friend)
+• თან ერთად (together with): ჩემ ძაღლთან ერთად
+
+INSTRUMENTAL (-ით/თი) government:
+• -დან (from a place): სკოლიდან (from school) — drops case -თ: სკოლით → სკოლიდან
+
+GENITIVE (-ის/ს) government:
+• -თვის (for): გიორგისთვის (for Giorgi) — NO letter drop
+• -გან (from a person/living thing): მეგობრისგან (from a friend)
+• გამო (because of): შფოთვის გამო
+• გარდა (except): ამის გარდა
+• გარეშე (without): ფულის გარეშე
+• მიერ (by, agent of passive): მის მიერ
+• მაგივრად (instead of): პურის მაგივრად
+• მიუხედავად (in spite of): სირთულეების მიუხედავად
+• -წინ (before, in front of): კარის წინ
+
+ADVERBIAL (-ად) government:
+• -მდე (up to, as far as): სახლამდე (up to the house) — drops final -დ: სახლად → სახლამდე
+
+NOMINATIVE government:
+• -ვით (like): მისავით (like him) — dative with -ა- insertion for pronouns
+
+FUSED PRONOUN FORMS (learn as units): ჩემთან, შენთან, მასთან, ჩემთვის,
+შენთვის, მისთვის, მათთვის, ჩემგან, მისგან, მათგან, ჩემზე, მასზე.
+
+SPECIAL SEMANTICS:
+• ზე with a verb of motion marks PURPOSE of the motion: პურზე მივდივარ
+  (I'm going to GET bread, lit. "I go onto bread").
+• -დან vs -გან: -დან = from a PLACE; -გან = from a PERSON/living thing or
+  material origin: მეგობრისგან მივიღე (I got it from a friend).
+• -მდე with time phrases: 8 საათიდან 5 საათამდე (from 8 until 5).
+• კენ (GEN) = towards, directional: შინისაკენ გაემართა (he headed homeward).
+• Listing multiple -ში items: the second-to-last takes -ისა not -ში.`;
+
+const KA_MASDARS_DEEP = `KA-56 MASDARS (VERBAL NOUNS) IN DEPTH (v1.12.0, zmnebi.com + polyglotclub + Wiktionary):
+The Georgian masdar (verbal noun/infinitive) is a NOUN formed from a verb,
+usually ending in -ა (წერა writing/to write), sometimes -ომა/-ოლა/-ილი.
+It declines like any noun and is the standard rendering of BOTH the English
+infinitive ("to write") and the gerund ("writing") in most contexts.
+
+FORMATION:
+• Strip person/tense endings, keep root + PFSF + -ა: წერს (writes) → წერა.
+• Preverbs carry direction into the masdar: მისვლა (to go), მოსვლა (to come),
+  გაფრენა (to fly away), შემოფრენა (to fly in), გადარბენა (to run across).
+
+USAGE PATTERNS (EN → KA mapping):
+• "to + verb" after modals: უნდა წავიდე (want-to-go takes OPTATIVE, not masdar);
+  შემიძლია წასვლა (can + masdar); მინდა წასვლა (want + masdar).
+• Gerund subject/object: სირბილი სასარგებლოა (running is useful).
+• After prepositions: masdar + case suffix per postposition government.
+• "keep doing" → გააგრძელებს + masdar; "on the verge of" → ე-...-ებოდეს.
+• "have done (already)" → past passive participle + აქვს: წაკითხული გაქვს?
+• Purpose adverbial of masdar: სა-...-დ/-ად → სამოგზიუროდ (in order to travel).
+
+CAUTION: the masdar is a NOUN — it takes case endings, not tense. A masdar
+followed by a finite verb agreement is a hallucination signature.`;
+
+const KA_PURPOSE_CLAUSES = `KA-57 EXPRESSING PURPOSE (v1.12.0, parryc.com "Expressing Purpose" + რათა):
+English "in order to / so as to + verb" has THREE Georgian renderings, in
+order of frequency in literary prose:
+
+1. სა-...-დ/-ად adverbial of the masdar (most idiomatic, compact):
+   მოგზაურობა (to travel) → სამოგზაუროდ (in order to travel).
+   With a preverb: სა- + preverb + root + -დ: სა-წა-სვლელად pattern family.
+2. რათა + optative (explicit, formal, clause-level):
+   იმღერა ხმამაღლა, რათა ყველამ გაიგონა (he sang loudly so that everyone heard).
+   რათა clause takes the OPTATIVE screeve, never the future indicative.
+3. ზე with a motion verb (implicit purpose): პურზე მივდივარ
+   (I'm going to get bread — lit. "I go onto bread").
+4. Future participle სა-...-ელი as attributive purpose: სასწავლი მასალა
+   (material to be learned).
+
+ENGLISH MAPPING TABLE:
+• "in order to + VERB" / "so as to + VERB" → სა-...-ად masdar adverbial
+• "so that + clause" → რათა + optative clause
+• "go/come/send ... to get/do X" → ზე with motion verb
+• "to be V-ed" (attributive) → სა-...-ელი future participle
+• "for + NOUN" (benefit) → -თვის + GENITIVE (გიორგისთვის), NOT სა-...-ად.`;
+
+const KA_HISTORICAL_PRESENT = `KA-58 HISTORICAL PRESENT IN NARRATION (v1.12.0, Wikipedia "Historical present" + EN↔KA novel comparison):
+English fiction uses the PRESENT tense for past events to add vividness
+(dream retellings, plot summaries, dramatic scene climaxes — Updike, Mantel,
+Atwood style). Georgian narrative prose has its own convention:
+
+MAPPING RULES:
+• English historical-present NARRATION (he walks in and says...) → Georgian
+  uses the AORIST (წერს-ნარატივი: შემოვიდა და უთხრა). Georgian does not use
+  present tense for completed past narrative events.
+• English historical present in DIALOGUE tags within past narration → AORIST
+  speech verb: "then he goes: '...'" → შემოდის კი არა, უთხრა: „..."
+• KEEP the present only when the English present is genuinely present-time
+  (current narration voice, stage directions, timeless general truths).
+• Dream retellings: English present → Georgian AORIST (დავინახა, მოვიდა);
+  the dream frame is marked once (ოცნებობდა, რომ...).
+• Vividness in Georgian comes from aspect (preverb presence) and short
+  clauses, NOT from tense shifting — do not "preserve" the English present.
+
+TACTIC: when the source mixes past narration with historical-present
+sentences, normalize ALL of them to aorist in Georgian; inconsistent tense
+shifting reads as an error to Georgian listeners.`;
+
+const KA_KINSHIP_ADDRESS = `KA-59 KINSHIP TERMS & VOCATIVES (v1.12.0, polyglotclub + parryc.com):
+Core family vocabulary and how characters address each other in Georgian prose.
+
+KINSHIP NOUNS:
+• მამა (father), დედა (mother), ძმა (brother), და (sister), შვილი (child),
+  ვაჟი (son — formal/literary), ასული (daughter — formal/literary),
+  მშობელი (parent), ოჯახი (family), ქმარი (husband), ცოლი (wife),
+  ბიჭი (boy), გოგო (girl — colloquial), გოგონა (girl — neutral).
+• Grandparents: ბაბუა (grandfather), ბებია/ბებო (grandmother).
+• In-laws: სიძე (son-in-law), რძალი (daughter-in-law), სიმამრი (father-in-law),
+  სიდედრი (mother-in-law).
+
+VOCATIVE FORMS (calling someone):
+• მამავ (father!), დედავ (mother!), ძმაო (brother!) — vocative case -ვ/-ო.
+• მამაო means "priest!" NOT "father!" — critical disambiguation.
+• ბატონო (sir), ქალბატონო (ma'am) — polite address, function as vocatives.
+• Addressing family by bare noun is normal and warm: დედა, მამა, ბაბუა.
+
+REGISTER:
+• English "son/daughter" in direct address → შვილო (vocative, affectionate),
+  not ვაჟო/ასულო (those are narrative/literary registers).
+• ბიჭი/გოგო are colloquial; use ვაჟი/ასული/გოგონა in formal narration.`;
+
+const KA_DEMONSTRATIVES_DEEP = `KA-60 DEMONSTRATIVES: ეს / ეგ / ის THREE-WAY SYSTEM (v1.12.0, parryc.com):
+Georgian has THREE demonstrative degrees where English has two ("this/that").
+
+• ეს = near the SPEAKER (English "this").
+• ეგ = near the ADDRESSEE or vaguely nearby / in the listener's possession
+  (English "that (of yours)" — colloquial workhorse: ეგ წიგნი that book of yours).
+• ის = far from both, or previously established in discourse (English "that").
+
+OBLIQUE FORMS (non-nominative):
+• ეს → ამ (ამ ქალს = this (DAT) woman); ის → იმ (იმ დღეს = on that day).
+• ეგ → მაგ (მაგ პონტში = because of that).
+• Plural: ესინი / ისინი (rare); usually ეს ხალხი / ის ხალხი instead.
+
+DISTAL ი- prefix: ის with ი- (იმას) implies someone FAR or a STRANGER;
+colloquial ა- prefix (ამას) implies someone close at hand.
+
+ENGLISH MAPPING TABLE:
+• "this" → ეს (NOM) / ამ (oblique)
+• "that" (near you) → ეგ (NOM) / მაგ (oblique)
+• "that" (far / anaphoric) → ის (NOM) / იმ (oblique)
+• "the aforementioned / the said" → იგი (formal literary demonstrative).
+TACTIC: English "that" is ambiguous — choose ეგ vs ის by who possesses or
+perceives the referent; default to ის in narration, ეგ in dialogue.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -1462,6 +1632,12 @@ function getKaKnowledgeBase() {
         KA_T_V_REGISTER,
         KA_PARALLEL_PROSE,
         KA_STYLE_GUIDE,
+        KA_POSTPOSITIONS_CASE,
+        KA_MASDARS_DEEP,
+        KA_PURPOSE_CLAUSES,
+        KA_HISTORICAL_PRESENT,
+        KA_KINSHIP_ADDRESS,
+        KA_DEMONSTRATIVES_DEEP,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -1956,6 +2132,52 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'additive_untranslated', message: `"${m30[1]}" — untranslated English additive/focus word in Georgian output. Map: also/too → -ც, even → კიდევ / არც კი, either/neither → არც, moreover → გარდა ამისა.` });
     }
 
+    // ── v1.12.0 additions: postpositions, masdars, purpose, tense, address ──
+
+    // 3.61 Postposition case-government error: მიერ / გამო / გარდა / გარეშე /
+    //      მაგივრად / მიუხედავად / კენ / წინ require GENITIVE (-ის/ს), and
+    //      -დან requires instrumental stem (drops -თ), -მდე requires adverbial
+    //      stem (drops -დ). Flag GEN-postpositions following non-genitive nouns.
+    const genPostRe = /(?<![\u10A0-\u10FF])[\u10A0-\u10FF]+[აეიოუ]\s+(მიერ|გამო|გარდა|გარეშე|მაგივრად|მიუხედავად)(?![\u10A0-\u10FF])/g;
+    let m31;
+    while ((m31 = genPostRe.exec(text)) !== null) {
+        issues.push({ rule: 'postposition_case', message: `"${m31[1]}" governs the GENITIVE case, but the preceding noun lacks ის/ს (e.g. შფოთვის გამო, მის მიერ, ამის გარდა). Check case agreement.` });
+    }
+
+    // 3.62 -დან attached to a bare dative/nominative form instead of the
+    //      instrumental stem (სკოლის დან or სკოლი დან instead of სკოლიდან);
+    //      also -მდე not fused (სახლი მდე instead of სახლამდე).
+    const detachedDanMdeRe = /(?<![\u10A0-\u10FF])[\u10A0-\u10FF]+(ის|ს|ი)\s+(დან|მდე)(?![\u10A0-\u10FF])/g;
+    let m32;
+    while ((m32 = detachedDanMdeRe.exec(text)) !== null) {
+        issues.push({ rule: 'detached_dan_mde', message: `"${m32[1]} ${m32[2]}" — -დან and -მდе are single words fused to the noun stem: სკოლიდან (from school), სახლამდე (up to the house). Never written as separate words.` });
+    }
+
+    // 3.63 Purpose mistranslated: bare English purpose words surviving, or
+    //      "in order to / so that / so as to" left untranslated in output.
+    const purposeEnRe = /\b(in order to|so as to|so that|in order that)\b/gi;
+    let m33;
+    while ((m33 = purposeEnRe.exec(text)) !== null) {
+        issues.push({ rule: 'purpose_untranslated', message: `"${m33[1]}" — untranslated English purpose connector. Map: in order to/so as to → სა-...-ად masdar adverbial or რათა + optative; so that → რათა + optative clause.` });
+    }
+
+    // 3.64 Vocative confusion: მამაო (priest!) used as family address — must be
+    //      მამავ for "father!"; also bare მამაო in dialogue context.
+    const mamaoRe = /(?<![\u10A0-\u10FF])მამაო(?![\u10A0-\u10FF])/g;
+    let m34;
+    while ((m34 = mamaoRe.exec(text)) !== null) {
+        issues.push({ rule: 'vocative_mamao', message: `"მამაო" means "priest!" — for addressing one's father use "მამავ" (vocative) or bare "მამა". Verify the speaker means a cleric before keeping.` });
+    }
+
+    // 3.65 Historical-present calque: present-tense narration verb immediately
+    //      after a clearly past-frame marker (გუშინ/ადრე/ერთხელ/წლების წინ) —
+    //      English vivid-present narration should be aorist in Georgian.
+    const histPresRe = /(?<![\u10A0-\u10FF])(გუშინ|ერთხელ|წლების წინ|დიდი ხნის წინ|იმ დღეს|ერთ დღეს)(?![\u10A0-\u10FF])[^.!?]{0,60}(?<![\u10A0-\u10FF])(დის|ამბობს|მიდის|ხედავს|შედის|იწყებს)(?![\u10A0-\u10FF])/g;
+    let m35;
+    while ((m35 = histPresRe.exec(text)) !== null) {
+        issues.push({ rule: 'historical_present', message: `Past frame "${m35[1]}" + present "${m35[2]}" — English historical-present narration must shift to the AORIST in Georgian: ერთხელ ... შევიდა/უთხრა/წავიდა. Keep present only for genuinely current narration.` });
+    }
+
     return issues;
 }
 
@@ -2191,16 +2413,56 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\balso\b/gi, 'ასევე');
     out = out.replace(/\bmoreover\b/gi, 'გარდა ამისა');
 
+    // ── v1.12.0 additions: postpositions, purpose, tense, address ──
+
+    // 4.47 Detached -დან/-მდე → fuse to the preceding noun stem
+    //     ("... ის დან" → "...-დან", "... ი მდე" → "...-მდე").
+    //     Lookahead includes ।/… because 4.15/4.29 already normalized periods.
+    out = out.replace(/(?<=[\u10A0-\u10FF])(ის|ს|ი)\s+(დან|მდე)(?=[\s,."”):;!?।…])/g, '$1$2');
+
+    // 4.48 Detached -გან → fuse to the preceding genitive stem
+    //     ("... ის გან" → "...-გან").
+    out = out.replace(/(?<=[\u10A0-\u10FF])ის\s+გან(?=[\s,."”):;!?।…])/g, 'ისგან');
+
+    // 4.49 Untranslated English purpose connectors → რათა + optative reading
+    //     (deterministic: "in order to/so as to" should never survive into
+    //     Georgian output as English words).
+    out = out.replace(/\bin order to\b/gi, 'რათა');
+    out = out.replace(/\bso as to\b/gi, 'რათა');
+    out = out.replace(/\bso that\b/gi, 'რათა');
+
+    // 4.50 Vocative confusion: მამაო (priest!) in direct family address → მამავ
+    //     (deterministic: მამაო as family address is always wrong; if the speaker
+    //     genuinely means a cleric the QA rule 3.64 flags it for review).
+    out = out.replace(/(?<![\u10A0-\u10FF])მამაო(?![\u10A0-\u10FF])/g, 'მამავ');
+
+    // 4.51 Historical-present calque: present-tense narration verb immediately
+    //     after a clearly past-frame marker (გუშინ/ადრე/ერთხელ/წლების წინ) →
+    //     aorist. These verbs are suppletive, so use an explicit mapping table
+    //     (string surgery cannot derive aorist stems: შედის → შევიდა,
+    //     მიდის → წავიდა, ამბობს → თქვა ...).
+    const KA_HIST_AORIST = {
+        'შედის': 'შევიდა',
+        'მიდის': 'წავიდა',
+        'ამბობს': 'თქვა',
+        'ხედავს': 'დაინახა',
+        'იწყებს': 'დაიწყო'
+    };
+    out = out.replace(
+        /(?<![\u10A0-\u10FF])(გუშინ|ერთხელ|წლების წინ|დიდი ხნის წინ|იმ დღეს|ერთ დღეს)(?![\u10A0-\u10FF])([^.!?]{0,20}?)(?<![\u10A0-\u10FF])(შედის|მიდის|ამბობს|ხედავს|იწყებს)(?![\u10A0-\u10FF])/g,
+        (m, frame, mid, verb) => frame + mid + KA_HIST_AORIST[verb]
+    );
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.11.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.12.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 54,
-    qaRules: 60,
-    autoFixes: 46,
-    researchSources: 135
+    promptBlocks: 60,
+    qaRules: 65,
+    autoFixes: 51,
+    researchSources: 155
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
