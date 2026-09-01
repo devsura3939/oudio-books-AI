@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.5.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.10.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -71,6 +71,21 @@
 // (-ად formation, high-frequency literary adverbs, narrative time markers).
 // QA rules 3.47-3.50 (have_calque, akvs_animate, comparison_calque,
 // would_calque).
+// v1.10.0 expansion (narrative/evidentiality deep-dive, 22 new web sources
+// incl. Wier lingbuzz evidentiality paper): KA_EVIDENTIALITY_DEEP (aorist vs
+// perfect narrative choice, perfect inversion dative subject, არ+perfect vs
+// არ+aorist negation nuance, თურმე/მეთქი/თქო/-ო quotatives), KA_PLUPERFECT
+// (participle + ქონდა screeve, ნა- experiential variant, უკვე+aorist
+// alternative), KA_FUTURE_IN_PAST (conditional screeve in reported speech,
+// English "would" disambiguation table), KA_ASPECT_HABITUAL (imperfective vs
+// perfective stem choice, imperfect background / aorist foreground prose
+// rhythm, ხოლმე habitual marker), KA_TIME_CLAUSES (როცა/სანამ...არ/შემდეგ
+// რაც/როგორც კი/ვიდრე/რაკი, narration sequence connectors), KA_WORD_ORDER_
+// NARRATIVE (SOV default, preverbal focus slot, contrastive fronting + კი,
+// Wackernagel enclitics, anti-SVO-calque tactic).
+// QA rules 3.51-3.55 (sanam_missing_ar, habit_conditional, evidential_missing,
+// pluperfect_form, svo_order), auto-fixes 4.40-4.41 (EN evidential adverbs →
+// თურმე, სანამ აर spacing normalize).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1062,6 +1077,155 @@ NARRATIVE PAST TIME MARKERS:
 RULE: In narration prefer the single native adverb (უეცრად) over an English
 calque phrase ("all of a sudden" → უეცრად, NOT *ყველა მოულოდნელობისა).`;
 
+const KA_EVIDENTIALITY_DEEP = `KA-43 EVIDENTIALITY IN NARRATION (v1.10.0, Wier lingbuzz / Tuite):
+Georgian grammar itself distinguishes WHO SAW the event — aorist vs perfect series.
+
+AORIST (firsthand, authoritative):
+• Aorist asserts the narrator witnessed or fully commits to the event.
+• "She bought bread" (seen): მან პური იყიდა. Subject = ERGATIVE (მან).
+• Use aorist for direct narration of plot events the story presents as fact.
+
+PERFECT-EVIDENTIAL (unwitnessed, deduced, reported):
+• Perfect series marks that the speaker did NOT witness the event directly —
+  it was inferred from results or heard from others.
+• "She has (apparently) bought bread": მას პური უყიდია / მან... შეუძენია.
+• Perfect INVERTS the case frame: subject goes DATIVE (მას), object NOMINATIVE.
+  This is the grammatical signature of evidential distance.
+• Negative nuance: არ მიყიდია (perfect-negation) = "I haven't bought it"
+  (neutral state); არ ვიყიდე (aorist-negation) = "I chose not to buy it"
+  (intentional non-action). Choose by meaning, not habit.
+
+QUOTATIVE / REPORTED PARTICLES:
+• თურმე = "apparently / they say / so it turns out" — the lexical evidential
+  particle par excellence. Attach to reported content:
+  მოვიდაო თურმე (he has apparently come). Use when rendering
+  "apparently", "supposedly", "as it turned out", "so they say".
+• =მეთქი (metki) = first-person self-quote: "so I said / I was like".
+• =თქო (tko) = reported command: "and (they say) do this".
+• -ო suffix on quoted words marks reported speech in folk narrative:
+  მოვიდაო, წავიდაო.
+
+TRANSLATION MAPPING:
+• English simple past in objective narration → AORIST.
+• English "had done / has done" with inference flavor, "apparently",
+  "it turned out", "reportedly" → PERFECT series or თურმე.
+• English "I hear (that)...", "they say..." → თურმე / -ო reported forms.`;
+
+const KA_PLUPERFECT = `KA-44 PLUPERFECT & "HAD DONE" (v1.10.0):
+English past perfect "had + participle" maps to Georgian constructions:
+
+1. PLUPERFECT SCREEVE (primary): imperfect of ქონა + participle —
+   დაწერილი მქონდა (I had written), ნანახი ჰქონდა (he had seen),
+   გაკეთებული გვქონდა (we had done). Inversion: possessor/experiencer DATIVE.
+2. ნა- PARTICIPLE variant (experiential flavor — "had once done"):
+   ნაჭამი გქონდა (you had (already) eaten), ნამღერი ჰქონდა.
+3. Simple narrative alternative: when English "had done" is just background
+   sequencing, Georgian prose often uses plain aorist with უკვე (already):
+   "he had left before dawn" → გათენებამდე უკვე წავიდა.
+   Prefer this when the evidential nuance is absent — do not stack
+   "had + had" chains into pluperfects mechanically.
+
+RULE: "had + V-ed" BEFORE another past event → pluperfect screeve or
+უკვე + aorist. "had + V-ed" as pure report/inference → perfect series.`;
+
+const KA_FUTURE_IN_PAST = `KA-45 FUTURE-IN-THE-PAST & REPORTED SPEECH (v1.10.0):
+English "would + verb" (future viewed from the past) → CONDITIONAL screeve:
+
+• "He said he would come" → თქვა, რომ მოვიდოდა (conditional: preverb + imperfect).
+• "I knew she would agree" → ვიცოდი, რომ დათანხმდებოდა.
+• "would always / used to" (habit) → imperfect, NOT conditional:
+   ის ყოველ დილას დადიოდა (he would walk every morning = habitual → imperfect).
+   ხოლმე can sharpen habituality: დადიოდა ხოლმე.
+
+DISAMBIGUATION TABLE for English "would":
+• would = future-in-past after a reporting verb → conditional (მოვიდოდა).
+• would = repeated past habit → imperfect (დადიოდა), optionally + ხოლმე.
+• would = politeness ("would you...") → გთხოვთ / შეგვიძლია თუ... phrasing,
+  not a literal conditional.
+• would = counterfactual ("I would go if...") → conditional screeve +
+  რომ/თუ condition clause (see KA-CONDITIONAL).
+
+REPORTED THOUGHT / SPEECH INTRODUCERS:
+• თქვა, რომ... (he said that), იფიქრა, რომ... (he thought that),
+  გაახსენდა, რომ... (he recalled that), მოეჩვენა, რომ... (it seemed to him).`;
+
+const KA_ASPECT_HABITUAL = `KA-46 ASPECT & HABITUAL IN NARRATION (v1.10.0):
+Georgian aspect = stem choice, not suffix tense:
+
+IMPERFECTIVE vs PERFECTIVE:
+• Present-series stems (no preverb) = imperfective: ongoing, habitual,
+  incomplete. ვწერ (I write / I am writing).
+• Preverb + stem = perfective: bounded, completed event. დავწერე (I wrote it
+  [to completion]). The preverb is the aspect switch.
+
+PAST NARRATIVE CHOICE:
+• Imperfect (ვწერდი) = background, description, repeated/habitual past,
+  ongoing states: წვიმდა (it was raining / it rained on and on).
+• Aorist (დავწერე) = foreground events, single completed actions, plot beats.
+• Prose rhythm: set the scene with imperfect; advance the plot with aorist.
+  "The rain was falling; he opened the door" → წვიმდა; კარი გააღო.
+
+HABITUAL MARKER ხოლმე:
+• ხოლმე explicitly marks habitual/characteristic past action:
+  დადიოდა ხოლმე ტბასთან (he used to go to the lake).
+  Use for English "used to", "would (habitual)", "always ... -ed".
+
+DURATIVE vs PUNCTUAL:
+• იწყებს/დაიწყო (began), განაგრძო (continued), დაასრულა (finished) mark
+  phase boundaries; combine imperfective verbs with them for duration.`;
+
+const KA_TIME_CLAUSES = `KA-47 TIME CLAUSES & TEMPORAL CONNECTORS (v1.10.0):
+Native temporal subordinators (prefer over calques of "when/after/until"):
+
+• როცა / როდესაც = when: როცა მოვიდა, ყველა გაჩუმდა.
+  (როდესაც is the literary/longer variant; როცა is neutral.)
+• სანამ ... არ = until (with negation in the subordinate clause!):
+  დაელოდე, სანამ არ დაბრუნდება (wait until he returns).
+  NOTE the obligatory არ inside სანამ-clauses with a completed event.
+• სანამ = while / as long as (without არ): სანამ ცოცხალია (while he lives).
+• შემდეგ რაც / რაც შეეხება... no — AFTER = შემდეგ, რაც or იმის შემდეგ, რაც:
+  შემდეგ რაც წავიდა, ოთახი დაცარიელდა.
+• როგორც კი = as soon as: როგორც კი დაინახა, გაიქცა.
+• მაშინ როცა = at the time when / back when: მაშინ როცა ახალგაზრდა იყო.
+• სანამღე / ვიდრე... არ = literary "until": ვიდრე არ მოვა, არ წავალ.
+• რაკი / რაკიღა = since, given that (literary): რაკი დაპირდა, უნდა შეასრულოს.
+
+SEQUENCE IN NARRATION:
+• ჯერ (first), მერე / შემდეგ (then), ბოლოს (finally), ამის შემდეგ (after that),
+  იმავე წუთას (that very moment), ერთბაშად (all at once).
+
+RULE: English "until + positive verb" → სანამ ... არ + verb. Missing არ is a
+defect, not a stylistic choice.`;
+
+const KA_WORD_ORDER_NARRATIVE = `KA-48 WORD ORDER & INFORMATION STRUCTURE (v1.10.0):
+Georgian is morphologically rich, so order is flexible — but DEFAULT is SOV
+and the verb typically CLOSES the clause.
+
+DEFAULTS:
+• Subject–Object–Verb: ბავშვმა ვაშლი შეჭამა. Verb-final is the unmarked,
+  calm narrative order.
+• Adjective precedes noun: დიდი სახლი. Genitive precedes noun: ბიჭის წიგნი.
+• Adverbs usually precede the verb: ნელა ლაპარაკობს.
+
+FOCUS & EMPHASIS (information structure):
+• The preverbal slot carries FOCUS: the word right before the verb is the
+  newsworthy element. ვაშლი შეჭამა ბავშვმა puts focus on ვაშლი.
+• Topicalized/contrastive elements move to clause-initial position with
+  კი / კიდევ: ეს კი მან არ იცოდა (THIS he did not know).
+• Fronting for dramatic effect is native and literary — use sparingly in
+  prose translation to mirror English end-focus.
+
+ENCLITICS (Wackernagel position):
+• Focus particles კი, ვერ, თურმე, ხოლმე and clitic pronouns gravitate to
+  second position in the clause, not sentence-final.
+
+TRANSLATION TACTIC:
+• Keep SOV + verb-final for neutral sentences.
+• When English fronting signals contrast ("But THIS..."), reproduce with
+  fronting + კი.
+• Do not mirror English SVO word order literally — it reads as translated-ese.
+  Reorder to SOV unless focus demands otherwise.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -1102,6 +1266,12 @@ function getKaKnowledgeBase() {
         KA_POSSESSION,
         KA_CONDITIONAL,
         KA_ADVERBS_LITERARY,
+        KA_EVIDENTIALITY_DEEP,
+        KA_PLUPERFECT,
+        KA_FUTURE_IN_PAST,
+        KA_ASPECT_HABITUAL,
+        KA_TIME_CLAUSES,
+        KA_WORD_ORDER_NARRATIVE,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -1508,6 +1678,53 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'would_calque', message: `"უნდა ${m21[1]}" — English "would" calque. The conditional is a screeve (preverb + imperfect): დაწერდი, წავიდოდი. უნდა + optative means "must", not "would".` });
     }
 
+    // ── v1.10.0 additions: evidentiality, pluperfect, aspect, time clauses ──
+
+    // 3.51 "until" clause missing the obligatory არ: სანამ + positive verb
+    //     for a completed event must be სანამ ... არ ...
+    const sanamRe = /(?<![\u10A0-\u10FF])სანამ(?![\u10A0-\u10FF])([^,。؛]{0,20})/g;
+    let m22;
+    while ((m22 = sanamRe.exec(text)) !== null) {
+        if (!/არ/.test(m22[1])) {
+            issues.push({ rule: 'sanam_missing_ar', message: `"სანამ${m22[1]}" — "until" clauses require არ inside the subordinate clause: სანამ არ დაბრუნდება (until he returns). სანამ without არ means "while/as long as".` });
+        }
+    }
+
+    // 3.52 Habitual "used to / would always" wrongly rendered as conditional
+    //     (preverb + imperfect) instead of imperfect (+ ხოლმე).
+    const habitCondRe = /(?<![\u10A0-\u10FF])(დადიოდეთ?|დაწერდეთ?|გააკეთებდეთ?)(?![\u10A0-\u10FF])\s*(?=[^,]{0,10}(ყოველ|ხოლმე|ყოველთვის|დღესასწაულ))/g;
+    let m23;
+    while ((m23 = habitCondRe.exec(text)) !== null) {
+        issues.push({ rule: 'habit_conditional', message: `"${m23[1]}" — habitual past should use the imperfect (დადიოდა), optionally + ხოლმე, not the conditional screeve.` });
+    }
+
+    // 3.53 Evidential marker missing: English "apparently/supposedly/it turned out"
+    //     left untranslated — should be თურმე or the perfect series.
+    const apparentRe = /\b(apparently|supposedly|reportedly|allegedly|it (?:turned|seems|seemed) out|they say)\b/gi;
+    let mApp;
+    while ((mApp = apparentRe.exec(text)) !== null) {
+        issues.push({ rule: 'evidential_missing', message: `"${mApp[1]}" — untranslated English evidential. Use the particle თურმე ("apparently/they say") or the perfect series (მას ... უყიდია) for unwitnessed/reported events.` });
+    }
+
+    // 3.54 Pluperfect "had + V-ed" rendered as double perfect or wrong inversion:
+    //     flag ქონდა forms not preceded by a past participle.
+    const pluperfectRe = /(?<![\u10A0-\u10FF])(მქონდა|გქონდა|ჰქონდა|გვქონდა|გქონდათ|ჰქონდათ)(?![\u10A0-\u10FF])/g;
+    let m24;
+    while ((m24 = pluperfectRe.exec(text)) !== null) {
+        const before = text.slice(Math.max(0, m24.index - 8), m24.index);
+        if (!/[\u10A0-\u10FF]ლი\s*$|[\u10A0-\u10FF]ლა\s*$/.test(before)) {
+            issues.push({ rule: 'pluperfect_form', message: `"${m24[1]}" — pluperfect needs a past participle before ქონდა: დაწერილი მქონდა (I had written). Check participle + inversion (dative subject).` });
+        }
+    }
+
+    // 3.55 English SVO calque: pronoun/subject directly before transitive verb with
+    //     object after verb — Georgian default is SOV with verb-final.
+    const svoRe = /(?<![\u10A0-\u10FF])(მან|ის|მე|შენ|ჩვენ|თქვენ|მათ)\s+(იყიდა|ნახა|გააკეთა|წერს|კითხულობს|შეჭამა)\s+([\u10A0-\u10FF]{2,12})(?![\u10A0-\u10FF])/g;
+    let m25;
+    while ((m25 = svoRe.exec(text)) !== null) {
+        issues.push({ rule: 'svo_order', message: `"${m25[1]} ${m25[2]} ${m25[3]}" — SVO calque. Georgian default is SOV with the verb closing the clause: ბავშვმა ვაშლი შეჭამა.` });
+    }
+
     return issues;
 }
 
@@ -1701,16 +1918,30 @@ function correctGeorgianMorphology(text) {
         'უფრო $1'
     );
 
+    // ── v1.10.0 additions: evidentiality, time clauses, narrative polish ──
+
+    // 4.40 Untranslated English evidential adverbs → თურმე (deterministic:
+    //     these should never survive into Georgian output).
+    out = out.replace(/\bapparently\b/gi, 'თურმე');
+    out = out.replace(/\bsupposedly\b/gi, 'თურმე');
+    out = out.replace(/\breportedly\b/gi, 'თურმე');
+    out = out.replace(/\ballegedly\b/gi, 'თურმე');
+
+    // 4.41 "სანამ არ" spacing normalize: სანამ არ X → keep, but collapse
+    //     doubled არ or missing space artifacts: "სანამარ" → "სანამ არ".
+    out = out.replace(/(?<![\u10A0-\u10FF])სანამარ(?![\u10A0-\u10FF])/g, 'სანამ არ');
+    out = out.replace(/(?<![\u10A0-\u10FF])სანამ\s+არ\s+არ\s+/g, 'სანამ არ ');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.9.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.10.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 42,
-    qaRules: 50,
-    autoFixes: 39,
-    researchSources: 91
+    promptBlocks: 48,
+    qaRules: 55,
+    autoFixes: 41,
+    researchSources: 113
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
