@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.22.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.23.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -332,6 +332,30 @@
 // მჭირდება, EN I-love-you family → be-form agreement მიყვარხარ/
 // გიყვარვარ/გვიყვარხარ). 89→102 QA is v1.22.0: rules 3.102-3.103,
 // fixes 4.88-4.89, sources +8 (259→267).
+// v1.23.0 expansion (reported questions / indirect speech — dictionary.ge
+// "whether II" + "what" entries, latinum.substack.com L50 reported-speech
+// lesson): KA_REPORTED_QUESTIONS (KA-104: polar თუ conjunction (never
+// რომ), თუ არა clause-final alternative, ხომ არ tag strategy მკითხა, რაიმე
+// დახმარება ხომ არ მჭირდებოდა, wh-retention მკითხა, სად მივდიოდი /
+// თუ რომელი წიგნი სჭირდება, tense backshift past→imperfect never
+// pluperfect, double-optative წასულიყო თუ დარჩენილიყო for "whether to V
+// or V", concessive იმისდა მიუხედავად, მოვა იგი თუ არა, what-if რა
+// იქნება, ... რომ / ვაითუ), KA_REPORTED_COMMANDS (KA-105: reported
+// commands as optative მითხრა, დაველოდე / არ წასულიყო, request სთხოვა
+// + masdar vs information მკითხა, quotative -ო გჭირდებაო/მოვაო, speech
+// verb inventory მკითხა/მითხრა/უთხრა/უპასუხა/ჩურჩულა/დაუყვირა,
+// თქვა, რომ statements). QA rule 3.104 (reported_question_untranslated:
+// EN asked if/whether/where, wonder if, told me where, don't know if,
+// what if with no თუ/ხომ არ/ვაითუ/-ო carrier — თუ guarded with Georgian
+// lookarounds so თუმცა does not satisfy it). Auto-fix 4.90 (EN reported
+// frames → speech verb + carrier; runs AFTER 4.53/4.73/4.74 and accepts
+// both raw English triggers AND their Georgian residue — whether/if
+// arrive as თუ, when as როცა, "whether or not" as "თუ or not" repaired
+// to თუ არა; asked me whether → მკითხა, თუ, I wonder if → მაინტერესებს,
+// თუ, asked me where → მკითხა, სად (wh-retention), told me where →
+// მითხრა, სად, don't know if → არ ვიცი, თუ, what if → რა იქნება, რომ).
+// 104→106 blocks is v1.23.0: KA-104/KA-105, rule 3.104, fix 4.90,
+// sources +3 (267→270).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3219,6 +3243,88 @@ TACTIC: when the OBJECT of love/like/hate/miss/have is 1st or
 2nd person, append the be-form; do NOT write უყვარს შენ or
 *მიყვარს შენ — that shape is reserved for 3rd-person stimuli.`;
 
+// KA-104 v1.23.0 — Reported questions / indirect speech
+const KA_REPORTED_QUESTIONS = `
+GEORGIAN REPORTED QUESTIONS / INDIRECT SPEECH (არაპირდაპირი მეტყველება) (EN↔KA)
+• POLAR QUESTIONS (yes/no): the conjunction is თუ — NEVER რომ:
+  "He asked me if I want coffee" → მან მკითხა, თუ მინდა ყავა (Latinum
+  L50); "I don't know whether she will come today" → არ ვიცი, თუ
+  მოვა დღეს ის. "იცი თუ არა..." = "do you know whether..." (v1.6.0
+  KA_PARTICLES complement).
+• POLAR ALTERNATIVE თუ არა — clause-FINAL or pre-verbal:
+  "he asked me whether we would be coming to the party" →
+  მან მკითხა, მივიდოდით თუ არა წვეულებაზე (dictionary.ge);
+  "I'll see whether she's at home" → ვნახავ, სახლში არის თუ არა იგი;
+  "the question arose as to whether" → წამოიჭრა საკითხი, იყო თუ არა.
+• ხომ არ STRATEGY: polar reported questions also use the tag frame:
+  "she asked me whether I needed any help" → მან მკითხა, რაიმე
+  დახმარება ხომ არ მჭირდებოდა (dictionary.ge) — ხომ არ + imperfect
+  softens the polarity (expects "yes" less than თუ არა).
+• WH RETENTION: wh-words are kept DIRECTLY with NO conjunction;
+  statement word order, question mark DROPS:
+  "he asked where I was going" → მკითხა, სად მივდიოდი (v1.6.0
+  KA_RELATIVES rule, now with frames); "she told me what book she
+  needs" → მან მითხრა, თუ რომელი წიგნი სჭირდება (თუ რომელი variant
+  attested); "do you know which cinema it's in" → იცი თუ რომელ
+  კინოთეატრშია (Latinum L50); "I believe what he told me" →
+  მე მჯერა იმის, რაც მე მან მითხრა (რაც fused relative).
+• TENSE BACKSHIFT: English past → Georgian IMPERFECT, never pluperfect:
+  "he asked where I was going" → სად მივდიოდი; would + V → future-in-
+  past მივიდოდით (v1.11.0 KA_FUTURE_IN_PAST); general truths may stay
+  present: "she does not know what she wants" → არ იცის, რა უნდა;
+  "no one knows exactly what happened" → ზუსტად არავინ იცის, რა მოხდა.
+• DOUBLE OPTATIVE for "whether to V or V": infinitive questions become
+  two optatives: "whether to go or stay" → წასულიყო თუ დარჩენილიყო
+  (dictionary.ge). Masdar + თუ variant: ვნახავთ თუ შევძლებთ "we'll
+  see whether we can" (Latinum L50).
+• CONCESSIVE "whether or not": იმისდა მიუხედავად, მოვა იგი თუ არა...
+  (dictionary.ge) — თუ არა postposed inside the concessive frame
+  (v1.16.0 KA_OPTIONS_CORRELATIVE complement).
+• "WHAT IF": რა იქნება, ... რომ + optative — "what if the train is
+  late?" → რა იქნება, მატარებელმა რომ დაიგვიანოს? (რომ is clause-
+  FINAL in the optative frame) — or the fused ვაითუ (dictionary.ge).
+MAPPING: asked if → მკითხა, თუ · asked whether → მკითხა, ხომ არ/თუ არა ·
+told me what → მითხრა, თუ რომელი/რა · I wonder if → მაინტერესებს, თუ ·
+don't know if → არ ვიცი, თუ · what if → რა იქნება, რომ/ვაითუ ·
+whether to go or stay → წასულიყო თუ დარჩენილიყო
+TACTIC: reported questions keep STATEMENT word order; polar uses თუ
+(never რომ), wh retains the wh-word (optionally preceded by თუ);
+backshift is past→imperfect ONLY, never pluperfect; question mark
+becomes a period (or ? only after რა იქნება, ... რომ frames).`;
+
+// KA-105 v1.23.0 — Reported commands & quotative -ო
+const KA_REPORTED_COMMANDS = `
+GEORGIAN REPORTED COMMANDS / QUOTATIVE PARTICLE -ო (EN↔KA)
+• REPORTED COMMANDS: the quote becomes an OPTATIVE marked for the
+  ORIGINAL addressee (1st person if I was commanded):
+  "He told me to wait" → მან მითხრა, დაველოდე (optative of
+  დაელოდება); negative: "she told him not to go" → მან უთხრა,
+  არ წასულიყო (or ნუ წახვალო with quotative).
+• REQUESTS: "asked me to help" → სთხოვა დახმარება (request verb
+  სთხოვა + masdar; the plain მკითხა is for INFORMATION questions,
+  სთხოვა for favours/objects: სთხოვა ფული he asked for money).
+• QUOTATIVE -ო: colloquial hearsay marker GLUED to the last word of
+  the reported utterance: "she asked me whether I needed any help" →
+  ... გჭირდებაო (dictionary.ge); მოვაო "he says he'll come"; ნუ წავაო
+  "he says don't go". Literary narration prefers the თუ/რომ frames;
+  -ო belongs to marked live dialogue (v1.16.0 KA_QUOTATIVES deepening).
+• SPEECH VERBS (aorist, addressee DATIVE — მ- me, გ- you, უ- him/her):
+  მკითხა asked-me · ჰკითხა asked · მითხრა told-me · უთხრა told-him ·
+  გვითხრა told-us · თქვა said · უპასუხა answered/replied ·
+  ჩურჩულა whispered · დაუყვირა shouted-at · დაიძახა called-out ·
+  სთხოვა requested. "he phoned me" → დამირეკა (v1.19.0 motion მი-
+  toward-speaker inside და- perfective).
+• "SAID (THAT)" statements: თქვა, რომ + indicative — რომ is REQUIRED
+  for reported statements and DROPPED for reported questions (თუ
+  takes over): "he said that he was tired" → თქვა, რომ დაღლილი იყო.
+MAPPING: told me to wait → მითხრა, დაველოდე · asked me to help →
+სთხოვა დახმარება · he said (that) → თქვა, რომ · answered → უპასუხა ·
+whispered → ჩურჩულა · told us → გვითხრა
+TACTIC: choose the speech verb by INTERACTION TYPE (information →
+კითხ stem, favour → სთხოვ, statement → თქვ/უთხრ); the addressee is
+dative ON the verb, never a nominative pronoun; optative person of
+the embedded command matches the ORIGINAL addressee, not the reporter.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -3320,6 +3426,8 @@ function getKaKnowledgeBase() {
         KA_EXISTENTIAL_FRAMES,
         KA_AFFECTIVE_VERBS,
         KA_BEFORM_AGREEMENT,
+        KA_REPORTED_QUESTIONS,
+        KA_REPORTED_COMMANDS,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4224,6 +4332,29 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'beform_missing', message: 'Interpersonal emotion with 1st/2nd-person object present but no be-form agreement: I love you → მიყვარხარ (NOT *მიყვარს შენ), you love me → გიყვარვარ, we love you → გვიყვარხარ, I love you all → მიყვარხართ, I miss you → მენატრები. The object is marked with the present "to be" form (ვარ/ხარ/ვართ/ხართ), Series I present only.' });
     }
 
+    // 3.104 Reported-question carrier missing: English indirect-speech
+    //      frames (asked if/whether/where, wondered if, told me where/
+    //      what, don't know if/whether/where) present but NO Georgian
+    //      reported-question carrier (თუ / თუ არა / ხომ არ / ვაითუ /
+    //      რა იქნება) in output. Wh-retention alone (სად/რა/რომელი)
+    //      does NOT satisfy the guard — the თუ carrier is the signal.
+    const repEn =
+        /\b(?:asked|wonder(?:ed|s)?|wondering)\b[^.!?]{0,60}?\b(?:if|whether|where|what|why|how|when|who)\b/i.test(text) ||
+        /\b(?:told|tell)\s+(?:me|him|her|us|them)\b[^.!?]{0,40}?\b(?:where|what|why|how|when|who|that)\b/i.test(text) ||
+        /\b(?:do(?:es)?n'?t|did(?:n'?t)|no one|nobody)\s+(?:know|knew|knows)\b[^.!?]{0,40}?\b(?:if|whether|where|what|why|how|when|who)\b/i.test(text) ||
+        /\bwhat\s+if\b/i.test(text);
+    //      Guard: polar carriers (თუ / თუ არა / ხომ არ — თუ checked with
+    //      Georgian-boundary lookarounds so თუმცა "although" does NOT
+    //      satisfy it), quotative -ო (გჭირდებაო — but ო preceded by ყ
+    //      EXCLUDED so იყო "was", the most common word-final Georgian ო,
+    //      does not false-satisfy the guard), what-if frames
+    //      (ვაითუ / რა იქნება, ... რომ), optative double-question
+    //      (წასულიყო თუ დარჩენილიყო).
+    const repGuard = /(?:(?<![\u10A0-\u10FF])თუ(?![\u10A0-\u10FF])|ხომ\s+არ|ვაითუ|რა\s+იქნება|(?<!ყ)ო(?![\u10A0-\u10FF]))/;
+    if (repEn && !repGuard.test(text)) {
+        issues.push({ rule: 'reported_question_untranslated', message: 'English reported/indirect question present but no Georgian carrier: asked if/whether → მკითხა, თუ / თუ არა / ხომ არ (NEVER რომ for questions), asked where → მკითხა, სად (wh-word kept, statement order, no ?), told me what → მითხრა, თუ რომელი/რა, I wonder if → მაინტერესებს, თუ, don\'t know if → არ ვიცი, თუ, whether to go or stay → წასულიყო თუ დარჩენილიყო (double optative), what if → რა იქნება, ... რომ / ვაითუ.' });
+    }
+
     return issues;
 }
 
@@ -4514,6 +4645,8 @@ function correctGeorgianMorphology(text) {
 
     // 4.53 Untranslated English correlatives → Georgian correlatives
     //      (deterministic: these should never survive into Georgian output).
+    //      "whether or not" maps whether→თუ here too; the leftover
+    //      "თუ or not" residue is repaired to თუ არა by 4.90 (v1.23.0).
     out = out.replace(/\bneither\b/gi, 'არც');
     out = out.replace(/\bnor\b/gi, 'არც');
     out = out.replace(/\beither\b/gi, 'ან');
@@ -5108,16 +5241,76 @@ function correctGeorgianMorphology(text) {
         return w || m;
     });
 
+    // ── v1.23.0 additions ──
+
+    // 4.90 Reported-question frames: ask/tell/wonder/know + embedded
+    //      question → Georgian speech verb + თუ carrier. Runs AFTER the
+    //      bare conjunction mappings (4.53 whether→თუ, 4.73 if→თუ,
+    //      4.74 when→როცა), so the patterns below accept BOTH the raw
+    //      English trigger and its Georgian residue: the თუ/როცa left
+    //      behind by 4.53/4.73/4.74 is embedded into the frame whole
+    //      (v1.22.0 ნამდვილად-tolerance discipline). The თუ fragment is
+    //      guarded by Georgian-boundary lookarounds (NOT \b — Georgian
+    //      chars are not \w and \b fails after them; each თუ alternative
+    //      self-terminates via its trailing lookahead) so თუმცა inside a
+    //      clause never leaks a false match; "whether or not" arrives
+    //      as residue "თუ or not" (no bare or/not mappings exist) and
+    //      is repaired to the attested concessive carrier თუ არა
+    //      (dictionary.ge). Wh-word frames (told me where/what) map
+    //      თუ-free: Georgian keeps the wh-word without a carrier.
+    const tu = '(?<![\\u10A0-\\u10FF])თუ(?![\\u10A0-\\u10FF])';
+    const roca = '(?<![\\u10A0-\\u10FF])როცა(?![\\u10A0-\\u10FF])';
+    out = out.replace(new RegExp(`\\b(?:whether|if)\\s+or\\s+not\\b|${tu}\\s+or\\s+not\\b`, 'gi'), 'თუ არა');
+    out = out.replace(new RegExp(`\\basked\\s+me\\s+(?:whether|if|${tu})`, 'gi'), 'მკითხა, თუ');
+    out = out.replace(new RegExp(`\\basked\\s+(?:him|her)\\s+(?:whether|if|${tu})`, 'gi'), 'ჰკითხა, თუ');
+    out = out.replace(new RegExp(`\\basked\\s+(?:us|them)\\s+(?:whether|if|${tu})`, 'gi'), 'ჰკითხა, თუ');
+    out = out.replace(new RegExp(`\\basked\\s+(?:whether|if|${tu})`, 'gi'), 'ჰკითხა, თუ');
+    out = out.replace(new RegExp(`\\b(?:ask|asked)\\s+(?:to\\s+)?(?:himself|herself|myself|themselves)?\\s*(?:aloud\\s+)?(?:whether|if|${tu})`, 'gi'), 'ჰკითხა, თუ');
+    //      "I wonder if" MUST be consumed before the generic wonder
+    //      pattern below, or the stranded English "I" would survive
+    //      ("I მაინტერესებდა"); "wonders" (present) → მაინტერესებს,
+    //      "wonder(ed)" → მაინტერესებდა.
+    out = out.replace(new RegExp(`\\bi\\s+wonder\\s+(?:whether|if|${tu})`, 'gi'), 'მაინტერესებს, თუ');
+    out = out.replace(new RegExp(`\\bwonders\\s+(?:to\\s+)?(?:himself|herself|myself|themselves)?\\s*(?:aloud\\s+)?(?:whether|if|${tu})`, 'gi'), 'მაინტერესებს, თუ');
+    out = out.replace(new RegExp(`\\bwonder(?:ed)?\\s+(?:to\\s+)?(?:himself|herself|myself|themselves)?\\s*(?:aloud\\s+)?(?:whether|if|${tu})`, 'gi'), 'მაინტერესებდა, თუ');
+    out = out.replace(new RegExp(`\\btold\\s+me\\s+(where|what|why|who|${roca})`, 'gi'), (m, w) => {
+        const map = { where: 'მითხრა, სად', what: 'მითხრა, რა', why: 'მითხრა, რატომ', who: 'მითხრა, ვინ' };
+        if (map[w.toLowerCase()]) return map[w.toLowerCase()];
+        return 'მითხრა, როდის'; // when / როცა residue → როდის (attested reported-time wh-word)
+    });
+    out = out.replace(new RegExp(`\\btell\\s+me\\s+(where|what|why|who|${roca})`, 'gi'), (m, w) => {
+        const map = { where: 'მითხრა, სად', what: 'მითხრა, რა', why: 'მითხრა, რატომ', who: 'მითხრა, ვინ' };
+        if (map[w.toLowerCase()]) return map[w.toLowerCase()];
+        return 'მითხრა, როდის'; // when / როცა residue → როდის
+    });
+    out = out.replace(new RegExp(`\\btold\\s+me\\s+(?:that\\s+)?how\\b`, 'gi'), 'მითხრა, როგორ');
+    out = out.replace(new RegExp(`\\btell\\s+me\\s+(?:that\\s+)?how\\b`, 'gi'), 'მითხრა, როგორ');
+    //      Attested wh-retention frames (dictionary.ge): "He asked me
+    //      where I was going" → მან მკითხა, სად მივდიოდი — speech verb
+    //      + KEPT wh-word, statement order, NO თუ carrier, NO question
+    //      mark. მკითხა for "asked me" (no h-external), ჰკითხა for
+    //      3rd-person/plural objects (h-external). Polar frames are
+    //      consumed by the earlier patterns above, so no collision.
+    out = out.replace(new RegExp(`\\basked\\s+(me|him|her|us|them)\\s+(where|what|why|who|${roca})`, 'gi'), (m, obj, w) => {
+        const verb = obj.toLowerCase() === 'me' ? 'მკითხა' : 'ჰკითხა';
+        const map = { where: 'სად', what: 'რა', why: 'რატომ', who: 'ვინ' };
+        return verb + ', ' + (map[w.toLowerCase()] || 'როდის'); // when / როცა residue → როდის
+    });
+    out = out.replace(new RegExp(`\\b(?:don'?t|do not)\\s+know\\s+(?:whether|if|${tu})`, 'gi'), 'არ ვიცი, თუ');
+    out = out.replace(new RegExp(`\\b(?:didn'?t|did not)\\s+know\\s+(?:whether|if|${tu})`, 'gi'), 'არ ვიცოდი, თუ');
+    out = out.replace(new RegExp(`\\b(?:doesn'?t|does not)\\s+know\\s+(?:whether|if|${tu})`, 'gi'), 'არ იცის, თუ');
+    out = out.replace(new RegExp(`\\bwhat\\s+(?:if|${tu})`, 'gi'), 'რა იქნება, რომ');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.22.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.23.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 104,
-    qaRules: 104,
-    autoFixes: 89,
-    researchSources: 267
+    promptBlocks: 106,
+    qaRules: 105,
+    autoFixes: 90,
+    researchSources: 270
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
