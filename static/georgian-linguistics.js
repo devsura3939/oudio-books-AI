@@ -657,7 +657,7 @@ GEORGIAN WORD BANK — HIGH-FREQUENCY VOCABULARY (prefer these in translations):
 CORE CONNECTORS (use these exact forms):
 • and=და  or=ან  but=მაგრამ  though/however=თუმცა  because=რადგან  since=რადგან
 • if=თუ  when=როდესაც  while=ხოლო  until=სანამ  before=ადრე/წინ  after=შემდეგ
-• also=ასევე  so=ასე რომ  never=არასდროს  always=ყველაფთვის  already=უკვე
+• also=ასევე  so=ასე რომ  never=არასდროს  always=ყოველთვის  already=უკვე
 • very=ძალიან  again=კიდევ ერთხელ  only=მხოლოდ  just=უბრალოდ  now=ახლა
 • suddenly=მოულოდნელად  finally=საბოლოოდ  slowly=ნელა  quickly=სწრაფად
 
@@ -3397,6 +3397,39 @@ bare motion mapping მიდის — that reading exists only for motion to a
 PLACE. The masdar after აპირებს takes dative -ს (წასვლას, დაწერას,
 ნახვას), mirroring რის გაკეთებას აპირებთ.`;
 
+// KA-107 v1.25.0 — Habituality & hortatives
+const KA_HABITUAL_HORTATIVE = `
+HABITUALITY & HORTATIVES (grammars.training/ka/grammar/used-to: "used to
+always refers to the past" + V1 after used to; en.wiktionary Appendix:
+Georgian verbs — imperfect screeve = habitual past, "the meaning of used
+to"; talkpal.ai frequency: always=ყოველთვის, usually=ჩვეულებრივ,
+often=ხშირად, sometimes=ზოგჯერ, rarely=იშვიათად, never=არასდროს;
+kahibaro.com habit table: ხოლმე = usually/sometimes (habit);
+learnentry.com: Let's ask the teacher → მოდი ვკითხოთ მასწავლებელს,
+Let's go out and eat → გავიდეთ და ვჭამოთ):
+• HABITUAL PAST ladder: "used to V" / "would V (habit)" / "always V-ed"
+  → IMPERFECT screeve; ხოლმე sharpens the habitual reading and sits
+  NEXT TO the verb: დადიოდა ხოლმე ტბასთან (he used to go to the lake).
+  Never conditional დადიოდებოდა-style forms for habit; conditional is
+  ONLY future-in-past after a report or counterfactual (KA-45).
+• "used to be + N/Adj" → იყო + imperfect carrier context (იყო alone
+  already covers state habit: ახალგაზრდა იყო ხოლმე).
+• be used to V-ing = DIFFERENT IDIOM (accustomed) → მიჩვეული ვარ + masdar
+  (მიჩვეული ვარ ადრე ადგომას) — never the habitual imperfect.
+• FREQUENCY ADVERBS (position: usually pre-verbal, ხოლმე post-verbal):
+  always=ყოველთვის · usually=ჩვეულებრივ / ძირითადად · often=ხშირად ·
+  sometimes=ზოგჯერ · rarely=იშვიათად · seldom=იშვიათად ·
+  never=არასდროს (+ არ on the verb — negative concord KA-45 of
+  არასდროს არ ...), every day=ყოველ დღე, every morning=ყოველ დილას.
+• HORTATIVE "let's + V" → მოდი(თ) + OPTATIVE 1pl: მოდი ვკითხოთ,
+  გავიდეთ და ვჭამოთ, მოდი კინოზე წავიდეთ. Negative: ნუ მივდივართ
+  style prohibitive. "let us not V" → ნუ + optative.
+• "let me + V" → მიმეცი/მომეცი-type optative 1sg (მოვუსმინო frame) or
+  მინდა ვ... paraphrase; keep the volitive, never aorist.
+MAPPING: used to V → imperfect (+ ხოლმე) · would always V → imperfect
+ხოლმე · let's V → მოდი(თ) + optative-1pl · let me V → optative-1sg /
+მინდა ვ · always → ყოველთვის · never → არასდროს + არ`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -3501,6 +3534,7 @@ function getKaKnowledgeBase() {
         KA_REPORTED_QUESTIONS,
         KA_REPORTED_COMMANDS,
         KA_FUTURE_INTENT,
+        KA_HABITUAL_HORTATIVE,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4444,6 +4478,23 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'future_intent_untranslated', message: 'English planned future "BE going to VERB" untranslated: I\'m going to leave → ვაპირებ წასვლას / წავალ, he is going to help → აპირებს დახმარებას, what are you going to do? → რას აპირებ? / რის გაკეთებას აპირებთ?, was going to call → დაგირეკას ვაპირებდი / დაგირეკავდი. Paradigm: ვაპირებ/აპირებ/აპირებს/ვაპირებთ/აპირებთ/აპირებენ; imperfect აპირებდა. "going to BE + noun/adj" is the COPULA FUTURE: he\'s going to be a doctor → იქნება ექიმი (never აპირებს იყოს). NEVER the bare motion მიდის for intent frames — მიდის is only for motion to a PLACE (I\'m going to the market → ბაზარზე მივდივარ). Masdar after აპირებს takes dative -ს (რის გაკეთებას აპირებთ, dictionary.ge). Plain future (წავალ/დავწერ) is also acceptable.' });
     }
 
+    // 3.106 Habituality & hortative residue: "used to V" (habitual past,
+    //      NOT "be used to" = accustomed), "would always V", bare "let's"
+    //      and "let me" frames surviving into the output.
+    //      "be used to" (accustomed) is EXCLUDED — it maps to მიჩვეული,
+    //      not the habitual imperfect.
+    const usedToHabit = /\b(?:he|she|it|there|we|you|they|i)\s+used\s+to\b/i.test(text) || /\bused\s+to\s+[a-z]+/i.test(text);
+    const habitCarrier = /ხოლმე|მიჩვეული/;
+    if ((usedToHabit || /\bwould\s+always\b/i.test(text)) && /used to|would always/i.test(text) && !habitCarrier.test(text)) {
+        issues.push({ rule: 'habitual_untranslated', message: 'English habitual past "used to V" / "would always V" untranslated. Habit → IMPERFECT screeve + optional ხოლმე: he used to go → დადიოდა ხოლმე, I used to write → ვწერდი (ხოლმე), they would always meet → ხვდებოდნენ ხოლმე. "be used to V-ing" (accustomed) is different: მიჩვეული ვარ + masdar. Conditional screeve is ONLY future-in-past, never habit.' });
+    }
+    if (/\blet'?s\b/i.test(text) && !/(?:მოდი|მოდით|გავიდეთ|optative)/i.test(text)) {
+        issues.push({ rule: 'hortative_untranslated', message: 'English hortative "let\'s V" untranslated → მოდი(თ) + OPTATIVE 1pl: let\'s go → მოდი წავიდეთ / წავიდეთ, let\'s ask → მოდი ვკითხოთ, let\'s eat → ვჭამოთ. "let me V" → optative 1sg (მოვუსმინო) or მინდა ვ... Never aorist for hortatives.' });
+    }
+    if (/\blet\s+me\s+[a-z]+/i.test(text) && !/(?:მინდა|მომეცი|მივუსმინო|optative)/i.test(text)) {
+        issues.push({ rule: 'hortative_untranslated', message: 'English "let me V" untranslated → volitive/optative 1sg: let me see → მინდა ვნახო / ვნახო, let me help → მინდა დაგეხმარო. Keep the volitive, never plain aorist.' });
+    }
+
     return issues;
 }
 
@@ -4861,7 +4912,9 @@ function correctGeorgianMorphology(text) {
     //      (conservative: make/made → აიძულა (forced) is wrong in most
     //      contexts, so only map the unambiguous "let" family; make/cause
     //      map to the generic აიძულა which the refine pass can re-shape).
-    out = out.replace(/\blet\b/gi, 'დაუშვა');
+    //      let's / let me are EXCLUDED here — they are hortatives handled
+    //      by 4.92 (მოდით / მინდა), never the causative დაუშვა (KA-107).
+    out = out.replace(/\blet\b(?!'?\s?s\b|\s+me\b)/gi, 'დაუშვა');
     out = out.replace(/\bforced\b/gi, 'აიძულა');
 
     // 4.67 Plural vowel-loss repair: X-იები → X-ები (drop the kept singular
@@ -5204,6 +5257,48 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bwas\s+going\s+(?:home|abroad|back|away|downtown|upstairs|downstairs|outside|inside|there)\b/gi, 'მივდიოდა');
     out = out.replace(/\bwere\s+going\s+(?:home|abroad|back|away|downtown|upstairs|downstairs|outside|inside|there)\b/gi, 'მივდიოდნენ');
 
+    // 4.92 Habituality & hortatives (KA-107). Strategy = carrier + residue
+    //      (same as 4.91): consume the English FRAME, insert the Georgian
+    //      carrier (ხოლმე / მოდით / frequency adverb), leave the main
+    //      verb as residue for the LLM/imperfect stages. Runs BEFORE
+    //      4.69/4.81 so "used to go" isn't degraded to bare მიდის and
+    //      "let's go" isn't split into fragments.
+    //      "be used to V-ING" (ACCUSTOMED idiom) is consumed FIRST and
+    //      excluded from the habitual mapping (მიჩვეული, never ხოლმე).
+    //      -ing REQUIRED: passive "was used to MAKE" (purpose) must NOT
+    //      match — only the gerund marks the accustomed idiom.
+    out = out.replace(/\b(?:'m|'s|'re|am|is|are|was|were)\s+used\s+to\s+([a-z]+ing)\b/gi, 'მიჩვეული $1');
+    //      existential past-habit: "there used to be" → fairy-tale იყო ხოლმე
+    out = out.replace(/\bthere\s+used\s+to\s+be\b/gi, 'იყო ხოლმე');
+    out = out.replace(/\bI\s+used\s+to\s+be\b/gi, 'ვიყავი ხოლმე');
+    out = out.replace(/\bwe\s+used\s+to\s+be\b/gi, 'ვიყავით ხოლმე');
+    out = out.replace(/\bused\s+to\s+be\b/gi, 'იყო ხოლმე');
+    //      habitual frame: "SUBJ used to V" → "SUBJ ხოლმე V" (verb residue
+    //      later staged to imperfect by AI; ხოლმე pre-verbal is attested)
+    out = out.replace(/\b(?:i|he|she|it|we|you|they|there)\s+used\s+to\b/gi, (m) => m.replace(/\s*used\s+to\b/i, ' ხოლმე'));
+    out = out.replace(/\bused\s+to\b/gi, ' ხოლმე');
+    //      habitual motion residue: "go" inside a ხოლმე frame → imperfect
+    //      დადიოდა (attested დადიოდა ხოლმე ტბასთან) — must precede 4.81's
+    //      bare go → მიდის which would degrade the habitual reading
+    out = out.replace(/(ხოლმე)\s+go\b/gi, '$1 დადიოდა');
+    out = out.replace(/\bwould\s+always\b/gi, 'ყოველთვის ხოლმე');
+    //      hortatives: "let's not V" → ნუ + optative; "let's V" → მოდით;
+    //      attested collocations first (learnentry.com)
+    out = out.replace(/\blet'?s\s+go\b/gi, 'მოდი წავიდეთ');
+    out = out.replace(/\blet'?s\s+not\b/gi, 'ნუ');
+    out = out.replace(/\blet'?s\b/gi, 'მოდით');
+    out = out.replace(/\blet\s+me\s+know\b/gi, 'გამატყობინე');
+    out = out.replace(/\blet\s+me\b/gi, 'მინდა');
+    //      frequency adverbs (talkpal.ai / kahibaro.com tables)
+    out = out.replace(/\balways\b/gi, 'ყოველთვის');
+    out = out.replace(/\busually\b/gi, 'ჩვეულებრივ');
+    out = out.replace(/\boften\b/gi, 'ხშირად');
+    out = out.replace(/\brarely\b/gi, 'იშვიათად');
+    out = out.replace(/\bseldom\b/gi, 'იშვიათად');
+    out = out.replace(/\bnever\b/gi, 'არასდროს');
+    out = out.replace(/\bevery\s+day\b/gi, 'ყოველ დღე');
+    out = out.replace(/\bevery\s+morning\b/gi, 'ყოველ დილას');
+
     // ── v1.19.0 additions ──
 
     // 4.81 Untranslated English motion verbs. Tense-sensitive carriers from
@@ -5490,12 +5585,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.24.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.25.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 107,
-    qaRules: 106,
-    autoFixes: 91,
-    researchSources: 274
+    promptBlocks: 108,
+    qaRules: 107,
+    autoFixes: 92,
+    researchSources: 279
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
