@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.13.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.14.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -132,7 +132,26 @@
 // QA rules 3.66-3.70 (rom_nonfinite, reflexive_possessive, impersonal_calque,
 // asymmetric_khan, correlative_untranslated), auto-fixes 4.52-4.56 (impersonal
 // calque → dative verbs, EN correlatives → არც/ან/თუ/ზოგჯერ, მან...მისი →
-// თავისი, რომ+masdar → drop რომ, lone ხან → ზოგჯერ).
+//  თავისი, რომ+masdar → drop რომ, lone ხან → ზოგჯერ).
+// v1.14.0 expansion (EN↔KA book comparison: numerals/adjectives/comparison/
+// ordinals/time, 20 new web sources incl. Wikipedia vigesimal numerals,
+// peacebridge.ge numeral declension + Wiktionary adjective declension):
+// KA_NUMERALS_VIGESIMAL (20-based counting, teens t-prefix + მეტი, 21-99
+// და-connector, hundreds no -მ-, final -i drop, thousands),
+// KA_ADJECTIVE_DECLENSION (ი-final class NOM/GEN/DAT/ERG/VOC patterns,
+// decline-when-postposed/standalone/nominalized, modern no-agreement rule),
+// KA_COMPARISON_DEEP (-ზе comparative on compared noun, უფრო/ნაკლებად,
+// ყველაზე superlative, suppletive კარგი→უკეთესი→საუკეთესო, ისევე როგორც),
+// KA_ORDINALS_FRACTIONS (მე- prefix + -ე suffix, პირველი irregular,
+// მე-N abbreviation, -ედ-ი fractions, ნახევარი half),
+// KA_TIME_EXPRESSIONS_DEEP (case-marked time: დილით/საღამოს/დღეს,
+// ყოველ + oblique stem, X საათზე, -ში duration, narrative-first position),
+// KA_MEASURES (სი- abstract nouns სიმაღლე/სიგრძე/სიღრმე, genitive-of-
+// measure, X წლის არის age genitive, units).
+// QA rules 3.71-3.75 (vigesimal_gap, ordinal_first_suppletive, age_genitive,
+// ordinal_suffix_untranslated, comparative_untranslated), auto-fixes
+// 4.57-4.61 (ოცი N → ოცდაN, მეერთი → პირველი, წელი → წლის in age,
+// EN ordinal suffixes → მე-N/N-ე, EN comparatives → უფრო/ნაკლებად/ყველაზე).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1757,6 +1776,200 @@ TACTIC: "I am + state-adjective" calques (მე შიმშილობა ვ
 must become the dative-experiencer verb. Check that the experiencer carries
 -ს/-მა and the verb is 3rd person even for "I".`;
 
+const KA_NUMERALS_VIGESIMAL = `KA-67 THE VIGESIMAL NUMBER SYSTEM (v1.14.0, Wikipedia "Georgian numerals" + peacebridge.ge + Wikibooks):
+Georgian counts in TWENTIES, not tens. English round numbers map differently:
+
+PRIMITIVES (1-10): ნული 0, ერთი 1, ორი 2, სამი 3, ოთხი 4, ხუთი 5,
+ექვსი 6, შვიდი 7, რვა 8, ცხრა 9, ათი 10.
+TEENS (11-19): t- prefix + root + მეტი ("ten more"), with consonant changes:
+  თერთმეტი 11, თორმეტი 12, ცამეტი 13 (t+s→ts), თოთხმეტი 14,
+  თხუთმეტი 15, თექვსმეტი 16, ჩვიდმეტი 17 (t+š→č), თვრამეტი 18 (t+rv→tvr),
+  ცხრამეტი 19 (t+s→ts).
+TWENTIES: ოცი 20, ორმოცი 40 (= 2×20, note -მ-), სამოცი 60 (3×20),
+  ოთხმოცი 80 (4×20). NOT ორ ოცი or ოთხ ოცი.
+21-99: drop final -ი of the twenty-word, add და ("and"), add 1-19:
+  ოცდაერთი 21, ოცდაათი 30, ოცდათვრამეტი 38, ორმოცდაშვიდი 47,
+  სამოცდაორი 62, ოთხმოცდაცხრამეტი 99. The და connector is MANDATORY.
+HUNDREDS: ასი 100; 200-900 have NO -მ-: ორასი, სამასი, ოთხასი, ხუთასი,
+  ექვსასი, შვიდასი, რვაასი, ცხრაასი.
+THOUSANDS: ათასი 1000 (lit. 10×100); ორი ათასი 2000; ათი ათასი 10,000.
+FINAL -i DROP: before a smaller number the final -ი disappears:
+  ორას ორმოცდაათი 250, სამას ათი 310, ოთხას თხუთმეტი 415,
+  ორი ათას ათი 2010.
+SPELLING: under 100 → one word (ოცდაერთი); from 100 → units written
+  separately: ათას ხუთას ოცდაშვიდი 1,527.
+
+ENGLISH MAPPING TABLE:
+• "twenty-one" → ოცდაერთი (NOT ოცი ერთი — missing და is a defect)
+• "thirty" → ოცდაათი (20+10); "fifty" → ორმოცდაათი (40+10);
+  "seventy" → სამოცდაათი (60+10); "ninety" → ოთხმოცდაათი (80+10)
+• "two hundred" → ორასი (NOT ორმოცი — that is 40)
+• "2,000" → ორი ათასი (two words); "10,000" → ათი ათასი
+TACTIC: an English round ten (30/50/70/90) is NOT a single Georgian word —
+it is a vigesimal compound with და. Never render "seventy" as a borrowed
+single word; it is სამოცდაათი (60+10).`;
+
+const KA_ADJECTIVE_DECLENSION = `KA-68 ADJECTIVE DECLENSION (v1.14.0, Wiktionary "Georgian adjectives" + georgian.se grammar):
+Modern Georgian adjectives normally do NOT agree with their nouns in case or
+number (unlike Old Georgian) — but they DO decline when:
+
+1. Postposed after the noun (poetic/emphatic): წიგნი კარგი (a book, a good one).
+2. Used standalone (substantivized): კარგმა თქვა (the good one said).
+3. Nominalized (the adjective IS the noun): ღარიბმა თქვა.
+
+TWO DECLENSION CLASSES:
+• Vowel-final adjectives NOT ending in -ი (e.g. ლურჯი? no — e.g. მაღალი is
+  -ი class; ლურჯ IS -ი class; true vowel-final like ცხვირ-? none common):
+  effectively UNCHANGING in all cases in modern usage.
+• ი-final adjectives (the vast majority: კარგი, დიდი, მაღალი, ლამაზი):
+  NOM = stem + ი (კარგი), GEN = stem + ის (კარგის) — same as noun;
+  DAT = bare stem (კარგ), ADV = bare stem (კარგ), ERG = stem + მა (კარგმა),
+  VOC = stem + ო (კარგო), INST = stem + ით (კარგით), ADVB = stem + ად (კარგად).
+
+KEY POINT: in the NOMINATIVE the -ი-final adjective looks identical to the
+noun; in DAT/ADV/ERG the adjective loses -ი or takes -მა while the noun keeps
+its own ending: დიდმა კაცმა (by the big man), დიდ სახლს (to the big house).
+
+ENGLISH MAPPING TABLE:
+• "the big house" → დიდი სახლი (adjective PRECEDES noun, uninflected)
+• "to the big house" → დიდ სახლს (adjective bare stem + noun dative)
+• "by the big man" → დიდმა კაცმა (adjective -მა + noun -მა)
+• "a good one" (standalone) → კარგი / declined კარგმა თქვა
+TACTIC: the classic MT error is leaving the FULL -ი form before a dative or
+ergative noun (დიდი სახლს ✗ → დიდ სახლს ✓). When the noun is declined away
+from nominative, the preceding ი-adjective usually drops its -ი.`;
+
+const KA_COMPARISON_DEEP = `KA-69 COMPARISON & SUPERLATIVE (v1.14.0, talkpal.ai comparison guide + lingualabs.com):
+Georgian does NOT inflect the adjective for comparison. The comparison is
+carried by particles and case endings:
+
+COMPARATIVE ("-er than"):
+• Structure: [Noun1] [Noun2]-ზე [adjective] — the -ზე suffix goes on the
+  COMPARED NOUN, the adjective is unchanged:
+  ლაშა გიორგიზე მაღალია (Lasha is taller than Giorgi — lit. "Lasha
+  on-Giorgi tall-is").
+• With უფრო (more) for emphasis: ეს წიგნი იმ წიგნზე უფრო საინტერესოა
+  (this book is more interesting than that one).
+• "less ... than" → ნაკლებად + adjective (+ X-ზე): ნაკლებად ძვირი (less expensive).
+• "than" as a standalone conjunction → ვიდრე: უმჯობესია დავგვიანდე,
+  ვიდრე ... (better to be late than ...).
+
+SUPERLATIVE ("the -est"):
+• ყველაზე + adjective = "the most" (lit. "on-all"): ყველაზე დიდი (the biggest);
+  თბილისი ყველაზე დიდი ქალაქია საქართველოში (Tbilisi is the biggest city in Georgia).
+• "the least" → ყველაზე ნაკლებად + adjective.
+• Suppletive (irregular) pairs: კარგი good → უკეთესი better → საუკეთესო best;
+  ცუდი bad → უარესი worse → ყველაზე უარესი worst.
+
+EQUALITY ("as ... as"):
+• როგორც ..., ისევე ... / X-ისევე როგორც Y: ის ისევე მაღალია, როგორც შენ
+  (he is as tall as you).
+
+ENGLISH MAPPING TABLE:
+• "X is -er than Y" → X Y-ზე [adjective]-ა (suffix on Y, adjective unchanged)
+• "more ... than" → ... -ზე უფრო [adj] (or უფრო ... ვიდრე)
+• "less ... than" → ... -ზე ნაკლებად [adj]
+• "the -est / the most [adj]" → ყველაზე [adj]
+• "the least [adj]" → ყველაზე ნაკლებად [adj]
+• "as [adj] as" → ისევე [adj]-ა, როგორც / როგორც ..., ისევე
+TACTIC: an English "-er" ending must NEVER be calqued onto the Georgian
+adjective. If a translation contains a modified adjective where English had
+a comparative, check that -ზე sits on the compared noun or უფრო/ვიდრე is
+present. Also memorize the suppletive trio: კარგი → უკეთესი → საუკეთესო.`;
+
+const KA_ORDINALS_FRACTIONS = `KA-70 ORDINALS & FRACTIONS (v1.14.0, peacebridge.ge numerals + omniglot.com + georgian.se):
+ORDINALS ("-th", "first", "second"):
+• Formation: მე- prefix + cardinal stem + -ე suffix:
+  მეხუთე 5th, მეექვსე 6th, მეშვიდე 7th, მერვე 8th, მეცხრე 9th, მეათე 10th,
+  მეთერთმეტე 11th, მეთორმეტე 12th, ოცდამეხუთე 25th, სამას მეხუთე 305th.
+  For compounds, მე- may attach to the LAST component only: ოცდამეხუთე (25th).
+• Irregulars to memorize: პირველი first (NOT მეერთი), მეორე second,
+  მესამე third (from სამი), მეოთხე 4th, მეხუთე 5th, მეექვსე 6th
+  (note vowel changes: მეექვსე, მერვე).
+• Abbreviations: with Arabic numerals მე-3 (3rd), მე-15 (15th), 21-ე, 42-ე;
+  with Roman numerals NO affix: III, V, XX.
+• Ordinals decline like adjectives: მეორე კაცს (to the second man),
+  მეორე კაცის (of the second man).
+• Spelling: under 100 one word (ოცდამეხუთე); with hundreds/thousands
+  written separately: ათას ორას ოცდამეხუთე (1,225th).
+
+FRACTIONS:
+• ordinal stem + -ედ-ი: მეოთხედი ¼, მესამედი ⅓, მეექვსედი ⅙, მეათედი ⅒,
+  მეასედი 1/100.
+• Half = ნახევარი (irregular; NOT მემეორედი); compounds: ორნახევარი 2½.
+
+ENGLISH MAPPING TABLE:
+• "first" → პირველი (irregular — never მეერთი)
+• "second/third/fourth..." → მეორე/მესამე/მეოთხე...
+• "the 21st / 21st" → მე-21 / 21-ე (abbreviation style)
+• "one-third / a third" → მესამედი; "a quarter" → მეოთხედი; "half" → ნახევარი
+• "two and a half" → ორნახევარი
+TACTIC: English "first" must map to the suppletive პირველი — a literal
+მეერთი is a classic MT defect. "2nd" digit-suffixes (st/nd/rd/th) must be
+converted to the Georgian მე-...-ე / N-ე style, never left as English.`;
+
+const KA_TIME_EXPRESSIONS_DEEP = `KA-71 TIME EXPRESSIONS & TEMPORAL CASES (v1.14.0, peacebridge.ge declension + georgien.free.fr + usage corpora):
+Georgian marks time with CASE, not prepositions. English "in/on/at + time"
+maps to case endings:
+
+• Adverbial -ად / -ით for time-of-day: დილით (in the morning),
+  საღამოს (in the evening), შუადღისას (at midday), ღამით (at night),
+  ზამთარში (in winter).
+• Dative -ს for point-in-time: დილას (in the morning), საღამოს (in the
+  evening), მეორე დღეს (the next day), ორ საათზე (at two o'clock).
+• "every X" as a time adverbial → ყოველ + OBLIQUE stem (no -ი):
+  ყოველ დილას (every morning), ყოველ დღე (every day) — NOT ყოველი დილა.
+  (ყოველი + nominative as a time adverbial is a documented learner error.)
+• "What time is it?" → რომელი საათია?; წუთი/წუთები = minute(s);
+  საათი = hour/clock; მაჯის საათი = wristwatch.
+• Narrative position: time markers typically come FIRST in the sentence:
+  დღეს მე ... (today I ...), დილით შევედით (in the morning we entered).
+• "at X o'clock" → X საათზე (postposition -ზე on the hour).
+• "in X" (duration: in two hours) → ორ საათში (-ში on the time span).
+
+ENGLISH MAPPING TABLE:
+• "in the morning / at night" → დილით / ღამით (adverbial, no preposition)
+• "the next day / next morning" → მეორე დღეს / მეორე დილას (dative)
+• "every morning/day" → ყოველ დილას / ყოველ დღე (oblique ყოველ, no -ი)
+• "at X o'clock" → X საათზე
+• "What time is it?" → რომელი საათია?
+• "in two hours / within a week" → ორ საათში / კვირაში
+TACTIC: never translate "in the morning" as a prepositional phrase with a
+separate preposition — Georgian folds it into the case ending. A bare
+English "in/on/at" surviving before a time word is a translationese marker.`;
+
+const KA_MEASURES = `KA-72 MEASURES, DIMENSIONS & AGE (v1.14.0, Wiktionary usage + georgia.georgien.free.fr):
+Georgian expresses dimensions and age with GENITIVE-of-measure or dedicated
+სი- abstract nouns — never with English "of"-phrases or adjective calques:
+
+DIMENSIONS (სი- abstract nouns + genitive):
+• სიმაღლე = height (lit. "highness"): შენობის სიმაღლე (the height of the building);
+  "X meters tall/high" → X მეტრი სიმაღლის / X მეტრის სიმაღლისაა.
+• სიგრძე = length; სიგანე = width; სიღრმე = depth; სიჩქარე = speed;
+  სიმძიმე = weight/heaviness.
+• "the weight of X" → X-ის წონა; "weighs X kilos" → X კილოგრამს იწონის.
+
+UNITS: მეტრი meter, კილომეტრი km, სანტიმეტრი cm, კილოგრამი kg,
+  გრამი g, ლიტრი liter, კვადრატული მეტრი square meter.
+
+AGE:
+• "X years old" → X წლის არის (genitive of წელი): ის ოც წლის არის
+  (he is 20 years old — lit. "he is of twenty years").
+• "at the age of X" → X წლის ასაკში.
+• Note the vowel grade: წელი (year, standalone), წლის (of the year),
+  წლები (years, plural), წლიანი (lasting X years).
+
+ENGLISH MAPPING TABLE:
+• "X meters high/tall" → X მეტრი სიმაღლისაა (NOT X მეტრი მაღალია calque)
+• "the height/length/depth of X" → X-ის სიმაღლე / სიგრძე / სიღრმე
+• "X kilos" → X კილოგრამი; "weighs X" → X კილოგრამს იწონის
+• "X years old" → X წლის არის (genitive წლის, NOT წელი)
+• "at the age of X" → X წლის ასაკში
+• "two and a half meters" → ორნახევარი მეტრი
+TACTIC: English "X years old" calqued as X წელი არის or X წლების არის is a
+frequent MT defect — the age construction always uses the GENITIVE წლის.
+"X meters tall" should prefer the სიმაღლე nominalization in careful prose.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -1821,6 +2034,12 @@ function getKaKnowledgeBase() {
         KA_OPTIONS_CORRELATIVE,
         KA_SELF_REFERENCE,
         KA_IMPERSONAL_DEEP,
+        KA_NUMERALS_VIGESIMAL,
+        KA_ADJECTIVE_DECLENSION,
+        KA_COMPARISON_DEEP,
+        KA_ORDINALS_FRACTIONS,
+        KA_TIME_EXPRESSIONS_DEEP,
+        KA_MEASURES,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -2406,6 +2625,49 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'correlative_untranslated', message: `"${m39[1]}" — untranslated English correlative. Map: either...or → ან..., ან...; neither...nor → არც..., არც...; both...and → როგორც..., ისე...; sometimes → ხან or ზოგჯერ; whether → თუ.` });
     }
 
+    // 3.71 Vigesimal defect: "twenty" and "forty" confused — ორმოცი is 40
+    //      (2×20), not 20. A bare ოც- compound missing the და connector
+    //      (e.g. ოცი ერთი for 21) is a vigesimal-calque signature.
+    const vigesimalGapRe = /(?<![\u10A0-\u10FF])ოცი\s+(?:ერთი|ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი)(?![\u10A0-\u10FF])/g;
+    let m40;
+    while ((m40 = vigesimalGapRe.exec(text)) !== null) {
+        issues.push({ rule: 'vigesimal_gap', message: `"${m40[0]}" — 21-99 requires the და connector: ოცდაერთი (21), ოცდაორი (22)... A bare "ოცი N" is an English vigesimal calque. Also: ორმოცი = 40, სამოცი = 60, ოთხმოცი = 80.` });
+    }
+
+    // 3.72 Suppletive ordinal defect: მეერთი for "first" — the suppletive
+    //      პირველი is required; მე- + ერთი is not a valid ordinal.
+    const meErtiRe = /(?<![\u10A0-\u10FF])მეერთ(?:ი|ე|ს)(?![\u10A0-\u10FF])/g;
+    let m41;
+    while ((m41 = meErtiRe.exec(text)) !== null) {
+        issues.push({ rule: 'ordinal_first_suppletive', message: `"${m41[0]}" — "first" is the suppletive პირველი (პირველი/პირველს/პირველმა). მეერთი is not a Georgian ordinal; second is მეორე, third მესამე.` });
+    }
+
+    // 3.73 Age construction defect: "X წელი არის" or "X წლების" for age —
+    //      the age construction requires the genitive წლის (X წლის არის).
+    const ageCalqueRe = /(?<![\u10A0-\u10FF])(?:წელი|წლები)(?![\u10A0-\u10FF])\s+არის/g;
+    let m42;
+    while ((m42 = ageCalqueRe.exec(text)) !== null) {
+        issues.push({ rule: 'age_genitive', message: `"${m42[0]}" — age uses the GENITIVE: "X წლის არის" (he is X years old). წელი/წლები + არის is an English "years old" calque; the year word takes the vowel-graded form წლის.` });
+    }
+
+    // 3.74 Untranslated English ordinal suffixes: "1st/2nd/3rd/4th..." left
+    //      as English digit+suffix in Georgian output.
+    const ordinalEnRe = /\b\d+(?:st|nd|rd|th)\b/gi;
+    let m43;
+    while ((m43 = ordinalEnRe.exec(text)) !== null) {
+        issues.push({ rule: 'ordinal_suffix_untranslated', message: `"${m43[0]}" — English ordinal suffix left untranslated. Map to Georgian: მე-N (მე-3) or N-ე (21-ე); "first" → პირველი, "second" → მეორე. Fractions: 1/3 → მესამედი, half → ნახევარი.` });
+    }
+
+    // 3.75 Comparative calque: English "-er/more" translated as a modified
+    //      adjective without the Georgian carrier — check for უფრო/ვიდრე/-ზე
+    //      missing when the sentence asserts a comparison. Heuristic: an
+    //      untranslated English comparative/marker pair in Georgian output.
+    const comparEnRe = /\b(?:more|less|than|bigger|smaller|taller|shorter|better|worse|oldest|youngest|biggest|smallest)\b/gi;
+    let m44;
+    while ((m44 = comparEnRe.exec(text)) !== null) {
+        issues.push({ rule: 'comparative_untranslated', message: `"${m44[0]}" — untranslated English comparison word. Map: "-er than" → Y-ზე + adjective (suffix on the compared noun, adjective unchanged); "more" → უფრო; "less" → ნაკლებად; "than" → ვიდრე (conjunction) or -ზე; "the -est" → ყველაზე; better/worse → უკეთესი/უარესი; best → საუკეთესო.` });
+    }
+
     return issues;
 }
 
@@ -2718,16 +2980,63 @@ function correctGeorgianMorphology(text) {
             return khanCount === 1 ? before + 'ზოგჯერ' + after : m;
         });
 
+    // 4.57 Vigesimal და-connector repair: "ოცი N" (bare twenty + unit) →
+    //      ოცდაN compound form. Deterministic for the common units 1-9:
+    //      "ოცი ერთი" → "ოცდაერთი". The compound drops the final -ი of ოცი.
+    const vigUnitMap = {
+        'ერთი': 'ერთი', 'ორი': 'ორი', 'სამი': 'სამი', 'ოთხი': 'ოთხი',
+        'ხუთი': 'ხუთი', 'ექვსი': 'ექვსი', 'შვიდი': 'შვიდი',
+        'რვა': 'რვა', 'ცხრა': 'ცხრა', 'ათი': 'ათი',
+    };
+    for (const [unit, stem] of Object.entries(vigUnitMap)) {
+        out = out.replace(
+            new RegExp(`(?<![\\u10A0-\\u10FF])ოცი\\s+${unit}(?![\\u10A0-\\u10FF])`, 'g'),
+            `ოცდა${stem}`,
+        );
+    }
+
+    // 4.58 Suppletive ordinal fix: მეერთი family → პირველი family
+    //      (case-mapped: NOM პირველი, ERG პირველმა, DAT/GEN პირველს/პირველის).
+    out = out.replace(/(?<![\u10A0-\u10FF])მეერთი(?![\u10A0-\u10FF])/g, 'პირველი');
+    out = out.replace(/(?<![\u10A0-\u10FF])მეერთე(?![\u10A0-\u10FF])/g, 'პირველი');
+    out = out.replace(/(?<![\u10A0-\u10FF])მეერთს(?![\u10A0-\u10FF])/g, 'პირველს');
+
+    // 4.59 Age genitive fix: "X წელი არის" → "X წლის არის" (age requires the
+    //      vowel-graded genitive წლის, not the standalone წელი).
+    out = out.replace(/(?<![\u10A0-\u10FF])წელი(?![\u10A0-\u10FF])(\s+არის)/g, 'წლის$1');
+
+    // 4.60 Untranslated English ordinal digit-suffixes → Georgian style:
+    //      "3rd" → "მე-3", "21st" → "21-ე". Word-boundary digits only.
+    out = out.replace(/\b(\d+)(?:st|nd|rd|th)\b/gi, (m, digits) => {
+        const n = parseInt(digits, 10);
+        return n === 1 ? 'პირველი' : `${digits}-ე`;
+    });
+
+    // 4.61 Untranslated English comparison words → Georgian carriers
+    //      (deterministic single-word mappings; "than" is ambiguous so map
+    //      to the safe conjunction ვიდრე).
+    out = out.replace(/\bmore\b/gi, 'უფრო');
+    out = out.replace(/\bless\b/gi, 'ნაკლებად');
+    out = out.replace(/\bbetter\b/gi, 'უკეთესი');
+    out = out.replace(/\bworse\b/gi, 'უარესი');
+    out = out.replace(/\bbest\b/gi, 'საუკეთესო');
+    out = out.replace(/\bbiggest\b/gi, 'ყველაზე დიდი');
+    out = out.replace(/\bsmallest\b/gi, 'ყველაზე პატარა');
+    out = out.replace(/\bbigger\b/gi, 'უფრო დიდი');
+    out = out.replace(/\bsmaller\b/gi, 'უფრო პატარა');
+    out = out.replace(/\btaller\b/gi, 'უფრო მაღალი');
+    out = out.replace(/\bshorter\b/gi, 'უფრო დაბალი');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.13.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.14.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 66,
-    qaRules: 70,
-    autoFixes: 56,
-    researchSources: 175
+    promptBlocks: 72,
+    qaRules: 75,
+    autoFixes: 61,
+    researchSources: 195
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
