@@ -356,6 +356,27 @@
 // მითხრა, სად, don't know if → არ ვიცი, თუ, what if → რა იქნება, რომ).
 // 104→106 blocks is v1.23.0: KA-104/KA-105, rule 3.104, fix 4.90,
 // sources +3 (267→270).
+// v1.24.0 expansion (future intent — glosbe.com აპირებს = "to be going to"
+// [enwiki-01-2017-defs], dictionary.ge intend: "what do you intend to do?"
+// → რის გაკეთებას აპირებთ?, latinum L13: ხვალ ის აპირებს სპორტზე წასვლას,
+// kartuliena.eu/moods: დავწერ წერილს = I am going to write a letter):
+// KA_FUTURE_INTENT (KA-106: "BE going to + VERB" → აპირებს + masdar-DAT
+// (წასვლას) — NEVER the motion მიდის for intent, paradigm ვაპირებ/
+// აპირებ/აპირებს/ვაპირებთ/აპირებთ/აპირებენ, imperfect აპირებდა-family
+// for abandoned "was going to", აპირებთ present/imperfect ambiguity,
+// semantic ladder აპირებს → მინდა → მივდიოდი (verge) → plain future
+// (Georgian prose preference), motion-vs-intent decision by following
+// element (place noun → მივდივარ, verb → აპირებს), copula-future "going
+// to BE + N" → იქნება never აპირებს იყოს, impersonal იქნება for
+// there-is-future, weather წვიმა მოდის). QA rule 3.105
+// (future_intent_untranslated: EN "BE going to V" frame residue with no
+// აპირებ-/იქნებ- carrier — place-object frames and copula-future
+// excluded from the trigger). Auto-fix 4.91 (EN intent frames →
+// აპირებს-paradigm per person incl. inverted questions and noun-subject
+// residues, imperfect for was/were; copula-future → იქნება family;
+// place-guard lookahead keeps motion readings for 4.81; runs BEFORE
+// 4.81's bare "going to → მიდის"). 106→107 blocks is v1.24.0: KA-106,
+// rule 3.105, fix 4.91, sources +4 (270→274).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3325,6 +3346,57 @@ TACTIC: choose the speech verb by INTERACTION TYPE (information →
 dative ON the verb, never a nominative pronoun; optative person of
 the embedded command matches the ORIGINAL addressee, not the reporter.`;
 
+// KA-106 v1.24.0 — Future intent: "be going to" / planned future
+const KA_FUTURE_INTENT = `
+FUTURE INTENT — "BE GOING TO" (glosbe.com / გლოსბე: აპირებს = "to be going to"
+[enwiki-01-2017-defs]; dictionary.ge intend: "what do you intend to
+do?" → რის გაკეთებას აპირებთ?; latinum L13: ხვალ ის აპირებს სპორტზე
+წასვლას დილით; kartuliena.eu/moods: დავწერ წერილს = I am going to write
+a letter):
+• "BE going to + VERB" (planned future) → აპირებს + masdar in DATIVE
+  (dictionary.ge attests რის გაკეთებას აპირებთ — the action noun takes
+  -ს/-ს, the case masdars take as objects):
+  "I'm going to leave" → აპირებ წასვლას · "he is going to help us" →
+  აპირებს დაგვეხმაროს ან ჩვენი დახმარებას აპირებს · "what are you going
+  to do?" → რას აპირებ? / რის გაკეთებას აპირებთ?
+  NEVER the motion verb: "I'm going to leave" is NOT მიდის წასვლას and
+  NOT *მე მიდის — "going to" marks INTENT, not walking.
+• PARADIGM of აპირებს (Series I present; aorist აპირე, imperfect
+  აპირებდა):
+  ვაპირებ (I plan/am going to) · აპირებ (you) · აპირებს (he/she) ·
+  ვაპირებთ (we) · აპირებთ (you pl) · აპირებენ (they).
+  IMPERFECT (was going to): ვაპირებდი · აპირებდი · აპირებდა ·
+  ვაპირებდით · აპირებდით · აპირებდნენ — the engine's attested frame:
+  "on the verge of leaving" → ვაპირებდი წასვლას (KA_MASDARS).
+  NOTE the ambiguity: აპირებთ is BOTH 2nd-plural present AND 1st-plural
+  imperfect; disambiguate by context (ხვალ/დღეს/გუშინ).
+• SEMANTIC LADDER (intent strength):
+  1. Neutral plan: აპირებს + masdar-DAT (აპირებ წასვლას).
+  2. General will/desire: მინდა + masdar (მინდა წავიდე / წასვლას).
+  3. On the verge of (imminence): ვაპირებდი წასვლას / მივდიოდი.
+  4. Plain future (prediction or intention — most natural for Georgian):
+     preverb + FUTURE: "I'm going to write a letter" → დავწერ წერილს
+     (kartuliena.eu). Georgian prose usually prefers the simple future;
+     აპირებს is for CONTRASTED, deliberated plans ("that's the plan").
+• "WAS GOING TO" (abandoned past intention) → imperfect აპირებდა +
+  masdar-DAT: "I was going to call you" → დაგირეკავდი ან დაგირეკას
+  ვაპირებდი — imperfect keeps the unfulfilled reading.
+• "GOING TO" in literal MOTION sense ("I'm going to the market") keeps
+  the motion verb: ბაზარზე მივდივარ/მივდიოდი — ზე marks the goal
+  (KA_PURPOSE_CLAUSES). Decide INTENT vs MOTION by the following
+  element: infinitive/gerund → intent (აპირებს), noun-place → motion
+  (მივდივარ).
+MAPPING: I'm going to V → ვაპირებ V-ს · are you going to V? →
+აპირებ ...-ს? · he's going to V → აპირებს ...-ს · we're going to V →
+ვაპირებთ ...-ს · they're going to V → აპირებენ ...-ს · was going to →
+აპირებდა · not going to → არ ვაპირებ (negation on აპირებს, never on
+the masdar alone)
+TACTIC: when the English aux is be/is/am/are/was/were + going + to +
+VERB, translate INTENT (აპირებს-paradigm) or plain future, NEVER the
+bare motion mapping მიდის — that reading exists only for motion to a
+PLACE. The masdar after აპირებს takes dative -ს (წასვლას, დაწერას,
+ნახვას), mirroring რის გაკეთებას აპირებთ.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -3428,6 +3500,7 @@ function getKaKnowledgeBase() {
         KA_BEFORM_AGREEMENT,
         KA_REPORTED_QUESTIONS,
         KA_REPORTED_COMMANDS,
+        KA_FUTURE_INTENT,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4355,6 +4428,22 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'reported_question_untranslated', message: 'English reported/indirect question present but no Georgian carrier: asked if/whether → მკითხა, თუ / თუ არა / ხომ არ (NEVER რომ for questions), asked where → მკითხა, სად (wh-word kept, statement order, no ?), told me what → მითხრა, თუ რომელი/რა, I wonder if → მაინტერესებს, თუ, don\'t know if → არ ვიცი, თუ, whether to go or stay → წასულიყო თუ დარჩენილიყო (double optative), what if → რა იქნება, ... რომ / ვაითუ.' });
     }
 
+    // 3.105 Future-intent residue: English "BE going to + VERB" (planned
+    //      future — NOT motion to a place, which the place-word lookahead
+    //      below excludes) present in the source frame, but the output
+    //      still carries the English residue "going to" / "gonna" and no
+    //      აპირებ- carrier. Plain-future renderings (დავწერ, წავალ) are
+    //      LEGITIMATE (kartuliena.eu: დავწერ წერილს = I am going to write
+    //      a letter) and do not fire — only untranslated frames do.
+    const goEn =
+        /\b(?:am|is|are|was|were|be)\s+(?:not\s+)?going\s+to\s+(?!(?:the|a|an|my|your|his|her|its|our|their|this|that|these|those|bed|school|work|market|church|town|home|store|cinema|hospital|airport|station|university|college|sleep|dinner|lunch|meeting|be)\b)/i.test(text) ||
+        /\b(?:'s|'re|'m)\s+(?:not\s+)?going\s+to\s+(?!(?:the|a|an|my|your|his|her|its|our|their|this|that|these|those|bed|school|work|market|church|town|home|store|cinema|hospital|airport|station|university|college|sleep|dinner|lunch|meeting|be)\b)/i.test(text) ||
+        /\b(?:am\s+i|is\s+(?:he|she|it)|are\s+(?:we|they|you))\s+(?:not\s+)?going\s+to\s+(?!(?:the|a|an|my|your|his|her|its|our|their|this|that|these|those|bed|school|work|market|church|town|home|store|cinema|hospital|airport|station|university|college|sleep|dinner|lunch|meeting|be)\b)/i.test(text);
+    const goGuard = /აპირებ|იქნებ/;
+    if (goEn && /going to|gonna/i.test(text) && !goGuard.test(text)) {
+        issues.push({ rule: 'future_intent_untranslated', message: 'English planned future "BE going to VERB" untranslated: I\'m going to leave → ვაპირებ წასვლას / წავალ, he is going to help → აპირებს დახმარებას, what are you going to do? → რას აპირებ? / რის გაკეთებას აპირებთ?, was going to call → დაგირეკას ვაპირებდი / დაგირეკავდი. Paradigm: ვაპირებ/აპირებ/აპირებს/ვაპირებთ/აპირებთ/აპირებენ; imperfect აპირებდა. "going to BE + noun/adj" is the COPULA FUTURE: he\'s going to be a doctor → იქნება ექიმი (never აპირებს იყოს). NEVER the bare motion მიდის for intent frames — მიდის is only for motion to a PLACE (I\'m going to the market → ბაზარზე მივდივარ). Masdar after აპირებს takes dative -ს (რის გაკეთებას აპირებთ, dictionary.ge). Plain future (წავალ/დავწერ) is also acceptable.' });
+    }
+
     return issues;
 }
 
@@ -5019,6 +5108,102 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bexactly\b/gi, 'სწორედ');
     out = out.replace(/\bprecisely\b/gi, 'სწორედ');
 
+    // ── v1.24.0 additions ──
+
+    // 4.91 Future-intent frames: BE + going to + VERB → აპირებს-paradigm
+    //      (ვაპირებ/აპირებ/აპირებს/ვაპირებთ/აპირებთ/აპირებენ; imperfect
+    //      აპირებდა-family for "was/were going to"). Runs BEFORE 4.81's
+    //      bare "going to → მიდის" motion mapping — "I'm going to leave"
+    //      is PLANNED FUTURE (გლოსბე: აპირებს = "to be going to"), not
+    //      walking. Attested frames: რის გაკეთებას აპირებთ? (dictionary.ge),
+    //      აპირებს სპორტზე წასვლას (latinum L13), ვაპირებდი წასვლას
+    //      (engine KA_MASDARS). Place-guard lookahead keeps the MOTION
+    //      reading alive ("I was going to the market" is untouched here —
+    //      4.81 keeps it მიდის/მივდიოდი). The embedded verb stays as
+    //      residue for the LLM stages / later fixes (same frame strategy
+    //      as 4.88-4.90); QA 3.105 is satisfied by the აპირებ carrier.
+    //      Bare "gonna" is intentionally left to QA 3.105 + AI refinement
+    //      (subject-less, highest ambiguity).
+    //      COPULA-FUTURE comes FIRST: "BE going to BE + N/Adj" is the
+    //      copula future იქნება (he's going to be a doctor → იქნება
+    //      ექიმი), NOT an აპირებს-frame — Georgian marks the nominal
+    //      predicate future directly on the copula. there-is frames are
+    //      impersonal იქნება (inanimate plural subjects keep 3sg
+    //      agreement: პრობლემები იქნება). Weather frames are idiomatic
+    //      (It's going to rain → წვიმა მოდის).
+    out = out.replace(/\bthere(?:'s|\s+is|\s+are|\s+isn't|\s+aren't)\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნება' : 'იქნება'));
+    out = out.replace(/\bit(?:'s|\s+is)\s+going\s+to\s+rain\b/gi, 'წვიმა მოდის');
+    out = out.replace(/\bit(?:'s|\s+is)\s+going\s+to\s+snow\b/gi, 'თოვლი მოდის');
+    out = out.replace(/\bi(?:'m|\s+am|\s+ain't)\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ ვიქნები' : 'ვიქნები'));
+    out = out.replace(/\b(?:he|she|it)\s*(?:'s|\s+is|\s+isn't)\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნება' : 'იქნება'));
+    out = out.replace(/\bwe\s*(?:'re|\s+are|\s+aren't)\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ ვიქნებით' : 'ვიქნებით'));
+    out = out.replace(/\bthey\s*(?:'re|\s+are|\s+aren't)\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნებიან' : 'იქნებიან'));
+    out = out.replace(/\byou\s*(?:'re|\s+are|\s+aren't)\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნები' : 'იქნები'));
+    out = out.replace(/\bi\s+was(?:n't)?\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ ვიქნებოდი' : 'ვიქნებოდი'));
+    out = out.replace(/\b(?:he|she|it)\s+was(?:n't)?\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნებოდა' : 'იქნებოდა'));
+    out = out.replace(/\bwe\s+were(?:n't)?\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ ვიქნებოდით' : 'ვიქნებოდით'));
+    out = out.replace(/\bthey\s+were(?:n't)?\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნებოდნენ' : 'იქნებოდნენ'));
+    out = out.replace(/\byou\s+were(?:n't)?\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნებოდით' : 'იქნებოდით'));
+    out = out.replace(/\b(?:'s|is|isn't)\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნება' : 'იქნება'));
+    out = out.replace(/\b(?:'re|are|aren't)\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნებიან' : 'იქნებიან'));
+    out = out.replace(/\bwas(?:n't)?\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნებოდა' : 'იქნებოდა'));
+    out = out.replace(/\bwere(?:n't)?\s+(not\s+)?going\s+to\s+be\b/gi, (m, neg) => (neg || /n't/i.test(m) ? 'არ იქნებოდნენ' : 'იქნებოდნენ'));
+    //      Place guard: REGEX LOOKAHEAD CANNOT DO CASE-SENSITIVE CHECKS
+    //      under the i-flag ([A-Z] matches lowercase too — proven by
+    //      debug run: guard always fired). So the guard runs in the
+    //      REPLACE CALLBACK instead: capture the word right after "to"
+    //      and bail (return m untouched → 4.81 motion მიდის) when it is
+    //      a place/sleep/determiner noun or a Proper noun (capitalized).
+    //      Verb objects fall through to the აპირებს-paradigm carrier.
+    const PLACE_NOUNS = '(?:the|a|an|my|your|his|her|its|our|their|this|that|these|those|some|any|be|bed|school|work|market|church|town|home|abroad|back|sleep|dinner|lunch|store|cinema|hospital|airport|station|university|college|meeting)';
+    const isPlaceWord = (w) => !!w && (new RegExp('^' + PLACE_NOUNS + '$', 'i').test(w) || /^[A-Z]/.test(w));
+    //      intent helper: replace "SUBJ (not) going to [WORD]" → carrier
+    //      (+ WORD), keeping place/proper-noun frames untouched for 4.81.
+    //      negAt: index of the negation capture group in the pattern.
+    //      Polarity: n't inside the aux (weren't/isn't/ain't) is detected
+    //      on the full match — the capture group alone would miss it.
+    const intent = (re, negAt, posCar, negCar) => out.replace(re, (m, ...rest) => {
+        const g = rest[negAt] || /n't/i.test(m);
+        const nxt = rest[negAt + 1] || '';
+        if (isPlaceWord(nxt)) return m;
+        return (g ? negCar : posCar) + (nxt ? ' ' + nxt : '');
+    });
+    //      per-subject frames — group 1 = negation, group 2 = next word
+    out = intent(/\bi(?:'m|\s+am|\s+ain't)\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'ვაპირებ', 'არ ვაპირებ');
+    out = intent(/\b(?:he|she|it)\s*(?:'s|\s+is|\s+isn't)\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებს', 'არ აპირებს');
+    out = intent(/\bwe\s*(?:'re|\s+are|\s+aren't)\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'ვაპირებთ', 'არ ვაპირებთ');
+    out = intent(/\bthey\s*(?:'re|\s+are|\s+aren't)\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებენ', 'არ აპირებენ');
+    out = intent(/\byou\s*(?:'re|\s+are|\s+aren't)\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებ', 'არ აპირებ');
+    //      inverted questions: are you going to...? / is he going to...?
+    out = intent(/\bam\s+i\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'ვაპირებ', 'არ ვაპირებ');
+    out = intent(/\bis(?:n't)?\s+(?:he|she|it)\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებს', 'არ აპირებს');
+    out = intent(/\bare(?:n't)?\s+we\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'ვაპირებთ', 'არ ვაპირებთ');
+    out = intent(/\bare(?:n't)?\s+they\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებენ', 'არ აპირებენ');
+    out = intent(/\bare(?:n't)?\s+you\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებ', 'არ აპირებ');
+    //      past: was/were going to (abandoned intention → imperfect)
+    out = intent(/\bi\s+was(?:n't)?\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'ვაპირებდი', 'არ ვაპირებდი');
+    out = intent(/\b(?:he|she|it)\s+was(?:n't)?\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებდა', 'არ აპირებდა');
+    out = intent(/\bwe\s+were(?:n't)?\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'ვაპირებდით', 'არ ვაპირებდით');
+    out = intent(/\bthey\s+were(?:n't)?\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებდნენ', 'არ აპირებდნენ');
+    out = intent(/\byou\s+were(?:n't)?\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებდით', 'არ აპირებდით');
+    //      generic noun-subject residues AFTER specific subjects consumed:
+    //      "the men are going to V" → აპირებენ; "Tom's going to V" →
+    //      აპირებს (the "'s" here is always the "is" contraction; the
+    //      subject itself remains as residue for later stages, and the
+    //      place guard still applies to the word AFTER "to").
+    out = intent(/(?:'s|\bis|isn't)\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებს', 'არ აპირებს');
+    out = intent(/(?:'re|\bare|aren't)\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებენ', 'არ აპირებენ');
+    out = intent(/\bwas(?:n't)?\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებდა', 'არ აპირებდა');
+    out = intent(/\bwere(?:n't)?\s+(not\s+)?going\s+to\s*([a-z']*)/gi, 0, 'აპირებდნენ', 'არ აპირებდნენ');
+    //      BARE MOTION, no "to": "going home/abroad/back" — direction
+    //      adverbs never take "to" in English, so "going" here is ALWAYS
+    //      motion (intent needs "to" + VERB). Present მიდის; past
+    //      continuous მივდიოდა/მივდიოდნეน mirrors 4.81's tense-sensitive
+    //      strategy (was going home → მივდიოდა სახლში).
+    out = out.replace(/\bgoing\s+(?:home|abroad|back|away|downtown|upstairs|downstairs|outside|inside|there)\b/gi, 'მიდის');
+    out = out.replace(/\bwas\s+going\s+(?:home|abroad|back|away|downtown|upstairs|downstairs|outside|inside|there)\b/gi, 'მივდიოდა');
+    out = out.replace(/\bwere\s+going\s+(?:home|abroad|back|away|downtown|upstairs|downstairs|outside|inside|there)\b/gi, 'მივდიოდნენ');
+
     // ── v1.19.0 additions ──
 
     // 4.81 Untranslated English motion verbs. Tense-sensitive carriers from
@@ -5305,12 +5490,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.23.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.24.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 106,
-    qaRules: 105,
-    autoFixes: 90,
-    researchSources: 270
+    promptBlocks: 107,
+    qaRules: 106,
+    autoFixes: 91,
+    researchSources: 274
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
