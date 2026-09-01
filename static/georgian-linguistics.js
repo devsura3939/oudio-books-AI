@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.19.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.20.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -268,6 +268,23 @@
 // preverb_direction_missing), auto-fixes 4.81-4.83 (EN go/goes/went →
 // მიდის/წავიდა carriers, EN come/comes/came → მოდის/მოვიდა, EN
 // stand/sit/lie → დგას/ზის/წევს).
+// v1.20.0 expansion (masdar adverbial temporal phrases — latinum.substack.com
+// Lesson 63 (დრო/time) + Lesson 54 (-ისას attestation: შუადღისას) +
+// polyglotclub.com infinitives-as-nouns case declension:
+// KA_MASDAR_ADVERBIAL (KA-98: genitive masdar + temporal postpositions —
+// V-ის შემდეგ after-V-ing, V-ის წინ before-V-ing, V-ის დროს while-V-ing,
+// literary V-ისას, V-ის დრომდე until-V-ing, perfect gerund "having done"
+// → დამთავრების შემდეგ, [object-GEN masdar-GEN postposition] order:
+// წიგნის წაკითხვის შემდეგ after reading the book),
+// KA_TEMPORAL_NOUN_FRAMES (KA-99: N-ის დროს dative frame ომის დროს vs
+// documented defect *ომის დრო, იმ დროს at that time, N-ის განმავლობაში
+// during-X-duration, დროთა განმავლობაში over-the-course-of-time,
+// დროიდან...-მდე დილიდან საღამომდე, ბავშვობის დროიდან since childhood,
+// class-varying dayparts დილით/შუადღისას/საღამოს/ღამით/ზამთარში).
+// QA rules 3.98-3.99 (masdar_adverbial_untranslated,
+// temporal_dative_untranslated), auto-fixes 4.84-4.85 (EN after/before/
+// while V-ing → GEN-masdar + postposition frames, EN during-the-X →
+// X-ის დროს dative frame, იმ დროს/დროიდან...-მდე correlative frames).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2932,6 +2949,78 @@ TACTIC: Posture verbs are the natural carrier for static scene
 description — a character "was standing" is იდგა, a body "lay" is
 წევს/ეწო. Do not import English "be + participle" periphrasis.`;
 
+// KA-98 v1.20.0 — Masdar adverbial temporal phrases. latinum.substack.com
+// Lesson 63 (დრო — daily-routine frames) + Lesson 54 (-ისას) +
+// polyglotclub.com (masdars decline like nouns; genitive marks the
+// action before a postposition). The genitive masdar is Georgian's
+// gerund: every English "V-ing / having V-ed" time phrase maps to
+// [GEN masdar] + [შემდეგ|წინ|დროს|დრომდე|დროიდან].
+const KA_MASDAR_ADVERBIAL = `
+GEORGIAN MASDAR ADVERBIALS — TEMPORAL FRAMES (EN↔KA)
+• The masdar (verbal noun) declines like a noun; in the GENITIVE it is
+  Georgian's gerund. A temporal postposition after it builds the
+  equivalent of English "after/before/while V-ing":
+  V-ის შემდეგ after V-ing · V-ის წინ before V-ing · V-ის დროს while/
+  when V-ing · V-ის დრომდე until V-ing · V-ის დროიდან from V-ing on
+• Literary compact variant: -ისას = -ის დროს (შუადღისას at midday,
+  მოსვლისას on arrival). Both are correct; -ისას is more written-style.
+• Perfect gerund "having done X" / "after he had done X" → X-ის
+  შემდეგ: საუზმის მირთმევის შემდეგ having served breakfast ·
+  დამთავრების შემდეგ after finishing · ამის შესახებ გაგების შემდეგ
+  upon learning of it · გამოღვიძების შემდეგ after waking up.
+• With an OBJECT, the object too goes genitive, BEFORE the masdar:
+  წიგნის წაკითხვის შემდეგ after reading the book · სადილის მირთმევის
+  წინ before serving lunch · სახლში დაბრუნების დროს while returning
+  home (destination სახლში stays -ში and fronts the masdar).
+• Attested daily-routine frames: სამსახურში წასვლის დრომდე until it
+  was time to go to work · სადილის შემდეგ after lunch · ძილის წინ
+  before sleep · დაძინებამდე before falling asleep · ადგომის დროს
+  on getting up.
+• Persian-style loan frames are common in classical narrative:
+  წამოდგომისთანავე as soon as (he) rose · -ისთანავე as soon as =
+  -ის თანავე; choose -ისთანავე for immediacy, -ის შემდეგ for plain
+  sequence.
+MAPPING: after V-ing → GEN-masdar + შემდეგ · before V-ing →
+GEN-masdar + წინ · while V-ing → GEN-masdar + დროს / -ისას ·
+until V-ing → GEN-masdar + დრომდე · as soon as V-ing → GEN-masdar +
+-ისთანავე · having V-ed → GEN-masdar + შემდეგ
+TACTIC: Never translate "after reading" as შემდეგ კითხულობს or a
+finite clause "შემდეგ წაიკითხა როცა" — Georgian prefers the single
+frozen frame [GEN masdar + postposition]: წაკითხვის შემდეგ. The
+masdar of a preverb verb keeps its preverb: დაბრუნება, წასვლა,
+შესვლა, გასვლა.`;
+
+// KA-99 v1.20.0 — Temporal noun frames. latinum.substack.com Lesson 63:
+// დრო declension (NOM დრო, GEN დროის, DAT დროს, INST დროთი, ADV დროდ)
+// and documented learner defects (*ომის დრო → ომის დროს; *დრო ვკითხულობ
+// → დროს ვკითხულობ; word order მე არ მაქვს დრო).
+const KA_TEMPORAL_NOUN_FRAMES = `
+GEORGIAN TEMPORAL NOUN FRAMES — "დრო" & CO (EN↔KA)
+• დრო time declines: NOM დრო · GEN დროის · DAT დროს · INST დროთი ·
+  ADV დროდ · pl დროები/დროებს. TEMPORAL USE TAKES THE DATIVE -ს:
+  ომის დროს during the war (NEVER *ომის დრო) · საღამოს დროს at
+  evening time · იმ დროს at that time · ამ დროს at this moment ·
+  დროს ვკითხულობ I read for a time (dative, not *დრო).
+• N-ის განმავლობაში during X (duration): ომის განმავლობაში during
+  the war · დროთა განმავლობაში over the course of time (archaic-gen
+  დროთა fixed idiom).
+• From-to span: დროიდან...-მდე / N-დან N-მდე: დილიდან საღამომდე from
+  morning till evening · სამსახურში წასვლის დრომდე until work-time.
+• Starting point in time: N-ის დროიდან since X: ბავშვობის დროიდან
+  since childhood · გუშინდან from yesterday on.
+• Dayparts decline irregularly by class — memorize whole forms:
+  დილით in the morning (INST-like -ით) · შუადღისას at midday (-ისას)
+  · საღამოს in the evening (GEN-form) · ღამით at night (-ით) ·
+  ზამთარში in winter (-ში) · გაზაფხულზე in spring (-ზე). Do not
+  normalize them to one pattern.
+MAPPING: during X → X-ის დროს (event) / X-ის განმავლობაში (span) ·
+at that time → იმ დროს · since X → X-ის დროიდან · from X till Y →
+X-დან Y-მდე · in the morning/evening/night → დილით/საღამოს/ღამით ·
+over time → დროთა განმავლობაში
+TACTIC: "during" with an EVENT noun is N-ის დროს (dative!); with a
+DURATION noun prefer N-ის განმავლობაში. Never leave დრო bare after
+a genitive attribute — *ომის დრო is the documented defect.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -3027,6 +3116,8 @@ function getKaKnowledgeBase() {
         KA_MOTION_VERBS,
         KA_DIRECTIONAL_PREVERBS,
         KA_POSTURE_VERBS,
+        KA_MASDAR_ADVERBIAL,
+        KA_TEMPORAL_NOUN_FRAMES,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -3853,6 +3944,25 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'preverb_direction_missing', message: 'English directed motion (entered/exited/returned/crossed/went up/down) present but the fused Georgian preverb verb missing: entered → შევიდა, exited → გავიდა, returned → დაბრუნდა, crossed → გადავიდა, went up → ავიდა, went down → ჩამოვიდა.' });
     }
 
+    // 3.98 Masdar-adverbial untranslated: English gerund time phrase
+    //      (after/before/while/until V-ing, "having V-ed") present but
+    //      no [GEN masdar + postposition] frame (V-ის შემდეგ/წინ/დროს/
+    //      დრომდე/-ისას/-ისთანავე) in the output. წინ(?!ა) — so წინა/
+    //      წინააღმდეგ do not count as the frame.
+    if (/\b(after|before|while|until|upon|having)\b/i.test(text) &&
+        /\b\w+ing\b/i.test(text) &&
+        !/შემდეგ|წინ(?!ა)|დროს|დრომდე|დროიდან|ისას|ისთანავე/.test(text)) {
+        issues.push({ rule: 'masdar_adverbial_untranslated', message: 'English gerund time phrase (after/before/while V-ing, having V-ed) present but no masdar adverbial frame: after V-ing → V-ის შემდეგ, before V-ing → V-ის წინ, while V-ing → V-ის დროს/-ისას, until V-ing → V-ის დრომდე, as soon as → V-ისთანავე. Genitive masdar is the gerund.' });
+    }
+
+    // 3.99 Temporal-dative untranslated: English "during/during the X /
+    //      at that time / for a long time" present but no N-ის დროს /
+    //      იმ დროს / განმავლობაში frame in the output.
+    if (/\b(during|throughout|at that time|at the time|for a long time|in (?:the )?course)\b/i.test(text) &&
+        !/დროს|განმავლობაში/.test(text)) {
+        issues.push({ rule: 'temporal_dative_untranslated', message: 'English during/throughout/at-that-time present but the temporal dative frame missing: during X → X-ის დროს (dative; never *X-ის დრო), duration → X-ის განმავლობაში, over time → დროთა განმავლობაში, at that time → იმ დროს.' });
+    }
+
     return issues;
 }
 
@@ -4321,6 +4431,115 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bby plane\b/gi, 'თვითმფრინავით');
     out = out.replace(/\bby hand\b/gi, 'ხელით');
 
+    // ── v1.20.0 additions — MUST run before the v1.17.0 conjunction
+    //      mappings below: bare "while"/"until"/"as soon as" (4.74) and
+    //      bare "after/before" would otherwise consume the gerund-phrase
+    //      forms first. Same ordering class as 4.78's "one and the same",
+    //      4.80's "but also", 4.81's "will go".
+
+    // 4.84 Untranslated English gerund time phrases → masdar adverbial
+    //      frames. Longest/most-specific FIRST. Each maps to
+    //      [GEN masdar] + [postposition]; the masdar itself is left as
+    //       masdar-GEN skeleton for the AI pass to fill lexically.
+    //      Lookup normalizes the (\w+)ing capture: e-drop (leav→leave,
+    //      wak→wake) and doubled final consonant (sitt→sit, runn→run).
+    const masdarLookup = (dict, raw) => dict[raw] || dict[raw + 'e'] ||
+        dict[raw.replace(/(.)\1$/, '$1')] || dict[raw.replace(/(.)\1$/, '$1') + 'e'] || null;
+    out = out.replace(/\bafter (?:he|she|it|they|we|I|you) (?:had|have) (\w+ed|\w+en)\b/gi, 'მას შემდეგ, რაც $1');
+    out = out.replace(/\b(?:before|after|upon) (\w+)ing\b/gi, (m, v) => {
+        const masdars = {
+            read: 'წაკითხვის', write: 'დაწერის', eat: 'ჭამის', drink: 'სმის',
+            wake: 'გამოღვიძების', finish: 'დამთავრების', return: 'დაბრუნების',
+            come: 'მოსვლის', go: 'წასვლის', arrive: 'მოსვლის',
+            leave: 'წასვლის', sleep: 'დაძინების', work: 'მუშაობის',
+            speak: 'ლაპარაკის', see: 'დანახვის', hear: 'გაგების',
+            learn: 'გაგების', get: 'მიღების', take: 'წაღების',
+            make: 'გაკეთების', do: 'კეთების', say: 'თქმის', tell: 'თქმის',
+            enter: 'შესვლის', exit: 'გასვლის', stand: 'დგომის',
+            sit: 'ჯდომის', lie: 'წოლის', think: 'ფიქრის',
+            wait: 'ლოდინის', walk: 'სეირნობის', talk: 'ლაპარაკის',
+            look: 'შეხედვის', watch: 'ყურების', ask: 'კითხვის',
+            open: 'გახსნის', close: 'დახურვის', laugh: 'სიცილის',
+            cry: 'ტირილის', smile: 'ღიმილის', dance: 'ცეკვის',
+            live: 'ცხოვრების', start: 'დაწყების', begin: 'დაწყების',
+            find: 'პოვნის', lose: 'დაკარგვის', give: 'მიცემის',
+            meet: 'შეხვედრის'
+        };
+        const stem = masdarLookup(masdars, v.toLowerCase());
+        const frame = m.trim().toLowerCase().startsWith('before') ? 'წინ' : 'შემდეგ';
+        return stem ? stem + ' ' + frame : m;
+    });
+    out = out.replace(/\bwhile (\w+)ing\b/gi, (m, v) => {
+        const masdars = {
+            read: 'კითხვის', write: 'წერის', work: 'მუშაობის',
+            speak: 'ლაპარაკის', walk: 'სეირნობის', wait: 'ლოდინის',
+            think: 'ფიქრის', live: 'ცხოვრების', eat: 'ჭამის',
+            drink: 'სმის', go: 'მიმსვლელობის', come: 'მოსვლის',
+            sit: 'სხდომის', stand: 'დგომის', lie: 'წოლის',
+            sleep: 'ძილის', talk: 'ლაპარაკის', look: 'ყურების',
+            watch: 'ყურების', laugh: 'სიცილის', cry: 'ტირილის',
+            run: 'სირბილის', drive: 'მართვის', cook: 'კეთების'
+        };
+        const stem = masdarLookup(masdars, v.toLowerCase());
+        return stem ? stem + ' დროს' : m;
+    });
+    out = out.replace(/\buntil (\w+)ing\b/gi, (m, v) => {
+        const masdars = {
+            return: 'დაბრუნების', come: 'მოსვლის', arrive: 'მოსვლის',
+            finish: 'დამთავრების', end: 'დამთავრების', sleep: 'დაძინების',
+            leave: 'წასვლის', go: 'წასვლის', wake: 'გამოღვიძების',
+            die: 'გარდაცვალების', stop: 'გაჩერების', close: 'დახურვის',
+            start: 'დაწყების', begin: 'დაწყების', find: 'პოვნის'
+        };
+        const stem = masdarLookup(masdars, v.toLowerCase());
+        return stem ? stem + ' დრომდე' : m;
+    });
+    out = out.replace(/\b(?:having|upon) (\w+ed|\w+en)\b/gi, (m, v) => {
+        const perfects = {
+            finished: 'დამთავრების', returned: 'დაბრუნების',
+            arrived: 'მოსვლის', woken: 'გამოღვიძების', woke: 'გამოღვიძების',
+            eaten: 'ჭამის', read: 'წაკითხვის', said: 'თქმის',
+            heard: 'გაგების', learned: 'გაგების', learnt: 'გაგების',
+            left: 'წასვლის', done: 'კეთების', seen: 'დანახვის',
+            spoken: 'ლაპარაკის', written: 'წერის', taken: 'წაღების',
+             given: 'მიცემის', found: 'პოვნის', made: 'გაკეთების'
+         };
+        const stem = masdarLookup(perfects, v.toLowerCase());
+        return stem ? stem + ' შემდეგ' : m;
+    });
+
+    // 4.85 Untranslated English temporal noun frames → dative დროს
+    //      frames. Longest FIRST: "during the" must be consumed before
+    //      "during" (same ordering discipline as 4.74's "as soon as").
+    out = out.replace(/\bat that (?:very )?time\b/gi, 'იმ დროს');
+    out = out.replace(/\bat the (?:very )?time\b/gi, 'იმ დროს');
+    out = out.replace(/\bfor a long time\b/gi, 'დიდხანს');
+    out = out.replace(/\bin the course of\b/gi, 'განმავლობაში');
+    out = out.replace(/\bthroughout the (\w+)\b/gi, (m, n) => {
+        const nouns = {
+            war: 'ომის', night: 'ღამის', day: 'დღის', year: 'წლის',
+            summer: 'ზაფხულის', winter: 'ზამთრის', story: 'ამბის',
+            book: 'წიგნის', life: 'ცხოვრების'
+        };
+        const stem = nouns[n.toLowerCase()] || null;
+        return stem ? 'მთელი ' + stem + ' განმავლობაში' : m;
+    });
+    out = out.replace(/\bthroughout\b/gi, 'განმავლობაში');
+    out = out.replace(/\bduring the (\w+(?: \w+)?)\b/gi, (m, n) => {
+        const nouns = {
+            war: 'ომის', night: 'ღამის', day: 'დღის', morning: 'დილის',
+            evening: 'საღამოს', summer: 'ზაფხულის', winter: 'ზამთრის',
+            meal: 'ჭამის', lunch: 'სადილის', dinner: 'ვახშმის',
+            meeting: 'შეხვედრის', conversation: 'საუბრის', trip: 'მოგზაურობის',
+            journey: 'მოგზაურობის', story: 'ამბის', rain: 'წვიმის',
+            storm: 'ქარიშხლის', year: 'წლის', week: 'კვირის', month: 'თვის'
+        };
+        const first = n.split(' ')[0].toLowerCase();
+        const stem = nouns[first] || null;
+        return stem ? stem + ' დროს' : m;
+    });
+    out = out.replace(/\bduring\b/gi, 'დროს');
+
     // ── v1.17.0 additions ──
 
     // 4.73 Untranslated English conditional markers → Georgian carriers.
@@ -4473,12 +4692,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.19.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.20.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 98,
-    qaRules: 98,
-    autoFixes: 83,
-    researchSources: 251
+    promptBlocks: 100,
+    qaRules: 100,
+    autoFixes: 85,
+    researchSources: 255
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
