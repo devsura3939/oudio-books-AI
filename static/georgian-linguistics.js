@@ -3461,6 +3461,39 @@ MAPPING: don't/doesn't/didn't + V → არ + V · won't + V → არ + V-fut
 can't/cannot + V → ვერ + V · couldn't + V → ვერ + V-past ·
 isn't/aren't + Adj → არ არის + Adj (not არის-less calque)`;
 
+// KA-109 v1.27.0 — Time deictics: zero-polysemy day-words → fixed Georgian
+//                  forms (extends KA_TIME_EXPR which already pins the core
+//                  trio yesterday/today/tomorrow).
+const KA_TIME_DEICTIC = `
+TIME DEICTICS — GEORGIAN HAS NO TENSE-COPYING: the deictic adverb ALONE
+selects the screeve (გუშინ + aorist, ხვალ + future), and the day-word
+itself is invariable — no case, no preposition (folkways.today Talking
+Georgian phrasebook; dictionary.ge; ilanguages.org):
+• CORE TRIO (KA_TIME_EXPR attested): yesterday → გუშინ · today → დღეს ·
+  tomorrow → ხვალ (ხვალ მოვალ I will come tomorrow).
+• THE TWO DAY-WORDS ENGLISH LACKS: day before yesterday →
+  გუშინწინ (gushintsin, fused გუშინ+წინ 'before-yesterday');
+  day after tomorrow → ზეგ (zeg) — folk/dictionary.ge day count.
+  NEVER calque *ერთი დღით ადრე / *ორი დღის შემდეგ for these.
+• FUSED ADVERBS: right now → ახლავე (ახლა + emphatic -ვე, v1.5.0
+  focus attestation ახლავე წადი!) · tonight → ამაღამ (fused
+  ამ+ა+ღამე 'at this night') · later → მოგვიანებით (folkways:
+  მოგვიანებით გნახავ see you later) · soon → მალე (KA_TIME_EXPR).
+• ORDERING CONSTRAINT: longest-first substitution — "right now" must
+  consume BEFORE bare "now" (else ახლავე → ახლა -ვე splits), "the day
+  before yesterday" BEFORE "day before yesterday", "day before
+  yesterday" BEFORE bare "yesterday" (else გუშინწინ → გუშინ residue).
+• SCREEVE RESIDUE: "yesterday I ..." → გუშინ + AORIST frame (4.51's
+  historical-present guards stay active); "tomorrow I ..." → ხვალ +
+  FUTURE frame (4.85's during-frames and 4.70's sequencers unaffected —
+  they key on different English tokens: while/after/then/next day).
+• NO PREPOSITION STRIPPING NEEDED: English "on Monday" → ორშაბათს
+  (dative) already handled by 4.51-family; these deictics are bare.
+MAPPING: yesterday→გუშინ · today→დღეს · tomorrow→ხვალ ·
+the day before yesterday→გუშინწინ · day before yesterday→გუშინწინ ·
+day after tomorrow→ზეგ · right now→ახლავე · tonight→ამაღამ ·
+now→ახლა · later→მოგვიანებით (longest-first)`;
+
 
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
@@ -3568,6 +3601,7 @@ function getKaKnowledgeBase() {
         KA_FUTURE_INTENT,
         KA_HABITUAL_HORTATIVE,
         KA_NEGATION_CARRIERS,
+        KA_TIME_DEICTIC,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4539,6 +4573,21 @@ function validateGeorgianTranslation(text) {
     }
     if (/\b(?:can'?t|can\s*not|cannot)\b/i.test(text) && !/(?<![\u10A0-\u10FF])ვერ(?![\u10A0-\u10FF])/.test(text)) {
         issues.push({ rule: 'negation_untranslated', message: 'English "can\'t" untranslated → ვერ (subject-incapacity particle, NOT არ): I couldn\'t come → ვერ მოვედი (ver movedi). ვერ is reserved for inability; neutral negation uses არ.' });
+    }
+
+    // 3.108 Time-deictic residue: English day-words surviving into Georgian
+    //      output. Georgia's day count is richer than English's — გუშინწინ
+    //      (day before yesterday) and ზეგ (day after tomorrow) are single
+    //      invariable words (KA-109); bare English adverbs must map to them
+    //      or to the KA_TIME_EXPR core trio (გუშინ/დღეს/ხვალ).
+    if (/\byesterday\b/i.test(text) && !/გუშინ(წინ)?(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'time_deictic_untranslated', message: 'English "yesterday" untranslated → გუშინ (invariable, no case/prep). "the day before yesterday" is ONE word: გუშინწინ — never a calque like *ორი დღის წინ.' });
+    }
+    if (/\btomorrow\b/i.test(text) && !/ხვალ(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'time_deictic_untranslated', message: 'English "tomorrow" untranslated → ხვალ + FUTURE screeve (ხვალ მოვალ). "the day after tomorrow" is ONE word: ზეგ (zeg) — never *ორი დღის შემდეგ.' });
+    }
+    if (/\b(?:right\s+now|tonight)\b/i.test(text) && !/ახლავე(?![\u10A0-\u10FF])|ამაღამ(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'time_deictic_untranslated', message: 'English "right now"/"tonight" untranslated → ახლავე (fused ახლა+ვე) / ამაღამ (fused ამ+ა+ღამე). "right now" consumes BEFORE bare "now" → ახლა.' });
     }
 
     return issues;
@@ -5660,16 +5709,36 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bisn'?t\b/gi, 'არ არის');
     out = out.replace(/\baren'?t\b/gi, 'არ არის');
 
+    // 4.94 Time deictics (KA-109). FUNCTION TAIL, after 4.93 — negation
+    //      auxiliaries are consumed first ("didn't come yesterday" →
+    //      არ გუშინ come residue), then the bare day-words map. ZERO-
+    //      POLYSEMY single-word swaps, the proven 4.70/4.72 pattern.
+    //      ORDER MATTERS (longest-first):
+    //      "the day before yesterday" before "day before yesterday"
+    //      before bare "yesterday" — else გუშინწიン degrades to გუშინ;
+    //      "right now" before bare "now" — else ახლავე splits.
+    out = out.replace(/\bthe\s+day\s+before\s+yesterday\b/gi, 'გუშინწინ');
+    out = out.replace(/\bday\s+before\s+yesterday\b/gi, 'გუშინწინ');
+    out = out.replace(/\bday\s+after\s+tomorrow\b/gi, 'ზეგ');
+    out = out.replace(/\bright\s+now\b/gi, 'ახლავე');
+    //      core trio + fused adverbs (folkways.today phrasebook; KA_TIME_EXPR)
+    out = out.replace(/\byesterday\b/gi, 'გუშინ');
+    out = out.replace(/\btoday\b/gi, 'დღეს');
+    out = out.replace(/\btomorrow\b/gi, 'ხვალ');
+    out = out.replace(/\btonight\b/gi, 'ამაღამ');
+    out = out.replace(/\bnow\b/gi, 'ახლა');
+    out = out.replace(/\blater\b/gi, 'მოგვიანებით');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.26.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.27.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 109,
-    qaRules: 108,
-    autoFixes: 93,
-    researchSources: 282
+    promptBlocks: 110,
+    qaRules: 109,
+    autoFixes: 94,
+    researchSources: 285
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
