@@ -3430,6 +3430,38 @@ MAPPING: used to V → imperfect (+ ხოლმე) · would always V → imper
 ხოლმე · let's V → მოდი(თ) + optative-1pl · let me V → optative-1sg /
 მინდა ვ · always → ყოველთვის · never → არასდროს + არ`;
 
+// KA-108 v1.26.0 — Negation carriers: do-support auxiliaries → არ / ვერ
+const KA_NEGATION_CARRIERS = `
+NEGATION CARRIERS (en.wikibooks.org/wiki/Georgian/Questions#Negation:
+"There are three kinds of negation particles: ar 'not', ver 'cannot',
+nu 'do not!'. Ar is the chief one... Ver is only used to indicate that
+the grammatical subject of the sentence is NOT ABLE to carry out an
+action" — Tsasvla ar minda 'I do not want to go', Ver movedi 'I could
+not come'; science.org.ge Sharashenidze "Interaction of Modality and
+Negation in the Georgian Language": "Georgian has a three-member system
+of negation: particle ar for neutral negation, ver expresses
+possibility, nu request/prohibition"; talkpal.ai: არ sits DIRECTLY
+BEFORE the verb — ის არ წავიდა 'he did not go', მე არ ვმუშაობ 'I am
+not working'; ეს არ არის წიგნი 'this is not a book' (ar + aris)):
+• ENGLISH DO-SUPPORT has NO Georgian counterpart: don't / doesn't /
+  didn't / do not / does not / did not → არ placed IMMEDIATELY before
+  the main verb; the tense lands on the Georgian verb itself
+  (didn't answer → არ უპასუხა; doesn't smoke → არ ეწევის).
+• won't → არ + FUTURE screeve (he won't come → არ მოვა).
+• can't / cannot / can not → ვერ (subject-incapacity, KB default;
+  ვერ movedi 'I could not come'); couldn't → ვერ + imperfect/aorist
+  context. Never არ შემიძლია calque when ვეر suffices.
+• didn't have to → არ მჭირდებოდა / არ უნდოდა context (AI refine).
+• POSITION INVARIANT: English negation is pre-auxiliary, Georgian არ
+  is PRE-VERBAL — in-place substitution preserves the slot. The
+  residual main verb then stages to the correct screeve.
+• Negative CONCORD: არასდროს / არავინ / არაფერი co-occur with არ on
+  the verb (KA-45) — never strip the second არ.
+MAPPING: don't/doesn't/didn't + V → არ + V · won't + V → არ + V-fut ·
+can't/cannot + V → ვერ + V · couldn't + V → ვერ + V-past ·
+isn't/aren't + Adj → არ არის + Adj (not არის-less calque)`;
+
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -3535,6 +3567,7 @@ function getKaKnowledgeBase() {
         KA_REPORTED_COMMANDS,
         KA_FUTURE_INTENT,
         KA_HABITUAL_HORTATIVE,
+        KA_NEGATION_CARRIERS,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4493,6 +4526,19 @@ function validateGeorgianTranslation(text) {
     }
     if (/\blet\s+me\s+[a-z]+/i.test(text) && !/(?:მინდა|მომეცი|მივუსმინო|optative)/i.test(text)) {
         issues.push({ rule: 'hortative_untranslated', message: 'English "let me V" untranslated → volitive/optative 1sg: let me see → მინდა ვნახო / ვნახო, let me help → მინდა დაგეხმარო. Keep the volitive, never plain aorist.' });
+    }
+
+    // 3.107 Negation residue: do-support auxiliary surviving into Georgian
+    //      output. Georgian has NO do-support — არ sits pre-verbal (KA-108);
+    //      can't → ვერ (subject-incapacity), not არ.
+    if (/\b(?:don'?t|doesn'?t|didn'?t|do\s+not|does\s+not|did\s+not)\b/i.test(text) && !/(?<![\u10A0-\u10FF])არ(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'negation_untranslated', message: 'English do-support negation (don\'t/doesn\'t/didn\'t) untranslated. Georgian has no auxiliary: place არ DIRECTLY before the verb, tense lands on the Georgian verb — didn\'t answer → არ უპასუხა, doesn\'t smoke → არ ეწევის, I don\'t want to go → წასვლა არ მინდა.' });
+    }
+    if (/\b(?:won'?t|will\s+not)\b/i.test(text) && !/(?<![\u10A0-\u10FF])არ(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'negation_untranslated', message: 'English "won\'t" untranslated → არ + FUTURE screeve: he won\'t come → არ მოვა / ის არ მოვა. The negation is plain არ, the future lands on the verb.' });
+    }
+    if (/\b(?:can'?t|can\s*not|cannot)\b/i.test(text) && !/(?<![\u10A0-\u10FF])ვერ(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'negation_untranslated', message: 'English "can\'t" untranslated → ვერ (subject-incapacity particle, NOT არ): I couldn\'t come → ვერ მოვედი (ver movedi). ვერ is reserved for inability; neutral negation uses არ.' });
     }
 
     return issues;
@@ -5581,16 +5627,49 @@ function correctGeorgianMorphology(text) {
     out = out.replace(new RegExp(`\\b(?:doesn'?t|does not)\\s+know\\s+(?:whether|if|${tu})`, 'gi'), 'არ იცის, თუ');
     out = out.replace(new RegExp(`\\bwhat\\s+(?:if|${tu})`, 'gi'), 'რა იქნება, რომ');
 
+    // 4.93 Negation carriers (KA-108). Placed at the FUNCTION TAIL — after
+    //      4.90 whose frames key on the raw auxiliaries (don't/didn't/doesn't
+    //      know if → არ ვიცი, თუ etc.), and after 4.71's didn't even slice —
+    //      so only the leftovers reach this general rule.
+    //      ORDER MATTERS (longest-first): "do not/does not/did not" before
+    //      their contractions is unnecessary (contractions match first, the
+    //      spelled forms are separate alternations), but "will not" must run
+    //      before "won't" shares the same არ target anyway; crucially
+    //      can't-family → ვერ runs BEFORE the general არ family would ever
+    //      see it (separate pattern, listed first for clarity).
+    //      can't/cannot/couldn't → ვერ (subject-incapacity, Wikibooks:
+    //      "ver is only used to indicate that the subject is not able")
+    out = out.replace(/\bcan'?t\b/gi, 'ვერ');
+    out = out.replace(/\bcannot\b/gi, 'ვერ');
+    out = out.replace(/\bcan\s+not\b/gi, 'ვერ');
+    out = out.replace(/\bcouldn'?t\b/gi, 'ვერ');
+    //      do-support → არ (Georgian has no auxiliary; არ is pre-verbal,
+    //      tense lands on the Georgian verb — talkpal.ai placement rule)
+    out = out.replace(/\bdon'?t\b/gi, 'არ');
+    out = out.replace(/\bdoesn'?t\b/gi, 'არ');
+    out = out.replace(/\bdidn'?t\b/gi, 'არ');
+    out = out.replace(/\bdo\s+not\b/gi, 'არ');
+    out = out.replace(/\bdoes\s+not\b/gi, 'არ');
+    out = out.replace(/\bdid\s+not\b/gi, 'არ');
+    //      future negation → არ + future screeve residue
+    out = out.replace(/\bwon'?t\b/gi, 'არ');
+    out = out.replace(/\bwill\s+not\b/gi, 'არ');
+    //      copula negation: isn't/aren't + Adj → არ არის (talkpal.ai:
+    //      ეს არ არის წიგნი). Not mapped when followed by a participle —
+    //      4.86's copK pass already consumed that frame earlier.
+    out = out.replace(/\bisn'?t\b/gi, 'არ არის');
+    out = out.replace(/\baren'?t\b/gi, 'არ არის');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.25.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.26.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 108,
-    qaRules: 107,
-    autoFixes: 92,
-    researchSources: 279
+    promptBlocks: 109,
+    qaRules: 108,
+    autoFixes: 93,
+    researchSources: 282
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
