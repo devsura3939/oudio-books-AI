@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.17.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.19.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -247,6 +247,27 @@
 // (EN like/as → ვით family, EN so...that → ისე...რომ, EN the-same-as /
 // just-as → ისევე როგორც, EN exactly/precisely/the-point-is →
 // სწორედ/უბრალოდ ის, რომ).
+// v1.19.0 expansion (motion-verb system — kahibaro.com 9.5 irregular-verb
+// conjugation tables + latinum.substack.com Lessons 37/54 + Tbilisi2007
+// (ILLC) preverb inventory + kartuliena.eu sit-verbs + cram.com flashcard
+// set on მოყვანა/მიყვანა/წაყვანа + georgian.english-dictionary.help მოუტანს:
+// KA_MOTION_VERBS (KA-95: suppletive stems წასვლა→მიდ- present vs წა-
+// future/aorist წავალ/წავა, მოსვლა→მოდ- present მოდის vs მოვა, ჩამოსვლა
+// →ჩამოდის, imperatives წადი!/მოდი!, ცოდნა ვიცი vs ცნობნა ვიცნობ,
+// სურდეს მინდა, გაკეთება ვაკეთებ, თქმა ამბობს, იყო ვარ, ქონა მაქვს),
+// KA_DIRECTIONAL_PREVERBS (KA-96: 9 simple preverbs a-/cha-/ga-/she-/
+// gada-/mi-/mo-/c'a-/da- with motion-verb fusion მივდივარ→წავალ→
+// გავედი გა-სვლა, შევიდა, ჩამოვედი, გადავედი, ავედი, დავბრუნდი, transitive
+// motion წაიყვანს/მიყვანს წაყვანა, მოყვანს მოყვანა, მოაქვს მოტანა,
+// მიაქვს მიტანა, ატარებს carry),
+// KA_POSTURE_VERBS (KA-97: დგას stands — ვდგავარ/დგახარ, ზის sits —
+// ვზივარ/ზიხარ + literary სხედან, იჯდეს/დაჯდება sat-down ვიჯექი/იჯდა,
+// წევს lies — ვწევვარ/წევხარ; posture verbs keep present in state-
+// descriptions where English uses progressive).
+// QA rules 3.95-3.97 (motion_verb_untranslated, posture_verb_untranslated,
+// preverb_direction_missing), auto-fixes 4.81-4.83 (EN go/goes/went →
+// მიდის/წავიდა carriers, EN come/comes/came → მოდის/მოვიდა, EN
+// stand/sit/lie → დგას/ზის/წევს).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2816,6 +2837,101 @@ TACTIC: An isolated არამედ without its არა თუ / არა 
 a defect — always check the corrective frame is complete. სწორედ goes
 IMMEDIATELY before the focused word, never sentence-initial.`;
 
+// KA-95 v1.19.0 — Motion verbs (suppletive system). kahibaro.com 9.5 +
+// latinum.substack.com Lesson 37: English "go/come" have NO stable root —
+// present uses მიდ-/მოდ- stems, future/aorist fuses წა-/მო- + -ვალ/-ვა.
+// Also covers the other top-frequency irregulars (ცოდნა, სურდეს, ...).
+const KA_MOTION_VERBS = `
+GEORGIAN MOTION VERBS — SUPPLETIVE SYSTEM (EN↔KA)
+• "go" has THREE roots by tense: present stem მიდ-, future/aorist წა-,
+  masdar წასვლა:
+  მივდივარ I go · მიდიხარ you go · მიდის he goes · მივდივართ we go ·
+  მიდიხართ you (pl) go · მიდიან they go — BUT წავალ I will go ·
+  წავა he will go · წავიდა he went · წადი! go! (imperative)
+• "come": present stem მოდ-, future მო-, masdar მოსვლა:
+  მოვდივარ I come · მოდიხარ you come · მოდის he comes · მოდიან they
+  come — BUT მოვალ I will come · მოვა he will come · მოვიდა he came ·
+  მოდი! come! · ჩამოდის he comes down · ჩამოვა he will come down
+• Suppletive trap: NEVER build a present from წა- (წავდივარ is wrong)
+  and NEVER build a future from მიდ- (*მივალ for plain go is wrong —
+  წავალ is the future of go; მი- with მივა exists only with a goal
+  phrase as a bookish variant).
+• Other suppletive/high-frequency irregulars:
+  ცოდნა know-a-fact → ვიცი / იცის vs ცნობნა know-a-person → ვიცნობ /
+  იცნობს · სურდეს want → მინდა / გინდა / უნდა / უნდათ · გაკეთება do →
+  ვაკეთებ / აკეთებს · თქმა say → ამბობს / თქვა said · იყო be → ვარ /
+  ხარ / არის · ქონა have → მაქვს / აქვს / აქვთ
+MAPPING: go → მიდის (present) / წავიდა (past) / წავა (future) ·
+come → მოდის / მოვიდა / მოვა · imperative go! → წადი, come! → მოდი
+TACTIC: Translating "he goes" word-by-word gives *წადის or *წავდის —
+both wrong. Pick the root BY TENSE first, then conjugate the stem.`;
+
+// KA-96 v1.19.0 — Directional preverbs + transitive motion. Tbilisi2007
+// (ILLC) inventory + latinum.substack.com Lessons 37/54 + cram.com
+// მოყვანა/მიყვანა set + georgian.english-dictionary.help მოუტანს:
+// preverbs fuse with motion verbs to build directed motion; the
+// bring/take-by-vehicle verbs invert (ჰ- marker).
+const KA_DIRECTIONAL_PREVERBS = `
+GEORGIAN DIRECTIONAL PREVERBS & TRANSITIVE MOTION (EN↔KA)
+• Simple preverbs fuse with მიდის/წავიდა to give directed motion —
+  each replaces "go" with a NEW verb with its own masdar:
+  ა- up → ავედი (he) went up, ასვლა · ჩა- down → ჩამოვედი went down,
+  ჩამოსვლა · გა- out → გავედი went out, გასვლა · შე- in → შევიდა went
+  in / entered, შესვლა · გადა- across → გადავედი crossed over,
+  გადასვლა · მი- to(toward a goal) → მივედი went (to), მისვლა ·
+  მო- toward-speaker → მოვედი came, მოსვლა · წა- away(from speaker)
+  → წავიდა went away, წასვლა · და- return → დავბრუნდი returned,
+  დაბრუნება
+• With DESTINATION, "went" prefers წავიდა or მივედი: სახლში წავიდა
+  he went home · ქალაქში მივედი I went to the city. With SOURCE,
+  წამოვიდა set out (from here). -ში/-ზე/-დან mark the goal/surface/
+  source (შევიდა ოთახში entered the room).
+• Transitive motion — carrying a PERSON (invertive, dative object +
+  ჰ- person marker): წაიყვანს will take (someone), წაყვანა took ·
+  მიყვანს / მიჰყავს takes (to a goal), მიყვანა · მოყვანს / მოჰყავს
+  brings (someone here), მოყვანა. Pattern: replace მო- with მი-/წა-
+  to switch from bring to take: დედამ ბავშვი სკოლამდე მიჰყავს the
+  mother takes the child to school.
+• Transitive motion — carrying a THING (direct object): მოაქვს /
+  მოუტანს brings (a thing), მოტანა · მიაქვს / მიუტანს takes (a thing
+  to a goal), მიტანა · ატარებს carries/wears, ტარება · წამოიღო took
+  (a thing and left)
+MAPPING: went-out → გავედი · went-in/entered → შევიდა · went-up →
+ავედი · went-down → ჩამოვედი · crossed → გადავედი · returned →
+დაბრუნდა · bring-sb → მოყვანს · take-sb → მიყვანს/წაიყვანს ·
+bring-sth → მოაქვს · take-sth → მიაქვს · carry → ატარებს
+TACTIC: English "went" collapses 6+ Georgian verbs. Choose the
+preverb from the PATH (out/in/up/down/across/away/toward), not from
+"went". Person-objects take the ჰ- invertive carrier (მოჰყავს), not
+the direct-object form.`;
+
+// KA-97 v1.19.0 — Posture verbs. kartuliena.eu ზის-vs-ჯდება +
+// kaikki.org + cram.com III-conjugation set: დგას/ზის/წევς describe
+// STATE in the present where English uses progressive "is standing/
+// sitting/lying"; the change-of-state aorists are irregular.
+const KA_POSTURE_VERBS = `
+GEORGIAN POSTURE VERBS (EN↔KA)
+• დგას stands (state): ვდგავარ I stand · დგახარ you stand · დგას he
+  stands · დგანან they stand. In narration a standing figure is
+  იდგა he was standing (aorist of დგომა), NOT *იყო მდგომი.
+• ზის sits (state): ვზივარ I sit · ზიხარ you sit · ზის he sits ·
+  სხედან they sit (irregular plural; literary alternative to ზიან).
+  Literary prose often prefers სხედან for 3pl.
+• Change of state "sat down": დაჯდა he sat down (aorist), masdar
+  დაჯდომა/ჯდომა; aorist person grid: ვიჯექი I sat · იჯექი you sat ·
+  იჯდა he sat · ვიჯეთ we sat · იჯეთ you (pl) sat · ისხდნენ they sat.
+• წევს lies (state): ვწევვარ I lie · წევხარ you lie · წევს he lies ·
+  წევანან they lie. "lay down" → დაწვა he lay down, დაწოლა.
+• State present, not progressive: Georgian uses the simple present
+  for what English renders "is standing/sitting/lying" — ქუჩაში
+  დგას he is standing in the street (never *ის დგება).
+MAPPING: stand/stands → დგას (ვდგავარ/დგახარ/დგანან) · stood →
+იდგა · sit → ზის (ვზივარ/ზიხარ/სხედან) · sat (down) → დაჯდა /
+ვიჯექი · lie/lies → წევს (ვწევვარ/წევხარ) · lay down → დაწვა
+TACTIC: Posture verbs are the natural carrier for static scene
+description — a character "was standing" is იდგა, a body "lay" is
+წევს/ეწო. Do not import English "be + participle" periphrasis.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -2908,6 +3024,9 @@ function getKaKnowledgeBase() {
         KA_RESULT_CORRELATIVES,
         KA_AS_FAMILY,
         KA_CLEFT_EMPHASIS,
+        KA_MOTION_VERBS,
+        KA_DIRECTIONAL_PREVERBS,
+        KA_POSTURE_VERBS,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -3708,6 +3827,32 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'cleft_untranslated', message: 'English cleft/emphasis construction (it is X who... / not only ... but / the point is) present in source but the Georgian focus carrier missing: cleft → სწორედ + focused element, not-only-but → არა მხოლოდ ..., არამედ ..., the-point-is → უბრალოდ ის, რომ.' });
     }
 
+    // ── v1.19.0 additions: motion verbs, posture verbs, preverb direction ──
+
+    // 3.95 Motion-verb untranslated: English go/goes/went/come/comes/came
+    //      left bare in Georgian output — the suppletive system requires
+    //      root selection BY TENSE (მიდ-/მოდ- present, წავალ/მოვალ future,
+    //      წავიდა/მოვიდა aorist).
+    if (/\b(go|goes|going|went|gone|come|comes|coming|came)\b/i.test(text) &&
+        !/მიდის|მივდივარ|მოდის|მოვდივარ|წავიდ|მოვიდ|მივიდ|მივედ|წავალ|მოვალ|წადი|მოდი|წასვლა|მოსვლა/.test(text)) {
+        issues.push({ rule: 'motion_verb_untranslated', message: 'English motion verb (go/went/come/came) left untranslated. Suppletive system: present მივდივარ/მიდის & მოვდივარ/მოდის, past წავიდა/მოვიდა, future წავალ/მოვალ, imperative წადი!/მოდი!.' });
+    }
+
+    // 3.96 Posture-verb untranslated: English stand/sit/lie (any form)
+    //      present but no Georgian posture verb (დგას/ზის/წევს family).
+    if (/\b(stand|stands|standing|stood|sit|sits|sitting|sat|lie|lies|lying|lay down|laid)\b/i.test(text) &&
+        !/დგას|დგახარ|ვდგავარ|იდგა|ზის|ვზივარ|სხედ|იჯდ|დაჯდ|ვიჯექი|წევს|ვწევვარ|დაწვა/.test(text)) {
+        issues.push({ rule: 'posture_verb_untranslated', message: 'English posture verb (stand/sit/lie) left untranslated. State present: დგას/ზის/წევს (ვდგავარ, ვზივარ, ვწევვარ); change of state: დაჯდა sat down, დაწვა lay down; past state იდგა was standing.' });
+    }
+
+    // 3.97 Directional-preverb missing: English directed motion (entered/
+    //      exited/returned/crossed/climbed/descended) present but the
+    //      matching fused preverb verb absent from the output.
+    if (/\b(entered|exited|returned|crossed|climbed|descended|went out|went in|went up|went down|went away)\b/i.test(text) &&
+        !/შევიდ|შესვლა|გავიდ|გასვლა|დაბრუნდ|გადავიდ|გადასვლა|ავიდ|ასვლა|ჩამოვიდ|ჩამოსვლა|წავიდ|მივიდ|მისვლა|წამოვიდ/.test(text)) {
+        issues.push({ rule: 'preverb_direction_missing', message: 'English directed motion (entered/exited/returned/crossed/went up/down) present but the fused Georgian preverb verb missing: entered → შევიდა, exited → გავიდა, returned → დაბრუნდა, crossed → გადავიდა, went up → ავიდა, went down → ჩამოვიდა.' });
+    }
+
     return issues;
 }
 
@@ -4256,16 +4401,84 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bexactly\b/gi, 'სწორედ');
     out = out.replace(/\bprecisely\b/gi, 'სწორედ');
 
+    // ── v1.19.0 additions ──
+
+    // 4.81 Untranslated English motion verbs. Tense-sensitive carriers from
+    //      the suppletive system; past "went to/came to" keeps the goal
+    //      phrase in place (წავიდა სახლში). Future forms FIRST — bare
+    //      "go"/"come" would otherwise consume them (same ordering class
+    //      as 4.78's "one and the same" / 4.80's "but also").
+    out = out.replace(/\bwill go\b/gi, 'წავალ');
+    out = out.replace(/\bwill come\b/gi, 'მოვალ');
+    out = out.replace(/\bgoing to\b/gi, 'მიდის');
+    out = out.replace(/\bgoes to\b/gi, 'მიდის');
+    out = out.replace(/\bgo to\b/gi, 'მიდის');
+    out = out.replace(/\bgoes\b/gi, 'მიდის');
+    out = out.replace(/\bgo\b/gi, 'მიდის');
+    out = out.replace(/\bcoming to\b/gi, 'მოდის');
+    out = out.replace(/\bcomes to\b/gi, 'მოდის');
+    out = out.replace(/\bcome to\b/gi, 'მოდის');
+    out = out.replace(/\bcomes\b/gi, 'მოდის');
+    out = out.replace(/\bcome\b/gi, 'მოდის');
+    out = out.replace(/\bwent to\b/gi, 'წავიდა');
+    out = out.replace(/\bcame to\b/gi, 'მოვიდა');
+    out = out.replace(/\bwent\b/gi, 'წავიდა');
+    out = out.replace(/\bcame\b/gi, 'მოვიდა');
+
+    // 4.82 Untranslated English posture verbs: state present დგას/ზის/
+    //      წევს, change of state დაჯდა/დაწვა, past state იდგა.
+    out = out.replace(/\bis standing\b/gi, 'დგას');
+    out = out.replace(/\bare standing\b/gi, 'დგანან');
+    out = out.replace(/\bwas standing\b/gi, 'იდგა');
+    out = out.replace(/\bwere standing\b/gi, 'იდგნენ');
+    out = out.replace(/\bstands\b/gi, 'დგას');
+    out = out.replace(/\bstanding\b/gi, 'დგომა');
+    out = out.replace(/\bstood\b/gi, 'იდგა');
+    out = out.replace(/\bstand\b/gi, 'დგას');
+    out = out.replace(/\bis sitting\b/gi, 'ზის');
+    out = out.replace(/\bare sitting\b/gi, 'სხედან');
+    out = out.replace(/\bwas sitting\b/gi, 'ზიოდა');
+    out = out.replace(/\bwere sitting\b/gi, 'სხედნენ');
+    out = out.replace(/\bsits\b/gi, 'ზის');
+    out = out.replace(/\bsitting\b/gi, 'ჯდომა');
+    out = out.replace(/\bsat down\b/gi, 'დაჯდა');
+    out = out.replace(/\bsat\b/gi, 'იჯდა');
+    out = out.replace(/\bsit\b/gi, 'ზის');
+    out = out.replace(/\bis lying\b/gi, 'წევს');
+    out = out.replace(/\bwas lying\b/gi, 'წევოდა');
+    out = out.replace(/\blies\b/gi, 'წევს');
+    out = out.replace(/\blying\b/gi, 'წოლა');
+    out = out.replace(/\blay down\b/gi, 'დაწვა');
+    out = out.replace(/\blay\b/gi, 'იწვა');
+    out = out.replace(/\blie\b/gi, 'წევს');
+
+    // 4.83 Untranslated English directed motion: fused preverb verbs carry
+    //      the PATH, so enter/exit/return/cross map to whole new verbs.
+    out = out.replace(/\bentered\b/gi, 'შევიდა');
+    out = out.replace(/\benters\b/gi, 'შედის');
+    out = out.replace(/\benter\b/gi, 'შედის');
+    out = out.replace(/\bexited\b/gi, 'გავიდა');
+    out = out.replace(/\bexits\b/gi, 'გადის');
+    out = out.replace(/\bexit\b/gi, 'გადის');
+    out = out.replace(/\breturned\b/gi, 'დაბრუნდა');
+    out = out.replace(/\breturns\b/gi, 'ბრუნდება');
+    out = out.replace(/\breturn\b/gi, 'ბრუნდება');
+    out = out.replace(/\bcrossed\b/gi, 'გადავიდა');
+    out = out.replace(/\bcrosses\b/gi, 'გადადის');
+    out = out.replace(/\bcross\b/gi, 'გადადის');
+    out = out.replace(/\bclimbed\b/gi, 'ავიდა');
+    out = out.replace(/\bdescended\b/gi, 'ჩამოვიდა');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.18.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.19.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 95,
-    qaRules: 95,
-    autoFixes: 80,
-    researchSources: 245
+    promptBlocks: 98,
+    qaRules: 98,
+    autoFixes: 83,
+    researchSources: 251
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
