@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.10.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.11.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -85,7 +85,23 @@
 // Wackernagel enclitics, anti-SVO-calque tactic).
 // QA rules 3.51-3.55 (sanam_missing_ar, habit_conditional, evidential_missing,
 // pluperfect_form, svo_order), auto-fixes 4.40-4.41 (EN evidential adverbs →
-// თურმე, სანამ აर spacing normalize).
+// თურმე, სანამ არ spacing normalize).
+// v1.11.0 expansion (particles/quotatives/version vowels/T-V register/parallel
+// prose, 22 new web sources incl. Advadze TSU particle paper + kaikki.org
+// particle index + georgianlanguage.online): KA_PARTICLES_DEEP (კი/-ც/არ
+// combination semantics: არც, არც კი, ...ც არ, კი არ, ...ც კი არ, კი ...ც არ,
+// EN mapping table), KA_QUOTATIVES (თქო 2nd-hand relay, მეთქი self-quote, -ო
+// third-party/proverbs, hyphen attachment), KA_VERSION_MARKERS_DEEP (ი-/ა-/უ-
+// version vowels, benefactive m/g/v fusion, drop postpositional beneficiary),
+// KA_T_V_REGISTER (შენ vs თქვენ inference rules, agreement propagation,
+// register consistency in dialogue), KA_PARALLEL_PROSE (idiom compensation,
+// body/nature metaphors, parallel-structure preservation, dialogue-tag variety),
+// KA_STYLE_GUIDE („low-high" quotes, em dash, indirect-question punctuation,
+// no capitals, possessive dropping, number style).
+// QA rules 3.56-3.60 (detached_ts, double_benefactive, tv_register_clash,
+// detached_quotative, additive_untranslated), auto-fixes 4.42-4.46 (attach
+// detached -ც, hyphenate detached თქო/მეთქი, drop redundant beneficiary,
+// straight quotes → „", EN also/moreover → ასევე/გარდა ამისა).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1226,6 +1242,174 @@ TRANSLATION TACTIC:
 • Do not mirror English SVO word order literally — it reads as translated-ese.
   Reorder to SOV unless focus demands otherwise.`;
 
+const KA_PARTICLES_DEEP = `KA-49 PARTICLE COMBINATIONS კი/ც/არ (v1.11.0, Advadze TSU paper):
+The three particles კი, -ც, არ combine into precise negation/additivity
+semantics. Getting them wrong flips meaning.
+
+CORE SENSES:
+• -ც = "too/also" (enclitic, attaches AFTER the word): მეც მივდივარ (I'm going
+  too). Never write ც as a separate word.
+• არც = "neither/nor, not...either": არც ის მოვიდა (he didn't come either).
+  Also temporal negation (არც ახლა — not even now) and negation of the minimal
+  amount (არც ერთი — not a single one).
+• არც კი = "not even" negating a presupposition: არც კი მომესალმა (he didn't
+  even say hello).
+• ...ც არ = "not even one X": ერთი წყალიც არ დარჩა (not a drop of water left).
+  The ც-marked noun's minimal unit is negated.
+• კი არ = "not X but Y" (qualitative opposition) AND positive additive
+  emphasis: კი არა, საუკეთესოა (not just good — the best).
+• კი ...ც არ = კი marks the agent, ც marks the noun: double marking, both
+  present in one clause.
+• ...ც კი არ = ც marks the noun, კი adds the presupposition: წყალიც კი არ
+  დარჩა (not even water was left).
+
+ENGLISH MAPPING TABLE:
+• "even + negated verb" → არც კი / ...ც კი არ
+• "neither / nor / not...either" → არც
+• "not a single / not a drop of" → ...ც არ (with ერთი or a minimal noun)
+• "not only...but also" → არა თუ...არამედ
+• "used to / would always" → imperfect (+ ხოლმე)
+
+TACTIC: when English uses "even", "either", "neither", or "not a single",
+check the Georgian output uses the right კი/ც/არ combination — a plain არ
+loses the presupposition and reads flat.`;
+
+const KA_QUOTATIVES = `KA-50 QUOTATIVE PARTICLES თქო/მეთქი/-ო (v1.11.0):
+Georgian marks reported speech with sentence-final enclitic particles —
+English marks it with "he said (that)" or nothing at all. Drop them and the
+"who said what" chain breaks.
+
+• თქო = the CURRENT speaker relays someone else's words (2nd hand):
+  წადი და მამას უთხარი, გელოდებით-თქო (Go tell daddy [that I said] we're
+  waiting for you). Attaches to the last word of the quoted clause.
+• მეთქი = the speaker repeats THEIR OWN earlier words (self-quote, often
+  exasperated): ახლავე წადი! ახლავე წადი-მეთქი! (Go this instant! I SAID, go
+  this instant!)
+• -ო = marks third-party words, sayings, proverbs heard from others:
+  მოვიდა-ო (so he came, they say). Common in folk narrative.
+
+TRANSLATION TACTIC:
+• English "X said (that)..." inside dialogue → keep the quote, append -თქო
+  when the narrator relays a third party's words.
+• English "I said..." repetition → -მეთქი.
+• Proverbs/sayings introduced with "as they say" → ...-ო or ასე ამბობენ.
+• Never translate these as full verbs (თქვა) when they are enclitic markers —
+  that doubles the speech verb.
+• In audiobook prose, თქო is the workhorse for he-said/she-said chains; keep
+  it attached with a hyphen to the final word of the quote.`;
+
+const KA_VERSION_MARKERS_DEEP = `KA-51 VERSION VOWELS ი-/ა-/უ- (v1.11.0):
+The slot right after the preverb (or word-initially) carries a version vowel
+that encodes WHO BENEFITS from the action. It is obligatory, not optional.
+
+• ი- SUBJECT version: action benefits/returns to the subject — მო-ი-ყიდა
+  (he bought FOR HIMSELF), შე-ი-მაგრა (strengthened itself).
+• ა- NEUTRAL version: plain transitive action — მო-ა-ყიდა? No: neutral is the
+  unmarked form მი-ა-ცა, გა-ა-კეთა (he did it, no beneficiary).
+• უ- SUPERESSIVE/OBJECT version: action benefits a third party or lands ON
+  something — მო-უ-ყიდა (he bought FOR SOMEONE), და-უ-წერა (wrote FOR/TO
+  someone). With 1st/2nd person beneficiaries it fuses: მო-მ-ცა (gave me),
+  მო-გ-ცა (gave you), მო-ვ-ცა (gave us), მო-ვ-ე-ცა? — watch m/g/v/gv infixes.
+
+ENGLISH MAPPING:
+• "bought a book" (self) → ი-version: წიგნი მოიყიდა.
+• "bought a book for her" → უ-version: წიგნი მოუყიდა.
+• "gave me the book" → მომცა (the beneficiary is INSIDE the verb — no separate
+  pronoun needed; მომცა წიგნი, NOT *მომცა ჩემთვის წიგნი).
+
+TACTIC: when English says "for me/for him/to her" after a verb of transfer,
+the Georgian output must show the უ-version (or m/g/v fusion) and DROP the
+postpositional phrase. Keeping ჩემთვის/მისთვის alongside the version vowel is
+a calque defect.`;
+
+const KA_T_V_REGISTER = `KA-52 T–V DISTINCTION შენ vs თქვენ (v1.11.0):
+Georgian distinguishes intimate singular შენ from polite/plural თქვენ. The
+verb agrees, so the choice propagates: შენ ხარ vs თქვენ ხართ, წადი vs წადით.
+
+RULES:
+• Narrator → unnamed stranger, formal address, or reader: თქვენ (polite).
+• Dialogue between close friends, family, children, insults: შენ.
+• Animals, God (traditional), rhetorical address to oneself: შენ.
+• Mixed groups always take თქვენ (plural wins).
+• თქვენ is ALSO plain plural "you all" — register follows context.
+
+ENGLISH MAPPING: English "you" is ambiguous. Infer from the scene:
+• Master→servant, strangers, shopkeepers: თქვენ.
+• Lovers, siblings, childhood friends: შენ.
+• When the English text gives no cue, default to თქვენ in narration and
+  dialogue with strangers; switch to შენ only on explicit intimacy signals
+  (first names, diminutives, შენ ჩემო...).
+
+TACTIC: never mix registers inside one dialogue — a speaker who addresses
+one character with შენ and another with თქვენ must be intentional (power
+contrast), otherwise it reads as an error. Audiobook listeners HEAR the
+difference (ხარ vs ხართ) — mismatched register is an immediate quality flag.`;
+
+const KA_PARALLEL_PROSE = `KA-53 PARALLEL PROSE PATTERNS (v1.11.0, EN↔KA book comparisons):
+Patterns observed in published Georgian literary translations (Wardrop's
+Rustaveli, Rayfield's Georgian prose anthology, contemporary novel
+translations).
+
+IDIOM COMPENSATION:
+• When English has an idiom with no Georgian twin, translate the MEANING with
+  a natural Georgian collocation — do not calque the image. "It's raining
+  cats and dogs" → ცა ჩამოინგრა (the sky fell in) or ძლიერი წვიმა მოდის.
+• Georgian prefers BODY and NATURE metaphors: anger = სისხლი აუდიდა (his blood
+  rose), fear = გული წაუვიდა (his heart left), sadness = გული მოეკვეთა.
+
+RHYTHM & PARALLELISM:
+• English parallel structures ("He came, he saw, he left") map well to
+  Georgian verb-fronted repetition: მოვიდა, დაინახა, წავიდა — keep the
+  repetition, it sounds native.
+• Georgian literary prose favors SHORT verb-final sentences in action scenes
+  and ONE long flowing sentence (with participial chains) for description.
+  Mirror the English's alternation rather than flattening it.
+
+ALLITERATION & SOUND:
+• Rustaveli-era translation tradition rewards sound texture. When the English
+  alliterates, seek Georgian alliteration or assonance (not mandatory, but a
+  mark of quality in audiobook prose).
+
+DIALOGUE TAGS:
+• Vary: თქვა, უთხრა, წამოიძახა, აღნიშნა, ჩაიბუტბუტა — English "said" is
+  neutral, Georgian tags carry manner. Pick from context, not randomly.
+• Georgian drops the tag entirely when the speaker is obvious — prefer that
+  over repeating თქვა in every line.`;
+
+const KA_STYLE_GUIDE = `KA-54 KA-GE STYLE GUIDE (v1.11.0, Microsoft style guide + audiobook house rules):
+Punctuation and formatting conventions that make Georgian output look native.
+
+PUNCTUATION:
+• Quotation marks: „double low-high" — „მოგესალმები" თქვა მან. Never straight
+  quotes "..." or English curly quotes in Georgian prose.
+• Em dash (—) with spaces for parenthetical asides: ის — და მხოლოდ ის — იცოდა
+  სიმართლე.
+• Comma before ან (or) in lists of alternatives: ჩაი ან ყავა; before და (and)
+  in simple lists NO comma: პური, ყველ და ვაშლი — but და joins the last pair
+  without a comma.
+• Question mark direct: სად მიდიხარ? Indirect questions take NO question
+  mark: მკითხა, სად მიდიოდა.
+
+CAPITALIZATION:
+• Georgian has NO capital letters — never capitalize sentence starts, proper
+  nouns stay lowercase: თბილისი, რუსთაველი are written as-is (they look
+  distinct by spelling, not case).
+
+POSSESSION & PRONOUN DROPPING:
+• Drop possessive pronouns when the owner is obvious from context: თვალები
+  დახუჭა (closed HIS eyes) not მისი თვალები დახუჭა. Keep the possessive only
+  when ambiguity or contrast demands it.
+• Singular they → ის with singular agreement (Georgian has no gender and no
+  plural-of-unknown issue).
+
+NUMBERS & MEASUREMENT:
+• Small counts in prose: spell out (სამი დღე); dates and figures keep digits.
+• Percent: 50 პროცენტი (space, word).
+
+TACTIC: run this checklist on final output — wrong quote marks and
+un-dropped possessives are the two most visible "translated-ese" flags in
+Georgian audiobooks.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -1272,6 +1456,12 @@ function getKaKnowledgeBase() {
         KA_ASPECT_HABITUAL,
         KA_TIME_CLAUSES,
         KA_WORD_ORDER_NARRATIVE,
+        KA_PARTICLES_DEEP,
+        KA_QUOTATIVES,
+        KA_VERSION_MARKERS_DEEP,
+        KA_T_V_REGISTER,
+        KA_PARALLEL_PROSE,
+        KA_STYLE_GUIDE,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -1725,6 +1915,47 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'svo_order', message: `"${m25[1]} ${m25[2]} ${m25[3]}" — SVO calque. Georgian default is SOV with the verb closing the clause: ბავშვმა ვაშლი შეჭამა.` });
     }
 
+    // ── v1.11.0 additions: particles, quotatives, version vowels, T–V, style ──
+
+    // 3.56 Detached enclitic -ც written as a separate word (calque of English
+    //     "also/too" as a free adverb). -ც must attach to the preceding word.
+    const detachedTsRe = /(^|[\s,„"(])ც(?=[\s,."”):;!?।…])/g;
+    let m26;
+    while ((m26 = detachedTsRe.exec(text)) !== null) {
+        issues.push({ rule: 'detached_ts', message: `Standalone "ც" found — the additive enclitic -ც must attach to the preceding word: მეც, ისიც, აქაც. A separate ც is a calque of English "too/also".` });
+    }
+
+    // 3.57 Double-marked beneficiary: უ-version verb + redundant postpositional
+    //     beneficiary phrase (ჩემთვის/მისთვის/მასთან) after a fused მ-/გ-/ვ- verb.
+    const beneRe = /(?<![\u10A0-\u10FF])(მომცა|მოგცა|მოვცა|მიმცა|მიგცა|მივცა|დამწერა|დაგწერა|დავწერე)(?![\u10A0-\u10FF])\s+(ჩემთვის|შენთვის|მისთვის|მათთვის|ჩვენთვის|თქვენთვის)(?![\u10A0-\u10FF])/g;
+    let m27;
+    while ((m27 = beneRe.exec(text)) !== null) {
+        issues.push({ rule: 'double_benefactive', message: `"${m27[1]} ${m27[2]}" — the beneficiary is already inside the verb (${m27[1]} contains the m/g/v infix). Drop the redundant ${m27[2]}: მომცა წიგნი, not მომცა ჩემთვის წიგნი.` });
+    }
+
+    // 3.58 T–V register clash: polite თქვენ-verb and intimate შენ-verb
+    //     addressed in the same breath (conflicting agreement in one sentence).
+    const tvClashRe = /(?<![\u10A0-\u10FF])(ხართ|მიდიხართ|გაქვთ|იცით|გინდათ)(?![\u10A0-\u10FF])[^.!?]{0,60}(?<![\u10A0-\u10FF])(ხარ|მიდიხარ|გაქვს|იცი|გინდა)(?![\u10A0-\u10FF])/g;
+    let m28;
+    while ((m28 = tvClashRe.exec(text)) !== null) {
+        issues.push({ rule: 'tv_register_clash', message: `Register clash: polite "${m28[1]}" and intimate "${m28[2]}" in the same sentence. Pick one addressee register (შენ ↔ თქვენ) and keep the verb agreement consistent.` });
+    }
+
+    // 3.59 Quotative detached: თქო / მეთქი / -ო written as separate words —
+    //     they are hyphenated enclitics on the final word of the quote.
+    const detachedQuotRe = /(^|[\s„"(])((თქო|მეთქი))(?=[\s.!?,"”):।…])/g;
+    let m29;
+    while ((m29 = detachedQuotRe.exec(text)) !== null) {
+        issues.push({ rule: 'detached_quotative', message: `"${m29[2]}" written as a separate word — quotative particles attach with a hyphen to the last word of the quoted clause: გელოდებით-თქო, წადი-მეთქი.` });
+    }
+
+    // 3.60 Untranslated English additivity/focus words in Georgian output.
+    const additRe = /\b(also|too|even|either|neither|moreover|besides)\b/gi;
+    let m30;
+    while ((m30 = additRe.exec(text)) !== null) {
+        issues.push({ rule: 'additive_untranslated', message: `"${m30[1]}" — untranslated English additive/focus word in Georgian output. Map: also/too → -ც, even → კიდევ / არც კი, either/neither → არც, moreover → გარდა ამისა.` });
+    }
+
     return issues;
 }
 
@@ -1932,16 +2163,44 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/(?<![\u10A0-\u10FF])სანამარ(?![\u10A0-\u10FF])/g, 'სანამ არ');
     out = out.replace(/(?<![\u10A0-\u10FF])სანამ\s+არ\s+არ\s+/g, 'სანამ არ ');
 
+    // ── v1.11.0 additions: enclitics, quotatives, beneficiary, style ──
+
+    // 4.42 Detached standalone "ც" → attach to the preceding word
+    //     (deterministic: a separate ც is always the additive enclitic mis-spaced).
+    //     Lookahead includes ।/… because 4.15 already converted sentence periods.
+    out = out.replace(/(?<=[\u10A0-\u10FF])\s+ც(?=[\s,."”):;!?।…])/g, 'ც');
+
+    // 4.43 Detached quotatives → hyphenate to the preceding word
+    //     ("... თქო" → "...-თქო", "... მეთქი" → "...-მეთქი").
+    out = out.replace(/(?<=[\u10A0-\u10FF])\s+(თქო|მეთქი)(?=[\s.!?,"”):।…])/g, '-$1');
+
+    // 4.44 Double benefactive: drop the redundant postpositional beneficiary
+    //     after a fused m/g/v transfer verb (მომცა ჩემთვის → მომცა).
+    out = out.replace(
+        /(?<![\u10A0-\u10FF])(მომცა|მოგცა|მოვცა|მიმცა|მიგცა|მივცა|დამწერა|დაგწერა|დავწერა)\s+(ჩემთვის|შენთვის|მისთვის|მათთვის|ჩვენთვის|თქვენთვის)(?![\u10A0-\u10FF])/g,
+        '$1'
+    );
+
+    // 4.45 English quotation marks in Georgian output → „low-high" pair
+    //     (deterministic for straight quotes only; direction inferred by position).
+    out = out.replace(/(^|[\s(\[])"/g, '$1„');
+    out = out.replace(/"([\s)\].,!?;:]|$)/g, '“$1');
+
+    // 4.46 Untranslated English additive adverbs → Georgian equivalents
+    //     (deterministic set that should never survive into Georgian output).
+    out = out.replace(/\balso\b/gi, 'ასევე');
+    out = out.replace(/\bmoreover\b/gi, 'გარდა ამისა');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.10.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.11.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 48,
-    qaRules: 55,
-    autoFixes: 41,
-    researchSources: 113
+    promptBlocks: 54,
+    qaRules: 60,
+    autoFixes: 46,
+    researchSources: 135
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
