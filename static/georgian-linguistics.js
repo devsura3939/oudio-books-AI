@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.21.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.22.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -307,6 +307,31 @@
 // passive → PPP carrier, EN "un-/in- V-able/ible" → და-უ-...-ელი/
 // -შეუძლებელი negative potential carrier, EN "-able/-ible" →
 // შესაძლებელი carrier).
+// v1.22.0 expansion (affective/dative-subject verb system — lingua.ge
+// უყვარს full paradigm, zmnebi.com m-class person markers + be-form
+// object agreement (მიყვარხარ = მ+iყვარ+ხარ), latinum.substack.com L65
+// მინდა dative-wanter, en.wiktionary Appendix Georgian verbs m-set table,
+// love.you phrase corpus, BYU Case Shift paper (Series III inversion)):
+// KA_AFFECTIVE_VERBS (KA-102: m-class affective paradigm — მიყვარს/
+// უყვარს loves with full series grid მიყვარდა/მეყვარება/მყვარებია,
+// be-form object agreement მიყვარხარ/გიყვარვარ/უყვარს ის, მოსწონს
+// likes მომწონს/მოსწონს, მძულს hates, მეშინია fears + GEN object,
+// მსურს wants, სწამს believes + DAT, სჯერა, მჭირდება needs მჭირდება
+// + NOM, სძინავს, მსმენია heard-of, სწყდება; inversion principle: experiencer
+// DAT + stimulus NOM, verb agrees with EXPERIENCER not stimulus),
+// KA_BEFORM_AGREEMENT (KA-103: be-form object rule — interpersonal
+// emotion verbs mark 1st/2nd-person object with the PRS "to be" form
+// ვარ/ხარ/არის + plural ვართ/ხართ/არიან; მიყვარხარ I-love-you,
+// გიყვარვარ you-love-me, გვიყვარხართ we-love-you-pl, გყავვარ→გყავარ
+// double-v collapse, only in Series I present, მოვწონვარ she-likes-me).
+// QA rules 3.102-3.103 (affective_agreement_missing: EN love/like/hate/
+// fear sentence with no m-class affective carrier; beform_missing:
+// interpersonal "I love/miss you" with no -ხარ/-ვარ be-form suffix).
+// Auto-fixes 4.88-4.89 (EN I/you love/liked/hate/fear/want/need/afraid
+// → m-class affective carriers მიყვარს/მომწონს/მძულს/მეშინია/მინდა/
+// მჭირდება, EN I-love-you family → be-form agreement მიყვარხარ/
+// გიყვარვარ/გვიყვარხარ). 89→102 QA is v1.22.0: rules 3.102-3.103,
+// fixes 4.88-4.89, sources +8 (259→267).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3122,6 +3147,78 @@ TACTIC: never translate "have/has" as an ergative verb; the dative
 owner is obligatory (v1.2.0 KA_IMPERSONAL frames already demand the
 dative experiencer — possession is the same pattern).`;
 
+// KA-102 v1.22.0 — Affective (dative-subject) verb system
+const KA_AFFECTIVE_VERBS = `
+GEORGIAN AFFECTIVE / DATIVE-SUBJECT VERB SYSTEM (EN↔KA)
+• INVERSION PRINCIPLE: the EXPERIENCER (feeler) is DATIVE and the verb
+  agrees with HIM/HER; the stimulus (thing loved/seen/wanted) is
+  NOMINATIVE. English "I love you" → მე შენ მიყვარხარ (I-DAT you
+  love-2SG-OBJ); "She loves him" → მას უყვარს ის (NOT *ის უყვარს მას).
+• m-CLASS PARADIGM of უყვარს (loves): PRS მიყვარს/გიყვარს/უყვარს ·
+  გვიყვარს/გიყვართ/უყვართ · IMPERF მიყვარდა/უყვარდა · FUT მეყვარება/
+  ეყვარება · PERF მყვარებია/ჰყვარებია (evidential "has loved") ·
+  COND მეყვარებოდა. FUTURE subjunctive: მეყვარებოდეს.
+• FULL AFFECTIVE VERB SET (all m-class, DAT experiencer):
+  მოსწონს likes (მომწონს I-like · მოსწონს he-likes · მოგწონთ they-like-you);
+  მძულს hates (მას მძულს სიცრუე he hates lies — stimulus NOM);
+  მეშინია is-afraid (object GENITIVE: მეშინია სიბნელის I fear the dark
+  / მეშინია, რომ დაგვიანდება I'm afraid we'll be late);
+  მსურს wants (formal; მინდა colloquial — მინდა პური I want bread,
+  stimulus NOM); სწამს believes + DAT (მწამს შენი I believe you);
+  სჯერა trusts + GEN (მსჯერა მისი I trust him); მჭირდება needs
+  (მჭირდება ფული I need money — stimulus NOM); სძინავს sleeps/
+  is-asleep (მძინავს); მსმენია has-heard-of (PERF evidential:
+  მსმენია ეს ამბავი I've heard this story); მახსოვს I-remember
+  (არ მახსოვს სახელი I don't remember the name); შეუძლია can
+  (მშეუძლია — subject DAT, action masdar or optative).
+• NEVER translate "I love/like/hate/see/know" with v-class present
+  of the plain verb when the frame is affective: *მე ვუყვარვარ,
+  *მე მიყვარს ვარ — always m-class with DAT experiencer.
+• PAST: affective imperfect მიყვარდა/მომწონდა/მეშინია (I used to
+  love/like/fear — invariable shape, DAT experiencer). PERFECT
+  evidential: მყვარებია/მსმენია — English "had loved/has heard" in
+  hearsay contexts.
+MAPPING: I love X → მიყვარს X · she loves him → მას უყვარს ის ·
+I like it → მომწონს · I hate it → მძულს · I'm afraid → მეშინია ·
+I want → მინდა/მსურს · I need → მჭირდება · I remember → მახსოვს ·
+I believe → მწამს
+TACTIC: any English stative emotion/perception verb maps to an
+m-class carrier + dative experiencer; the STIMULUS takes NOM (GEN
+for მეშინია/სჯერა), never ergative; v1.13.0 KA_IMPERSONAL_DEEP
+covered the bodily states (მშია/მტკივა) — this block covers the
+INTERPERSONAL and cognitive set.`;
+
+// KA-103 v1.22.0 — Be-form object agreement (მიყვარხარ family)
+const KA_BEFORM_AGREEMENT = `
+GEORGIAN BE-FORM OBJECT AGREEMENT (მიყვარხარ სისტემა) (EN↔KA)
+• RULE: interpersonal emotion verbs (უყვარს love, მოსწონს like,
+  სძულს hate, უნდება desire, ჰყავს have-someone) may mark a
+  1st/2nd-PERSON OBJECT with the PRESENT "TO BE" form instead of a
+  person suffix: ვარ/ხარ/არის + ვართ/ხართ/არიან.
+• მიყვარხარ I-love-you (მ-1SG-DAT + ყვარ + ხარ-2SG-OBJ) ·
+  გიყვარვარ you-love-me (გ-2SG-DAT + ყვარ + ვარ-1SG-OBJ) ·
+  უყვარვარ he-loves-me · გვიყვარხართ we-love-you(pl) ·
+  გიყვარხართ I-love-you(pl/polite) · გყავხარ you-have-me —
+  plural OBJECT gets plural be-form: მიყვარხართ I-love-you-all.
+• DOUBLE-v COLLAPSE: where the form would show two ვ (გყავვარ
+  you-have-me), only one is written: გყავარ. Similarly
+  გვყავვართ → გვყავართ shape rules; memorize the stock forms.
+• SERIES RESTRICTION: be-form agreement occurs ONLY in Series I
+  present group (PRS). Outside it use plain agreement: შენ გიყვარდი
+  I loved you (imperfect), შენ გიყვარე you were loved (aorist).
+• მოვწონვარ she-likes-me (მო- preverb + ვ-1SG-OBJ + წონ + ვარ);
+  with 3SG experiencer the ს- marker is replaced by the be-form:
+  უყვარხარ he-loves-you.
+• PRONOUNS OPTIONAL: მე შენ მიყვარხარ is emphatic; bare მიყვარხარ
+  is the neutral literary form (v1.8.0 KA_SUBORDINATION noted the
+  same economy for subject pronouns).
+MAPPING: I love you → მიყვარხარ · you love me → გიყვარვარ ·
+we love you → გვიყვარხარ · I love you all → მიყვარხართ ·
+she likes me → მოვწონვარ · do you love me? → გიყვარვარ?
+TACTIC: when the OBJECT of love/like/hate/miss/have is 1st or
+2nd person, append the be-form; do NOT write უყვარს შენ or
+*მიყვარს შენ — that shape is reserved for 3rd-person stimuli.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -3221,6 +3318,8 @@ function getKaKnowledgeBase() {
         KA_TEMPORAL_NOUN_FRAMES,
         KA_DEEP_PARTICIPLES,
         KA_EXISTENTIAL_FRAMES,
+        KA_AFFECTIVE_VERBS,
+        KA_BEFORM_AGREEMENT,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4092,6 +4191,39 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'potential_untranslated', message: 'English -able/-ible adjective present but no Georgian potential morphology: impossible → შეუძლებელი, unbelievable/incredible → დაუჯერებელი, unforgettable → დაუვიწყარი, invisible → უხილავი, visible → ხილული, unreadable → წაუკითხავი, unbreakable → დაუმტვრეველი, inevitable → აუცილებელი, unusable → უვარგისი, readable → საკითხავი, to-be-done → გასაკეთებელი, future → მომავალი (-ველი).' });
     }
 
+    // 3.102 Affective agreement missing: English emotion/perception verb
+    //      (love/like/hate/fear/want/need/believe/remember) present but
+    //      no m-class affective carrier (მიყვარს/მომწონს/მძულს/მეშინია/
+    //      მინდა/მჭირდება/მწამს/მახსოვს/სურს/შემიძლია...) in output.
+    const affEn = /\b(?:loves?|loved|likes?|liked|hates?|hated|fears?|feared|afraid|wants?|wanted|needs?|needed|believes?|believed|remembers?|remembered|trusts?|trusted)\b/i.test(text);
+    //      Guard covers: m-class carriers (მიყვარს...), imperfect/perfect
+    //      (მიყვარდა/მყვარებია), future (მეყვარება), optative stems
+    //      (მინდოდეს), ეშინია family (მეშინია/გეშინია/ეშინიათ —
+    //      wiktionary attested), ვისურვებ conditional, მოეწონებინა.
+    //      უნდოდ covers imperfect უნდოდა — it does NOT contain the
+    //      substring უნდა (the უ-ნ-დ-ო sequence breaks it).
+    const affGuard = /(?:მიყვარ|გიყვარ|უყვარ|გვიყვარ|მომწონ|მოგწონ|მოსწონ|გვწონ|მძულ|მოძულ|მეშინი|გეშინი|ეშინი|მინდა|მინდოდ|გინდა|უნდა|უნდოდ|მსურ|სურს|ვისურვ|მჭირდ|სჭირდ|მწამ|გწამ|სწამ|სჯერ|მახსოვ|გახსოვ|მსმენი|შემიძლ|შეგიძლ|შეუძლ|გვშეძლ|მყვარ|გყვარ|ჰყვარ|მეყვარ|დაინტერეს|აინტერეს)/;
+    if (affEn && !affGuard.test(text)) {
+        issues.push({ rule: 'affective_agreement_missing', message: 'English emotion/perception verb present but no m-class affective carrier: I love X → მიყვარს X, she loves him → მას უყვარს ის (experiencer DATIVE, verb agrees with experiencer), I like → მომწონს, I hate → მძულს, I am afraid → მეშინია + GEN, I want → მინდა/მსურს, I need → მჭირდება, I remember → მახსოვს, I believe → მწამს. Never *მე ვუყვარვარ.' });
+    }
+
+    // 3.103 Be-form object agreement missing: interpersonal "I/you love/
+    //      like/miss/have (1st or 2nd person object)" present but no
+    //      be-form suffix (-ხარ/-ვარ/-ხართ/-ვართ) on the carrier.
+    //      3rd-person objects (him/her) deliberately NOT triggers —
+    //      those take plain მიყვარს (be-form is 1st/2nd-person only).
+    const beEn =
+        /\b(?:i|we)\s+(?:really\s+)?(?:love|loved|like|liked|miss|missed|need)\s+you\b/i.test(text) ||
+        /\b(?:do\s+you|you)\s+(?:really\s+)?(?:love|like|miss)\s+me\b/i.test(text) ||
+        /\blove\s+you\b|\bmiss\s+you\b/i.test(text);
+    //      Guard: be-form outputs of 4.88 + attested family (მიყვარხარ
+    //      kaikki.org; მენატრები pinhok/learnentry; მე შენ მჭირდები
+    //      singpraises hymn; მოვწონვარ/გყავარ zmnebi.com).
+    const beGuard = /(?:მიყვარხარ|მიყვარხართ|გიყვარხარ|გიყვარხართ|გვიყვარხარ|გიყვარვარ|უყვარვარ|მოვწონვარ|მომწონხარ|მოგწონვარ|გყავარ|გყავხარ|მყავხარ|მენატრ|მჭირდები)/;
+    if (beEn && !beGuard.test(text)) {
+        issues.push({ rule: 'beform_missing', message: 'Interpersonal emotion with 1st/2nd-person object present but no be-form agreement: I love you → მიყვარხარ (NOT *მიყვარს შენ), you love me → გიყვარვარ, we love you → გვიყვარხარ, I love you all → მიყვარხართ, I miss you → მენატრები. The object is marked with the present "to be" form (ვარ/ხარ/ვართ/ხართ), Series I present only.' });
+    }
+
     return issues;
 }
 
@@ -4728,7 +4860,12 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bthe same as\b/gi, 'ისეთივე როგორც');
     out = out.replace(/\bthe same\b/gi, 'იგივე');
     out = out.replace(/\bas\b/gi, 'როგორც');
-    out = out.replace(/\blike\b/gi, 'როგორც');
+    //      verb-"like" carve-out: a pronoun subject (with ნამდვილად
+    //      residue from 4.69, which runs earlier) marks "like" as the
+    //      affective VERB ("I like the story") — leave it for 4.88/4.89
+    //      (მომწონს/გვწონს...). Comparison-"like" ("books like this",
+    //      "like father") still → როგორც.
+    out = out.replace(/(?<!\b(?:i|we|they|she|he|you)\s+(?:ნამდვილად\s+)?)like\b/gi, 'როგორც');
 
     // 4.79 Result/equality remnants: bare "such" → ასეთი. The full "such
     //      ... that" → ისეთი ... რომ and "so ... that" → ისე ... რომ
@@ -4889,16 +5026,98 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bfuture\b/gi, 'მომავალი');
     out = out.replace(/\bformer (\w+)\b/gi, 'ყოფილი $1');
 
+    // 4.88 (renumbered 4.89 here in execution order) Be-form interpersonal
+    //      agreement → მიყვარხარ family. MUST run BEFORE the plain
+    //      affective map below so "I love you" gets the be-form, not
+    //      მიყვარს + bare pronoun. you-ALL before you (the \b in
+    //      "i love you\b" would otherwise match the prefix of
+    //      "i love you all"). Attested: მიყვარხარ (kaikki.org "მე შენ
+    //      მიყვარხარ"), მენატრები (pinhok/learnentry), მძულხარ
+    //      (learnentry), მე შენ მჭირდები (singpraises hymn), მოვწონვარ
+    //      (zmnebi.com).
+    //      (zmnebi.com). The ნამდვილად alternation tolerates intensifier
+    //      residue — 4.69 (really → ნამდვილად) runs earlier in the
+    //      pipeline, so "I really love you" reaches this block as
+    //      "I ნამდვილად love you" and must still match.
+    out = out.replace(/\bi\s+(?:really\s+|ნამდვილად\s+)?love\s+you\s+all\b|\bi\s+(?:really\s+|ნამდვილად\s+)?love\s+you\s+guys\b/gi, 'მიყვარხართ');
+    out = out.replace(/\bi\s+(?:really\s+|ნამდვილად\s+)?love\s+you\b/gi, 'მიყვარხარ');
+    out = out.replace(/\bwe\s+(?:really\s+|ნამდვილად\s+)?love\s+you\b/gi, 'გვიყვარხარ');
+    out = out.replace(/\byou\s+(?:really\s+|ნამდვილად\s+)?love\s+me\b/gi, 'გიყვარვარ');
+    out = out.replace(/\bhe\s+(?:really\s+|ნამდვილად\s+)?loves?\s+me\b|\bshe\s+(?:really\s+|ნამდვილად\s+)?loves?\s+me\b/gi, 'უყვარვარ');
+    out = out.replace(/\bshe\s+(?:really\s+|ნამდვილად\s+)?likes?\s+me\b|\bhe\s+(?:really\s+|ნამდვილად\s+)?likes?\s+me\b/gi, 'მოვწონვარ');
+    out = out.replace(/\bi\s+(?:really\s+|ნამდვილად\s+)?miss\s+you\b/gi, 'მენატრები');
+    out = out.replace(/\bi\s+(?:really\s+|ნამდვილად\s+)?need\s+you\b/gi, 'მჭირდები');
+    out = out.replace(/\bi\s+hate\s+you\b/gi, 'მძულხარ');
+    //      Attested be-forms of the liking verbs themselves (same
+    //      1st/2nd-person object-agreement rule): მომწონხარ "I like you",
+    //      მოგწონვარ "you like me" (zmnebi.com — მოგწონხარ would be
+    //      morphologically contradictory: 2SG experiencer + 2SG object).
+    out = out.replace(/\bi\s+(?:really\s+|ნამდვილად\s+)?like\s+you\b/gi, 'მომწონხარ');
+    out = out.replace(/\byou\s+(?:really\s+|ნამდვილად\s+)?like\s+me\b/gi, 'მოგწონვარ');
+
+    // 4.89 (renumbered 4.88 here in execution order) Untranslated English
+    //      affective/emotion verbs → m-class affective carriers (DAT
+    //      experiencer; stimulus stays as-is — case repair is the LLM
+    //      stages' job, these are lexical carriers). loved/liked past →
+    //      affective imperfect (მიყვარდა/მომწონდა), NOT the aorist — the
+    //      experiencer frame is tense-stable.
+    out = out.replace(/\b(?:i|we|he|she|they)\s+am\s+afraid\b|\bi'?m\s+afraid\b|\bshe'?s\s+afraid\b|\bhe'?s\s+afraid\b|\b(?:are|is)\s+afraid\b/gi, 'მეშინია');
+    out = out.replace(/\b(?:i|we)\s+am\s+scared\b|\bi'?m\s+scared\b/gi, 'მეშინია');
+    out = out.replace(/\bwe\s+(love|like|hate|want|need)\b/gi, (m, v) => {
+        const w = { love: 'გვიყვარს', like: 'გვწონს', hate: 'გვძულს', want: 'გვინდა', need: 'გვჭირდება' }[v.toLowerCase()];
+        return w || m;
+    });
+    out = out.replace(/\bthey\s+(love|like|hate|want|need)\b/gi, (m, v) => {
+        const w = { love: 'უყვართ', like: 'მოსწონთ', hate: 'მძულთ', want: 'უნდათ', need: 'სჭირდებათ' }[v.toLowerCase()];
+        return w || m;
+    });
+    out = out.replace(/\bshe\s+(loves|likes|hates|wants|needs|fears)\b/gi, (m, v) => {
+        const w = { loves: 'უყვარს', likes: 'მოსწონს', hates: 'მძულს', wants: 'უნდა', needs: 'სჭირდება', fears: 'მეშინია' }[v.toLowerCase()];
+        return w || m;
+    });
+    out = out.replace(/\bhe\s+(loves|likes|hates|wants|needs|fears)\b/gi, (m, v) => {
+        const w = { loves: 'უყვარს', likes: 'მოსწონს', hates: 'მძულს', wants: 'უნდა', needs: 'სჭირდება', fears: 'მეშინია' }[v.toLowerCase()];
+        return w || m;
+    });
+    out = out.replace(/\bi\s+(love|like|hate|want|need|remember|believe)\b/gi, (m, v) => {
+        const w = { love: 'მიყვარს', like: 'მომწონს', hate: 'მძულს', want: 'მინდა', need: 'მჭირდება', remember: 'მახსოვს', believe: 'მწამს' }[v.toLowerCase()];
+        return w || m;
+    });
+    out = out.replace(/\bi\s+(loved|liked|hated|wanted|needed)\b/gi, (m, v) => {
+        const w = { loved: 'მიყვარდა', liked: 'მომწონდა', hated: 'მძულდა', wanted: 'მინდოდა', needed: 'მჭირდებოდა' }[v.toLowerCase()];
+        return w || m;
+    });
+    out = out.replace(/\bi\s+(loved|liked)\s+the\s+(\w+)\b/gi, (m, v, n) =>
+        (v.toLowerCase() === 'loved' ? 'მიყვარდა ' : 'მომწონდა ') + n);
+    out = out.replace(/\bi\s+(loved|liked)\s+(?!the\b)(\w+)\b/gi, (m, v, n) =>
+        (v.toLowerCase() === 'loved' ? 'მიყვარდა ' : 'მომწონდა ') + n);
+    out = out.replace(/\byou\s+(love|like|hate|want|need)\b/gi, (m, v) => {
+        const w = { love: 'გიყვარს', like: 'მოგწონს', hate: 'გძულს', want: 'გინდა', need: 'გჭირდება' }[v.toLowerCase()];
+        return w || m;
+    });
+    out = out.replace(/\byou\s+(loved|liked|hated|wanted|needed)\b/gi, (m, v) => {
+        const w = { loved: 'გიყვარდა', liked: 'მოგწონდა', hated: 'გძულდა', wanted: 'გინდოდა', needed: 'გჭირდებოდა' }[v.toLowerCase()];
+        return w || m;
+    });
+    out = out.replace(/\bhe\s+(loved|liked|hated|wanted|needed)\b/gi, (m, v) => {
+        const w = { loved: 'უყვარდა', liked: 'მოსწონდა', hated: 'მძულდა', wanted: 'უნდოდა', needed: 'სჭირდებოდა' }[v.toLowerCase()];
+        return w || m;
+    });
+    out = out.replace(/\bshe\s+(loved|liked|hated|wanted|needed)\b/gi, (m, v) => {
+        const w = { loved: 'უყვარდა', liked: 'მოსწონდა', hated: 'მძულდა', wanted: 'უნდოდა', needed: 'სჭირდებოდა' }[v.toLowerCase()];
+        return w || m;
+    });
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.21.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.22.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 102,
-    qaRules: 102,
-    autoFixes: 87,
-    researchSources: 259
+    promptBlocks: 104,
+    qaRules: 104,
+    autoFixes: 89,
+    researchSources: 267
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
