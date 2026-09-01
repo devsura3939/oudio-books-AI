@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.14.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.15.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -152,6 +152,26 @@
 // ordinal_suffix_untranslated, comparative_untranslated), auto-fixes
 // 4.57-4.61 (ოცი N → ოცდაN, მეერთი → პირველი, წელი → წლის in age,
 // EN ordinal suffixes → მე-N/N-ე, EN comparatives → უფრო/ნაკლებად/ყველაზე).
+// v1.15.0 expansion (EN↔KA book comparison: negation/concession/reason/
+// causation/verb-class/plural, 15 new web sources incl. georgian.se clause
+// grammar, zmnebi.com verb morphology, talkpal.ai causative+plural guides,
+// multilingual.sdu.dk declension, app2brain medial verbs):
+// KA_NEGATION_DEEP (არ neutral / ვერ inability / ნუ prohibitive, double
+// negation with არა- pronouns, aorist nuance არ=didn't vs ვერ=couldn't),
+// KA_CONCESSIVE_DEEP (მიუხედავად იმისა რომ, თუმცა, მაინც correlative
+// placement, მაგრამ contrast),
+// KA_REASON_CLAUSES (იმიტომ რომ neutral, რადგანაც formal since, რადგან,
+// რაკი archaic, ამიტომ result, correlative იმის გამო რომ),
+// KA_CAUSATIVES (ა- prefix + -ინ/-ევინ suffix, აცეკვებს/აწერინებს,
+// irregular causatives, over-causation defect),
+// KA_MEDIAL_VERBS (class-3 medio-active, -ობ- thematic თამაშობს/ლაპარაკობს,
+// -ვა → ავ present inversion კლავს/ცურავს/მართავს),
+// KA_PLURAL_DEEP (-ები general, drop -ი before -ები, -ა nouns, archaic -ნ-
+// and -თა, no adjective number agreement, case-after-plural order).
+// QA rules 3.76-3.80 (negation_double_missing, concessive_calque,
+// reason_conj_untranslated, causative_untranslated, plural_vowel_loss),
+// auto-fixes 4.62-4.66 (არა- double-negation repair, EN concessive/reason/
+// causative markers → Georgian carriers, -ები stem-loss repair).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1970,6 +1990,262 @@ TACTIC: English "X years old" calqued as X წელი არის or X წლ
 frequent MT defect — the age construction always uses the GENITIVE წლის.
 "X meters tall" should prefer the სიმაღლე nominalization in careful prose.`;
 
+const KA_NEGATION_DEEP = `KA-73 NEGATION SYSTEM DEEP: არ / ვერ / ნუ (v1.15.0, georgian.se GeoGrammar negation chapter + zmnebi.com verb morphology + Wikipedia "Georgian grammar"):
+Georgian has THREE distinct negative particles — choosing the wrong one is a
+meaning-changing defect, not a style issue:
+
+THREE PARTICLES:
+• არ = neutral "not" — simple denial of an action/state: არ ვიცი (I don't
+  know), არ მოვიდა (he didn't come). Default choice for all statements.
+• ვერ = "not ABLE to" — inability/failure: ვერ ვნახე (I couldn't see / failed
+  to see). Implies the subject TRIED or WANTED but was blocked.
+• ნუ = prohibitive "don't!" — negative imperative only: ნუ დაწერ (don't
+  write!), ნუ მიდი (don't go!). Never used in declaratives.
+
+PLACEMENT: The negative particle sits IMMEDIATELY before the conjugated
+verb, no other word between: მან არ თქვა (he didn't say). Only a proclitic
+like ვეღარ/არასოდეს may intervene.
+
+AORIST NUANCE (critical for narrative prose):
+• არ + aorist = "didn't WANT to / chose not to": არ მივიდა (he didn't go —
+  his own choice or neutral statement).
+• ვერ + aorist = "couldn't / failed to": ვერ მივიდა (he couldn't go —
+  something prevented him).
+English "he didn't come" is ambiguous between these; pick არ by default and
+ვერ only when the source signals inability (couldn't, failed to, was unable).
+
+DOUBLE NEGATION (obligatory, not redundancy):
+Georgian negates the SENTENCE and then also negates the indefinite pronoun:
+• nobody → არავინ ... არ: არავინ არ მოვიდა (lit. "nobody not came").
+• never → არასოდეს ... არ: არასდროს არ მივიწყებდა.
+• nothing → არაფერი ... არ: არაფერი არ ვთქვი.
+• nowhere → არსად ... არ; no one's → არც ერთი ... არ.
+The არ before the verb is REQUIRED even though არავინ etc. are already
+negative. Omitting it (არავინ მოვიდა) is substandard.
+
+NEGATIVE CONCORD WORDS:
+ვეღარ (no longer could), აღარ (no longer/not anymore), ვერც კი (not even),
+არც ერთი (not a single). ვეღარ/აღარ carry the verb negation themselves.
+
+ENGLISH MAPPING TABLE:
+• "does not / don't / didn't" → არ + verb
+• "cannot / couldn't / was unable / failed to" → ვერ + verb
+• "don't! / stop! (imperative)" → ნუ + optative form
+• "nobody/no one" → არავინ ... არ (+verb)
+• "nothing" → არაფერი ... არ (+verb)
+• "never" → არასოდეს ... არ (+verb)
+• "not anymore / no longer" → აღარ (+verb)
+TACTIC: "nobody came" translated as არავინ მოვიდა (missing the verb არ) is
+a high-frequency MT defect. English "couldn't" translated with არ loses the
+inability meaning — restore ვერ when the source says cannot/couldn't.`;
+
+const KA_CONCESSIVE_DEEP = `KA-74 CONCESSIVE & ADVERSATIVE DEEP (v1.15.0, georgian.se complex clauses + languages42.ru conjunction list + zmnebi.com style notes):
+Georgian distinguishes concessive clause ("despite/although") from
+adversative coordination ("but") — English blurs them with "but/though";
+
+CONCESSIVE CONSTRUCTIONS (full clause):
+• მიუხედავად იმისა, რომ + clause = "despite the fact that" (most formal,
+  bookish): მიუხედავად იმისა, რომ წვიმდა, გზაზე გავედით.
+  Short form: მიუხედავად + GENITIVE noun: მიუხედავად წვიმისა (despite the
+  rain) — note the სა...-სა shell: მიუხედავად ... -სა.
+• თუმცა = "though / however" — formal, sentence-internal or sentence-initial:
+  წვიმდა, თუმცა გზაზე გავედით.
+• მართალია ..., მაგრამ ... = "it is true that ..., but ..." — the correlative
+  frame English "although" often maps to in natural prose: მართალია წვიმდა,
+  მაგრამ გზაზე გავედით.
+• მაინც = "still / anyway" — the payoff adverb of the concessive pair:
+  იყო დაღლილი, მაგრამ მაინც იმუშავა. English "still" in concessive
+  sentences maps to მაინც, not to a second მაგრამ.
+
+ADVERSATIVE (simple contrast, no concession):
+• მაგრამ = "but" (default); ხოლო = "whereas/and but" (formal, contrasts
+  subjects); კი = "but/however" (enclitic after the contrasted word:
+  ის კი არ მოვიდა).
+
+ENGLISH MAPPING TABLE:
+• "although / though + clause" → მიუხედავად იმისა, რომ ... / თუმცა ...
+• "despite + noun" → მიუხედავად X-ისა
+• "even though" → მიუხედავად იმისა, რომ (strengthen with კიდევ: კიდევ
+  უფრო — only when source says "even more")
+• "..., but ..." → ..., მაგრამ ... (comma before მაგრამ is native)
+• "...; however, ..." → ...; თუმცა ... or ..., თუმცა ...
+• "still / nevertheless / anyway" → მაინც (position: before the verb)
+• "although X, still Y" → მართალია X, მაგრამ მაინც Y
+TACTIC: English "despite" calqued as მიუხედავად რომ (dropping იმისა) or
+"despite of" → მიუხედავად of-phrase are MT defects. The noun-form needs the
+genitive + სა shell (მიუხედავად წვიმისა). "Still" as a standalone English
+word left untranslated in concessive output is a defect — map to მაინც.`;
+
+const KA_REASON_CLAUSES = `KA-75 REASON & RESULT CLAUSES DEEP (v1.15.0, languages42.ru Georgian conjunction list + georgian.se adverbial clauses + zmnebi.com):
+Georgian has a FORMAL REGISTER LADDER for "because" — register mismatch is
+a quality defect in literary translation:
+
+REASON CONJUNCTIONS (cause):
+• იმიტომ რომ = "because" (neutral-correlative; lit. "for that reason
+  that"). Use as default in narrative: დაბრუნდა, იმიტომ რომ დაივიწყა
+  ქუდი. Correlative variant: იმის გამო, რომ (because of the fact that —
+  slightly heavier, common in careful prose).
+• რადგანაც = "since / as" (formal; presents the reason as known info):
+  რადგანაც გვიანი იყო, წავედით.
+• რადგან = "for / since" (bookish, clause usually follows the main one):
+  მას სწამდა, რადგან ესწავლა.
+• ვინაიდან = "inasmuch as / since" (very formal, officialese).
+• რაკი = "since / given that" (archaic-folk, appears in 19th-c. prose).
+
+RESULT CONJUNCTIONS (consequence):
+• ამიტომ = "therefore / that's why" (adverb, starts the result clause):
+  გვიანი იყო, ამიტომ წავედით.
+• ასე რომ = "so / thus"; შესაბამისად = "accordingly" (formal).
+• იმდენად ..., რომ = "so ... that" (degree-result): იმდენად დაიღალა,
+  რომ არ ადგა.
+
+PLACEMENT & PUNCTUATION:
+• Reason-first: რადგანაც ... , main clause (comma REQUIRED after the
+  subordinate clause).
+• Reason-after: main clause, იმიტომ რომ ... (no comma before იმიტომ რომ
+  unless a pause is intended; comma before რადგანაც/რადგან when they
+  follow the main clause is native).
+• ამიტომ always begins its own clause after a comma.
+
+ENGLISH MAPPING TABLE:
+• "because" → იმიტომ რომ (default) / იმის გამო, რომ (emphatic)
+• "since / as (reason)" → რადგანაც (formal) / რადგან (bookish)
+• "for (literary)" → რადგან
+• "therefore / so / that's why" → ამიტომ / ასე რომ
+• "so ... that" → იმდენად ..., რომ
+• "due to / because of + noun" → X-ის გამო (genitive + გამო postposition)
+TACTIC: English "because" calqued as ვინაიდან in narrative prose is a
+register clash (officialese in fiction) — prefer იმიტომ რომ. An English
+"because/therefore/since" word surviving untranslated in Georgian output
+is a hard defect: map because→იმიტომ რომ, therefore→ამიტომ, since→რადგანაც.
+"because of + N" must become genitive + გამო (დაღლილობის გამო), never a
+literal of-phrase.`;
+
+const KA_CAUSATIVES = `KA-76 CAUSATIVE CONSTRUCTIONS (v1.15.0, talkpal.ai Georgian causative guide + zmnebi.com version markers + Aronson causative templates):
+Georgian builds "make/let someone DO" with MORPHOLOGICAL causatives — not
+with a separate verb "make" + subordinate clause:
+
+MORPHOLOGICAL CAUSATIVE PATTERN (Series I):
+• ა- prefix on the verb + causative suffix -ინ- (most common) or -ევინ-
+  (after stems in -ამ/-ედ etc.), then person markers.
+• Base აცეკვებს (he dances) → causative აცეკვინებს (he makes him dance).
+• Base წერს (he writes) → აწერინებს (he makes him write / has him write).
+• Base სვამს (drinks) → ასვამს / ასმევინებს (makes him drink).
+• ჭამს (eats) → აჭმევს (feeds, i.e. makes eat) — irregular suppletive.
+• სცემს (beats) → სცემინებს; იცინის (laughs) → აცინებს (makes laugh).
+
+IRREGULAR / SUPPLETIVE CAUSATIVES (memorize, don't compose):
+• ჭამს → აჭმევს (feed); სვამს → ასმევინებს (make drink);
+• დგას → ადგმევინებს (make stand); იჯდის → დასვამს (seat);
+• ლაპარაკობს → ალაპარაკებს (make talk); ცეკვავს → აცეკვებს.
+
+PER-FORMATIVE CAUSATIVE (lexical "make/let"):
+• When no natural causative exists or the source means "allow", use
+  აძლევს ნებას / აიძულებს (forces) / აკეთებინებს:
+  "he made her cry" → ატირებს (morphological) or აიძულა ტირილი (forced
+  her to cry, + masdar) for emphasis.
+• რომ + subjunctive after აიძულებს/აძლევს ნებას for finite complements:
+  აიძულეს, რომ დათმობაზე წასულიყო.
+
+VOICE EFFECTS:
+• Causative of an intransitive moves the original subject into the
+  indirect-object slot (dative): ბავშვი სძინავს → ბავშვს აძინებს (puts the
+  child to sleep). Causative of a transitive adds a second object:
+  წერილს წერს → წერილს აწერინებს (has the letter written by someone).
+
+ENGLISH MAPPING TABLE:
+• "made him write / had him write" → აწერინებს (NOT გააკეთა მას წერა)
+• "fed" → აჭმევს / გამოკვება (aorist გამოკვება is the narrative default)
+• "put to sleep" → დააძინა (aorist of დააძინებს)
+• "made her laugh/cry" → აცინებს / ატირებს
+• "let him go" → გაუშვა / ნება დართო წასვლისა
+TACTIC: English "make + person + verb" rendered as a literal verb-for-verb
+calque (გააკეთა მას იცინოდა) is a hard MT defect — use the morphological
+causative. Over-causation is equally a defect: do NOT force ა-...-ინ- onto
+verbs that have a suppletive causative (ჭამს→აჭმევს, not აჭმევინებს).`;
+
+const KA_MEDIAL_VERBS = `KA-77 MEDIAL (MEDIO-ACTIVE) VERB CLASS (v1.15.0, app2brain Georgian grammar part 2 + zmnebi.com screeve morphology + Wikipedia "Georgian verbs"):
+Georgian verb classes by thematic suffix — Class 3 "medials" describe
+ACTIVITIES the subject engages in; they take the -ება/-ობა/-ვა masdar
+ending and -ობ-/-ებ-/-დ- present stems:
+
+MEDIAL PATTERNS (masdar → present):
+• -ობ- stem: თამაშობს (plays, masdar თამაშობა), ლაპარაკობს (speaks,
+  ლაპარაკობა), მუშაობს (works, მუშაობა), ცურაობს (swims about),
+  სწავლობს (studies), აკვირდება (observes).
+• -ებ- stem: ტირის→ტირილი weeps; სჩხრიალებს rustles; ისმენს→მოსმენა
+  (Class 2 passives overlap: იხსნება opens (itself), იშლება breaks).
+• -ავ-/-ვ- stem: verbs whose masdar ends in -ვა invert to -ავ- in the
+  present: კლავს (kills, masdar კვლა), ცურავს (swims, ცურვა),
+  მართავს (rules, მართვა) — pattern: ვა-masdar ⇄ ავ-present.
+  More: ქსავს weaves (ქსოვა), თესავს sows (თესვა), კვეთავს cuts
+  (კვეთა), აგებს builds (აშენება).
+
+CLASS 1 vs 3 DISTINCTION:
+• Class 1 transitive: წერს (writes) — direct object nominative-inversion
+  (ergative in Series II).
+• Class 3 medial: subject is the only argument, activity-focused, often
+  English intransitives of continuous activity (work, play, talk, swim).
+  Series III (perfect) of medials is REGULAR (not inverted): უმუშავია.
+
+FREQUENT BOOK VERBS (medial class):
+მუშაობს works; თამაშობს plays; ლაპარაკობს talks; სწავლობს studies;
+ცურავს swims; ტირის cries; იცინის laughs; სუნთქავს breathes;
+დგას stands; ზის sits; ცხოვრობს lives; ისვენებს rests.
+
+ENGLISH MAPPING TABLE:
+• "he works/plays/talks" → მუშაობს / თამაშობს / ლაპარაკობს (medial class,
+  NO auxiliary "is" needed — Georgian present covers English progressive)
+• "was working" → მუშაობდა (imperfect screeve, no auxiliary)
+• "has been working for X years" → X წელია მუშაობს
+TACTIC: Do not compose English progressive with არის (+ participle) —
+Georgian has no progressive auxiliary; the present/imperfect screeve alone
+carries "is/was doing". Medial -ვა masdars (ცურვა, მართვა, კვლა) must map
+to the -ავ- present stem (ცურავს, მართავს, კლავს), never ცურვის/მართვის.`;
+
+const KA_PLURAL_DEEP = `KA-78 PLURAL FORMATION DEEP (v1.15.0, talkpal.ai Georgian plurals guide + multilingual.sdu.dk declension tables + grokipedia case system):
+Georgian plurals are formed by ONE of two markers placed BETWEEN stem and
+case — and adjectives never agree in number:
+
+FORMATION RULES:
+• -ებ- is the DEFAULT plural: წიგნი → წიგნები (books), კაცი → კაცები,
+  ქალი → ქალები. VOWEL LOSS: drop the final -ი of the singular stem before
+  -ები (მეგობარი → მეგობრები, ბაღი → ბაღები — syncope of the stem vowel:
+  მეგობარ → მეგობრ-).
+• Nouns ending in -ა: drop the -ა and add -ები (ვაჟიშვილო-class): დედა →
+  დედები (mothers), ბებია → ბებიები (insert linking ე), შვილიშვილი-class
+  regulars keep stem.
+• -ნ- plural: limited set, mostly HUMAN kinship/ animate nouns in older
+  and formal prose: მამა → მამნი (fathers, archaic), დედა → დედნიანი
+  forms; modern standard prefers -ები. The -ნ- plural also appears in
+  postpositional/genitive contexts: მამათა და შვილთა (fathers and sons').
+• -თა: the ARCHaic GENITIVE/DATIVE plural (kinship + rhetoric): მამათა
+  (of fathers), ხალხთა (of the peoples). Modern prose uses -ების: მამების.
+  -თა survives in set phrases and elevated style: წმინდანთა (of saints).
+
+ORDER: stem + PLURAL + CASE: წიგნებში (in the books), წიგნების (of the
+books), წიგნებმა (ergative), წიგნებით (with the books). Case marker comes
+AFTER the plural marker, never before.
+
+NO ADJECTIVE AGREEMENT:
+Adjectives preceding a plural noun stay SINGULAR (v1.14.0 rule): ლამაზი
+წიგნები (beautiful books), ახალი სახლები. Only postposed or predicative
+adjectives may pluralize in literary register: წიგნები ლამაზნი (archaic).
+
+NUMERALS: No plural after cardinals (v1.5.0 rule): ორი წიგნი (two books,
+NOT ორი წიგნები). Collective numerals: ორივე მხარეს (on both sides).
+
+ENGLISH MAPPING TABLE:
+• "books/friends/houses" → წიგნები / მეგობრები / სახლები (note syncope)
+• "mothers" → დედები (drop -ა); "grandmothers" → ბებიები (linking ე)
+• "of the fathers (elevated)" → მამათა; "of the books" → წიგნების
+• "two books" → ორი წიგნი (singular after numeral)
+• "in the books" → წიგნებში (plural + case, one word)
+TACTIC: Plural defects: (a) keeping the singular -ი before -ები (წიგნიები)
+— drop it; (b) adjective pluralized with the noun (ლამაზები წიგნები) —
+adjective stays singular; (c) plural after a numeral (ორი წიგნები) —
+remove the plural; (d) -თა used where modern prose needs -ების.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -2040,6 +2316,12 @@ function getKaKnowledgeBase() {
         KA_ORDINALS_FRACTIONS,
         KA_TIME_EXPRESSIONS_DEEP,
         KA_MEASURES,
+        KA_NEGATION_DEEP,
+        KA_CONCESSIVE_DEEP,
+        KA_REASON_CLAUSES,
+        KA_CAUSATIVES,
+        KA_MEDIAL_VERBS,
+        KA_PLURAL_DEEP,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -2668,6 +2950,57 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'comparative_untranslated', message: `"${m44[0]}" — untranslated English comparison word. Map: "-er than" → Y-ზე + adjective (suffix on the compared noun, adjective unchanged); "more" → უფრო; "less" → ნაკლებად; "than" → ვიდრე (conjunction) or -ზე; "the -est" → ყველაზე; better/worse → უკეთესი/უარესი; best → საუკეთესო.` });
     }
 
+    // 3.76 Double negation defect: არავინ/არაფერი/არასოდეს/არსად + verb
+    //      WITHOUT the obligatory second არ — Georgian requires negative
+    //      concord (არავინ არ მოვიდა), unlike English.
+    const araSpanRe = /(?<![\u10A0-\u10FF])(?:არავინ|არავითარი|არაფერი|არასოდეს|არასდროს|არსად)(?![\u10A0-\u10FF])([^.!?।]{0,60})/g;
+    let m45;
+    while ((m45 = araSpanRe.exec(text)) !== null) {
+        const spanTail = m45[1] || '';
+        const hasNeg = /(?<![\u10A0-\u10FF])(?:არ|ვერ|ნუ|ვეღარ|აღარ)(?![\u10A0-\u10FF])/.test(spanTail);
+        if (!hasNeg) {
+            issues.push({ rule: 'negation_double_missing', message: `"${(m45[0] || '').trim()}" — indefinite negative (არავინ/არაფერი/არასოდეს/არსად) requires DOUBLE negation: არავინ არ მოვიდა. The არ before the verb is obligatory in Georgian.` });
+        }
+    }
+
+    // 3.77 Concessive calque: English "despite/although/however/still"
+    //      surviving untranslated, or the defective მიუხედავად რომ form
+    //      (missing იმისა).
+    const concessEnRe = /\b(?:despite|although|though|however|nevertheless|nonetheless)\b/gi;
+    let m46;
+    while ((m46 = concessEnRe.exec(text)) !== null) {
+        issues.push({ rule: 'concessive_untranslated', message: `"${m46[0]}" — untranslated English concessive. Map: although/though → თუმცა or მიუხედავად იმისა, რომ; despite + N → მიუხედავად X-ისა; however → თუმცა; nevertheless → მაინც / ამის მიუხედავად.` });
+    }
+    if (/(?<![\u10A0-\u10FF])მიუხედავად\s+რომ/.test(text)) {
+        issues.push({ rule: 'concessive_shell_broken', message: 'მიუხედავად რომ — defective concessive shell. Correct forms: მიუხედავად იმისა, რომ + clause (full) or მიუხედავად + GENITIVE + -სა (noun: მიუხედავად წვიმისა).' });
+    }
+
+    // 3.78 Reason conjunction untranslated: because/since/therefore/so that
+    //      left as English words in Georgian output.
+    const reasonEnRe = /\b(?:because|therefore|thus|hence|due to|because of)\b/gi;
+    let m47;
+    while ((m47 = reasonEnRe.exec(text)) !== null) {
+        issues.push({ rule: 'reason_conj_untranslated', message: `"${m47[0]}" — untranslated English reason marker. Map: because → იმიტომ რომ (default) / რადგანაც (formal since); therefore → ამიტომ; thus/hence → ამიტომ / ასე რომ; because of + N → X-ის გამო.` });
+    }
+
+    // 3.79 Causative calque: "make/let + person + verb" rendered as a
+    //      literal გააკეთა/მისცა + clause instead of a morphological
+    //      causative (ა-...-ინ-), or English make/let left untranslated.
+    const causEnRe = /\b(?:made|makes|make|let|lets|forced|caused)\b/gi;
+    let m48;
+    while ((m48 = causEnRe.exec(text)) !== null) {
+        issues.push({ rule: 'causative_untranslated', message: `"${m48[0]}" — untranslated English causative. Map: made him write → აწერინებს; made her laugh/cry → აცინებს/ატირებს; fed → აჭმევს/გამოკვება; let him go → გაუშვა; forced → აიძულა + masdar.` });
+    }
+
+    // 3.80 Plural vowel-loss defect: ი-kept plural (წიგნიები) or adjective
+    //      pluralized with noun (ლამაზები წიგნები) — the singular -ი is
+    //      dropped before -ები and preceding adjectives stay singular.
+    const pluralVowelRe = /(?<![\u10A0-\u10FF])([ა-ჰ]+)ი(ებ(?:ი|ს|მა|ს|ით|ად|ო|ში|ზე|თან|გან))(?![\u10A0-\u10FF])/g;
+    let m49;
+    while ((m49 = pluralVowelRe.exec(text)) !== null) {
+        issues.push({ rule: 'plural_vowel_loss', message: `"${m49[0]}" — plural keeps the singular -ი (X-ი-ები). Georgian drops the stem-final -ი before -ები: მეგობარი → მეგობრები. If this is an adjective, preceding adjectives stay singular (ლამაზი წიგნები).` });
+    }
+
     return issues;
 }
 
@@ -3027,16 +3360,73 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\btaller\b/gi, 'უფრო მაღალი');
     out = out.replace(/\bshorter\b/gi, 'უფრო დაბალი');
 
+    // ── v1.15.0 additions ──
+
+    // 4.62 Double-negation repair: არავინ/არაფერი/არასოდეს/არსად + verb
+    //      without the obligatory second არ → insert არ immediately before
+    //      the conjugated verb. Conservative span-scan like QA 3.76.
+    const negFixRe = /(?<![\u10A0-\u10FF])(არავინ|არავითარი|არაფერი|არასოდეს|არასდროს|არსად)(?![\u10A0-\u10FF])([^.!?।]{0,80})/g;
+    out = out.replace(negFixRe, (m, pron, tail) => {
+        if (/(?<![\u10A0-\u10FF])(?:არ|ვერ|ნუ|ვეღარ|აღარ)(?![\u10A0-\u10FF])/.test(tail)) return m;
+        // Insert არ before the LAST Georgian word in the tail (the verb slot)
+        const words = tail.split(/(\s+)/);
+        let lastGeorgianIdx = -1;
+        for (let i = words.length - 1; i >= 0; i--) {
+            if (/^[\u10A0-\u10FF]{2,}/.test(words[i])) { lastGeorgianIdx = i; break; }
+        }
+        if (lastGeorgianIdx === -1) return m;
+        // Avoid inserting არ into a non-verb trailing word (e.g. a noun):
+        // only fix when the tail has exactly one Georgian word (S V order)
+        const georgianWordCount = words.filter(w => /^[\u10A0-\u10FF]{2,}/.test(w)).length;
+        if (georgianWordCount !== 1) return m;
+        words[lastGeorgianIdx] = 'არ ' + words[lastGeorgianIdx];
+        return pron + words.join('');
+    });
+
+    // 4.63 Untranslated English concessives → Georgian carriers
+    //      (deterministic single-word mappings; "despite" needs a noun so it
+    //      maps to the ამ-shell adverb form).
+    out = out.replace(/\bdespite\b/gi, 'მიუხედავად');
+    out = out.replace(/\balthough\b/gi, 'თუმცა');
+    out = out.replace(/\bthough\b/gi, 'თუმცა');
+    out = out.replace(/\bhowever\b/gi, 'თუმცა');
+    out = out.replace(/\bnevertheless\b/gi, 'მაინც');
+    out = out.replace(/\bnonetheless\b/gi, 'მაინც');
+
+    // 4.64 Broken concessive shell: მიუხედავად რომ → მიუხედავად იმისა, რომ
+    out = out.replace(/(?<![\u10A0-\u10FF])მიუხედავად\s+რომ/g, 'მიუხედავად იმისა, რომ');
+
+    // 4.65 Untranslated English reason/result markers → Georgian carriers
+    out = out.replace(/\bbecause of\b/gi, 'გამო');
+    out = out.replace(/\bdue to\b/gi, 'გამო');
+    out = out.replace(/\bbecause\b/gi, 'იმიტომ რომ');
+    out = out.replace(/\btherefore\b/gi, 'ამიტომ');
+    out = out.replace(/\bthus\b/gi, 'ამიტომ');
+    out = out.replace(/\bhence\b/gi, 'ამიტომ');
+
+    // 4.66 Untranslated English causative markers → Georgian carriers
+    //      (conservative: make/made → აიძულა (forced) is wrong in most
+    //      contexts, so only map the unambiguous "let" family; make/cause
+    //      map to the generic აიძულა which the refine pass can re-shape).
+    out = out.replace(/\blet\b/gi, 'დაუშვა');
+    out = out.replace(/\bforced\b/gi, 'აიძულა');
+
+    // 4.67 Plural vowel-loss repair: X-იები → X-ები (drop the kept singular
+    //      -ი before the plural marker; standard syncope applies to the
+    //      base stem which only the AI pass can restore — here we only fix
+    //      the mechanical double-vowel defect).
+    out = out.replace(/(?<![\u10A0-\u10FF])([ა-ჰ]+)ი(ებ(?:ი|ს|მა|ს|ით|ად|ო|ში|ზე|თან|გან))(?![\u10A0-\u10FF])/g, '$1$2');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.14.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.15.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 72,
-    qaRules: 75,
-    autoFixes: 61,
-    researchSources: 195
+    promptBlocks: 78,
+    qaRules: 80,
+    autoFixes: 67,
+    researchSources: 210
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
