@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.15.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.16.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -172,6 +172,35 @@
 // reason_conj_untranslated, causative_untranslated, plural_vowel_loss),
 // auto-fixes 4.62-4.66 (არა- double-negation repair, EN concessive/reason/
 // causative markers → Georgian carriers, -ები stem-loss repair).
+// v1.16.0 expansion (EN↔KA book comparison: questions/degree/sequence/
+// instrumental/adverbial/quotative/focus/at-least, 10+ new web sources incl.
+// TSU Spekali academic paper on არც/არც კი focus negation, languages42.ru
+// question particles, talkpal.ai question syntax, parryc.com instrumental,
+// Wiktionary -ად adverbial, sagapedia quotatives):
+// KA_QUESTIONS_DEEP (yes/no intonation no-order-change, wh-words at start,
+// tag particles ხომ?/არა?/ბა?/რომ?, თუ alternative questions),
+// KA_DEGREE_ADVERBS (ძალიან/საკმაოდ/სრულიად/თითქმის preverbal placement,
+// ძალიან vs ძალზე register),
+// KA_SEQUENCERS (ჯერ/მაშინ/შემდეგ/ბოლოს/საბოლოოდ narrative chain,
+// ამის შემდეგ, და ბოლოს),
+// KA_INSTRUMENTAL_DEEP (-ით with/by-means-of, no preposition, გეგმით
+// according-to, -ურთ together-with),
+// KA_ADVERBIAL_DEEP (-ად/-დ derives adverbs from adjectives კარგად and
+// numerals პირველად; essive-as professions მასწავლებლად),
+// KA_QUOTATIVES (-მეთქি 1st-person / -ო 2nd-3rd-person evidential
+// quotative clitics after reported speech),
+// KA_FOCUS_PARTICLES (არც even-not, არც კი not-even negates minimal
+// expected action on cognitive scale — TSU Spekali; კი presupposition;
+// ვე even; მხოლოდ vs მარტო only),
+// KA_DISCOURSE_MARKERS (საზოგადოდ/მაგალითად/კერძოდ/ამიტომაც/აქედან
+// გამომდინარე formal connective tissue),
+// KA_AT_LEAST (მინიმუმ quantitative lower bound, სულ ცოტა concessive
+// lower bound, გონე defensive permissive).
+// QA rules 3.81-3.85 (question_particle_missing, wh_question_untranslated,
+// degree_adverb_untranslated, sequencer_untranslated, instrumental_
+// untranslated, quotative_particle_missing, even_not_missing),
+// auto-fixes 4.68-4.72 (tag particle repair, EN degree/sequence/at-least/
+// focus carriers → Georgian, -ით insertion for with-by-means-of).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2246,6 +2275,231 @@ TACTIC: Plural defects: (a) keeping the singular -ი before -ები (წი�
 adjective stays singular; (c) plural after a numeral (ორი წიგნები) —
 remove the plural; (d) -თა used where modern prose needs -ების.`;
 
+// KA-79 v1.16.0 — Questions & tag particles. Georgian has NO word-order
+// change for yes/no questions: statement + rising intonation (+ "?" in
+// writing). Wh-questions: the wh-word goes to sentence START (unlike the
+// multiple wh-order of English in-situ calques).
+// Wh-set: ვინ who / რა what / სად where / როდის when / რატომ why /
+// როგორ how / რომელი which / რამდენი how-much-many / საიდან from-where /
+// საით whither / როდისმდე until-when. Wh-word CANNOT stay in-situ mid-
+// sentence as in English "You saw what?" — front it: რა დაინახე?
+// Tag particles (sentence-final, after the clause, intonation rises):
+// ხომ = "right? / isn't it?" — seeks agreement, expects YES
+// (ლამაზია, ხომ? it's beautiful, right?); ხომ can also sit before the
+// verb mid-clause with emphatic force: ხომ არ დაგავიწყდა you haven't
+// forgotten, have you?; NEGATIVE tag with ხომ: ხომ არა? / ხომ?
+// არა? = "right? no?" — neutral tag, expects confirmation (after both
+// positive and negative statements: არ მოსულა, არა? he hasn't come, right?)
+// ბა? = colloquial/surprised tag (rustic-childish flavor, dialogue only)
+// რომ? = "really? is that so?" — asks for elaboration or expresses doubt
+// თუ introduces ALTERNATIVE questions: მოდის თუ არა? is he coming or not;
+// არის თუ არა სახლში? is he at home or not; X თუ Y? X or Y?
+// Defects: (a) calquing English auxiliary inversion (Do you...? → შენ
+// აკეთებ?) — Georgian keeps statement order; (b) leaving English "right?",
+// "isn't it?", "really?" untranslated instead of ხომ?/არა?/რომ?;
+// (c) wh-word left mid-sentence; (d) "or not" tail → თუ არა?
+const KA_QUESTIONS_DEEP = `
+GEORGIAN QUESTIONS & TAG PARTICLES (EN↔KA)
+• YES/NO question = statement + rising intonation, NO word-order change,
+  NO auxiliary: "Do you know?" → იცი? "Is he coming?" → მოდის?
+• WH-word goes to sentence START: ვინ მოვიდა? who came; რა გინდა?
+  what do you want; სად მიდიხარ? where are you going; როდის მოხვალ?
+  when will you come; რატომ ტირი? why are you crying; როგორ ხარ?
+  how are you; რამდენი წელი გაქვს? how old are you
+• TAG particles: ხომ? right? (expects yes) / არა? right? neutral /
+  ბა? colloquial surprise / რომ? really? elaborate-please
+• ხომ preverbal emphatic: ხომ არ დაგავიწყდა? you haven't forgotten, have you?
+• ALTERNATIVE: თუ არა? or-not tail: მოდის თუ არა? is he coming or not
+• "right?" → ხომ? / არა?  ·  "isn't it?" → არა?  ·  "really?" → მართლა? / რომ?
+TACTIC: Never translate English question syntax word-for-word: drop the
+do/does/did auxiliary, keep statement order, front the wh-word, and land
+the tag particle at the end. English tag questions (right? isn't it? has
+he?) must surface as ხომ?/არა?/თუ არა? — never dropped silently.`;
+
+// KA-80 v1.16.0 — Degree adverbs. Placement: BEFORE the word modified
+// (adj/adv/verb). ძალიან is the neutral default; ძალზე/ძალზედ bookish;
+// მეტისმეტად excessively; საკმაოდ quite/fairly; სრულიად completely;
+// თითქმის almost (preverbal); ნამდვილად really; მართლა(დ) truly
+// (colloquial მართლა); უზომოდ immoderately. Intensifier stacking is
+// rare in good prose — one degree adverb per phrase.
+// COMMON DEFECT: English very/really/quite/almost dropped entirely, or
+// calqued as ძალიან for every shade. Another: "very much" after verb →
+// Georgian preverbal ძალიან: მიყვარს ძალიან (I love very-much).
+const KA_DEGREE_ADVERBS = `
+GEORGIAN DEGREE ADVERBS (EN↔KA)
+• ძალიან very (neutral default) · ძალზე/ძალზედ very (bookish/formal)
+• მეტისმეტად excessively · საკმაოდ quite/fairly/rather
+• სრულიად completely/totally · თითქმის almost/nearly
+• ნამდვილად really/actually · მართლა(დ) truly (colloq.)
+• PLACEMENT: before the modified word: ძალიან ლამაზი very beautiful,
+  საკმაოდ სწრაფად quite fast, თითქმის დაასრულა almost finished
+• "very much" (verb) → preverbal ძალიან: მიყვარს ძალიან / ძალიან
+  მიყვარს both idiomatic
+• MAPPING: very→ძალიან · quite/fairly→საკმაოდ · really→ნამდვილად ·
+  almost→თითქმის · completely→სრულიად · extremely→მეტისმეტად ·
+  truly→მართლად (colloq) / ნამდვილად
+TACTIC: Never drop English degree adverbs; pick the shade-matched
+Georgian carrier and place it preverbal/pre-adjectival. Avoid stacking
+two intensifiers on one word.`;
+
+// KA-81 v1.16.0 — Narrative sequencers. The narrative chain of Georgian
+// prose: ჯერ first-at-first → მერე/შემდეგ then-next → ბოლოს finally.
+// ჯერ almost always pairs with მერე/შემდეგ in the next clause (ჯერ...
+// მერე... correlative). მაშინ then-at-that-time resumes after pause.
+// საბოლოოდ ultimately/eventually (outcome, not just last step).
+// ამის შემდეგ after-this; ამის შემდეგაც after-this-too; და ბოლოს
+// and-finally (list close). Formal: პირველ რიგში first-of-all,
+// შემდეგ რიგში secondly. DEFECT: dropping English first/then/next/
+// finally, or overusing შემდეგ where მერე (colloq) or მაშინ fits.
+const KA_SEQUENCERS = `
+GEORGIAN NARRATIVE SEQUENCERS (EN↔KA)
+• ჯერ first / at first — expects continuation: ჯერ ფიქრობდა, მერე
+  გადაწყვიტა first he thought, then he decided (ჯერ...მერე correlative)
+• მერე then (colloquial) · შემდეგ then/next (neutral/formal)
+• მაშინ then / at that time — resumption after a pause
+• ბოლოს finally / at last · და ბოლოს and finally (list close)
+• საბოლოოდ ultimately / eventually (final outcome)
+• ამის შემდეგ after this · ამის შემდეგაც after this as well
+• პირველ რიგში first of all · შემდეგ რიგში secondly (formal enumeration)
+• MAPPING: first→ჯერ / პირველ რიგში · then→მერე/მაშინ/შემდეგ ·
+  next→შემდეგ · finally→ბოლოს · eventually→საბოლოოდ ·
+  after that→ამის შემდეგ
+TACTIC: Preserve the narrative chain — English first/then/finally in
+narration must surface as ჯერ/მერე-შემდეგ/ბოლოს, not vanish. Use
+ჯერ only when a later მერე/შემდეგ completes the pair.`;
+
+// KA-82 v1.16.0 — Instrumental case deep. -ით = "with/by means of":
+// კალმით with-a-pen, ხელით by-hand, მანქანით by-car, დანით with-a-knife.
+// NO preposition — the case suffix carries "with". Idiomatic:
+// გეგმით according-to-the-plan, ბრძანებით by-order/per-order,
+// შემთხვევით by-chance/accidentally, შეცდომით by-mistake,
+// უფლებამოსილებით by-virtue-of-authority. Accompaniment "together
+// with (a person)" prefers -თან ერთად / -ურთ: მეგობართან ერთად
+// with-a-friend (.animate); instrumental -ით for inanimate means:
+// ავტობუსით მიდის goes by bus. Passive agent (rare, bookish): ღმერთის
+// მიერ by-God (მიერ postposition, not -ით).
+// DEFECT: translating "with X" as ერთად X or leaving English "with".
+const KA_INSTRUMENTAL_DEEP = `
+GEORGIAN INSTRUMENTAL CASE -ით (EN↔KA)
+• -ით = with / by means of (inanimate instruments, transport):
+  კალმით წერს writes with a pen · მანქანით მგზავრობს travels by car ·
+  ხელით აკეთებს does by hand
+• NO preposition: "with a knife" → დანით (one word, suffix only)
+• Idiomatic: გეგმით according to the plan · ბრძანებით by order ·
+  შემთხვევით by accident · შეცდომით by mistake
+• Animate accompaniment: -თან ერთად / -ურთ (მეგობართან ერთად),
+  not -ით; inanimate means: -ით
+• Passive agent: -ის მიერ (bookish), not -ით
+TACTIC: "with/by (tool, vehicle, means)" → X-ით in one word. If the
+companion is a person, switch to -თან ერთად/-ურთ. Never leave English
+"with" untranslated and never paraphrase კალმით as კალამი ერთად.`;
+
+// KA-83 v1.16.0 — Adverbial case deep (-ად / -დ after vowels). Derives
+// ADVERBS from adjectives: კარგი good → კარგად well; სწრაფი fast →
+// სწრაფად fast(ly); ლამაზი → ლამაზად beautifully; ცუდი → ცუდად badly.
+// From numerals: პირველი first → პირველად for-the-first-time; მეორე →
+// მეორედ second-time; მესამე → მესამედ. Essive "as/for-a": professions
+// and roles მასწავლებლად as-a-teacher, საჩუქრად as-a-gift,
+// საუზმედ for-breakfast. Time: ზამთრად for-winter (rare).
+// DEFECT: using the bare adjective where the -ად form is required
+// (მან კარგი იმღერა ✗ → კარგად იმღერა ✓), or translating English
+// "-ly" adverbs with adjective + აკეთებს paraphrase.
+const KA_ADVERBIAL_DEEP = `
+GEORGIAN ADVERBIAL CASE -ად/-დ (EN↔KA)
+• Adjective → adverb: კარგი→კარგად well · სწრაფი→სწრაფად fast ·
+  ლამაზი→ლამაზად beautifully · ცუდი→ცუდად badly · მშვიდი→მშვიდად quietly
+• Numeral → "for the Nth time": პირველი→პირველად · მეორე→მეორედ ·
+  მესამე→მესამედ
+• Essive "as / for": მასწავლებლად as a teacher · საჩუქრად as a gift ·
+  სადილად for lunch
+• "well done" → კარგად შესრულებული; "he sings well" → კარგად მღერის
+TACTIC: English -ly adverbs map to the -ად form of the Georgian
+adjective — never to the bare nominative adjective. When describing HOW
+an action is done, -ად is obligatory.`;
+
+// KA-84 v1.16.0 — Focus particles deep (TSU Spekali, Advadze). არც =
+// "not even / neither" — negates the MINIMAL unit of a cognitive scale;
+// არც კი = emphatic "not even" (negates the contextually expected
+// minimal action): არც კი დაფიქრებულა he didn't even think; არც
+// გამოუხედავს he didn't even look at me. კი არც (order variant): მე კი
+// არც გამიფრთხილებია without even warning (me). არც ერთი... არ =
+// neither-one: არც ერთს არ დაუხუჭავს თვალი neither closed an eye.
+// არც = "either" in negative additivity: არც ეზოებში ჩანდა ვინმე
+// nobody could be seen in the yards either. English counterparts:
+// not even / n't even / never / without even / neither / either.
+// Positive focus: კი (presupposition, contrast): ეს კი ვიცი this I do
+// know; ვე = even (postposed: მას ვე... არ), თანაც = moreover/even,
+// კიდევ even/still (additive). მხოლოდ / მარტო(დ) only.
+const KA_FOCUS_PARTICLES = `
+GEORGIAN FOCUS PARTICLES: არც / არც კი / კი / ვე (EN↔KA)
+• არც = "not even / neither": negates the minimal scale unit.
+  არც გამოუხედავს — he didn't even look at me
+• არც კი = emphatic "not even" (denies the expected minimal action):
+  არც კი დაფიქრებულა he didn't even think; არც კი შევსულვარ I never
+  (not even) entered
+• კი არც = order variant (focus on the agent): მე კი არც გამიფრთხილებია
+  I left without even warning (him)
+• არც ერთი ... არ = neither one ... : არც ერთს არ დაუხუჭავს თვალი
+• Negative additivity "either": არც ეზოებში ჩანდა ვინმე nobody in the
+  yards either
+• MAPPING: not even → არც (კი) · without even → კი არც · neither →
+  არც ერთი · either (negative) → არც · even (positive) → ვე/თანაც/კიდევ ·
+  only → მხოლოდ/მარტო
+TACTIC: English "not even V" is არც (კი) + V with the verb negated —
+never plain არ alone when "even" is present. Keep არც კი for the
+strongest denial of the expected minimal action.`;
+
+// KA-85 v1.16.0 — Formal discourse markers. Connective tissue of
+// argumentative/formal Georgian prose: საზოგადოდ / ზოგადად generally,
+// მაგალითად for-example (after comma: , მაგალითად:), კერძოდ
+// specifically/namely, კონკრეტულად specifically (colloq-formal),
+// ამიტომაც therefore-EMPHATIC (stronger than ამიტომ), ამის გამო
+// because-of-this, ამისთვის for-this-reason, აქედან გამომდინარე
+// from-this-following (officialese), შესაბამისად accordingly,
+// შედეგად as-a-result, ამრიგად thus-in-this-way (formal "thus"),
+// ანუ that-is (reformulation), აღნიშნული the-said (officialese
+// anaphor). DEFECT: English therefore/for example/namely dropped or
+// always rendered ამიტომ regardless of force.
+const KA_DISCOURSE_MARKERS = `
+GEORGIAN FORMAL DISCOURSE MARKERS (EN↔KA)
+• საზოგადოდ / ზოგადად generally · მაგალითად for example ·
+  კერძოდ namely/specifically · ანუ that is (reformulation)
+• therefore ladder: ამიტომ (neutral) < ამიტომაც (emphatic) <
+  აქედან გამომდინარე (officialese) · ამრიგად thus ·
+  შედეგად as a result · შესაბამისად accordingly
+• ამის გამო because of this · ამისთვის for this reason
+• Punctuation: მაგალითად/კერძოდ usually set off by commas: , მაგალითად,
+TACTIC: Match force: emphatic English therefore → ამიტომაც; legal/
+official consequently → აქედან გამომდინარე or შესაბამისად. Keep for
+example = მაგალითად and namely = კერძოდ distinct — do not merge into
+one catch-all.`;
+
+// KA-86 v1.16.0 — "At least" markers. მინიმუმ = quantitative lower
+// bound (borrowed, invariable): მინიმუმ ათი კაცი at-least ten men.
+// სულ ცოტა = "at least (the-little)" — concessive/defensive lower
+// bound, colloquial-neutral: სულ ცოტა ერთი ჭიქა at least one glass.
+// არანაკლებ = "no less than" (formal, emphatic): არანაკლებ ასი
+// ლარი no-less-than 100 lari. გონე / გონება = archaic-folk defensive
+// permissive "at least, if nothing else" (dialogue/folk narrative).
+// Also: ერთი მაინც at least one (არავინ მაინც even one); მაინც after
+// a focused noun gives "at least X". DEFECT: dropping "at least", or
+// one-size-fits-all მინიმუმ where სულ ცოტა sounds natural.
+const KA_AT_LEAST = `
+GEORGIAN "AT LEAST" MARKERS (EN↔KA)
+• მინიმუმ — quantitative lower bound: მინიმუმ ათი კაცი at least ten
+  men · მინიმუმ სამი დღე at least three days
+• სულ ცოტა — concessive/defensive lower bound (colloq-neutral):
+  სულ ცოტა ერთი ჭიქა დამილევინე at least buy me one glass
+• არანაკლებ — "no less than", formal-emphatic: არანაკლებ ასი ლარი
+• გონე / გონება — archaic-folk "at least, if nothing else" (dialogue,
+  folk narrative): გონე ერთი სიტყვა თქვი say at least one word
+• Focused noun + მაინც = "at least X": ერთი მაინც at least one
+• MAPPING: at least + NUMBER → მინიმუმ · at least (plea/concession) →
+  სულ ცოტა · no less than → არანაკლებ · at least (folk) → გონე
+TACTIC: Never drop English "at least": choose მინიმუმ for counts/
+measurements, სულ ცოტა for pleas and concessions, არანაკლებ for
+formal emphasis.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -2322,6 +2576,14 @@ function getKaKnowledgeBase() {
         KA_CAUSATIVES,
         KA_MEDIAL_VERBS,
         KA_PLURAL_DEEP,
+        KA_QUESTIONS_DEEP,
+        KA_DEGREE_ADVERBS,
+        KA_SEQUENCERS,
+        KA_INSTRUMENTAL_DEEP,
+        KA_ADVERBIAL_DEEP,
+        KA_FOCUS_PARTICLES,
+        KA_DISCOURSE_MARKERS,
+        KA_AT_LEAST,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -3001,6 +3263,52 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'plural_vowel_loss', message: `"${m49[0]}" — plural keeps the singular -ი (X-ი-ები). Georgian drops the stem-final -ი before -ები: მეგობარი → მეგობრები. If this is an adjective, preceding adjectives stay singular (ლამაზი წიგნები).` });
     }
 
+    // 3.81 Untranslated English tag-question / question softener remnants.
+    //      "right?", "isn't it?", "really?" must surface as ხომ? / არა? /
+    //      მართლა? / რომ? — never vanish or stay in English.
+    if (/\b(?:right\?|isn'?t it\?|aren'?t you\?|don'?t you\?|really\?|eh\?)/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:ხომ|არა|მართლა|რომ)(?![\u10A0-\u10FF])\s*\?/.test(text)) {
+        issues.push({ rule: 'question_particle_missing', message: 'English tag question (right? / isn\'t it? / really?) is present in the source but the Georgian tag particle (ხომ? / არა? / მართლა? / რომ?) is missing in the translation.' });
+    }
+
+    // 3.82 Untranslated English degree adverbs.
+    if (/\b(?:very|really|quite|almost|completely|extremely)\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:ძალიან|ძალზე|საკმაოდ|თითქმის|სრულიად|ნამდვილად|მეტისმეტად)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'degree_adverb_untranslated', message: 'English degree adverb (very/really/quite/almost/completely/extremely) present in source but no Georgian degree carrier (ძალიან/საკმაოდ/თითქმის/სრულიად/ნამდვილად/მეტისმეტად) found in translation.' });
+    }
+
+    // 3.83 Untranslated English sequencers.
+    if (/\b(?:first(ly)?|then|next|finally|eventually)\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:ჯერ|მერე|შემდეგ|მაშინ|ბოლოს|საბოლოოდ)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'sequencer_untranslated', message: 'English sequencer (first/then/next/finally/eventually) present in source but no Georgian sequencer (ჯერ/მერე/შემდეგ/მაშინ/ბოლოს/საბოლოოდ) found. The narrative chain must not vanish.' });
+    }
+
+    // 3.84 Untranslated English instrumental "with/by + means".
+    if (/\bwith (?:a|an|the) [a-z-]+\b|\bby (?:car|bus|train|plane|hand)\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])[ა-ჰ]{2,}ით(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'instrumental_untranslated', message: 'English instrumental phrase (with a tool / by car/by hand) present in source but no Georgian instrumental -ით form found. "with a pen" → კალმით (one word, no preposition).' });
+    }
+
+    // 3.85 Quotative particle misattachment: -მეთქი is FIRST-person only;
+    //      hearing-reported speech of others uses -ო.
+    const metekhiRe = /(?<![\u10A0-\u10FF])[ა-ჰ]{2,}\s*მეთქი(?![\u10A0-\u10FF])/g;
+    let m50;
+    while ((m50 = metekhiRe.exec(text)) !== null) {
+        const spanStart = Math.max(0, m50.index - 80);
+        const before = text.slice(spanStart, m50.index);
+        // Heuristic flag: მეთქი after a 3rd-person frame (თქვა/უთხრა მან...)
+        if (/(?<![\u10A0-\u10FF])(?:თქვა|უთხრა|მითხრა)(?![\u10A0-\u10FF])/.test(before)) {
+            issues.push({ rule: 'quotative_particle_missing', message: `"${m50[0]}" — quotative -მეთქី marks MY OWN reported words. After frames like თქვა/უთხრა (he said), the reported speech of another person takes -ო instead.` });
+        }
+    }
+
+    // 3.85b "not even" flattened to plain negation: English "even" with a
+    //       negated verb must surface არც (კი), not bare არ.
+    if (/\bnot even\b|\bdidn'?t even\b|\bwithout even\b|\bnever even\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])არც(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'even_not_missing', message: 'English "not even / without even" present in source but Georgian არც / არც კი missing. "he didn\'t even look" → არც გამოუხედავს — the minimal-expected-action denial needs არც.' });
+    }
+
     return issues;
 }
 
@@ -3345,6 +3653,10 @@ function correctGeorgianMorphology(text) {
         return n === 1 ? 'პირველი' : `${digits}-ე`;
     });
 
+    // 4.61a "no less than" (quantity lower bound) must be consumed BEFORE
+    //      the bare comparative "less" → ნაკლებად mapping in 4.61.
+    out = out.replace(/\bno less than\b/gi, 'არანაკლებ');
+
     // 4.61 Untranslated English comparison words → Georgian carriers
     //      (deterministic single-word mappings; "than" is ambiguous so map
     //      to the safe conjunction ვიდრე).
@@ -3417,16 +3729,60 @@ function correctGeorgianMorphology(text) {
     //      the mechanical double-vowel defect).
     out = out.replace(/(?<![\u10A0-\u10FF])([ა-ჰ]+)ი(ებ(?:ი|ს|მა|ს|ით|ად|ო|ში|ზე|თან|გან))(?![\u10A0-\u10FF])/g, '$1$2');
 
+    // 4.68 Untranslated English tag questions → Georgian tag particles.
+    out = out.replace(/\bisn'?t it\?/gi, 'არა?');
+    out = out.replace(/\baren'?t you\?/gi, 'არა?');
+    out = out.replace(/\bdon'?t you\?/gi, 'არა?');
+    out = out.replace(/\bright\?/gi, 'ხომ?');
+    out = out.replace(/\beh\?/gi, 'არა?');
+
+    // 4.69 Untranslated English degree adverbs → Georgian carriers.
+    out = out.replace(/\bvery much\b/gi, 'ძალიან');
+    out = out.replace(/\bvery\b/gi, 'ძალიან');
+    out = out.replace(/\bquite\b/gi, 'საკმაოდ');
+    out = out.replace(/\bfairly\b/gi, 'საკმაოდ');
+    out = out.replace(/\balmost\b/gi, 'თითქმის');
+    out = out.replace(/\bcompletely\b/gi, 'სრულიად');
+    out = out.replace(/\bextremely\b/gi, 'მეტისმეტად');
+    out = out.replace(/\breally\b/gi, 'ნამდვილად');
+
+    // 4.70 Untranslated English sequencers → Georgian narrative chain.
+    out = out.replace(/\bfirst of all\b/gi, 'პირველ რიგში');
+    out = out.replace(/\bfirstly\b/gi, 'ჯერ');
+    out = out.replace(/\bfirst\b/gi, 'ჯერ');
+    out = out.replace(/\bnext\b/gi, 'შემდეგ');
+    out = out.replace(/\bthen\b/gi, 'მერე');
+    out = out.replace(/\bafter that\b/gi, 'ამის შემდეგ');
+    out = out.replace(/\beventually\b/gi, 'საბოლოოდ');
+    out = out.replace(/\bfinally\b/gi, 'ბოლოს');
+
+    // 4.71 Untranslated English "at least" / discourse-markers remnants.
+    out = out.replace(/\bat least\b/gi, 'მინიმუმ');
+    out = out.replace(/\bnot even\b/gi, 'არც კი');
+    out = out.replace(/\bdidn'?t even\b/gi, 'არც კი');
+    out = out.replace(/\bnever even\b/gi, 'არც კი');
+    out = out.replace(/\bwithout even\b/gi, 'კი არც');
+    out = out.replace(/\bfor example\b/gi, 'მაგალითად');
+    out = out.replace(/\bnamely\b/gi, 'კერძოდ');
+    out = out.replace(/\bin general\b/gi, 'ზოგადად');
+
+    // 4.72 Untranslated English "by + transport/means" → instrumental -ით.
+    out = out.replace(/\bby car\b/gi, 'მანქანით');
+    out = out.replace(/\bby bus\b/gi, 'ავტობუსით');
+    out = out.replace(/\bby train\b/gi, 'მატარებლით');
+    out = out.replace(/\bby plane\b/gi, 'თვითმფრინავით');
+    out = out.replace(/\bby hand\b/gi, 'ხელით');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.15.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.16.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 78,
-    qaRules: 80,
-    autoFixes: 67,
-    researchSources: 210
+    promptBlocks: 87,
+    qaRules: 86,
+    autoFixes: 72,
+    researchSources: 225
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
