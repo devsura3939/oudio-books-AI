@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.20.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.21.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -285,6 +285,28 @@
 // temporal_dative_untranslated), auto-fixes 4.84-4.85 (EN after/before/
 // while V-ing → GEN-masdar + postposition frames, EN during-the-X →
 // X-ის დროს dative frame, იმ დროს/დროიდან...-მდე correlative frames).
+// v1.21.0 expansion (deep participle system — en.wiktionary.org დაწერილი
+// declension, talkpal.ai participles lesson, polyglotclub.com
+// participles (transitive affixes მ---ელ-, მ---არ-/ალ-),
+// georgian.stackexchange.com Non-finite forms (subject და-მ-ხატ-ვ-ელ-ი,
+// negative და-უ-ხატ-ავ-ი, potential სა-ხატ-ავ-ელ-ი), grammar.emis.ge
+// ნათქვამი resultative attestation, latinum.substack.com L72 ყოფილა:
+// KA_DEEP_PARTICIPLES (KA-100: resultative ნა- ნაწერი/ნანახი/ნაჭამი/
+// ნასმელი/ნათქვამი, PPP -ილ-/-ულ-/-ებულ- allomorphs დაწერილი/
+// ნაპოვნი/გაკეთებული/მოკლული, potential -ებელი/-ველი გასაკეთებელი/
+// საკითხავი/დასაწერი, negative და-უ- დაუჯერებელი/დაუსრულებელი/
+// დაუმთავრებელი, agent მ-...-ელ- მწერალი/მხატვარი/მასწავლებელი,
+// -არი/-ული instruments სასანთე/ბერეტი documented, ყოფილი been
+// ≠ ყოფილა evidential), KA_EXISTENTIAL_FRAMES (KA-101: აქვს have-in-
+// locative მას ჰქონდა, არსებობს exists, ნახულობს is-found-at-place,
+// დგას მაგიდაზე on-table-stands, ყოფილა vs იყო evidential split).
+// QA rules 3.100-3.101 (participle_untranslated: EN broken/written/
+// unforgettable/burned-down left bare; potential_untranslated: EN
+// -able/-ible word with no -ებელი/-ველი/სა-...-ელ-/-შეუძლებელი in
+// output). Auto-fixes 4.86-4.87 (EN "was V-ed" attributive/static
+// passive → PPP carrier, EN "un-/in- V-able/ible" → და-უ-...-ელი/
+// -შეუძლებელი negative potential carrier, EN "-able/-ible" →
+// შესაძლებელი carrier).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3021,6 +3043,85 @@ TACTIC: "during" with an EVENT noun is N-ის დროს (dative!); with a
 DURATION noun prefer N-ის განმავლობაში. Never leave დრო bare after
 a genitive attribute — *ომის დრო is the documented defect.`;
 
+// KA-100 v1.21.0 — Deep participle system
+const KA_DEEP_PARTICIPLES = `
+GEORGIAN PARTICIPLE SYSTEM — DEEP MORPHOLOGY (EN↔KA)
+• RESULTATIVE ნა-: "what has been V-ed (and remains)". ნაწერი written
+  (stays written) · ნანახი seen · ნაჭამი eaten (leftovers) · ნასმელი
+  drunk · ნათქვამი said/uttered · ნაკეთები made. Attribute first, noun
+  second: ნანახი ადამიანები the people (he) had seen · ნათქვამი
+  სიტყვა the words spoken. Often corresponds to English perfect
+  attributives "the books (he had) read".
+• PAST PASSIVE PARTICIPLE (PPP): preverb + stem + -ილ-/-ულ-/-ებულ-,
+  agreeing like any adjective (NOM დაწერილი, ERG დაწერილმა, DAT/ADV
+  დაწერილ, INST დაწერილით, VOC დაწერილო):
+  დაწერილი written · ნაპოვნი found (masdar-ი + -ი) · მოკლული killed ·
+  გაკეთებული done/made · ნაჭმევი/ნაჭამი eaten · გაბრაზებული angry
+  (result-state) · დაკავებული busy/occupied. ე-verbs use -ებულ-:
+  დაბადებული born · შეყვარებული in love.
+• POTENTIAL / future passive: -ებელი (transitive roots: გასაკეთებელი
+  to-be-done, საწერი to-be-written) and -ველი (intransitive roots:
+  მომავალი coming/future, დასახმარებელი to-be-helped). Short suppletive
+  set: საკითხავი worth-reading/readable, სანახავი worth-seeing, სმენა-
+  dust. სა-...-ელ- circumfix for passive potential: სა-ხატ-ავ-ელ-ი
+  paintable / that-can-be-painted.
+• NEGATIVE POTENTIAL და-უ- (or bare უ- on stems): "that cannot be
+  V-ed". დაუჯერებელი unbelievable · დაუსრულებელი unfinishable ·
+  დაუმთავრებელი unfinished/never-ending · დასაჯდომარედ unwritable
+  variant · უხილავი invisible · უვარგისი unusable. With preverbs:
+  და-უ-ხატ-ავ-ი something-not-painted. English un-/in-/-less
+  adjectives of possibility map HERE, not to არა-: *არაჯერებელი is
+  wrong.
+• AGENT/SUBJECT PARTICIPLES: მ-...-ელ- / მ-...-არ- (transitive):
+  და-მ-წერ-ელ-ი one-who-wrote-it · მწერალი writer · მხატვარი painter ·
+  მასწავლებელი teacher · მომღერალი singer · მშენებელი builder. English
+  "the man who built this house" → ამ სახლის მშენებელი კაცი.
+• PARTICIPLE vs ყოფილა: ყოფილი is the plain PPP of არის "been" (ყოფილი
+  მოსწავლე former pupil, ყოფილი პრეზიდენტი former president); ყოფილა
+  is the PERFECT screeve "apparently was" (evidential, already covered
+  by v1.14.0 rules). Do not mix: *ყოფილა მოსწავლე is wrong for
+  "former pupil".
+MAPPING: the books he had read → ნაკითხი წიგნები / წაკითხული წიგნები ·
+written (by) → დაწერილი · broken → დამტვრეული · busy → დაკავებული ·
+angry → გაბრაზებული · born → დაბადებული · future → მომავალი ·
+unbelievable → დაუჯერებელი · impossible → შეუძლებელი · invisible →
+უხილავი · writer → მწერალი · former X → ყოფილი X
+TACTIC: English attributive perfects ("the books he had read") map to
+the single noun-sized RESULTATIVE/PPP, never to a finite clause
+*წიგნები, რომლებიც წაიკითხა ჰქონია — the participial form is the
+literary norm (v1.6.0 KA_RELATIVES already prefers it). ნა- says
+"result still there"; -ილ-/-ებულ- says "result achieved"; -ებელი/
+-ველი says "can be done"; და-უ- says "cannot be done".`;
+
+// KA-101 v1.21.0 — Existential & possessive frames
+const KA_EXISTENTIAL_FRAMES = `
+GEORGIAN EXISTENTIAL & POSSESSIVE FRAMES (EN↔KA)
+• "HAVE" is locative, not transitive: OWNER in dative + აქვს/ჰქონდა:
+  მას ჰქონდა ცხენი he had a horse · მას აქვს სახლი he has a house ·
+  მას არ ჰქონია he (apparently) never had. NEVER *მას ჰქონდა as
+  "he possessed" with ergative. NEGATIVE of possession = არ + აქვს
+  (he doesn't have), not a verb არ ფლობს.
+• EXISTENCE: არის exists/is · არ არის doesn't exist · არსებობს
+  exists (abstract) · არსებობდა existed (past) — "There is no X" →
+  X არ არის / X არ არსებობს, never *აქ არ აქვს X.
+• AVAILABILITY/PRESENCE: ნახულობს is (found) here / is available:
+  მაღაზიაში პური არ ნახულობს there's no bread at the shop. Passive-
+  shaped, take DAT subject + GEN agent if stated.
+• LOCATION exists-frame: place + postposition + დგას/ზის/წევს for
+  upright/sitting/lying things: მაგიდაზე წიგნი დევს the book is
+  (lying) on the table · კედელზე სურათია there's a picture on the
+  wall. English bare "is on/in" prefers the posture verb or -ია
+  copula, NOT არის repeated.
+• "THERE WAS" narrative openers → იყო or bare nominative: იყო და
+  არა იყო, რა იყო იყო — the folk-tale formula; keep იყო for neutral
+  "there was".
+MAPPING: he has → მას აქვს · he had → მას ჰქონდა · there is/are →
+არის / -ია · there is no → არ არის / არ არსებობს · is available →
+ნახულობს · is on the table → მაგიდაზეა / მაგიდაზე დევს
+TACTIC: never translate "have/has" as an ergative verb; the dative
+owner is obligatory (v1.2.0 KA_IMPERSONAL frames already demand the
+dative experiencer — possession is the same pattern).`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -3118,6 +3219,8 @@ function getKaKnowledgeBase() {
         KA_POSTURE_VERBS,
         KA_MASDAR_ADVERBIAL,
         KA_TEMPORAL_NOUN_FRAMES,
+        KA_DEEP_PARTICIPLES,
+        KA_EXISTENTIAL_FRAMES,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -3963,6 +4066,32 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'temporal_dative_untranslated', message: 'English during/throughout/at-that-time present but the temporal dative frame missing: during X → X-ის დროს (dative; never *X-ის დრო), duration → X-ის განმავლობაში, over time → დროთა განმავლობაში, at that time → იმ დროს.' });
     }
 
+    // 3.100 Participle untranslated: static passive (was/were/is/are/been
+    //      + V-ed), participial adjective in attributive slot, or un-/in-
+    //      stem word present, with no Georgian participial morphology in
+    //      output and no English "by" agent (KA_VOICE prefers active
+    //      aorist re-syntax when the agent is stated: "was written by X"
+    //      → X-მა დაწერა). Guard substrings (ილი/ული/დაუ...) intentionally
+    //      over-match common Georgian words to keep false positives low.
+    const pcpGuard = /(?:ილი|ული|ებული|ნაწ|ნანახ|ნაჭ|ნასმ|ნათქვ|ნაკეთ|ნაპოვნ|დაუ|უხილავ|უვარგის|უცნობ|ებელი|ველი|ყოფილი|მომავალ)/;
+    const pcpEn =
+        /\b(?:was|were|is|are|been|being|seems?|seemed|looks?|looked|feels?|felt)\s+(?:very\s+|so\s+|really\s+)?(?!(?:even|often|then|when)\b)\w+(?:ed|en)\b/i.test(text) ||
+        /\b(?:the|a|an|his|her|their|its|my|our)\s+(?:very\s+)?(?:tired|broken|burned|burnt|closed|locked|frozen|hidden|forgotten|written|torn|wounded|aged|crowded|frightened|excited|surprised)\s+\w+/i.test(text) ||
+        /\b(?:un|in)(?:known|finished|seen|heard|written|said|done|made|found|told|forgotten|broken|opened|closed|locked|paid|employed)\b/i.test(text);
+    if (pcpEn && !/\bby\b/i.test(text) && !pcpGuard.test(text)) {
+        issues.push({ rule: 'participle_untranslated', message: 'English participle (V-ed/V-en) present but no Georgian participial morphology: written → დაწერილი, broken → დამტვრეული, killed → მოკლული, angry → გაბრაზებული, busy → დაკავებული, the books he had read → ნაკითხი წიგნები (resultative ნა-), unbelievable → დაუჯერებელი (და-უ- negative potential, never *არაჯერებელი), former X → ყოფილი X (NOT ყოფილა). Static passive without agent prefers PPP + იყო/არის; aorist re-syntax is OK only with a stated agent.' });
+    }
+
+    // 3.101 Potential untranslated: curated TRUE-potential English
+    //      adjectives (-able/-ible family; table/comfortable/valuable etc.
+    //      deliberately NOT triggers) but no potential/negative-potential
+    //      morphology in output.
+    const poteEn = /\b(?:impossible|unbelievable|incredible|unforgettable|invisible|unbreakable|unreadable|inevitable|unusable|readable|visible)\b/i.test(text);
+    const poteGuard = /(?:ებელი|ველი|შესაძლებელი|შეუძლებელი|საკითხავი|სანახავი|უხილავი|ხილული|დაუჯერებელი|დაუვიწყარი|წაუკითხავი|აუცილებელი|უვარგისი|დაუმტვრეველი|სარწმუნო)/;
+    if (poteEn && !poteGuard.test(text)) {
+        issues.push({ rule: 'potential_untranslated', message: 'English -able/-ible adjective present but no Georgian potential morphology: impossible → შეუძლებელი, unbelievable/incredible → დაუჯერებელი, unforgettable → დაუვიწყარი, invisible → უხილავი, visible → ხილული, unreadable → წაუკითხავი, unbreakable → დაუმტვრეველი, inevitable → აუცილებელი, unusable → უვარგისი, readable → საკითხავი, to-be-done → გასაკეთებელი, future → მომავალი (-ველი).' });
+    }
+
     return issues;
 }
 
@@ -4688,16 +4817,88 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bclimbed\b/gi, 'ავიდა');
     out = out.replace(/\bdescended\b/gi, 'ჩამოვიდა');
 
+    // ── v1.21.0 additions — run LAST so earlier verb-carrier fixes (4.81-4.83
+    //      motion/posture, 4.84 gerunds) have already consumed their
+    //      forms; these patterns key on copula + participle leftovers and
+    //      un-/in- prefixed adjectives.
+
+    // 4.86 Untranslated English participles → PPP/resultative carriers.
+    //      Static passive "was V-ed" → PPP + იყო (იყვნენ pl.); present
+    //      "is/are V-ed" → PPP + არის (არიან); perfect passive "has/have/
+    //      had been V-ed" → PPP + ა (დაწერილია). Attributive "the V-ed N"
+    //      → PPP in attributive slot. masdarLookup (4.84) is reused as the
+    //      stem normalizer (same e-drop / doubled-consonant logic).
+    const pcpLookup = masdarLookup;
+    const ppps = {
+        written: 'დაწერილი', finished: 'დამთავრებული', done: 'გაკეთებული',
+        made: 'გაკეთებული', closed: 'დახურული', opened: 'გახსნილი',
+        locked: 'დაკეტილი', broken: 'დამტვრეული', killed: 'მოკლული',
+        found: 'ნაპოვნი', tired: 'დაღლილი', born: 'დაბადებული',
+        hidden: 'დამალული', forgotten: 'დავიწყებული', frozen: 'გაყინული',
+        torn: 'დაგლეჯილი', wounded: 'დაჭრილი', paid: 'გადახდილი',
+        employed: 'დასაქმებული', surprised: 'გაკვირვებული',
+        excited: 'აღელვებული', frightened: 'შეშინებული',
+        crowded: 'გადაჭედილი', aged: 'მოხუცებული', told: 'ნათქვამი',
+        seen: 'ნანახი', read: 'ნაკითხი', heard: 'ნასმენი'
+    };
+    out = out.replace(/\b(?:has|have|had) been (\w+)\b/gi, (m, v) => {
+        const p = pcpLookup(ppps, v.toLowerCase());
+        return p ? p + 'ა' : m;
+    });
+    //      Copula + participle: intensifiers preserved pre-participle
+    //      (4.69 has usually already translated very/really/quite →
+    //      ძალიან/საკმაოდ/ნამდვილად by the time 4.86 runs, so the
+    //      Georgian forms are matched too; bare "so" is mapped here).
+    //      was → იყო, were → იყვნენ, is → არის, are → არიან.
+    const copK = { was: ' იყო', were: ' იყვნენ', is: ' არის', are: ' არიან' };
+    out = out.replace(/\b(was|were|is|are) (ძალიან |საკმაოდ |ნამდვილად |თითქმის |სრულიად |მეტისმეტად |very |so |really )?(\w+)\b/gi,
+        (m, cop, inten, v) => {
+            const p = pcpLookup(ppps, v.toLowerCase());
+            if (!p) return m;
+            const gi = inten
+                ? (inten === 'so ' || inten === 'very ' ? 'ძალიან '
+                    : inten === 'really ' ? 'ნამდვილად ' : inten)
+                : '';
+            return gi + p + copK[cop.toLowerCase()];
+        });
+    out = out.replace(/\b(broken|burned|burnt|closed|locked|frozen|hidden|forgotten|written|torn|wounded|killed|tired|aged|crowded|frightened|excited|surprised|employed|paid) (?!by\b|and\b|or\b|but\b|the\b|a\b|an\b|is\b|was\b|were\b|to\b|in\b|on\b|at\b)(\w+)\b/gi,
+        (m, v, n) => {
+            const p = pcpLookup(ppps, v.toLowerCase());
+            return p ? p + ' ' + n : m;
+        });
+
+    // 4.87 Untranslated English potential/negative-potential adjectives →
+    //      და-უ- negative potential / -ებელი-ველი potential carriers.
+    //      Negative (un-/in-/im-) FIRST: unbreakable must not fall to a
+    //      bare-breakable map (same longest-first discipline as 4.74's
+    //      "as soon as" / 4.85's "during the"). former X → ყოფილი X
+    //      (participle of არის; NEVER ყოფილა, which is evidential).
+    out = out.replace(/\bunbelievable\b/gi, 'დაუჯერებელი');
+    out = out.replace(/\bincredible\b/gi, 'დაუჯერებელი');
+    out = out.replace(/\bunforgettable\b/gi, 'დაუვიწყარი');
+    out = out.replace(/\bunbreakable\b/gi, 'დაუმტვრეველი');
+    out = out.replace(/\bunreadable\b/gi, 'წაუკითხავი');
+    out = out.replace(/\binvisible\b/gi, 'უხილავი');
+    out = out.replace(/\bimpossible\b/gi, 'შეუძლებელი');
+    out = out.replace(/\binevitable\b/gi, 'აუცილებელი');
+    out = out.replace(/\bunusable\b/gi, 'უვარგისი');
+    out = out.replace(/\bunknown\b/gi, 'უცნობი');
+    out = out.replace(/\bunfinished\b/gi, 'დაუმთავრებელი');
+    out = out.replace(/\bvisible\b/gi, 'ხილული');
+    out = out.replace(/\breadable\b/gi, 'საკითხავი');
+    out = out.replace(/\bfuture\b/gi, 'მომავალი');
+    out = out.replace(/\bformer (\w+)\b/gi, 'ყოფილი $1');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.20.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.21.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 100,
-    qaRules: 100,
-    autoFixes: 85,
-    researchSources: 255
+    promptBlocks: 102,
+    qaRules: 102,
+    autoFixes: 87,
+    researchSources: 259
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
