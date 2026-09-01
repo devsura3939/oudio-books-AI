@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.16.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.17.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -201,6 +201,27 @@
 // untranslated, quotative_particle_missing, even_not_missing),
 // auto-fixes 4.68-4.72 (tag particle repair, EN degree/sequence/at-least/
 // focus carriers → Georgian, -ით insertion for with-by-means-of).
+// v1.17.0 expansion (EN↔KA book comparison: clause-level connective
+// architecture, 8+ new web sources incl. dictionary.ge corpus examples,
+// georgian.se clausal-complement grammar, learnentry sentence bank,
+// languages42.ru clause typology):
+// KA_CONDITIONALS (თუ + future/present real condition, NO optative in
+// თუ-clause; counterfactual uses რომ + pluperfect + -ებდი conditional
+// — მე რომ ვსწავლობდი, ჩავაბარებდი; იქნებოდა would-be),
+// KA_TEMPORAL_CLAUSES (როცა/როდესაც when, სანამ ... (არ) until/while
+// with მანამ correlate, ვიდრე bookish, როგორც კი as-soon-as, მას
+// შემდეგ რაც after),
+// KA_PURPOSE_CLAUSES (იმისათვის რომ in-order-to, masdar + -ად
+// მოსამზადებლად, ისე რომ so-that),
+// KA_FREE_RELATIVES (რაც that-which, ვინც who(ever), სადაც where,
+// როცა when, რასაც whatever — fused heads).
+// QA rules 3.86-3.90 (conditional_untranslated, counterfactual_calque,
+// temporal_conj_untranslated, purpose_clause_untranslated, free_
+// relative_untranslated), auto-fixes 4.73-4.77 (EN if/otherwise →
+// თუ/სხინააღმდეგ, EN when/until/as-soon-as → Georgian temporal
+// carriers, EN in-order-to/so-that → purpose carriers, EN what/who/
+// where free relatives → რაც/ვინც/სადაც, would/should counterfactual
+// verb repair).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2500,6 +2521,145 @@ TACTIC: Never drop English "at least": choose მინიმუმ for counts/
 measurements, სულ ცოტა for pleas and concessions, არანაკლებ for
 formal emphasis.`;
 
+// KA-87 v1.17.0 — Conditional system (dictionary.ge corpus examples +
+// learnentry sentence bank + polyglotclub conditional mood). REAL
+// conditions use თუ + FUTURE/PRESENT (Series I), never optative in the
+// თუ-clause: თუ ის მოვა, სთხოვეთ დაელოდოს if he comes, ask him to
+// wait; თუ წვიმს, დავსველდებით if it rains, we will get wet. The
+// conditional mood itself derives from imperfect + ი- (kartuliena.eu):
+// ვიგრძნობდი I would feel. COUNTERFACTUAL ("if I had studied") uses
+// რომ + PLUPERFECT in the protasis + -ებდი conditional in the apodosis:
+// მე რომ ვსწავლობდი, გამოცდას ჩავაბარებდი if I had studied, I would
+// have passed; თქვენს ადგილას რომ იყოს, იგი ამას გააკეთებდა were he
+// in your place, he would do it (dictionary.ge "would"). იქნებოდა =
+// "would be". English "if" can also be თუ არა if-not (negative
+// condition), წინააღმდეგ შემთხვევაში otherwise. DEFECT: calquing
+// "if I would have" as თუ + conditional (Georgian needs რომ +
+// pluperfect), or keeping the English if-counterfactual order.
+const KA_CONDITIONALS = `
+GEORGIAN CONDITIONAL SYSTEM (EN↔KA)
+• REAL condition (likely): თუ + FUTURE/PRESENT in BOTH clauses —
+  თუ ის მოვა, სთხოვეთ დაელოდოს if he comes, ask him to wait ·
+  თუ წვიმს, დავსველდებით if it rains, we'll get wet
+• NO optative inside the თუ-clause: *თუ მოსულიყო (unreal) is a
+  different meaning — real conditions keep Series I
+• COUNTERFACTUAL (unreal / regret): რომ + PLUPERFECT protasis +
+  -ებდი conditional apodosis —
+  მე რომ ვსწავლობდი, გამოცდას ჩავაბარებდი if I had studied, I would
+  have passed · თქვენს ადგილას რომ იყოს, გააკეთებდა were he in your
+  place, he would do it
+• იქნებოდა = "would be"; conditional mood = imperfect stem + ი- +
+  -დი (ვიგრძნობდი I would feel)
+• Negative condition: თუ არა = if not; წინააღმდეგ შემთხვევაში =
+  otherwise; თორემ (colloq) otherwise/else
+• "if only" → ნეტავ + რომ / მინდა რომ frames with optative
+MAPPING: if + future → თუ + future · if I had/were → რომ + pluperfect
++ (-ებდი) · would + V → conditional -ებდი · otherwise → წინააღმდეგ
+შემთხვევაში / თორემ
+TACTIC: Never render "if he had come, he would have seen it" as თუ +
+pluperfect — Georgian counterfactuals are რომ-driven (მოსულიყო რომ,
+დაინახავდა). Keep თუ strictly for real/open conditions.`;
+
+// KA-88 v1.17.0 — Temporal clauses (dictionary.ge "until/till" corpus
+// + languages42.ru clause typology). როცა = when (neutral, contracts
+// რომ+აც); როდესაც = when (formal/bookish). UNTIL uses the CORRELATIVE
+// frame: მანამ/იქამდე ... (მანამ) სანამ ... არ — "we walked until it
+// got dark" → მანამ ვიარეთ, სანამ არ დაღამდა (dictionary.ge); the
+// negative marker არ inside the სანამ-clause is STANDARD
+// even though the meaning is positive ("until") — a unique Georgian
+// polarity quirk. ვიდრე = until/while (bookish, same pattern with
+// არ: თამაში არ მთავრდება, ვიდრე მსაჯი არ დაუსტვენს). Postpositional
+// shortcut: N-მდე by/until-N (დაღამებამდე ვიარეთ). როგორც კი =
+// as-soon-as; მას შემდეგ რაც = after; სანამ არ მოვა until he comes
+// (negative imperative: არ წახვიდეთ, ვიდრე იგი არ მოვა don't leave
+// till he comes). DEFECT: dropping the არ inside სანამ/ვიდრე, or
+// translating "until" with bare სანამ without the მანამ correlate.
+const KA_TEMPORAL_CLAUSES = `
+GEORGIAN TEMPORAL CLAUSES (EN↔KA)
+• when → როცა (neutral) / როდესაც (formal): როცა ჩამოვედი, უკვე
+  გვიანი იყო when I arrived, it was already late
+• UNTIL (correlative frame): მანამ ... სანამ ... არ —
+  მანამ ვიარეთ, სანამ არ დაღამდა we walked until it got dark ·
+  დაიცადე, სანამ წვიმა (არ) გადაიღებს wait till the rain stops
+• ვიდრე = until/while (bookish, takes არ the same way):
+  თამაში არ მთავრდება, ვიდრე მსაჯი არ დაუსტვენს the game isn't over
+  till the referee blows the whistle
+• The არ inside სანამ/ვიდრე-clauses is OBLIGATORY-flavored idiom
+  (polarity quirk) — do not remove it as "double negation"
+• Shortcut: noun + მდე = until/by-N: დაღამებამდე until dark ·
+  საღამომდე until evening
+• as soon as → როგორც კი: როგორც კი მოვიდა, ყველამ შეხედა
+• after → მას შემდეგ რაც / ამის შემდეგ: მას შემდეგ რაც წავიდა...
+• while → სანამ (durative): სანამ ის საუბრობდა, ჩვენ ვისმენდით
+MAPPING: when → როცა/როდესაც · until → (მანამ) სანამ/ვიდრე ... არ ·
+as soon as → როგორც კი · after → მას შემდეგ რაც · while → სანამ
+TACTIC: "until"-translations without არ inside the temporal clause
+sound foreign — keep (მანამ) სანამ/ვიდრე ... არ intact; front the
+temporal clause or place it after the main clause, both native.`;
+
+// KA-89 v1.17.0 — Purpose clauses DEEP (complements KA-57 v1.12.0
+// masdar/რათა/ზე system; georgian.se clausal complement grammar +
+// dictionary.ge). იმისათვის რომ = in-order-that (full clause
+// purpose; formal-neutral); რომ alone + subjunctive/optative
+// can carry purpose after motion verbs (მოვიდა, რომ დაეხმაროს he
+// came to help). ისე რომ = so-that (result-purposive): ისე იყო
+// დაწერილი, რომ ვერავინ წაიკითხა it was written so that nobody could
+// read it. DEFECT: rendering "in order to V" with the English
+// infinitive kept in place, or choosing the full იმისათვის რომ
+// where the masdar -ად one-word form is the natural literary choice.
+const KA_PURPOSE_CLAUSES_DEEP = `
+GEORGIAN PURPOSE CLAUSES (EN↔KA)
+• in order to + CLAUSE → იმისათვის რომ + optative/subjunctive:
+  იმისათვის რომ გამოცდა ჩააბაროს, ბევრს სწავლობს he studies hard in
+  order to pass the exam
+• in order to / to + VERB (compact) → masdar + ად (future participle
+  სა-...-ელი → -ად): სადილის მოსამზადებლად in order to prepare dinner ·
+  წავედი წიგნის საყიდლად I went to buy a book
+• bare რომ + optative after motion verbs: მოვიდა, რომ დაეხმაროს he
+  came to help
+• so that / so ... that → ისე ... რომ / ისე რომ: ისე იყო დაწერილი,
+  რომ ვერავინ წაიკითხა
+MAPPING: in order to → იმისათვის რომ / masdar-ად · to + V (purpose) →
+masdar-ად · so that → ისე რომ · lest → თუ არა ... (rare, rephrase)
+TACTIC: Prefer the masdar+ად form for compact literary purpose
+(მოსასყიდლად, სანახავად, მოსასმენლად); use the full იმისათვის რომ
+clause when the purpose has its own subject. Never leave the English
+infinitive untranslated.`;
+
+// KA-90 v1.17.0 — Free (fused) relatives. Georgian fuses the relative
+// pronoun and its head into ONE word — no external antecedent: რაც =
+// that-which/what (ეს რაც გითხარი what I told you); ვინც = the-one-
+// who/whoever (ვინც გინდა whoever wants); სადაც = where (fused სა-
+// +და+ც; სადაც კი წახვალ wherever you go); როცა = when(ever) (fused
+// რომ+აც); რასაც whatever (რასაც თქვას whatever he says); როგორაც =
+// as/how (როგორაც იყო as it was); რამდენადაც
+// as-far-as; იმდენი რამდენი as-much-as (correlative pair). The
+// correlative construction copies the particle in both halves: ვინც
+// შეიძლება, მოვა who can, will come; რაც უნდა, ის ვთქვით whatever we
+// wanted, we said. DEFECT: leaving English "what/whoever/wherever"
+// untranslated, or splitting რაც into რა ... იც (non-word).
+const KA_FREE_RELATIVES = `
+GEORGIAN FREE RELATIVES — რაც / ვინც / სადაც / როცა (EN↔KA)
+• რაც = what / that-which: ეს რაც გითხარი, მართალია what I told you
+  is true · რაც უნდა, ის ვთქვით we said what we wanted
+• ვინც = the one who / whoever: ვინც გინდა, მოვიდეს whoever wants,
+  let him come
+• სადაც = where / wherever (ONE word): სადაც კი წახვალ wherever you
+  go · სადაც ვცხოვრობდით where we lived
+• როცა = when(ever) (ONE word, fused): როცა მომწონს რაღაც whenever
+  I like something
+• რასაც = whatever: რასაც თქვას, არ დაუჯერებ whatever he says, don't
+  believe him
+• Correlative doubling: the -ც word opens the subordinate half and
+  the main half repeats the frame (ვინც ... ის; რაც ... ის):
+  რაც მოგცა, ის წაიღე take whatever he gave you
+• რამდენადაც as far as · იმდენი, რამდენიც as much as
+MAPPING: what (clause) → რაც · whoever → ვინც · where(ver) → სადაც ·
+when(ever) → როცა · whatever → რასაც / რაც ... ის
+TACTIC: Never split the fused forms (სადაც/როცა are single words) and
+never leave English "what/whoever/wherever" untranslated — the -ც
+fused relative is the native carrier.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -2584,6 +2744,10 @@ function getKaKnowledgeBase() {
         KA_FOCUS_PARTICLES,
         KA_DISCOURSE_MARKERS,
         KA_AT_LEAST,
+        KA_CONDITIONALS,
+        KA_TEMPORAL_CLAUSES,
+        KA_PURPOSE_CLAUSES_DEEP,
+        KA_FREE_RELATIVES,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -3309,6 +3473,44 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'even_not_missing', message: 'English "not even / without even" present in source but Georgian არც / არც კი missing. "he didn\'t even look" → არც გამოუხედავს — the minimal-expected-action denial needs არც.' });
     }
 
+    // 3.86 Untranslated English conditional marker: "if" present in source
+    //      but neither თუ nor the counterfactual რომ-protasis present in
+    //      the translation.
+    if (/\bif\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:თუ|რომ|თუ არა|ნეტავ)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'conditional_untranslated', message: 'English conditional "if" present in source but Georgian თუ (real condition) or the counterfactual რომ-protasis missing. Real: თუ მოვა, სთხოვეთ... Counterfactual: მე რომ ვსწავლობდი, ჩავაბარებდი.' });
+    }
+
+    // 3.87 Counterfactual calque: English "had + V-ed / would have" with no
+    //      pluperfect (-იყო/-ები/-ებოდა family) or conditional (-ებდი) in
+    //      the translation.
+    if (/\b(?:had (?:not\s+)?[a-z]+ed|would(?:n'?t)? have|if only)\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:[ა-ჰ]{2,}ებდი|იყო|ებოდა|ებინა|ნეტავ)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'counterfactual_calque', message: 'English counterfactual (had done / would have done / if only) present in source but no Georgian pluperfect/conditional verb (-ებდი / იყო / -ებოდა) found. Counterfactuals use რომ + pluperfect + -ებდი: მე რომ ვსწავლობდი, ჩავაბარებდი.' });
+    }
+
+    // 3.88 Untranslated English temporal conjunctions: when/until/as soon
+    //      as/after + clause present but no Georgian temporal carrier.
+    if (/\bwhen\b|\buntil\b|\bwhile\b|\bas soon as\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:როცა|როდესაც|სანამ|ვიდრე|როგორც კი|მას შემდეგ|მდე)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'temporal_conj_untranslated', message: 'English temporal conjunction (when/until/while/as soon as) present in source but no Georgian temporal carrier (როცა/სანამ/ვიდრე/როგორც კი) found. "until" needs the (მანამ) სანამ/ვიდრე ... არ frame.' });
+    }
+
+    // 3.89 Untranslated English purpose clause: in order to / so that
+    //      present but no იმისათვის რომ / რათა / ისე რომ / masdar-ად
+    //      (სა-...-აد purpose masdar like საყიდლად / მოსამზადებლად).
+    if (/\bin order to\b|\bso that\b|\bso as to\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:იმისათვის|ისე რომ|რათა|[ა-ჰ]{0,12}სა[ა-ჰ]{2,}ად)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'purpose_clause_untranslated', message: 'English purpose clause (in order to / so that) present in source but no Georgian purpose carrier (იმისათვის რომ / რათა / ისე რომ / masdar-ად) found. Compact purpose: სადილის მოსამზადებლად.' });
+    }
+
+    // 3.90 Untranslated English free relatives: what/whoever/wherever/
+    //      whenever as clause heads with no -ც fused relative in output.
+    if (/\bwhat (?:I|you|he|she|we|they)\b|\bwhoever\b|\bwherever\b|\bwhatever\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:რაც|ვინც|სადაც|როცა|რასაც)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'free_relative_untranslated', message: 'English free relative (what/whoever/wherever/whatever) present in source but no Georgian fused relative (რაც/ვინც/სადაც/როცა/რასაც) found. "what I saw" → რაც დავინახე.' });
+    }
+
     return issues;
 }
 
@@ -3558,9 +3760,13 @@ function correctGeorgianMorphology(text) {
     // 4.49 Untranslated English purpose connectors → რათა + optative reading
     //     (deterministic: "in order to/so as to" should never survive into
     //     Georgian output as English words).
-    out = out.replace(/\bin order to\b/gi, 'რათა');
-    out = out.replace(/\bso as to\b/gi, 'რათა');
-    out = out.replace(/\bso that\b/gi, 'რათა');
+    //     v1.17.0: purpose ladder enriched — full-clause purpose now prefers
+    //     იმისათვის რომ (formal-neutral); რათა remains for literary/optative
+    //     flavor; result-purposive "so that" → ისე რომ.
+    out = out.replace(/\bin order to\b/gi, 'იმისათვის რომ');
+    out = out.replace(/\bso as to\b/gi, 'იმისათვის რომ');
+    out = out.replace(/\bin order that\b/gi, 'იმისათვის რომ');
+    out = out.replace(/\bso that\b/gi, 'ისე რომ');
 
     // 4.50 Vocative confusion: მამაო (priest!) in direct family address → მამავ
     //     (deterministic: მამაო as family address is always wrong; if the speaker
@@ -3773,16 +3979,50 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bby plane\b/gi, 'თვითმფრინავით');
     out = out.replace(/\bby hand\b/gi, 'ხელით');
 
+    // ── v1.17.0 additions ──
+
+    // 4.73 Untranslated English conditional markers → Georgian carriers.
+    //      "if" maps to თუ (real condition); "otherwise" family maps to
+    //      the formal წინააღმდეგ შემთხვევაში. Counterfactual rewrites
+    //      (if ... had ... → რომ + pluperfect) are left to the AI pass —
+    //      only the connector is deterministic here.
+    out = out.replace(/\bif not\b/gi, 'თუ არა');
+    out = out.replace(/\botherwise\b/gi, 'წინააღმდეგ შემთხვევაში');
+    out = out.replace(/\bif\b/gi, 'თუ');
+
+    // 4.74 Untranslated English temporal conjunctions → Georgian carriers.
+    //      "as soon as" MUST be consumed before the bare "as" mappings;
+    //      "until" maps to the bookish ვიდრე + აر frame carrier (the არ
+    //      inside the clause is the standard polarity quirk).
+    out = out.replace(/\bas soon as\b/gi, 'როგორც კი');
+    out = out.replace(/\bwhen\b/gi, 'როცა');
+    out = out.replace(/\bwhile\b/gi, 'სანამ');
+    out = out.replace(/\buntil\b/gi, 'ვიდრე არ');
+    out = out.replace(/\btill\b/gi, 'ვიდრე არ');
+
+    // 4.75 Untranslated English free relatives → fused -ც relatives.
+    out = out.replace(/\bwhoever\b/gi, 'ვინც');
+    out = out.replace(/\bwherever\b/gi, 'სადაც');
+    out = out.replace(/\bwhenever\b/gi, 'როცა');
+    out = out.replace(/\bwhatever\b/gi, 'რასაც');
+
+    // 4.76 Counterfactual verb remnants: bare English "would be" left in
+    //      Georgian output → იქნებოდა (conditional of არის). "should be"
+    //      (unreal) → უნდა იყოს (obligative). Conservative: only the
+    //      copula forms; lexical would+V stays for the AI pass.
+    out = out.replace(/\bwould be\b/gi, 'იქნებოდა');
+    out = out.replace(/\bshould be\b/gi, 'უნდა იყოს');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.16.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.17.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 87,
-    qaRules: 86,
-    autoFixes: 72,
-    researchSources: 225
+    promptBlocks: 91,
+    qaRules: 91,
+    autoFixes: 76,
+    researchSources: 235
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
