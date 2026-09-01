@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.12.0
+// GEORGIAN LINGUISTIC KNOWLEDGE BASE  v1.13.0
 // Research-derived Georgian grammar knowledge + morphological QA rules.
 // Sources: Wikipedia Georgian grammar, Wikibooks Georgian, Aronson 1990,
 // Harris 1981, Tuite; style calibration on authentic Georgian prose
@@ -116,6 +116,23 @@
 // vocative_mamao, historical_present), auto-fixes 4.47-4.51 (fuse detached
 // -დან/-მდე/-გან, EN in-order-to/so-that → რათა, მამაო → მამავ, historical
 // present → aorist).
+// v1.13.0 expansion (EN↔KA book comparison: რომ multi-purpose, relative
+// clauses deep, simultaneous action, options/correlatives, reflexive თავი,
+// impersonal/dative-experiencer, 20 new web sources incl. talkpal.ai
+// reflexive guide + dictionary.ge + Foley thesis on relative clauses):
+// KA_ROM_MULTIPURPOSE (რომ as complementizer/causative/purpose/result,
+// მინდა+optative no რომ, hallucination check რომ+masdar),
+// KA_RELATIVE_DEEP (-ც relative system, რომელიც case forms, რაც indefinite,
+// X წელია რაც pattern, -მე "some-" suffix, contact clauses),
+// KA_SIMULTANEOUS_ACTION (როცა default, თან...თან literary correlative),
+// KA_OPTIONS_CORRELATIVE (ან...ან, არც...არც, როგორც...ისე, ხან...ხან),
+// KA_SELF_REFERENCE (თავი reflexive forms, თავისი vs მისი critical
+// distinction, თვითონ emphasis), KA_IMPERSONAL_DEEP (dative experiencer:
+// მშია/მწყურია/მძინავს/მტკივა, აქვს vs ჰყავს, სჭირდება, შეუძლია).
+// QA rules 3.66-3.70 (rom_nonfinite, reflexive_possessive, impersonal_calque,
+// asymmetric_khan, correlative_untranslated), auto-fixes 4.52-4.56 (impersonal
+// calque → dative verbs, EN correlatives → არც/ან/თუ/ზოგჯერ, მან...მისი →
+// თავისი, რომ+masdar → drop რომ, lone ხან → ზოგჯერ).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1580,6 +1597,166 @@ ENGLISH MAPPING TABLE:
 TACTIC: English "that" is ambiguous — choose ეგ vs ის by who possesses or
 perceives the referent; default to ის in narration, ეგ in dialogue.`;
 
+const KA_ROM_MULTIPURPOSE = `KA-61 THE MANY USES OF რომ (v1.13.0, parryc.com "The Many Uses of რომ" + Wikibooks):
+რომ is the Georgian all-purpose subordinator. English renders it differently
+depending on function — do NOT translate it word-for-word.
+
+FUNCTIONS OF რომ:
+1. Complementizer "that": ვიცი, რომ ის მოვა (I know that he will come).
+   English "that" may be omitted; Georgian რომ is NEVER omitted.
+2. With მინდა (want): "want to do" → მინდა + OPTATIVE, no რომ needed:
+   მინდა წავიდე (I want to go). With a full clause, რომ appears:
+   მინდა, რომ ის წავიდეს (I want him to go) — subjunctive agreement.
+3. Causative "make/let someone do": აიძულა, რომ... (he made him...),
+   დაუშვა, რომ... (he let him...) — verb of causing + რომ + aorist subjunctive.
+4. Purpose "so that": რომ + optative = რათă family; იმღერა ხმამაღლა,
+   რომ ყველამ გაიგონა (he sang loudly so that everyone heard).
+5. Condition (colloquial): რომ მოვიდე, რას იზამ? (if I come, what will you do?)
+   — mostly replaced by თუ in modern prose; keep თუ in narration.
+6. Result "so...that": იმდენად დაღლილია, რომ ვერ დგება
+   (he is so tired that he cannot stand up).
+
+ENGLISH MAPPING TABLE:
+• "that + clause" (after know/think/say) → რომ (mandatory)
+• "want to + VERB" → მინდა + optative (NO რომ)
+• "want SOMEONE to + VERB" → მინდა, რომ + subjunctive
+• "make/let X do" → causative verb + რომ + subjunctive
+• "so that" → რომ/რათა + optative
+• "so...that" → იმდენად..., რომ...
+TACTIC: a რომ clause must contain a FINITE verb. A რომ followed by a masdar
+or bare noun is a hallucination signature — რომ წასვლა is wrong; say წასვლა.`;
+
+const KA_RELATIVE_DEEP = `KA-62 RELATIVE PRONOUNS & CLAUSES (v1.13.0, parryc.com + Wikipedia "Relative clause" + Foley thesis):
+Georgian builds relative pronouns by adding -ც to interrogatives:
+
+• რაც = what/that which/whatever (indefinite antecedents)
+• ვინც = who/whoever
+• სადაც = where/wherever
+• როდისაც / როცა = when/whenever
+• როგორც = how/as
+• რამდენიც = however many
+• რომელიც = which/who (definite antecedent, declines for case:
+  რომელსაც DAT, რომლის GEN "whose", რომელთან "with whom")
+• რომლის = whose (possession)
+
+KEY PATTERNS:
+• Definite antecedent: კაცი, რომელიც ზის, ჩემი მასწავლებელია
+  (the man who is sitting is my teacher).
+• Indefinite antecedent → რაც: რაც ვიცი, გეტყვი (I will tell you what I know).
+• "It has been X years since" → X წელია რაც: იქ 6 წელია რაც ვმუშაობ
+  (I have been working there for 6 years).
+• "some-" prefix → -მე suffix: ვინმე (someone), სადმე (somewhere),
+  რაღაც (something), როდისმე (ever/sometime).
+• English contact clauses ("the book I read") → წიგნი, რომელიც წავიკითხე —
+  Georgian ALWAYS requires the relative pronoun; it cannot be dropped.
+
+ENGLISH MAPPING TABLE:
+• "who/which/that" (definite) → რომელიც (+ case form)
+• "what / that which / whatever" → რაც
+• "where" (clause) → სადაც
+• "when" (clause) → როცა / როდისაც
+• "whose" → რომლის / რომელსაც ... აქვს
+• "someone/something/somewhere" → ვინმე/რაღაც/სადმე
+• "It is X years since..." → X (წელი/წლია) რაც ...`;
+
+const KA_SIMULTANEOUS_ACTION = `KA-63 SIMULTANEOUS ACTION (v1.13.0, parryc.com "Simultaneous Action"):
+English "while/as + -ing" has TWO Georgian strategies:
+
+1. როცა / როდისაც + finite verb (default, neutral):
+   როცა შენ დარეკე, მე ვკითხულობდი (while/when you called, I was reading).
+   როცა covers both "when" and "while" — Georgian does not force a distinction.
+2. თან... თან... (correlative "as... as...", one process unfolding with another):
+   თან მიდიოდა, თან ფიქრობდა (as he walked, he thought — lit. "on-one-hand
+   going, on-one-hand thinking"). Literary, expressive register.
+
+ENGLISH MAPPING TABLE:
+• "while + clause" / "as + clause" → როცა + finite verb (default)
+• "as he walked/went, ..." (literary doubling) → თან..., თან...
+• "-ing" participial phrase (Walking down the street, he saw...) →
+  finite როცა clause or ისე (so doing): ქუჩაში მიმავალმა დაინახა —
+  prefer როცა ქუჩაში მიდიოდა, დაინახა for clarity in audio.
+TACTIC: long English participial chains ("doing X, she did Y") should become
+finite როცა clauses in Georgian — masdar chains sound like telegraphese.`;
+
+const KA_OPTIONS_CORRELATIVE = `KA-64 OPTIONS & CORRELATIVES (v1.13.0, parryc.com "Options" + "Sometimes this, sometimes that"):
+English correlative pairs map to Georgian correlatives as follows:
+
+• "or" → ან / თუ (თუ as "or" appears in questions: მოხვალ თუ არა?)
+• "either... or..." → ან..., ან... (ან ერთი, ან მეორე — either one or the other)
+• "neither... nor..." → არც..., არც... (არც ერთი, არც მეორე) —
+  verb then takes არ: არც მან, არც მე არ ვიცი.
+• "both... and..." → როგორც..., ისე... (როგორც მამა, ისე შვილი —
+  both father and child). Note: this როგორც...ისე is NOT the "as" როგორც.
+• "sometimes... sometimes..." → ხან..., ხან... (ხან ცხარია, ხან ცივი —
+  sometimes it's hot, sometimes cold). Literary alternation marker.
+• "whether... or..." → თუ... თუ... (კარგად თუ ცუდად — for better or worse).
+
+ENGLISH MAPPING TABLE:
+• "either A or B" → ან A, ან B
+• "neither A nor B" → არც A, არც B (+ არ on verb)
+• "both A and B" → როგორც A, ისე B
+• "sometimes A, sometimes B" → ხან A, ხან B
+• "whether A or B" → თუ A, თუ B / A თუ B
+TACTIC: keep correlative pairs SYMMETRIC — if ხან opens the first member,
+ხან must open the second. Asymmetric correlatives read as translationese.`;
+
+const KA_SELF_REFERENCE = `KA-65 REFLEXIVE თავი (v1.13.0, talkpal.ai + dictionary.ge + parryc.com "Referring to the self"):
+თავი literally means "head" but is THE reflexive pronoun for ALL persons
+(Georgian has no myself/yourself/himself series — case + possessive do the work).
+
+CORE FORMS:
+• თავი (NOM self), თავს (DAT), თავის (GEN), თავით (INST), თავზე (on self),
+  თავისთვის (for oneself), თავის თავს (emphatic: "his own self").
+• Plural: თავები / თავიანთ თავს (themselves).
+• Emphasis particle: თვითონ (personally/oneself): მე თვითონ ვნახე.
+
+CRITICAL POSSESSIVE DISTINCTION:
+• თავისი = his OWN (possession by the subject — reflexive possessive):
+  მან წაიკითხა თავისი წიგნი (he read his own book).
+• მისი = his (someone else's — non-reflexive):
+  მან წაიკითხა მისი წიგნი (he read HIS [another man's] book).
+• Same for ჩემი/შენი/ჩვენი/თქვენი with თავი: ჩემი თავი (myself),
+  შენი თავი (yourself), თავიანთი (their own, plural reflexive possessive).
+
+ENGLISH MAPPING TABLE:
+• "myself/yourself/himself/herself" (object) → (ჩემი/შენი/თავისი) თავი + case:
+  "he cut himself" → ხელი გაიჭრა (often verb-internal, no თავი needed);
+  "she sees herself" → ხედავს თავის თავს.
+• "his own / her own" (possessive) → თავისი (NEVER მისი when reflexive)
+• "him/his" (non-reflexive) → მას/მისი
+• "on one's own" → თავისთვის / მარტო
+TACTIC: English "himself" after a 3rd-person subject is ambiguous — if the
+possessor is the subject, Georgian MUST use თავისი; მისი there is a
+classic MT error that changes the meaning.`;
+
+const KA_IMPERSONAL_DEEP = `KA-66 IMPERSONAL SENTENCES & DATIVE EXPERIENCER (v1.13.0, parryc.com "Impersonal Sentences" + zmnebi.com):
+Georgian expresses bodily states and possession with the EXPERIENCER in the
+DATIVE case and a 3rd-person verb — the English "I" becomes "to me":
+
+• მშია = I am hungry (lit. "to-me is-hunger"); მშიანია? = are you hungry?
+• მწყურია = I am thirsty; მცივა = I am cold; მცხვა = I am warm;
+  მძინავს = I am sleepy; მტკივა = it hurts (მე თავი მტკივა — my head hurts);
+  მსმენია/მნახავს = I have heard/seen (evidential perfect).
+• აქვს = has (possessor DAT + thing NOM): მას წიგნი აქვს (he has a book).
+• ჰყავს = has (people/animals): მას ძმა ჰყავს (he has a brother);
+  მას ძაღლი ჰყავს (he has a dog). Use ჰყავს for animate "having".
+• სჭირდება = needs (experiencer DAT + thing NOM):
+  მჭირდება დახმარება (I need help).
+• უყვარს = loves/likes; სძულს = hates (experiencer DAT).
+• შეუძლია = can (experiencer DAT + masdar): შემიძლია წასვლა.
+
+ENGLISH MAPPING TABLE:
+• "I am hungry/thirsty/cold/sleepy" → მშია / მწყურია / მცივა / მძინავს
+  (dative experiencer, NOT ვარ + adjective)
+• "I have + thing" → DAT experiencer + NOM thing + აქვს
+• "I have + person/pet" → DAT experiencer + NOM person + ჰყავს
+• "I need + X" → მჭირდება + X (NOM)
+• "I like/love + X" → მყვარს/მომწონს (dative experiencer)
+• "my head hurts" → თავი მტკივა (head NOM, me DAT)
+TACTIC: "I am + state-adjective" calques (მე შიმშილობა ვარ-style errors)
+must become the dative-experiencer verb. Check that the experiencer carries
+-ს/-მა and the verb is 3rd person even for "I".`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -1638,6 +1815,12 @@ function getKaKnowledgeBase() {
         KA_HISTORICAL_PRESENT,
         KA_KINSHIP_ADDRESS,
         KA_DEMONSTRATIVES_DEEP,
+        KA_ROM_MULTIPURPOSE,
+        KA_RELATIVE_DEEP,
+        KA_SIMULTANEOUS_ACTION,
+        KA_OPTIONS_CORRELATIVE,
+        KA_SELF_REFERENCE,
+        KA_IMPERSONAL_DEEP,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -2178,6 +2361,51 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'historical_present', message: `Past frame "${m35[1]}" + present "${m35[2]}" — English historical-present narration must shift to the AORIST in Georgian: ერთხელ ... შევიდა/უთხრა/წავიდა. Keep present only for genuinely current narration.` });
     }
 
+    // 3.66 რომ + non-finite after a desire/modal verb: მინდა/გინდა/უნდა +
+    //      რომ + masdar is always wrong ("want to + VERB" takes the optative
+    //      without რომ, or მინდა + masdar). Flag the definite hallucination.
+    const romMasdarRe = /(?<![\u10A0-\u10FF])(მინდა|გინდა|უნდა|შემიძლია)(?![\u10A0-\u10FF])\s*,?\s*რომ\s+[\u10A0-\u10FF]+(?:ა|ომა|ოლა)(?![\u10A0-\u10FF])/g;
+    let m36;
+    while ((m36 = romMasdarRe.exec(text)) !== null) {
+        issues.push({ rule: 'rom_nonfinite', message: `"${m36[0]}" — რომ must introduce a FINITE clause. "want to + VERB" takes მინდა + optative without რომ; a bare masdar after რომ is a hallucination. Rewrite: მინდა წავიდე or ვიცი, რომ მოვა.` });
+    }
+
+    // 3.67 Reflexive possessive confusion: მისი used where the possessor is the
+    //      subject (must be თავისი). Heuristic: მან ... მისი ... (same clause
+    //      with მან as agent) — classic MT error changing the meaning.
+    const misiReflexiveRe = /(?<![\u10A0-\u10FF])მან(?![\u10A0-\u10FF])[^.!?]{0,80}(?<![\u10A0-\u10FF])მისი(?![\u10A0-\u10FF])/g;
+    let m37;
+    while ((m37 = misiReflexiveRe.exec(text)) !== null) {
+        issues.push({ rule: 'reflexive_possessive', message: `მან ... მისი ... — if the possessor is the clause subject, Georgian requires the reflexive possessive თავისი (his OWN), not მისი (someone else's). Verify the intended referent.` });
+    }
+
+    // 3.68 Impersonal calque: ვარ/არის + hunger/thirst/sleep nouns instead of
+    //      the dative-experiencer verbs (მშია/მწყურია/მძინავს). Flag
+    //      "შიმშილობა ვარ"-style or "შიმშილი ვარ" patterns.
+    const impersonalCalqueRe = /(?<![\u10A0-\u10FF])(შიმშილი|სიწყურე|ძილი|სიცივე|სიცხე)(?![\u10A0-\u10FF])\s+(ვარ|ხარ|არის|ვართ|ხართ|არიან)(?![\u10A0-\u10FF])/g;
+    let m38;
+    while ((m38 = impersonalCalqueRe.exec(text)) !== null) {
+        issues.push({ rule: 'impersonal_calque', message: `"${m38[0]}" — bodily states use the DATIVE EXPERIENCER verb: მშია (I am hungry), მწყურია (thirsty), მძინავს (sleepy), მცივა (cold). The experiencer carries -ს/-მა and the verb stays 3rd person.` });
+    }
+
+    // 3.69 Asymmetric ხან...ხან correlative: ხან appears once without its pair
+    //      (must be ხან A, ხან B). Count ხან occurrences in one sentence.
+    const sentences = text.split(/[.!?]+/);
+    for (const sentence of sentences) {
+        const khanCount = (sentence.match(/(?<![\u10A0-\u10FF])ხან(?![\u10A0-\u10FF])/g) || []).length;
+        if (khanCount === 1) {
+            issues.push({ rule: 'asymmetric_khan', message: `Sentence contains a single ხან — the correlative "sometimes A, sometimes B" needs the pair ხან..., ხან... (e.g. ხან ცხარია, ხან ცივი). A lone ხან likely means "once/a while" and may be a mistranslation.` });
+        }
+    }
+
+    // 3.70 Untranslated English correlatives: "either...or", "neither...nor",
+    //      "sometimes" left as English words in Georgian output.
+    const correlEnRe = /\b(either|neither|nor|whether|sometimes)\b/gi;
+    let m39;
+    while ((m39 = correlEnRe.exec(text)) !== null) {
+        issues.push({ rule: 'correlative_untranslated', message: `"${m39[1]}" — untranslated English correlative. Map: either...or → ან..., ან...; neither...nor → არც..., არც...; both...and → როგორც..., ისე...; sometimes → ხან or ზოგჯერ; whether → თუ.` });
+    }
+
     return issues;
 }
 
@@ -2453,16 +2681,53 @@ function correctGeorgianMorphology(text) {
         (m, frame, mid, verb) => frame + mid + KA_HIST_AORIST[verb]
     );
 
+    // 4.52 Impersonal calque fix: "შიმშილი ვარ"-style noun+copula → dative
+    //      experiencer verbs (deterministic mapping; experiencer pronoun
+    //      მე/შენ removed since the verb prefix already encodes person).
+    out = out.replace(/(?<![\u10A0-\u10FF])(მე|შენ)(?![\u10A0-\u10FF])\s+(?<![\u10A0-\u10FF])(შიმშილი|სიწყურე|ძილი|სიცივე|სიცხე)(?![\u10A0-\u10FF])\s+(ვარ|ხარ)(?![\u10A0-\u10FF])/g,
+        (m, pron, noun) => {
+            const map = { 'შიმშილი': 'მშია', 'სიწყურე': 'მწყურია', 'ძილი': 'მძინავს', 'სიცივე': 'მცივა', 'სიცხე': 'მცხვა' };
+            return map[noun];
+        });
+
+    // 4.53 Untranslated English correlatives → Georgian correlatives
+    //      (deterministic: these should never survive into Georgian output).
+    out = out.replace(/\bneither\b/gi, 'არც');
+    out = out.replace(/\bnor\b/gi, 'არც');
+    out = out.replace(/\beither\b/gi, 'ან');
+    out = out.replace(/\bwhether\b/gi, 'თუ');
+    out = out.replace(/\bsometimes\b/gi, 'ზოგჯერ');
+
+    // 4.54 Reflexive possessive in მან-clauses: "მან ... მისი წიგნი" pattern
+    //      is ambiguous; when მან (agent) and მისი appear in the same clause
+    //      with a possessive-noun object, prefer თავისი (his own). Conservative:
+    //      only fix when მისი directly precedes a noun and მან starts the clause.
+    out = out.replace(/(?<![\u10A0-\u10FF])მან(?![\u10A0-\u10FF])([^.!?]{0,60}?)(?<![\u10A0-\u10FF])მისი(?![\u10A0-\u10FF])/g, 'მან$1თავისი');
+
+    // 4.55 რომ + masdar → drop რომ (masdar stands alone after მინდა/შემიძლია):
+    //      "მინდა, რომ წასვლა" → "მინდა წასვლა".
+    out = out.replace(/(?<![\u10A0-\u10FF])(მინდა|გინდა|უნდა|შემიძლია)(?![\u10A0-\u10FF])\s*,?\s*რომ\s+([\u10A0-\u10FF]+(?:ა|ომა|ოლა))(?![\u10A0-\u10FF])/g, '$1 $2');
+
+    // 4.56 Lone ხან → ზოგჯერ (a single ხან in a sentence without its pair
+    //      is either the "sometimes" adverb or a mistranslation; ზოგჯერ is
+    //      the safe unambiguous adverb). Lookahead includes । because earlier
+    //      fixes already normalized periods.
+    out = out.replace(/([^.\n!?]*)(?<![\u10A0-\u10FF])ხან(?![\u10A0-\u10FF])([^.\n!?]*[.!?।])/g,
+        (m, before, after) => {
+            const khanCount = (m.match(/(?<![\u10A0-\u10FF])ხან(?![\u10A0-\u10FF])/g) || []).length;
+            return khanCount === 1 ? before + 'ზოგჯერ' + after : m;
+        });
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.12.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.13.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 60,
-    qaRules: 65,
-    autoFixes: 51,
-    researchSources: 155
+    promptBlocks: 66,
+    qaRules: 70,
+    autoFixes: 56,
+    researchSources: 175
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
