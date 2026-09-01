@@ -222,6 +222,31 @@
 // carriers, EN in-order-to/so-that → purpose carriers, EN what/who/
 // where free relatives → რაც/ვინც/სადაც, would/should counterfactual
 // verb repair).
+// v1.18.0 expansion (comparative degree & simile suffixes — georgian.se
+// Lect05 adjective gradation + dictionary.ge simile corpus: თოვლივით
+// white-as-snow, -ივით/-ვით/-სავით adverbial-case simile, mo-...-o
+// attenuative degree, უ-...-ეს- high-style superlative; result clauses —
+// polyglotgym.com + dictionary.ge "so...that" correlative frames ისე/ისეთი/
+// იმდენი + რომ; the "as" family — dictionary.ge as I/II/III entries:
+// როგორც manner, რაც შეეხება as-for, როგორც წესი as-usual, ასევე as-well;
+// clefts & focus fronting — dictionary.ge "same II"/"exactly" corpus:
+// სწორედ it-is-precisely, არა თუ ... არამედ not-only-but,
+// უბრალოდ ის, რომ the-point-is):
+// KA_SIMILES_DEGREE (KA-91: -ივით/-ვით/-სავით simile suffixes, mo-...-o
+// attenuative, უ-...-ეს- elevative, მეტისმეტად excess),
+// KA_RESULT_CORRELATIVES (KA-92: ისე ... რომ verb-result, ისეთი ...
+// რომ quality-result, იმდენი ... რომ quantity-result, რაც უფრო ...
+// მით უფრო proportional correlative),
+// KA_AS_FAMILY (KA-93: როგორც manner/example, რაც შეეხება as-for,
+// როგორც წესი as-usual, როგორც ცნობილია as-is-known, ისევე როგორც
+// just-as, the same as ისეთივე როგორც),
+// KA_CLEFT_EMPHASIS (KA-94: სწორედ focus cleft, არა თუ ... არამედ
+// not-only-but, უბრალოდ ის რომ the-point-is, სწორედ ის ვინც it-is-he-who).
+// QA rules 3.91-3.94 (simile_suffix, result_correlative_missing,
+// as_family_untranslated, cleft_untranslated), auto-fixes 4.77-4.80
+// (EN like/as → ვით family, EN so...that → ისე...რომ, EN the-same-as /
+// just-as → ისევე როგორც, EN exactly/precisely/the-point-is →
+// სწორედ/უბრალოდ ის, რომ).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2660,6 +2685,137 @@ TACTIC: Never split the fused forms (სადაც/როცა are single wor
 never leave English "what/whoever/wherever" untranslated — the -ც
 fused relative is the native carrier.`;
 
+// KA-91 v1.18.0 — Simile suffixes & fine degree system (georgian.se
+// Lect05 adjective gradation + dictionary.ge simile corpus). Georgian
+// does NOT say "as white as snow" with the full ისევე...როგორც frame in
+// literary prose — the native carrier is the ADVERBIAL-CASE simile:
+// noun + -ივით/-ვით/-სავით + adjective (თოვლივით თეთრი white-as-snow,
+// ტილოსავით თეთრი sheet-white). Fine degrees: mo-...-o attenuative
+// (მოთეთრო whitish), უ-...-ეს- elevative high-style (უდიდესი),
+// მეტისმეტად excess, საკმაოდ moderate.
+const KA_SIMILES_DEGREE = `
+GEORGIAN SIMILES & FINE DEGREES (EN↔KA)
+• "as [adj] as [noun]" simile → NOUN + ივით/ვით/სავით + [adj]:
+  თოვლივით თეთრი as white as snow · მარტივია როგორც ორი ორია
+  (matters simple as two and two) · ტილოსავით თეთრი as white as a
+  sheet · ლომივით მამაცი as brave as a lion · ბუზღუნასავით murmuring
+• ივით attaches to vowel-final stems, სავით to consonant-final stems,
+  ვით is the short literary allomorph: თოვლ+ივით, ტილო+სავით
+• Attenuative "a bit [adj] / [adj]-ish": mo-...-o circumfix:
+  მოთეთრო whitish/a-bit-white · მოშავო blackish · მომწარო
+  bitterish · მოწითალო reddish — NEVER ცოტა თეთრი (calque)
+• Elevative high-style superlative უ-...-ეს-: უდიდესი greatest ·
+  უთეთრესი whitest · ულამაზესი most beautiful · უმძიმესი heaviest —
+  bookish/terminology register; everyday superlative stays ყველაზე
+• Excess "too": მეტისმეტად excessively · ზედმეტად overly ·
+  საჭიროზე მეტი more than necessary — მეტისმეტად is stronger than
+  ძალიან and carries complaint/criticism
+• Moderate "rather/quite": საკმაოდ · Literary eminence: ფრიად (ფრიად
+  პატიოსანი most-honored)
+MAPPING: as-snow → თოვლივით · -ish/a-bit → მო-...-ო · very-superlative
+high style → უ-...-ეს- · too → მეტისმეტად/ზედმეტად · rather → საკმაოდ
+TACTIC: English similes sound translated-ese with ისევე...როგორც in
+narration — the -ივით suffix is the native literary carrier. Never
+write ცოტა + adjective for the attenuative; use the mo-...-o form.`;
+
+// KA-92 v1.18.0 — Result clauses & proportional correlatives
+// (polyglotgym.com result-clause grammar + dictionary.ge "so...that"
+// corpus). Georgian encodes result with CORRELATIVE PAIRS: the
+// demonstrative in the main clause (ისე / ისეთი / იმდენი) is matched
+// by რომ in the subordinate clause. Proportional "the more...the
+// more": რაც უფრო ... მით უფრო ...
+const KA_RESULT_CORRELATIVES = `
+GEORGIAN RESULT CLAUSES & PROPORTIONALS (EN↔KA)
+• so + ADV/VERB ... that → ისე ... რომ (manner/degree correlative):
+  ისე იყო დაწერილი, რომ ვერავინ წაიკითხა it was written so (badly)
+  that nobody could read it · ისე მოსიყვარულებლად ლაპარაკობდა, რომ
+  ყველას სურვილი ჰქონდა მოსმენა ესმინა
+• so + ADJ ... that → ისეთი ... რომ (quality correlative):
+  ისეთი გემო ჰქონდა, რომ ვერ აღვწერდი it had a taste (so odd) that I
+  couldn't describe it · ისეთი მზერა მაგდო, რომ აკანკალებდი
+• so MUCH/MANY ... that → იმდენი ... რომ (quantity correlative):
+  იმდენი ფული მაქვს, რომ სახლის ყიდვა შემიძლია I have so much money
+  that I can buy a house · იმდენი წვიმა მოვიდა, რომ გზა გადაირეცხა
+• without-result: ისე, რომ არ / ისე რომ არა + clause = "so that not /
+  thereby not": ისე გამოვედი, რომ არავინ შეამჩნია I left so that no
+  one noticed
+• proportional "the more ... the more ...": რაც უფრო ... მით უფრო ...
+  — რაც უფრო ვკითხულობ, მით უფრო მესმის the more I read, the more I
+  understand · რაც უფრო გვიანდება, მით უარესი the later it gets, the
+  worse it is
+• "(all) the more so because" → მით უფრო, რომ: მით უფრო, რომ გვიან
+  იყო all the more so because it was late
+MAPPING: so-adv...that → ისე...რომ · so-adj...that → ისეთი...რომ ·
+so-much...that → იმდენი...რომ · the-more-the-more → რაც უფრო...მით
+უფრო · the-more-so-because → მით უფრო, რომ
+TACTIC: NEVER render "so X that Y" as bare ძალიან X + რომ Y — the
+correlative demonstrative (ისე/ისეთი/იმდენი) in the main clause is
+OBLIGATORY; რომ alone cannot carry the result meaning.`;
+
+// KA-93 v1.18.0 — The "as" family (dictionary.ge as I/II/III entries).
+// როგორც is the master manner/example marker; fixed adverbial frames:
+// რაც შეეხება as-for, როგორც წესი as-usual, როგორც ცნობილია as-is-
+// known, როგორც ქვემოთაა მითითებული as-follows, ასევე as-well,
+// ისევე როგორც just-as, ისეთივე როგორც the-same-as.
+const KA_AS_FAMILY = `
+GEORGIAN "AS" FAMILY (EN↔KA)
+• როგორც = as / like (manner, example): როგორც ვთქვით as we said ·
+  როგორც დედას ჰგავს like a mother · ჩემი ძმისვილები, როგორც ძმა as
+  brothers · დავწერე როგორც სწავლული I wrote as instructed
+• as for X / as to X → რაც შეეხება X-ს (treats X as the OBJECT):
+  რაც შეეხება შენს კითხვას, ... as for your question · რაც შემეხება
+  as for me — the topic ALWAYS goes in the dative
+• as usual → როგორც წესი · as follows → როგორც ქვემოთაა მითითებული ·
+  as is known → როგორც ცნობილია · as it seems → როგორც ჩანს · as such
+  → როგორც ასეთი · as well → ასევე / ამასთანავე · as yet → ჯერ კიდევ
+• just as / the same as → ისევე როგორც · ისეთივე ... როგორც:
+  ისევე მაღალია, როგორც შენ as tall as you · ისეთივე წიგნი, როგორც
+  შენი the same kind of book as yours · მეც ასევე ვფიქრობ, როგორც
+  შენ I think the same as you do
+• one and the same → ერთი და იგივე · the same thing → იგივე ·
+  same here → მეც ასევე
+• as long as (time) → მანამ, სანამ · as long as (condition) →
+  რამდენადაც / ვინაიდან · as far as (place) → -მდე · as far as
+  (degree) → იმდენად, რამდენადაც · as soon as → როგორც კი
+MAPPING: as-like (manner) → როგორც · as-for → რაც შეეხება + dative ·
+as-usual → როგორც წესი · as-is-known → როგორც ცნობილია · as-well →
+ასევე · just-as → ისევე როგორც · the-same-as → ისეთივე როგორც
+TACTIC: "as" is NOT one Georgian word — pick by function. Fixed
+frames (როგორც წესი / როგორც ცნობილია) must appear VERBATIM, never
+recomposed word-by-word. რაც შეეხება keeps its -ს on the topic.`;
+
+// KA-94 v1.18.0 — Cleft emphasis & focus fronting (dictionary.ge
+// "same II" / "exactly" corpus). Georgian achieves English cleft
+// ("it is X who/that...") with the particle სწორედ immediately before
+// the focused element, plus the არა თუ ... არამედ contrastive-corrective
+// frame and the უბრალოდ ის, რომ "the point is" frame.
+const KA_CLEFT_EMPHASIS = `
+GEORGIAN CLEFT & FOCUS EMPHASIS (EN↔KA)
+• "it is/was X who/that ..." cleft → სწორედ X + rest:
+  სწორედ ის ვინც მოვიდა it is precisely he who came · სწორედ ის
+  რომელიც მაშინ იყო it is the very one who was there then · სწორედ
+  ასე exactly so / precisely like this
+• Contrastive-corrective "not X but Y / not only X but Y" →
+  არა თუ X, არამედ Y: არა თუ ბრალი მდომებს, არამედ გამოცდილებას
+  (not that I blame them, but experience) — არამედ REQUIRES the
+  არა თუ (or არა მხოლოდ) setup before it
+• "not only ... but also" → არა მხოლოდ X, არამედ Y:
+  არა მხოლოდ წავიკითხე, არამედ დავწერე ანალიზი too
+• "the point is / it's just that" → უბრალოდ ის, რომ / უბრალოდ:
+  უბრალოდ ის, რომ დავიღალე the point is I got tired
+• Fronting for emphasis: Georgian moves the focused element BEFORE
+  the verb without any particles — კარგი წიგნია (it's a GOOD book)
+  vs წიგნი კარგია (the book is good); ის კი არა, მაგრამ ... "him
+  certainly not, but ..."
+• სწორედ also = exactly/precisely as a degree adverb: სწორედ იმ
+  დღეს precisely on that day · სწორედ აქ exactly here
+MAPPING: it-is-X-who → სწორედ X · not-only-but → არა მხოლოდ ...
+არამედ ... · not-X-but-Y → არა თუ X, არამედ Y · the-point-is →
+უბრალოდ ის, რომ · exactly → სწორედ
+TACTIC: An isolated არამედ without its არა თუ / არა მხოლოდ setup is
+a defect — always check the corrective frame is complete. სწორედ goes
+IMMEDIATELY before the focused word, never sentence-initial.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -2748,6 +2904,10 @@ function getKaKnowledgeBase() {
         KA_TEMPORAL_CLAUSES,
         KA_PURPOSE_CLAUSES_DEEP,
         KA_FREE_RELATIVES,
+        KA_SIMILES_DEGREE,
+        KA_RESULT_CORRELATIVES,
+        KA_AS_FAMILY,
+        KA_CLEFT_EMPHASIS,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -3511,6 +3671,43 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'free_relative_untranslated', message: 'English free relative (what/whoever/wherever/whatever) present in source but no Georgian fused relative (რაც/ვინც/სადაც/როცა/რასაც) found. "what I saw" → რაც დავინახე.' });
     }
 
+    // ── v1.18.0 additions: similes, result correlatives, as-family, clefts ──
+
+    // 3.91 Simile calque: English "as ADJ as (a/the) NOUN" present but the
+    //      native -ივით/-ვით/-სავით suffix AND the equality carrier
+    //      როგორც are both absent — the simile was dropped or flattened.
+    if (/\bas (?!soon\b|well\b|much\b|far\b|long\b|many\b|little\b|yet\b|usual\b|known\b|follows\b|such\b|to\b|for\b)[a-z]{3,} as\b/i.test(text) &&
+        !/ვით|როგორც/.test(text)) {
+        issues.push({ rule: 'simile_calque', message: 'English simile ("as white as snow" type) present in source but the Georgian simile suffix -ივით/-სავით or the carrier როგორც is missing. Native literary form: თოვლივით თეთრი (white as snow), ტილოსავით თეთრი (white as a sheet).' });
+    }
+
+    // 3.92 Result-correlative missing: English "so X that Y" / "such X that
+    //      Y" present but the obligatory correlative demonstrative
+    //      (ისე / ისეთი / იმდენი) absent in the output. "so that" (pure
+    //      purpose) is excluded — rule 3.89 covers it.
+    if (/\bso\b(?!\s+that\b)[^.!?]{0,40}?\bthat\b|\bsuch\b[^.!?]{0,40}?\bthat\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:ისე|ისეთი|იმდენი)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'result_correlative_missing', message: 'English result clause ("so ... that" / "such ... that") present in source but the Georgian correlative demonstrative (ისე / ისეთი / იმდენი) is missing. The pair is OBLIGATORY: ისე იყო დაწერილი, რომ ვერავინ წაიკითხა; იმდენი ფული მაქვს, რომ ....' });
+    }
+
+    // 3.93 Untranslated "as"-family fixed frames: as for / as usual /
+    //      as follows / as is known present but the verbatim Georgian
+    //      frames (რაც შეეხება / როგორც წესი / როგორც ქვემოთ /
+    //      როგორც ცნობილია) absent.
+    if (/\bas for\b|\bas to\b|\bas usual\b|\bas follows\b|\bas is known\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:შეეხება|შემეხება|როგორც წესი|ქვემოთ|ცნობილია)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'as_family_untranslated', message: 'English fixed "as"-frame (as for / as usual / as follows / as is known) present in source but the Georgian verbatim frame missing: as for → რაც შეეხება (+ dative topic), as usual → როგორც წესი, as is known → როგორც ცნობილია, as follows → როგორც ქვემოთაა მითითებული.' });
+    }
+
+    // 3.94 Cleft/corrective frame missing: English "it is X who/that" cleft,
+    //      "not only ... but" corrective, or "the point is" present but no
+    //      Georgian carrier (სწორედ / არა მხოლოდ ... არამედ / არა თუ /
+    //      უბრალოდ ის, რომ) in the output.
+    if (/\bit (?:is|was) [^.!?]{0,30}\b(?:who|that)\b|\bnot only\b|\bnot just\b|\bthe point is\b/i.test(text) &&
+        !/(?<![\u10A0-\u10FF])(?:სწორედ|არა მხოლოდ|არა თუ|უბრალოდ)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'cleft_untranslated', message: 'English cleft/emphasis construction (it is X who... / not only ... but / the point is) present in source but the Georgian focus carrier missing: cleft → სწორედ + focused element, not-only-but → არა მხოლოდ ..., არამედ ..., the-point-is → უბრალოდ ის, რომ.' });
+    }
+
     return issues;
 }
 
@@ -4013,16 +4210,62 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bwould be\b/gi, 'იქნებოდა');
     out = out.replace(/\bshould be\b/gi, 'უნდა იყოს');
 
+    // ── v1.18.0 additions ──
+
+    // 4.77 Untranslated English "than" (comparative conjunction) → ვიდრე.
+    //      The -ზე postposition variant requires re-syntaxing that only the
+    //      AI pass can do; the conjunction ვიდრე is the safe deterministic
+    //      carrier (ნიკო უფრო მაღალია ვიდრე ნინო).
+    out = out.replace(/\bthan\b/gi, 'ვიდრე');
+
+    // 4.78 The "as" family leftovers (4.74 has already consumed "as soon
+    //      as"; 4.49 has consumed "so as to"). Fixed frames FIRST, then
+    //      the bare manner "as"/"like" → როგორც fallback.
+    out = out.replace(/\bas usual\b/gi, 'როგორც წესი');
+    out = out.replace(/\bas is known\b/gi, 'როგორც ცნობილია');
+    out = out.replace(/\bas follows\b/gi, 'როგორც ქვემოთაა მითითებული');
+    out = out.replace(/\bas such\b/gi, 'როგორც ასეთი');
+    out = out.replace(/\bas yet\b/gi, 'ჯერ კიდევ');
+    out = out.replace(/\bas well as\b/gi, 'ასევე');
+    out = out.replace(/\bas well\b/gi, 'ასევე');
+    out = out.replace(/\bas for\b/gi, 'რაც შეეხება');
+    out = out.replace(/\bas to\b/gi, 'რაც შეეხება');
+    out = out.replace(/\bjust as\b/gi, 'ისევე როგორც');
+    out = out.replace(/\bone and the same\b/gi, 'ერთი და იგივე');
+    out = out.replace(/\bthe same as\b/gi, 'ისეთივე როგორც');
+    out = out.replace(/\bthe same\b/gi, 'იგივე');
+    out = out.replace(/\bas\b/gi, 'როგორც');
+    out = out.replace(/\blike\b/gi, 'როგორც');
+
+    // 4.79 Result/equality remnants: bare "such" → ასეთი. The full "such
+    //      ... that" → ისეთი ... რომ and "so ... that" → ისე ... რომ
+    //      re-syntaxing stays with the AI pass.
+    out = out.replace(/\bsuch\b/gi, 'ასეთი');
+
+    // 4.80 Cleft & corrective carriers: "but also/but rather" completes
+    //      the არამედ frame BEFORE "not only" so the pair lands together;
+    //      exactly/precisely → სწორედ; "the point is" → უბრალოდ ის, რომ.
+    //      NOTE: 4.46 consumes bare "also" → ასევე, so the corrective
+    //      residue "but ასევე" must also be consumed here.
+    out = out.replace(/\bbut also\b/gi, 'არამედ');
+    out = out.replace(/\bbut\s+ასევე/gi, 'არამედ');
+    out = out.replace(/\bbut rather\b/gi, 'არამედ');
+    out = out.replace(/\bnot only\b/gi, 'არა მხოლოდ');
+    out = out.replace(/\bnot just\b/gi, 'არა მხოლოდ');
+    out = out.replace(/\bthe point is\b/gi, 'უბრალოდ ის, რომ');
+    out = out.replace(/\bexactly\b/gi, 'სწორედ');
+    out = out.replace(/\bprecisely\b/gi, 'სწორედ');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.17.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.18.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 91,
-    qaRules: 91,
-    autoFixes: 76,
-    researchSources: 235
+    promptBlocks: 95,
+    qaRules: 95,
+    autoFixes: 80,
+    researchSources: 245
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
