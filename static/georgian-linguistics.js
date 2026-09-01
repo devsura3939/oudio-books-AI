@@ -60,6 +60,17 @@
 // QA rules 3.43-3.46 (digit_in_dialogue, decimal_point_ka, english_ordinal,
 // missing_rom), auto-fixes 4.34-4.36 (EN ordinal → KA ordinal, decimal point →
 // comma, small digit + quantity noun → spelled-out).
+// v1.9.0 expansion (participles/modality/comparison/possession/conditionals,
+// 12 new web sources incl. georgian.se + kartuliena.eu): KA_PARTICIPLES
+// (4 participle forms from any verb, adverbial of purpose, nominalized -ებელი),
+// KA_MODALITY (უნდა+optative necessity, მინდა desire, შემიძლია ability, იქნებ),
+// KA_COMPARISON (analytic უფრო/ყველაზე, სა-...-ეს- synthetic, irregular pairs),
+// KA_POSSESSION (inverted აქვს/ჰყავს frames, possessive adjective declension,
+// genitive rules), KA_CONDITIONAL (conditional screeve = preverb+imperfect,
+// რომ/თუ + subjunctive conditions, "would" mapping), KA_ADVERBS_LITERARY
+// (-ად formation, high-frequency literary adverbs, narrative time markers).
+// QA rules 3.47-3.50 (have_calque, akvs_animate, comparison_calque,
+// would_calque).
 // Consumed by static/app.js pipeline: prompt blocks for LLM stages,
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -881,6 +892,176 @@ MIXED TEXT:
 • 3,14 not 3.14 (decimal comma). Thousands separator is a space: 10 000.
 • Don't mix spelled-out and digits for the same quantity in one sentence.`;
 
+const KA_PARTICIPLES = `
+PARTICIPLES (VERBAL ADJECTIVES) — 4 CORE FORMS FROM ANY VERB (v1.9.0, georgian.se):
+The participle is a verbal ADJECTIVE (the masdar is the verbal noun). It declines
+like an adjective and is the natural rendering of English attributive clauses.
+
+THE FOUR FORMS (example root ხატ- paint, preverb და-):
+• Subject participle: დამ-ხატ-ვ-ელ-ი (the one who has painted / will paint /
+  can paint). Affixes: preverb + მ-...-ელ-ი (transitive); also მ-...-არ-ი /
+  მ-...-ალ-ი (მწერალი writer, მხატვარი painter, მასწავლებელი teacher).
+  English "the man who wrote X" → "X დამწერი კაცი" — prefer this over a full
+  relative clause for compact narration.
+• Object participle, past: preverb + root + -ულ-ი (დახატული = painted/drawn).
+  English perfect-participle attributives ("the broken glass") → გატეხილი ჭიქა.
+  Also predicative: ჭიქა გატეხილია (the glass is broken) — participle + ა copula.
+• Object participle, future: preverb + სა-...-ი (დასახატი = to be painted).
+  English "to be V-ed", "yet to be V-ed" → სა- participle.
+• Negative participle: preverb + უ- + root + thematic + -ი (დაუხატავი =
+  unpainted, never painted). English "un-V-ed", "never V-ed" → this form.
+
+ADVERBIAL OF PURPOSE:
+• სა- participle + adverbial case: დასახმარებლად (in order to help),
+  მოსამზადებლად (in order to prepare). English infinitive of purpose after a
+  motion verb → სა-...-ლად / სა-...-ად on the dative noun: მოვედი თქვენს
+  დასახმარებლად. NEVER render purpose as a separate რათა clause when the
+  compact სა- participle fits narration register.
+
+NOMINALIZED PARTICIPLES (productive word-building):
+• -ებელი agent/instrument nouns: მატარებელი (train), მაცივარი (fridge),
+  მასწავლებელი (teacher). Use the native noun, not a descriptive phrase.`;
+
+const KA_MODALITY = `
+MODALITY — NECESSITY, POSSIBILITY, PERMISSION, DESIRE (v1.9.0, zmnebi/kartuliena):
+Georgian has no auxiliary modals; modal meaning uses PARTICLE + OPTATIVE or
+dative-experiencer verbs.
+
+NECESSITY / OBLIGATION — უნდა + OPTATIVE (Series II aorist-subjunctive form):
+• უნდა დავწერო წერილი = I must/have to write a letter.
+• Third person: მას უნდა დაწეროს (ergative subject in optative).
+• უნდა is invariable — it never conjugates. NEVER write *უნდება or *უნდავს.
+• English "must / have to / should / needs to" → უნდა + optative, NOT a finite
+  future. "He should write" → მან უნდა დაწეროს წერილი.
+• უნდა also means "wants" with a dative experiencer: მასპინძელს უნდა (the host
+  wants). Disambiguate by context; keep the optative after it either way.
+
+DESIRE — მინდა (I want):
+• მინდა + masdar: მინდა დაწერა (I want to write) — colloquial, common.
+• მინდა, რომ + optative: მინდა რომ დავწერო — formal/emphatic. Both are correct;
+  narration prefers მინდა + masdar.
+• Negation: არ მინდა. English "I don't want to V" → არ მინდა + masdar.
+
+ABILITY / PERMISSION — შემიძლია (dative experiencer, invariable stem):
+• შემიძლია დავწერო / შემიძლია დაწერა = I can write (optative or masdar follow).
+• Future: შემეძლება; past: შემეძლო. Person marked by prefix: შეგიძლია, შეუძლია,
+  შეგვიძლია, შეგიძლიათ, შეუძლიათ.
+• English "can / be able to" → შე-...-ძლია form, NEVER a literal "able" adjective.
+
+HYPOTHETICAL / UNCERTAIN — იქნებ (perhaps), უნდა + conditional readings:
+• იქნებ + future/aorist = maybe: იქნებ მოვიდეს (maybe he will come).
+• English "might / may" in narration → იქნებ or the conditional screeve.
+
+RULE: never calque English "will be able to", "is supposed to", "has got to"
+word by word — rebuild with შეეძლება, უნდა + optative, უნდა + optative.`;
+
+const KA_COMPARISON = `
+DEGREES OF COMPARISON (v1.9.0, georgian.se / lingualabs):
+Georgian has NO morphological comparative; comparison is ANALYTIC.
+
+• Positive (neutral): დიდი (big).
+• Comparative: უფრო + adjective: უფრო დიდი (bigger), უფრო მაღალი (taller),
+  უფრო ლამაზი (more beautiful). "than" = ვიდრე: ნიკო უფრო მაღალია ვიდრე ნინო.
+• "less": ნაკლებად + adjective: ნაკლებად ლამაზი.
+• Superlative: ყველაზე + adjective: ყველაზე დიდი (biggest), ყველაზე ლამაზი.
+• Synthetic superlative with სა-...-ეს- circumfix exists for some adjectives:
+  უდიდესი (biggest), საუკეთესო (best), უმძიმესი (heaviest) — prefer these
+  established forms in literary register over ყველაზე for the common ones.
+• Irregular comparative/superlative pairs to memorize:
+  კარგი → უკეთესი → საუკეთესო (good/better/best);
+  ცუდი → უარესი → ყველაზე ცუდი (bad/worse/worst).
+• Equality: როგორც ... ისევე (as ... as); ისევე როგორც (just as).
+• "the more ... the more ...": რაც უფრო ... მით უფრო ...
+• NEVER calque "-er/-est" endings or "more/most" as separate invented words.
+• After ვიდრე the compared noun takes the same case as the standard of
+  comparison; keep both nominative in equative narration.`;
+
+const KA_POSSESSION = `
+POSSESSION & THE "HAVE" VERBS (v1.9.0, talkingingeorgian / lingoseven):
+Georgian "have" is an INVERTED construction: the possessor is DATIVE, the
+possessed thing is the grammatical subject.
+
+INANIMATE POSSESSION — ქონა (აქვს paradigm):
+• მაქვს (I have), გაქვს, აქვს, გვაქვს, გაქვთ, აქვთ.
+• Frame: [dative possessor] + [nominative thing] + აქვს:
+  მას აქვს წიგნი (he has a book). წიგნი is the subject.
+• Past: ჰქონდა (he had): მას ჰქონდა წიგნი. Future: ექნება.
+• Evidential: ჰქონია (reportedly had).
+
+ANIMATE POSSESSION (people, animals) — ჰყავს:
+• მყავს (I have), გყავს, ჰყავს, გვყავს, გყავთ, ჰყავთ.
+• მას ჰყავს ძაღლი (he has a dog). Past: ჰყავდა. Future: ეყოლება.
+• NEVER use აქვს for a person or animal; NEVER use ჰყავს for objects.
+
+POSSESSIVE ADJECTIVES (decline like consonant-stem adjectives):
+• ჩემი, შენი, მისი, ჩვენი, თქვენი, მათი (my...their).
+• Dative/adverbial take -ს: ჩემს, შენს, ჩვენს, თქვენს; 3rd person: მის, მათ.
+• Ergative: ჩემმა, შენმა, მისმა, მათმა.
+• 3rd person reflexive possessive = თავისი (his own) vs მისი (his [another's]).
+
+GENITIVE:
+• Consonant stems: -ის (კაცის); vowel stems: -ს (ნინოს, საქართველოს).
+• Postpositions თვის (for), გარეშე (without), მიერ (by, passive agent),
+  შემდეგ (after), შორის (between) take the GENITIVE: ჩემთვის, მის გარეშე.
+
+RULE: English "X's Y" or "Y of X" → genitive X + Y. English "has" → inverted
+აქვს/ჰყავს frame; do NOT translate "have" as a transitive action verb.`;
+
+const KA_CONDITIONAL = `
+CONDITIONAL SENTENCES & "WOULD" (v1.9.0, kartuliena / wikibooks):
+English "would" maps to a screeve, never to a modal word.
+
+FORMATION:
+• Conditional mood = PREVERB + IMPERFECT indicative (დავწერდი = I would write /
+  I used to write — context disambiguates).
+• Condition clause (hypothetical) = რომ or თუ + future subjunctive (-დ-ე endings):
+  მე რომ დავწერდე ... (if I wrote ...). Present-stem variant: შენ რომ წერდე ...
+  (if you were writing now).
+
+PATTERN (type II conditional, like English "If I went, I would eat"):
+• მე რომ წავიდოდე სახლში, მერე ვჭამდი ვაშლს.
+• Condition: subjunctive (-დე); result: conditional (imperfect + preverb).
+• თუ + future/aorist serves REAL conditions: თუ მოვა, დამირეკე (if he comes,
+  call me) — realis, NOT subjunctive.
+
+OTHER USES OF უნდა + SUBJUNCTIVE:
+• Past subjunctive (-ოდე): მინდა რომ წასულიყო (I wish he would go).
+• იქნებ + aorist optative: იქნებ მოვიდეს (perhaps he will come).
+
+RULES:
+• English "would + verb" in narration → conditional screeve (preverb + -დი/-და),
+  NOT უნდა + verb and NOT the future.
+• English "If I were ... I would ..." → რომ/თუ + subjunctive, conditional result.
+• Keep the imperfect + preverb "used to" reading when narration is habitual:
+  დავწერდი წერილს ყოველ კვირას (I would write a letter every week).`;
+
+const KA_ADVERBS_LITERARY = `
+ADVERBS & LITERARY TRANSITIONS (v1.9.0, kartuliena / prose corpus):
+
+FORMATION:
+• Adverbial case -ად/-დ turns adjectives into adverbs: სწრაფი → სწრაფად
+  (quickly), მშვიდობიანად (peacefully). "as a / into a" role: მასწავლებლად
+  მუშაობს (works as a teacher).
+• Postposition მდე (up to/until) takes the adverbial minus final -დ: სახლამდე.
+
+HIGH-FREQUENCY LITERARY ADVERBS & CONNECTORS (prefer over calques):
+• ძალიან (very)  • ხშირად (often)  • იშვიათად (rarely)  • ადრე (early)
+• გვიან (late)  • უეცრად (suddenly)  • ნელ-ნელა (slowly)  • მალე (soon)
+• ჯერ (first/still)  • მერე (then/after)  • ამის შემდეგ (after this)
+• ამავე დროს (at the same time)  • საბოლოოდ (finally)  • მაინც (still/anyway)
+• მაგრამ / თუმცა (but / although)  • ამიტომ / ამის გამო (therefore)
+• მაშინ (then, at that time)  • აქ / იქ / სადღაც (here / there / somewhere)
+• სადმე, როდესმე, ვინმე (somewhere, sometime, someone) — indefinite series
+  built on -მე; use these instead of literal "some-" compounds.
+
+NARRATIVE PAST TIME MARKERS:
+• დილით (in the morning), საღამოს (in the evening), ღამით (at night),
+  ერთ დღეს (one day), ერთხელ (once), იმ დროს (at that time),
+  დიდი ხნის წინ (long ago), ცოტა ხნის წინ (recently).
+
+RULE: In narration prefer the single native adverb (უეცრად) over an English
+calque phrase ("all of a sudden" → უეცრად, NOT *ყველა მოულოდნელობისა).`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -915,6 +1096,12 @@ function getKaKnowledgeBase() {
         KA_SUBORDINATION,
         KA_ONOMATOPOEIA,
         KA_NUMBERS_TTS,
+        KA_PARTICIPLES,
+        KA_MODALITY,
+        KA_COMPARISON,
+        KA_POSSESSION,
+        KA_CONDITIONAL,
+        KA_ADVERBS_LITERARY,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -1288,6 +1475,39 @@ function validateGeorgianTranslation(text) {
         }
     }
 
+    // ── v1.9.0 additions: participles, modality, comparison, possession, conditionals ──
+
+    // 3.47 English "have" calque: transitive ჰქონის/ფლობს or მიიღებს used for possession.
+    //     Georgian "have" is inverted: dative possessor + აქვს (inanimate) / ჰყავს (animate).
+    const haveCalqueRe = /(?<![\u10A0-\u10FF])(ჰქონის|ფლობს|ფლობდა|ფლობენ)(?![\u10A0-\u10FF])/g;
+    let m18;
+    while ((m18 = haveCalqueRe.exec(text)) !== null) {
+        issues.push({ rule: 'have_calque', message: `"${m18[1]}" — English "have" calque. Possession is inverted: [dative possessor] + აქვს (objects) / ჰყავს (people & animals), e.g. მას აქვს წიგნი, მას ჰყავს ძაღლი.` });
+    }
+
+    // 3.48 აქვს used for an animate possessee (or ჰყავს for an object).
+    const ananimate = /(?<![\u10A0-\u10FF])(აქვს|აქვთ|ჰქონდა|ექნებათ?)(\s+(?:ერთი|ორი|სამი|სამი|დედა|მამა|შვილი|ძმა|და|ბიჭი|გოგო|კაცი|ქალი|ძაღლი|კატა|ცხენი|მეგობარი|ბავშვი|მასწავლებელი))/g;
+    let m19;
+    while ((m19 = ananimate.exec(text)) !== null) {
+        issues.push({ rule: 'akvs_animate', message: `"${m19[1]}${m19[2]}" — აქვს is for objects only; people/animals take ჰყავს (მყავს/გყავს/ჰყავს...). Verify the possessee is animate.` });
+    }
+
+    // 3.49 English "-er/-est" or "more/most" calque in comparison: Georgian is analytic
+    //     (უფრო + adj, ყველაზე + adj) or synthetic სა-...-ეს- for established forms.
+    const moreCalqueRe = /(?<![\u10A0-\u10FF])(მეტი სწრაფი|მეტი დიდი|მეტი კარგი|ყველა დიდი|ყველა კარგი)(?![\u10A0-\u10FF])/g;
+    let m20;
+    while ((m20 = moreCalqueRe.exec(text)) !== null) {
+        issues.push({ rule: 'comparison_calque', message: `"${m20[1]}" — comparison calque. Use უფრო + adjective (comparative), ყველაზე + adjective (superlative), or the სა-...-ეს- form (უდიდესი, საუკეთესო). "than" = ვიდრე.` });
+    }
+
+    // 3.50 "would" rendered as უნდა + future or a modal word instead of the conditional
+    //     screeve (preverb + imperfect): დავწერდი = I would write.
+    const wouldCalqueRe = /(?<![\u10A0-\u10FF])უნდა\s+(დაწერს|წავა|მივა|გააკეთებს|იცინებს|იმღერებს)(?![\u10A0-\u10FF])/g;
+    let m21;
+    while ((m21 = wouldCalqueRe.exec(text)) !== null) {
+        issues.push({ rule: 'would_calque', message: `"უნდა ${m21[1]}" — English "would" calque. The conditional is a screeve (preverb + imperfect): დაწერდი, წავიდოდი. უნდა + optative means "must", not "would".` });
+    }
+
     return issues;
 }
 
@@ -1461,16 +1681,36 @@ function correctGeorgianMorphology(text) {
         (m, num, noun) => `${KA_SMALL_NUMS[num]} ${noun}`
     );
 
+    // ── v1.9.0 additions: modality, comparison, possession ──
+
+    // 4.37 Conjugated უნდა hallucination (უნდა is invariable) and
+    //     "უნდა + finite future" would-calque → უნდა + optative reading stays,
+    //     but a conjugated form is always wrong.
+    out = out.replace(/(?<![\u10A0-\u10FF])უნდება(?![\u10A0-\u10FF])/g, 'უნდა');
+    out = out.replace(/(?<![\u10A0-\u10FF])უნდავს(?![\u10A0-\u10FF])/g, 'უნდა');
+
+    // 4.38 "have"-calque verbs → inverted აქვس frame is context-dependent, so only
+    //     fix the deterministic false-friend verb: ფლობს "he has X" is calque-ish but
+    //     ფლობს can be legitimate ("owns/controls"). Fix only ჰქონის (nonexistent form).
+    out = out.replace(/(?<![\u10A0-\u10FF])ჰქონის(?![\u10A0-\u10FF])/g, 'აქვს');
+
+    // 4.39 Comparison calque "მეტი + adjective" → უფრო + adjective (deterministic
+    //     for the frequent set; "მეტი" as a standalone pronoun "more" is untouched).
+    out = out.replace(
+        /(?<![\u10A0-\u10FF])მეტი\s+(სწრაფი|დიდი|კარგი|მაღალი|ლამაზი|ძლიერი|მძიმე|ახალი|ძველი|ცხელი|ცივი|სწორი)(?![\u10A0-\u10FF])/g,
+        'უფრო $1'
+    );
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.8.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.9.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 36,
-    qaRules: 46,
-    autoFixes: 36,
-    researchSources: 71
+    promptBlocks: 42,
+    qaRules: 50,
+    autoFixes: 39,
+    researchSources: 91
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
