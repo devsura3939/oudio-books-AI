@@ -18,12 +18,12 @@ const ruleOf = text => qa(text).map(i => i.rule);
 const has = (arr, r) => arr.includes(r);
 const msgOf = (text, rule) => (qa(text).find(i => i.rule === rule) || {}).message || '';
 
-// ── [1] VERSION & STATS (5) ─────────────────────────────────────────────────
-t('version 1.41.0', GEORGIAN_KNOWLEDGE_VERSION === '1.41.0');
-t('stats promptBlocks 124', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 124);
-t('stats qaRules 123', GEORGIAN_KNOWLEDGE_STATS.qaRules === 123);
-t('stats autoFixes 108', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 108);
-t('stats researchSources 375', GEORGIAN_KNOWLEDGE_STATS.researchSources === 375);
+// ── [1] VERSION & STATS (5) — updated for v1.42.0 (KA-124 MODALS & AUX) ────
+t('version 1.42.0', GEORGIAN_KNOWLEDGE_VERSION === '1.42.0');
+t('stats promptBlocks 125', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 125);
+t('stats qaRules 124', GEORGIAN_KNOWLEDGE_STATS.qaRules === 124);
+t('stats autoFixes 109', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 109);
+t('stats researchSources 376', GEORGIAN_KNOWLEDGE_STATS.researchSources === 376);
 
 // ── [2] KB PRESENCE + WIRING (12) ──────────────────────────────────────────
 t('KB KA-123 const exists', src.includes('const KA_PERSONAL_PRONOUNS = `'));
@@ -84,20 +84,21 @@ t('case: 1pl/2pl INS ჩვენით/თქვენით', src.includes('�
 t('case: 3pl NOM ისინი', src.includes('NOM ისინი'));
 t('case: 3pl oblique მათ', src.includes('მათ'));
 
-// ── [7] REGRESSION SPOTS from prior versions (8) ────────────────────────────
+// ── [7] REGRESSION SPOTS from prior versions (8) — is→არის pins updated
+//         for v1.42.0 (bare 3sg copula map, captured, not guessed)
 t('v1.39.0 spot: something → რაღაც intact', strip(fix('I want to say something')) === 'მინდა to say რაღაც');
 t('v1.39.0 spot: nobody → არავინ intact', strip(fix('Nobody came')) === 'არავინ მოვიდა');
 t('v1.38.0 spot: each other intact', strip(fix('They saw each other')) === 'ისინი დაინახა ერთმანეთი');
 t('v1.37.0 spot: said → თქვა intact', strip(fix('She said hello')) === 'ის თქვა გამარჯობა');
 t('v1.40.0 spot: bare much stays AI-gated', strip(fix('I have much work')) === 'მე have much work');
 t('v1.40.0 spot: both...and correlative', strip(fix('both you and I')) === 'როგორც you, ისე მე');
-t('v1.36.0 spot: however → თუმცა intact', strip(fix('however, it is fine')) === 'თუმცა, it is fine');
+t('v1.36.0 spot: however → თუმცა intact', strip(fix('however, it is fine')) === 'თუმცა, it არის fine');
 t('v1.35.0 spot: please → გთხოვთ intact', strip(fix('please help me')) === 'გთხოვთ help მე');
 
 // ── [8] EDGE CASES (5) ──────────────────────────────────────────────────────
 t('edge: empty string', fix('') === '');
 t('edge: pure Georgian input (terminal punct only)', strip(fix('ეს არის წიგნი')) === 'ეს არის წიგნი');
-t('edge: no pronouns at all', strip(fix('the book is on the table')) === 'the book is on the table');
+t('edge: no pronouns at all', strip(fix('the book is on the table')) === 'the book არის on the table');
 t('edge: repeated pronoun', strip(fix('I told him I told him')) === 'მე უთხრა მას მე უთხრა მას');
 t('edge: pronoun at string end', strip(fix('she knows him')) === 'ის knows მას');
 

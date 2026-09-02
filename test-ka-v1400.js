@@ -17,12 +17,12 @@ const ruleOf = text => qa(text).map(i => i.rule);
 const has = (arr, r) => arr.includes(r);
 const msgOf = (text, rule) => (qa(text).find(i => i.rule === rule) || {}).message || '';
 
-// ── [1] VERSION & STATS (5) ─────────────────────────────────────────────────
-t('version 1.41.0', GEORGIAN_KNOWLEDGE_VERSION === '1.41.0');
-t('stats promptBlocks 124', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 124);
-t('stats qaRules 123', GEORGIAN_KNOWLEDGE_STATS.qaRules === 123);
-t('stats autoFixes 108', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 108);
-t('stats researchSources 375', GEORGIAN_KNOWLEDGE_STATS.researchSources === 375);
+// ── [1] VERSION & STATS (5) — updated for v1.42.0 (KA-124 MODALS & AUX) ────
+t('version 1.42.0', GEORGIAN_KNOWLEDGE_VERSION === '1.42.0');
+t('stats promptBlocks 125', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 125);
+t('stats qaRules 124', GEORGIAN_KNOWLEDGE_STATS.qaRules === 124);
+t('stats autoFixes 109', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 109);
+t('stats researchSources 376', GEORGIAN_KNOWLEDGE_STATS.researchSources === 376);
 
 // ── [2] KB PRESENCE + WIRING (12) ──────────────────────────────────────────
 t('KB KA-122 const exists', src.includes('const KA_QUANTIFIERS = `'));

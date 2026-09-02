@@ -4142,6 +4142,83 @@ they→ისინი (animate; generic-they → ის per KA_PRONOUN_ECONOMY)
 you→შენ|თქვენ (QA-gated, T–V register) · 1st/2nd-INS → ჩემით/
 შენით/ჩვენით/თქვენით · 3rd-case → ის/მან/მას/მის/მით (suppletive)`;
 
+// KA-124 v1.42.0 — Modals & auxiliaries: bare EN modal/copula tokens →
+//                  Georgian impersonal-modal carriers + the copula
+//                  paradigm. Wires the KA_MODALITY doctrine (KB-only
+//                  since v1.9.0) into deterministic swaps. Attested:
+//                  talkpal.ai (შეუძლია impersonal — "it is possible for
+//                  [someone]"), sjani.ge (unda tsavikitkho — უნდა +
+//                  optative obligation), cram.com (should → უნდა/
+//                  მმართებს), Peace Corps Georgian guide +
+//                  georgianlanguagesite (copula paradigm მე ვარ, შენ
+//                  ხარ, ის არის, ჩვენ ვართ, თქვენ ხართ, ისინი არიან;
+//                  negated არ ვარ/არ ხარ/არ არის), latinum.substack L56
+//                  (არ before consonants, არა before vowels),
+//                  nthuleen.com (4 verb classes; future screeve via
+//                  preverb — დავწერ), kaikki.org (შეძლო paradigm).
+const KA_MODALS_AUX = `
+KA-124 MODALS & AUXILIARIES — Georgian has NO auxiliary verbs and NO
+inflecting modals; modal meaning is carried by PARTICLE + OPTATIVE
+(უნდა), impersonal dative-experiencer verbs (შე-ძლია family,
+შეიძლება), or screeve choice. English do-support, perfect have, and
+the copula have NO Georgian counterpart — tense/mood lives on the
+verb itself.
+• ABILITY — შე-...-ძლია family: an IMPERSONAL dative-experiencer
+  verb ("it is possible for [someone]"); the person lives in the
+  pre-radical prefix, NOT in a subject pronoun: შემიძლია (I can),
+  შეგიძლია (you sg can), შეუძლია (he/she can), შეგვიძლია (we can),
+  შეგიძლიათ (you pl/formal can), შეუძლიათ (they can). Past: შემეძლო,
+  შეგეძლო, შეეძლო, შეგვეძლო, შეგეძლოთ, შეეძლოთ. Future: შემეძლება.
+  A masdar or optative follows: შემიძლია დავწერო / დაწერა. The
+  subject+modal pair is consumed TOGETHER (I can → შემიძლია) — never
+  map bare "can" alone. "you can/could" is T–V gated (შეგიძლია vs
+  შეგიძლიათ) and stays for QA + AI.
+• OBLIGATION — უნდა is INVARIABLE: it never conjugates (NEVER
+  *უნდება, *უნდავს) and takes the OPTATIVE: უნდა დავწერო (I must
+  write). must / should / have to / has to / had to / have got to
+  → უნდა. Negation: არ უნდა (must not / shouldn't).
+• PERMISSION / POSSIBILITY — შეიძლება (impersonal): may / might →
+  შეიძლება (შეიძლება მოვიდეს — I may come). იქნებ + future is the
+  literary "perhaps" variant (KA_MODALITY).
+• FUTURE COPULA — will be → იქნება paradigm: ვიქნები, იქნება,
+  ვიქნებით, იქნებიან (you: იქნები/იქნებით T–V gated). NEGATED
+  frames (won't be / will not be) are consumed in 4.93 BEFORE its
+  bare won't → არ map (longest-first) — the bare map alone would
+  strand the copula as "მე არ be". Positive frames live in 4.109;
+  bare subjectless "will be" is LEFT (person unknown → no safe
+  form; QA 3.123 + AI-pass decide). Bare "will +
+  VERB" is the future screeve built by PREVERB + present stem
+  (დავწერ I will write) — verb-specific, AI-pass territory.
+• COPULA — present: მე ვარ, შენ ხარ, ის არის, ჩვენ ვართ, თქვენ
+  ხართ, ისინი არიან. The copula is REQUIRED in 1st/2nd person
+  present; 3rd person allows zero copula or the -ა clitic (ეს
+  წიგნია) — see 3.33 is-calque. Past: ვიყავი, იყავი, იყო, ვიყავით,
+  იყავით, იყვნენ. Negation precedes: არ ვარ, არ ხარ, არ არის, არ
+  ვართ, არ არიან; არ ვიყავი, არ იყო, არ იყვნენ (არ before
+  consonants, არა before vowels). "it is" NEVER maps mechanically —
+  dummy/weather subjects drop (წვიმს, ცივა) and clefts rebuild
+  (3.94).
+• DO-SUPPORT / PERFECT HAVE — Georgian has no auxiliary: do/does/
+  did (emphatic or interrogative) DROP; negation is არ/ვერ (4.93).
+  have/has/had + participle is the PERFECT screeve on the verb
+  itself (დაწერილია, ნახავს) — not a word swap; AI-pass rebuilds.
+• WOULD — conditional screeve (ვნახავდი) or იქნებ readings;
+  verb-specific, AI-pass. would be → იქნებოდა is already
+  deterministic (4.91).
+• ORDER: fix 4.109 consumes SUBJECT+MODAL and SUBJECT+COPULA
+  frames atomically (I can → შემიძლია, I am → მე ვარ) and
+  therefore runs IMMEDIATELY BEFORE 4.108's bare pronoun swaps —
+  otherwise the pronoun is stripped first and the subject-adjacent
+  person agreement is lost.
+MAPPING: I can→შემიძლია · he/she can→შეუძლია · we can→შეგვიძლია ·
+they can→შეუძლიათ · past could→შემეძლო series · must/should/
+have to→უნდა (+optative follows) · must not/shouldn't→არ უნდა ·
+may/might→შეიძლება · will be→იქნება paradigm · I am→მე ვარ ·
+we are→ჩვენ ვართ · he/she is→ის არის · they are→ისინი არიან ·
+I was→მე ვიყავი · he/she/it was→ის იყო · we were→ჩვენ ვიყავით ·
+they were→ისინი იყვნენ · negated frames→არ + same paradigm ·
+you-forms and bare will/would/have→QA-gated, AI-pass`;
+
 // KA-111 v1.29.0 — Spatial deictics + existential copula: bare EN place
 //                  adverbs and dummy-subject "there is/are" frames. Wires
 //                  KA-101's documented-but-never-coded EXISTENCE frames
@@ -4532,6 +4609,7 @@ function getKaKnowledgeBase() {
         KA_QUANTIFIERS,
         KA_POSSESSIVE_DET,
         KA_PERSONAL_PRONOUNS,
+        KA_MODALS_AUX,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
         KA_IRREGULAR_PAST,
@@ -5850,6 +5928,31 @@ function validateGeorgianTranslation(text) {
     const pronCarrier = /(?<![\u10A0-\u10FF])(?:მე|შენ|ჩვენ|თქვენ|ის|მას|მათ|ისინი)(?![\u10A0-\u10FF])/.test(text);
     if ((pronCore || pronYou || pronIt) && !pronCarrier) {
         issues.push({ rule: 'personal_pronoun_untranslated', message: 'Personal pronoun untranslated: I/me→მე · we/us→ჩვენ · he/she→ის (NO gender in Georgian) · him→მას · them→მათ · they→ისინი (animate; generic-they→ის) · you→შენ (informal) or თქვენ (formal/plural — AI decides) · it→ის only as anaphora; as weather/dummy subject it DROPS (წვიმს, ცივა). PRO-DROP: the verb already carries the person — prefer dropping the pronoun entirely (დავინახე, not მე დავინახა). 3rd person declines by case: NOM ის → ERG მან → DAT მას → GEN მის. A mapped carrier (მე/შენ/ჩვენ/თქვენ/ის/მას/მათ) present = already rendered.' });
+    }
+
+    // 3.123 Untranslated modals & copula (v1.42.0, KA-124). Bare EN
+    //      modal or copula tokens surviving into the draft. Georgian
+    //      has NO auxiliaries: ability → შე-ძლია impersonal family
+    //      (subject+modal consumed TOGETHER, person lives in the
+    //      prefix); obligation → უნდა + optative (INVARIABLE — never
+    //      *უნდება); permission → შეიძლება; copula → ვარ/ხარ/არის/
+    //      ვართ/ხართ/არიან (past ვიყავი...იყვნენ); do-support drops;
+    //      perfect have rebuilds as the perfect screeve (AI-pass).
+    //      you-copula frames are T–V gated (ხარ vs ხართ) and
+    //      you-modals likewise (შეგიძლია vs შეგიძლიათ). Bare will/
+    //      would/have before a LEXICAL verb (future/conditional/
+    //      perfect screeves) is the AI pass's rebuild — flagged but
+    //      never mechanically mapped. A mapped carrier (შეძლია-
+    //      stems, უნდა, შეიძლება, ვარ/ხარ/არის/ვართ/არიან, იყო/
+    //      იყვნენ/იქნებ, აპირებ) present = already rendered.
+    const mdCore = /\b(?:can|could|must|should|may|might)\b/i.test(text);
+    const mdObl = /\b(?:have|has|had)\s+to\b/i.test(text);
+    const mdBe = /\b(?:will\s+be|am|is|are|was|were)\b/i.test(text)
+        && !/\bthere\s+(?:is|are|was|were)\b/i.test(text);
+    const mdAux = /\b(?:will|would|do|does|did)\b/i.test(text);
+    const mdCarrier = /(?<![\u10A0-\u10FF])(?:შემიძლია|შეგიძლია|შეუძლია|შემეძლო|შეეძლო|შეგვეძლო|უნდა|შეიძლება|ვარ|ხარ|არის|ვართ|ხართ|არიან|ვიყავ|იყავ|იყო|იყვნენ|ვიქნებ|იქნებ|აპირებ|მინდა)(?![\u10A0-\u10FF])/.test(text);
+    if ((mdCore || mdObl || mdBe || mdAux) && !mdCarrier) {
+        issues.push({ rule: 'modal_aux_untranslated', message: 'Modal/auxiliary untranslated: Georgian has NO auxiliaries — tense/mood lives on the verb. I can→შემიძლია · he/she can→შეუძლია · we can→შეგვიძლია · they can→შეუძლიათ (impersonal dative-experiencer: person in the prefix, NEVER bare can + verb) · could→შემეძლო series · must/should/have to→უნდა + OPTATIVE (უნდა დავწერო; უნდა is invariable — never *უნდება) · must not/shouldn\'t→არ უნდა · may/might→შეიძლება · will be→იქნება/ვიქნები/იქნებიან · I am→მე ვარ · we are→ჩვენ ვართ · he/she is→ის არის · they are→ისინი არიან · I was→მე ვიყავი · was→იყო · were→იყვნენ (negation precedes: არ ვარ, არ იყო; არ before consonants, არა before vowels) · do/does/did DROP (Georgian has no do-support) · will+VERB/would/have+V-ed → future/conditional/perfect screeve built on the verb itself (დავწერ, ვნახავდი, დაწერილია) — AI-pass rebuilds. you-forms are T–V gated (ხარ vs ხართ; შეგიძლია vs შეგიძლიათ). A mapped carrier (შე...ძლია / უნდა / შეიძლება / ვარ / არის / იყო / იქნებ / აპირებ) present = already rendered.' });
     }
 
     return issues;
@@ -7224,8 +7327,19 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bdo\s+not\b/gi, 'არ');
     out = out.replace(/\bdoes\s+not\b/gi, 'არ');
     out = out.replace(/\bdid\s+not\b/gi, 'არ');
-    //      future negation → არ + future screeve residue
+    //      future negation → არ + future screeve residue.
+    //      NEGATED FUTURE COPULA frames run BEFORE bare won't (longest-
+    //      first — same ordering class as can't-family → ვეর running
+    //      before the general არ family): 4.109's won't-be frames were
+    //      DEAD CODE because this bare map consumed won't first, leaving
+    //      "I won't be here" → "მე არ be აქ" (untranslated be).
+    out = out.replace(/\bI\s+won'?t\s+be\b/gi, 'მე არ ვიქნები');
+    out = out.replace(/\bwe\s+won'?t\s+be\b/gi, 'ჩვენ არ ვიქნებით');
+    out = out.replace(/\b(?:he|she|it)\s+won'?t\s+be\b/gi, 'ის არ იქნება');
+    out = out.replace(/\bthey\s+won'?t\s+be\b/gi, 'ისინი არ იქნებიან');
+    out = out.replace(/\bwon'?t\s+be\b/gi, 'არ იქნება');
     out = out.replace(/\bwon'?t\b/gi, 'არ');
+    out = out.replace(/\bwill\s+not\s+be\b/gi, 'არ იქნება');
     out = out.replace(/\bwill\s+not\b/gi, 'არ');
     //      copula negation: isn't/aren't + Adj → არ არის (talkpal.ai:
     //      ეს არ არის წიგნი). Not mapped when followed by a participle —
@@ -7574,6 +7688,205 @@ function correctGeorgianMorphology(text) {
         }
     );
 
+    // 4.109 (v1.42.0, KA-124) Modals & auxiliaries → Georgian carriers.
+    //      Runs IMMEDIATELY BEFORE 4.108: subject+modal and
+    //      subject+copula frames are consumed ATOMICALLY (I can →
+    //      შემიძლია, I am → მე ვარ) — if the bare-pronoun pass ran
+    //      first, the pronoun would be stripped and the person
+    //      agreement inside the შე-ძლია prefix / copula form lost.
+    //      DOCTRINE (KA_MODALITY + KA-124): Georgian has no
+    //      auxiliary verbs and no inflecting modals.
+    //      ABILITY = impersonal dative-experiencer შე-ძლია family
+    //      (talkpal.ai: "it is possible for [someone]"; the person
+    //      lives in the pre-radical prefix — შემიძლია/შეუძლია/
+    //      შეგვიძლია; past შემეძლო-series; kaikki.org შეძლო paradigm).
+    //      OBLIGATION = უნდა + optative (sjani.ge: unda tsavikitkho);
+    //      უნდა is INVARIABLE — NEVER *უნდება / *უნდავს.
+    //      PERMISSION = შეიძლება (impersonal; იქნებ is the literary
+    //      "perhaps" variant). FUTURE COPULA — the NEGATED frames
+    //      (won't be / will not be) live in 4.93 BEFORE its bare
+    //      won't → არ map (longest-first; bare map stranded the
+    //      copula as "მე არ be"); POSITIVE will be frames live HERE.
+    //      COPULA = მე ვარ, შენ ხარ, ის არის, ჩვენ ვართ, თქვენ ხართ,
+    //      ისინი არიან (Peace Corps guide); past ვიყავი, იყავი, იყო,
+    //      ვიყავით, იყავით, იყვნენ; negation PRECEDES the copula:
+    //      არ ვარ, არ არის, არ ვიყავი, არ იყო (latinum L56: არ before
+    //      consonants, არა before vowels).
+    //      you-forms are deliberately NOT mapped (T–V register,
+    //      KA-52/3.58): you are → ხარ vs ხართ, you can → შეგიძლია vs
+    //      შეგიძლიათ — QA 3.123 + AI-pass decide.
+    //      do/does/did (do-support) — see section 5: bare auxiliaries
+    //      are LEFT for QA 3.123 + AI-pass (a mechanical drop cannot
+    //      tell auxiliary from main verb). Question inversion
+    //      (are we, is he, was she) maps via the same paradigm.
+    //      BARE can/could/must/should/may/will/would/have with no
+    //      mapped subject are LEFT (subject unknown or non-pronominal
+    //      — person agreement would be a guess) and handed to
+    //      QA 3.123 + AI. Bare do/does/did are likewise LEFT —
+    //      dropping them corrupts main-verb do ("do homework",
+    //      "what does it mean") and erases the interrogative signal
+    //      of inversion ("do you know?") — QA 3.123 flags the bare
+    //      aux and the AI-pass drops it on screeve rebuild.
+    //      ORDER GUARD: must NOT touch "there is/are/was/were"
+    //      (4.96 existentials own არის/არიან/იყო there) — lookbehind
+    //      on "there " keeps those frames intact.
+    //      1. ABILITY — subject + can/could → შე-ძლია family
+    out = out.replace(/\bI\s+can'?t?\b/gi, (m) => (/n't/i.test(m) ? 'ვერ შემიძლია' : 'შემიძლია'));
+    out = out.replace(/\bwe\s+can'?t?\b/gi, (m) => (/n't/i.test(m) ? 'ვერ შეგვიძლია' : 'შეგვიძლია'));
+    out = out.replace(/\b(?:he|she)\s+can'?t?\b/gi, (m) => (/n't/i.test(m) ? 'ვერ შეუძლია' : 'შეუძლია'));
+    out = out.replace(/\bthey\s+can'?t?\b/gi, (m) => (/n't/i.test(m) ? 'ვერ შეუძლიათ' : 'შეუძლიათ'));
+    out = out.replace(/\bI\s+could\b/gi, 'შემეძლო');
+    out = out.replace(/\bwe\s+could\b/gi, 'შეგვეძლო');
+    out = out.replace(/\b(?:he|she)\s+could\b/gi, 'შეეძლო');
+    out = out.replace(/\bthey\s+could\b/gi, 'შეეძლოთ');
+    //      1b. PERSON RESTORE after 4.93 — 4.93 (can't/cannot/
+    //      couldn't → ვერ) runs BEFORE this rule, so "I can't swim"
+    //      arrives here as "I ვერ swim" with the pronoun intact but
+    //      unregistered. The pronoun is kept and the pair normalized
+    //      to person+ Georgian (მე ვერ, ის ვერ) — Georgian negated
+    //      ability renders as ვერ + verb screeve (the ვერ already
+    //      sits before the verb residue), never as a bare
+    //      subjectless ვერ (KA-124: dative-experiencer frame).
+    out = out.replace(/\bI\s+ვერ\b/gi, 'მე ვერ');
+    out = out.replace(/\bwe\s+ვერ\b/gi, 'ჩვენ ვერ');
+    out = out.replace(/\b(?:he|she)\s+ვერ\b/gi, 'ის ვერ');
+    out = out.replace(/\bthey\s+ვერ\b/gi, 'ისინი ვერ');
+    //      2. OBLIGATION — must/should/have-to → უნდა (invariable).
+    //      Negated frames first (mustn't/shouldn't): არ უნდა. The
+    //      subject pronoun STAYS — the optative rebuild needs the
+    //      person cue (მე არ უნდა წავიდე); pro-drop 3.19 trims it
+    //      later if redundant.
+    out = out.replace(/\bI\s+(?:mustn'?t|shouldn'?t)\b/gi, 'მე არ უნდა');
+    out = out.replace(/\bwe\s+(?:mustn'?t|shouldn'?t)\b/gi, 'ჩვენ არ უნდა');
+    out = out.replace(/\b(?:he|she|it)\s+(?:mustn'?t|shouldn'?t)\b/gi, 'ის არ უნდა');
+    out = out.replace(/\bthey\s+(?:mustn'?t|shouldn'?t)\b/gi, 'ისინი არ უნდა');
+    out = out.replace(/\bI\s+(?:must|should)\b/gi, 'მე უნდა');
+    out = out.replace(/\bwe\s+(?:must|should)\b/gi, 'ჩვენ უნდა');
+    out = out.replace(/\b(?:he|she|it)\s+(?:must|should)\b/gi, 'ის უნდა');
+    out = out.replace(/\bthey\s+(?:must|should)\b/gi, 'ისინი უნდა');
+    out = out.replace(/\bI\s+have\s+to\b/gi, 'მე უნდა');
+    out = out.replace(/\bwe\s+have\s+to\b/gi, 'ჩვენ უნდა');
+    out = out.replace(/\b(?:he|she|it)\s+has\s+to\b/gi, 'ის უნდა');
+    out = out.replace(/\bthey\s+have\s+to\b/gi, 'ისინი უნდა');
+    out = out.replace(/\bI\s+had\s+to\b/gi, 'მე უნდა');
+    out = out.replace(/\bwe\s+had\s+to\b/gi, 'ჩვენ უნდა');
+    out = out.replace(/\b(?:he|she|it)\s+had\s+to\b/gi, 'ის უნდა');
+    out = out.replace(/\bthey\s+had\s+to\b/gi, 'ისინი უნდა');
+    //      bare (subjectless/modal-frame) obligation residue — after
+    //      the pronoun frames consumed theirs: must/should/have to/
+    //      has to/had to/have got to → უნდა; shouldn't/mustn't →
+    //      არ უნდა. Question inversion (must I, should we) also lands
+    //      here after its subject is already gone? No — inversion
+    //      keeps subject AFTER the modal: handled by the pronoun
+    //      swaps in 4.108 leaving უნდა + მე. The bare map below only
+    //      fires when NO mapped carrier precedes.
+    out = out.replace(/\bmustn'?t\b/gi, 'არ უნდა');
+    out = out.replace(/\bshouldn'?t\b/gi, 'არ უნდა');
+    out = out.replace(/\bhave\s+got\s+to\b/gi, 'უნდა');
+    out = out.replace(/\b(?:must|have\s+to|has\s+to|had\s+to|should)\b/gi, 'უნდა');
+    //      3. PERMISSION / POSSIBILITY — may/might → შეიძლება.
+    //      "may I/we" consumed FIRST (polite request frame); the
+    //      month guard preserves capital "May" verbatim — მაისი
+    //      polysemy (4.102: May/rowan) — only lowercase may maps.
+    //      might has no homograph and maps unconditionally.
+    out = out.replace(/\bmay\s+(I|we)\b/gi, 'შეიძლება $1');
+    out = out.replace(/\bmay\b/g, (m) => (m[0] === 'M' ? 'May' : 'შეიძლება'));
+    out = out.replace(/\bmight\b/gi, 'შეიძლება');
+    //      4. FUTURE COPULA (positive will be) — the NEGATED frames
+    //      (won't be / will not be) are consumed EARLIER by 4.93, before
+    //      its bare won't → არ map could strand the copula ("მე არ be").
+    //      Positive will be has NO owner (4.91 owns going-to-be only;
+    //      4.81 owns will go/will come) — a closed copula paradigm
+    //      (KA-124: ვიქნები, იქნება, ვიქნებით, იქნებიან), so a
+    //      deterministic person-marked mapping is KB-consistent.
+    //      BARE "will be" (no subject) is deliberately LEFT: without a
+    //      person it cannot pick a form safely ("you will be" would
+    //      wrongly take 3sg იქნება — same T–V/animacy guard as bare
+    //      are/were). QA 3.123 mdBe flags it; AI-pass decides.
+    out = out.replace(/\bI\s+will\s+be\b/gi, 'მე ვიქნები');
+    out = out.replace(/\bwe\s+will\s+be\b/gi, 'ჩვენ ვიქნებით');
+    out = out.replace(/\b(?:he|she|it)\s+will\s+be\b/gi, 'ის იქნება');
+    out = out.replace(/\bthey\s+will\s+be\b/gi, 'ისინი იქნებიან');
+    //      5. DO-SUPPORT — bare do/does/did are NOT dropped here.
+    //      A mechanical drop cannot tell auxiliary from main verb
+    //      ("do homework" is lexical) and erases the interrogative
+    //      marker of inversion ("Do you know?" — without "do" the
+    //      AI-pass would read a declarative). Negated forms are
+    //      already 4.93's (don't/doesn't/didn't → არ); the bare
+    //      auxiliaries are left in the draft, flagged by QA 3.123
+    //      (mdAux: will|would|do|does|did), and dropped by the
+    //      AI-pass during screeve rebuild.
+    //      6. COPULA — present/past, negated first. The pronoun is
+    //      kept in the output (მე ვარ) — Georgian 1st/2nd person
+    //      REQUIRES the copula and the pronoun is common in narration
+    //      (მე ვარ მასწავლებელი); pro-drop trimming is 3.19's job.
+    //      NEGATED frames before positive (isn't/aren't already →
+    //      არ არის in 4.93; here: am not/was not/were not leftovers).
+    out = out.replace(/\bI\s+am\s+not\b/gi, 'მე არ ვარ');
+    out = out.replace(/\bI'?m\s+not\b/gi, 'მე არ ვარ');
+    out = out.replace(/\bwe\s+are\s+not\b/gi, 'ჩვენ არ ვართ');
+    out = out.replace(/\bwe'?re\s+not\b/gi, 'ჩვენ არ ვართ');
+    out = out.replace(/\bthey\s+are\s+not\b/gi, 'ისინი არ არიან');
+    out = out.replace(/\bthey'?re\s+not\b/gi, 'ისინი არ არიან');
+    out = out.replace(/\b(?:he|she)\s+is\s+not\b/gi, 'ის არ არის');
+    //      contracted he's/she's not → ის არ არის (it's is excluded —
+    //      dummy-it/cleft polysemy is AI-gated, 4.108 doctrine).
+    out = out.replace(/\b(?:he|she)'s\s+not\b/gi, 'ის არ არის');
+    //      past-negated frames (4.93 does NOT own wasn't/weren't) —
+    //      person-marked first; არ PRECEDES the copula (latinum L56).
+    out = out.replace(/\bI\s+wasn'?t\b/gi, 'მე არ ვიყავი');
+    out = out.replace(/\bwe\s+weren'?t\b/gi, 'ჩვენ არ ვიყავით');
+    out = out.replace(/\bthey\s+weren'?t\b/gi, 'ისინი არ იყვნენ');
+    out = out.replace(/\b(?:he|she)\s+wasn'?t\b/gi, 'ის არ იყო');
+    out = out.replace(/\bit\s+wasn'?t\b/gi, 'ის არ იყო');
+    out = out.replace(/\bI\s+was\s+not\b/gi, 'მე არ ვიყავი');
+    out = out.replace(/\bwe\s+were\s+not\b/gi, 'ჩვენ არ ვიყავით');
+    out = out.replace(/\bthey\s+were\s+not\b/gi, 'ისინი არ იყვნენ');
+    out = out.replace(/\b(?:he|she|it)\s+was\s+not\b/gi, 'ის არ იყო');
+    //      bare residue: wasn't/was not → არ იყო (person-invariant);
+    //      weren't/were not LEFT — animacy decides (არ იყვნენ animate
+    //      vs არ იყო inanimate: Georgian inanimate PLURAL subjects
+    //      take SINGULAR verb agreement) → AI-pass.
+    out = out.replace(/\bwasn'?t\b/gi, 'არ იყო');
+    out = out.replace(/\bwas\s+not\b/gi, 'არ იყო');
+    //      positive frames — subject+copula atomically:
+    out = out.replace(/\bI\s+am\b/gi, 'მე ვარ');
+    out = out.replace(/\bwe\s+are\b/gi, 'ჩვენ ვართ');
+    out = out.replace(/\bthey\s+are\b/gi, 'ისინი არიან');
+    out = out.replace(/\b(?:he|she)\s+is\b/gi, 'ის არის');
+    out = out.replace(/\bI\s+was\b/gi, 'მე ვიყავი');
+    out = out.replace(/\bwe\s+were\b/gi, 'ჩვენ ვიყავით');
+    out = out.replace(/\bthey\s+were\b/gi, 'ისინი იყვნენ');
+    out = out.replace(/\b(?:he|she|it)\s+was\b/gi, 'ის იყო');
+    //      question inversion + bare copula (subject AFTER or absent):
+    //      am I → ვარ, are we → ვართ, is he → არის, was she → იყო —
+    //      the postposed subject then maps via 4.108's bare swaps
+    //      (are we here → ვართ ჩვენ აქ). there-frames are guarded:
+    //      the lookbehind below only fires when NOT preceded by
+    //      "there ".
+    out = out.replace(/\bam\s+I\b/gi, 'ვარ მე');
+    out = out.replace(/\bare\s+we\b/gi, 'ვართ ჩვენ');
+    out = out.replace(/\bare\s+they\b/gi, 'არიან ისინი');
+    out = out.replace(/\bis\s+(?:he|she)\b/gi, 'არის ის');
+    out = out.replace(/\bwas\s+I\b/gi, 'ვიყავი მე');
+    out = out.replace(/\bwere\s+we\b/gi, 'ვიყავით ჩვენ');
+    out = out.replace(/\bwere\s+they\b/gi, 'იყვნენ ისინი');
+    out = out.replace(/\bwas\s+(?:he|she|it)\b/gi, 'იყო ის');
+    //      bare copula residue LAST (after every framed form).
+    //      Only the person-UNAMBIGUOUS forms map: am → ვარ
+    //      (exclusively 1sg), is → არის (exclusively 3sg), was →
+    //      იყო (safe default — past copula; inanimate-plural
+    //      subjects also take the singular იყო). bare are/were are
+    //      LEFT untranslated: are spans 2sg (T–V gated, ხარ vs
+    //      ხართ) / 1pl / 3pl-animate; were spans 2pl (T–V) /
+    //      animate-plural / inanimate-plural-singular-agreement /
+    //      subjunctive (if I were) — person or animacy would be a
+    //      guess → QA 3.123 (mdBe) flags them and the AI-pass
+    //      decides.
+    out = out.replace(/\bam\b/gi, 'ვარ');
+    out = out.replace(/\bis\b/gi, 'არის');
+    out = out.replace(/\bwas\b/gi, 'იყო');
+
     // 4.108 (v1.41.0, KA-123) Personal pronouns → Georgian cased
     //      carriers. ABSOLUTE FUNCTION TAIL — runs after EVERY rule
     //      that consumes a pronoun-containing phrase: 4.90 reported-
@@ -7632,12 +7945,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.41.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.42.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 124,
-    qaRules: 123,
-    autoFixes: 108,
-    researchSources: 375
+    promptBlocks: 125,
+    qaRules: 124,
+    autoFixes: 109,
+    researchSources: 376
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
