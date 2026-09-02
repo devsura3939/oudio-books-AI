@@ -3782,6 +3782,97 @@ mapped (conjunction vs negation-frame polysemy — AI pass decides) ·
 contracted didn't/hasn't...yet frames reach the AI pass for ჯერ არ
 rendering (do-support 4.93 runs after this block)`;
 
+// KA-120 v1.38.0 — Reciprocals & otherness: each other / one another /
+//                     other / another / else. Carrier ერთმანეთი with
+//                     case-by-verb-government doctrine; სხვა family
+//                     with possessive-sense სხვისი.
+const KA_RECIPROCALS_OTHERNESS = `
+KA-120 RECIPROCALS & OTHERNESS — EACH OTHER / ONE ANOTHER / OTHER /
+ANOTHER / ELSE (v1.38.0; en.wiktionary ერთმანეთი-entry "each other",
+pronunciation [e̞ɾtʰmäne̞tʰi], hyphenation ერ‧თმა‧ნე‧თი, Synonym
+ერთიმეორე (ertimeore), attested "ძალიან უყვარდათ ერთმანეთი"; LOT
+dissertation Amiridze 2006 §3.6 "The Georgian Reciprocals" + §5.5
+"ertmanet- as a Subject Argument" — ertmanet- is THE reciprocal stem;
+usage attestations: trend.ge "ისინი ერთმანეთისთვის იყვნენ შექმნილნი"
+(made for each other), fortuna.ge "ერთმანეთის უძლურების ტვირთვა"
+(GEN), rustavi2.ge "ვხედავთ ერთმანეთის" (GEN), TSU dissertation
+"ერთმანეთს პირველად 1971 წელს შეხვდნენ" (DAT); dictionary.ge
+touch-entry "to keep in touch ერთმანეთთან კავშირი" (COM);
+en.wiktionary სხვა-entry "other", pronunciation [sχʷä], plural
+სხვები, from Old Georgian სხუაჲ, Proto-Kartvelian *s₁xwa-, cognate
+Mingrelian შხვა; en.wiktionary სხვისი-entry "other's / someone
+else's", pronunciation [sχʷisi], Antonym ჩემი, adjectival declension
+NOM/GEN/INS სხვისი · ERG სხვისმა · DAT/ADV სხვის, ref Čikobava
+Explanatory Dictionary; dictionary.ge someone-entry "it must have
+been someone else ალბათ ვინმე სხვა იყო"; dictionary.ge another
+II-entry "1) სხვა; კიდევ ერთი" + "take this cup away and bring me
+another ეს ფინჯანი წაიღეთ და სხვა მომიტანეთ"; en.wiktionary
+სხვა მხრივ-entry "otherwise, in other respects"; Swadesh list #21
+other=სხვა; ganmarteba.ge სხვისი; gapscan-v1380 each other / one
+another / other / another / else pure Latin residue in all 35 suites):
+
+• EACH OTHER / ONE ANOTHER — ერთმანეთი (reciprocal pronoun, stem
+  ertmanet-, synonym ერთიმეორე). CASE IS VERB-GOVERNED, NOT FREE:
+  NOM ერთმანეთი (ძალიან უყვარდათ ერთმანეთი) · DAT ერთმანეთს
+  (ერთმანეთს შეხვდნენ "met each other" — შეხვდნენ takes dative) ·
+  GEN ერთმანეთის is possessive/relative (ერთმანეთის სიყვარული
+  "love of each other") · COM ერთმანეთთან (კავშირი ერთმანეთთან
+  "contact with each other") · postposition frames ერთმანეთისთვის
+  (for each other), ერთმანეთზე (on each other), ერთმანეთში (in
+  each other). MECHANICAL POLICY: the deterministic pass renders
+  ONLY the base form ერთმანეთი; every other case is the AI pass's
+  verb-government decision (KB KA_CASE_SYSTEM). QA 3.119 flags any
+  leftover bare "each other / one another" for that decision.
+• OTHER / OTHERS — სხვა (plural სხვები; "the others" → სხვები /
+  დანარჩენები). Polysemous across adjective ("other people" →
+  სხვა ადამიანები), pronoun ("some ... others" → ზოგი ... სხვები),
+  and determiner uses — the mechanical pass consumes ONLY the
+  pinned frames below; any other "other" is QA-flagged.
+• ANOTHER — TWO SENSES (dictionary.ge another II "1) სხვა;
+  კიდევ ერთი"): (i) DIFFERENT-ONE → სხვა ("bring me another [cup]
+  → სხვა მომიტანეთ"); (ii) ONE-MORE → კიდევ ერთი ("another day"
+  in the additional sense → კიდევ ერთი დღე) — same polysemy family
+  as KA-119's bare "one more" guard; the mechanical pass consumes
+  ONLY "one another" (reciprocal) and pinned frames; bare "another"
+  is QA-flagged, AI decides სხვა vs კიდევ ერთი.
+• SOMEONE ELSE / ANYBODY ELSE — ვინმე სხვა (dictionary.ge
+  someone-entry "it must have been someone else ალბათ ვინმე სხვა
+  იყო"); NOTHING ELSE → სხვა არაფერი (negative frame, consistent
+  with KB KA_NEGATION); ANYTHING ELSE → სხვა რამე (question frame);
+  WHAT ELSE / WHO ELSE → ვინ/რა სხვა frames (AI renders; flagged).
+  SOMEONE ELSE'S → სხვისი (adjectival possessive pronoun, dedicated
+  lexeme — NOT *სხვის ერთი; declension სხვისი/სხვისმა/სხვის,
+  Čikobava).
+• ELSE (bare, after wh-words) — who else / what else / where else /
+  when else → the wh-word stays, სხვა added: AI-decided placement
+  (ვინ სხვა, რა სხვა, სად კიდევ); bare "else" NEVER maps alone —
+  postmodifier polysemy ("or else" → თორემ/ან სხვაგვარად, covered
+  by the otherwise-family 4.61) — QA flags leftovers.
+
+NON-INTERFERENCE (4.105 sits between 4.104's repetition block and
+4.102's calendar block; shared-token audit against the whole
+fix-stream):
+- "each other/one another" share NO tokens with any earlier rule —
+  "other" appears only inside "another" (4.105 consumes one another
+  FIRST — longest-first within the block).
+- "someone else" is consumed whole; "somebody else / anyone else /
+  anybody else" normalize to the same frame before any bare-token
+  pass could split them.
+- "nothing else" runs BEFORE 4.93's negation-family tail could
+  reorder negatives (4.105 is far above the tail).
+- "each" alone NEVER maps (each=თითოეული quantifier, KB wordbank);
+  "other" alone NEVER maps (adjective/pronoun polysemy); bare
+  "another" NEVER maps (two senses — AI decides).
+- ერთიმეორე is the synonym carrier — accepted by QA as silencing.
+MAPPING: each other / one another → ერთმანეთი (base NOM; case by
+verb government — AI decides outside safe frames) · the others →
+სხვები · other → სხვა (frame-guarded) · another → სხვა
+(different-one) / კიდევ ერთი (one-more) — AI decides bare ·
+someone/somebody/anyone/anybody else → ვინმე სხვა ·
+nothing else → სხვა არაფერი · anything else → სხვა რამე ·
+someone else's → სხვისი · bare else NEVER mechanically mapped
+(AI pass decides; or-else belongs to the otherwise family)`;
+
 // KA-110 v1.28.0 — Possessive determiners: unambiguous EN possessives →
 //                  Georgian carriers (extends KA_POSSESSION's declension
 //                  table with the deterministic EN-side mapping).
@@ -4197,6 +4288,7 @@ function getKaKnowledgeBase() {
         KA_CALENDAR_TIME,
         KA_NARRATIVE_TIME,
         KA_REPETITION_ADV,
+        KA_RECIPROCALS_OTHERNESS,
         KA_POSSESSIVE_DET,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
@@ -5387,6 +5479,33 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'repetition_cont_untranslated', message: 'Repetition/continuation adverb untranslated: again→ისევ · again and again→ისევ და ისევ · once again / over again / one more time→კიდევ ერთხელ · time and again / time after time→არაერთხელ · already→უკვე · anymore / no longer→აღარ · not yet→ჯერ არ · never again→აღარასოდეს (აღარასოდეს is stronger than არასოდეს — implies past occurrence) · still→ჯერ კიდევ ONLY in the continuation sense ("I am still here"→მე ჯერ კიდევ აქ ვარ) — "still water" is მდგრადი/უძრავი (adj), "still taller" is კიდევ უფრო (degree): AI decides · bare yet: negation frame renders ჯერ არ ("hasn\'t come yet"→ჯერ არ მოსულა), conjunction yet = მაგრამ/მაინც: AI decides · ხელახლა is redo-only, never plain again. Carrier არასოდეს present = never-family already rendered.' });
     }
 
+    // 3.119 Untranslated reciprocals & otherness (v1.38.0, KA-120).
+    //      Trigger arms:
+    //      (a) each other / one another (reciprocal pronoun — carrier
+    //      ერთმანეთი; case is verb-governed: ერთმანეთს/ერთმანეთის/
+    //      ერთმანეთთან/ერთმანეთისთვის);
+    //      (b) other / others (adjective/pronoun polysemy — frame-
+    //      guarded mechanically, rest flagged);
+    //      (c) another (two senses: სხვა different-one vs კიდევ ერთი
+    //      one-more — AI decides bare);
+    //      (d) else (someone else / anything else / nothing else /
+    //      who-what-where else; bare else is a postmodifier, "or
+    //      else" belongs to the otherwise-family).
+    //      LOOSE silencing: ANY otherness/reciprocal carrier present —
+    //      ერთმანეთ, სხვ, დანარჩენ (stem-PREFIX match: leading
+    //      Georgian lookbehind only, NO trailing lookahead — the
+    //      carriers inflect, so ერთმანეთი/ერთმანეთს/ერთმანეთთან and
+    //      სხვა/სხვები/სხვისი must all silence; every სხვ-/ერთმანეთ-/
+    //      დანარჩენ-initial word IS an otherness carrier).
+    const recEachOther = /\b(?:each other|one another)\b/i.test(text);
+    const recOther = /\bothers?\b/i.test(text);
+    const recAnother = /\banother\b/i.test(text);
+    const recElse = /\belse\b/i.test(text);
+    const recCarrier = /(?<![\u10A0-\u10FF])(?:ერთმანეთ|სხვ|დანარჩენ)/.test(text);
+    if ((recEachOther || recOther || recAnother || recElse) && !recCarrier) {
+        issues.push({ rule: 'reciprocal_otherness_untranslated', message: 'Reciprocal/otherness pronoun untranslated: each other / one another→ერთმანეთი (case is VERB-GOVERNED: NOM ერთმანეთი "ძალიან უყვარდათ ერთმანეთი" · DAT ერთმანეთს "ერთმანეთს შეხვდნენ" · GEN ერთმანეთის (possessive) · COM ერთმანეთთან "კავშირი ერთმანეთთან" · ერთმანეთისთვის "for each other"; synonym ერთიმეორე) · other→სხვა · the others→სხვები / დანარჩენები · another→სხვა (different-one: "bring me another→სხვა მომიტანეთ") vs კიდევ ერთი (one-more): AI decides · someone/somebody else→ვინმე სხვა ("it must have been someone else ალბათ ვინმე სხვა იყო") · someone else\'s→სხვისი (dedicated possessive lexeme) · nothing else→სხვა არაფერი · anything else→სხვა რამე · who/what else→ვინ/რა სხვა (AI placement) · bare else NEVER maps alone (postmodifier; "or else"→თორემ, otherwise-family). Carrier სხვა stem present = otherness already rendered.' });
+    }
+
     return issues;
 }
 
@@ -5861,6 +5980,33 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\balready\b/gi, 'უკვე');
     out = out.replace(/\banymore\b/gi, 'აღარ');
     out = out.replace(/\bagain\b/gi, 'ისევ');
+
+    // 4.105 (v1.38.0, KA-120) Reciprocals & otherness → Georgian carriers.
+    //      Runs AFTER 4.104 (shares no token with the repetition family)
+    //      and BEFORE 4.102's calendar frames and 4.93's do-support /
+    //      negation tail ("nothing else" must be consumed whole before
+    //      any negative-reordering pass could touch it).
+    //      Longest-first INSIDE the block: "one another" before any
+    //      "other"-token rule; possessive 's frames before the bare
+    //      else-frames (someone else's consumed whole).
+    //      ONLY SAFE FRAMES are deterministic: the reciprocal base NOM
+    //      ერთმანეთი (case by verb government is the AI pass's decision
+    //      — KB KA_CASE_SYSTEM), the else-family, and "the others".
+    //      Bare other / another / each / else are NEVER mechanically
+    //      mapped (polysemy: adjective vs pronoun; სხვა vs კიდევ ერთი;
+    //      quantifier თითოეული; postmodifier "or else") — QA 3.119
+    //      flags and the AI pass decides.
+    out = out.replace(/\bone another\b/gi, 'ერთმანეთი');
+    out = out.replace(/\beach other\b/gi, 'ერთმანეთი');
+    out = out.replace(/\bthe others\b/gi, 'სხვები');
+    out = out.replace(/\bsomeone else's\b/gi, 'სხვისი');
+    out = out.replace(/\bsomebody else's\b/gi, 'სხვისი');
+    out = out.replace(/\bsomeone else\b/gi, 'ვინმე სხვა');
+    out = out.replace(/\bsomebody else\b/gi, 'ვინმე სხვა');
+    out = out.replace(/\banyone else\b/gi, 'ვინმე სხვა');
+    out = out.replace(/\banybody else\b/gi, 'ვინმე სხვა');
+    out = out.replace(/\bnothing else\b/gi, 'სხვა არაფერი');
+    out = out.replace(/\banything else\b/gi, 'სხვა რამე');
 
     // 4.102 (v1.35.0, KA-117) Calendar time frames → Georgian carriers.
     //      MUST run BEFORE 4.70's next→შემდეგ and 4.99's this→ეს (whole
@@ -6938,12 +7084,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.37.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.38.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 120,
-    qaRules: 119,
-    autoFixes: 104,
-    researchSources: 341
+    promptBlocks: 121,
+    qaRules: 120,
+    autoFixes: 105,
+    researchSources: 353
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
