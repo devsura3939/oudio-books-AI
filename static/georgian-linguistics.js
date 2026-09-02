@@ -3693,6 +3693,95 @@ at night→ღამით · all day→მთელი დღე · all night�
 every evening→ყოველ საღამოს · every night→ყოველ ღამე ·
 once a week→კვირაში ერთხელ · twice a week→კვირაში ორჯერ (longest-first)`;
 
+// KA-119 v1.37.0 — Repetition & continuation adverbs: again / still / yet /
+//                  already / anymore. Deterministic carriers ისევ-კვლავ-
+//                  უკვე-ჯერ-აღარ with polysemy guards on still/yet.
+const KA_REPETITION_ADV = `
+KA-119 REPETITION & CONTINUATION ADVERBS — AGAIN / STILL / YET / ALREADY /
+ANYMORE (v1.37.0; dictionary.ge again-entry "კვლავ, ისევ, ხელახლა;
+ერთხელ კიდევ", "again and again კვლავ და კვლავ", "time and again
+არაერთხელ", "over again კიდევ ერთხელ"; dictionary.ge yet-entry
+"ჯერ, ჯერაც არ; ჯერჯერობით არ; ჯერ კიდევ არ" + "he hasn't come yet
+ის ჯერ არ მოსულა"; ganmarteba.ge უკვე-entry "უკვე დაბრუნდა სახლში.
+უკვე გავიგე. უკვე თავისით წერს."; en.wiktionary still-entry Georgian
+cell "კვლავაც, ჯერაც, კიდევ, ჯერ კიდევ, ისევ, ჯერ ისევ";
+lingualabs/ilovelanguages/learn101 "Not yet ჯერ არა", "No longer
+უკვე აღარ"; translated-into.com anymore-entry აღარ; ka.wikipedia
+აღარასოდეს თქვა არასოდეს (Never Say Never Again); talkpal.ai isev
++ kidev articles; KB KA_TIME_EXPR ჯერ note; gapscan-v1370 all five
+adverbs pure Latin residue):
+
+• AGAIN — ისევ (colloquial, primary narrative carrier) / კვლავ
+  (literary; KA-108 style: literary narration → კვლავ not ისევ) /
+  ხელახლა (redo, anew — only for "redo" sense, never plain again).
+  Deterministic: again → ისევ. NOTE: the mechanical pass emits the
+  lexical carrier; position before the verb (ისევ წვიმს "it is
+  raining again") is the AI pass's word-order duty (KB KA_WORD_ORDER).
+• AGAIN & AGAIN — ისევ და ისევ (colloquial) / კვლავ და კვლავ
+  (literary; dictionary.ge "again and again კვლავ და კვლავ");
+  over again / once again / one more time → კიდევ ერთხელ
+  (dictionary.ge; languageknow attested); time and again / time after
+  time → არაერთხელ (dictionary.ge "არაერთხელ, არაერთგზის").
+  Bare "one more" NOT mapped here — polysemous (one more thing →
+  კიდევ ერთი): the AI pass decides.
+• STILL — carrier ჯერ კიდევ (continuation, attested; ჯერაც/ჯერ ისევ
+  variants) · ისევ ისე (the same as ever — idiom, attested dictionary.ge
+  family). POLYSEMY GUARD: still has NO mechanical rule — "still water"
+  (adj მდგრადი/უძრავი), "still" (noun), "still taller" (degree —
+  კიდევ უფრო, KA-80) are NOT the continuation adverb; the pure-adverb
+  sense ("I am still here") is AI-decided with this carrier guidance.
+• YET — POLYSEMY GUARD FIRST: bare yet NEVER maps — "yet" as
+  conjunction ("yet he came" = however → მაგრამ/მაინც, KA-115) and
+  "as yet" (ჯერ კიდევ, mapped whole-phrase far below) stay out.
+  Deterministic negation frame only: not yet → ჯერ არ (dictionary.ge
+  "ჯერ, ჯერაც არ"; lingualabs "Not yet ჯერ არა"; KB attested "ჯერ არ
+  მოსულა") · hasn't come yet → ჯერ არ მოსულა pattern: [X] not ... yet
+  → ჯერ არ ... (the ჯერ continuation marker + pre-verbal არ carried
+  by the verb's negation). CONTRACTED frames (didn't/hasn't ... yet)
+  are NOT mechanically consumed — the do-support reduction lives in
+  4.93 at the function tail, AFTER 4.104, and bare yet is polysemous —
+  so the leftover "yet" is QA-3.118-flagged and the AI pass renders
+  ჯერ არ.
+• ALREADY — უკვე (ganmarteba.ge "უკვე დაბრუნდა სახლში. უკვე გავიგე.
+  უკვე თავისით წერს."; KA-107 უკვე+aorist note). Zero polysemy.
+  Deterministic: already → უკვე (natural carrier order lands it
+  pre-verbally — same word-order note as AGAIN).
+• ANYMORE / NO LONGER — აღარ (translated-into.com; KB KA-84
+  "not anymore / no longer → აღარ (+verb)") · no longer → აღარ ·
+  უკვე აღარ variant attested (lingualabs "No longer უკვე აღარ") but
+  აღარ alone suffices; "not ... anymore" is consumed at the ANYMORE
+  arm (the spelled "not" itself is left for the AI pass to render —
+  no generic not→არ swap exists; "she is not here anymore" → ის
+  აღარ არის აქ).
+• NEVER AGAIN — აღარასოდეს (ka.wikipedia Never-Say-Never-Again title
+  attestation); stronger than არასოდეს, implies past occurrence.
+
+NON-INTERFERENCE (4.104 runs BEFORE the 4.93 do-support negation pass at
+the function tail — so a raw "not yet"/"not ... anymore" frame is
+consumed here whole, before 4.93 could ever reduce the bare "not" (no
+generic not→არ swap exists anyway — only auxiliaries don't/doesn't/
+didn't/do not/does not/did not at 4.93). The disjoint "as yet"→ჯერ
+კიდევ whole-phrase rule lives in the 4.60-family far below 4.104 —
+ordering irrelevant because the patterns share no token ("not yet" ≠
+"as yet"; "as yet" contains no again/already/anymore token)):
+- bare yet/still NEVER mapped (conjunction/degree/adjective senses);
+  only the frames above.
+- "once again" is a whole-phrase (not the bare-once conjunction
+  territory of 4.74) — safe to consume here.
+- 4.74's bare once → როგორც კი is untouched by this rule family.
+- ისევე როგორც (just as, KA-93) is a DIFFERENT word family
+  (ისევე ≠ ისევ) — never touched here.
+MAPPING: again→ისევ · again and again→ისევ და ისევ / კვლავ და კვლავ ·
+once again→კიდევ ერთხელ · over again→კიდევ ერთხელ ·
+one more time→კიდევ ერთხელ (bare "one more" NOT mapped — polysemous) ·
+time and again→არაერთხელ · time after time→არაერთხელ ·
+not yet→ჯერ არ · still→ჯერ კიდევ (AI-decided, continuation sense only) ·
+already→უკვე · anymore→აღარ · no longer→აღარ · not ... anymore→აღარ ·
+never again→აღარასოდეს (longest-first) · bare yet NEVER mechanically
+mapped (conjunction vs negation-frame polysemy — AI pass decides) ·
+contracted didn't/hasn't...yet frames reach the AI pass for ჯერ არ
+rendering (do-support 4.93 runs after this block)`;
+
 // KA-110 v1.28.0 — Possessive determiners: unambiguous EN possessives →
 //                  Georgian carriers (extends KA_POSSESSION's declension
 //                  table with the deterministic EN-side mapping).
@@ -4107,6 +4196,7 @@ function getKaKnowledgeBase() {
         KA_TIME_DEICTIC,
         KA_CALENDAR_TIME,
         KA_NARRATIVE_TIME,
+        KA_REPETITION_ADV,
         KA_POSSESSIVE_DET,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
@@ -5271,6 +5361,32 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'narrative_time_untranslated', message: 'Narrative time untranslated: three years ago→სამი წლის წინ (ago = GENITIVE + წინ postposition; month irregular თვის წინ; discrete genitive — never *სამი წლების წინ) · a long time ago→დიდი ხნის წინ · not long ago→არც ისე დიდი ხნის წინ · a short time ago→ცოტა ხნის წინ · once upon a time→იყო და არა იყო რა (folklore opener, lit. "there was and there was not"; NEVER calque) · from that day on→იმ დღიდან · one day→ერთ დღეს · one morning→ერთ დილას · one evening→ერთ საღამოს · one night→ერთ ღამეს (narrative indefinite dative) · in the morning→დილას · in the afternoon→ნაშუადღევს · in the evening→საღამოს · at noon→შუადღისას · at night→ღამით · all day→მთელი დღე · all night→მთელი ღამე · all year→მთელი წელი · every evening→ყოველ საღამოს · every night→ყოველ ღამე · once a week→კვირაში ერთხელ · twice a week→კვირაში ორჯერ (-ში per-interval + -ჯერ multiplier). NEVER map bare one/all/recently/once — one=pronoun/numeral, all=ყველა, recently is tense-dependent, bare once is the conjunction "as soon as"→როგორც კი.' });
     }
 
+    // 3.118 Untranslated repetition/continuation adverbs (v1.37.0, KA-119).
+    //      Trigger arms:
+    //      (a) again + again-idioms (again and again, once again, over
+    //      again, time and again, time after time, one more time —
+    //      the last is mechanically consumed at 4.61a-bis);
+    //      (b) already; (c) anymore / no longer; (d) not yet / bare yet
+    //      (bare still likewise — both are QA-FLAGGED, AI-decided: still
+    //      is polysemous adj/noun/degree vs continuation adverb; yet is
+    //      polysemous conjunction vs negation frame; KB KA-119 carries the
+    //      guidance); (e) never again. LOOSE silencing: ANY repetition
+    //      carrier present — ისევ, კვლავ, უკვე, ჯერ არ, ჯერ კიდევ,
+    //      კიდევ ერთხელ, არაერთხელ, აღარ, აღარასოდეს (Georgian
+    //      lookarounds on every carrier so longer ისევე forms do not
+    //      false-satisfy). უკვე alone silences the already AND still/yet
+    //      arms (attested overlap: still/yet ≈ ჯერ კიდევ family).
+    const repAgain = /\b(?:again|again and again|once again|over again|time and again|time after time|one more time)\b/i.test(text);
+    const repAlready = /\balready\b/i.test(text);
+    const repAnymore = /\b(?:anymore|no longer|not any longer)\b/i.test(text);
+    const repNotYet = /\b(?:not yet|yet)\b/i.test(text);
+    const repStill = /\bstill\b/i.test(text);
+    const repNeverAgain = /\bnever again\b/i.test(text);
+    const repCarrier = /(?<![\u10A0-\u10FF])(?:ისევ|კვლავ|უკვე|ჯერ არ|ჯერ კიდევ|ჯერაც|კიდევ ერთხელ|არაერთხელ|აღარ|აღარასოდეს|არასოდეს)(?![\u10A0-\u10FF])/.test(text);
+    if ((repAgain || repAlready || repAnymore || repNotYet || repStill || repNeverAgain) && !repCarrier) {
+        issues.push({ rule: 'repetition_cont_untranslated', message: 'Repetition/continuation adverb untranslated: again→ისევ · again and again→ისევ და ისევ · once again / over again / one more time→კიდევ ერთხელ · time and again / time after time→არაერთხელ · already→უკვე · anymore / no longer→აღარ · not yet→ჯერ არ · never again→აღარასოდეს (აღარასოდეს is stronger than არასოდეს — implies past occurrence) · still→ჯერ კიდევ ONLY in the continuation sense ("I am still here"→მე ჯერ კიდევ აქ ვარ) — "still water" is მდგრადი/უძრავი (adj), "still taller" is კიდევ უფრო (degree): AI decides · bare yet: negation frame renders ჯერ არ ("hasn\'t come yet"→ჯერ არ მოსულა), conjunction yet = მაგრამ/მაინც: AI decides · ხელახლა is redo-only, never plain again. Carrier არასოდეს present = never-family already rendered.' });
+    }
+
     return issues;
 }
 
@@ -5625,6 +5741,11 @@ function correctGeorgianMorphology(text) {
     //      the bare comparative "less" → ნაკლებად mapping in 4.61.
     out = out.replace(/\bno less than\b/gi, 'არანაკლებ');
 
+    // 4.61a-bis (v1.37.0) "one more time" must be consumed as a WHOLE
+    //      phrase BEFORE 4.61's bare more→უფრო could eat the "more"
+    //      (longest-first: whole idiom outranks the bare word).
+    out = out.replace(/\bone more time\b/gi, 'კიდევ ერთხელ');
+
     // 4.61 Untranslated English comparison words → Georgian carriers
     //      (deterministic single-word mappings; "than" is ambiguous so map
     //      to the safe conjunction ვიდრე).
@@ -5715,6 +5836,31 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bcompletely\b/gi, 'სრულიად');
     out = out.replace(/\bextremely\b/gi, 'მეტისმეტად');
     out = out.replace(/\breally\b/gi, 'ნამდვილად');
+
+    // 4.104 (v1.37.0, KA-119) Repetition & continuation adverbs → Georgian
+    //      carriers. Runs BEFORE 4.70's then/finally and 4.74's bare once
+    //      (so "once again" is consumed as a whole
+    //      phrase before bare once could touch it) and BEFORE 4.93's
+    //      do-support tail (so "not yet" is consumed whole; the disjoint
+    //      "as yet" rule sits far below and shares no token with these
+    //      frames).
+    //      "never again" is consumed before the generic never
+    //      swap. Bare yet/still are NEVER mechanically
+    //      mapped here (conjunction/degree/adjective polysemy — KB
+    //      guard); QA 3.118 flags them and the AI pass decides.
+    out = out.replace(/\bnever again\b/gi, 'აღარასოდეს');
+    out = out.replace(/\bagain and again\b/gi, 'ისევ და ისევ');
+    out = out.replace(/\btime after time\b/gi, 'არაერთხელ');
+    out = out.replace(/\btime and again\b/gi, 'არაერთხელ');
+    out = out.replace(/\bonce again\b/gi, 'კიდევ ერთხელ');
+    out = out.replace(/\bover again\b/gi, 'კიდევ ერთხელ');
+    //      ("one more time" is consumed EARLIER — 4.61a-bis, before 4.61's
+    //      bare more→უფრო could eat the frame)
+    out = out.replace(/\bno longer\b/gi, 'აღარ');
+    out = out.replace(/\bnot yet\b/gi, 'ჯერ არ');
+    out = out.replace(/\balready\b/gi, 'უკვე');
+    out = out.replace(/\banymore\b/gi, 'აღარ');
+    out = out.replace(/\bagain\b/gi, 'ისევ');
 
     // 4.102 (v1.35.0, KA-117) Calendar time frames → Georgian carriers.
     //      MUST run BEFORE 4.70's next→შემდეგ and 4.99's this→ეს (whole
@@ -6792,12 +6938,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.36.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.37.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 119,
-    qaRules: 118,
-    autoFixes: 103,
-    researchSources: 334
+    promptBlocks: 120,
+    qaRules: 119,
+    autoFixes: 104,
+    researchSources: 341
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
