@@ -3873,6 +3873,113 @@ nothing else → სხვა არაფერი · anything else → სხ�
 someone else's → სხვისი · bare else NEVER mechanically mapped
 (AI pass decides; or-else belongs to the otherwise family)`;
 
+// KA-121 v1.39.0 — Indefinite pronoun series: -thing / -body / -where
+//                     (+ any-series interrogative guard, negative series,
+//                     none-of partitives). Carriers: რაღაც / ვინმე /
+//                     სადმე / ყველაფერი / ყველა / ყველგან / არაფერი /
+//                     არავინ / არსად.
+const KA_INDEFINITE_PRONOUNS = `
+KA-121 INDEFINITE PRONOUN SERIES — SOMETHING/SOMEBODY/SOMEWHERE/
+EVERYTHING/EVERYBODY/EVERYWHERE + ANY-SERIES (GUARDED) + NEGATIVES +
+NONE-OF PARTITIVES (v1.39.0; en.wiktionary ვინმე-entry "someone",
+pronunciation [vinme̞], hyphenation ვინ‧მე, etymology vin "who" +
+-me suffix; en.wiktionary არავინ-entry "nobody, no one",
+pronunciation [äɾävin], etymology არა- "un-" + vin; en.wiktionary
+რაღაც-entry "something", pronunciation [ɾäʁät͡sʰ], hyphenation
+რა‧ღაც, attested usage "რაღაც მოხდა" = something happened,
+Coordinate term ვიღაც, Related რამე; en.wiktionary ვიღაც-entry
+"someone", pronunciation [viʁät͡sʰ], plural ვიღაცები, attested
+"ოპაა ვიღაცამ გააკუა" (ERG ვიღაცამ!); en.wiktionary სადმე-entry
+"somewhere", pronunciation [sädme̞], Alternative syncopated forms
+სამ / სამე, See-also არსად / ვერსად, ref Čikobava Explanatory
+Dictionary; en.wiktionary არაფერი-entry "nothing", pronunciation
+[äɾäpʰe̞ɾi], Antonym ყველაფერი, Coordinate ვერაფერი, FULL
+DECLENSION with syncope in obliques: NOM არაფერი · ERG არაფერმა ·
+DAT არაფერს(ა) · GEN არაფრის(ა) (syncopated!) · INS არაფრით(ა) ·
+ADV არაფრად(ა) · VOC არაფერო; postpositions არაფერზე/არაფერთან/
+არაფერში · არაფრისთვის/არაფრისგან · არაფრიდან; dictionary.ge
+everybody-entry "1) ყოველი, თითოეული (ადამიანი); ყველა; not
+everybody..."; dictionary.ge everything-entry "ყველაფერი; he
+thinks he knows everything ჰგონია..."; dictionary.ge everyplace/
+everywhere "ყველგან; I looked everyplace ყველგან ვნახე";
+dictionary.ge anybody-entry "(კითხვით და პირობით წინადადებებში)
+ვინმე; is there anybody here? აქ არის ვინმე?" — THE DICTIONARY
+ITSELF attests the interrogative/conditional guard for the
+any-series; dictionary.ge none¹-entry "1) არავინ, არც ერთი
+(ორზე მეტი რაოდენობიდან); none of them is/are known to us არც
+ერთ მათგანს არ ვიცნობთ (DAT + არ!); none of the applicants was
+German განმცხადებელთაგან არავინ იყო გერმანელი (-თაგან + არავინ);
+none of them can help me ვერც ერთი მათგანი ვერ დამეხმარება
+(-გან + ვერც); I saw none of the people I wanted ვერავინ ვნახე,
+ვისი ნახვაც მინდოდა; 2) არაფერი, არც ერთი; I want none of these
+things ამ ნივთებიდან არც ერთი არ მჭირდება (-დან partitive);
+none other than სწორედ (ties to KA_CLEFT_EMPHASIS)"; en.wiktionary
+everything → ყველაფერი; ganmarteba.ge ყველაფერი synonyms ყოველივე /
+სუყველაფერი; dlab.ug.edu.ge synonym set ყველა, რაც არის /
+ყოველივე; gapscan-v1390 -thing/-body/-where families pure Latin
+residue in all suites — არავინ/არაფერი/არსად carriers documented
+since KA_NEGATION but never emitted mechanically):
+• CARRIER TRIADS (Georgian builds the series morphologically):
+  - რა- question stem: რაღაც something (specific-unknown) ·
+    რამე anything/any-old-thing · არაფერი nothing · ყველაფერი
+    everything
+  - ვინ- who stem: ვინმე someone (non-specific) · ვიღაც someone
+    (specific-unknown, pl. ვიღაცები) · არავინ nobody · ყველა
+    everybody
+  - სად- where stem: სადმე somewhere · არსად nowhere · ყველგან
+    everywhere
+  The -მე suffix marks the non-specific indefinite (ვინმე, სადმე);
+  -ღაც marks the SPECIFIC-unknown (ვიღაც "a certain someone");
+  -ც on რაღაც. AI pass may prefer ვიღაც when context implies a
+  definite-but-unnamed person; mechanical pass stays neutral with
+  ვინმე (dictionary.ge someone → ვინმე default).
+• NEGATIVE CONCORD (KB KA_NEGATION, QA 3.76): არავინ/არაფერი/
+  არსად REQUIRE არ (or ვერ-) before the verb: არავინ არ მოვიდა
+  nobody came (attested substandard without არ). The mechanical
+  pass emits the carrier; ა-placement stays with the AI pass
+  EXCEPT the deterministic none-of frames below.
+• ANY-SERIES GUARD (dictionary.ge anybody: "კითხვით და პირობით
+  წინადადებებში ვინმე"): anything/anybody/anyone/anywhere map to
+  რამე/ვინმე/სადმე ONLY in questions and conditionals
+  (is there anybody here? → აქ არის ვინმე?). In affirmative
+  free-choice statements ("anyone can do it") the carrier is
+  ნებისმიერი/ნებისმიერი რამ — NEVER mechanically mapped, AI
+  decides. Mechanical guard: question mark in the segment, or
+  do/does/did/can/could/will/would/should + bare-anywhere at
+  clause start (interrogative inversion), or if/unless/when(ever)
+  conditional frames.
+• PARTITIVE none-of FRAMES (dictionary.ge none¹, all attested):
+  none of them/us/you + VERB → არც ერთ მათგანს/ჩვენგანს/
+  თქვენგანს ... არ (DAT partitive, verb-ა concord — attested
+  "არც ერთ მათგანს არ ვიცნობთ"); none of + PLURAL NOUN →
+  -თაგან/-დან/-გან + არავინ (attested "განმცხადებელთაგან არავინ
+  იყო გერმანელი"). Bare none (ellipsis) → არც ერთი — AI decides.
+  none other than → სწორედ (cleft family).
+• SYNCOPE WARNING: არაფერი's obliques syncopate the ე
+  (GEN არაფრის, INS არაფრით, ADV არაფრად) — the mechanical pass
+  emits only base NOM არაფერი; AI pass must syncopate in oblique
+  positions. ვიღაც has ERG ვიღაცამ (epenthetic ა).
+• NON-INTERFERENCE:
+- 4.105 (KA-120) owns the else-family: someone else / nothing
+  else / anything else are consumed BEFORE 4.106's bare rules
+  (4.106 sits after 4.105). სხვ stem silences QA 3.119 first.
+- anything else → სხვა რამე (4.105) must win over bare
+  anything → რამე — longest-first ordering handles it.
+- someone's possessive → ვინმეს (DAT-genitive function, wordbank
+  ვინმეს გასაკვირი attested); nobody's → არავის.
+- everything is fine / nothing happened stay mechanical-neutral
+  beyond carrier emission; predicate არის/მოხდა rendering is the
+  verb family's territory.
+MAPPING: something → რაღაც · somebody/someone → ვინმე ·
+somewhere → სადმე · everything → ყველაფერი ·
+everybody/everyone → ყველა · everywhere → ყველგან ·
+nothing → არაფერი · nobody/no one → არავინ · nowhere → არსად ·
+anything/anybody/anyone/anywhere → რამე/ვინმე/სადმე ONLY in
+questions/conditionals (free-choice → AI) · none of them/us/you →
+არც ერთ მათგანს/ჩვენგანს/თქვენგანს (+verb-ა by AI) ·
+someone's → ვინმეს · nobody's → არავის · bare none → არც ერთი
+(AI) · ვიღაც specific-unknown — AI decides`;
+
 // KA-110 v1.28.0 — Possessive determiners: unambiguous EN possessives →
 //                  Georgian carriers (extends KA_POSSESSION's declension
 //                  table with the deterministic EN-side mapping).
@@ -4289,6 +4396,7 @@ function getKaKnowledgeBase() {
         KA_NARRATIVE_TIME,
         KA_REPETITION_ADV,
         KA_RECIPROCALS_OTHERNESS,
+        KA_INDEFINITE_PRONOUNS,
         KA_POSSESSIVE_DET,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
@@ -5506,6 +5614,32 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'reciprocal_otherness_untranslated', message: 'Reciprocal/otherness pronoun untranslated: each other / one another→ერთმანეთი (case is VERB-GOVERNED: NOM ერთმანეთი "ძალიან უყვარდათ ერთმანეთი" · DAT ერთმანეთს "ერთმანეთს შეხვდნენ" · GEN ერთმანეთის (possessive) · COM ერთმანეთთან "კავშირი ერთმანეთთან" · ერთმანეთისთვის "for each other"; synonym ერთიმეორე) · other→სხვა · the others→სხვები / დანარჩენები · another→სხვა (different-one: "bring me another→სხვა მომიტანეთ") vs კიდევ ერთი (one-more): AI decides · someone/somebody else→ვინმე სხვა ("it must have been someone else ალბათ ვინმე სხვა იყო") · someone else\'s→სხვისი (dedicated possessive lexeme) · nothing else→სხვა არაფერი · anything else→სხვა რამე · who/what else→ვინ/რა სხვა (AI placement) · bare else NEVER maps alone (postmodifier; "or else"→თორემ, otherwise-family). Carrier სხვა stem present = otherness already rendered.' });
     }
 
+    // 3.120 Untranslated indefinite pronouns (v1.39.0, KA-121).
+    //      Trigger arms: the -thing / -body / -where triads, any-series
+    //      (dictionary.ge anybody: "კითხვით და პირობით წინადადებებში
+    //      ვინმე" — questions/conditionals only; free-choice →
+    //      ნებისმიერი, AI decides), none-of partitives (dictionary.ge
+    //      none¹: "არც ერთ მათგანს არ ვიცნობთ").
+    //      LOOSE silencing: ANY indefinite carrier present — stem-prefix
+    //      match (leading lookbehind only, NO trailing lookahead — the
+    //      carriers inflect/syncopate: არაფრის from არაფერი, ვიღაცამ
+    //      from ვიღაც; every რაღაც-/ვინმე-/სადმე-/არაფრ-/არავინ-/
+    //      არსად-/ყველაფრ-/ყველგან-initial word IS a carrier).
+    //      Bare ყველა is deliberately NOT a silencer: it is shared with
+    //      the universal-quantifier family (all) and ყველაზე superlatives,
+    //      so its presence must not mask a genuinely untranslated
+    //      -body/-thing word in the same segment. ყველაფრ- (stem of
+    //      ყველაფერი, which syncopates in obliques) and exact ყველგან
+    //      are unambiguous carriers and DO silence.
+    const indThing = /\b(?:something|nothing|everything|anything)\b/i.test(text);
+    const indBody = /\b(?:somebody|someone|nobody|no one|everybody|everyone|anybody|anyone)\b/i.test(text);
+    const indWhere = /\b(?:somewhere|nowhere|everywhere|anywhere)\b/i.test(text);
+    const indNone = /\bnone\b/i.test(text);
+    const indCarrier = /(?<![\u10A0-\u10FF])(?:რაღაც|რამე|ვინმე|ვიღაც|სადმე|არსად|ვერსად|არაფრ|არავინ|ყველაფრ|ყველგან)/.test(text);
+    if ((indThing || indBody || indWhere || indNone) && !indCarrier) {
+        issues.push({ rule: 'indefinite_pronoun_untranslated', message: 'Indefinite pronoun untranslated: something→რაღაც ("რაღაც მოხდა") · somebody/someone→ვინმე (specific-unknown ვიღაც, pl. ვიღაცები — AI decides) · somewhere→სადმე (syncopated სამ/სამე) · everything→ყველაფერი (syn. ყოველივე) · everybody/everyone→ყველა · everywhere→ყველგან · nothing→არაფერი (NEGATIVE CONCORD: არაფერი არ ვთქვი; obliques syncopate: GEN არაფრის, INS არაფრით, ADV არაფრად) · nobody/no one→არავინ (არავინ არ მოვიდა — the ა is obligatory) · nowhere→არსად (არსად ... არ) · anything/anybody/anyone/anywhere→რამე/ვინმე/სადმე ONLY in questions & conditionals ("is there anybody here? აქ არის ვინმე?") — affirmative free-choice → ნებისმიერი (AI decides) · none of them/us/you→არც ერთ მათგანს/ჩვენგანს/თქვენგანს + verb-ა ("none of them is known to us არც ერთ მათგანს არ ვიცნობთ") · none of + plural noun→-თაგან/-დან + არავინ ("განმცხადებელთაგან არავინ იყო გერმანელი") · someone\'s→ვინმეს · nobody\'s→არავის · bare none→არც ერთი (AI). Carrier stems რაღაც/ვინმე/არაფრ/არავინ present = indefinite already rendered.' });
+    }
+
     return issues;
 }
 
@@ -6007,6 +6141,64 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\banybody else\b/gi, 'ვინმე სხვა');
     out = out.replace(/\bnothing else\b/gi, 'სხვა არაფერი');
     out = out.replace(/\banything else\b/gi, 'სხვა რამე');
+
+    // 4.106 (v1.39.0, KA-121) Indefinite pronoun series → Georgian carriers.
+    //      Runs AFTER 4.105 so the else-frames (someone else / anything
+    //      else / nothing else) are consumed WHOLE before any bare rule
+    //      could fire, and BEFORE 4.93's do-support/negation tail and
+    //      4.77's question family (any-series in questions must already
+    //      be carriers by then).
+    //      DETERMINISTIC ONLY: the some/every/no triads map directly
+    //      (dictionary.ge/wiktionary attested). The any-series maps ONLY
+    //      under the interrogative/conditional guard (dictionary.ge
+    //      anybody: "კითხვით და პირობით წინადადებებში ვინმე") —
+    //      affirmative free-choice any → ნებისმიერი is the AI pass's
+    //      decision and is NEVER mechanically mapped.
+    //      Possessives before bare frames: someone's / nobody's
+    //      consumed whole (\'s swallowed by \b).
+    //      Negative-concord carriers (არავინ/არაფერი/არსად) are emitted
+    //      base-NOM; ა-placement before the verb remains with the AI
+    //      pass except in the attested none-of frames mapped whole.
+    //      Interrogative arm: question mark / inverted opening (direct
+    //      inversion, first 12 chars) / INVERTED ORDER (aux directly
+    //      BEFORE the any-token, ≤12 chars gap — "did anybody", "is
+    //      anything"). A loose proximity window would wrongly arm
+    //      declaratives like "She is better than anyone" (is…anyone =
+    //      13 chars) — comparison frames stay AI-only.
+    const anyGuard = /\?|¡/.test(out)
+        || /\b(?:do|does|did|can|could|will|would|should|is|are|was|were|have|has|had)\b[^\n]{0,12}?\b(?:anybody|anyone|anything|anywhere)\b/i.test(out)
+        || /^\s*(?:do|does|did|can|could|will|would|should|is|are|was|were|have|has|had)\b/i.test(out)
+        || /\b(?:if|unless|whenever)\b[^\n]{0,60}?\b(?:anybody|anyone|anything|anywhere)\b/i.test(out);
+    // possessive frames first (\'s consumed whole)
+    out = out.replace(/\bsomeone's\b/gi, 'ვინმეს');
+    out = out.replace(/\bsomebody's\b/gi, 'ვინმეს');
+    out = out.replace(/\bnobody's\b/gi, 'არავის');
+    // none-of partitives (attested dictionary.ge none¹ frames)
+    out = out.replace(/\bnone of them\b/gi, 'არც ერთი მათგანი');
+    out = out.replace(/\bnone of us\b/gi, 'არც ერთი ჩვენგანი');
+    out = out.replace(/\bnone of you\b/gi, 'არც ერთი თქვენგანი');
+    // any-series under the interrogative/conditional guard
+    if (anyGuard) {
+        out = out.replace(/\banybody\b/gi, 'ვინმე');
+        out = out.replace(/\banyone\b/gi, 'ვინმე');
+        out = out.replace(/\banything\b/gi, 'რამე');
+        out = out.replace(/\banywhere\b/gi, 'სადმე');
+    }
+    // some-series
+    out = out.replace(/\bsomething\b/gi, 'რაღაც');
+    out = out.replace(/\bsomebody\b/gi, 'ვინმე');
+    out = out.replace(/\bsomeone\b/gi, 'ვინმე');
+    out = out.replace(/\bsomewhere\b/gi, 'სადმე');
+    // every-series
+    out = out.replace(/\beverything\b/gi, 'ყველაფერი');
+    out = out.replace(/\beverybody\b/gi, 'ყველა');
+    out = out.replace(/\beveryone\b/gi, 'ყველა');
+    out = out.replace(/\beverywhere\b/gi, 'ყველგან');
+    // no-series (negative-concord carriers; ა by AI pass)
+    out = out.replace(/\bnothing\b/gi, 'არაფერი');
+    out = out.replace(/\bnobody\b/gi, 'არავინ');
+    out = out.replace(/\bno one\b/gi, 'არავინ');
+    out = out.replace(/\bnowhere\b/gi, 'არსად');
 
     // 4.102 (v1.35.0, KA-117) Calendar time frames → Georgian carriers.
     //      MUST run BEFORE 4.70's next→შემდეგ and 4.99's this→ეს (whole
@@ -7084,12 +7276,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.38.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.39.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 121,
-    qaRules: 120,
-    autoFixes: 105,
-    researchSources: 353
+    promptBlocks: 122,
+    qaRules: 121,
+    autoFixes: 106,
+    researchSources: 363
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
