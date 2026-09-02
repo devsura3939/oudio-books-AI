@@ -3615,6 +3615,59 @@ where to→საით · when→როდის (questions only) · why→რ�
 what for→რისთვის · how→როგორ · how many/much→რამდენი ·
 how old→რამდენი წლის · which→რომელი`;
 
+// KA-113 v1.31.0 — Irregular past (aorist) dictionary. The high-frequency
+//                  English irregular verbs whose Georgian aorists are
+//                  SUPPLETIVE or stem-changing — a naive -eb/aorist or
+//                  present-stem calque produces hard MT defects. Forms
+//                  verified: Latinum lesson 26 (თქვა aorist paradigm ვთქვი/
+//                  თქვი/თქვა/ვთქვით; უთხრა used when there's an indirect
+//                  object — "telling someone"), dictionary.ge find II
+//                  (ვიპოვე "I have found"), lingua.ge გრძნობა (იგრძნო
+//                  aorist), and the engine's own KB attestations (თქვა/
+//                  უთხრა/მითხრა split; დაინახა saw; იფიქრა/იცოდა mental;
+//                  მოესმა heard; იგრძნო felt; მომცა gave-me; მოიტანა
+//                  brought-hither; აიღო took; წაიღო took-away).
+const KA_IRREGULAR_PAST = `
+IRREGULAR PAST (AORIST) DICTIONARY — high-frequency English irregular
+verbs whose Georgian aorists are suppletive or stem-changing. The aorist
+(Series II) marks COMPLETED past action in the ERGATIVE alignment: the
+subject takes -მა (მან თქვა), the direct object stays nominative
+(წიგნი წაიღო). Never calque an English irregular past with the present
+stem — ამბობს→*ამბო was, ხედავს→*ხედ was are hard MT defects.
+SPEECH VERBS (three-way split, KB KA-SPEECH-VERBS / defect 16):
+• said (no indirect object) → თქვა [tqva] (Latinum L26 paradigm:
+  ვთქვი I said · თქვი you said · თქვა he said · ვთქვით we said).
+• said TO someone / told → უთხრა (Latinum L26: თხრა-form used when
+  there is an indirect object); said TO ME → მითხრა (mi- series fuses
+  the 1st-person object: მითხრა, რომ... — KB defect 9).
+  "he said that..." → თქვა, რომ... (KB: რომ REQUIRED after speech verbs
+  even where English drops it).
+MENTAL / PERCEPTION (KB attested set):
+• thought (momentary) → იფიქრა; was thinking → ფიქრობდა (imperfect);
+  realized → მიხვდა; knew → იცოდა (imperfect; იცის = knows now).
+• saw → დაინახა (aorist of ნახავს-family; ხედავს = sees now);
+  heard → მოესმა (aorist; მოესმოდა = could be heard; გაიგონა =
+  heard/learned something new); felt → იგრძნო (lingua.ge გრძნობა
+  aorist: ვიგრძენი/იგრძენი/იგრძნო); noticed → შეამჩნია.
+GIVE / TAKE / BRING / FIND / MAKE (KB attested):
+• gave → მისცა (beneficiary fused: gave me → მომცა, gave you → მოგცა,
+  gave us → მოგვცა — KB KA-MASDARS-DEEP m/g/v/gv infixes; never
+  *მეცა). • took → აიღო; took away → წაიღო (წა- away preverb).
+• brought (hither) → მოიტანა (მო- toward speaker); found → იპოვა
+  (dictionary.ge find II: პოვნა, ვიპოვე "I have found what I want");
+  made/did → გააკეთა (გა- completive, KB preverb table); wrote →
+  დაწერა (lingoseven aorist paradigm დავწერე/დაწერა/დაწერეს).
+DO-NOT-MAP guards: "said" inside quoted dialogue attribution keeps the
+quote intact (KB -თქო/-მეთქi quotative block governs dialogue chains);
+"was/were + -ing" is imperfect territory (ფიქრობდა/მიდიოდა), never the
+aorist; evidential/reported pasts ("they say he was rich") belong to
+the Series III perfect block (ყოფილა/უთქვამს), not the aorist.
+MAPPING: said→თქვა · said to/told→უთხრა · said to me→მითხრა ·
+thought→იფიქრა · was thinking→ფიქრობდა · knew→იცოდა · realized→მიხვდა ·
+saw→დაინახა · heard→მოესმა/გაიგონა · felt→იგრძნო · noticed→შეამჩნია ·
+gave→მისცა (gave me→მომცა) · took→აიღო · took away→წაიღო ·
+brought→მოიტანა · found→იპოვა · made/did→გააკეთა · wrote→დაწერა`;
+
 
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
@@ -3726,6 +3779,7 @@ function getKaKnowledgeBase() {
         KA_POSSESSIVE_DET,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
+        KA_IRREGULAR_PAST,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4779,6 +4833,23 @@ function validateGeorgianTranslation(text) {
         firstQ !== -1 && !/[ა-ჰ]/.test(text.slice(firstQ + 1));
     if (bareWh && !/(?<![\u10A0-\u10FF])(?:ვინ|რა|სად|საიდან|საით|როდის|რატომ|როგორ(?!ც)|რამდენი|რომელი|რისთვის)(?![\u10A0-\u10FF])/.test(text)) {
         issues.push({ rule: 'interrogative_untranslated', message: 'English interrogative untranslated: who → ვინ (animate; ვის/ვისი object/whose), what → რა (inanimate; dative რას, genitive რის, ergative რამ), where → სად · where from → საიდან · where to → საით, when → როდის (questions ONLY — subordinate "when" is როცა, Latinum lesson 51), why → რატომ · what for → რისთვის, how → როგორ (როგორ ხარ?), how many/much → რამდენი, how old are you → რამდენი წლის ხარ?, which → რომელი. WORD ORDER: the wh-word sits IMMEDIATELY PREVERBALLY (Borise 2019: ბებია რას ალაგებდა, never *რას ბებია ალაგებდა) — reorder the residue around the question verb. "how about"/"what about" (suggestions) and "what\'s" have no single carrier — rewrite for the AI pass.' });
+    }
+
+    // 3.112 Irregular past untranslated (KA-113): a high-frequency English
+    //      irregular past (said/told/saw/thought/knew/gave/took/found/
+    //      made/brought/heard/felt/wrote) with NO Georgian aorist carrier
+    //      anywhere. Carrier set mirrors the 4.98 map (თქვა family covers
+    //      უთხრა/მითხრა via the თხრ substring; იპოვა covers იპოვე).
+    //      Deliberately LOOSE: any Georgian aorist carrier in the text
+    //      silences the probe — a draft like "მან თქვა ..." is fine even
+    //      if a second "said" remains (dialogue chains are AI-pass work).
+    //      "was/were + -ing" imperfects and Series III evidentials
+    //      (ყოფილა/უთქვამს) also satisfy the probe.
+    const irregPast =
+        /\b(?:said|told|saw|thought|knew|gave|took|found|made|brought|heard|felt|wrote)\b/i.test(text) &&
+        !/(?:თქვ|უთხრ|მითხრ|დაინახ|იფიქრ|ფიქრობ|იცოდ|მიხვდ|მისც|მო[მგვ]ც|აიღ|წაიღ|მოიტან|იპოვ|გააკეთ|დაწერ|მოესმ|გაიგონ|იგრძნ|შეამჩნ|ყოფილ|უთქვამს)(?![\u10A0-\u10FF])/.test(text);
+    if (irregPast) {
+        issues.push({ rule: 'irregular_past_untranslated', message: 'English irregular past untranslated: said→თქვა · said to/told→უთხრა · said to me→მითხრა · thought→იფიქრა (continuous ფიქრობდა) · knew→იცოდა · saw→დაინახა · heard→მოესმა/გაიგონა · felt→იგრძნო · gave→მისცა (gave me→მომცა — beneficiary fuses INTO the verb) · took→აიღო · took away→წაიღო · brought→მოიტანა · found→იპოვა · made/did→გააკეთა · wrote→დაწერა. AORIST ALIGNMENT (Series II, ergative): subject takes -მა (მან თქვა), object stays nominative (წიგნი წაიღო). NEVER calque with the present stem (*ამბო, *ხედ) — suppletive/stem-changing aorists only. "he said that..." needs რომ even where English drops it. was/were+-ing → imperfect (ფიქრობდა), evidential pasts → Series III perfect (უთქვამს/ყოფილა).' });
     }
 
     return issues;
@@ -6026,16 +6097,53 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bwhich\b/gi, 'რომელი');
     out = out.replace(/\uE000MORE\uE001/gi, 'more');
 
+    // 4.98 Irregular past aorist dictionary (KA-113). FUNCTION TAIL — runs
+    //      AFTER 4.90's reported-question frames (asked me where... etc.
+    //      already consumed; bare said/told leftovers only), AFTER 4.74's
+    //      when and 4.97's bare interrogatives, so the aorist swaps never
+    //      fire inside a consumed frame. ZERO-POLYSEMY single-word swaps
+    //      EXCEPT the guarded ones:
+    //      • said: "said to (someone)" → უთხრა FIRST (Latinum L26: the
+    //        თხრ- form takes the indirect object); bare "said" → თქვა.
+    //        "said to me" → მითხრა (mi- series) — longest-first.
+    //      • took away → წაიღო (წა- away preverb) before bare took → აიღო.
+    //      • gave me/you/us → მომცა/მოგცა/მოგვცა (beneficiary fused,
+    //        KB m/g/v/gv infixes) before bare gave → მისცა.
+    //      • was/were + V-ing is imperfect territory — the aorist map
+    //        must NOT touch the progressive: guard with a lookahead on
+    //        the -ing participle (saw/thought etc. never take -ing here,
+    //        but "said" inside "was saying" would wrongly aorist-ize).
+    //      NOTE: \b never matches after Georgian chars (JS \b is
+    //      ASCII-word-based) — Georgian lookarounds where needed.
+    out = out.replace(/\bsaid\s+to\s+me\b/gi, 'მითხრა');
+    out = out.replace(/\bsaid\s+to\b/gi, 'უთხრა');
+    out = out.replace(/\btold\b/gi, 'უთხრა');
+    out = out.replace(/\bsaid\b/gi, 'თქვა');
+    out = out.replace(/\btook\s+away\b/gi, 'წაიღო');
+    out = out.replace(/\bgave\s+me\b/gi, 'მომცა');
+    out = out.replace(/\bgave\s+you\b/gi, 'მოგცა');
+    out = out.replace(/\bgave\s+us\b/gi, 'მოგვცა');
+    out = out.replace(/\bgave\b/gi, 'მისცა');
+    out = out.replace(/\btook\b/gi, 'აიღო');
+    out = out.replace(/\bbrought\b/gi, 'მოიტანა');
+    out = out.replace(/\bfound\b/gi, 'იპოვა');
+    out = out.replace(/\bmade\b/gi, 'გააკეთა');
+    out = out.replace(/\bsaw\b/gi, 'დაინახა');
+    out = out.replace(/\bthought\b/gi, 'იფიქრა');
+    out = out.replace(/\bknew\b/gi, 'იცოდა');
+    out = out.replace(/\bfelt\b/gi, 'იგრძნო');
+    out = out.replace(/\bwrote\b/gi, 'დაწერა');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.30.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.31.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 113,
-    qaRules: 112,
-    autoFixes: 97,
-    researchSources: 308
+    promptBlocks: 114,
+    qaRules: 113,
+    autoFixes: 98,
+    researchSources: 313
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
