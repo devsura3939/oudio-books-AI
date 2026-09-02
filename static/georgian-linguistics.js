@@ -3565,6 +3565,56 @@ there is/are→არის · there was→იყო · there were→იყო (
 default) | იყვნენ (animate, QA-gated) · there is no→არ არის ·
 X on the table→X ... მაგიდაზეა (-ა fused copula)`;
 
+// KA-112 v1.30.0 — Bare interrogatives (direct-question wh-words). All
+//                  FRAMED wh-uses are already consumed by earlier rules
+//                  (3.90/4.75 free relatives, 3.104/4.90 reported
+//                  questions, 4.74 temporal when) — this block governs
+//                  the LEFTOVERS: genuine direct questions.
+const KA_BARE_INTERROGATIVE = `
+BARE INTERROGATIVES (direct questions) — the deterministic wh-word set
+for genuine question frames, gated on sentence-final "?". Georgian
+interrogatives (en.wikibooks Georgian/Questions; talkpal.ai; geolang.ru;
+parryc.com interrogative/relative table):
+• who → ვინ [vin] — ANIMATE ONLY (persons). Object case: ვის (dative),
+  ვისი = whose. NOT for things — რა covers inanimates.
+• what → რა [ɾä] — INANIMATE. Declines (en.wiktionary რა): ergative
+  რამ, dative რას (direct object: რას აპირებ?), genitive რის,
+  instrumental რით. Bare nominative რა for subjects/citation.
+• where → სად [sad] — static location AND generic goal (dictionary.ge:
+  სად ხარ? where are you; სად ცხოვრობ? where do you live). DIRECTIONAL
+  SPLIT: where from → საიდან; where to → საით (en.wiktionary [säitʰ];
+  dictionary.ge also საითკენ). "Where did you hear that?" → საიდან /
+  სად (dictionary.ge gives both).
+• when → როდის [rodis] — INTERROGATIVE ONLY (Latinum lesson 51:
+  როდის = asking when; როცა = relative conjunction "at the time
+  when"). როდის იყავი ბათუმში? (kahibaro). NEVER use interrogative
+  როდის inside a subordinate clause — that is როცა/როდესაც.
+  Relative pairs (parryc): რაც/ვინც/სადაც/როგორც/როდისაც|როცა.
+• why → რატომ [rat'om] (composition რა+ტომ "what-for" shape).
+  what for → რისთვის (Wikibooks: რისთვის "what for", geolang).
+• how → როგორ [rogor] (attested: როგორ ხარ? — talkinggeorgian).
+  how many/much → რამდენი; how old are you? → რამდენი წლის ხარ?
+  ("how many years are you" — kahibaro 5.3; learn101).
+• which → რომელი — selection interrogative (Wikibooks; declines like
+  an adjective, agrees in case: რომელ წიგნს იღებ?).
+WORD ORDER (Borise 2019, syntax of wh-phrases in Georgian): the wh-word
+MUST sit IMMEDIATELY PREVERBALLY (IPrP) — ბებია რას ალაგებდა, NOT
+*Ras bebia alagebda (Borise & Polinsky: *wh-fronting to clause-initial
+is ungrammatical; only negation may intervene). The fix carries the
+question mark through — re-ordering EN residue words around the
+wh-word is AI-pass work; this block only swaps the wh-token itself.
+DO-NOT-MAP guards: "how about"/"what about" (suggestion idioms, no
+stable single carrier), "what's" (attested → რა იქნება only in the
+what-if frame, 4.90 — otherwise copula frame, AI pass), embedded/
+indirect wh (consumed by 4.90 asked/told/don't-know frames BEFORE the
+tail) and free relatives (3.90/4.75 -ც fusions) never reach the bare
+map. როგორ არის როგორც — the relative/complement როგორც is a separate
+word (4.78 simile family); bare how → როგორ never touches it.
+MAPPING: who→ვინ · what→რა · where→სად · where from→საიდან ·
+where to→საით · when→როდის (questions only) · why→რატომ ·
+what for→რისთვის · how→როგორ · how many/much→რამდენი ·
+how old→რამდენი წლის · which→რომელი`;
+
 
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
@@ -3675,6 +3725,7 @@ function getKaKnowledgeBase() {
         KA_TIME_DEICTIC,
         KA_POSSESSIVE_DET,
         KA_SPATIAL_DEICTIC,
+        KA_BARE_INTERROGATIVE,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4706,6 +4757,30 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'existential_untranslated', message: 'English dummy-subject "there is/are/was/were" untranslated → DROP "there", use the real subject + არის/იყო (there is a book → არის წიგნი; the book is on the table → წიგნი მაგიდაზეა, -ა fused copula). Negated: there is no → არ არის / არ არსებობს (KA-101). PLURAL ANIMACY (Latinum lesson 44): inanimate plural → SINGULAR იყო (წიგნები იყო მაგიდაზე), animate plural → იყვნენ (მეფენი იყვნენ, Rustaveli) — COMMON MISTAKE: *წიგნები იყვნენ is wrong.' });
     }
 
+    // 3.111 Bare interrogative untranslated (KA-112): an English wh-word
+    //      inside a DIRECT-QUESTION frame with no Georgian interrogative
+    //      carrier anywhere. Question-frame gating: the text must contain
+    //      "?" with NO Georgian word after the first "?" — if Georgian
+    //      follows the "?", the question already sits inside Georgian
+    //      residue (mixed/double-question drafts are AI-pass work; the
+    //      wh-word there is embedded, not bare). This also silences the
+    //      probe on statement residue like "there is/are" inputs that
+    //      merely end in "?".
+    //      Guard mirrors the 4.97 map: როგორ WITHOUT the ც only — the
+    //      complementizer როგორც (4.78 as-family) is NOT an
+    //      interrogative and must NOT satisfy the probe; საიდან/საით
+    //      satisfy the where-family; how-old/many/much inputs are
+    //      satisfied by რამდენი (also via its რა substring).
+    //      "how about"/"what about"/"what's" have no stable carrier —
+    //      they stay flagged for the AI pass.
+    const firstQ = text.indexOf('?');
+    const bareWh =
+        /\b(?:who|what|where|when|why|how|which)\b/i.test(text) &&
+        firstQ !== -1 && !/[ა-ჰ]/.test(text.slice(firstQ + 1));
+    if (bareWh && !/(?<![\u10A0-\u10FF])(?:ვინ|რა|სად|საიდან|საით|როდის|რატომ|როგორ(?!ც)|რამდენი|რომელი|რისთვის)(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'interrogative_untranslated', message: 'English interrogative untranslated: who → ვინ (animate; ვის/ვისი object/whose), what → რა (inanimate; dative რას, genitive რის, ergative რამ), where → სად · where from → საიდან · where to → საით, when → როდის (questions ONLY — subordinate "when" is როცა, Latinum lesson 51), why → რატომ · what for → რისთვის, how → როგორ (როგორ ხარ?), how many/much → რამდენი, how old are you → რამდენი წლის ხარ?, which → რომელი. WORD ORDER: the wh-word sits IMMEDIATELY PREVERBALLY (Borise 2019: ბებია რას ალაგებდა, never *რას ბებია ალაგებდა) — reorder the residue around the question verb. "how about"/"what about" (suggestions) and "what\'s" have no single carrier — rewrite for the AI pass.' });
+    }
+
     return issues;
 }
 
@@ -5302,8 +5377,21 @@ function correctGeorgianMorphology(text) {
     //      "as soon as" MUST be consumed before the bare "as" mappings;
     //      "until" maps to the bookish ვიდრე + აر frame carrier (the არ
     //      inside the clause is the standard polarity quirk).
+    //      "when" is SENTENCE-AWARE (KA-112, Latinum lesson 51: როდის is
+    //      the INTERROGATIVE, როცა the relative conjunction): if the
+    //      sentence containing "when" ends in "?" and still carries
+    //      English (direct wh-question), map როდის; otherwise the
+    //      temporal-conjunction როცა (all prior suites' inputs are
+    //      statement frames and keep როცა).
     out = out.replace(/\bas soon as\b/gi, 'როგორც კი');
-    out = out.replace(/\bwhen\b/gi, 'როცა');
+    out = out.replace(/\bwhen\b/gi, (m, off, whole) => {
+        if (whole.indexOf('?') === -1) return 'როცა';
+        const before = whole.slice(0, off);
+        const start = Math.max(before.lastIndexOf('.'), before.lastIndexOf('!'), before.lastIndexOf('…'), before.lastIndexOf('?'));
+        const end = whole.slice(off).search(/[.!?…]/);
+        const sentence = whole.slice(start + 1, end === -1 ? undefined : off + end + 1);
+        return (sentence.indexOf('?') !== -1 && /[A-Za-z]/.test(sentence)) ? 'როდის' : 'როცა';
+    });
     out = out.replace(/\bwhile\b/gi, 'სანამ');
     out = out.replace(/\buntil\b/gi, 'ვიდრე არ');
     out = out.replace(/\btill\b/gi, 'ვიდრე არ');
@@ -5895,16 +5983,59 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bhere\b/gi, 'აქ');
     out = out.replace(/\bthere\b/gi, 'იქ');
 
+    // 4.97 Bare interrogatives (KA-112). FUNCTION TAIL — after 4.74's
+    //      sentence-aware when (questions → როდის already), 4.75 free
+    //      relatives (-ც fusions), 4.78 as-family (როგორც), and 4.90's
+    //      reported-question frames (asked/told/don't-know + wh kept),
+    //      so ONLY direct-question leftovers reach the bare swaps.
+    //      ORDER MATTERS (longest-first): where from/where to before
+    //      bare where; what for before bare what; how many/how much/
+    //      how old before bare how — else რამდენი degrades to რა,
+    //      საიდან/საით degrade to სად.
+    //      SUPPRESSIONS & CONTRACTIONS: 's-copula contractions map to
+    //      wh + არის FIRST (attested: ვინ არის აქ? languages42;
+    //      სად არის ..., რა არის ეს?), "what's more" (discourse idiom)
+    //      excluded — stays English for the AI pass. "how about"/
+    //      "what about" (suggestion idioms, no stable carrier) are
+    //      look-ahead-suppressed on the bare words. Case forms stay
+    //      bare-nominative (რა/ვინ) — the dative რას / ergative რამ
+    //      choice depends on the screeve (Borise: რას ალაგებდა dative
+    //      in Series I) and is AI-pass work; the question mark is
+    //      preserved by the fix engine.
+    //      "what's more" (discourse idiom) is placeholder-protected —
+    //      the word "more" is consumed by an earlier rule (→ უფრო),
+    //      so the protect must match the ALREADY-SUBSTITUTED residue.
+    //      NOTE: \b never matches after Georgian chars (JS \b is
+    //      ASCII-word-based) — use a Georgian lookaround instead.
+    out = out.replace(/\bwhat'?s\s+(?:more\b|უფრო(?![\u10A0-\u10FF]))/gi, "what's \uE000MORE\uE001");
+    out = out.replace(/\bwho'?s\b/gi, 'ვინ არის');
+    out = out.replace(/\bwhere'?s\b/gi, 'სად არის');
+    out = out.replace(/\bhow'?s\b/gi, 'როგორ არის');
+    out = out.replace(/\bwhat'?s\b(?!\s*[\uE000\uE001])/gi, 'რა არის');
+    out = out.replace(/\bhow\s+old\b/gi, 'რამდენი წლის');
+    out = out.replace(/\bhow\s+many\b/gi, 'რამდენი');
+    out = out.replace(/\bhow\s+much\b/gi, 'რამდენი');
+    out = out.replace(/\bwhere\s+from\b/gi, 'საიდან');
+    out = out.replace(/\bwhere\s+to\b/gi, 'საით');
+    out = out.replace(/\bwhat\s+for\b/gi, 'რისთვის');
+    out = out.replace(/\bwho\b/gi, 'ვინ');
+    out = out.replace(/\bwhat\b(?!\s+about\b)(?!\s*['’]?s\b)/gi, 'რა');
+    out = out.replace(/\bwhere\b/gi, 'სად');
+    out = out.replace(/\bwhy\b/gi, 'რატომ');
+    out = out.replace(/\bhow\b(?!\s+about\b)/gi, 'როგორ');
+    out = out.replace(/\bwhich\b/gi, 'რომელი');
+    out = out.replace(/\uE000MORE\uE001/gi, 'more');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.29.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.30.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 112,
-    qaRules: 111,
-    autoFixes: 96,
-    researchSources: 293
+    promptBlocks: 113,
+    qaRules: 112,
+    autoFixes: 97,
+    researchSources: 308
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
