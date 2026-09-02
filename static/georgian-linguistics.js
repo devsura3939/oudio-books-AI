@@ -3712,6 +3712,31 @@ noun's case — AI-pass work.
 MAPPING: this→ეს · these+noun→ეს · these (standalone)→ესინი ·
 those+noun→ის · those (standalone)→ისინი · bare that→(unmapped, AI-pass)`;
 
+// KA-115 v1.33.0 — Coordinating conjunctions: bare and/but/or. Georgian has
+// exact coordinators (KA_CONJUNCTIONS; georgian.se): და = and, მაგრამ = but,
+// ან = or (ან...ან = either...or). Until now the bare forms had NO
+// deterministic swap — every mixed draft left them in Latin. PUNCTUATION
+// ASYMMETRY (KA_CONJUNCTIONS; georgian.se glossed example): NO comma before
+// და joining clauses ("დედა სადილს ამზადებს და ნინო თამაშობს") — drop the
+// English comma habit; the comma goes BEFORE მაგრამ. SHORT/FOCUS forms
+// (-ც enclitic "and/too": ნინოც, კი focus particle) are stylistic — AI-pass.
+// Compound frames are already handled upstream (but also/but rather→არამედ,
+// not only/not just→არა მხოლოდ, not even→არც კი, either→ან, neither/nor→არც,
+// although/however→თუმცა, because→იმიტომ რომ, if→თუ) — fix 4.100 only sees
+// the bare leftovers.
+const KA_COORDINATING_CONJ = `
+COORDINATING CONJUNCTIONS — და / მაგრამ / ან. და = and (joins words,
+phrases and whole clauses; NO comma before it joining clauses —
+დედა სადილს ამზადებს და ნინო თამაშობს), მაგრამ = but (comma BEFORE),
+ან = or; ან...ან = either...or. Georgian also marks addition with the
+enclitic -ც (ნინოც "Nino too") and the focus particle კი — prefer plain
+და unless the second item is an afterthought/addition (AI-pass choice).
+"and then" → და შემდეგ. თუმცა = although (comma before), ხოლო =
+whereas/and (contrast between parallel subjects). "not only... but
+also" → არა მხოლოდ... არამედ.
+MAPPING: and→და · but→მაგრამ · or→ან · either...or→ან...ან ·
+neither/nor→არც · focus/-ც→AI-pass`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -3824,6 +3849,7 @@ function getKaKnowledgeBase() {
         KA_BARE_INTERROGATIVE,
         KA_IRREGULAR_PAST,
         KA_DEMONSTRATIVES,
+        KA_COORDINATING_CONJ,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4909,6 +4935,21 @@ function validateGeorgianTranslation(text) {
         !/(?:ეს|ის|ამ|იმ)(?![\u10A0-\u10FF])/.test(text);
     if (demonstrative) {
         issues.push({ rule: 'demonstrative_untranslated', message: 'English demonstrative untranslated: this→ეს (always; ეს covers singular AND plural as a determiner: ეს წიგნი / ეს წიგნები) · these+noun→ეს (number-neutral determiner) · these standalone→ესინი · those+noun→ის (ის წიგნები) · those standalone→ისინი (ergative/dative მათ). THREE-WAY system: ეს = near speaker, ეგ = near addressee (dialogue: "your book" → ეგ წიგნი), ის = far/anaphoric (narration default). NON-NOMINATIVE stems: ეს→ამ, ეგ→მაგ, ის→იმ (ამ წიგნში "in this book", იმ დღეს "on that day") — never ეს + oblique case. BARE "that" is ambiguous (demonstrative vs complementizer რომ vs so/such...that) — decide ეგ vs ის by who possesses/perceives the referent; complementizer clauses need რომ.' });
+    }
+
+    // 3.114 Coordinating conjunction untranslated (KA-115): bare English
+    //      and/but/or with NO Georgian coordinator anywhere. Carrier check
+    //      requires the coordinator to stand ALONE (string edge or a
+    //      non-Georgian char on BOTH sides) — the plain negative-lookahead
+    //      style of 3.113 would false-silence on imperfect verbs, which END
+    //      in -და (წერდა, ფიქრობდა). Still LOOSE in the 3.113 sense: ANY
+    //      one of და/მაგრამ/ან silences the probe (a draft mixing და and
+    //      one leftover "but" is AI-pass work, not a hard defect).
+    const coordConj =
+        /\b(?:and|but|or)\b/i.test(text) &&
+        !/(?:^|[^\u10A0-\u10FF])(?:და|მაგრამ|ან)(?![\u10A0-\u10FF])/.test(text);
+    if (coordConj) {
+        issues.push({ rule: 'coordinating_conjunction_untranslated', message: 'English coordinating conjunction untranslated: and→და · but→მაგრამ · or→ან (ან...ან = either...or). PUNCTUATION: NO comma before და joining clauses (დედა სადილს ამზადებს და ნინო თამაშობს — drop the English comma habit); comma BEFORE მაგრამ. Georgian also marks addition with the enclitic -ც (ნინოც "Nino too") and the focus particle კი — prefer plain და unless the item is an afterthought. Compound frames: not only...but also→არა მხოლოდ...არამედ · either...or→ან...ან · neither/nor→არც · although→თუმცა (comma before) · whereas/and-contrast→ხოლო.' });
     }
 
     return issues;
@@ -6214,16 +6255,32 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bthose\b/gi, 'ის');
     out = out.replace(/\bthis\b/gi, 'ეს');
 
+    // 4.100 Coordinating conjunctions (KA-115). FUNCTION TAIL — runs AFTER
+    //      every compound-conjunction rule (but also/but rather→არამედ,
+    //      not only/not just→არა მხოლოდ, not even→არც კი, either→ან,
+    //      neither/nor→არც, although/though/however→თუმცა, because→
+    //      იმიტომ რომ, if→თუ, also→ასევე), so bare and/but/or here only
+    //      sees true leftovers. PUNCTUATION (KA-115): NO comma before და
+    //      joining clauses; comma BEFORE მაგრამ — punctuation is the
+    //      DRAFT's job, the swaps below never insert commas.
+    //      NOTE: \b never matches after Georgian chars (JS \b is
+    //      ASCII-word-based) — safe to run after earlier Georgian swaps.
+    //      "either or" → ან ან (either→ან upstream, then or→ან) —
+    //      exactly the attested ან...ან frame.
+    out = out.replace(/\band\b/gi, 'და');
+    out = out.replace(/\bbut\b/gi, 'მაგრამ');
+    out = out.replace(/\bor\b/gi, 'ან');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.32.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.33.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 115,
-    qaRules: 114,
-    autoFixes: 99,
-    researchSources: 317
+    promptBlocks: 116,
+    qaRules: 115,
+    autoFixes: 100,
+    researchSources: 320
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
