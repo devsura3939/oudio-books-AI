@@ -3668,6 +3668,49 @@ saw→დაინახა · heard→მოესმა/გაიგონა 
 gave→მისცა (gave me→მომცა) · took→აიღო · took away→წაიღო ·
 brought→მოიტანა · found→იპოვა · made/did→გააკეთა · wrote→დაწერა`;
 
+// KA-114 v1.32.0 — Demonstratives, split-scoped. Georgian has a THREE-WAY
+// demonstrative system (parryc.com; KB KA_DEMONSTRATIVES_DEEP; Latinum L40):
+// ეს = near the SPEAKER (this/these), ეგ = near the ADDRESSEE (that of
+// yours), ის = far / anaphoric (that/those). In non-nominative roles the
+// stems change: ეს→ამ, ეგ→მაგ, ის→იმ (fr.wikipedia declensions; parryc:
+// "In non-NOM situations ეს becomes ამ and ის becomes იმ").
+// Old Georgian used ესე/ეგე/იგი as third-person pronouns (Wiktionary ესე);
+// the unmarked form is იგი (formal register).
+// DETERMINER vs STANDALONE (Latinum L40: "ეს covers both singular and
+// plural" as a determiner — "ეს წიგნები" = these books; standalone plural
+// pronouns are ესინი/ისინი, parryc paradigm SG ეს/ის · PL ესინი/ისინი):
+// • this → ეს ALWAYS (singular determiner or emphatic pronoun).
+// • these + noun → ეს (determiner, number-neutral); standalone these
+//   (before a verb or sentence-finally) → ესინი.
+// • those + noun → ის (determiner: "ის წიგნები"); standalone those →
+//   ისინი (Latinum L38: ისინი = they, NOM; ergative/dative მათ).
+// BARE "that" IS DELIBERATELY UNMAPPED: English "that" is ambiguous
+// between demonstrative ("that book"), complementizer ("that he left" —
+// needs რომ), and the so/such...that result frame (KB KA_DEMONSTRATIVES_
+// DEEP: "choose ეგ vs ის by who possesses or perceives the referent").
+// No deterministic signal separates these — bare that stays AI-pass.
+// OBLIQUE CASES (ამ/მაგ/იმ + case suffixes, e.g. ამ წიგნში "in this
+// book") and the ეგ medial are AI-pass work: the fix layer only maps the
+// nominative-determiner / nominative-pronoun forms above.
+// Narration default: prefer ის for anaphoric reference; dialogue: ეგ for
+// the addressee's possessions (KB tactic).
+const KA_DEMONSTRATIVES = `
+DEMONSTRATIVES (THREE-WAY) — ეს / ეგ / ის. Proximal ეს = this/these (near
+speaker), medial ეგ = that near YOU, distal ის = that/those (far or
+anaphoric). NON-NOMINATIVE stems: ეს→ამ, ეგ→მაგ, ის→იმ (ამ წიგნში "in
+this book", იმ დღეს "on that day") — case agreement continues on the
+stem (ამას/იმას dative standalone). Old Georgian ესე/ეგე/იგი survive as
+archaic/formal; unmarked 3rd-person pronoun იგი. STANDALONE PLURALS:
+ესინი (these ones) / ისინი (those ones = they, ergative/dative მათ).
+As DETERMINERS ეს/ის are number-neutral: ეს წიგნი = this book, ეს
+წიგნები = these books, ის წიგნები = those books (Latinum L40).
+DO-NOT-MAP: bare "that" (complementizer რომ vs demonstrative vs
+so/such...that) is undecidable deterministically — AI-pass must decide
+ეგ vs ის by who possesses/perceives the referent, and use რომ for the
+complementizer. Oblique ამ/იმ selection depends on the following
+noun's case — AI-pass work.
+MAPPING: this→ეს · these+noun→ეს · these (standalone)→ესინი ·
+those+noun→ის · those (standalone)→ისინი · bare that→(unmapped, AI-pass)`;
 
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
@@ -3780,6 +3823,7 @@ function getKaKnowledgeBase() {
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
         KA_IRREGULAR_PAST,
+        KA_DEMONSTRATIVES,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4850,6 +4894,21 @@ function validateGeorgianTranslation(text) {
         !/(?:თქვ|უთხრ|მითხრ|დაინახ|იფიქრ|ფიქრობ|იცოდ|მიხვდ|მისც|მო[მგვ]ც|აიღ|წაიღ|მოიტან|იპოვ|გააკეთ|დაწერ|მოესმ|გაიგონ|იგრძნ|შეამჩნ|ყოფილ|უთქვამს)(?![\u10A0-\u10FF])/.test(text);
     if (irregPast) {
         issues.push({ rule: 'irregular_past_untranslated', message: 'English irregular past untranslated: said→თქვა · said to/told→უთხრა · said to me→მითხრა · thought→იფიქრა (continuous ფიქრობდა) · knew→იცოდა · saw→დაინახა · heard→მოესმა/გაიგონა · felt→იგრძნო · gave→მისცა (gave me→მომცა — beneficiary fuses INTO the verb) · took→აიღო · took away→წაიღო · brought→მოიტანა · found→იპოვა · made/did→გააკეთა · wrote→დაწერა. AORIST ALIGNMENT (Series II, ergative): subject takes -მა (მან თქვა), object stays nominative (წიგნი წაიღო). NEVER calque with the present stem (*ამბო, *ხედ) — suppletive/stem-changing aorists only. "he said that..." needs რომ even where English drops it. was/were+-ing → imperfect (ფიქრობდა), evidential pasts → Series III perfect (უთქვამს/ყოფილა).' });
+    }
+
+    // 3.113 Demonstrative untranslated (KA-114): English this/these/those
+    //      with NO Georgian demonstrative carrier anywhere. Carrier set
+    //      covers ეს (and ესინი via substring), ის/ისინი, and the oblique
+    //      stems ამ/იმ. Deliberately LOOSE: any carrier silences the probe
+    //      (a draft mixing "ეს წიგნი" and one leftover "this" is AI-pass
+    //      work, not a hard defect). Bare "that" is NOT probed — it is
+    //      ambiguous (complementizer რომ vs demonstrative vs so/such...that)
+    //      and deliberately unmapped (KA-114).
+    const demonstrative =
+        /\b(?:this|these|those)\b/i.test(text) &&
+        !/(?:ეს|ის|ამ|იმ)(?![\u10A0-\u10FF])/.test(text);
+    if (demonstrative) {
+        issues.push({ rule: 'demonstrative_untranslated', message: 'English demonstrative untranslated: this→ეს (always; ეს covers singular AND plural as a determiner: ეს წიგნი / ეს წიგნები) · these+noun→ეს (number-neutral determiner) · these standalone→ესინი · those+noun→ის (ის წიგნები) · those standalone→ისინი (ergative/dative მათ). THREE-WAY system: ეს = near speaker, ეგ = near addressee (dialogue: "your book" → ეგ წიგნი), ის = far/anaphoric (narration default). NON-NOMINATIVE stems: ეს→ამ, ეგ→მაგ, ის→იმ (ამ წიგნში "in this book", იმ დღეს "on that day") — never ეს + oblique case. BARE "that" is ambiguous (demonstrative vs complementizer რომ vs so/such...that) — decide ეგ vs ის by who possesses/perceives the referent; complementizer clauses need რომ.' });
     }
 
     return issues;
@@ -6134,16 +6193,37 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bfelt\b/gi, 'იგრძნო');
     out = out.replace(/\bwrote\b/gi, 'დაწერა');
 
+    // 4.99 Demonstratives (KA-114). FUNCTION TAIL — runs AFTER 4.97's bare
+    //      interrogatives and 4.98's aorist swaps. SPLIT-SCOPED: only the
+    //      near-unambiguous forms are mapped; BARE "that" is deliberately
+    //      NOT mapped (complementizer რომ vs demonstrative vs so/such...
+    //      that — undecidable deterministically, KA-114 DO-NOT-MAP).
+    //      LONGEST-FIRST: standalone plurals ესინი/ისინი before the
+    //      number-neutral determiners ეს/ის.
+    //      • this → ეს ALWAYS (Latinum L40: ეს covers singular and
+    //        plural as a determiner; also the emphatic pronoun).
+    //      • these + noun → ეს (determiner); these NOT followed by a
+    //        noun (standalone pronoun) → ესინი (parryc PL ესინი).
+    //      • those + noun → ის (determiner: ის წიგნები); standalone
+    //        those → ისინი (Latinum L38: ისინი = they).
+    //      NOTE: \b never matches after Georgian chars (JS \b is
+    //      ASCII-word-based) — safe to run after earlier Georgian swaps.
+    out = out.replace(/\bthese\b(?!\s+[a-z])/gi, 'ესინი');
+    out = out.replace(/\bthese\b/gi, 'ეს');
+    out = out.replace(/\bthose\b(?!\s+[a-z])/gi, 'ისინი');
+    out = out.replace(/\bthose\b/gi, 'ის');
+    out = out.replace(/\bthis\b/gi, 'ეს');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.31.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.32.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 114,
-    qaRules: 113,
-    autoFixes: 98,
-    researchSources: 313
+    promptBlocks: 115,
+    qaRules: 114,
+    autoFixes: 99,
+    researchSources: 317
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
