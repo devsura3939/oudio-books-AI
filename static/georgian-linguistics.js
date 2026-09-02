@@ -4088,6 +4088,60 @@ MAPPING: my→ჩემი · our→ჩვენი · their→მათი · h
 your→შენი|თქვენი (QA-gated) · her→მისი|მას (QA-gated) ·
 1st/2nd-dat → ჩემს/შენს/ჩვენს/თქვენს · 3rd-dat → მის/მათ (zero -ს)`;
 
+// KA-123 v1.41.0 — Personal pronouns: bare EN subject/object pronouns →
+//                  Georgian case-marked carriers. Complements KA-110
+//                  (possessive determiners) and KA-121 (indefinites).
+//                  Attested: en.wiktionary მე entry (full declension +
+//                  Template:ka-personal_and_demonstrative_pronouns),
+//                  latinum.substack.com Lessons 9/13, jazykirossii.ru,
+//                  zh.wikipedia 格鲁吉亚语语法.
+const KA_PERSONAL_PRONOUNS = `
+KA-123 PERSONAL PRONOUNS — EN PRONOUN → KA CASED CARRIER (en.wiktionary მე:
+1st/2nd person are CASE-INVARIANT for the four "core" cases — მე, შენ,
+ჩვენ, თქვენ serve NOM/ERG/DAT/GEN alike; only the instrumental and
+adverbial inflect: ჩემით/ჩემად, შენით/შენად, ჩვენით/ჩვენად,
+თქვენით/თქვენად. The 3rd person is SUPPLETIVE by case: NOM ის/იგი →
+ERG მან/იმან → DAT მას/იმას → GEN მის/იმის → INS მით/იმით →
+ADV იმად; plural NOM ისინი/იგინი → ERG/DAT/GEN მათ/იმათ. Georgian has
+NO gender: he, she and it COLLAPSE into ის — never "gendered" forms.
+Old-Georgian literary variants (იგი, იგინი, ჰქონდა-series agreement)
+belong to formal prose, not to everyday narration):
+• DETERMINISTIC (unambiguous, auto-fixable): I→მე · me→მე ·
+  we→ჩვენ · us→ჩვენ · he→ის · she→ის · him→მას · them→მათ.
+  Object-only forms take the dative: me→მე (1st/2nd are
+  case-invariant, so the dative equals the nominative), him→მას,
+  us→ჩვენ, them→მათ. 3rd-person plural is ANIMATE-default ისინი
+  for the subject form; inanimate subjects are the AI pass's call.
+• CONTEXT-GATED (QA-only, AI-pass decides): you → შენ (informal
+  singular) vs თქვენ (formal/polite or plural) — the T–V register
+  choice per KA-52; it → ის ONLY as an anaphoric reference to a
+  known entity, NEVER as a dummy/weather subject (KB 4.24: წვიმს,
+  ცივა, no dummy pronoun) and NEVER when "it is" opens a cleft
+  (3.94: სწორედ X + rest). Bare "it" that survives into the final
+  draft stays for the AI pass to resolve or drop.
+• PRO-DROP (KA_PRONOUN_ECONOMY): Georgian verb agreement already
+  encodes the subject (v-, g-, h-/m- prefixes, -თ plural), so the
+  mapped pronoun is often DELETED in fluent prose: "I saw him" →
+  დავინახე, not მე დავინახა მას. The bare mapping below is a
+  FALLBACK for residue — the AI pass and 4.33/3.19 still prefer
+  dropping the pronoun when the verb form makes it redundant.
+• NEVER map: myself/yourself/himself/herself/itself/ourselves/
+  themselves (reflexives → თავი + postposition/case, context-
+  dependent, KA_SELF_REFERENCE), mine/yours/his/hers/ours/theirs
+  standalone possessive pronouns (coal-mine polysemy, contrastive
+  reading), whom/whose (relative pronouns, KA-112 territory).
+• ORDER: these swaps run at the FUNCTION TAIL, after 4.97's
+  what/who/where family, 4.98's said/told/gave frames, 4.99's
+  this/these/those, 4.100's and/but/or, 4.101's politeness
+  formulas, 4.102-4.103's time frames, 4.107's quantifier series
+  and 4.95's possessive determiners — so only genuinely bare
+  pronoun tokens reach the swaps below.
+MAPPING: I→მე · me→მე · we→ჩვენ · us→ჩვენ · he→ის · she→ის ·
+it→ის (anaphoric only, AI-gated) · him→მას · them→მათ ·
+they→ისინი (animate; generic-they → ის per KA_PRONOUN_ECONOMY) ·
+you→შენ|თქვენ (QA-gated, T–V register) · 1st/2nd-INS → ჩემით/
+შენით/ჩვენით/თქვენით · 3rd-case → ის/მან/მას/მის/მით (suppletive)`;
+
 // KA-111 v1.29.0 — Spatial deictics + existential copula: bare EN place
 //                  adverbs and dummy-subject "there is/are" frames. Wires
 //                  KA-101's documented-but-never-coded EXISTENCE frames
@@ -4477,6 +4531,7 @@ function getKaKnowledgeBase() {
         KA_INDEFINITE_PRONOUNS,
         KA_QUANTIFIERS,
         KA_POSSESSIVE_DET,
+        KA_PERSONAL_PRONOUNS,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
         KA_IRREGULAR_PAST,
@@ -5774,6 +5829,27 @@ function validateGeorgianTranslation(text) {
         || qtLot || qtMost || qtWhole || qtHalf || qtBoth || qtMajority)
         && !qtCarrier) {
         issues.push({ rule: 'quantifier_untranslated', message: 'Quantifier untranslated: much (uncountable)→ბევრი · many→ბევრი (everyday) or მრავალი (formal/literary) · plenty of / a lot of / lots of→ბევრი (emphatic უამრავი) · so much→იმდენი (so much...that → იმდენი...რომ; AI) · several / a few→რამდენიმე · few (negative "hardly any")→ცოტა · little (amount)→ცოტა vs პატარა (SIZE: little girl — AI decides) · most (of the)→უმეტესი — NOT ყველაზე (that is the superlative: the most beautiful→ყველაზე ლამაზი) · majority→უმეტესობა · whole→მთელი (the whole day→მთელი დღე) · half→ნახევარი (half an hour→ნახევარი საათი; half past two→ორის ნახევარი — genitive; two and a half→ორნახევარი; obliques syncopate: ნახევრის/ნახევრით/ნახევრად) · both→ორივე (both hands→ორივე ხელი; on both sides→ორივე მხარეს; both...and→როგორც..., ისე...) · SINGULAR AGREEMENT (dictionary.ge norm): ბევრი/ცოტა/რამდენიმე/ორივე take a SINGULAR noun — რამდენიმე წიგნი, NOT *რამდენიმე წიგნები · bare a lot (adverb: I like it a lot) and bare much (I don\'t much care)→AI decides · ზღვა "sea" is attested as a determiner "many" but stays KB-only — never mechanically mapped. Carrier stems ბევრ-/მრავალ-/რამდენიმ-/ცოტ-/მთელ-/მთლ-/ნახევრ-/ორივე/უმეტეს-/უამრავ- present = quantifier already rendered.' });
+    }
+
+    // 3.122 Untranslated personal pronouns (v1.41.0, KA-123). Bare EN
+    //      subject/object pronouns surviving into the draft. 1st/2nd
+    //      person carriers are case-invariant (მე/შენ/ჩვენ/თქვენ);
+    //      3rd person suppletive (ის/მან/მას/მის/მათ). Georgian has no
+    //      gender — he/she/it all → ის. PRO-DROP: the verb already
+    //      encodes the person, so the mapped pronoun is often deleted
+    //      (3.19 over-explicit მე ვ... flags the redundant form).
+    //      EXCLUSIONS: contractions are token-internal and skipped by
+    //      the guards below; "it is/it's" frames belong to 3.33 (is-
+    //      calque) and 3.94 (cleft) — never double-flag them here;
+    //      bare "it" as weather/dummy subject is KB-only (წვიმს,
+    //      ცივა) and stays AI-pass.
+    const pronCore = /\b(?:i|me|we|us|he|she|him|them|they)\b/i.test(text);
+    const pronYou = /\byou\b/i.test(text);
+    const pronIt = /\bit\b/i.test(text)
+        && !/\bit(?:'s|\s+is)\b/i.test(text);
+    const pronCarrier = /(?<![\u10A0-\u10FF])(?:მე|შენ|ჩვენ|თქვენ|ის|მას|მათ|ისინი)(?![\u10A0-\u10FF])/.test(text);
+    if ((pronCore || pronYou || pronIt) && !pronCarrier) {
+        issues.push({ rule: 'personal_pronoun_untranslated', message: 'Personal pronoun untranslated: I/me→მე · we/us→ჩვენ · he/she→ის (NO gender in Georgian) · him→მას · them→მათ · they→ისინი (animate; generic-they→ის) · you→შენ (informal) or თქვენ (formal/plural — AI decides) · it→ის only as anaphora; as weather/dummy subject it DROPS (წვიმს, ცივა). PRO-DROP: the verb already carries the person — prefer dropping the pronoun entirely (დავინახე, not მე დავინახა). 3rd person declines by case: NOM ის → ERG მან → DAT მას → GEN მის. A mapped carrier (მე/შენ/ჩვენ/თქვენ/ის/მას/მათ) present = already rendered.' });
     }
 
     return issues;
@@ -7498,16 +7574,70 @@ function correctGeorgianMorphology(text) {
         }
     );
 
+    // 4.108 (v1.41.0, KA-123) Personal pronouns → Georgian cased
+    //      carriers. ABSOLUTE FUNCTION TAIL — runs after EVERY rule
+    //      that consumes a pronoun-containing phrase: 4.90 reported-
+    //      question frames (told me / asked me), 4.92 hortatives
+    //      (let me/let's), 4.92-family affectives (loves me →
+    //      უყვარვარ, I am afraid → მეშინია), 4.91/4.92 going-to-be
+    //      frames (I/we/they/you 're going to be), 4.98 aorist
+    //      dictionary (said to me → მითხრა, gave me → მომცა), 4.99
+    //      demonstratives (these/those + noun), 4.100 conjunctions,
+    //      4.101 politeness (you're welcome → არაფრის, see you later),
+    //      4.102-4.103 time frames, 4.107 quantifiers (both of them/
+    //      us/you partitives). Only genuinely bare tokens remain.
+    //      1st/2nd person case-invariant (მე/ჩვენ serve NOM and DAT
+    //      alike — en.wiktionary მე), 3rd person suppletive: subject
+    //      he/she → ის (NO gender), object him → მას (dative),
+    //      them → მათ (dative/plural-ergative homograph). they →
+    //      ისინি (animate subject default). you is QA-gated (T–V
+    //      register, KA-52) and it is AI-gated (dummy subject /
+    //      cleft polysemy) — neither maps mechanically.
+    //      CONTRACTION GUARD: \b matches inside contractions ("I'm"
+    //      → boundary before m), so I'm/I'll/I've/I'd/you're/it's
+    //      are placeholder-protected FIRST — the full contraction is
+    //      restored verbatim after the bare swaps, leaving the
+    //      auxiliary residue for the AI pass instead of degrading to
+    //      a wrong bare pronoun + orphan fragment.
+    //      PLACEHOLDER DESIGN (bug fix): the original placeholder
+    //      embedded the pronoun letter (\uE000I\uE001) — but \uE000 is
+    //      a non-word char, so \bI\b matched INSIDE the placeholder
+    //      and clobbered it. Fix: placeholders are \uE000<index>\uE001
+    //      with the original text kept in a per-call array; digits are
+    //      \w so no bare-pronoun \b regex can match inside, and the
+    //      restore returns the exact original contraction.
+    //      NOTE: \b never matches after Georgian chars — safe after
+    //      earlier Georgian swaps.
+    const savedContr = [];
+    const protectContr = (m) => { savedContr.push(m); return '\uE000' + (savedContr.length - 1) + '\uE001'; };
+    out = out.replace(/\bI(?:'m|'ll|'ve|'d)\b/gi, protectContr);
+    out = out.replace(/\byou(?:'re|'ll|'ve|'d)\b/gi, protectContr);
+    out = out.replace(/\bwe(?:'re|'ll|'ve|'d)\b/gi, protectContr);
+    out = out.replace(/\bthey(?:'re|'ll|'ve|'d)\b/gi, protectContr);
+    out = out.replace(/\bit(?:'s|'ll|'ve|'d)\b/gi, protectContr);
+    out = out.replace(/\bhe(?:'s|'ll|'ve|'d)\b/gi, protectContr);
+    out = out.replace(/\bshe(?:'s|'ll|'ve|'d)\b/gi, protectContr);
+    out = out.replace(/\bI\b/gi, 'მე');
+    out = out.replace(/\bme\b/gi, 'მე');
+    out = out.replace(/\bwe\b/gi, 'ჩვენ');
+    out = out.replace(/\bus\b/gi, 'ჩვენ');
+    out = out.replace(/\bshe\b/gi, 'ის');
+    out = out.replace(/\bhe\b/gi, 'ის');
+    out = out.replace(/\bhim\b/gi, 'მას');
+    out = out.replace(/\bthem\b/gi, 'მათ');
+    out = out.replace(/\bthey\b/gi, 'ისინი');
+    out = out.replace(/\uE000(\d+)\uE001/g, (m, i) => savedContr[+i]);
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.40.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.41.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 123,
-    qaRules: 122,
-    autoFixes: 107,
-    researchSources: 374
+    promptBlocks: 124,
+    qaRules: 123,
+    autoFixes: 108,
+    researchSources: 375
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
