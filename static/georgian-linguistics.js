@@ -3524,6 +3524,47 @@ MAPPING: my→ჩემი · our→ჩვენი · their→მათი · h
 your→შენი|თქვენი (QA-gated) · her→მისი|მას (QA-gated) ·
 1st/2nd-dat → ჩემს/შენს/ჩვენს/თქვენს · 3rd-dat → მის/მათ (zero -ს)`;
 
+// KA-111 v1.29.0 — Spatial deictics + existential copula: bare EN place
+//                  adverbs and dummy-subject "there is/are" frames. Wires
+//                  KA-101's documented-but-never-coded EXISTENCE frames
+//                  into deterministic fixes.
+const KA_SPATIAL_DEICTIC = `
+SPATIAL DEICTICS + EXISTENTIAL COPULA — bare EN place adverbs map to
+Georgian's two-way system (en.wiktionary აქ [äkʰ] "here", იქ [ikʰ]
+"there"; be-easy.org /ak /ik: აქ = place NEAR THE SPEAKER, იქ = place
+DISTANT relative to speaker AND listener — no English-style mid-deixis,
+no demonstrative duplication; the -ვე fusions are coordinate):
+• here → აქ · there → იქ (idioms: იქ სწავლობს "he studies there",
+  აქ უნდა გაშენდეს ხეხილის ბაღი "an orchard is to be planted here").
+• right here → აქვე · over there → იქვე (en.wiktionary, Chikobava
+  Explanatory Dictionary refs: აქვე = "here, right here", იქვე = "in
+  that very place" — POLYSEMOUS: also "at that very instant"; spatial
+  vs temporal reading needs context, map spatial by default).
+  Fused pattern აქ+ვე / იქ+ვე mirrors ახლა+ვე (KA-109).
+• EXISTENTIAL COPULA (KA-101 wiring): Georgian has NO dummy subject —
+  "there" DELETES, the real subject surfaces: there is a book → არის
+  წიგნი / წიგნი არის. Location frame: the book is on the table →
+  წიგნი მაგიდაზეა — არიس ABBREVIATES to -ა after a case suffix
+  (georgiafriends.ru). there is no → არ არის / არ არსებობს.
+• PLURAL ANIMACY RULE (Latinum Georgian lesson 44, literary
+  attestations): inanimate plural subjects take SINGULAR იყო, animate
+  plurals take იყვნენ — წიგნები იყო მაგიდაზე · ქალაქის ქუჩები იყო
+  ცარიელი · პასუხები იყო სწორი · ციხე-სიმაგრეები იყო აშენებული ·
+  სოფლები იყო გაფანტული · ისტორიები იყო გადმოცემული; animate:
+  მეფენი იყვნენ (Rustaveli). COMMON MISTAKE: *წიგნები იყვნენ is WRONG.
+  DEFAULT for bare there were → იყო (inanimate dominates text);
+  animate-only frames reach QA 3.110 + AI pass.
+• HOMONYM GUARD: colloquial აქ is a clipping of აქვს "has" — EN→KA
+  never triggers it (English "has" never maps through here), but the
+  AI pass must not "correct" locative აქ into აქვს.
+• ORDERING: fix 4.91 (There's going to be → იქნება) and 4.92 (There
+  used to be → იყო ხოლმე) consume their frames BEFORE 4.96 — only
+  bare there is/are/was/were leftovers reach the deterministic map.
+MAPPING: right here→აქვე · here→აქ · over there→იქვე · there→იქ ·
+there is/are→არის · there was→იყო · there were→იყო (inanimate
+default) | იყვნენ (animate, QA-gated) · there is no→არ არის ·
+X on the table→X ... მაგიდაზეა (-ა fused copula)`;
+
 
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
@@ -3633,6 +3674,7 @@ function getKaKnowledgeBase() {
         KA_NEGATION_CARRIERS,
         KA_TIME_DEICTIC,
         KA_POSSESSIVE_DET,
+        KA_SPATIAL_DEICTIC,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4632,6 +4674,36 @@ function validateGeorgianTranslation(text) {
     }
     if (/\bher\b/i.test(text) && !/(?<![\u10A0-\u10FF])(მისი|მას)(?![\u10A0-\u10FF])/.test(text)) {
         issues.push({ rule: 'possessive_det_untranslated', message: 'English "her" untranslated → მისი (possessive: her book → მისი წიგნი) or მას (object: saw her → დაინახა მას). Polysemous — decide from syntax. If the possessor is the clause subject, use თავისი (reflexive) instead.' });
+    }
+
+    // 3.110 Spatial-deictic + existential residue (KA-111): bare EN place
+    //      adverbs and dummy-subject there-frames surviving into Georgian
+    //      output. SCOPE: exact there is/are/was/were bigrams ONLY — never
+    //      bare "there" (3.99 temporal_dative covers "there lived a king",
+    //      3.106 covers "there used to be"; a bare-there probe would
+    //      double-flag both). NARRATIVE INVERSION excluded: "there lived/
+    //      stood/lay X" has NO locative there — Georgian drops it (verb-
+    //      first: ცხოვრობდა ერთი მეფე). DUMMY-SUBJECT frames excluded
+    //      the same way (there's / there is|are|was|were / used to /
+    //      going to / modal+be) — those belong to the existential and
+    //      intent rules, never to the locative იქ probe. Animacy split
+    //      (Latinum lesson 44): inanimate plural → იყო, animate plural →
+    //      იყვნენ — *წიგნები იყვნენ WRONG.
+    if (/\bhere\b/i.test(text) && !/(?<![\u10A0-\u10FF])აქ(ვე)?(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'spatial_deictic_untranslated', message: 'English "here" untranslated → აქ (place near the speaker); "right here" → აქვე (fused აქ+ვე, Chikobava). Never map locative აქ to აქვს "has" — homonym, not related.' });
+    }
+    if (/\bthere\b(?!\s*['’]?s\b)(?!\s+(?:is|are|was|were)\b)(?!\s+used\s+to\b)(?!\s+going\s+to\b)(?!\s+(?:will|would|can|could|must|may|might|should)\s+be\b)(?!\s+(?:lived|stood|sat|lay|hung|appeared|arose|emerged|existed|remained|grew|ruled|reigned)\b)/i.test(text) && !/(?<![\u10A0-\u10FF])იქ(ვე)?(?![\u10A0-\u10FF])/.test(text)) {
+        issues.push({ rule: 'spatial_deictic_untranslated', message: 'English "there" untranslated → იქ (place distant from speaker AND listener); "over there" → იქვე (fused). Georgian has no dummy subject: existential "there" DELETES (there is a book → არის წიგნი) — do not calque dummy there as იქ.' });
+    }
+    //      -ა fused-copula detection: the abbreviation attaches AFTER a
+    //      postposition suffix (მაგიდაზეა = ზე+ა) — never bare -ა (would
+    //      false-positive on მაგიდა-class nouns).
+    //      Existential probe: exact there is/are/was/were bigrams ONLY.
+    //      Was/were merge into one probe: იყო/იყვნენ carriers satisfy it
+    //      (Latinum animacy split in the message). არ არის is covered by
+    //      the არის substring.
+    if (/\bthere\s+(?:is|are|was|were)\b/i.test(text) && !/(?:არის|იყო|იყვნენ|(?:ზე|ში|თან|გან|ვით)ა(?![\u10A0-\u10FF]))/.test(text)) {
+        issues.push({ rule: 'existential_untranslated', message: 'English dummy-subject "there is/are/was/were" untranslated → DROP "there", use the real subject + არის/იყო (there is a book → არის წიგნი; the book is on the table → წიგნი მაგიდაზეა, -ა fused copula). Negated: there is no → არ არის / არ არსებობს (KA-101). PLURAL ANIMACY (Latinum lesson 44): inanimate plural → SINGULAR იყო (წიგნები იყო მაგიდაზე), animate plural → იყვნენ (მეფენი იყვნენ, Rustaveli) — COMMON MISTAKE: *წიგნები იყვნენ is wrong.' });
     }
 
     return issues;
@@ -5791,16 +5863,48 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bour\b/gi, 'ჩვენი');
     out = out.replace(/\btheir\b/gi, 'მათი');
 
+    // 4.96 Spatial deictics + existentials (KA-111). FUNCTION TAIL — runs
+    //      AFTER 4.91 (There's going to be → იქნება) and 4.92 (There used
+    //      to be → იყო ხოლმე) have consumed their frames, so only bare
+    //      there is/are/was/were leftovers reach these swaps. ZERO-
+    //      POLYSEMY single-word/bigram swaps, the proven 4.94 pattern.
+    //      ORDER MATTERS (longest-first):
+    //      "right here" before "here" — else აქვე degrades to აქ;
+    //      "over there" before "there" — else იქვე degrades to იქ;
+    //      "there is no" before "there is" — else negation splits;
+    //      there-is/are/was/were before bare "there" — else the dummy
+    //      subject leaks to იქ (Georgian has no dummy subject: it DROPS).
+    //      იყვნენ is deliberately NOT mapped (animate QA-gated per
+    //      Latinum lesson 44) — bare there were → იყო inanimate default.
+    //      NARRATIVE INVERSION (attested verb-first: იყო და არსებობდა,
+    //      ცხოვრობდა ერთი მეფე): "there lived a king" has no locative
+    //      there — DELETE the dummy before inversion verbs, never map იქ
+    //      ("at that time there lived a king" → იმ დროს ცხოვრობდა ...).
+    //      Same for modal existentials (there will/would/can/could/must/
+    //      may/might/should be) — delete, the modal-copula frame is
+    //      AI-pass territory (იქნება წვეულება, never *იქ will be).
+    out = out.replace(/\bthere\s+(?=(?:lived|stood|sat|lay|hung|appeared|arose|emerged|existed|remained|grew|ruled|reigned)\b)/gi, '');
+    out = out.replace(/\bthere\s+(?=(?:will|would|can|could|must|may|might|should)\s+be\b)/gi, '');
+    out = out.replace(/\bright\s+here\b/gi, 'აქვე');
+    out = out.replace(/\bover\s+there\b/gi, 'იქვე');
+    out = out.replace(/\bthere\s+is\s+no\b/gi, 'არ არის');
+    out = out.replace(/\bthere\s+is\b/gi, 'არის');
+    out = out.replace(/\bthere\s+are\b/gi, 'არის');
+    out = out.replace(/\bthere\s+was\b/gi, 'იყო');
+    out = out.replace(/\bthere\s+were\b/gi, 'იყო');
+    out = out.replace(/\bhere\b/gi, 'აქ');
+    out = out.replace(/\bthere\b/gi, 'იქ');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.28.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.29.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 111,
-    qaRules: 110,
-    autoFixes: 95,
-    researchSources: 288
+    promptBlocks: 112,
+    qaRules: 111,
+    autoFixes: 96,
+    researchSources: 293
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
