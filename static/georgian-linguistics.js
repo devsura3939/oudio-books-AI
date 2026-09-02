@@ -3737,6 +3737,68 @@ also" → არა მხოლოდ... არამედ.
 MAPPING: and→და · but→მაგრამ · or→ან · either...or→ან...ან ·
 neither/nor→არც · focus/-ც→AI-pass`;
 
+// KA-116 v1.34.0 — Politeness formulas & dialogue interjections. The
+// highest-frequency fixed phrases in audiobook DIALOGUE (yes/no/please/
+// thank you/sorry/excuse me/hello/goodbye) had NO deterministic swap —
+// every dialogue line left them in Latin. Sources: kahibaro course 6.2
+// (full politeness tables), georgianlanguage.online (greetings/thanks),
+// Wiktionary Basic Georgian glossary, geolang.ru. YES has a REGISTER
+// TRIAD (Wiktionary): formal დიახ, neutral კი, informal ხო/ჰო — map to
+// the NEUTRAL კი; the formal/informal choice is AI-pass. THANK YOU:
+// გმადლობთ (formal verb form) vs მადლობა (neutral noun) — მადლობა is
+// safe everywhere; დიდი მადლობა = thank you very much. RESPONSE არაფრის
+// "for nothing" (Wiktionary). APOLOGY SPLIT (geolang.ru): უკაცრავად =
+// introductory excuse-me (nothing to apologize for yet: passing,
+// asking), ბოდიში = the actual apology — kahibaro uses ბოდიში for both
+// in casual speech. GREETINGS: გამარჯობა (lit. "victory") all-purpose,
+// გამარჯობათ formal; time greetings X მშვიდობისა "X of peace".
+// ნახვამდის = "until we see each other" goodbye; მერე გნახავთ =
+// see you later. კარგი = good/okay (filler), რა თქმა უნდა = of course
+// (lit. "what to say is needed"). Address forms ბატონო/ქალბატონო
+// (Sir/Madam) — gender choice is deterministic from the referent, but
+// honorific usage is style — AI-pass.
+// MAPPING: yes→კი · no→არა · please→გთხოვთ · thanks→მადლობა ·
+// sorry→ბოდიში · excuse me→უკაცრავად · hello→გამარჯობა ·
+// goodbye→ნახვამდის · you're welcome→არაფრის · okay→კარგი ·
+// of course→რა თქმა უნდა · formal/informal variants→AI-pass
+// NAME NOTE: KA_POLITENESS (1h, v1.2.0) already covers the T-V register
+// system — this block is the fixed DIALOGUE FORMULAS layer.
+const KA_POLITENESS_FORMULAS = `
+POLITENESS FORMULAS & DIALOGUE INTERJECTIONS. Fixed formulas used
+constantly in dialogue — translate them with the Georgian FORMULA, not
+word-by-word. YES has three registers (Wiktionary): დიახ formal, კი
+neutral, ხო/ჰო informal — default კი; დიახ for emphatic/formal
+speech (AI-pass). NO → არა ("no, thank you" → არა, მადლობა — refusal
+formula). PLEASE: no single exact word (kahibaro) — გთხოვ/გთხოვთ
+"lit. I ask you" (გთხოვთ formal/polite) or თუ შეიძლება "if possible";
+default გთხოვთ, sentence-final position natural (წყალი, გთხოვ).
+THANK YOU: გმადლობთ formal / მადლობა neutral; დიდი მადლობა = thank
+you very much ("big thanks"; მადლი = grace). YOU'RE WELCOME →
+არაფრის "for nothing"; also არა ღირს "it's nothing".
+APOLOGY SPLIT (geolang.ru): უკაცრავად = introductory excuse-me —
+nothing to apologize for yet (passing through, getting attention,
+asking a question); ბოდიში = actual apology / casual sorry
+(ბოდიში, დავიგვიანე "sorry, I'm late"; ძალიან ბოდიში = I'm very
+sorry). GREETINGS: გამარჯობა (lit. "victory") all-purpose hello;
+გამარჯობათ formal plural-polite. Time-of-day: დილა მშვიდობისა good
+morning · საღამო მშვიდობისა good evening · ღამე მშვიდობისა good
+night (lit. "morning/evening/night OF PEACE" — genitive + postposition).
+FAREWELL: ნახვამდის "until we see each other" — any register;
+მერე გნახავთ see you later; კარგად იყავი(თ) be well/take care.
+OKAY: კარგი good/okay (also კაი colloquial); OF COURSE → რა თქმა
+უნდა (lit. "what is to be said"); ალბათ = probably, რასაკვირვალა =
+naturally. Address: ბატონო Sir/Mr., ქალბატონო Madam/Ms. (+ name),
+polite you = თქვენ (verbs take -თ). სასიამოვნოა = nice to meet you;
+მოგესალმებით = greetings (formal).
+MAPPING: yes→კი (დიახ formal, ხო/ჰო informal) · no→არა ·
+please→გთხოვთ · thank you→მადლობა · thank you very much→დიდი
+მადლობა · thanks→მადლობა · you're welcome→არაფრის · sorry→ბოდიში ·
+excuse me→უკაცრავად · hello/hi→გამარჯობა · goodbye/bye→ნახვამდის ·
+good morning→დილა მშვიდობისა · good evening→საღამო მშვიდობისა ·
+good night→ღამე მშვიდობისა · see you later→მერე გნახავთ ·
+okay→კარგი · of course→რა თქმა უნდა · Mr./Sir→ბატონო ·
+Madam→ქალბატონო · formal/informal variant choice→AI-pass`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -3850,6 +3912,7 @@ function getKaKnowledgeBase() {
         KA_IRREGULAR_PAST,
         KA_DEMONSTRATIVES,
         KA_COORDINATING_CONJ,
+        KA_POLITENESS_FORMULAS,
         KA_PREVERBS,
         KA_DEFECTS,
         KA_REGISTER,
@@ -4950,6 +5013,21 @@ function validateGeorgianTranslation(text) {
         !/(?:^|[^\u10A0-\u10FF])(?:და|მაგრამ|ან)(?![\u10A0-\u10FF])/.test(text);
     if (coordConj) {
         issues.push({ rule: 'coordinating_conjunction_untranslated', message: 'English coordinating conjunction untranslated: and→და · but→მაგრამ · or→ან (ან...ან = either...or). PUNCTUATION: NO comma before და joining clauses (დედა სადილს ამზადებს და ნინო თამაშობს — drop the English comma habit); comma BEFORE მაგრამ. Georgian also marks addition with the enclitic -ც (ნინოც "Nino too") and the focus particle კი — prefer plain და unless the item is an afterthought. Compound frames: not only...but also→არა მხოლოდ...არამედ · either...or→ან...ან · neither/nor→არც · although→თუმცა (comma before) · whereas/and-contrast→ხოლო.' });
+    }
+
+    // 3.115 Politeness formula untranslated (KA-116): dialogue
+    //      interjections (yes/no/please/thanks/sorry/excuse me/hello/
+    //      goodbye) left in Latin with NO Georgian politeness formula
+    //      anywhere. Same isolated-carrier check as 3.114 (string edge
+    //      or non-Georgian char on both sides — verbs like მადლობა inside
+    //      inflected forms don't exist, but კი/არა appear INSIDE words
+    //      everywhere: კითხულობს, არასდროს — a bare substring match would
+    //      false-silence every draft). LOOSE: ANY one carrier silences.
+    const politeness =
+        /\b(?:yes|no|please|thanks?|sorry|excuse me|hello|hi|goodbye|bye)\b/i.test(text) &&
+        !/(?:^|[^\u10A0-\u10FF])(?:კი|დიახ|არა|მადლობა|გმადლობთ|გთხოვ|ბოდიში|უკაცრავად|გამარჯობა|ნახვამდის)(?![\u10A0-\u10FF])/.test(text);
+    if (politeness) {
+        issues.push({ rule: 'politeness_formula_untranslated', message: 'Politeness formula untranslated in dialogue: yes→კი (დიახ formal, ხო/ჰო informal) · no→არა · please→გთხოვთ (თუ შეიძლებا "if possible") · thank you→მადლობა (გმადლობთ formal; დიდი მადლობა = very much) · you\'re welcome→არაფრის · sorry→ბოდიში · excuse me→უკაცრავად (introductory; ბოდიში for the actual apology) · hello/hi→გამარჯობა (გამარჯობათ formal) · goodbye/bye→ნახვამდის · good morning→დილა მშვიდობისა · good evening→საღამო მშვიდობისა · good night→ღამე მშვიდობისა. Translate the FORMULA, not word-by-word; refusal formula "no, thank you" → არა, მადლობა.' });
     }
 
     return issues;
@@ -6271,16 +6349,80 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bbut\b/gi, 'მაგრამ');
     out = out.replace(/\bor\b/gi, 'ან');
 
+    // 4.101 Politeness formulas & dialogue interjections (KA-116).
+    //      FUNCTION TAIL — runs after every frame rule that consumes the
+    //      longer surroundings (4.90 don't-know frames, 4.96 there-is-no,
+    //      4.94 later→მოგვიანებით, 4.97 wh-swaps), so only the fixed
+    //      formulas and their bare leftovers reach these swaps.
+    //      ZERO-POLYSEMY formula swaps (kahibaro 6.2, georgianlanguage.
+    //      online, Wiktionary Basic Georgian glossary, geolang.ru).
+    //      ORDER MATTERS (longest-first):
+    //      "no thank you/thanks" (refusal formula → არა, მადლობა) before
+    //      bare thanks/no; "thank you very much" (→ დიდი მადლობა, kahibaro)
+    //      before "thank you" — BUT 4.69 already turned "very much"→ძალიან,
+    //      so the compound only catches a lot/so much; the ძალიან residue
+    //      is repaired to დიდი მადლობა after the bare thanks swap. "good
+    //      morning/evening/night" (X მშვიდობისა "X of peace") before any
+    //      bare residue; "see you later" must match the ALREADY-SUBSTITUTED
+    //      residue (4.94 turned later→მოგვიანებით) — and the \b must sit on
+    //      the LATIN branch only (JS \b never matches against Georgian
+    //      chars) — same precedent as 4.97's "what's more".
+    //      DELIBERATE SPLIT on "no": answer-particle (before punctuation —
+    //      INCLUDING the auto-appended । danda from 4.19 — or string end)
+    //      → არა; determiner "no money/no problem" stays Latin — negation
+    //      placement is screeve-dependent, AI-pass (KB 4.11: do-support →
+    //      არ + verb).
+    //      Bare yes → კი (Wiktionary neutral register; დიახ formal and
+    //      ხო/ჰო informal are AI-pass choices). sorry→ბოდიში (actual
+    //      apology); excuse me→უკაცრავად (introductory — geolang.ru).
+    //      Address: sir→ბატონო, madam/ma'am→ქალბატონო, Mr./Mrs./Ms.→
+    //      ბატონო/ქალბატონო (abb. dot consumed — Georgian uses none).
+    //      NOTE: \b never matches after Georgian chars (JS \b is
+    //      ASCII-word-based) — safe to run after earlier Georgian swaps.
+    //      "no, thank you" (with comma) also reaches the refusal rule.
+    out = out.replace(/\bno[,]?\s+(?:thank you|thanks)\b/gi, 'არა, მადლობა');
+    out = out.replace(/\b(?:thank you|thanks)\s+(?:very much|a lot|so much)\b/gi, 'დიდი მადლობა');
+    out = out.replace(/\byou'?re\s+welcome\b/gi, 'არაფრის');
+    out = out.replace(/\byou\s+are\s+welcome\b/gi, 'არაფრის');
+    out = out.replace(/\bgood\s+morning\b/gi, 'დილა მშვიდობისა');
+    out = out.replace(/\bgood\s+evening\b/gi, 'საღამო მშვიდობისა');
+    out = out.replace(/\bgood\s+night\b/gi, 'ღამე მშვიდობისა');
+    out = out.replace(/\bsee\s+you\s+(?:მოგვიანებით|later)/gi, 'მერე გნახავთ');
+    out = out.replace(/\bexcuse\s+me\b/gi, 'უკაცრავად');
+    out = out.replace(/\bof\s+course\b/gi, 'რა თქმა უნდა');
+    out = out.replace(/\bma'?am\b/gi, 'ქალბატონო');
+    out = out.replace(/\bmadam\b/gi, 'ქალბატონო');
+    out = out.replace(/\bsir\b/gi, 'ბატონო');
+    out = out.replace(/\bMrs\.?/gi, 'ქალბატონო');
+    out = out.replace(/\bMs\.?/gi, 'ქალბატონო');
+    out = out.replace(/\bMr\.?/gi, 'ბატონო');
+    out = out.replace(/\bthank\s+you\b/gi, 'მადლობა');
+    out = out.replace(/\bthanks\b/gi, 'მადლობა');
+    // 4.69 already turned "very much"→ძალიან, so "thank you very much" ends
+    // up as "მადლობა ძალიან" — repair it to the attested დიდი მადლობა
+    // ("big thanks", kahibaro).
+    out = out.replace(/მადლობა\s+ძალიან/g, 'დიდი მადლობა');
+    out = out.replace(/\bplease\b/gi, 'გთხოვთ');
+    out = out.replace(/\bsorry\b/gi, 'ბოდიში');
+    out = out.replace(/\bhello\b/gi, 'გამარჯობა');
+    out = out.replace(/\bhi\b/gi, 'გამარჯობა');
+    out = out.replace(/\bgoodbye\b/gi, 'ნახვამდის');
+    out = out.replace(/\bbye\b/gi, 'ნახვამდის');
+    out = out.replace(/\bokay\b/gi, 'კარგი');
+    out = out.replace(/\bok\b/gi, 'კარგი');
+    out = out.replace(/\byes\b/gi, 'კი');
+    out = out.replace(/\bno(?=\s*[,;.!?…:—।]|\s*$)/gi, 'არა');
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.33.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.34.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 116,
-    qaRules: 115,
-    autoFixes: 100,
-    researchSources: 320
+    promptBlocks: 117,
+    qaRules: 116,
+    autoFixes: 101,
+    researchSources: 324
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
