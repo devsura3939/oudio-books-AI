@@ -3594,6 +3594,105 @@ this/next/last month→ამ/მომავალ/გასულ თვეშ
 in [year]→[year] წელს · from Monday to Friday→ორშაბათიდან პარასკევამდე ·
 at the weekend→შაბათ-კვირას (longest-first)`;
 
+// KA-118 v1.36.0 — Narrative time deixis II: story openers, the ago-
+//                  construction, daypart frames, all/every completion.
+const KA_NARRATIVE_TIME = `
+KA-118 NARRATIVE TIME DEIXIS II — STORY OPENERS / AGO / DAYPARTS /
+ALL-FRAMES (v1.36.0; dictionary.ge since-entry "ten years ago → ათი
+წლის წინ", "many years since → მრავალი წლის წინ", "long since →
+დიდი ხნის წინ", "not long since → ცოტა ხნის წინ"; teachandlearnwith
+georgia.wordpress.com Star Wars ka-subtitle "დიდი ხნის წინ, შორეულ
+გალაქტიკაში…" = "A long time ago in a galaxy far, far away…";
+date-fns ka locale "ნაკლები ხნის წინ" = "less than X ago"; ka.wiktionary
+იყო და არა იყო რა lit. "there was and there was not"; folklore.usc.edu +
+talkpal.ai fairy-tale notes; ka.wiktionary p.m.-entry ნაშუადღევს
+"afternoon/p.m."; georgiantranslate.com "მთელი დღე = all day";
+asik.su "იმ დღიდან მხოლოდ ჩემთვის ვამზადებდი" = "from that day on";
+KB KA_COLLOCATIONS narrative-opener note; gapscan-v1360 six-domain
+battery: openers/ago/dayparts/all-frames all Latin residue):
+
+• AGO CONSTRUCTION — [quantity] + GENITIVE + წინ (postposition "before"):
+  ათი წლის წინ ten years ago · სამი წლის წინ three years ago ·
+  ერთი წლის წინ a year ago · ერთი თვის წინ a month ago (month is
+  IRREGULAR genitive თვის, never *თვისის წინ) · ერთი კვირის წინ a week
+  ago · ორი დღის წინ two days ago · ხუთი წუთის წინ five minutes ago.
+  Discrete-genitive discipline (KA-2 numerals + KA-58 narrative past):
+  სამი წლის წინ, never *სამი წლების წინ — quantity is singular while
+  genitive marks the measure noun.
+• WHOLE-PHRASE AGO IDIOMS (deterministic):
+  a long time ago → დიდი ხნის წინ (lit. "long of time before";
+    Star-Wars attested) · long ago → დიდი ხნის წინ ·
+  a long while ago → დიდი ხნის წინ ·
+  not long ago → არც ისე დიდი ხნის წინ ·
+  a short time ago / a little while ago → ცოტა ხნის წინ ("little of
+    time before"; dictionary.ge "not long since → ცოტა ხნის წინ") ·
+  recently → ცოტა ხნის წინ in narrative past, ბოლო ხანში / ახლახანს
+    elsewhere (KA_TIME_EXPR; contextual, AI decides) ·
+  once upon a time → იყო და არა იყო რა (lit. "there was and there was
+    not" — Georgian folklore opener; NEVER calque *ერთხელ ადრე) ·
+  from that day on → იმ დღიდან (დღიდან = ablative-of-day; asik.su
+    attested "იმ დღიდან მხოლოდ ჩემთვის ვამზადებდი") ·
+  from that time on → იმ დროიდან · ever since → იმ დღიდან in
+    day-frames else მას შემდეგ (KA_TEMPORAL_CLAUSES; AI decides).
+• NARRATIVE ONE-DAY OPENERS — "one + daypart" = indefinite narrative
+  deictic (EN "one day" ≈ "a certain day"), Georgian drops the article
+  and keeps dative: ერთ დღეს one day · ერთ დილას one morning ·
+  ერთ საღამოს one evening · ერთ ღამეს one night (KB KA_COLLOCATIONS
+  ერთ დღეს / KA_DECISION_TABLE ერთ საღამოს attested openers).
+  POLYSEMY GUARD: bare "one" NEVER maps — numeral ერთი, pronoun one,
+  impersonal one (KA_IMPERSONAL) — only the "one + daypart" frame.
+• DAYPART ADVERB FRAMES (KB KA_TIME_EXPR line "in the morning →
+  დილას NOT *დილაში"):
+  in the morning → დილას · in the evening → საღამოს ·
+  in the afternoon → ნაშუადღევს (na-…-evs circumfix "after-midday";
+    ka.wiktionary p.m. entry) · at noon → შუადღისას (-ისას compact;
+    KA-71) · at night → ღამით (instrumental -ით; KB attested).
+• ALL-COMPLETION FRAMES — მთელი + dative დროს postposition (whole + time
+  during; georgiantranslate.com მთელი დღე):
+  all day → მთელი დღე · all night → მთელი ღამე · all morning → მთელი
+  დილა · all evening → მთელი საღამო · all week → მთელი კვირა ·
+  all month → მთელი თვე · all year → მთელი წელი (nominative წელი;
+    წელს is dative "in year", მთელი წელი = "the whole year" object/subject).
+  POLYSEMY GUARD: bare "all" NEVER maps (all=ყველა/ყოველი quantifier,
+  ყველაფერი everything) — only the "all + time-noun" frame.
+• EVERY-COMPLETION (extends 4.92/4.102): every evening → ყოველ
+  საღამოს · every night → ყოველ ღამე (KB-attested paradigm; 4.92
+  covers only day/morning, 4.102 only week/month/year — evening/night
+  fall between).
+• FREQUENCY ADVERBIALS (KB KA_COLLOCATIONS კვირაში ერთხელ, -ში
+  per-interval): once a day → დღეში ერთხელ · once a week → კვირაში
+  ერთხელ · once a month → თვეში ერთხელ · once a year → წელიწადში
+  ერთხელ (year is წელიწადში in per-interval, attested "ას წელიწადში
+  ერთხელ" once in a blue moon) · twice a week → კვირაში ორჯერ ·
+  three times a day → დღეში სამჯერ (-ჯერ multiplier + -ში interval).
+• DAYPART × WEEKDAY COMBINATION (production case: "on Monday
+  evening"): weekday-dative first, daypart dative second, NO linker —
+  ორშაბათს საღამოს Monday evening (KB KA_CALENDAR_TIME: on Saturday
+  evening→შაბათ საღამოს attested). 4.102's on+weekday runs FIRST,
+  4.103 then completes the daypart tail.
+
+NON-INTERFERENCE (4.103 runs at the 4.69/4.70 boundary right AFTER
+4.102, BEFORE 4.70 next→შემდეგ / then→მერე, BEFORE 4.74 bare
+"once"-conjunction territory, BEFORE 4.81 go→მიდის, BEFORE 4.92):
+- 4.103 must NEVER fire on bare one/all/recently — only inside the
+  listed frames (one=pronoun/numeral, all=ყველა, recently=AI-tense).
+- "once" bare is POLYSEMOUS (conjunction "as soon as" = როგორც კი in
+  4.74) — never mapped here; only "once upon a time" whole-phrase.
+- 4.102's "from X to Y" consumes day-range first; 4.103's from-that-day
+  frames are disjoint (that X, not weekday).
+- 4.85's "at that time → იმ დროს" already handles time-not-day; 4.103
+  only takes day/daypart nouns.
+MAPPING: [N] years ago→[N] წლის წინ · [N] months ago→[N] თვის წინ ·
+[N] weeks ago→[N] კვირის წინ · [N] days ago→[N] დღის წინ ·
+a long time ago→დიდი ხნის წინ · not long ago→არც ისე დიდი ხნის წინ ·
+a short time ago→ცოტა ხნის წინ · once upon a time→იყო და არა იყო რა ·
+from that day on→იმ დღიდან · one day→ერთ დღეს · one morning→ერთ დილას ·
+one evening→ერთ საღამოს · one night→ერთ ღამეს · in the morning→დილას ·
+in the afternoon→ნაშუადღევს · in the evening→საღამოს · at noon→შუადღისას ·
+at night→ღამით · all day→მთელი დღე · all night→მთელი ღამე ·
+every evening→ყოველ საღამოს · every night→ყოველ ღამე ·
+once a week→კვირაში ერთხელ · twice a week→კვირაში ორჯერ (longest-first)`;
+
 // KA-110 v1.28.0 — Possessive determiners: unambiguous EN possessives →
 //                  Georgian carriers (extends KA_POSSESSION's declension
 //                  table with the deterministic EN-side mapping).
@@ -4007,6 +4106,7 @@ function getKaKnowledgeBase() {
         KA_NEGATION_CARRIERS,
         KA_TIME_DEICTIC,
         KA_CALENDAR_TIME,
+        KA_NARRATIVE_TIME,
         KA_POSSESSIVE_DET,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
@@ -5147,6 +5247,30 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'calendar_time_untranslated', message: 'Calendar time untranslated: on Monday→ორშაბათს (weekdays take dative -ს after "on": ორშაბათს სამშაბათს ოთხშაბათს ხუთშაბათს პარასკევს შაბათს კვირას) · in January→იანვარში (months take -ში with s/r doubling: იანვარში თებერვალში მარტში აპრილში მაისში ივნისში ივლისში აგვისტოში სექტემბერში ოქტომბერში ნოემბერში დეკემბერში) · seasons are CLASS-VARYING: in spring→გაზაფხულზე · in summer→ზაფხულში · in autumn→შემოდგომაზე · in winter→ზამთარში · this/next/last week→ამ/მომავალ/გასულ კვირას · this/next/last month→ამ/მომავალ/გასულ თვეში · this/next/last year→ამ/მომავალ/გასულ წელს (month takes -ში, week/year take dative -ს) · every week/month/year→ყოველ კვირას/თვეს/წელს (ყოველ + OBLIQUE stem, never ყოველი) · in 1991→1991 წელს · at/on the weekend→შაბათ-კვირას · the next day→მეორე დღეს · next morning→მეორე დილას · from Monday to Friday→ორშაბათიდან პარასკევამდე. NEVER map a BARE weekday/month/season — კვირა means both week and Sunday, მაისი is May and rowan; only preposition/determiner frames consume the noun.' });
     }
 
+    // 3.117 Untranslated narrative time (v1.36.0, KA-118). Five trigger arms:
+    //      (a) the ago-construction ([qty] + daypart/period + ago);
+    //      (b) one/all/every + daypart openers and completions;
+    //      (c) whole-phrase idioms (once upon a time, from that day on,
+    //      in the morning/afternoon/evening, at night, at noon);
+    //      (d) once/twice/N-times-a-period frequency adverbials;
+    //      (e) ago-idioms without a measure noun (long ago, a long
+    //      time ago, not long ago, a short time ago). LOOSE:
+    //      ANY one narrative-time carrier silences — წლის/დღის/კვირის/
+    //      თვის წინ, დიდი/ცოტა ხნის წინ, იყო და არა იყო რა, იმ დღიდან,
+    //      ერთ დღეს, მთელი დღე, დილას, საღამოს, ღამით, ნაშუადღევს,
+    //      შუადღისას, ყოველ საღამოს, კვირაში ერთხელ. (4.92's ყოველ
+    //      დღე/დილას carriers included.)
+    const narrativeTime =
+        (/\b(?:a|an|\d+|one|two|three|four|five|six|seven|eight|nine|ten|many|few|several)\s+(?:day|days|week|weeks|month|months|year|years|hour|hours|minute|minutes|moment|moments)\s+ago\b/i.test(text) ||
+         /\b(?:one|all|every)\s+(?:day|night|morning|evening|week|month|year)\b/i.test(text) ||
+         /\b(?:once upon a time|from that (?:day|time) on|ever since|in the (?:morning|afternoon|evening)|at night|at noon)\b/i.test(text) ||
+         /\b(?:once|twice)\s+an?\s+(?:day|week|month|year)\b|\b\d+\s+times\s+an?\s+(?:day|week|month|year)\b/i.test(text) ||
+         /\b(?:long ago|a long time ago|a long while ago|not long ago|a short time ago|a little while ago)\b/i.test(text)) &&
+        !/(?<![\u10A0-\u10FF])(?:წლის წინ|დღის წინ|კვირის წინ|თვის წინ|ხნის წინ|იყო და არა იყო რა|იმ დღიდან|იმ დროიდან|მას შემდეგ|ერთ დღეს|ერთ დილას|ერთ საღამოს|ერთ ღამეს|მთელი დღე|მთელი ღამე|მთელი დილა|მთელი საღამო|მთელი კვირა|მთელი თვე|მთელი წელი|დილას|საღამოს|ღამით|ნაშუადღევს|შუადღისას|ყოველ საღამოს|ყოველ ღამე|ყოველ დღე|ყოველ დილას|დღეში ერთხელ|კვირაში ერთხელ|თვეში ერთხელ|წელიწადში ერთხელ|კვირაში ორჯერ|დღეში სამჯერ)(?![\u10A0-\u10FF])/.test(text);
+    if (narrativeTime) {
+        issues.push({ rule: 'narrative_time_untranslated', message: 'Narrative time untranslated: three years ago→სამი წლის წინ (ago = GENITIVE + წინ postposition; month irregular თვის წინ; discrete genitive — never *სამი წლების წინ) · a long time ago→დიდი ხნის წინ · not long ago→არც ისე დიდი ხნის წინ · a short time ago→ცოტა ხნის წინ · once upon a time→იყო და არა იყო რა (folklore opener, lit. "there was and there was not"; NEVER calque) · from that day on→იმ დღიდან · one day→ერთ დღეს · one morning→ერთ დილას · one evening→ერთ საღამოს · one night→ერთ ღამეს (narrative indefinite dative) · in the morning→დილას · in the afternoon→ნაშუადღევს · in the evening→საღამოს · at noon→შუადღისას · at night→ღამით · all day→მთელი დღე · all night→მთელი ღამე · all year→მთელი წელი · every evening→ყოველ საღამოს · every night→ყოველ ღამე · once a week→კვირაში ერთხელ · twice a week→კვირაში ორჯერ (-ში per-interval + -ჯერ multiplier). NEVER map bare one/all/recently/once — one=pronoun/numeral, all=ყველა, recently is tense-dependent, bare once is the conjunction "as soon as"→როგორც კი.' });
+    }
+
     return issues;
 }
 
@@ -5646,6 +5770,85 @@ function correctGeorgianMorphology(text) {
         return seasons[s.toLowerCase()] || m;
     });
     out = out.replace(/\bin ((?:19|20)\d{2})\b/gi, '$1 წელს');
+
+    // 4.103 (v1.36.0, KA-118) Narrative time: story openers, ago-
+    //      construction, daypart frames, all/every/frequency completion.
+    //      Runs right AFTER 4.102 (weekday datives already in place — the
+    //      daypart-tail rule completes "on Monday evening" → ორშაბათს
+    //      საღამოს) and BEFORE 4.70's next/then and 4.74's bare once
+    //      (whole phrases consumed first; bare one/all/once NEVER touched).
+    //      Longest-first: "not long ago" before "long ago", "once upon a
+    //      time" before any frequency "once a N", "a long time ago"
+    //      before the bare ago-construction.
+    out = out.replace(/\bonce upon a time\b/gi, 'იყო და არა იყო რა');
+    out = out.replace(/\bnot long ago\b/gi, 'არც ისე დიდი ხნის წინ');
+    out = out.replace(/\ba long time ago\b/gi, 'დიდი ხნის წინ');
+    out = out.replace(/\ba long while ago\b/gi, 'დიდი ხნის წინ');
+    out = out.replace(/\blong ago\b/gi, 'დიდი ხნის წინ');
+    out = out.replace(/\ba short time ago\b/gi, 'ცოტა ხნის წინ');
+    out = out.replace(/\ba little while ago\b/gi, 'ცოტა ხნის წინ');
+    out = out.replace(/\bfrom that day on\b/gi, 'იმ დღიდან');
+    out = out.replace(/\bfrom that time on\b/gi, 'იმ დროიდან');
+    out = out.replace(/\ball day long\b/gi, 'მთელი დღე');
+    out = out.replace(/\b(\d+|a|one|two|three|four|five|six|seven|eight|nine|ten|many|several)\s+(year|years|month|months|week|weeks|day|days|hour|hours|minute|minutes)\s+ago\b/gi, (m, q, n) => {
+        const nums = { a: 'ერთი', one: 'ერთი', two: 'ორი', three: 'სამი',
+            four: 'ოთხი', five: 'ხუთი', six: 'ექვსი', seven: 'შვიდი',
+            eight: 'რვა', nine: 'ცხრა', ten: 'ათი', many: 'მრავალი',
+            several: 'რამდენიმე' };
+        const gens = { year: 'წლის', years: 'წლის', month: 'თვის',
+            months: 'თვის', week: 'კვირის', weeks: 'კვირის',
+            day: 'დღის', days: 'დღის', hour: 'საათის', hours: 'საათის',
+            minute: 'წუთის', minutes: 'წუთის' };
+        const geo = nums[q.toLowerCase()] || q;
+        const gen = gens[n.toLowerCase()];
+        return gen ? geo + ' ' + gen + ' წინ' : m;
+    });
+    out = out.replace(/\bone (day|morning|evening|night)\b/gi, (m, d) => {
+        const openers = { day: 'ერთ დღეს', morning: 'ერთ დილას',
+            evening: 'ერთ საღამოს', night: 'ერთ ღამეს' };
+        return openers[d.toLowerCase()] || m;
+    });
+    out = out.replace(/\bin the (morning|afternoon|evening)\b/gi, (m, d) => {
+        const parts = { morning: 'დილას', afternoon: 'ნაშუადღევს',
+            evening: 'საღამოს' };
+        return parts[d.toLowerCase()] || m;
+    });
+    out = out.replace(/\bat noon\b/gi, 'შუადღისას');
+    out = out.replace(/\bat night\b/gi, 'ღამით');
+    out = out.replace(/\ball (day|night|morning|evening|week|month|year)\b/gi, (m, n) => {
+        const alls = { day: 'მთელი დღე', night: 'მთელი ღამე',
+            morning: 'მთელი დილა', evening: 'მთელი საღამო',
+            week: 'მთელი კვირა', month: 'მთელი თვე', year: 'მთელი წელი' };
+        return alls[n.toLowerCase()] || m;
+    });
+    out = out.replace(/\bevery (evening|night)\b/gi, (m, n) => {
+        return n.toLowerCase() === 'evening' ? 'ყოველ საღამოს' : 'ყოველ ღამე';
+    });
+    out = out.replace(/\bonce a (day|week|month|year)\b/gi, (m, n) => {
+        const freq = { day: 'დღეში ერთხელ', week: 'კვირაში ერთხელ',
+            month: 'თვეში ერთხელ', year: 'წელიწადში ერთხელ' };
+        return freq[n.toLowerCase()] || m;
+    });
+    out = out.replace(/\btwice a (day|week|month|year)\b/gi, (m, n) => {
+        const freq = { day: 'დღეში ორჯერ', week: 'კვირაში ორჯერ',
+            month: 'თვეში ორჯერ', year: 'წელიწადში ორჯერ' };
+        return freq[n.toLowerCase()] || m;
+    });
+    out = out.replace(/\b(?:three|four|five|\d+) times a (day|week|month|year)\b/gi, (m, n) => {
+        const mults = { three: 'სამჯერ', four: 'ოთხჯერ', five: 'ხუთჯერ' };
+        const intervals = { day: 'დღეში', week: 'კვირაში', month: 'თვეში',
+            year: 'წელიწადში' };
+        const mult = mults[m.match(/three|four|five|\d+/i)[0].toLowerCase()] ||
+            (/\d+/.test(m) ? m.match(/\d+/)[0] + '-ჯერ' : null);
+        const iv = intervals[n.toLowerCase()];
+        return (mult && iv) ? iv + ' ' + mult : m;
+    });
+    out = out.replace(/(?<![\u10A0-\u10FF])(ორშაბათს|სამშაბათს|ოთხშაბათს|ხუთშაბათს|პარასკევს|შაბათს|კვირას) (morning|evening|night|afternoon)\b/gi, (m, w, d) => {
+        const tails = { morning: 'დილას', evening: 'საღამოს',
+            night: 'ღამეს', afternoon: 'ნაშუადღევს' };
+        const tail = tails[d.toLowerCase()];
+        return tail ? w + ' ' + tail : m;
+    });
 
     // 4.70 Untranslated English sequencers → Georgian narrative chain.
     out = out.replace(/\bfirst of all\b/gi, 'პირველ რიგში');
@@ -6589,12 +6792,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.35.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.36.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 118,
-    qaRules: 117,
-    autoFixes: 102,
-    researchSources: 329
+    promptBlocks: 119,
+    qaRules: 118,
+    autoFixes: 103,
+    researchSources: 334
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
