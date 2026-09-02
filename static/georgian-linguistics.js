@@ -3980,6 +3980,84 @@ questions/conditionals (free-choice → AI) · none of them/us/you →
 someone's → ვინმეს · nobody's → არავის · bare none → არც ერთი
 (AI) · ვიღაც specific-unknown — AI decides`;
 
+// KA-122 v1.40.0 — Quantifiers: much/many/few/little/plenty/several/
+//                  most/whole/half/both (amount carriers, singular
+//                  agreement, polysemy guards)
+const KA_QUANTIFIERS = `KA-122 QUANTIFIERS — MUCH/MANY/FEW/LITTLE/PLENTY/
+SEVERAL/MOST/WHOLE/HALF/BOTH (v1.40.0)
+Attested (Wiktionary, 11 entries): ბევრი [bɛvɾi] much/many/a lot —
+ERG ბევრმა, DAT/ADV ბევრ, comp უფრო ბევრი, ant ცოტა, Old-Georgian
+numeral "ten thousand"; მრავალი [mɾäväli] many (countable) —
+ERG მრავალმა, derived სიმრავლე quantity, see ზღვა/მირიადი;
+რამდენიმე [ɾämde̞nimɛ] several/a few — რამდენი+-მე, ERG
+რამდენიმემ, DAT რამდენიმეს~რამდენსამე, GEN syncopates რამდენიმის;
+ცოტა [tsʼo̞tʰä] few/little — Proto-Georgian-Zan *c₁oṭa-, ERG
+ცოტამ, comp ნაკლები, derived ცოტ-ცოტა (little by little);
+მთელი [mtʰe̞li] whole/all — Old-Georgian მრთელი, Proto-GZ
+*m-rt-el-, ERG მთელმა, DAT/ADV მთელ, derived მთელი რიგი (a whole
+row), მთელი რიცხვი (whole number), related მთლიანი (intact);
+ნახევარი [näχe̞väɾi] half — uncomparable, noun "half past" (ორის
+ნახევარი), colloq. spouse; OBLIQUES SYNCOPATE: GEN ნახევრის, INS
+ნახევრით, ADV ნახევრად, pl ნახევრები; ორივე [o̞ɾive̞] both —
+ორი+-ვე collective-two, determiner, ორივე მხარეს on both sides;
+უმეტესი [ume̞tʼe̞si] most (of) — მეტი+უ- -ეს-i circumfix,
+superlative adjective, ERG SYNCOPATES უმეტესმა (ე dropped), DAT
+უმეტეს, derived უმეტესობა, see-also ბევრი; უმეტესობა
+[ume̞tʼe̞so̞bä] majority — უმეტესი+-ობა, GEN syncopates
+უმეტესობის(ა), INS უმეტესობით(ა), pl უმეტესობები; უამრავი
+[uämɾävi] plenty of/numerous — ERG უამრავმა, DAT/ADV უამრავ,
+comp უფრო უამრავი.
+
+• AMOUNT CARRIERS: much (uncountable) → ბევრი · many (countable)
+  → ბევრი (everyday) / მრავალი (formal/literary) · plenty of /
+  a lot of → ბევრი · უამრავი = emphatic "loads of" · several /
+  a few → რამდენიმე · few (negative, "hardly any") → ცოტა ·
+  little (amount) → ცოტა · few vs a few mirrors ცოტა vs
+  რამდენიმე (negative vs positive slant — "few people came ცოტა
+  ადამიანი მოვიდა" vs "a few people came რამდენიმე ადამიანი
+  მოვიდა").
+• WHOLE/HALF/BOTH: the whole day → მთელი დღე · whole → მთელი,
+  related მთლიანი (intact) · half → ნახევარი: half an hour →
+  ნახევარი საათი, half past two → ორის ნახევარი ("two's half",
+  genitive!), two and a half → ორნახევარი · both → ორივე: both
+  hands → ორივე ხელი, on both sides → ორივე მხარეს · "both A
+  and B" → როგორც A, ისე B (see KA-79 correlative).
+• MOST: most (of the) people → უმეტესი ადამიანი · the majority →
+  უმეტესობა · the most [adj] → ყველაზე [adj] (KA_COMPARISON —
+  DIFFERENT WORD: უმეტესი is a quantifier, ყველაზე is the
+  superlative degree marker; never conflate).
+• SINGULAR AGREEMENT (dictionary.ge norm): ბევრი, ცოტა,
+  რამდენიმე, ორივე take a SINGULAR noun: რამდენიმე წიგნი,
+  ორივე მხარეს, ცოტა ხანი — NOT *რამდენიმე წიგნები, NOT
+  *ორივე მხარეები. English plurals after these carriers are
+  de-pluralized (წიგნები → წიგნი; mirrors numerals, KA-NUMERALS).
+• POLYSEMY — AI decides, never bare-map: little = ცოტა (amount:
+  little money) vs პატარა (size: little girl) · most = უმეტესი
+  (quantifier) vs ყველაზე (superlative: the most beautiful →
+  ყველაზე ლამაზი) · a lot (adverbial: I like it a lot) — no
+  safe carrier, paraphrase ძალიან/ბევრად — AI · much (bare,
+  verb-position: I don't much care) — KB-only · ზღვა "sea" is
+  ATTESTED as a determiner "many" (syn ბევრი, ant ცოტა) but the
+  noun "sea" dominates — KB-KNOWLEDGE ONLY, never mechanically
+  mapped.
+• NON-INTERFERENCE (fix 4.107 sits at the very tail, AFTER these
+  frame rules): how much / how many → რამდენი (4.97) · many
+  years ago → მრავალი წლის წინ, several days ago → რამდენიმე
+  დღის წინ (4.103 ago-construction) · all day long → მთელი დღე,
+  all week → მთელი კვირა (4.103 all-frames) · a little while
+  ago / a short time ago → ცოტა ხნის წინ (4.103) · very much →
+  ძალიან (4.69) · thank you very much/a lot/so much → დიდი
+  მადლობა (4.94).
+• IDIOMS: by halves → ნახევრად · halfhearted → ნახევარგულიანი
+  (AI) · ცოტ-ცოტა = little by little · მთელი რიგი = a whole
+  row/whole series of · მთელი რიცხვი = whole number.
+MAPPING: much/many→ბევრი · many(formal)→მრავალი ·
+plenty of/a lot of→ბევრი · several/a few→რამდენიმე ·
+few/little(amount)→ცოტა · most of→უმეტესი · majority→
+უმეტესობა · whole→მთელი · half→ნახევარი · both→ორივე ·
+the most [adj]→ყველაზე [adj] · bare much/little/a lot/ზღვა
+→ AI decides`;
+
 // KA-110 v1.28.0 — Possessive determiners: unambiguous EN possessives →
 //                  Georgian carriers (extends KA_POSSESSION's declension
 //                  table with the deterministic EN-side mapping).
@@ -4397,6 +4475,7 @@ function getKaKnowledgeBase() {
         KA_REPETITION_ADV,
         KA_RECIPROCALS_OTHERNESS,
         KA_INDEFINITE_PRONOUNS,
+        KA_QUANTIFIERS,
         KA_POSSESSIVE_DET,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
@@ -5638,6 +5717,63 @@ function validateGeorgianTranslation(text) {
     const indCarrier = /(?<![\u10A0-\u10FF])(?:რაღაც|რამე|ვინმე|ვიღაც|სადმე|არსად|ვერსად|არაფრ|არავინ|ყველაფრ|ყველგან)/.test(text);
     if ((indThing || indBody || indWhere || indNone) && !indCarrier) {
         issues.push({ rule: 'indefinite_pronoun_untranslated', message: 'Indefinite pronoun untranslated: something→რაღაც ("რაღაც მოხდა") · somebody/someone→ვინმე (specific-unknown ვიღაც, pl. ვიღაცები — AI decides) · somewhere→სადმე (syncopated სამ/სამე) · everything→ყველაფერი (syn. ყოველივე) · everybody/everyone→ყველა · everywhere→ყველგან · nothing→არაფერი (NEGATIVE CONCORD: არაფერი არ ვთქვი; obliques syncopate: GEN არაფრის, INS არაფრით, ADV არაფრად) · nobody/no one→არავინ (არავინ არ მოვიდა — the ა is obligatory) · nowhere→არსად (არსად ... არ) · anything/anybody/anyone/anywhere→რამე/ვინმე/სადმე ONLY in questions & conditionals ("is there anybody here? აქ არის ვინმე?") — affirmative free-choice → ნებისმიერი (AI decides) · none of them/us/you→არც ერთ მათგანს/ჩვენგანს/თქვენგანს + verb-ა ("none of them is known to us არც ერთ მათგანს არ ვიცნობთ") · none of + plural noun→-თაგან/-დან + არავინ ("განმცხადებელთაგან არავინ იყო გერმანელი") · someone\'s→ვინმეს · nobody\'s→არავის · bare none→არც ერთი (AI). Carrier stems რაღაც/ვინმე/არაფრ/არავინ present = indefinite already rendered.' });
+    }
+
+    // 3.121 Untranslated quantifiers (v1.40.0, KA-122).
+    //      Trigger arms: amount quantifiers much/many, several/a few/
+    //      few, little, plenty, a lot (of)/lots (of), most (of),
+    //      whole, half, both, majority.
+    //      EXCLUSIONS (double-flag avoidance — these arms are owned by
+    //      other rules or deterministically fixed): very much (4.69
+    //      → ძალიან), how much/many (bare-wh family, რამდენი),
+    //      thank you/thanks + much/a lot (4.94 → დიდი მადლობა),
+    //      [qty] [period] ago frames (narrative-time rule + 4.103
+    //      ago-construction: many/several/few years ago →
+    //      მრავალი/რამდენიმე წლის წინ), the most [adj] (comparison
+    //      rules 3.49/3.44 — ყველაზე superlative family), both...and
+    //      (correlative rule → როგორც..., ისე...).
+    //      LOOSE silencing: any quantifier carrier present — leading
+    //      lookbehind only, NO trailing lookahead (carriers inflect/
+    //      syncopate: ნახევრის from ნახევარი, უმეტესმა from უმეტესი,
+    //      რამდენიმის from რამდენიმე, უმეტესობის from უმეტესობა).
+    //      მთლ- alternate covers მთლიანი/მთლიანად; რამდენიმ- (with
+    //      იმ) deliberately does NOT match plain რამდენი (the
+    //      interrogative "how many" is not a quantifier carrier).
+    //      ძალიან is NOT a silencer (it is "very", not an amount);
+    //      BUT a much/most preceded by the ძალიან-residue is the
+    //      4.69 "very much" output (ძალიან much → ძალიან) — exclude.
+    //      ყველაზე is NOT a silencer (superlative, not a quantifier).
+    //      both-arm exclusion ALSO recognizes the 4.100 and→და
+    //      residue between both and and/და (standalone-და lookarounds
+    //      — \b never matches Georgian chars).
+    const qtMuch = /\bmuch\b/i.test(text)
+        && !/\b(?:very|how)\s+much\b/i.test(text)
+        && !/(?:\bvery\b|(?<![\u10A0-\u10FF])ძალიან(?![\u10A0-\u10FF]))\s+much\b/i.test(text)
+        && !/\bthank(?:s| you)\b/i.test(text);
+    const qtMany = /\bmany\b/i.test(text)
+        && !/\bhow\s+many\b/i.test(text)
+        && !/\bmany\s+[a-z]{3,9}\s+ago\b/i.test(text);
+    const qtSeveral = /\bseveral\b/i.test(text)
+        && !/\bseveral\s+[a-z]{3,9}\s+ago\b/i.test(text);
+    const qtFew = /\bfew\b/i.test(text)
+        && !/\bfew\s+[a-z]{3,9}\s+ago\b/i.test(text);
+    const qtLittle = /\blittle\b/i.test(text)
+        && !/\blittle\s+[a-z]{3,9}\s+ago\b/i.test(text);
+    const qtPlenty = /\bplenty\b/i.test(text);
+    const qtLot = /\b(?:a\s+lot|lots)\b/i.test(text)
+        && !/\bthank(?:s| you)\b/i.test(text);
+    const qtMost = /\bmost\b/i.test(text)
+        && !/\b(?:the|at)\s+most\b/i.test(text);
+    const qtWhole = /\bwhole\b/i.test(text);
+    const qtHalf = /\bhalf\b/i.test(text);
+    const qtBoth = /\bboth\b/i.test(text)
+        && !/\bboth\b[^.!?]{0,60}?(?:\band\b|(?<![\u10A0-\u10FF])და(?![\u10A0-\u10FF]))/i.test(text);
+    const qtMajority = /\bmajority\b/i.test(text);
+    const qtCarrier = /(?<![\u10A0-\u10FF])(?:ბევრ|მრავალ|რამდენიმ|ცოტ|მთელ|მთლ|ნახევარ|ნახევრ|ორივე|უმეტეს|უამრავ)/.test(text);
+    if ((qtMuch || qtMany || qtSeveral || qtFew || qtLittle || qtPlenty
+        || qtLot || qtMost || qtWhole || qtHalf || qtBoth || qtMajority)
+        && !qtCarrier) {
+        issues.push({ rule: 'quantifier_untranslated', message: 'Quantifier untranslated: much (uncountable)→ბევრი · many→ბევრი (everyday) or მრავალი (formal/literary) · plenty of / a lot of / lots of→ბევრი (emphatic უამრავი) · so much→იმდენი (so much...that → იმდენი...რომ; AI) · several / a few→რამდენიმე · few (negative "hardly any")→ცოტა · little (amount)→ცოტა vs პატარა (SIZE: little girl — AI decides) · most (of the)→უმეტესი — NOT ყველაზე (that is the superlative: the most beautiful→ყველაზე ლამაზი) · majority→უმეტესობა · whole→მთელი (the whole day→მთელი დღე) · half→ნახევარი (half an hour→ნახევარი საათი; half past two→ორის ნახევარი — genitive; two and a half→ორნახევარი; obliques syncopate: ნახევრის/ნახევრით/ნახევრად) · both→ორივე (both hands→ორივე ხელი; on both sides→ორივე მხარეს; both...and→როგორც..., ისე...) · SINGULAR AGREEMENT (dictionary.ge norm): ბევრი/ცოტა/რამდენიმე/ორივე take a SINGULAR noun — რამდენიმე წიგნი, NOT *რამდენიმე წიგნები · bare a lot (adverb: I like it a lot) and bare much (I don\'t much care)→AI decides · ზღვა "sea" is attested as a determiner "many" but stays KB-only — never mechanically mapped. Carrier stems ბევრ-/მრავალ-/რამდენიმ-/ცოტ-/მთელ-/მთლ-/ნახევრ-/ორივე/უმეტეს-/უამრავ- present = quantifier already rendered.' });
     }
 
     return issues;
@@ -7272,16 +7408,106 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\byes\b/gi, 'კი');
     out = out.replace(/\bno(?=\s*[,;.!?…:—।]|\s*$)/gi, 'არა');
 
+    // 4.107 (v1.40.0, KA-122) Quantifier series → Georgian amount
+    //      carriers. FUNCTION TAIL placement — MUST run AFTER every
+    //      rule that owns a longer quantifier phrase: 4.97 how-family
+    //      (how much/many → რამდენი), 4.103 ago-construction ("many/
+    //      several years ago" → მრავალი/რამდენიმე ... წინ — its
+    //      callback consumes the WHOLE phrase, so bare many/several
+    //      would otherwise corrupt it), 4.103 all-frames (all day →
+    //      მთელი დღე — bare whole/all must not double-map), 4.103
+    //      "a little while ago"/"a short time ago" → ცოტა ხნის წინ,
+    //      4.69 very much → ძალიან, 4.94 thank-you compounds → დიდი
+    //      მადლობა, and 4.99-4.101 bare-word politeness tails. At the
+    //      tail, all these frames have already been consumed into
+    //      Georgian, so the surviving English quantifier tokens are
+    //      genuinely bare.
+    //      4.107a correlative first: "both X and Y" → როგორც X, ისე Y
+    //      (KB-attested pattern: როგორც მამა, ისე შვილი — no earlier
+    //      fix rule owns the correlative, so it is mapped HERE, before
+    //      bare-both, never degrading to ორივე...და). X/Y = 1-2 word
+    //      noun phrases in either script; and-or its 4.100 residue და
+    //      (standalone — lookarounds, since \b never matches Georgian
+    //      chars; დახმარება/დაინახა cannot false-positive). Then
+    //      pronoun partitives (both of them/us/you → ორივე
+    //      მათგანი/ჩვენგანი/თქვენგანი, nominative default — case
+    //      refinement is AI/QA work), then bare both → ორივე.
+    //      Excluded from mechanical mapping (AI/KB-only, per
+    //      KA-122 POLYSEMY): bare much (verb-position), bare most
+    //      ("the most [adj]" superlative → ყველაზე via comparison
+    //      fixes; "at most" is idiomatic), bare little (amount
+    //      ცოტა vs size პატარა), bare a lot (adverbial), ზღვა
+    //      (determiner "many" attested but "sea" dominates).
+    out = out.replace(
+        /\bboth\s+((?:[\u10A0-\u10FF]+|[a-z']+)(?:\s+(?:[\u10A0-\u10FF]+|[a-z']+))?)\s+(?:\band\b|(?<![\u10A0-\u10FF])და(?![\u10A0-\u10FF]))\s+((?:[\u10A0-\u10FF]+|[a-z']+)(?:\s+(?:[\u10A0-\u10FF]+|[a-z']+))?)/gi,
+        'როგორც $1, ისე $2'
+    );
+    out = out.replace(/\bboth\s+of\s+them\b/gi, 'ორივე მათგანი');
+    out = out.replace(/\bboth\s+of\s+us\b/gi, 'ორივე ჩვენგანი');
+    out = out.replace(/\bboth\s+of\s+you\b/gi, 'ორივე თქვენგანი');
+    out = out.replace(/\bplenty\s+of\b/gi, 'ბევრი');
+    out = out.replace(/\ba\s+lot\s+of\b/gi, 'ბევრი');
+    out = out.replace(/\blots\s+of\b/gi, 'ბევრი');
+    out = out.replace(/\bthe\s+whole\b/gi, 'მთელი');
+    out = out.replace(/\bwhole\b/gi, 'მთელი');
+    out = out.replace(/\bhalf\s+an\s+hour\b/gi, 'ნახევარი საათი');
+    out = out.replace(/\bhalf\s+a\b/gi, 'ნახევარი');
+    out = out.replace(/\bhalf\s+the\b/gi, 'ნახევარი');
+    out = out.replace(/\bhalf\b/gi, 'ნახევარი');
+    out = out.replace(/\bboth\b/gi, 'ორივე');
+    out = out.replace(/\bmajority\b/gi, 'უმეტესობა');
+    out = out.replace(/\bseveral\b/gi, 'რამდენიმე');
+    out = out.replace(/\bmany\b/gi, 'მრავალი');
+    // 4.107b singular agreement — runs OUTSIDE the both...and guard:
+    //      AI output can equally carry plural nouns after quantifier
+    //      carriers (ბევრი წიგნები → ბევრი წიგნი; dictionary.ge norm:
+    //      რამდენიმე წიგნი, NOT *რამდენიმე წიგნები). Georgian plural
+    //      morphology has THREE classes, so a naive strip is unsafe —
+    //      a callback classifies each noun:
+    //      1. RESTORE map: elided ა-stems whose plural drops the
+    //         grade-vowel (წლები→წელი, ხნები→ხანი) — strip AND
+    //         restore the vowel.
+    //      2. EXCLUSION list: syncopated plural stems where stripping
+    //         yields a non-word (მშობლები→*მშობლი, the true singular
+    //         is მშობელი; სიტყვები→*სიტყვი vs სიტყვა; მწერლები,
+    //         ცხვრები, მხედრები, მოსწავლები, სიზმრები, ზმნები) and
+    //         elided ა-stems needing restoration not in the map
+    //         (ზღვები→ზღვა, მიწები, დროშები, ქვეყნები, კალათები,
+    //         ტბები, ხმები, თმები, რქები) — left for QA/AI.
+    //      3. V+რ-final stems (კვირები→კვირა, ფანჯრები→ფანჯარა) —
+    //         რ-final nouns are virtually all ა-stems; excluded.
+    //      4. Vowel-final stems (ე-stems მხარეები, დღეები — stripping
+    //         yields *მხარეი; also full-grade ა-stems) — unchanged.
+    //      5. SAFE DEFAULT: consonant-final stems ≥3 chars keep the
+    //         consonant and take -ი directly (წიგნები→წიგნი,
+    //         სახლები→სახლი, კაცები→კაცი, ხელები→ხელი, თავები→თავი,
+    //         წუთები→წუთი, ბავშვები→ბავშვი) — the epenthetic -ებ-
+    //         contributes no vowel here.
+    //      Oblique/plural-compound suffixes (მა/ს/ის/ით/ად/ო/ში/ზე/
+    //      თან) are preserved as-is; მთელი deliberately not in the
+    //      carrier set (its plural is not normatively banned).
+    out = out.replace(
+        /(^|\s)(ბევრი|მრავალი|რამდენიმე|ცოტა|ორივე|უამრავი)\s+([ა-ჰ]+)ებ(ი|მა|ს|ის|ით|ად|ო|ში|ზე|თან)(?![\u10A0-\u10FF])/g,
+        (m, pre, q, stem, suf) => {
+            const restore = { 'წლ': 'წელ', 'ხნ': 'ხან' };
+            if (restore[stem] && suf === 'ი') return pre + q + ' ' + restore[stem] + suf;
+            if (/(?:სიტყვ|სიზმრ|ზმნ|მშობლ|მწერლ|ცხვრ|მხედრ|მოსწავლ|ზღვ|მთ|ტბ|ხმ|თმ|რქ|მიწ|დროშ|ქვეყნ|კალათ)$/.test(stem)) return m;
+            if (/[აეიოუ][რ]$/.test(stem)) return m;
+            if (/[აეიოუ]$/.test(stem) || stem.length < 3) return m;
+            return pre + q + ' ' + stem + suf;
+        }
+    );
+
     return out;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.39.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.40.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 122,
-    qaRules: 121,
-    autoFixes: 106,
-    researchSources: 363
+    promptBlocks: 123,
+    qaRules: 122,
+    autoFixes: 107,
+    researchSources: 374
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
