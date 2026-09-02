@@ -3494,6 +3494,106 @@ the day before yesterday→გუშინწინ · day before yesterday→�
 day after tomorrow→ზეგ · right now→ახლავე · tonight→ამაღამ ·
 now→ახლა · later→მოგვიანებით (longest-first)`;
 
+// KA-117 v1.35.0 — Calendar time: weekdays, months, seasons, determiner
+//                   frames (this/next/last/every + period), years.
+const KA_CALENDAR_TIME = `
+KA-117 CALENDAR TIME — WEEKDAYS / MONTHS / SEASONS / DETERMINER FRAMES
+(v1.35.0, kahibaro 10.4+5.5 + Frankfurt MFA consulate + EFC Georgia +
+bab.la weekend entry + dictionary.ge every/yearly II + EUdict year by year +
+ukurot.ucoz.net + languageknow.com + TraleBot issue 395 + Wiktionary
+ორშაბათი etymology + de.wikipedia Wochentage + peacebridge.ge declension)
+
+CORRECTION OF KA-109'S NOTE: its claim that English "on Monday" → ორშაბათს
+was "already handled by 4.51-family" is WRONG — no weekday swap exists
+anywhere in the fix chain (verified by grep sweep). Preposition+calendar
+time is THIS block's job (autoFix 4.102, inserted BEFORE 4.70/4.99 so
+"next week"→მომავალ კვირას and "this week"→ამ კვირას are consumed whole,
+before next→შემდეგ and this→ეს could corrupt them).
+
+WEEKDAYS (dative -ს after "on"; bare weekday never mapped — polysemy!):
+• on Monday→ორშაბათს · on Tuesday→სამშაბათს · on Wednesday→ოთხშაბათს ·
+  on Thursday→ხუთშაბათს · on Friday→პარასკევს · on Saturday→შაბათს ·
+  on Sunday→კვირას. Every weekday also has a plural-habitual form for
+  "on Mondays/ Tuesdays/..." (habitual plural): ორშაბათეობით სამშაბათეობით
+  ოთხშაბათეობით ხუთშაბათეობით პარასკევეობით შაბათ-კვირაობით — the
+  -ეობით adverbial marks recurrence without ყოველ (kahibaro 5.5).
+• Etymology (mnemonic): ორშაბათი=ორი(two)+შაბათი(Sabbath — second day
+  after the Sabbath), სამშაბათი=სამი(three), ოთხშაბათი=ოთხი(four),
+  ხუთშაბათი=ხუთი(five); პარასკევი from Greek παρασκευή (preparation);
+  შაბათი from Hebrew via Greek σάββατον; კვირა means BOTH Sunday and
+  week — კვირადღე disambiguates Sunday.
+• Attestation: მიღება ტარდება ყოველ ორშაბათს, სამშაბათს, ხუთშაბათს და
+  პარასკევს (Frankfurt consulate) — ყოველ + weekday takes DATIVE, not -ში.
+
+MONTHS (postposition -ში after "in"; doubling of final ს/რ before -ში;
+bare month never mapped):
+• in January→იანვარში · February→თებერვალში · March→მარტში ·
+  April→აპრილში · May→მაისში · June→ივნისში · July→ივლისში ·
+  August→აგვისტოში · September→სექტემბერში · October→ოქტომბერში ·
+  November→ნოემბერში · December→დეკემბერში.
+  DOUBLING NOTE: -ში doubles a stem-final s/r (მაის→მაისში,
+  ივნის→ივნისში, ივლის→ივლისში, სექტემბერ→სექტემბერში, ოქტომბერ→
+  ოქტომბერში, ნოემბერ→ნოემბერში, დეკემბერ→დეკემბერში) — the
+  elsewhere-case forms keep the single consonant + -ს
+  (მაისს, სექტემბერს).
+
+SEASONS (case class varies! not a single postposition):
+• in spring→გაზაფხულზე (-ზე class) · in summer→ზაფხულში (-ში class;
+  ზაფხულზე also attested) · in autumn→შემოდგომაზე (-ზე class) ·
+  in winter→ზამთარში (-ში class; ზამთარით instrumental also attested).
+
+DETERMINER + PERIOD frames (whole-frame consumption — never map the bare
+determiner or bare noun; SPLIT PARADIGM: month takes -ში, week/year
+take dative -ს — both attested):
+• this week→ამ კვირას · next week→მომავალ კვირას · last week→გასულ
+  კვირას · this month→ამ თვეში · next month→მომავალ თვეს (თვეში
+  variant attested) · last month→გასულ თვეში · this year→ამ წელს ·
+  next year→მომავალ წელს · last year→გასულ წელს.
+  Attestations: მომავალ თვეს / მომავალ წელს = "next month / next year"
+  (languageknow.com); ყოველ წელს = yearly (dictionary.ge yearly II).
+
+EVERY + PERIOD (habitual frames — ყოველ + OBLIQUE stem, NO -ი;
+TraleBot issue 395: ყოველი + nominative as time adverbial is a
+documented defect):
+• every day→ყოველ დღე · every morning→ყოველ დილას · every
+  evening→ყოველ საღამოს · every night→ყოველ ღამე · every week→ყოველ
+  კვირას · every month→ყოველ თვეს · every year→ყოველ წელს.
+  Attestations: ღვთისმსახურება ტარდება ყოველ კვირას 11:00 (EFC Georgia);
+  კონკურსი ჩატარდება ყოველ თვეს და წლის ბოლოს (ukurot.ucoz.net);
+  ყოველ წელს (dictionary.ge yearly II; EUdict year by year).
+• CONTRAST — frequency intervals take -ში (NOT mapped by 4.102; the
+  AI pass handles them): კვირაში ერთხელ (once a week), ყოველ სამ
+  საათში [დღეში, კვირაში, თვეში] (every three hours/days/weeks/months;
+  dictionary.ge), დღეგამოშვებით (every other day).
+
+MISC FRAMES:
+• in 1991 / in [19|20]xx→[year] წელს (e.g. 1991 წელს) — dative of წელი.
+• from Monday to Friday→ორშაბათიდან პარასკევამდე (source elative -იდან,
+  target limitative -მდე; BOTH postpositions appear on the SAME dative-
+  shaped stem; weekdays keep their full -ი stem before both).
+• at the weekend / on the weekend / at weekends→შაბათ-კვირას
+  (bab.la: შაბათ-კვირას ოფისი დაკეტილია — "the office is closed at/on
+  the weekend"); on Saturday evening→შაბათ საღამოს.
+• Narrative pair (KA-71 already holds these): the next day→მეორე დღეს ·
+  next morning→მეორე დილას — mapped here so they beat 4.70's next→შემდეგ.
+• worked example: ყოველ წელს აგვისტოში ზღვაზე მივდივარ — three calendar
+  frames in one sentence, zero prepositions.
+
+NON-INTERFERENCE (4.102 runs at 4.69/4.70 boundary, BEFORE 4.85's
+during-frames კვირის/თვის/წლის/ზაფხულის/ზამთრის დროს, BEFORE 4.92's
+every day/morning, BEFORE 4.70 next→შემდეგ, BEFORE 4.99 this→ეს):
+4.102 must NEVER fire on bare nouns — only inside preposition or
+determiner frames. Bare weekdays/months/seasons/week/year stay
+unmapped (polysemy: კვირა=week/Sunday, მაისი=May/rowan, ზამთარი=winter
+but ზამთრის ამბები=genitive possessor, last=ბოლო/წინა non-temporal).
+MAPPING: on Monday→ორშაბათს · ... · in January→იანვარში · ... ·
+in spring→გაზაფხულზე · in summer→ზაფხულში · in autumn→შემოდგომაზე ·
+in winter→ზამთარში · this/next/last week→ამ/მომავალ/გასულ კვირას ·
+this/next/last month→ამ/მომავალ/გასულ თვეში · this/next/last year→
+ამ/მომავალ/გასულ წელს · every week/month/year→ყოველ კვირას/თვეს/წელს ·
+in [year]→[year] წელს · from Monday to Friday→ორშაბათიდან პარასკევამდე ·
+at the weekend→შაბათ-კვირას (longest-first)`;
+
 // KA-110 v1.28.0 — Possessive determiners: unambiguous EN possessives →
 //                  Georgian carriers (extends KA_POSSESSION's declension
 //                  table with the deterministic EN-side mapping).
@@ -3906,6 +4006,7 @@ function getKaKnowledgeBase() {
         KA_HABITUAL_HORTATIVE,
         KA_NEGATION_CARRIERS,
         KA_TIME_DEICTIC,
+        KA_CALENDAR_TIME,
         KA_POSSESSIVE_DET,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
@@ -5030,6 +5131,22 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'politeness_formula_untranslated', message: 'Politeness formula untranslated in dialogue: yes→კი (დიახ formal, ხო/ჰო informal) · no→არა · please→გთხოვთ (თუ შეიძლებا "if possible") · thank you→მადლობა (გმადლობთ formal; დიდი მადლობა = very much) · you\'re welcome→არაფრის · sorry→ბოდიში · excuse me→უკაცრავად (introductory; ბოდიში for the actual apology) · hello/hi→გამარჯობა (გამარჯობათ formal) · goodbye/bye→ნახვამდის · good morning→დილა მშვიდობისა · good evening→საღამო მშვიდობისა · good night→ღამე მშვიდობისა. Translate the FORMULA, not word-by-word; refusal formula "no, thank you" → არა, მადლობა.' });
     }
 
+    // 3.116 Untranslated calendar time (v1.35.0, KA-117). Two trigger arms:
+    //      (a) bare weekday/month/season/weekend tokens (may/march excluded
+    //      — polysemous with the modal and the verb); (b) determiner-period
+    //      frames (this/next/last/every + week/month/year/weekend), which
+    //      fix 4.102 consumes whole. LOOSE: ANY one calendar carrier
+    //      silences — dative weekdays, -ში month forms, class-varying
+    //      season forms, შაბათ-კვირას, მეორე დღეს/დილას, ყოველ + period,
+    //      [year] წელს, determiner-period outputs, -იდან/-მდე pair.
+    const calendarTime =
+        (/\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|april|june|july|august|september|october|november|december|spring|summer|autumn|winter|weekend)\b/i.test(text) ||
+         /\b(?:this|next|last|every)\s+(?:week|month|year|weekend)\b/i.test(text)) &&
+        !/(?<![\u10A0-\u10FF])(?:ორშაბათს|სამშაბათს|ოთხშაბათს|ხუთშაბათს|პარასკევს|შაბათს|კვირას|იანვარში|თებერვალში|მარტში|აპრილში|მაისში|ივნისში|ივლისში|აგვისტოში|სექტემბერში|ოქტომბერში|ნოემბერში|დეკემბერში|გაზაფხულზე|ზაფხულში|შემოდგომაზე|ზამთარში|შაბათ-კვირას|მეორე დღეს|მეორე დილას|ორშაბათიდან|პარასკევამდე|ყოველ კვირას|ყოველ თვეს|ყოველ წელს|[12][0-9]{3} წელს|ამ კვირას|ამ თვეში|ამ წელს|მომავალ კვირას|მომავალ თვეს|მომავალ წელს|გასულ კვირას|გასულ თვეში|გასულ წელს)(?![\u10A0-\u10FF])/.test(text);
+    if (calendarTime) {
+        issues.push({ rule: 'calendar_time_untranslated', message: 'Calendar time untranslated: on Monday→ორშაბათს (weekdays take dative -ს after "on": ორშაბათს სამშაბათს ოთხშაბათს ხუთშაბათს პარასკევს შაბათს კვირას) · in January→იანვარში (months take -ში with s/r doubling: იანვარში თებერვალში მარტში აპრილში მაისში ივნისში ივლისში აგვისტოში სექტემბერში ოქტომბერში ნოემბერში დეკემბერში) · seasons are CLASS-VARYING: in spring→გაზაფხულზე · in summer→ზაფხულში · in autumn→შემოდგომაზე · in winter→ზამთარში · this/next/last week→ამ/მომავალ/გასულ კვირას · this/next/last month→ამ/მომავალ/გასულ თვეში · this/next/last year→ამ/მომავალ/გასულ წელს (month takes -ში, week/year take dative -ს) · every week/month/year→ყოველ კვირას/თვეს/წელს (ყოველ + OBLIQUE stem, never ყოველი) · in 1991→1991 წელს · at/on the weekend→შაბათ-კვირას · the next day→მეორე დღეს · next morning→მეორე დილას · from Monday to Friday→ორშაბათიდან პარასკევამდე. NEVER map a BARE weekday/month/season — კვირა means both week and Sunday, მაისი is May and rowan; only preposition/determiner frames consume the noun.' });
+    }
+
     return issues;
 }
 
@@ -5474,6 +5591,61 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bcompletely\b/gi, 'სრულიად');
     out = out.replace(/\bextremely\b/gi, 'მეტისმეტად');
     out = out.replace(/\breally\b/gi, 'ნამდვილად');
+
+    // 4.102 (v1.35.0, KA-117) Calendar time frames → Georgian carriers.
+    //      MUST run BEFORE 4.70's next→შემდეგ and 4.99's this→ეს (whole
+    //      frames are consumed first) and BEFORE 4.85's during-frames /
+    //      4.92's every day-morning (this block covers week/month/year).
+    //      NEVER fires on a BARE weekday/month/season/last/every — only
+    //      inside preposition or determiner frames (polysemy protection:
+    //      კვირა=week/Sunday, მაისი=May/rowan, "last"=ბოლო non-temporal).
+    //      Longest-first: "the next day" before "next morning", frames
+    //      before any bare-token rule could touch their tokens.
+    out = out.replace(/\bthe next day\b/gi, 'მეორე დღეს');
+    out = out.replace(/\bnext morning\b/gi, 'მეორე დილას');
+    out = out.replace(/\b(?:at|on|over) the weekend\b/gi, 'შაბათ-კვირას');
+    out = out.replace(/\bat weekends\b/gi, 'შაბათ-კვირას');
+    out = out.replace(/\bfrom (\w+) to (\w+)\b/gi, (m, a, b) => {
+        const days = { monday: 'ორშაბათიდან', tuesday: 'სამშაბათიდან',
+            wednesday: 'ოთხშაბათიდან', thursday: 'ხუთშაბათიდან',
+            friday: 'პარასკევიდან', saturday: 'შაბათიდან', sunday: 'კვირიდან' };
+        const tos = { monday: 'ორშაბათამდე', tuesday: 'სამშაბათამდე',
+            wednesday: 'ოთხშაბათამდე', thursday: 'ხუთშაბათამდე',
+            friday: 'პარასკევამდე', saturday: 'შაბათამდე', sunday: 'კვირამდე' };
+        const s = days[a.toLowerCase()], e = tos[b.toLowerCase()];
+        return (s && e) ? s + ' ' + e : m;
+    });
+    const calDet = { this: 'ამ', next: 'მომავალ', last: 'გასულ' };
+    out = out.replace(/\b(this|next|last) (week|month|year)\b/gi, (m, d, n) => {
+        const det = calDet[d.toLowerCase()];
+        if (!det) return m;
+        if (n.toLowerCase() === 'week') return det + ' კვირას';
+        if (n.toLowerCase() === 'year') return det + ' წელს';
+        return det + ' თვეში';
+    });
+    out = out.replace(/\bevery (week|month|year)\b/gi, (m, n) => {
+        const k = n.toLowerCase();
+        return k === 'week' ? 'ყოველ კვირას' : k === 'year' ? 'ყოველ წელს' : 'ყოველ თვეს';
+    });
+    out = out.replace(/\bon (monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, (m, d) => {
+        const days = { monday: 'ორშაბათს', tuesday: 'სამშაბათს',
+            wednesday: 'ოთხშაბათს', thursday: 'ხუთშაბათს', friday: 'პარასკევს',
+            saturday: 'შაბათს', sunday: 'კვირას' };
+        return days[d.toLowerCase()] || m;
+    });
+    out = out.replace(/\bin (january|february|march|april|may|june|july|august|september|october|november|december)\b/gi, (m, mo) => {
+        const months = { january: 'იანვარში', february: 'თებერვალში',
+            march: 'მარტში', april: 'აპრილში', may: 'მაისში', june: 'ივნისში',
+            july: 'ივლისში', august: 'აგვისტოში', september: 'სექტემბერში',
+            october: 'ოქტომბერში', november: 'ნოემბერში', december: 'დეკემბერში' };
+        return months[mo.toLowerCase()] || m;
+    });
+    out = out.replace(/\bin (spring|summer|autumn|winter)\b/gi, (m, s) => {
+        const seasons = { spring: 'გაზაფხულზე', summer: 'ზაფხულში',
+            autumn: 'შემოდგომაზე', winter: 'ზამთარში' };
+        return seasons[s.toLowerCase()] || m;
+    });
+    out = out.replace(/\bin ((?:19|20)\d{2})\b/gi, '$1 წელს');
 
     // 4.70 Untranslated English sequencers → Georgian narrative chain.
     out = out.replace(/\bfirst of all\b/gi, 'პირველ რიგში');
@@ -6417,12 +6589,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.34.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.35.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 117,
-    qaRules: 116,
-    autoFixes: 101,
-    researchSources: 324
+    promptBlocks: 118,
+    qaRules: 117,
+    autoFixes: 102,
+    researchSources: 329
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
