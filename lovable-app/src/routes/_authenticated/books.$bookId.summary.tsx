@@ -11,12 +11,12 @@ import { summarizeChapter } from "@/lib/summarize.functions";
 export const Route = createFileRoute("/_authenticated/books/$bookId/summary")({
   head: () => ({
     meta: [
-      { title: "AI summarization — Lumina Audio" },
+      { title: "AI summarization — EngBot" },
       {
         name: "description",
         content: "Generate chapter summaries, bullet points and key takeaways with AI.",
       },
-      { property: "og:title", content: "AI summarization — Lumina Audio" },
+      { property: "og:title", content: "AI summarization — EngBot" },
       {
         property: "og:description",
         content: "Generate chapter summaries, bullet points and key takeaways with AI.",

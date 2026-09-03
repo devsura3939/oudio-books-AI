@@ -7,15 +7,15 @@ export const Route = createFileRoute("/auth/callback")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Confirming your account | Lumina Audio Studio" },
+      { title: "Confirming your account | EngBot" },
       {
         name: "description",
-        content: "Finishing email confirmation for your Lumina Audio Studio account.",
+        content: "Finishing email confirmation for your EngBot account.",
       },
-      { property: "og:title", content: "Confirming your account | Lumina Audio Studio" },
+      { property: "og:title", content: "Confirming your account | EngBot" },
       {
         property: "og:description",
-        content: "Finishing email confirmation for your Lumina Audio Studio account.",
+        content: "Finishing email confirmation for your EngBot account.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

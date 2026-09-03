@@ -3,13 +3,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Lumina Audio — Premium AI listening for your PDFs" },
+      { title: "EngBot — Premium AI listening for your PDFs" },
       {
         name: "description",
         content:
-          "Lumina Audio turns any PDF into a chaptered audiobook with AI narration, Georgian translation and a Moon+ style reader. Your library stays private.",
+          "EngBot turns any PDF into a chaptered audiobook with AI narration, Georgian translation and a Moon+ style reader. Your library stays private.",
       },
-      { property: "og:title", content: "Lumina Audio — Premium AI listening for your PDFs" },
+      { property: "og:title", content: "EngBot — Premium AI listening for your PDFs" },
       {
         property: "og:description",
         content: "AI chaptering, high quality narration and a futuristic glass reader.",
@@ -60,7 +60,7 @@ function Landing() {
               graphic_eq
             </span>
             <div>
-              <p className="text-[18px] leading-5 font-bold text-primary-container">Lumina Audio</p>
+              <p className="text-[18px] leading-5 font-bold text-primary-container">EngBot</p>
               <p className="text-[12px] text-on-surface-variant">Premium AI Listening</p>
             </div>
           </div>
@@ -78,7 +78,7 @@ function Landing() {
             Every PDF you own, narrated like a studio audiobook
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-on-surface-variant">
-            Upload a book, let Lumina cut it into real chapters, then read along in the glass reader
+            Upload a book, let EngBot cut it into real chapters, then read along in the glass reader
             or listen hands-free with high quality voices and Georgian translation.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">

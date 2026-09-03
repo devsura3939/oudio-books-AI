@@ -12,9 +12,9 @@ import { Progress } from "@/components/ui/progress";
 export const Route = createFileRoute("/_authenticated/library")({
   head: () => ({
     meta: [
-      { title: "Your library — Lumina Audio Studio" },
+      { title: "Your library — EngBot" },
       { name: "description", content: "Upload PDFs and manage your personal audiobook library." },
-      { property: "og:title", content: "Your library — Lumina Audio Studio" },
+      { property: "og:title", content: "Your library — EngBot" },
       { property: "og:description", content: "Upload PDFs and manage your audiobook library." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -70,7 +70,7 @@ function Library() {
             <p className="label-caps text-primary-fixed-dim">Your shelf</p>
             <h1 className="mt-2 text-[32px] leading-10 font-bold tracking-[-0.02em]">Library</h1>
             <p className="mt-2 text-sm text-on-surface-variant">
-              Import a PDF and Lumina turns it into listenable chapters.
+              Import a PDF and EngBot turns it into listenable chapters.
             </p>
           </div>
 
@@ -79,7 +79,7 @@ function Library() {
               to="/studio"
               className="label-caps flex items-center gap-2 rounded-lg border border-white/10 px-4 py-3 text-on-surface transition-all hover:border-primary-container/50 hover:bg-white/5"
             >
-              <Sparkles className="size-4 text-primary-container" /> Open Studio
+              <Sparkles className="size-4 text-primary-container" /> Open EngBot Studio
             </Link>
             <input
               ref={fileInput}

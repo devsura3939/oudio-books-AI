@@ -60,7 +60,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Google Stitch "Lumina Audio" material tokens */
+  /* Google Stitch "EngBot" material tokens */
   --color-surface: var(--surface);
   --color-surface-container: var(--surface-container);
   --color-surface-container-high: var(--surface-container-high);
@@ -80,7 +80,7 @@
 
 /*
  * Stitch design system — dark-only, cyan/lavender glassmorphism.
- * Base values come straight from the Google Stitch spec for Lumina Audio.
+ * Base values come straight from the Google Stitch spec for EngBot.
  */
 :root,
 .dark {

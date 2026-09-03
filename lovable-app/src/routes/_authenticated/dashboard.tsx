@@ -7,12 +7,12 @@ import type { Book } from "@/integrations/external-supabase/types";
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Listening dashboard — Lumina Audio" },
+      { title: "Listening dashboard — EngBot" },
       {
         name: "description",
         content: "Continue listening, track chapters and jump back into your audiobooks.",
       },
-      { property: "og:title", content: "Listening dashboard — Lumina Audio" },
+      { property: "og:title", content: "Listening dashboard — EngBot" },
       {
         property: "og:description",
         content: "Continue listening, track chapters and jump back into your audiobooks.",
@@ -98,7 +98,7 @@ function Dashboard() {
               <>
                 <h2 className="mt-2 text-2xl leading-8 font-semibold">Nothing queued yet</h2>
                 <p className="mt-1 text-on-surface-variant">
-                  Upload a PDF and Lumina will split it into listenable chapters.
+                  Upload a PDF and EngBot will split it into listenable chapters.
                 </p>
                 <Link
                   to="/upload"

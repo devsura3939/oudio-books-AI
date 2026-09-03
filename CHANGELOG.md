@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-04 — Rebrand: "Lumina Audio Studio" → **EngBot**
+
+### Changed
+- App-wide user-facing brand rename to **EngBot** across the native app
+  (`src/routes/*`, `src/components/app-shell.tsx`) and the vendored studio
+  (`public/studio/index.html`): titles, meta/OG tags, sidebar/top-bar wordmark,
+  auth screen wordmark, "Voice & EngBot TTS" modal, `Narrator: EngBot` badge,
+  PDF export footer and gateway `X-Title`.
+- Sidebar nav item for the classic studio is now labelled **EngBot**; the route
+  path stays `/studio` and library CTA reads "Open EngBot Studio" so existing
+  links/bookmarks keep working.
+- Internal identifiers kept intentionally unchanged to avoid data loss:
+  `window.LuminaStore`, IndexedDB name `LuminaAudioStudioDB_v12`, `/studio` route,
+  and Supabase table/bucket names. Only labels changed.
+
+
 ## 2026-09-04 — Georgian AI translation actually engages; fine-grained studio speed
 
 ### Fixed

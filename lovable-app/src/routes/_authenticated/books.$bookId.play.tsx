@@ -10,12 +10,12 @@ import { VOICE_GROUPS, VOICE_PRESETS, findPreset } from "@/lib/tts-voices";
 export const Route = createFileRoute("/_authenticated/books/$bookId/play")({
   head: () => ({
     meta: [
-      { title: "Now playing — Lumina Audio" },
+      { title: "Now playing — EngBot" },
       {
         name: "description",
         content: "Listen to your book with a live, sentence-synced transcript.",
       },
-      { property: "og:title", content: "Now playing — Lumina Audio" },
+      { property: "og:title", content: "Now playing — EngBot" },
       {
         property: "og:description",
         content: "Listen to your book with a live, sentence-synced transcript.",

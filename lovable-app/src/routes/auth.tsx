@@ -8,9 +8,9 @@ import { db } from "@/integrations/external-supabase/client";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Lumina Audio Studio" },
+      { title: "Sign in — EngBot" },
       { name: "description", content: "Sign in or create an account to build your audiobook library." },
-      { property: "og:title", content: "Sign in — Lumina Audio Studio" },
+      { property: "og:title", content: "Sign in — EngBot" },
       { property: "og:description", content: "Access your private audiobook library." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -77,7 +77,7 @@ function AuthPage() {
             </span>
             <span>
               <span className="block text-[32px] leading-10 font-bold tracking-[-0.02em]">
-                Lumina Audio
+                EngBot
               </span>
               <span className="mt-1 block text-on-surface-variant">Premium AI Listening</span>
             </span>

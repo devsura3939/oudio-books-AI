@@ -9,12 +9,12 @@ type NavItem = { to: string; icon: string; label: string };
 const NAV: NavItem[] = [
   { to: "/dashboard", icon: "home", label: "Home" },
   { to: "/library", icon: "library_music", label: "Library" },
-  { to: "/studio", icon: "graphic_eq", label: "Studio" },
+  { to: "/studio", icon: "graphic_eq", label: "EngBot" },
   { to: "/profile", icon: "account_circle", label: "Profile" },
 ];
 
 /**
- * Stitch "Lumina Audio" chrome: frosted side rail + top bar, radial glow.
+ * Stitch "EngBot" chrome: frosted side rail + top bar, radial glow.
  * Shared by every authenticated screen.
  */
 export function AppShell({ children }: { children: ReactNode }) {
@@ -35,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Side rail */}
       <aside className="fixed top-0 left-0 z-50 hidden h-full w-64 flex-col border-r border-white/15 bg-surface-container/60 px-4 py-8 shadow-[0_0_40px_rgba(0,240,255,0.1)] backdrop-blur-[32px] md:flex">
         <Link to="/dashboard" className="text-2xl font-bold text-primary-container">
-          Lumina Audio
+          EngBot
         </Link>
         <p className="mt-1 mb-8 text-sm text-on-surface-variant">Premium AI Listening</p>
 
@@ -78,7 +78,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Top bar */}
       <nav className="fixed top-0 right-0 z-40 flex w-full items-center justify-between border-b border-white/15 bg-surface/40 px-5 py-4 backdrop-blur-[24px] md:w-[calc(100%-16rem)] md:px-10">
-        <span className="font-bold tracking-tight text-primary-fixed md:text-lg">Lumina Audio</span>
+        <span className="font-bold tracking-tight text-primary-fixed md:text-lg">EngBot</span>
         <div className="flex items-center gap-2">
           <Link
             to="/upload"

@@ -7,13 +7,13 @@ export const Route = createFileRoute("/_authenticated/studio")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Studio — Lumina Audio Studio" },
+      { title: "Studio — EngBot" },
       {
         name: "description",
         content:
           "Full audiobook studio: paged reader, neural narration, and the Georgian translation engine.",
       },
-      { property: "og:title", content: "Studio — Lumina Audio Studio" },
+      { property: "og:title", content: "Studio — EngBot" },
       {
         property: "og:description",
         content: "Paged reader, neural narration, and AI-assisted Georgian translation.",
@@ -60,7 +60,7 @@ function StudioPage() {
       {ready ? (
         <iframe
           src={STUDIO_URL}
-          title="Lumina Audio Studio"
+          title="EngBot"
           className="h-full w-full border-0"
           allow="autoplay; clipboard-write; fullscreen"
         />

@@ -9,12 +9,12 @@ import type { Book, Profile } from "@/integrations/external-supabase/types";
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
-      { title: "Your profile — Lumina Audio" },
-      { name: "description", content: "Manage your Lumina Audio account, plan and listening stats." },
-      { property: "og:title", content: "Your profile — Lumina Audio" },
+      { title: "Your profile — EngBot" },
+      { name: "description", content: "Manage your EngBot account, plan and listening stats." },
+      { property: "og:title", content: "Your profile — EngBot" },
       {
         property: "og:description",
-        content: "Manage your Lumina Audio account, plan and listening stats.",
+        content: "Manage your EngBot account, plan and listening stats.",
       },
       { property: "og:type", content: "profile" },
       { name: "twitter:card", content: "summary" },

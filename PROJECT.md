@@ -1,4 +1,4 @@
-# Lumina Audio Studio — project handbook
+# EngBot — project handbook
 
 Single source of truth for AI agents and humans working on this repository.
 Read this file plus `CHANGELOG.md` before making changes.
@@ -163,7 +163,7 @@ rotated; keys never belong in client code.
 
 ## Design system (source of truth)
 
-The intended visual design is the Google Stitch project *Lumina Audio*
+The intended visual design is the Google Stitch project *EngBot*
 (`https://stitch.withgoogle.com/projects/7169823663306117044`). All 14 exported screens are
 committed at `docs/design/stitch-screens.html.txt` — read them before changing any UI.
 

@@ -7,12 +7,12 @@ import type { Book, Chapter } from "@/integrations/external-supabase/types";
 export const Route = createFileRoute("/_authenticated/books/$bookId/")({
   head: () => ({
     meta: [
-      { title: "Chapter selection — Lumina Audio" },
+      { title: "Chapter selection — EngBot" },
       {
         name: "description",
         content: "Pick a chapter to listen to, or summarize it with AI.",
       },
-      { property: "og:title", content: "Chapter selection — Lumina Audio" },
+      { property: "og:title", content: "Chapter selection — EngBot" },
       { property: "og:description", content: "Pick a chapter to listen to, or summarize it with AI." },
       { property: "og:type", content: "book" },
       { name: "twitter:card", content: "summary" },

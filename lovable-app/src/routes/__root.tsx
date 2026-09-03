@@ -79,10 +79,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lumina Audio Studio" },
+      { title: "EngBot" },
       { name: "description", content: "Turn PDFs into private, chapter-based audiobooks." },
-      { name: "author", content: "Lumina Audio Studio" },
-      { property: "og:title", content: "Lumina Audio Studio" },
+      { name: "author", content: "EngBot" },
+      { property: "og:title", content: "EngBot" },
       { property: "og:description", content: "Turn PDFs into private, chapter-based audiobooks." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

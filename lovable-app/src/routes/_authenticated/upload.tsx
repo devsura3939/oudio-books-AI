@@ -7,15 +7,15 @@ import type { Book } from "@/integrations/external-supabase/types";
 export const Route = createFileRoute("/_authenticated/upload")({
   head: () => ({
     meta: [
-      { title: "Upload a PDF — Lumina Audio" },
+      { title: "Upload a PDF — EngBot" },
       {
         name: "description",
-        content: "Drop in a PDF and Lumina detects chapters, then narrates them.",
+        content: "Drop in a PDF and EngBot detects chapters, then narrates them.",
       },
-      { property: "og:title", content: "Upload a PDF — Lumina Audio" },
+      { property: "og:title", content: "Upload a PDF — EngBot" },
       {
         property: "og:description",
-        content: "Drop in a PDF and Lumina detects chapters, then narrates them.",
+        content: "Drop in a PDF and EngBot detects chapters, then narrates them.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -147,7 +147,7 @@ function UploadScreen() {
       <p className="label-caps text-primary-fixed-dim">Import</p>
       <h1 className="mt-2 text-[32px] leading-10 font-bold tracking-[-0.02em]">Upload a PDF</h1>
       <p className="mt-2 text-on-surface-variant">
-        Lumina detects chapters, then narrates them with high-quality voices. Up to 40 MB.
+        EngBot detects chapters, then narrates them with high-quality voices. Up to 40 MB.
       </p>
 
       <input
