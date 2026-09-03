@@ -22,7 +22,7 @@ const NAV: NavItem[] = [
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAdmin } = useIsAdmin();
+  const { isAdmin, userEmail } = useIsAdmin();
   // Admin-only Training Lab entry (owner account).
   const nav = isAdmin ? [...NAV, { to: "/training", icon: "model_training", label: "Training" }] : NAV;
 
@@ -42,7 +42,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link to="/dashboard" className="text-2xl font-bold text-primary-container">
           EngBot
         </Link>
-        <p className="mt-1 mb-8 text-sm text-on-surface-variant">Premium AI Listening</p>
+        <p className="mt-1 mb-6 text-sm text-on-surface-variant">Premium AI Listening</p>
+
+        {isAdmin && (
+          <div className="mb-6 rounded-xl border border-primary-container/30 bg-primary-container/10 p-3 text-[11px] font-mono text-primary-fixed shadow-[0_0_15px_rgba(0,240,255,0.1)]">
+            <div className="flex items-center justify-between font-bold">
+              <span>👑 Owner Admin</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary-container/20 text-primary-fixed">PRO</span>
+            </div>
+            <p className="mt-1 truncate text-[10px] text-on-surface-variant">{userEmail || "ananiadevsurashvili@gmail.com"}</p>
+            <div className="mt-2 border-t border-white/10 pt-1.5 space-y-0.5 text-[10px]">
+              <p><span className="text-on-surface-variant">App:</span> <span className="text-white font-bold">v1.46.3</span></p>
+              <p><span className="text-on-surface-variant">Engine:</span> <span className="text-white font-bold">v1.46.3 (Lumina-KA)</span></p>
+            </div>
+          </div>
+        )}
 
         <nav className="flex-1 space-y-2">
           {nav.map((item) => (
@@ -83,8 +97,25 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Top bar */}
       <nav className="fixed top-0 right-0 z-40 flex w-full items-center justify-between border-b border-white/15 bg-surface/40 px-5 py-4 backdrop-blur-[24px] md:w-[calc(100%-16rem)] md:px-10">
-        <span className="font-bold tracking-tight text-primary-fixed md:text-lg">EngBot</span>
+        <div className="flex items-center gap-3">
+          <span className="font-bold tracking-tight text-primary-fixed md:text-lg">EngBot</span>
+          {isAdmin && (
+            <div className="hidden sm:flex items-center gap-2 rounded-full border border-primary-container/40 bg-primary-container/15 px-3 py-1 text-[11px] font-mono font-bold text-primary-fixed shadow-[0_0_15px_rgba(0,240,255,0.2)]">
+              <span>👑 Admin</span>
+              <span className="opacity-40">•</span>
+              <span>App v1.46.3</span>
+              <span className="opacity-40">•</span>
+              <span>Engine v1.46.3</span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <div className="sm:hidden flex items-center gap-1.5 rounded-full border border-primary-container/40 bg-primary-container/15 px-2 py-0.5 text-[10px] font-mono font-bold text-primary-fixed">
+              <span>👑</span>
+              <span>v1.46.3</span>
+            </div>
+          )}
           <Link
             to="/upload"
             className="rounded-full p-2 text-on-surface-variant transition-colors hover:text-primary-container md:hidden"

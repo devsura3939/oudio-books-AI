@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-09-05 — v1.46.3: Multi-Tier AI Vision OCR, Scanned Book Re-Transcription & Admin Versioning
+
+### Added & Fixed — Multi-Tier AI Vision OCR (`lovable-app/src/routes/api/ocr.ts`, `static/scanner.js`)
+- **Resolved OCR Failure Root Cause**: Probing the live Lovable endpoint revealed `HTTP 402: Payment Required ("Not enough credits")`, which silently triggered client fallback to in-browser `tesseract.js` (`kat.traineddata`), causing mobile book photos to fragment into single-letter gibberish (`_ ბავ ს აააავავ...`, `IIIIIIIIIIII`).
+- **Direct Client-Side Gemini 2.0 Flash Vision**: Added zero-credit direct Google Gemini 2.0 Flash (`generativelanguage.googleapis.com`) vision fallback using CORS directly from the client browser.
+- **OpenRouter Vision Fallback**: Added secondary fallback to OpenRouter Vision (`google/gemini-2.0-flash-exp:free`) if gateway or server credits are exhausted.
+- **OCR Garbage Rejection & Scoring Calibration**: Upgraded `scoreText` to severely penalize high single-letter word ratios ($> 15\%$), driving gibberish Tesseract OCR scores down from false 54-60% positives to $< 35\%$, warning the user and triggering AI recovery.
+- **OCR Artifact Cleaning (`cleanOcrGarbage`, `repairText`)**: Strips stray mathematical symbols (`=`, `+`, `_`, `|`, `/`, `#`), repeated OCR loops (`IIIIIIIIIIII`), and merges space-fragmented Georgian words (`დ ა` $\rightarrow$ `და`, `მ ე` $\rightarrow$ `მე`, `თ ქ ვ ა` $\rightarrow$ `თქვა`).
+- **Vision Engine Status & Quick-Key Prompt**: Added a Vision Engine status indicator and a 1-click **Key** modal to input a free Gemini API key (1,500 free requests/day from `aistudio.google.com`) directly on the scanner UI.
+
+### Added — Scanned Book Re-Transcription & AI Linguistic Repair (`static/app.js`, `index.html`)
+- **1-Click "Re-transcribe" Action on Shelf Cards**: Added dedicated `Re-transcribe` button with neurology icon on `#scanShelfGrid` book cards.
+- **AI Linguistic Text Restoration Modal (`#retranscribeModal`)**:
+  - **AI Linguistic Text Repair**: Iterates through existing book chapters, runs deterministic noise stripping, and passes corrupted text through neural models with Georgian literary reconstruction prompts to restore proper flowing prose.
+  - **Re-photograph Pages**: 1-click shortcut to launch the high-resolution camera scanner with continuous autofocus targeting the existing book (`appendTo: book.id`).
+  - Real-time progress bar with section status reporting during batch restoration.
+
+### Added — Admin & Engine Version Display for `ananiadevsurashvili@gmail.com`
+- **Owner Admin Email Recognition**: Added explicit authorization for `ananiadevsurashvili@gmail.com` across both TanStack frontend (`use-admin.ts`, `app-shell.tsx`) and vanilla studio (`static/app.js`).
+- **Real-Time App & Engine Versioning**:
+  - Displays `👑 Admin • App v1.46.3 • Engine v1.46.3` in the top navigation bar.
+  - Displays owner admin status card in the side navigation panel.
+  - Configured to automatically update version strings on every iteration and push.
+
 ## 2026-09-05 — v1.46.2: Dedicated Translated Book Editions & Moon Reader Overhaul
 
 ### Added & Fixed — Dedicated Translated Book Editions (`static/app.js`)

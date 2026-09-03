@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AudioRead Studio Pro - AI PDF eBook to MP3 Audiobook</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- JSZip for 1-Click Audiobook ZIP Packaging -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- LameJS for High Quality Client-Side MP3 Audio Encoding -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    <!-- PDF.js CDN for in-browser client-side PDF parsing on GitHub Pages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<body class="bg-[#05070e] text-slate-100 min-h-screen font-['Plus_Jakarta_Sans',sans-serif] antialiased flex flex-col selection:bg-indigo-500 selection:text-white pb-40 sm:pb-36">
+
+    <!-- Top Glow Header -->
+    <header class="border-b border-white/[0.06] bg-slate-950/80 backdrop-blur-xl sticky top-0 z-40 shadow-lg shadow-black/40">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/30 ring-1 ring-white/20 flex-shrink-0">
+                    <i data-lucide="headphones" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm sm:text-lg font-extrabold tracking-tight flex items-center gap-1.5 sm:gap-2">
+                        <span id="ui-appTitle" class="bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent">AudioRead</span>
+                        <span id="ui-studioPro" class="text-[9px] sm:text-[10px] uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">Studio Pro</span>
+                    </h1>
+                    <p id="ui-appSubtitle" class="hidden sm:block text-[11px] text-slate-400">PDF eBook to Studio MP3 Audiobook</p>
+                </div>
+            </div>
+
+            <!-- Language Switcher & Actions -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Language Toggle Pill -->
+                <div class="flex items-center bg-slate-900/90 border border-white/10 rounded-2xl p-0.5 sm:p-1 shadow-inner text-xs font-semibold">
+                    <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 sm:px-2.5 py-1 rounded-xl bg-indigo-600 text-white shadow transition flex items-center gap-1">
+                        <span>🇺🇸</span> <span class="hidden xs:inline font-bold">EN</span>
+                    </button>
+                    <button onclick="setLanguage('ka')" id="langBtn-ka" class="px-2 sm:px-2.5 py-1 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-1">
+                        <span>🇬🇪</span> <span class="hidden xs:inline font-bold">ქარ</span>
+                    </button>
+                </div>
+
+                <button id="btnNewBook" class="hidden px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold transition flex items-center gap-1.5 border border-white/10 text-white shadow-md active:scale-95">
+                    <i data-lucide="folder-plus" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span id="ui-newBook">New</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8">
+
+        <!-- Welcome / Upload Section -->
+        <section id="uploadSection" class="transition-all duration-300 max-w-4xl mx-auto pt-4 sm:pt-8 pb-8 sm:pb-12">
+            <div class="text-center max-w-2xl mx-auto mb-6 sm:mb-10 space-y-2 sm:space-y-3 px-2">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-1 shadow-inner">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                    <span id="ui-heroBadge">100% Free AI Audiobook Converter</span>
+                </div>
+                <h2 id="ui-heroTitle" class="text-2xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent leading-tight">
+                    Convert Any PDF eBook Into An MP3 Audiobook
+                </h2>
+                <p id="ui-heroSubtitle" class="text-slate-400 text-xs sm:text-base leading-relaxed">
+                    Automatic chapter segmentation, translation, studio voice narration, and MP3 audio downloads.
+                </p>
+            </div>
+
+            <!-- Drag & Drop Zone -->
+            <label for="pdfFileInput" id="dropZone" class="relative group cursor-pointer block border border-dashed border-indigo-500/40 hover:border-indigo-400 rounded-3xl bento-card p-6 sm:p-14 text-center transition-all duration-300 shadow-2xl hover:shadow-indigo-500/15">
+                <input type="file" id="pdfFileInput" accept="application/pdf,.pdf" class="sr-only">
+                <div class="flex flex-col items-center justify-center space-y-4 sm:space-y-5 pointer-events-none">
+                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-indigo-600/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-xl shadow-indigo-600/20 p-3 sm:p-4">
+                        <i data-lucide="book-open-check" class="w-8 h-8 sm:w-10 sm:h-10"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <p id="ui-uploadTitle" class="text-sm sm:text-xl font-bold text-white tracking-tight">
+                            Select a PDF file or tap here to browse
+                        </p>
+                        <p id="ui-uploadSubtitle" class="text-xs text-slate-400 max-w-sm mx-auto">
+                            Supports novels, textbooks, documents, and multi-chapter eBooks (.pdf)
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2 sm:gap-6 text-[11px] sm:text-xs text-slate-300 pt-2 flex-wrap justify-center font-medium">
+                        <span class="flex items-center gap-1 bg-slate-900/80 px-2.5 sm:px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="ui-smartDetection">Chapter Splitting</span></span>
+                        <span class="flex items-center gap-1 bg-slate-900/80 px-2.5 sm:px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="ui-naturalVoice">Natural Voice</span></span>
+                        <span class="flex items-center gap-1 bg-slate-900/80 px-2.5 sm:px-3.5 py-1 rounded-full border border-white/5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="ui-zipExport">MP3 ZIP Export</span></span>
+                    </div>
+                </div>
+
+                <!-- Parsing Spinner Overlay -->
+                <div id="uploadingState" class="hidden absolute inset-0 bg-[#05070e]/90 rounded-3xl backdrop-blur-md flex flex-col items-center justify-center space-y-4 z-20 pointer-events-auto p-4">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+                    <p id="ui-extracting" class="text-xs sm:text-sm font-semibold text-indigo-300 animate-pulse text-center">Reading & structuring PDF chapters...</p>
+                </div>
+            </label>
+        </section>
+
+        <!-- Studio Workspace (Loaded state) -->
+        <section id="workspaceSection" class="hidden space-y-5 sm:space-y-6">
+            
+            <!-- Translation Progress Banner (Active when translating) -->
+            <div id="translationBanner" class="hidden bento-card rounded-2xl p-4 bg-indigo-950/70 border border-indigo-500/40 flex items-center justify-between gap-3 animate-pulse">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
+                        <i data-lucide="languages" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h4 id="translationBannerText" class="text-xs sm:text-sm font-bold text-white">Translating chapters into Georgian...</h4>
+                        <p class="text-[11px] text-indigo-300">High accuracy translation engine</p>
+                    </div>
+                </div>
+                <div class="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+
+            <!-- Bento Grid Row 1: Book Showcase & Metrics Matrix -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                
+                <!-- Bento 1: 3D Book Cover & Master CTA -->
+                <div class="bento-card rounded-3xl p-5 sm:p-7 flex flex-col justify-between relative overflow-hidden group">
+                    <div class="absolute -right-20 -top-20 w-56 h-56 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+                    
+                    <div class="flex items-start gap-4 z-10">
+                        <div class="w-16 h-22 sm:w-20 sm:h-28 bg-gradient-to-br from-indigo-600 via-indigo-900 to-slate-950 border border-indigo-400/40 rounded-2xl flex flex-col items-center justify-center p-2.5 sm:p-3 shadow-2xl flex-shrink-0 text-indigo-200 book-jacket ring-1 ring-white/10">
+                            <i data-lucide="book-open" class="w-7 h-7 sm:w-9 sm:h-9 mb-1 text-indigo-300"></i>
+                            <span class="text-[8px] sm:text-[9px] uppercase tracking-wider font-mono font-bold">STUDIO</span>
+                        </div>
+                        <div class="space-y-1 min-w-0">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span id="ui-activeDoc" class="px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] uppercase font-bold tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Active Document</span>
+                                <span id="activeLangBadge" class="px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider bg-slate-800 text-slate-300 border border-white/10">🇺🇸 EN</span>
+                            </div>
+                            <h2 id="bookTitle" class="text-base sm:text-xl font-extrabold text-white tracking-tight leading-snug truncate">Book Title</h2>
+                            <p class="text-xs text-slate-400 truncate font-mono" id="bookFilename">book.pdf</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 sm:pt-6 flex flex-col gap-2.5 z-10">
+                        <div class="flex flex-col sm:flex-row items-center gap-2">
+                            <button id="btnPlayAllFromStart" class="w-full sm:flex-1 py-3 px-4 rounded-2xl btn-stitch-primary text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xl active:scale-95">
+                                <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                                <span id="ui-listenStart">Listen from Beginning</span>
+                            </button>
+                            <button id="btnDownloadAllZip" class="w-full sm:w-auto py-3 px-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-semibold text-xs border border-white/10 flex items-center justify-center gap-2 transition active:scale-95 shadow-md">
+                                <i data-lucide="archive" class="w-4 h-4 text-indigo-400"></i>
+                                <span id="btnDownloadAllZipText">Download MP3 ZIP</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Translate to Georgian / Toggle Language CTA -->
+                        <button id="btnTranslateToggle" onclick="toggleBookTranslation()" class="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 hover:border-indigo-400 text-indigo-300 border border-indigo-500/30 text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-inner">
+                            <i data-lucide="languages" class="w-4 h-4 text-indigo-400"></i>
+                            <span id="btnTranslateToggleText">🇬🇪 Translate to Georgian (ქართულად)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bento 2: 4 High-Tech Matrix Counters -->
+                <div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                    <!-- Stat 1: Pages -->
+                    <div class="bento-card rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-2 sm:mb-4">
+                            <i data-lucide="layers" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                        </div>
+                        <div>
+                            <p id="ui-pagesLabel" class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Pages</p>
+                            <h3 id="statPages" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight font-mono">0</h3>
+                        </div>
+                    </div>
+
+                    <!-- Stat 2: Chapters -->
+                    <div class="bento-card rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-2 sm:mb-4">
+                            <i data-lucide="list-ordered" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                        </div>
+                        <div>
+                            <p id="ui-chaptersLabel" class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Chapters</p>
+                            <h3 id="statChapters" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight font-mono">0</h3>
+                        </div>
+                    </div>
+
+                    <!-- Stat 3: Words -->
+                    <div class="bento-card rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-2 sm:mb-4">
+                            <i data-lucide="file-text" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                        </div>
+                        <div>
+                            <p id="ui-wordsLabel" class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Words</p>
+                            <h3 id="statWords" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight font-mono">0</h3>
+                        </div>
+                    </div>
+
+                    <!-- Stat 4: Total Runtime -->
+                    <div class="bento-card rounded-3xl p-4 sm:p-5 flex flex-col justify-between bg-gradient-to-br from-indigo-950/40 to-slate-900/60 border border-indigo-500/30">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 mb-2 sm:mb-4">
+                            <i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                        </div>
+                        <div>
+                            <p id="ui-listenTimeLabel" class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-indigo-300">Total Audio</p>
+                            <h3 id="statEstDuration" class="text-base sm:text-xl font-extrabold text-white tracking-tight">~0 mins</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bento Grid Row 2: Acoustic Voice & Synthesizer Tuning Deck -->
+            <div class="bento-card rounded-3xl p-5 sm:p-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 items-center">
+                <!-- Voice Selector -->
+                <div class="lg:col-span-2 space-y-1.5 sm:space-y-2">
+                    <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i data-lucide="mic" class="w-3.5 h-3.5 text-indigo-400"></i> <span id="ui-aiVoice">AI Narrator Voice</span></span>
+                        <button id="btnPreviewVoice" class="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-bold transition">
+                            <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> <span id="ui-testVoice">Test Voice</span>
+                        </button>
+                    </label>
+                    <select id="voiceSelect" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-2xl px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 transition shadow-inner font-medium">
+                        <!-- Loaded dynamically -->
+                    </select>
+                </div>
+
+                <!-- 0.05x Precision Speed Control -->
+                <div class="space-y-1.5 sm:space-y-2">
+                    <div class="flex justify-between items-center text-xs font-bold text-slate-300">
+                        <span class="flex items-center gap-1.5"><i data-lucide="gauge" class="w-3.5 h-3.5 text-indigo-400"></i> <span id="ui-speedControl">Speed (0.05x Step)</span></span>
+                        <span id="speedDisplayLabel" class="text-indigo-400 font-mono text-xs font-bold bg-indigo-950 px-2 py-0.5 rounded-lg border border-indigo-500/30">1.00x</span>
+                    </div>
+                    <input type="range" id="speedSlider" min="0.50" max="2.50" step="0.05" value="1.00" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-2">
+                    <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                        <span onclick="setGlobalSpeed(0.75)" class="cursor-pointer hover:text-indigo-400">0.75x</span>
+                        <span onclick="setGlobalSpeed(1.00)" class="cursor-pointer hover:text-indigo-400 font-bold text-indigo-300">1.00x</span>
+                        <span onclick="setGlobalSpeed(1.25)" class="cursor-pointer hover:text-indigo-400">1.25x</span>
+                        <span onclick="setGlobalSpeed(1.50)" class="cursor-pointer hover:text-indigo-400">1.50x</span>
+                        <span onclick="setGlobalSpeed(2.00)" class="cursor-pointer hover:text-indigo-400">2.00x</span>
+                    </div>
+                </div>
+
+                <!-- Pitch Slider -->
+                <div class="space-y-1.5 sm:space-y-2">
+                    <div class="flex justify-between items-center text-xs font-bold text-slate-300">
+                        <span class="flex items-center gap-1.5"><i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400"></i> <span id="ui-pitchShift">Pitch Shift</span></span>
+                        <span id="pitchLabel" class="text-indigo-400 font-mono text-xs font-bold">0 Hz</span>
+                    </div>
+                    <input type="range" id="pitchSlider" min="-20" max="20" step="2" value="0" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-2">
+                </div>
+            </div>
+
+            <!-- Bento Grid Row 3: Chapter Tracks Table -->
+            <div class="space-y-3 sm:space-y-4">
+                <div class="flex items-center justify-between px-1">
+                    <h3 class="text-sm sm:text-lg font-extrabold text-white flex items-center gap-2">
+                        <i data-lucide="disc" class="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"></i>
+                        <span id="ui-chaptersTitle">Chapters & Sections</span>
+                    </h3>
+                    <span id="chapterCountBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-900 border border-white/5 text-slate-400 font-mono">0 Items</span>
+                </div>
+
+                <div id="chaptersContainer" class="space-y-2.5 sm:space-y-3">
+                    <!-- Chapter Rows injected via JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Chapter Text Drawer Modal -->
+    <div id="textModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-3 sm:p-4">
+        <div class="bento-card rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl border border-white/10 overflow-hidden">
+            <div class="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-slate-900/40">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h4 id="modalChapterTitle" class="text-sm sm:text-base font-bold text-white truncate max-w-xs sm:max-w-md">Chapter Text Inspector</h4>
+                        <p id="ui-editSubtitle" class="text-[11px] text-slate-400">Read or edit text</p>
+                    </div>
+                </div>
+                <button id="btnCloseModal" class="p-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="p-4 sm:p-6 flex-1 overflow-y-auto space-y-4">
+                <div>
+                    <label id="ui-chapterTitle" class="block text-xs font-bold text-slate-400 mb-1.5">Chapter Title</label>
+                    <input type="text" id="modalInputTitle" class="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 font-medium">
+                </div>
+                <div>
+                    <label id="ui-textContent" class="block text-xs font-bold text-slate-400 mb-1.5">Text Content</label>
+                    <textarea id="modalInputText" rows="12" class="w-full bg-slate-950 border border-slate-700/80 rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm text-slate-200 font-mono focus:outline-none focus:border-indigo-500 leading-relaxed"></textarea>
+                </div>
+            </div>
+
+            <div class="p-3 sm:p-4 border-t border-white/10 flex items-center justify-end gap-2 sm:gap-3 bg-slate-900/40">
+                <button id="btnCancelModal" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">Close</button>
+                <button id="btnSaveModal" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/30">
+                    <i data-lucide="check" class="w-4 h-4"></i> <span id="ui-saveChanges">Save Changes</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Mobile-Optimized Luxury Audio Player Dock -->
+    <div id="audioPlayerBar" class="hidden fixed bottom-2 inset-x-2 sm:bottom-4 sm:inset-x-8 max-w-6xl mx-auto player-dock rounded-2xl sm:rounded-3xl p-3 sm:p-4 z-50">
+        <audio id="globalAudioPlayer" preload="auto"></audio>
+        
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
+            
+            <!-- Top / Left: Currently Playing Info & Mobile Controls -->
+            <div class="flex items-center justify-between w-full sm:w-1/3 min-w-0">
+                <div class="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 flex-shrink-0 relative ring-1 ring-white/20">
+                        <i data-lucide="headphones" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                        <!-- Animated Soundwave Equalizer -->
+                        <div id="playerEqualizer" class="hidden absolute -top-1 -right-1 bg-indigo-600 px-1.5 py-0.5 rounded-full shadow-md">
+                            <div class="equalizer">
+                                <span class="equalizer-bar"></span>
+                                <span class="equalizer-bar"></span>
+                                <span class="equalizer-bar"></span>
+                                <span class="equalizer-bar"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="min-w-0">
+                        <h5 id="playerTrackTitle" class="text-xs sm:text-sm font-extrabold text-white truncate">Select a chapter</h5>
+                        <p id="playerTrackSubtitle" class="text-[10px] sm:text-[11px] text-indigo-300 font-medium truncate">AudioRead AI Studio</p>
+                    </div>
+                </div>
+
+                <!-- Mobile Quick Speed & Download Pill -->
+                <div class="flex sm:hidden items-center gap-1.5 flex-shrink-0">
+                    <button onclick="cyclePlayerSpeed()" id="btnPlayerSpeedMobile" class="px-2 py-1 rounded-xl bg-slate-900 border border-white/10 text-[11px] font-mono text-indigo-300 font-bold">
+                        1.00x
+                    </button>
+                    <button onclick="downloadActiveChapterAudio()" title="Download Chapter MP3" class="p-1.5 rounded-xl bg-slate-900 border border-white/10 text-slate-300">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Central Player Controls & Scrubber -->
+            <div class="flex flex-col items-center w-full sm:w-2/3 space-y-1 sm:space-y-1.5">
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <button id="btnPlayerPrev" title="Previous Chapter" class="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition">
+                        <i data-lucide="skip-back" class="w-4 h-4"></i>
+                    </button>
+                    <button id="btnPlayerRewind" title="Rewind 15s" class="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    </button>
+                    <button id="btnPlayerPlayPause" title="Play / Pause" class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl btn-stitch-primary text-white flex items-center justify-center shadow-xl shadow-indigo-600/40 hover:scale-105 active:scale-95 transition">
+                        <i data-lucide="play" id="playIcon" class="w-5 h-5 fill-current"></i>
+                    </button>
+                    <button id="btnPlayerForward" title="Forward 15s" class="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition">
+                        <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+                    </button>
+                    <button id="btnPlayerNext" title="Next Chapter" class="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition">
+                        <i data-lucide="skip-forward" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Progress Bar & Timers -->
+                <div class="w-full flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-mono text-slate-400">
+                    <span id="playerCurrentTime" class="font-bold text-slate-300">00:00</span>
+                    <div class="relative flex-1 group">
+                        <input type="range" id="playerProgress" min="0" max="100" value="0" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-1.5 group-hover:h-2 transition-all">
+                    </div>
+                    <span id="playerTotalTime" class="font-bold text-slate-300">00:00</span>
+                </div>
+            </div>
+
+            <!-- Desktop Volume & Quick Speed Stepper -->
+            <div class="hidden sm:flex items-center justify-end gap-2.5 w-full sm:w-1/4">
+                <!-- Speed Stepper -->
+                <div class="flex items-center bg-slate-900/90 border border-white/10 rounded-xl p-0.5">
+                    <button onclick="adjustSpeedByStep(-0.05)" class="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white font-mono">-</button>
+                    <span id="playerSpeedBadgeDesktop" class="px-1.5 py-0.5 text-xs font-mono font-bold text-indigo-300">1.00x</span>
+                    <button onclick="adjustSpeedByStep(0.05)" class="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white font-mono">+</button>
+                </div>
+
+                <button onclick="downloadActiveChapterAudio()" title="Download Current Chapter MP3" class="p-2 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 hover:text-indigo-400 transition shadow-inner">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                </button>
+                <div class="flex items-center gap-1.5">
+                    <button id="btnMute" class="text-slate-400 hover:text-white transition">
+                        <i data-lucide="volume-2" id="volumeIcon" class="w-4 h-4"></i>
+                    </button>
+                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" class="w-16 accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-1.5">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/app.js"></script>
+</body>
+</html>
