@@ -344,6 +344,116 @@
     return true;
   }
 
+  /**
+   * Upload scanned page photo to Supabase Storage ('book-pdfs' / <userId>/scans/<bookId>/page_<idx>.jpg)
+   * Ensures high-resolution photos are permanently stored in the cloud for re-transcription.
+   */
+  async function uploadScanImage(bookId, pageIndex, imageBlob) {
+    if (!isReady()) return null;
+    var path = userId + "/scans/" + String(bookId) + "/page_" + pageIndex + ".jpg";
+    try {
+      var res = await client.storage.from("book-pdfs").upload(path, imageBlob, {
+        upsert: true,
+        contentType: "image/jpeg",
+      });
+      if (res.error) throw res.error;
+      var signed = await client.storage.from("book-pdfs").createSignedUrl(path, 60 * 60 * 24 * 7);
+      return signed.data ? signed.data.signedUrl : null;
+    } catch (err) {
+      console.warn("[LuminaStore] scan upload warning:", err);
+      return null;
+    }
+  }
+
+  /**
+   * Upload chapter audio to Supabase Storage ('book-audio' / <userId>/audio/<bookId>/<chapterId>.mp3)
+   * Instant streaming playback across all devices without repeated neural synthesis.
+   */
+  async function uploadChapterAudio(bookId, chapterId, audioBlob) {
+    if (!isReady()) return null;
+    var path = userId + "/audio/" + String(bookId) + "/" + String(chapterId) + ".mp3";
+    try {
+      var res = await client.storage.from("book-audio").upload(path, audioBlob, {
+        upsert: true,
+        contentType: "audio/mpeg",
+      });
+      if (res.error) throw res.error;
+      var signed = await client.storage.from("book-audio").createSignedUrl(path, 60 * 60 * 24 * 30);
+      return signed.data ? signed.data.signedUrl : null;
+    } catch (err) {
+      console.warn("[LuminaStore] audio upload warning:", err);
+      return null;
+    }
+  }
+
+  /**
+   * Asynchronous cloud job tracker in Supabase 'jobs' table.
+   * Lets mobile devices offload long-running OCR and translation jobs.
+   */
+  async function createJob(bookId, kind, total, message) {
+    if (!isReady()) return null;
+    try {
+      var bookRow = await client.from("books").select("id").eq("user_id", userId).eq("slug", String(bookId)).maybeSingle();
+      var ins = await client.from("jobs").insert({
+        user_id: userId,
+        book_id: bookRow.data ? bookRow.data.id : null,
+        kind: kind === "synthesize" ? "synthesize" : "parse",
+        status: "running",
+        progress: 0,
+        total: total || 1,
+        message: message || "Processing...",
+        started_at: new Date().toISOString(),
+      }).select("id").single();
+      if (ins.error) return null;
+      var jobId = ins.data.id;
+      return {
+        id: jobId,
+        update: async function (progress, totalCount, status, msg) {
+          try {
+            await client.from("jobs").update({
+              progress: progress,
+              total: totalCount || total,
+              status: status || "running",
+              message: msg,
+              updated_at: new Date().toISOString(),
+              finished_at: (status === "done" || status === "failed") ? new Date().toISOString() : null,
+            }).eq("id", jobId);
+          } catch (e) {}
+        }
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Fetches active engine rules & OCR repairs straight from Supabase Cloud.
+   * Real-time distribution of Georgian & English linguistics rules.
+   */
+  async function fetchActiveEnginePack(lang) {
+    var c = ensureClient();
+    if (!c) return null;
+    try {
+      var targetLang = lang || "ka";
+      var res = await c
+        .from("engine_active")
+        .select("language,version_id,engine_versions(version,items)")
+        .eq("language", targetLang)
+        .eq("enabled", true)
+        .maybeSingle();
+      if (!res.error && res.data && res.data.engine_versions) {
+        var v = res.data.engine_versions;
+        return {
+          version: v.version,
+          items: v.items || [],
+        };
+      }
+    } catch (e) {
+      console.warn("[LuminaStore] fetchActiveEnginePack error:", e);
+    }
+    return null;
+  }
+
   window.LuminaStore = {
     init: init,
     isReady: isReady,
@@ -355,5 +465,9 @@
     getAllBooks: getAllBooks,
     saveBook: saveBook,
     deleteBook: deleteBook,
+    uploadScanImage: uploadScanImage,
+    uploadChapterAudio: uploadChapterAudio,
+    createJob: createJob,
+    fetchActiveEnginePack: fetchActiveEnginePack,
   };
 })();

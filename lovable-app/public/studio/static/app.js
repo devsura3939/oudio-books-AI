@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.46.6';
-const ENGINE_VERSION = 'v1.46.6 (Lumina-MultiBurst+ServerAI+SupabaseCloud)';
+const APP_VERSION = 'v1.46.7';
+const ENGINE_VERSION = 'v1.46.7 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
 
 let db = null;
 let currentBook = null;
@@ -4042,6 +4042,15 @@ async function startWholeBookTranslation(resume = false) {
         totalSentencesCount += s.length;
     });
 
+    let cloudJob = null;
+    if (window.LuminaStore && window.LuminaStore.createJob) {
+        try {
+            cloudJob = await window.LuminaStore.createJob(currentBook.id, 'parse', totalChapters, `Translating "${currentBook.title}" (Georgian Edition)`);
+        } catch (e) {
+            console.warn('[translation] cloud job create warning:', e);
+        }
+    }
+
     try {
         for (let chIdx = 0; chIdx < totalChapters; chIdx++) {
             if (cancelTranslationFlag) break;
@@ -4214,12 +4223,22 @@ async function startWholeBookTranslation(resume = false) {
             job.chapterIdx = chIdx + 1;
             job.partial = [];
             saveTranslationJob(job);
+            if (cloudJob) {
+                try {
+                    await cloudJob.update(chIdx + 1, totalChapters, 'running', `Translated chapter ${chIdx + 1} of ${totalChapters}`);
+                } catch (e) {}
+            }
             renderChaptersList();
             updateMiniDock();
         }
 
         if (!cancelTranslationFlag) {
             clearTranslationJob(currentBook.id);
+            if (cloudJob) {
+                try {
+                    await cloudJob.update(totalChapters, totalChapters, 'done', `Completed Georgian Edition for "${currentBook.title}"`);
+                } catch (e) {}
+            }
 
             if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = 'Translation Complete! 🇬🇪';
             if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
@@ -6504,6 +6523,13 @@ async function executeRetranscribeRepair() {
         const total = (book.chapters || []).length;
         const isKa = (book.lang === 'ka') || (book.translatedLangs && book.translatedLangs.includes('ka')) || bookHasGeorgian(book);
 
+        let cloudJob = null;
+        if (window.LuminaStore && window.LuminaStore.createJob) {
+            try {
+                cloudJob = await window.LuminaStore.createJob(book.id, 'parse', total, `Retranscribing & repairing "${book.title}"`);
+            } catch (e) {}
+        }
+
         for (let i = 0; i < total; i++) {
             const chap = book.chapters[i];
             if (statusText) statusText.textContent = `Repairing Section ${i + 1} of ${total}…`;
@@ -6518,12 +6544,24 @@ async function executeRetranscribeRepair() {
                 chap.word_count = chap.text.split(/\s+/).filter(Boolean).length;
                 chap.estimated_duration_sec = Math.max(10, Math.round(chap.word_count / 2.3));
             }
+
+            if (cloudJob) {
+                try {
+                    await cloudJob.update(i + 1, total, 'running', `Repaired section ${i + 1} of ${total}`);
+                } catch (e) {}
+            }
         }
 
         book.extra = Object.assign({}, book.extra, {
             last_retranscribed: new Date().toISOString(),
             retranscribe_engine: 'ai-linguistic-repair'
         });
+
+        if (cloudJob) {
+            try {
+                await cloudJob.update(total, total, 'done', `100% repaired and reconstructed "${book.title}"`);
+            } catch (e) {}
+        }
 
         await saveBookToDB(book);
         if (typeof renderDigitalShelf === 'function') await renderDigitalShelf();

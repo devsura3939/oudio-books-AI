@@ -90,6 +90,20 @@
 
   async function load(lang) {
     const language = lang || "ka";
+
+    // 1. Try fetching directly from Supabase Cloud (works on GitHub Pages & mobile!)
+    if (window.LuminaStore && window.LuminaStore.fetchActiveEnginePack) {
+      try {
+        const cloudPack = await window.LuminaStore.fetchActiveEnginePack(language);
+        if (cloudPack && cloudPack.items && cloudPack.items.length) {
+          packs[language] = { items: cloudPack.items, prompt: "", version: cloudPack.version || 1 };
+          writeCache();
+          return packs[language];
+        }
+      } catch (e) {}
+    }
+
+    // 2. Fall back to local server /api/engine-pack if running locally
     try {
       const res = await fetch("/api/engine-pack?language=" + encodeURIComponent(language), {
         headers: { Accept: "application/json" },
