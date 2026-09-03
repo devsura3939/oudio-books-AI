@@ -33,29 +33,76 @@ function AuthPage() {
     });
   }, [navigate]);
 
+  function friendly(message: string) {
+    const m = message.toLowerCase();
+    if (m.includes("already registered") || m.includes("already been registered")) {
+      return "That email already has an account — sign in instead.";
+    }
+    if (m.includes("invalid login credentials")) return "Wrong email or password.";
+    if (m.includes("email not confirmed")) return "Confirm your email first — check your inbox or resend the link.";
+    if (m.includes("rate limit") || m.includes("too many")) return "Too many attempts. Wait a minute and try again.";
+    if (m.includes("password")) return "Password must be at least 8 characters with a letter and a number.";
+    return message;
+  }
+
+  async function resendConfirmation() {
+    setBusy(true);
+    try {
+      const { error } = await db.auth.resend({
+        type: "signup",
+        email: email.trim().toLowerCase(),
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) throw error;
+      toast.success("Confirmation link sent again.");
+    } catch (error) {
+      toast.error(friendly(error instanceof Error ? error.message : "Could not resend the link"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    // One account per email address; normalise so casing/spacing can never
+    // create a second account for the same person.
+    const cleanEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    if (mode === "signup" && !(password.length >= 8 && /[a-z]/i.test(password) && /\d/.test(password))) {
+      toast.error("Password must be at least 8 characters and include a letter and a number.");
+      return;
+    }
+    setEmail(cleanEmail);
     setBusy(true);
     try {
       if (mode === "signup") {
         const { data, error } = await db.auth.signUp({
-          email,
+          email: cleanEmail,
           password,
           options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
         });
         if (error) throw error;
+        // Supabase masks existing accounts by returning a user with no identities.
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          setMode("signin");
+          toast.error("That email already has an account — sign in instead.");
+          return;
+        }
         if (!data.session) {
           setSentConfirmation(true);
           toast.success("Check your email to confirm your account.");
           return;
         }
       } else {
-        const { error } = await db.auth.signInWithPassword({ email, password });
+        const { error } = await db.auth.signInWithPassword({ email: cleanEmail, password });
         if (error) throw error;
       }
       navigate({ to: "/studio", replace: true });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Authentication failed");
+      toast.error(friendly(error instanceof Error ? error.message : "Authentication failed"));
     } finally {
       setBusy(false);
     }
@@ -93,6 +140,26 @@ function AuthPage() {
               </span>
               We sent a confirmation link to{" "}
               <span className="text-on-surface">{email}</span>. Confirm it, then sign in.
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={resendConfirmation}
+                  disabled={busy}
+                  className="label-caps text-primary-fixed-dim hover:text-primary-container disabled:opacity-60"
+                >
+                  Resend confirmation link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSentConfirmation(false);
+                    setMode("signin");
+                  }}
+                  className="label-caps text-on-surface-variant hover:text-primary-container"
+                >
+                  Back to sign in
+                </button>
+              </div>
             </div>
           ) : (
             <form onSubmit={submit} className="flex flex-col gap-6">

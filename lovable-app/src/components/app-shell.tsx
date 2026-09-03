@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { StudioHost, TranslationProgressPill } from "@/components/studio-host";
 import { db } from "@/integrations/external-supabase/client";
+import { useIsAdmin } from "@/lib/use-admin";
 
 type NavItem = { to: string; icon: string; label: string };
 
@@ -21,6 +22,9 @@ const NAV: NavItem[] = [
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isAdmin } = useIsAdmin();
+  // Admin-only Training Lab entry (owner account).
+  const nav = isAdmin ? [...NAV, { to: "/training", icon: "model_training", label: "Training" }] : NAV;
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -41,7 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <p className="mt-1 mb-8 text-sm text-on-surface-variant">Premium AI Listening</p>
 
         <nav className="flex-1 space-y-2">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.to}
               to={item.to}
@@ -106,7 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom bar */}
       <nav className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-white/15 bg-surface-container/80 py-2 backdrop-blur-[24px] md:hidden">
-        {NAV.map((item) => (
+        {nav.map((item) => (
           <Link
             key={item.to}
             to={item.to}

@@ -1,5 +1,64 @@
 # Changelog
 
+## 2026-09-05 — Unique accounts, hardcoded admin, and the Training Lab (trainable engine)
+
+### Added — auth hardening (`src/routes/auth.tsx`, `supabase/external/003_training.sql`)
+- Emails are normalised (trimmed + lowercased) before sign-up/sign-in and the database now
+  enforces `unique (lower(email))` on `profiles`, so **one account per email address**.
+- Sign-up validates the address shape and requires a password of >= 8 chars with a letter and
+  a digit; Supabase's "masked" duplicate response (a user with zero identities) is detected and
+  turned into "that email already has an account - sign in instead".
+- Friendly messages for wrong credentials / unconfirmed email / rate limits, plus a
+  **Resend confirmation link** button and a "Back to sign in" escape on the confirm screen.
+- `handle_new_user()` now also grants the `admin` role to the hardcoded owner account
+  `ananiadevsurashvili@gmail.com` (and the migration back-fills it for the existing user).
+
+### Added — Training Lab (admin only, `/training`)
+The engine can now be trained by LLMs **without ever touching application code**.
+- `src/routes/_authenticated/training.tsx` - admin-only page (non-admins are redirected):
+  live pack status/score, "Train now" runs, training-key management, benchmark editor,
+  version list with one-click **rewind**, and full session/iteration history.
+- `src/lib/engine-pack.ts` - the whole trainable surface: five data-only item types
+  (`glossary`, `autofix`, `qa_rule`, `prompt_block`, `ocr_fix`), a strict validator
+  (regex safety, length caps, no lookbehind/backrefs, no code in prompt blocks), a
+  deterministic applier, QA runner, prompt-addendum builder, benchmark evaluator and the
+  "is this an improvement" gate.
+- `src/lib/training.server.ts` - key verification (SHA-256 hashes), admin verification,
+  active-pack loading, and `applyProposal()`: validate -> replay the benchmark with and
+  without the proposal -> publish a new version **only** on a strict score improvement with
+  zero regressions and no QA false positives.
+- `src/routes/api/public/train/$.ts` - external training API for any LLM harness holding a
+  key: `POST /session`, `/context`, `/propose`, `/finish`. Keys are hashed, scoped to one
+  language and task, revocable, and usage-counted.
+- `src/routes/api/admin/training.ts` - admin API (bearer + `admin` role required): overview,
+  key create/revoke, benchmark case add/delete, enable/disable, rewind, session detail, and
+  in-app training runs driven by `openai/gpt-5.6-sol` through the existing gateway (no
+  user-supplied key needed).
+- `src/routes/api/engine-pack.ts` + `public/studio/static/engine-pack.js` - the studio loads
+  the active pack and layers it **after** the built-in engine: `window.applyKaRuleEngine` is
+  wrapped (built-in first, trained rules last), scanner OCR gets a `transcribe` pass, and the
+  trained glossary/guidance is appended to the Georgian prompt. Offline or without the API the
+  pack is simply absent and everything behaves exactly as before.
+
+### Added — schema (`supabase/external/003_training.sql`, `004_benchmark_seed.sql`)
+`engine_versions`, `engine_active`, `engine_benchmark_cases`, `training_keys`,
+`training_sessions`, `training_iterations` - all with grants, RLS (read/write gated on
+`has_role(auth.uid(),'admin')`, engine data readable by any signed-in user) and
+`updated_at` triggers. 16 seeded EN/KA benchmark cases.
+
+### Safety model
+Training may only add data-driven translation/OCR rules. It cannot change code, schema,
+infrastructure, prompts outside the pack, or the built-in v1.45.0 Georgian engine. Every
+accepted change is a new immutable version; the active version is a pointer, so rewind is
+instant and lossless.
+
+### Verified
+Migrations applied to the live project; `/api/engine-pack` returns the active pack; a full
+external session (`/session` -> `/propose` -> `/finish`) accepted a real improvement
+(score 79.9 -> 83.2, exact 1/10 -> 3/10, pack v1 -> v2) and correctly rejected unsafe regexes;
+`/api/admin/training` returns 403 without an admin bearer; an invalid key returns 401; the
+`openai/gpt-5.6-sol` gateway call returns valid JSON; typecheck clean.
+
 ## 2026-09-04 — Real narrator list, gap-free narration, recovery-grade scanning, measured Moon reader
 
 ### Fixed

@@ -156,6 +156,50 @@ library; it can both upload PDFs and scan pictures.
   `bookHasGeorgian()` is true and the reader does not offer to translate an already-Georgian
   book.
 
+## Training Lab — trainable engine (added 2026-09-05, admin only)
+
+`ananiadevsurashvili@gmail.com` is the hardcoded admin (role granted by `handle_new_user()`
+in `supabase/external/003_training.sql`). Admins see a **Training** item in the nav and the
+`/training` page; everyone else is redirected.
+
+**What can be trained.** The built-in engine (`public/studio/static/georgian-linguistics.js`
+v1.45.0 + the OCR/translation prompts) is authoritative and NEVER modified. Training produces
+a versioned *pack* of data-only rules layered on top:
+
+| type | shape | applied where |
+| --- | --- | --- |
+| `glossary` | literal phrase → preferred rendering | translation post-edit + prompt |
+| `autofix` | safe regex → replacement | translation + OCR post-edit |
+| `qa_rule` | regex matching BAD text → warning | QA pass / benchmark penalty |
+| `prompt_block` | extra prompt guidance | Georgian/English LLM prompt |
+| `ocr_fix` | literal mis-scan → correction | scanner post-edit |
+
+Anything else (code, SQL, files, infra) is rejected by `validateItem()` in
+`src/lib/engine-pack.ts`.
+
+**How a proposal is accepted.** `applyProposal()` (`src/lib/training.server.ts`) replays the
+benchmark (`engine_benchmark_cases`) with and without the candidate. It publishes a new
+`engine_versions` row and repoints `engine_active` **only** when the score improves, no
+passing case regresses, and no QA rule fires on known-good text. Everything is recorded in
+`training_sessions` / `training_iterations`; rewind just repoints `engine_active`.
+
+**APIs**
+* `POST /api/public/train/session|context|propose|finish` — external LLMs, auth via
+  `X-Training-Key` (hashed in `training_keys`, scoped to one language + task, revocable).
+* `POST /api/admin/training` — admin bearer token, actions: `overview`, `create_key`,
+  `revoke_key`, `add_cases`, `delete_case`, `set_enabled`, `rewind`, `session`, `run`
+  (in-app run using `openai/gpt-5.6-sol` via the platform gateway — no user key needed).
+* `GET /api/engine-pack?language=ka|en` — the studio/scanner read the active pack here.
+
+**Client integration.** `public/studio/static/engine-pack.js` (loaded after `app.js`) wraps
+`window.applyKaRuleEngine` so the built-in engine runs first and trained rules last, adds
+`window.EngbotPack.apply(text, lang, kind)` used by the scanner, and appends trained guidance
+to the Georgian prompt via `kaTrainedAddendum()` in `app.js`. If the endpoint is unreachable
+the pack is empty and behaviour is identical to before — never a regression.
+
+**Languages.** `ka` and `en` today; adding a language means adding benchmark cases and a row
+in `engine_active` (no code change).
+
 ## Conventions
 
 * Chapter splitting: heading regex (`Chapter/Part/Book N`) first, 10-page buckets as

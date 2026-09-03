@@ -179,10 +179,19 @@ function aiTranslationAvailable() {
 // hundreds of chunks stay fast without losing the morphology guardrails.
 function getKaRulesForPrompt() {
     if (translationBudgetMode === 'budget') {
-        return typeof getKaCompactRules === 'function' ? getKaCompactRules() : '';
+        return (typeof getKaCompactRules === 'function' ? getKaCompactRules() : '') + kaTrainedAddendum();
     }
-    if (typeof getKaKnowledgeBase === 'function') return getKaKnowledgeBase();
-    return typeof getKaCompactRules === 'function' ? getKaCompactRules() : '';
+    if (typeof getKaKnowledgeBase === 'function') return getKaKnowledgeBase() + kaTrainedAddendum();
+    return (typeof getKaCompactRules === 'function' ? getKaCompactRules() : '') + kaTrainedAddendum();
+}
+
+// Trained rules from the Training Lab, appended to (never replacing) the built-in
+// knowledge base. Empty string when no pack is active or the app is offline.
+function kaTrainedAddendum() {
+    try {
+        const extra = window.EngbotPack ? window.EngbotPack.promptAddendum('ka') : '';
+        return extra ? '\n\n' + extra : '';
+    } catch (e) { return ''; }
 }
 
 async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {

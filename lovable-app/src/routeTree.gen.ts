@@ -16,14 +16,18 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedScanRouteImport } from './routes/_authenticated/scan'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
+import { Route as AuthenticatedTrainingRouteImport } from './routes/_authenticated/training'
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
 import { Route as ApiAiRouteImport } from './routes/api/ai'
+import { Route as ApiEnginePackRouteImport } from './routes/api/engine-pack'
 import { Route as ApiOcrRouteImport } from './routes/api/ocr'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as ApiAdminTrainingRouteImport } from './routes/api/admin/training'
 import { Route as AuthenticatedBooksBookIdIndexRouteImport } from './routes/_authenticated/books.$bookId.index'
 import { Route as AuthenticatedBooksBookIdPlayRouteImport } from './routes/_authenticated/books.$bookId.play'
 import { Route as AuthenticatedBooksBookIdSummaryRouteImport } from './routes/_authenticated/books.$bookId.summary'
+import { Route as ApiPublicTrainSplatRouteImport } from './routes/api/public/train/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -59,6 +63,11 @@ const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTrainingRoute = AuthenticatedTrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedUploadRoute = AuthenticatedUploadRouteImport.update({
   id: '/upload',
   path: '/upload',
@@ -67,6 +76,11 @@ const AuthenticatedUploadRoute = AuthenticatedUploadRouteImport.update({
 const ApiAiRoute = ApiAiRouteImport.update({
   id: '/api/ai',
   path: '/api/ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEnginePackRoute = ApiEnginePackRouteImport.update({
+  id: '/api/engine-pack',
+  path: '/api/engine-pack',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOcrRoute = ApiOcrRouteImport.update({
@@ -83,6 +97,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
   getParentRoute: () => AuthRoute,
+} as any)
+const ApiAdminTrainingRoute = ApiAdminTrainingRouteImport.update({
+  id: '/api/admin/training',
+  path: '/api/admin/training',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedBooksBookIdIndexRoute =
   AuthenticatedBooksBookIdIndexRouteImport.update({
@@ -102,6 +121,11 @@ const AuthenticatedBooksBookIdSummaryRoute =
     path: '/books/$bookId/summary',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicTrainSplatRoute = ApiPublicTrainSplatRouteImport.update({
+  id: '/api/public/train/$',
+  path: '/api/public/train/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,13 +134,17 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/scan': typeof AuthenticatedScanRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/training': typeof AuthenticatedTrainingRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/api/ai': typeof ApiAiRoute
+  '/api/engine-pack': typeof ApiEnginePackRoute
   '/api/ocr': typeof ApiOcrRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/api/admin/training': typeof ApiAdminTrainingRoute
   '/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
   '/books/$bookId/summary': typeof AuthenticatedBooksBookIdSummaryRoute
+  '/api/public/train/$': typeof ApiPublicTrainSplatRoute
   '/books/$bookId/': typeof AuthenticatedBooksBookIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -126,13 +154,17 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/scan': typeof AuthenticatedScanRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/training': typeof AuthenticatedTrainingRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/api/ai': typeof ApiAiRoute
+  '/api/engine-pack': typeof ApiEnginePackRoute
   '/api/ocr': typeof ApiOcrRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/api/admin/training': typeof ApiAdminTrainingRoute
   '/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
   '/books/$bookId/summary': typeof AuthenticatedBooksBookIdSummaryRoute
+  '/api/public/train/$': typeof ApiPublicTrainSplatRoute
   '/books/$bookId': typeof AuthenticatedBooksBookIdIndexRoute
 }
 export interface FileRoutesById {
@@ -144,13 +176,17 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/scan': typeof AuthenticatedScanRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
+  '/_authenticated/training': typeof AuthenticatedTrainingRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/api/ai': typeof ApiAiRoute
+  '/api/engine-pack': typeof ApiEnginePackRoute
   '/api/ocr': typeof ApiOcrRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/api/admin/training': typeof ApiAdminTrainingRoute
   '/_authenticated/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
   '/_authenticated/books/$bookId/summary': typeof AuthenticatedBooksBookIdSummaryRoute
+  '/api/public/train/$': typeof ApiPublicTrainSplatRoute
   '/_authenticated/books/$bookId/': typeof AuthenticatedBooksBookIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -162,13 +198,17 @@ export interface FileRouteTypes {
     | '/profile'
     | '/scan'
     | '/studio'
+    | '/training'
     | '/upload'
     | '/api/ai'
+    | '/api/engine-pack'
     | '/api/ocr'
     | '/api/tts'
     | '/auth/callback'
+    | '/api/admin/training'
     | '/books/$bookId/play'
     | '/books/$bookId/summary'
+    | '/api/public/train/$'
     | '/books/$bookId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -178,13 +218,17 @@ export interface FileRouteTypes {
     | '/profile'
     | '/scan'
     | '/studio'
+    | '/training'
     | '/upload'
     | '/api/ai'
+    | '/api/engine-pack'
     | '/api/ocr'
     | '/api/tts'
     | '/auth/callback'
+    | '/api/admin/training'
     | '/books/$bookId/play'
     | '/books/$bookId/summary'
+    | '/api/public/train/$'
     | '/books/$bookId'
   id:
     | '__root__'
@@ -195,13 +239,17 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/scan'
     | '/_authenticated/studio'
+    | '/_authenticated/training'
     | '/_authenticated/upload'
     | '/api/ai'
+    | '/api/engine-pack'
     | '/api/ocr'
     | '/api/tts'
     | '/auth/callback'
+    | '/api/admin/training'
     | '/_authenticated/books/$bookId/play'
     | '/_authenticated/books/$bookId/summary'
+    | '/api/public/train/$'
     | '/_authenticated/books/$bookId/'
   fileRoutesById: FileRoutesById
 }
@@ -210,8 +258,11 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   ApiAiRoute: typeof ApiAiRoute
+  ApiEnginePackRoute: typeof ApiEnginePackRoute
   ApiOcrRoute: typeof ApiOcrRoute
   ApiTtsRoute: typeof ApiTtsRoute
+  ApiAdminTrainingRoute: typeof ApiAdminTrainingRoute
+  ApiPublicTrainSplatRoute: typeof ApiPublicTrainSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -265,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/training': {
+      id: '/_authenticated/training'
+      path: '/training'
+      fullPath: '/training'
+      preLoaderRoute: typeof AuthenticatedTrainingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/upload': {
       id: '/_authenticated/upload'
       path: '/upload'
@@ -277,6 +335,13 @@ declare module '@tanstack/react-router' {
       path: '/api/ai'
       fullPath: '/api/ai'
       preLoaderRoute: typeof ApiAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/engine-pack': {
+      id: '/api/engine-pack'
+      path: '/api/engine-pack'
+      fullPath: '/api/engine-pack'
+      preLoaderRoute: typeof ApiEnginePackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ocr': {
@@ -300,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/api/admin/training': {
+      id: '/api/admin/training'
+      path: '/api/admin/training'
+      fullPath: '/api/admin/training'
+      preLoaderRoute: typeof ApiAdminTrainingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/books/$bookId/': {
       id: '/_authenticated/books/$bookId/'
       path: '/books/$bookId'
@@ -321,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBooksBookIdSummaryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/train/$': {
+      id: '/api/public/train/$'
+      path: '/api/public/train/$'
+      fullPath: '/api/public/train/$'
+      preLoaderRoute: typeof ApiPublicTrainSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -329,6 +408,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedScanRoute: typeof AuthenticatedScanRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
+  AuthenticatedTrainingRoute: typeof AuthenticatedTrainingRoute
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
   AuthenticatedBooksBookIdPlayRoute: typeof AuthenticatedBooksBookIdPlayRoute
   AuthenticatedBooksBookIdSummaryRoute: typeof AuthenticatedBooksBookIdSummaryRoute
@@ -340,6 +420,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedScanRoute: AuthenticatedScanRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
+  AuthenticatedTrainingRoute: AuthenticatedTrainingRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
   AuthenticatedBooksBookIdPlayRoute: AuthenticatedBooksBookIdPlayRoute,
   AuthenticatedBooksBookIdSummaryRoute: AuthenticatedBooksBookIdSummaryRoute,
@@ -364,8 +445,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   ApiAiRoute: ApiAiRoute,
+  ApiEnginePackRoute: ApiEnginePackRoute,
   ApiOcrRoute: ApiOcrRoute,
   ApiTtsRoute: ApiTtsRoute,
+  ApiAdminTrainingRoute: ApiAdminTrainingRoute,
+  ApiPublicTrainSplatRoute: ApiPublicTrainSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

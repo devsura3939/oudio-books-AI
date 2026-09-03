@@ -1048,8 +1048,12 @@
       // Georgian pages go through the same in-house rule engine (v1.45.0
       // auto-fixes + QA rules) that the translation engine uses, so scanned
       // Georgian is cleaned up the same way translated Georgian is.
-      const cleanup = (t) =>
-        isKa && typeof window.applyKaRuleEngine === "function" ? window.applyKaRuleEngine(t) : t;
+      const cleanup = (t) => {
+        let out = isKa && typeof window.applyKaRuleEngine === "function" ? window.applyKaRuleEngine(t) : t;
+        // Trained OCR pack (Training Lab) runs last; no-op when no pack is active.
+        if (window.EngbotPack) out = window.EngbotPack.apply(out, isKa ? "ka" : "en", "transcribe");
+        return out;
+      };
       // Photographed cover page → the book's cover image on every shelf.
       const frontImages = {};
       for (let i = 0; i < Math.min(2, pages.length); i++) {
