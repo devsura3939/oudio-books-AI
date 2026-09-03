@@ -85,7 +85,7 @@ const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 // NOTE: stored as fragments and joined at runtime — keeps naive secret
 // scanners from matching the raw token in source, and a key in a browser
 // app is user-visible by design (it ships to every client anyway).
-const OPENROUTER_DEFAULT_KEY = ['sk-or-v1-f950286e', '062d770bbbf107bd', '0756ff6cc2c8f942', 'b9f49009715760f1', 'abff4bf4'].join('');
+const OPENROUTER_DEFAULT_KEY = ''; // removed: the previously hardcoded key was public/compromised. Enter your own key in the AI Keys panel.
 const OPENROUTER_FREE_MODELS = [
     'openrouter/free',
     'google/gemma-4-31b-it:free',
@@ -949,10 +949,14 @@ async function init() {
         window.speechSynthesis.onvoiceschanged = populateVoiceList;
     }
 
-    if (!localStorage.getItem('lumina_seeded_v13')) {
+    // Seed the classics once per store scope: the local shelf and each signed-in
+    // cloud shelf get their own flag, so signing in doesn't leave an empty shelf.
+    const seedFlag = usingCloud ? 'lumina_seeded_cloud_v1' : 'lumina_seeded_v13';
+    if (!localStorage.getItem(seedFlag)) {
         await seedDefaultBooks();
-        localStorage.setItem('lumina_seeded_v13', 'true');
+        localStorage.setItem(seedFlag, 'true');
     }
+
 
     await renderDigitalShelf();
     renderDiscoverClassics();
@@ -965,8 +969,25 @@ async function init() {
     if (window.lucide) lucide.createIcons();
 }
 
-// ── IndexedDB (v12) ─────────────────────────────────────────────────────────
-function initDB() {
+// ── Book store: Supabase first, IndexedDB as offline fallback ───────────────
+// `LuminaStore` (static/supabase-store.js) talks to the same `books`/`chapters`
+// tables the React library pages use, so both surfaces share one shelf. When
+// nobody is signed in (or Supabase is unreachable) we fall back to the original
+// IndexedDB store so the studio still works standalone.
+let usingCloud = false;
+
+async function initDB() {
+    try {
+        usingCloud = window.LuminaStore ? await window.LuminaStore.init() : false;
+    } catch (err) {
+        console.warn('[store] Supabase init failed, falling back to IndexedDB:', err);
+        usingCloud = false;
+    }
+    await initLocalDB();
+    console.info('[store] books are stored in', usingCloud ? 'Supabase' : 'IndexedDB (local only)');
+}
+
+function initLocalDB() {
     return new Promise((resolve, reject) => {
         const req = indexedDB.open('LuminaAudioStudioDB_v12', 1);
         req.onupgradeneeded = (e) => {
@@ -980,7 +1001,41 @@ function initDB() {
     });
 }
 
-function saveBookToDB(book) {
+async function saveBookToDB(book) {
+    if (usingCloud) {
+        try {
+            await window.LuminaStore.saveBook(book);
+            return;
+        } catch (err) {
+            console.error('[store] Supabase save failed, keeping a local copy:', err);
+        }
+    }
+    return saveBookToLocalDB(book);
+}
+
+async function getAllBooks() {
+    if (usingCloud) {
+        try {
+            return await window.LuminaStore.getAllBooks();
+        } catch (err) {
+            console.error('[store] Supabase read failed, falling back to local copy:', err);
+        }
+    }
+    return getAllLocalBooks();
+}
+
+async function deleteBookFromDB(id) {
+    if (usingCloud) {
+        try {
+            await window.LuminaStore.deleteBook(id);
+        } catch (err) {
+            console.error('[store] Supabase delete failed:', err);
+        }
+    }
+    return deleteBookFromLocalDB(id);
+}
+
+function saveBookToLocalDB(book) {
     return new Promise((resolve, reject) => {
         const tx = db.transaction('books', 'readwrite');
         tx.objectStore('books').put(book);
@@ -989,7 +1044,7 @@ function saveBookToDB(book) {
     });
 }
 
-function getAllBooks() {
+function getAllLocalBooks() {
     return new Promise((resolve, reject) => {
         const tx = db.transaction('books', 'readonly');
         const req = tx.objectStore('books').getAll();
@@ -998,7 +1053,7 @@ function getAllBooks() {
     });
 }
 
-function deleteBookFromDB(id) {
+function deleteBookFromLocalDB(id) {
     return new Promise((resolve, reject) => {
         const tx = db.transaction('books', 'readwrite');
         tx.objectStore('books').delete(id);
@@ -1006,6 +1061,7 @@ function deleteBookFromDB(id) {
         tx.onerror = (e) => reject(e);
     });
 }
+
 
 async function seedDefaultBooks() {
     const existing = await getAllBooks();

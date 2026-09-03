@@ -1,0 +1,150 @@
+# Lumina Audio Studio — project handbook
+
+Single source of truth for AI agents and humans working on this repository.
+Read this file plus `CHANGELOG.md` before making changes.
+
+## What the app does
+
+Users sign in, import a PDF, and Lumina parses it into chapters stored in Postgres.
+Chapters can be read and narrated in the browser (Web Speech API). The original PDF
+is kept in private object storage. Generated MP3 segments have a table + bucket
+reserved (`audio_segments`, `book-audio`) for the server-side TTS pipeline.
+
+## Stack
+
+| Layer | Choice |
+| --- | --- |
+| Framework | TanStack Start v1 (React 19, Vite 7, file routes in `src/routes`) |
+| Styling | Tailwind CSS v4 via `src/styles.css` + shadcn/ui in `src/components/ui` |
+| Data/auth/storage | **External, self-owned Supabase project** (ref `oakikavdnnvxzlcvsovq`) |
+| PDF parsing | `pdfjs-dist`, browser-side (`src/lib/pdf-chapters.ts`) |
+| Narration | Browser `speechSynthesis` |
+
+### Important: two Supabase projects exist
+
+* **The one the app uses** — external project `oakikavdnnvxzlcvsovq`, accessed only
+  through `src/integrations/external-supabase/client.ts` (exported as `db`).
+* **Lovable Cloud's own project** — auto-generated files under
+  `src/integrations/supabase/*` still exist because the platform manages them and
+  they cannot be deleted. **Do not use them for app features.** Always import `db`
+  from `@/integrations/external-supabase/client`.
+
+Credentials: the publishable key is inline in the client (safe, public by design).
+Server-side secrets are stored as environment variables and never committed:
+`EXTERNAL_SUPABASE_URL`, `EXTERNAL_SUPABASE_PUBLISHABLE_KEY`,
+`EXTERNAL_SUPABASE_SECRET_KEY`, `EXTERNAL_SUPABASE_JWKS_URL`.
+
+## Database schema (`supabase/external/001_init.sql`)
+
+Apply that file in the external project's SQL editor (idempotent, re-runnable).
+
+| Table | Purpose | Access rule |
+| --- | --- | --- |
+| `profiles` | display name, avatar, plan; auto-created by `on_auth_user_created` | owner only |
+| `user_roles` + `app_role` enum + `has_role()` | roles kept out of `profiles` to prevent privilege escalation | user reads own roles |
+| `books` | title, author, language, `pdf_path`, `page_count`, `total_chapters`, `status` | owner-only full access |
+| `chapters` | `chapter_index`, `title`, `text_content`, `word_count`, `status` | owner-only full access |
+| `audio_segments` | `part_index`, `storage_path`, `voice`, duration, size | owner-only full access |
+| `jobs` | `kind`, `status`, `progress`/`total`, `message`, `error` — for background pipelines | owner-only full access |
+
+Buckets: `book-pdfs`, `book-audio` — both **private**; every object path starts with
+`<auth.uid()>/`, and storage policies enforce that first path segment.
+
+RLS is enabled everywhere and every table has explicit `GRANT`s for `authenticated`
+and `service_role` (Supabase does not grant these by default).
+
+## Routes
+
+```
+/                          public landing
+/auth                      email + password sign in / sign up
+/auth/callback             email-confirmation handler (PKCE + hash tokens)
+/_authenticated/           client-side gate (ssr: false) → redirects to /auth
+  /library                 import PDF into Supabase, list & delete books
+  /books/$bookId           simple chapter list + browser-speech narration
+  /studio                  THE FULL ORIGINAL APP (see below)
+```
+
+## The vendored studio (`public/studio/`)
+
+The original Lumina app from `devsura3939/oudio-books-AI` is the real product surface and is
+kept intact rather than rewritten. It is a self-contained vanilla SPA served as static files:
+
+| File | Contains |
+| --- | --- |
+| `public/studio/index.html` | glass/futuristic UI, Moon Reader mode, Voice & Studio TTS panel, Gemini AI engine panel, Discover Classics |
+| `public/studio/static/app.js` | paged reader + sentence highlighting + themes/fonts, edge-tts Georgian neural voices via HF mirrors, ElevenLabs option, browser-speech fallback, smart translation routing (Gemini / OpenRouter / Groq / Mistral), whole-book translation with progress & cancel, AI key status probe |
+| `public/studio/static/georgian-linguistics.js` | KA knowledge base v1.45.0 — 128 prompt blocks, 127 QA rules, 112 auto-fixes, `validateGeorgianTranslation`, `correctGeorgianMorphology` |
+| `public/studio/static/supabase-store.js` | `window.LuminaStore` — the studio's book store, backed by the same Supabase tables the React pages use |
+
+Rules for agents:
+
+* It loads Tailwind/pdf.js/JSZip from CDN and needs **no build step**. Edit the files in place.
+* `/studio` is inside `_authenticated`, and the React route seeds `lumina_auth_user` in
+  localStorage from the Supabase session. The studio's own login form is therefore dead code —
+  never route users to it, and do not treat it as an auth mechanism.
+* AI/TTS keys are user-supplied and live in localStorage; calls run browser-side. Never
+  reintroduce a hardcoded provider key (the old OpenRouter default was removed as compromised).
+
+## One shelf: how storage is unified
+
+Both surfaces read and write `public.books` + `public.chapters` in the external project.
+
+```
+React /library ─┐
+                ├─→ public.books (+ chapters)  ← single source of truth
+studio /studio ─┘   via window.LuminaStore
+```
+
+* `books.slug` holds the studio's own book id (`book_1725…`, `classic_art_of_war`), unique per user.
+* Studio-only fields live in jsonb: `books.metadata` = `{ coverUrl, translatedLangs, dateAdded,
+  lastPlayedChapterId, progressPct, extra }`; `chapters.metadata` = `{ studio_id, text_ka,
+  estimated_duration_sec, extra }`. **Georgian translations live in `chapters.metadata.text_ka`.**
+* `saveBook()` replaces a book's chapter rows wholesale — the studio always passes the full array.
+* Signed out, or Supabase unreachable → the studio silently falls back to the original IndexedDB
+  store (`initLocalDB` / `saveBookToLocalDB` / …). Never delete that fallback.
+* Schema changes go in a new numbered file in `supabase/external/` AND get applied to the live
+  project; `002_studio_unify.sql` added `slug`/`metadata`.
+
+## Publishing (both targets, every change)
+
+| Target | How |
+| --- | --- |
+| Lovable app | Publish button (frontend changes need a re-publish) |
+| GitHub repo `devsura3939/oudio-books-AI` | `bun scripts/push-to-github.mjs "message"` |
+| GitHub Pages `devsura3939.github.io/oudio-books-AI/` | automatic — `.github/workflows/pages.yml` deploys the repo root on every push to `main` |
+
+The push script mirrors `public/studio/**` to the repo root (Pages serves that), the app source
+to `lovable-app/`, and the docs to the root. It commits on top of the existing `main` tree, so the
+old FastAPI backend, tests, and data files in that repo are never deleted. Run it after every
+change set — the repo and Pages must never lag behind the Lovable app.
+
+
+
+## Conventions
+
+* Chapter splitting: heading regex (`Chapter/Part/Book N`) first, 10-page buckets as
+  fallback; chapters over 2,500 words are split into 1,800-word parts.
+* Uploads capped at 40 MB client-side.
+* All colours come from semantic tokens in `src/styles.css` — never hardcode colours.
+* Server-only work goes in `createServerFn` handlers (`*.functions.ts`); secrets are
+  read inside handlers, never at module scope.
+
+## Migrated away from the old repo
+
+The predecessor (`devsura3939/oudio-books-AI`) had a Python FastAPI backend with JSON
+file persistence plus a browser-only SPA using IndexedDB (`LuminaAudioStudioDB_v12`)
+and a fake `localStorage` login that accepted any email. That model is replaced:
+real Supabase auth, Postgres persistence, RLS ownership, and private storage buckets.
+Any hardcoded third-party API keys from that repo must be treated as compromised and
+rotated; keys never belong in client code.
+
+## Open items
+
+* ~~Unify storage on Supabase~~ — done (002).
+* Move studio AI + TTS calls into `createServerFn` handlers so keys stay server-side.
+* Server-side MP3 synthesis writing into `audio_segments` / `book-audio`.
+* Google sign-in.
+* Supabase Auth **Site URL / Redirect URLs** must list the app origins, otherwise confirmation
+  emails fall back to `http://localhost:3000`.
+

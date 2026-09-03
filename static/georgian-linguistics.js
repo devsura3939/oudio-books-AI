@@ -1076,7 +1076,7 @@ TACTIC 5 — TTS-DRIVEN CHOICES:
 TACTIC 6 — SELF-CHECK ORDER (before answering):
 1. Verb-final everywhere? 2. Negation type correct (არ/ვერ/ნუ)? 3. Case alignment per series?
 4. Idioms nativized? 5. Pronouns/possessives pruned? 6. Discourse markers present but not stacked?
-7. Punctuation Georgian („…“, —, ।)? 8. Register consistent?`;
+7. Punctuation Georgian („…“, —, .)? 8. Register consistent?`;
 
 const KA_VERSION_MARKERS = `
 VERSION MARKERS (pre-radical vowels) — the vowel BEFORE the verb root changes meaning (v1.8.0, wikibooks/zmnebi):
@@ -4991,7 +4991,7 @@ function validateGeorgianTranslation(text) {
 
     // 3.27 Space before punctuation (typo artifact): "word ." / "word ,"
     if (/[\u10A0-\u10FF]\s+([,.:;!?…])/.test(text)) {
-        issues.push({ rule: 'space_before_punct', message: 'Space before punctuation mark — remove the space (word। not word ।).' });
+        issues.push({ rule: 'space_before_punct', message: 'Space before punctuation mark — remove the space (word. not word .).' });
     }
 
     // 3.28 Personal pronoun + postposition with incorrect -s (Proton rule v1.4.0)
@@ -5224,7 +5224,7 @@ function validateGeorgianTranslation(text) {
 
     // 3.56 Detached enclitic -ც written as a separate word (calque of English
     //     "also/too" as a free adverb). -ც must attach to the preceding word.
-    const detachedTsRe = /(^|[\s,„"(])ც(?=[\s,."”):;!?।…])/g;
+    const detachedTsRe = /(^|[\s,„"(])ც(?=[\s,."”):;!?…])/g;
     let m26;
     while ((m26 = detachedTsRe.exec(text)) !== null) {
         issues.push({ rule: 'detached_ts', message: `Standalone "ც" found — the additive enclitic -ც must attach to the preceding word: მეც, ისიც, აქაც. A separate ც is a calque of English "too/also".` });
@@ -5248,7 +5248,7 @@ function validateGeorgianTranslation(text) {
 
     // 3.59 Quotative detached: თქო / მეთქი / -ო written as separate words —
     //     they are hyphenated enclitics on the final word of the quote.
-    const detachedQuotRe = /(^|[\s„"(])((თქო|მეთქი))(?=[\s.!?,"”):।…])/g;
+    const detachedQuotRe = /(^|[\s„"(])((თქო|მეთქი))(?=[\s.!?,"”):…])/g;
     let m29;
     while ((m29 = detachedQuotRe.exec(text)) !== null) {
         issues.push({ rule: 'detached_quotative', message: `"${m29[2]}" written as a separate word — quotative particles attach with a hyphen to the last word of the quoted clause: გელოდებით-თქო, წადი-მეთქი.` });
@@ -5398,7 +5398,7 @@ function validateGeorgianTranslation(text) {
     // 3.76 Double negation defect: არავინ/არაფერი/არასოდეს/არსად + verb
     //      WITHOUT the obligatory second არ — Georgian requires negative
     //      concord (არავინ არ მოვიდა), unlike English.
-    const araSpanRe = /(?<![\u10A0-\u10FF])(?:არავინ|არავითარი|არაფერი|არასოდეს|არასდროს|არსად)(?![\u10A0-\u10FF])([^.!?।]{0,60})/g;
+    const araSpanRe = /(?<![\u10A0-\u10FF])(?:არავინ|არავითარი|არაფერი|არასოდეს|არასდროს|არსად)(?![\u10A0-\u10FF])([^.!?]{0,60})/g;
     let m45;
     while ((m45 = araSpanRe.exec(text)) !== null) {
         const spanTail = m45[1] || '';
@@ -6236,22 +6236,22 @@ function correctGeorgianMorphology(text) {
     // 4.14 Collapse adjacent tautology: same word repeated (≥3 chars, not hyphenated reduplication)
     out = out.replace(/(?<![\u10A0-\u10FF])([ა-ჰ]{3,})\s+\1(?![\u10A0-\u10FF])/g, '$1');
 
-    // 4.15 Replace English period at sentence end with Georgian ।
-    out = out.replace(/(?<=[\u10A0-\u10FF])\.(?=\s|$)/g, '।');
+    // 4.15 Replace English period at sentence end with Georgian 
+    out = out.replace(/(?<=[\u10A0-\u10FF])\.(?=\s|$)/g, '');
 
     // 4.16 Remove apostrophe inside Georgian words
     out = out.replace(/([\u10A0-\u10FF])'([\u10A0-\u10FF])/g, '$1$2');
 
     // 4.17 Replace semicolons in Georgian narrative with period
-    out = out.replace(/([\u10A0-\u10FF])\s*;(?=\s|$)/g, '$1।');
+    out = out.replace(/([\u10A0-\u10FF])\s*;(?=\s|$)/g, '$1');
 
     // 4.18 Fix ", ," or " ," artifacts
     out = out.replace(/\s+,/g, ',');
     out = out.replace(/,\s*,/g, ',');
 
     // 4.19 Ensure terminal punctuation at end of text
-    if (out.trim().length > 0 && !/[.!?…।]$/.test(out.trim())) {
-        out = out.trim() + '।';
+    if (out.trim().length > 0 && !/[.!?…]$/.test(out.trim())) {
+        out = out.trim() + '';
     }
 
     // ── v1.4.0 additions ──
@@ -6385,12 +6385,12 @@ function correctGeorgianMorphology(text) {
 
     // 4.42 Detached standalone "ც" → attach to the preceding word
     //     (deterministic: a separate ც is always the additive enclitic mis-spaced).
-    //     Lookahead includes ।/… because 4.15 already converted sentence periods.
-    out = out.replace(/(?<=[\u10A0-\u10FF])\s+ც(?=[\s,."”):;!?।…])/g, 'ც');
+    //     Lookahead includes /… because 4.15 already converted sentence periods.
+    out = out.replace(/(?<=[\u10A0-\u10FF])\s+ც(?=[\s,."”):;!?…])/g, 'ც');
 
     // 4.43 Detached quotatives → hyphenate to the preceding word
     //     ("... თქო" → "...-თქო", "... მეთქი" → "...-მეთქი").
-    out = out.replace(/(?<=[\u10A0-\u10FF])\s+(თქო|მეთქი)(?=[\s.!?,"”):।…])/g, '-$1');
+    out = out.replace(/(?<=[\u10A0-\u10FF])\s+(თქო|მეთქი)(?=[\s.!?,"”):…])/g, '-$1');
 
     // 4.44 Double benefactive: drop the redundant postpositional beneficiary
     //     after a fused m/g/v transfer verb (მომცა ჩემთვის → მომცა).
@@ -6413,12 +6413,12 @@ function correctGeorgianMorphology(text) {
 
     // 4.47 Detached -დან/-მდე → fuse to the preceding noun stem
     //     ("... ის დან" → "...-დან", "... ი მდე" → "...-მდე").
-    //     Lookahead includes ।/… because 4.15/4.29 already normalized periods.
-    out = out.replace(/(?<=[\u10A0-\u10FF])(ის|ს|ი)\s+(დან|მდე)(?=[\s,."”):;!?।…])/g, '$1$2');
+    //     Lookahead includes /… because 4.15/4.29 already normalized periods.
+    out = out.replace(/(?<=[\u10A0-\u10FF])(ის|ს|ი)\s+(დან|მდე)(?=[\s,."”):;!?…])/g, '$1$2');
 
     // 4.48 Detached -გან → fuse to the preceding genitive stem
     //     ("... ის გან" → "...-გან").
-    out = out.replace(/(?<=[\u10A0-\u10FF])ის\s+გან(?=[\s,."”):;!?।…])/g, 'ისგან');
+    out = out.replace(/(?<=[\u10A0-\u10FF])ის\s+გან(?=[\s,."”):;!?…])/g, 'ისგან');
 
     // 4.49 Untranslated English purpose connectors → რათა + optative reading
     //     (deterministic: "in order to/so as to" should never survive into
@@ -6484,9 +6484,9 @@ function correctGeorgianMorphology(text) {
 
     // 4.56 Lone ხან → ზოგჯერ (a single ხან in a sentence without its pair
     //      is either the "sometimes" adverb or a mistranslation; ზოგჯერ is
-    //      the safe unambiguous adverb). Lookahead includes । because earlier
+    //      the safe unambiguous adverb). Lookahead includes  because earlier
     //      fixes already normalized periods.
-    out = out.replace(/([^.\n!?]*)(?<![\u10A0-\u10FF])ხან(?![\u10A0-\u10FF])([^.\n!?]*[.!?।])/g,
+    out = out.replace(/([^.\n!?]*)(?<![\u10A0-\u10FF])ხან(?![\u10A0-\u10FF])([^.\n!?]*[.!?])/g,
         (m, before, after) => {
             const khanCount = (m.match(/(?<![\u10A0-\u10FF])ხან(?![\u10A0-\u10FF])/g) || []).length;
             return khanCount === 1 ? before + 'ზოგჯერ' + after : m;
@@ -6553,7 +6553,7 @@ function correctGeorgianMorphology(text) {
     // 4.62 Double-negation repair: არავინ/არაფერი/არასოდეს/არსად + verb
     //      without the obligatory second არ → insert არ immediately before
     //      the conjugated verb. Conservative span-scan like QA 3.76.
-    const negFixRe = /(?<![\u10A0-\u10FF])(არავინ|არავითარი|არაფერი|არასოდეს|არასდროს|არსად)(?![\u10A0-\u10FF])([^.!?।]{0,80})/g;
+    const negFixRe = /(?<![\u10A0-\u10FF])(არავინ|არავითარი|არაფერი|არასოდეს|არასდროს|არსად)(?![\u10A0-\u10FF])([^.!?]{0,80})/g;
     out = out.replace(negFixRe, (m, pron, tail) => {
         if (/(?<![\u10A0-\u10FF])(?:არ|ვერ|ნუ|ვეღარ|აღარ)(?![\u10A0-\u10FF])/.test(tail)) return m;
         // Insert არ before the LAST Georgian word in the tail (the verb slot)
@@ -7969,7 +7969,7 @@ function correctGeorgianMorphology(text) {
     //      the LATIN branch only (JS \b never matches against Georgian
     //      chars) — same precedent as 4.97's "what's more".
     //      DELIBERATE SPLIT on "no": answer-particle (before punctuation —
-    //      INCLUDING the auto-appended । danda from 4.19 — or string end)
+    //      INCLUDING the auto-appended  danda from 4.19 — or string end)
     //      → არა; determiner "no money/no problem" stays Latin — negation
     //      placement is screeve-dependent, AI-pass (KB 4.11: do-support →
     //      არ + verb).
@@ -8012,7 +8012,7 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\bokay\b/gi, 'კარგი');
     out = out.replace(/\bok\b/gi, 'კარგი');
     out = out.replace(/\byes\b/gi, 'კი');
-    out = out.replace(/\bno(?=\s*[,;.!?…:—।]|\s*$)/gi, 'არა');
+    out = out.replace(/\bno(?=\s*[,;.!?…:—]|\s*$)/gi, 'არა');
 
     // 4.107 (v1.40.0, KA-122) Quantifier series → Georgian amount
     //      carriers. FUNCTION TAIL placement — MUST run AFTER every
