@@ -315,3 +315,13 @@ The Library page was retired. `/scan` opens the studio's Scanner view: scan page
 
 ### Cover / title / chapter detection
 Both intake paths (camera scan and PDF import) run one detector: cover page, title, author and chapter headings are detected automatically; the cover image is the photographed/rendered cover page unless official art is found. Detection results are kept in `books.metadata.extra` (`cover_page`, `detected_title`, `detected_author`, `detected_sections`).
+
+### Page order & incremental scanning
+Scanned photos do not have to be captured or picked in order: filenames are sorted naturally,
+and after OCR the scanner reads the book's own printed page numbers (top/bottom edge lines) to
+re-order pages, only when most pages yield distinct numbers. Pages without a number stay next to
+their neighbours. Users can re-run this from the review screen.
+Existing scanned books can be extended: the "Add pages" action on the Scanner shelf opens the
+scanner in append mode (`LuminaScanner.open({ appendTo })`), and `appendScannedPagesToBook()`
+appends the recognised pages as new sections with continued page numbering, without touching the
+book's cover, translations or audio.

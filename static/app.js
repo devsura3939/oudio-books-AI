@@ -5163,6 +5163,56 @@ async function createBookFromScannedPages(pages, meta) {
 }
 window.createBookFromScannedPages = createBookFromScannedPages;
 
+/**
+ * Append freshly scanned pages to an existing scanned book. The new pages run
+ * through the same structure detection, so real chapter headings inside them
+ * become their own sections instead of one blob at the end.
+ */
+async function appendScannedPagesToBook(bookId, pages, meta) {
+    const list = (pages || []).filter(p => p && p.text && p.text.trim());
+    if (!list.length) throw new Error('No recognised page text');
+
+    const books = await getAllBooks();
+    const book = books.find(b => String(b.id) === String(bookId));
+    if (!book) throw new Error('Book not found');
+
+    const isKa = (meta && meta.lang) === 'ka';
+    const existingPages = (book.extra && book.extra.scanned_pages) || 0;
+    // Keep the printed page numbering continuing from what the book already has.
+    const offset = existingPages;
+    const structure = detectBookStructure(
+        list.map((p, i) => ({ ...p, index: offset + i + 1 })),
+        { isKa, skipCover: true }
+    );
+
+    const startNo = (book.chapters || []).length;
+    const added = structure.chapters.map((ch, i) => ({
+        ...ch,
+        id: 'ch_' + Date.now() + '_' + i,
+        title: ch.title && !/^Section\s+\d+$/i.test(ch.title) ? ch.title : `Section ${startNo + i + 1}`
+    }));
+
+    book.chapters = (book.chapters || []).concat(added);
+    book.extra = Object.assign({}, book.extra, {
+        source: 'scan',
+        scanned_pages: existingPages + list.length,
+        scan_engines: Array.from(new Set(((book.extra && book.extra.scan_engines) || []).concat(list.map(p => p.engine).filter(Boolean)))),
+        detected_sections: book.chapters.length,
+        last_pages_added: new Date().toISOString()
+    });
+    if (isKa && !(book.translatedLangs || []).includes('ka')) {
+        book.translatedLangs = (book.translatedLangs || []).concat('ka');
+    }
+
+    await saveBookToDB(book);
+    await renderDigitalShelf();
+    if (typeof renderScanShelf === 'function') await renderScanShelf();
+    if (currentBook && String(currentBook.id) === String(book.id)) await selectBook(book.id, false);
+    if (typeof showToast === 'function') showToast(`${list.length} page${list.length === 1 ? '' : 's'} added to “${book.title}”`);
+    return book;
+}
+window.appendScannedPagesToBook = appendScannedPagesToBook;
+
 
 // ══════════════════════════════════════════════════════════════════════════
 // ██ BOOK STRUCTURE DETECTION (cover · title · author · chapters) ██
@@ -5244,7 +5294,8 @@ function detectBookStructure(pages, opts) {
 
     // 1. Cover: only the first two pages can be one.
     let coverIndex = null;
-    for (const page of list.slice(0, 2)) {
+    // When appending to an existing book there is no cover among the new pages.
+    for (const page of (opts && opts.skipCover ? [] : list.slice(0, 2))) {
         if (looksLikeCoverPage(page.text)) { coverIndex = page.index; break; }
     }
 
@@ -5870,6 +5921,7 @@ async function renderScanShelf() {
                     <button onclick="engbotScanListen('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-primary-container text-on-primary-container text-[11px] font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">play_arrow</span>Listen</button>
                     <button onclick="engbotScanRead('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/10 text-white text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">menu_book</span>Read</button>
                     <button onclick="engbotScanTranslate('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-georgian-gold/15 text-georgian-gold text-[11px] font-bold border border-georgian-gold/30 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">translate</span>${hasKa ? 'Re-translate' : 'Translate'}</button>
+                    <button onclick="engbotScanAddPages('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/10 text-white text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">add_a_photo</span>Add pages</button>
                     <button onclick="engbotScanRename('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/5 text-on-surface-variant text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit</span>Edit</button>
                     <button onclick="engbotScanPdf('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/5 text-on-surface-variant text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">picture_as_pdf</span>PDF</button>
                     <button onclick="engbotScanMp3('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/5 text-on-surface-variant text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">audio_file</span>MP3</button>
@@ -5898,6 +5950,16 @@ async function engbotScanPdf(bookId) {
     await selectBook(bookId, false);
     exportCurrentBookPDF();
 }
+
+async function engbotScanAddPages(bookId) {
+    const books = await getAllBooks();
+    const book = books.find(b => String(b.id) === String(bookId));
+    if (!book) return;
+    if (window.LuminaScanner && typeof window.LuminaScanner.open === 'function') {
+        window.LuminaScanner.open({ appendTo: book.id, title: book.title });
+    }
+}
+window.engbotScanAddPages = engbotScanAddPages;
 
 async function engbotScanRename(bookId) {
     const books = await getAllBooks();

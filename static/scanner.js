@@ -33,6 +33,8 @@
     cancel: false,
     tier0: null, // null = unknown, true/false once probed
     structure: null, // detected cover / title / author after a scan
+    appendTo: null,  // book id when adding pages to an existing scanned book
+    orderNote: null, // set when pages were re-ordered from printed page numbers
     tessWorker: null,
     tessLang: null,
   };
@@ -40,7 +42,16 @@
   // ── DOM ────────────────────────────────────────────────────────────────────
   const shell = () => document.getElementById("scanShell");
 
-  function open() {
+  function open(opts) {
+    state.appendTo = (opts && opts.appendTo) || null;
+    state.appendTitle = (opts && opts.title) || "";
+    if (opts && opts.appendTo) {
+      // Adding to an existing book starts from an empty queue.
+      state.pages.forEach((p) => URL.revokeObjectURL(p.url));
+      state.pages = [];
+      state.structure = null;
+      state.orderNote = null;
+    }
     render("chooser");
     if (typeof openModal === "function") openModal("scanModal");
     else document.getElementById("scanModal").classList.add("active");
@@ -151,19 +162,26 @@
         </div>`;
     } else if (view === "review") {
       const words = state.pages.reduce((n, p) => n + countWords(p.text), 0);
+      const appending = !!state.appendTo;
       el.innerHTML =
-        header("Review & save", `${state.pages.length} pages · ${words.toLocaleString()} words · ${
+        header(appending ? "Review & add pages" : "Review & save", `${state.pages.length} pages · ${words.toLocaleString()} words · ${
           state.structure
             ? (state.structure.coverIndex ? `cover detected on page ${state.structure.coverIndex}, ` : "") +
               `${state.structure.chapters.length} section${state.structure.chapters.length === 1 ? "" : "s"} detected`
             : "structure detected"
         }`) +
         `<div class="space-y-3">
-          <input id="scanTitle" value="${escapeAttr(suggestTitle())}" placeholder="Book title" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
-          <input id="scanAuthor" value="${escapeAttr(suggestAuthor())}" placeholder="Author (optional)" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
+          <button onclick="LuminaScanner.reorderByPageNumbers()" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-on-surface-variant flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[14px]">sort</span>Re-order by printed page numbers</button>
+          ${state.orderNote ? `<p class="rounded-xl bg-primary-container/10 border border-primary-container/30 px-3 py-2 text-[11px] text-primary-fixed-dim">${escapeHtml(state.orderNote)}</p>` : ""}
+          ${
+            appending
+              ? `<p class="rounded-xl bg-surface/40 border border-white/10 px-3 py-2 text-xs text-on-surface-variant">Adding to <b class="text-white">${escapeHtml(state.appendTitle || "this book")}</b> — the new pages are appended after the existing ones.</p>`
+              : `<input id="scanTitle" value="${escapeAttr(suggestTitle())}" placeholder="Book title" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
+          <input id="scanAuthor" value="${escapeAttr(suggestAuthor())}" placeholder="Author (optional)" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">`
+          }
           <div id="scanReview" class="max-h-[34vh] overflow-y-auto space-y-2"></div>
           <button onclick="LuminaScanner.saveBook()" id="scanSaveBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-bold text-sm shadow-[0_0_25px_rgba(0,240,255,0.35)] flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined">library_add</span> Save to my library
+            <span class="material-symbols-outlined">library_add</span> ${appending ? "Add pages to this book" : "Save to my library"}
           </button>
         </div>`;
       renderReview();
@@ -226,11 +244,62 @@
     input.multiple = !useCapture;
     if (useCapture) input.setAttribute("capture", "environment");
     input.addEventListener("change", () => {
-      const files = Array.from(input.files || []);
+      // Photos picked from a gallery arrive in arbitrary order; sort them the way
+      // a human would (IMG_2 before IMG_10), then by capture time as a tiebreak.
+      const files = Array.from(input.files || []).sort(compareFiles);
       files.forEach((f) => addPage(f));
       if (files.length) render("pages");
     });
     input.click();
+  }
+
+  const collator = window.Intl ? new Intl.Collator(undefined, { numeric: true, sensitivity: "base" }) : null;
+
+  function compareFiles(a, b) {
+    const byName = collator ? collator.compare(a.name || "", b.name || "") : String(a.name).localeCompare(b.name);
+    if (byName !== 0) return byName;
+    return (a.lastModified || 0) - (b.lastModified || 0);
+  }
+
+  // ── Page order ─────────────────────────────────────────────────────────────
+  // Books print their own page numbers, so after recognition we can put photos
+  // back in the right order even when they were shot or picked out of sequence.
+  function printedPageNumber(text) {
+    const lines = (text || "").split("\n").map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return null;
+    const edges = [lines[lines.length - 1], lines[lines.length - 2], lines[0], lines[1]].filter(Boolean);
+    for (const line of edges) {
+      if (line.length > 24) continue;
+      const m = line.match(/^[^0-9]{0,6}?(\d{1,4})[^0-9]{0,6}$/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > 0 && n < 3000) return n;
+      }
+    }
+    return null;
+  }
+
+  function autoOrderPages() {
+    state.orderNote = null;
+    const numbers = state.pages.map((p) => printedPageNumber(p.text));
+    const known = numbers.filter((n) => typeof n === "number");
+    const unique = new Set(known);
+    // Only trust the reordering when most pages carry a distinct printed number.
+    if (known.length < Math.max(2, Math.ceil(state.pages.length * 0.6)) || unique.size !== known.length) return;
+
+    const before = state.pages.map((p) => p.id).join("|");
+    const decorated = state.pages.map((p, i) => ({ p, n: numbers[i], i }));
+    // Unnumbered pages (covers, plates) keep their place relative to neighbours.
+    let last = -Infinity;
+    decorated.forEach((d) => {
+      if (typeof d.n === "number") last = d.n;
+      else d.n = last === -Infinity ? -1 : last + 0.5;
+    });
+    decorated.sort((a, b) => a.n - b.n || a.i - b.i);
+    state.pages = decorated.map((d) => d.p);
+    if (state.pages.map((p) => p.id).join("|") !== before) {
+      state.orderNote = "pages re-ordered from their printed page numbers";
+    }
   }
 
   function addPage(blob) {
@@ -687,6 +756,7 @@
       render("pages");
       return;
     }
+    autoOrderPages();
     detectStructure();
     render("review");
   }
@@ -986,6 +1056,13 @@
         const url = await pageDataUrl(pages[i], 700);
         if (url) frontImages[i + 1] = url;
       }
+      if (state.appendTo) {
+        await window.appendScannedPagesToBook(
+          state.appendTo,
+          pages.map((p, i) => ({ index: i + 1, text: cleanup(p.text.trim()), engine: p.engine || "offline" })),
+          { lang: isKa ? "ka" : "en" },
+        );
+      } else
       await window.createBookFromScannedPages(
         pages.map((p, i) => ({ index: i + 1, text: cleanup(p.text.trim()), engine: p.engine || "offline" })),
         {
@@ -1000,6 +1077,8 @@
       state.pages.forEach((p) => URL.revokeObjectURL(p.url));
       state.pages = [];
       state.structure = null;
+      state.appendTo = null;
+      state.orderNote = null;
       close();
     } catch (err) {
       console.error("[scanner] save failed:", err);
@@ -1030,7 +1109,16 @@
     render(document.getElementById("scanGrid") ? "pages" : "chooser");
   }
 
+  function reorderByPageNumbers() {
+    autoOrderPages();
+    render(state.pages.some((p) => p.text && p.text.trim()) ? "review" : "pages");
+    if (!state.orderNote) alert("Not enough printed page numbers were recognised to re-order these pages.");
+  }
+
   window.LuminaScanner = {
+    reorderByPageNumbers,
+    _autoOrder: autoOrderPages,
+    _state: state,
     open,
     close,
     render,
