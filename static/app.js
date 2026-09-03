@@ -32,13 +32,14 @@ let readerActive = false;
 let readerBook = null;
 let readerChapterId = null;
 let readerLang = 'en'; // 'en' or 'ka'
-let readerMode = 'dual'; // 'dual' (Pages), 'scroll' (Continuous)
+let readerMode = localStorage.getItem('lumina_reader_mode') || 'dual'; // 'single', 'dual', 'scroll'
 let readerCurrentPage = 1;
 let readerPages = []; // Array of arrays of sentence objects { text: string, globalIndex: number }
 let readerSentenceToPageMap = {}; // Map: sentenceGlobalIndex -> pageIndex (0-based)
-let readerFontSize = 19; // in px
-let readerTheme = 'sepia'; // 'sepia', 'mocha', 'dark', 'light', 'forest', 'oled'
-let readerFontFamily = 'font-serif-book';
+let readerFontSize = parseInt(localStorage.getItem('lumina_reader_fontsize'), 10) || 19; // in px
+let readerTheme = localStorage.getItem('lumina_reader_theme') || 'sepia'; // 'sepia', 'mocha', 'dark', 'light', 'forest', 'oled'
+let readerFontFamily = localStorage.getItem('lumina_reader_fontfamily') || 'font-serif-book';
+let readerToolbarsVisible = true;
 
 // Touch Gesture Detection
 let touchStartX = 0;
@@ -1701,7 +1702,8 @@ function openCurrentBookInReader() {
         return;
     }
     const chapId = currentPlayingChapterId || (currentBook.chapters[0] ? currentBook.chapters[0].id : 1);
-    openReader(currentBook.id, chapId, currentLang);
+    const targetLang = (currentBook.lang === 'ka' || currentBook.isTranslatedEdition) ? 'ka' : currentLang;
+    openReader(currentBook.id, chapId, targetLang);
 }
 
 async function openReader(bookId, chapterId, lang = 'en') {
@@ -1720,15 +1722,24 @@ async function openReader(bookId, chapterId, lang = 'en') {
     readerLang = lang;
     readerCurrentPage = 1;
 
-    if (readerLang === 'ka') {
-        const hasKa = bookHasGeorgian(readerBook);
-        if (!hasKa) {
-            const doTranslate = confirm('This book is not yet translated to Georgian. Would you like to translate the whole book now?');
-            if (doTranslate) {
-                startWholeBookTranslation();
-                return;
-            } else {
-                readerLang = 'en';
+    // Check if the book is an explicit Georgian edition or already has Georgian text
+    const isGeorgianEdition = readerBook.lang === 'ka' || readerBook.isTranslatedEdition || bookHasGeorgian(readerBook);
+    if (isGeorgianEdition && lang !== 'en') {
+        readerLang = 'ka';
+        currentLang = 'ka';
+    } else if (readerLang === 'ka' && !isGeorgianEdition) {
+        // If Georgian was requested for an untranslated English book, check if a separate translated sibling exists
+        const translatedSibling = books.find(b => String(b.id) === `${readerBook.id}_ka` || (b.originalBookId && String(b.originalBookId) === String(readerBook.id)));
+        if (translatedSibling) {
+            readerBook = translatedSibling;
+            currentBook = translatedSibling;
+            readerChapterId = chapterId !== undefined ? chapterId : (readerBook.chapters[0] ? readerBook.chapters[0].id : 1);
+            readerLang = 'ka';
+            currentLang = 'ka';
+        } else {
+            readerLang = 'en';
+            if (typeof showToast === 'function') {
+                showToast('Book is in English. Click Translate to create a Georgian edition.', 'info');
             }
         }
     }
@@ -1893,7 +1904,8 @@ function measurePages(sentences) {
         const cardPadX = vw <= 400 ? 20 : vw <= 640 ? 28 : vw <= 1024 ? 40 : 80;
         const cardPadY = vw <= 400 ? 24 : vw <= 640 ? 32 : vw <= 1024 ? 44 : 64;
         const innerW = Math.max(160, boxW - cardPadX);
-        const innerH = Math.max(160, container.clientHeight - padY - cardPadY - 34 /* page footer */ - 8 /* safety */);
+        const clientH = container.clientHeight || (window.innerHeight - 150);
+        const innerH = Math.max(180, clientH - padY - cardPadY - 42 /* page footer */ - 12 /* safety */);
         // Page 1 also carries the chapter header, so it fits less text.
         const headerReserve = vw <= 640 ? 92 : 116;
 
@@ -1942,6 +1954,11 @@ function measurePages(sentences) {
                 current = [last];
                 buffer = [last.text];
                 probe.innerHTML = ''; // header space only applies to page 1
+                // Re-prime the probe with carryover sentence so next page accounts for its height!
+                const p = document.createElement('p');
+                p.className = 'text-justify indent-6';
+                p.textContent = last.text;
+                probe.appendChild(p);
             } else if (overflows) {
                 pages.push(current);
                 current = [];
@@ -1980,12 +1997,13 @@ function scheduleRepaginate() {
 window.addEventListener('resize', scheduleRepaginate);
 window.addEventListener('orientationchange', scheduleRepaginate);
 
-// Swipe / tap page turning — what makes it feel like a real reader on a phone.
+// Swipe / tap page turning — authentic Moon+ Reader gestures on mobile & desktop.
 function initReaderGestures() {
     const el = DOM.readerScrollContainer;
     if (!el || el._gesturesBound) return;
     el._gesturesBound = true;
     let x0 = 0, y0 = 0, t0 = 0, moved = false;
+
     el.addEventListener('touchstart', (e) => {
         if (e.touches.length !== 1) return;
         x0 = e.touches[0].clientX;
@@ -1993,7 +2011,16 @@ function initReaderGestures() {
         t0 = Date.now();
         moved = false;
     }, { passive: true });
-    el.addEventListener('touchmove', () => { moved = true; }, { passive: true });
+
+    el.addEventListener('touchmove', (e) => {
+        if (e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - x0;
+        const dy = e.touches[0].clientY - y0;
+        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+            moved = true;
+        }
+    }, { passive: true });
+
     el.addEventListener('touchend', (e) => {
         if (readerMode === 'scroll') return;
         const t = e.changedTouches[0];
@@ -2001,11 +2028,45 @@ function initReaderGestures() {
         const dx = t.clientX - x0;
         const dy = t.clientY - y0;
         const dt = Date.now() - t0;
-        if (!moved || dt > 800) return;
-        if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
-        if (window.getSelection && String(window.getSelection())) return; // user is selecting text
-        if (dx < 0) readerNextPage(); else readerPrevPage();
+
+        // Skip if user is actively selecting text
+        if (window.getSelection && String(window.getSelection()).trim().length > 0) return;
+
+        // Horizontal Swipe gesture
+        if (moved && dt < 700 && Math.abs(dx) >= 35 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+            if (dx < 0) readerNextPage();
+            else readerPrevPage();
+            return;
+        }
+
+        // Tap gesture: 3-Zone Navigation (Left 25% = Prev, Right 25% = Next, Center 50% = Immersion Toggle)
+        if (!moved && dt < 400) {
+            if (e.target.closest('button, .reader-sentence, a, input, select, textarea')) return;
+            const vw = window.innerWidth;
+            const tapX = t.clientX;
+            if (tapX < vw * 0.25) {
+                readerPrevPage();
+            } else if (tapX > vw * 0.75) {
+                readerNextPage();
+            } else {
+                toggleReaderToolbars();
+            }
+        }
     }, { passive: true });
+
+    // Desktop click zones on container sides
+    el.addEventListener('click', (e) => {
+        if (readerMode === 'scroll') return;
+        if (e.target.closest('button, .reader-sentence, a, input, select, textarea, .book-page-card')) return;
+        const vw = window.innerWidth;
+        if (e.clientX < vw * 0.25) {
+            readerPrevPage();
+        } else if (e.clientX > vw * 0.75) {
+            readerNextPage();
+        } else {
+            toggleReaderToolbars();
+        }
+    });
 }
 window.initReaderGestures = initReaderGestures;
 
@@ -2109,6 +2170,10 @@ function renderCurrentPage() {
     // Update Status Bars
     if (DOM.readerPageStatusBottom) {
         DOM.readerPageStatusBottom.textContent = `Page ${readerCurrentPage} of ${totalPages}`;
+    }
+    const floatingText = document.getElementById('floatingPageText');
+    if (floatingText) {
+        floatingText.textContent = `Page ${readerCurrentPage} of ${totalPages}`;
     }
 
     if (DOM.readerReadingProgressText && sentenceQueue.length > 0) {
@@ -2408,11 +2473,13 @@ function highlightReaderSentence(sentenceIdx, forceSync = false) {
 
 function setReaderTheme(theme) {
     readerTheme = theme;
+    localStorage.setItem('lumina_reader_theme', theme);
     DOM.readerView.className = `reader-theme-${theme} active`;
 }
 
 function changeReaderFontSize(delta) {
     readerFontSize = Math.max(14, Math.min(32, readerFontSize + delta));
+    localStorage.setItem('lumina_reader_fontsize', readerFontSize);
     if (DOM.readerModalFontSizeText) DOM.readerModalFontSizeText.textContent = `${readerFontSize}px`;
     // Keep the reader on the same sentence after re-flowing.
     repaginateKeepingPosition();
@@ -2420,8 +2487,44 @@ function changeReaderFontSize(delta) {
 
 function changeReaderFontFamily(fontClass) {
     readerFontFamily = fontClass;
+    localStorage.setItem('lumina_reader_fontfamily', fontClass);
     repaginateKeepingPosition();
 }
+
+function setReaderMode(mode) {
+    readerMode = mode;
+    localStorage.setItem('lumina_reader_mode', mode);
+    paginateChapter();
+    renderCurrentPage();
+    closeModal('readerThemeModal');
+}
+
+function toggleReaderToolbars(forceState) {
+    readerToolbarsVisible = typeof forceState === 'boolean' ? forceState : !readerToolbarsVisible;
+    const topBar = document.getElementById('readerTopToolbar');
+    const bottomBar = document.getElementById('readerBottomToolbar');
+    const floating = document.getElementById('readerFloatingPageIndicator');
+
+    if (topBar) {
+        topBar.style.transform = readerToolbarsVisible ? 'translateY(0)' : 'translateY(-100%)';
+        topBar.style.pointerEvents = readerToolbarsVisible ? 'auto' : 'none';
+    }
+    if (bottomBar) {
+        bottomBar.style.transform = readerToolbarsVisible ? 'translateY(0)' : 'translateY(100%)';
+        bottomBar.style.pointerEvents = readerToolbarsVisible ? 'auto' : 'none';
+    }
+    if (floating) {
+        if (!readerToolbarsVisible) {
+            floating.classList.remove('opacity-0', 'pointer-events-none');
+            floating.classList.add('opacity-100', 'pointer-events-auto');
+        } else {
+            floating.classList.add('opacity-0', 'pointer-events-none');
+            floating.classList.remove('opacity-100', 'pointer-events-auto');
+        }
+    }
+}
+window.toggleReaderToolbars = toggleReaderToolbars;
+window.setReaderMode = setReaderMode;
 
 function toggleReaderFullscreen() {
     if (!document.fullscreenElement) {
@@ -2465,6 +2568,16 @@ function setupKeyboardAndTouchControls() {
                 e.preventDefault();
                 readerPrevPage();
                 break;
+            case 'Home':
+                e.preventDefault();
+                readerCurrentPage = 1;
+                renderCurrentPage();
+                break;
+            case 'End':
+                e.preventDefault();
+                readerCurrentPage = readerPages.length;
+                renderCurrentPage();
+                break;
             case 'ArrowDown':
                 e.preventDefault();
                 readerForwardSentence();
@@ -2487,6 +2600,18 @@ function setupKeyboardAndTouchControls() {
                 e.preventDefault();
                 toggleReaderFullscreen();
                 break;
+            case 'c':
+            case 'C':
+                e.preventDefault();
+                openToCDrawer();
+                break;
+            case 'h':
+            case 'H':
+            case 'm':
+            case 'M':
+                e.preventDefault();
+                toggleReaderToolbars();
+                break;
             case 'Escape':
                 e.preventDefault();
                 closeReader();
@@ -2494,32 +2619,11 @@ function setupKeyboardAndTouchControls() {
         }
     });
 
-    const container = document.getElementById('readerScrollContainer');
-    if (container) {
-        container.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: true });
-
-        container.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            touchEndY = e.changedTouches[0].screenY;
-            handleTouchSwipe();
-        }, { passive: true });
-    }
+    // Note: Touch and tap gestures are consolidated inside initReaderGestures() to prevent duplicate triggers
 }
 
 function handleTouchSwipe() {
-    const diffX = touchEndX - touchStartX;
-    const diffY = touchEndY - touchStartY;
-
-    if (Math.abs(diffX) > Math.abs(diffY) * 1.3 && Math.abs(diffX) > 40) {
-        if (diffX < 0) {
-            readerNextPage();
-        } else {
-            readerPrevPage();
-        }
-    }
+    // Kept as safe compatibility helper; gestures are handled by initReaderGestures
 }
 
 // ── Dock Chapter Steppers ──────────────────────────────────────────────────
@@ -3931,6 +4035,11 @@ async function startWholeBookTranslation(resume = false) {
                 currentBook.translatedLangs.push('ka');
             }
             await saveBookToDB(currentBook);
+            try {
+                await saveTranslatedBookEdition(currentBook);
+            } catch (e) {
+                console.warn('[translation] saveTranslatedBookEdition checkpoint error:', e);
+            }
             // Chapter checkpoint: next resume starts at the following chapter.
             job.chapterIdx = chIdx + 1;
             job.partial = [];
@@ -3946,9 +4055,14 @@ async function startWholeBookTranslation(resume = false) {
             if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
             if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '100%';
 
-            setTimeout(() => {
+            setTimeout(async () => {
                 closeModal('wholeBookTranslateModal');
                 isTranslatingWholeBook = false;
+                try {
+                    await saveTranslatedBookEdition(currentBook);
+                } catch (e) {
+                    console.warn('[translation] saveTranslatedBookEdition complete error:', e);
+                }
                 renderChaptersList();
                 renderDigitalShelf();
                 if (DOM.heroGeorgianBadge) DOM.heroGeorgianBadge.classList.remove('hidden');
@@ -4634,10 +4748,12 @@ function playChapterAudio(chapId, startSentenceIdx = 0) {
 
     currentPlayingChapterId = chap.id;
 
-    let textToRead = chap.text;
-    if (currentLang === 'ka' && chap.text_ka) {
-        textToRead = chap.text_ka;
+    if (currentBook.lang === 'ka' || currentBook.isTranslatedEdition) {
+        currentLang = 'ka';
     }
+
+    let textToRead = (currentLang === 'ka' && chap.text_ka) ? chap.text_ka : chap.text;
+    if (!textToRead && chap.text) textToRead = chap.text;
 
     sentenceQueue = splitIntoNaturalSentences(textToRead);
     currentSentenceIndex = Math.min(startSentenceIdx, Math.max(0, sentenceQueue.length - 1));
@@ -4758,6 +4874,63 @@ function notifyNeedsTranslation() {
         alert('This book is not translated to Georgian yet. Use the Translate button to start.');
     }
 }
+
+// ── Dedicated Translated Book Persistence ──────────────────────────────────
+// When a book is translated, we create a dedicated sibling edition on the shelf
+// so the user can see and open it separately, with its own Georgian text,
+// instant Moon Reader loading, and Georgian voice listening.
+async function saveTranslatedBookEdition(originalBook) {
+    if (!originalBook) return null;
+    const translatedId = `${originalBook.id}_ka`;
+
+    let all = [];
+    try {
+        all = await getAllBooks();
+    } catch (e) {
+        all = [];
+    }
+    const existing = all.find(b => String(b.id) === String(translatedId));
+
+    const cleanBaseTitle = (originalBook.title || 'Untitled').replace(/\s*\(ქართულად\)\s*$/, '').trim();
+    const translatedTitle = `${cleanBaseTitle} (ქართულად)`;
+
+    const translatedChapters = (originalBook.chapters || []).map((chap, idx) => {
+        const textKa = (chap.text_ka && chap.text_ka.trim().length > 0) ? chap.text_ka.trim() : chap.text;
+        const words = textKa ? textKa.split(/\s+/).filter(Boolean).length : 0;
+        return {
+            id: chap.id || (idx + 1),
+            title: chap.title || `თავი ${idx + 1}`,
+            text: textKa, // Primary text IS the Georgian translation
+            text_ka: textKa,
+            word_count: words,
+            estimated_duration_sec: Math.max(10, Math.round(words / 2.3))
+        };
+    });
+
+    const translatedBook = {
+        id: translatedId,
+        title: translatedTitle,
+        author: originalBook.author || 'Unknown Author',
+        coverUrl: originalBook.coverUrl,
+        lang: 'ka',
+        translatedLangs: ['ka'],
+        isTranslatedEdition: true,
+        originalBookId: originalBook.id,
+        dateAdded: existing?.dateAdded || new Date().toISOString(),
+        lastPlayedChapterId: existing?.lastPlayedChapterId || (translatedChapters[0] ? translatedChapters[0].id : 1),
+        progressPct: existing?.progressPct || 0,
+        chapters: translatedChapters,
+        extra: {
+            ...(originalBook.extra || {}),
+            is_translated_copy: true,
+            source_book_id: originalBook.id
+        }
+    };
+
+    await saveBookToDB(translatedBook);
+    return translatedBook;
+}
+window.saveTranslatedBookEdition = saveTranslatedBookEdition;
 
 function setGlobalSpeed(value) {
     // Fine 0.05 steps across 0.50x–2.00x, applied live to whatever is playing
@@ -5736,7 +5909,7 @@ async function renderDigitalShelf(filterText = '') {
                     <span class="material-symbols-outlined text-[15px]">delete</span>
                 </button>
 
-                ${hasGeorgian ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold/90 text-[10px] font-bold text-black shadow-lg">🇬🇪 KA</div>' : ''}
+                ${book.isTranslatedEdition ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold text-[10px] font-extrabold text-black shadow-lg flex items-center gap-1"><span>🇬🇪</span><span>ქართულად</span></div>' : hasGeorgian ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold/90 text-[10px] font-bold text-black shadow-lg">🇬🇪 KA</div>' : ''}
                 ${book.progressPct > 0 ? `<div class="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-full h-1 overflow-hidden"><div class="h-full bg-primary-container" style="width: ${book.progressPct}%"></div></div>` : ''}
             </div>
             <h4 class="font-bold text-white text-xs sm:text-sm truncate group-hover:text-primary-fixed transition-colors">${escapeHtml(book.title)}</h4>
@@ -5775,8 +5948,8 @@ function renderDiscoverClassics() {
                 <p class="text-xs text-on-surface-variant mt-1">${stats.chaptersCount} Chapters • ${stats.totalWords.toLocaleString()} Words • ~${stats.totalFormattedTime}</p>
             </div>
             <button class="mt-4 w-full py-2.5 rounded-xl bg-white/5 group-hover:bg-primary-container group-hover:text-on-primary-container text-white text-xs font-semibold flex items-center justify-center gap-2 transition">
-                <span class="material-symbols-outlined text-base">headphones</span>
-                Read & Listen
+                <span class="material-symbols-outlined text-base">add_to_photos</span>
+                Add to My Audiobooks
             </button>
         `;
         DOM.discoverGrid.appendChild(div);
@@ -5789,6 +5962,10 @@ async function selectBook(bookId, autoPlayFirst = false) {
     if (!currentBook) return;
 
     if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
+    if (currentBook.lang === 'ka' || currentBook.isTranslatedEdition) {
+        currentLang = 'ka';
+    }
+    updateLangToggleUI();
 
     const stats = getBookStats(currentBook);
 

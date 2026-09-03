@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-09-05 — v1.46.2: Dedicated Translated Book Editions & Moon Reader Overhaul
+
+### Added & Fixed — Dedicated Translated Book Editions (`static/app.js`)
+- **Automated Sibling Book Creation**: When translation runs (step-by-step whole book or chapter completion), automatically creates and persists a dedicated **`[Title] (ქართულად)`** book on the digital shelf (`${book.id}_ka`).
+- **Eliminated Repetitive Confirm Popups**: Removed the disruptive `confirm()` popup when opening books. If a book is a Georgian edition (`lang === 'ka'` or `isTranslatedEdition`), it immediately loads the translated text. If an English book is opened with Georgian mode, it automatically switches to its translated sibling or defaults to English cleanly.
+- **Dedicated Shelf Presentation**: Translated books display a distinct gold `🇬🇪 ქართულად` badge with independent reading progress and last-played chapter tracking.
+- **Synchronized Moon Reader & TTS Narration**: Opening the translated book opens Moon Reader directly in Georgian and routes audio playback to Georgian Neural TTS (`ka-GE-EkaNeural`) with synchronized Georgian sentence highlighting.
+
+### Added & Fixed — Moon Reader Overhaul on Mobile & Desktop (`static/app.js`, `index.html`)
+- **Eliminated 2-Page Skip Bug on Mobile**: Discovered and removed redundant duplicate `touchstart`/`touchend` swipe event listeners that were firing simultaneously in `setupKeyboardAndTouchControls()`, which previously skipped two pages on a single swipe.
+- **3-Zone Tap Navigation**:
+  - Left 25% tap: Flips to previous page.
+  - Right 25% tap: Flips to next page.
+  - Center 50% tap: Toggles reader toolbars for distraction-free immersion mode.
+- **Distraction-Free Immersion Mode**: Top and bottom toolbars smoothly slide out (`translateY(-100%)` / `translateY(100%)`), expanding the reading canvas across the full screen with an unobtrusive floating page counter pill.
+- **Zero-Overflow Pagination (`measurePages`)**: Fixed sentence carry-over calculation so that newly split pages measure starting with the carried-over sentence, preventing text overflow and vertical card scrolling in paged mode.
+- **Persistent Preferences**: Saves and restores user's preferred theme (`sepia`, `dark`, `oled`, `mocha`, `forest`, `light`), font size, font family, and layout mode (`single`, `dual`, `scroll`) across sessions in `localStorage`.
+- **Expanded Desktop Keyboard Matrix**: Added shortcuts for `Home` (first page), `End` (last page), `c`/`C` (Table of Contents), `h`/`H`/`m`/`M` (toggle toolbars), alongside Arrow keys, PageUp/Down, Space, T (language), and F (fullscreen).
+
 ## 2026-09-05 — v1.46.1: Camera Autofocus, Image Upscaling & Publication-Grade Book PDF
 
 ### Added & Fixed — Publication Book PDF Generator (`static/app.js`, `index.html`)
