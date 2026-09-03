@@ -23,6 +23,10 @@ AudioRead Studio is a modern, high-performance web application that transforms a
 
 ## 🚀 Quick Start
 
+Live app (GitHub Pages): https://devsura3939.github.io/oudio-books-AI/ ← use this to test v1.45.0
+GitHub repo (public): https://github.com/devsura3939/oudio-books-AI
+Render backend (oudio-books-ai): https://oudio-books-ai.onrender.com (https://oudio-books-ai.onrender.com/) — currently responding 404 on all routes; the app is fully client-side (the browser loads the engine directly and calls AI providers itself), so the Pages link above is the complete, working test surface.
+
 ### 1. Launch AudioRead Studio
 Double-click 
 un.bat or run:
