@@ -168,6 +168,11 @@
         /* ════════════════ Moon+ Reader Fullscreen View ════════════════ */
         #readerView {
             position: fixed; inset: 0; z-index: 90;
+            /* dvh + safe areas: on mobile browsers 100vh sits under the URL bar,
+               which is what clipped the bottom playbar and page text. */
+            height: 100dvh;
+            padding-bottom: env(safe-area-inset-bottom);
+            overscroll-behavior: contain;
             display: flex; flex-direction: column;
             transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
             transform: translateY(100%);
@@ -184,7 +189,7 @@
             width: 100%;
             max-width: 1300px;
             margin: 0 auto;
-            min-height: 75vh;
+            min-height: 60dvh;
             display: flex;
             gap: 24px;
             transition: all 0.3s ease;
@@ -226,7 +231,7 @@
 
         @media (max-width: 640px) {
             .book-page-spread {
-                min-height: calc(100vh - 160px);
+                min-height: calc(100dvh - 168px);
                 gap: 0;
             }
             .book-page-card {
@@ -241,7 +246,7 @@
 
         @media (max-width: 400px) {
             .book-page-spread {
-                min-height: calc(100vh - 140px);
+                min-height: calc(100dvh - 150px);
             }
             .book-page-card {
                 padding: 12px 10px;
@@ -986,7 +991,7 @@
         </header>
 
         <!-- Reader Canvas -->
-        <div id="readerScrollContainer" class="flex-grow overflow-y-auto px-2 sm:px-6 md:px-12 py-3 sm:py-6 flex flex-col justify-start relative select-text">
+        <div id="readerScrollContainer" class="flex-grow overflow-y-auto overscroll-contain px-2 sm:px-6 md:px-12 py-3 sm:py-6 flex flex-col justify-start relative select-text" style="-webkit-overflow-scrolling: touch;">
             <!-- Left Page Floating Turn Button -->
             <button onclick="readerPrevPage()" class="hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/40 hover:bg-black/70 text-white items-center justify-center backdrop-blur-md border border-white/20 transition-all opacity-40 hover:opacity-100 hover:scale-110 shadow-2xl z-40" title="Previous Page (Key: Left Arrow)">
                 <span class="material-symbols-outlined text-2xl">chevron_left</span>
@@ -1336,14 +1341,16 @@
 
             <div>
                 <label class="block text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-2">
-                    🎙️ Standard Narrator Voice
+                    🎙️ Narrator Voice
                 </label>
-                <select id="voiceModalSelect" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
-                    <optgroup label="👨 Male Narrators" id="optgroupMale"></optgroup>
-                    <optgroup label="👩 Female Narrators" id="optgroupFemale"></optgroup>
-                    <optgroup label="🌍 Multilingual & International" id="optgroupOther"></optgroup>
-                </select>
+                <select id="voiceModalSelect" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none"></select>
+                <p id="voiceModalHint" class="mt-1.5 text-[11px] text-white/50"></p>
+                <button onclick="previewSelectedNarrator()" class="mt-2 w-full py-2.5 rounded-xl bg-primary-container/20 hover:bg-primary-container/30 border border-primary-container/40 text-xs font-bold text-primary-fixed flex items-center justify-center gap-1.5 transition">
+                    <span class="material-symbols-outlined text-base">play_circle</span>
+                    Preview this narrator
+                </button>
             </div>
+
 
             <div class="grid grid-cols-2 gap-2.5">
                 <button onclick="testVoicePreview()" class="py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs font-semibold text-primary-fixed flex items-center justify-center gap-1.5 transition">

@@ -278,3 +278,34 @@ Written after every chunk, cleared on completion or explicit cancel. `resumeTran
 runs on studio init; finished chapters (`chapter.text_ka`) are skipped. The studio iframe lives in
 `src/components/studio-host.tsx` (app-shell level, hidden not unmounted), so jobs survive
 navigation; `TranslationProgressPill` shows progress anywhere in the app.
+
+## Narration engine (voices + gap-free playback)
+
+`ENGBOT_VOICES` in `public/studio/static/app.js` is the visible narrator catalogue and maps 1:1
+onto the presets in `src/lib/tts-voices.ts` served by `/api/tts` (British, American, Georgian,
+multilingual). The picker lists these first because device `speechSynthesis` voices are usually
+absent on mobile inside an iframe; device voices are an extra group when available.
+Selection persists as `lumina_voice_choice` plus `lumina_voice_preset_en` / `_ka`.
+
+Playback keeps a rolling prefetch window of `GATEWAY_PREFETCH_AHEAD = 4` sentences.
+`stopCurrentSpeechAudio(keepBuffers)` must be called with `true` when merely advancing to the
+next sentence — otherwise the buffers are dropped and every sentence pays a network round-trip
+(this was the cause of the long inter-sentence pauses). Real stops/seeks bump
+`narrationGeneration`, which invalidates in-flight prefetches.
+
+## Scanner pipeline (photos → book)
+
+`public/studio/static/scanner.js`: `renderBase()` (rotate → deskew → sharpness/exposure metrics →
+optional 2× upscale, cached per page) then `preprocess(page, variant)` for the `enhanced` and
+`binary` (Sauvola) variants. `scanOnePage()` runs pass 1 on `enhanced`, and a recovery pass on
+`binary` when `scoreText()` is low or the photo measures blurry/dark/glared; the higher score wins.
+Tier 0 = `/api/ocr` vision (with a page hint), Tier 1 = tesseract.js 5.1 (`eng`/`kat`).
+`repairText()` applies language-specific OCR repair; Georgian pages also pass through
+`window.applyKaRuleEngine()` on save.
+
+## Moon reader layout
+
+Paged modes use `measurePages()` — an off-screen probe matching the real page box — so a page
+holds exactly what fits (page 1 reserves the chapter header). `repaginateKeepingPosition()` is the
+only correct way to re-flow after resize/orientation/typography changes. Reader shell sizing uses
+`100dvh` + safe-area insets; swipe gestures are bound once in `initReaderGestures()`.

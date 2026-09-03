@@ -1,5 +1,56 @@
 # Changelog
 
+## 2026-09-04 — Real narrator list, gap-free narration, recovery-grade scanning, measured Moon reader
+
+### Fixed
+- **Narrator picker was empty** (`public/studio/index.html`, `populateVoiceList` in
+  `app.js`). It only listed `speechSynthesis.getVoices()`, which is empty on Android
+  inside an iframe, so no British/American/Georgian narrators appeared. It now lists the
+  real EngBot neural narrators served by `/api/tts` (Oliver/Amelia British, Ethan/Nova/Fable
+  American, გიორგი/ეკა/ნინო Georgian, Puck/Fenrir multilingual) with device voices appended
+  as an extra group when the browser exposes any. Choice persists per language
+  (`lumina_voice_preset_en` / `_ka`) and has a "Preview this narrator" button.
+  Changing narrator applies from the next sentence instead of restarting the chapter.
+- **Long pauses between sentences.** `stopCurrentSpeechAudio()` cleared the prefetch cache
+  on *every* sentence advance, so the "prefetched" clip was always thrown away and each
+  sentence paid a fresh network round-trip. It now takes a `keepBuffers` flag (used by the
+  gateway, HF-Georgian and ElevenLabs paths), and invalidation uses a separate
+  `narrationGeneration` counter that only bumps on a real stop/seek. Prefetch is a rolling
+  window of 4 sentences (both gateway and Georgian paths), and the browser-speech gap
+  dropped from 180 ms to 60 ms.
+- **Over-long OCR sentences** are now split at clause boundaries (`splitLongIntoClauses`,
+  34-word budget) instead of arbitrary 50-word blocks, so synthesis starts sooner and the
+  narration breathes naturally on scanned books with sparse punctuation.
+
+### Changed — scanner quality (`public/studio/static/scanner.js`)
+- New deterministic, dependency-free image pipeline: **deskew** (projection-profile angle
+  search, ±6°), **illumination flattening** (divide by a coarse box blur — kills shadows,
+  spine gradients, lamp falloff), percentile contrast stretch with gentle gamma,
+  **unsharp mask** for soft focus, and **2× upscale** for small photos.
+- **Two variants per page**: `enhanced` (greyscale) and `binary` (Sauvola-style adaptive
+  threshold, which rescues faint/blurry ink). A second recovery pass runs whenever the first
+  transcription scores low or the photo is measurably blurry/dark/glared
+  (Laplacian-variance sharpness + exposure), and the higher-scoring transcription wins.
+- `scoreText()` gives a language-aware confidence (right-script ratio, junk-character and
+  shredded-word penalties); Tesseract confidence is folded in on the offline tier.
+- Vision OCR now gets a hint describing the page (Georgian vs English, blurry, dark, glare)
+  so it reconstructs damaged glyphs in the right alphabet instead of transliterating.
+- `repairText()`: Georgian Latin-look-alike repair inside mixed-script words, and English
+  digit-in-word repair where `1` resolves to `l` or `i` from its neighbours
+  ("Th1s"→"This", "Eng1ish"→"English"). Review list shows engine, confidence % and a
+  warning when a page should be re-shot.
+
+### Changed — Moon reader (`app.js`, reader CSS in `index.html`)
+- **Measured pagination** replaces the words-per-page estimate: sentences are laid out in an
+  off-screen clone of the real page box (same width, padding, font, line-height) and a page
+  is cut exactly where the text stops fitting, with the chapter header reserved on page 1.
+  Verified no overflow at 390×844 and 1280×900 (previously 98 px of clipped text on desktop).
+- Re-paginates on resize/orientation/font-size/font-family change while keeping the reader
+  on the same sentence (`repaginateKeepingPosition()`), instead of jumping to page 1.
+- Swipe left/right turns pages (ignored while selecting text or in scroll mode);
+  reader shell uses `100dvh` + `env(safe-area-inset-bottom)` and touch-friendly scrolling,
+  so the playbar and page text are no longer clipped under mobile browser chrome.
+
 ## 2026-09-04 — Hybrid Georgian engine (old + new) and translations that never lose progress
 
 ### Changed

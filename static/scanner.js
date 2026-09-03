@@ -305,48 +305,208 @@
         (p, i) => `<details class="rounded-xl border border-white/10 bg-surface/40 p-2">
           <summary class="text-xs font-bold text-white cursor-pointer flex items-center justify-between">
             <span>Page ${i + 1} · ${countWords(p.text)} words ${p.status === "error" ? '<span class="text-error">failed</span>' : ""}</span>
-            <span class="text-[10px] text-on-surface-variant">${p.engine || ""}</span>
+            <span class="text-[10px] text-on-surface-variant">${p.engine || ""}${typeof p.quality === "number" ? " · " + p.quality + "%" : ""}</span>
           </summary>
+          ${p.warning ? `<p class="mt-1 text-[10px] text-error">${escapeHtml(p.warning)}</p>` : ""}
           <textarea data-page="${p.id}" oninput="LuminaScanner.editPage('${p.id}', this.value)" class="mt-2 w-full h-32 glass-input rounded-lg p-2 text-[12px] text-white outline-none leading-relaxed">${escapeHtml(p.text)}</textarea>
           <button onclick="LuminaScanner.retryPage('${p.id}')" class="mt-1 text-[11px] text-primary-fixed font-bold">Re-scan this page</button>
+
         </details>`,
       )
       .join("");
   }
 
   // ── Preprocessing (canvas only, no dependencies) ───────────────────────────
-  async function preprocess(page) {
+  // A phone photo of a book page is skewed, unevenly lit, slightly soft and
+  // often too small for OCR. We fix all four deterministically and produce two
+  // variants of every page; OCR runs on the better-scoring one, and on the
+  // other as a second opinion when the first result looks weak.
+  //   "enhanced" — deskewed, illumination-flattened, unsharp-masked greyscale
+  //   "binary"   — Sauvola-style adaptive threshold (best for faint/blurry ink)
+  async function preprocess(page, variant) {
+    const base = page._base || (page._base = await renderBase(page));
+    const { w, h } = base;
+    const gray = Uint8ClampedArray.from(base.gray); // work on a copy
+
+    flattenIllumination(gray, w, h);
+    stretchContrast(gray);
+    if (variant === "binary") {
+      adaptiveThreshold(gray, w, h);
+    } else {
+      unsharpMask(gray, w, h, 1.1);
+    }
+
+    const canvas = grayToCanvas(gray, w, h, base.upscale);
+    return {
+      dataUrl: canvas.toDataURL("image/jpeg", 0.9),
+      blob: await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.9)),
+    };
+  }
+
+  // Rotation + deskew + optional upscale, cached once per page.
+  async function renderBase(page) {
     const bitmap = await blobToBitmap(page.blob);
     const rot = page.rotation % 360;
     const swap = rot === 90 || rot === 270;
     const srcW = swap ? bitmap.height : bitmap.width;
     const srcH = swap ? bitmap.width : bitmap.height;
     const scale = Math.min(1, MAX_EDGE / Math.max(srcW, srcH));
-    const w = Math.max(1, Math.round(srcW * scale));
-    const h = Math.max(1, Math.round(srcH * scale));
+    let w = Math.max(1, Math.round(srcW * scale));
+    let h = Math.max(1, Math.round(srcH * scale));
 
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctx.save();
     ctx.translate(w / 2, h / 2);
     ctx.rotate((rot * Math.PI) / 180);
-    const dw = (swap ? h : w);
-    const dh = (swap ? w : h);
+    const dw = swap ? h : w;
+    const dh = swap ? w : h;
     ctx.drawImage(bitmap, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
     if (bitmap.close) bitmap.close();
 
-    // Grayscale + local contrast stretch: the single biggest accuracy lever for
-    // phone photos (uneven lighting, grey paper, shadow from the spine).
-    const img = ctx.getImageData(0, 0, w, h);
+    let gray = toGray(ctx.getImageData(0, 0, w, h), w, h);
+
+    // Deskew: text lines are horizontal in a good scan. We score candidate
+    // angles by the variance of the horizontal ink projection — the sharpest
+    // profile is the upright one — then rotate the image back by that angle.
+    const angle = estimateSkew(gray, w, h);
+    if (Math.abs(angle) > 0.25) {
+      const rc = document.createElement("canvas");
+      rc.width = w;
+      rc.height = h;
+      const rctx = rc.getContext("2d", { willReadFrequently: true });
+      rctx.fillStyle = "#fff";
+      rctx.fillRect(0, 0, w, h);
+      rctx.imageSmoothingQuality = "high";
+      rctx.translate(w / 2, h / 2);
+      rctx.rotate((-angle * Math.PI) / 180);
+      rctx.drawImage(canvas, -w / 2, -h / 2);
+      gray = toGray(rctx.getImageData(0, 0, w, h), w, h);
+    }
+
+    // Small photos (older phones, cropped shots) OCR far better upscaled.
+    const upscale = Math.max(w, h) < 1400 ? 2 : 1;
+    page._sharpness = laplacianVariance(gray, w, h);
+    page._exposure = meanOf(gray);
+    return { gray, w, h, upscale };
+  }
+
+  function toGray(img, w, h) {
     const d = img.data;
     const gray = new Uint8ClampedArray(w * h);
     for (let i = 0, g = 0; i < d.length; i += 4, g++) {
       gray[g] = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0;
     }
-    // Percentile stretch (2%/98%) so we never clip real glyph strokes.
+    return gray;
+  }
+
+  function meanOf(gray) {
+    let sum = 0;
+    for (let i = 0; i < gray.length; i++) sum += gray[i];
+    return sum / gray.length;
+  }
+
+  // Blur detector: variance of the Laplacian. Low value = soft//out-of-focus.
+  function laplacianVariance(gray, w, h) {
+    let sum = 0;
+    let sumSq = 0;
+    let n = 0;
+    for (let y = 1; y < h - 1; y += 2) {
+      for (let x = 1; x < w - 1; x += 2) {
+        const i = y * w + x;
+        const v =
+          4 * gray[i] - gray[i - 1] - gray[i + 1] - gray[i - w] - gray[i + w];
+        sum += v;
+        sumSq += v * v;
+        n++;
+      }
+    }
+    if (!n) return 0;
+    const mean = sum / n;
+    return sumSq / n - mean * mean;
+  }
+
+  function estimateSkew(gray, w, h) {
+    // Downscale to a coarse binary mask for speed.
+    const step = Math.max(1, Math.floor(Math.max(w, h) / 500));
+    const sw = Math.floor(w / step);
+    const sh = Math.floor(h / step);
+    if (sw < 20 || sh < 20) return 0;
+    const mask = new Uint8Array(sw * sh);
+    const mean = meanOf(gray);
+    for (let y = 0; y < sh; y++) {
+      for (let x = 0; x < sw; x++) {
+        mask[y * sw + x] = gray[y * step * w + x * step] < mean - 12 ? 1 : 0;
+      }
+    }
+    let best = 0;
+    let bestScore = -1;
+    for (let a = -6; a <= 6; a += 0.5) {
+      const t = Math.tan((a * Math.PI) / 180);
+      const rows = new Float64Array(sh);
+      for (let y = 0; y < sh; y++) {
+        for (let x = 0; x < sw; x++) {
+          if (!mask[y * sw + x]) continue;
+          const ry = y - Math.round((x - sw / 2) * t);
+          if (ry >= 0 && ry < sh) rows[ry]++;
+        }
+      }
+      let m = 0;
+      for (let y = 0; y < sh; y++) m += rows[y];
+      m /= sh;
+      let v = 0;
+      for (let y = 0; y < sh; y++) v += (rows[y] - m) * (rows[y] - m);
+      if (v > bestScore) {
+        bestScore = v;
+        best = a;
+      }
+    }
+    return best;
+  }
+
+  // Divide out a coarse blur of the page = removes shadows, spine gradients and
+  // yellow-lamp falloff without touching glyph strokes.
+  function flattenIllumination(gray, w, h) {
+    const radius = Math.max(8, Math.round(Math.max(w, h) / 40));
+    const bg = boxBlur(gray, w, h, radius);
+    for (let i = 0; i < gray.length; i++) {
+      const b = bg[i] || 1;
+      let v = (gray[i] / b) * 200;
+      gray[i] = v > 255 ? 255 : v < 0 ? 0 : v;
+    }
+  }
+
+  function boxBlur(src, w, h, r) {
+    const tmp = new Float32Array(w * h);
+    const out = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) {
+      let acc = 0;
+      const row = y * w;
+      for (let x = -r; x <= r; x++) acc += src[row + Math.min(w - 1, Math.max(0, x))];
+      for (let x = 0; x < w; x++) {
+        tmp[row + x] = acc / (2 * r + 1);
+        acc -= src[row + Math.max(0, x - r)];
+        acc += src[row + Math.min(w - 1, x + r + 1)];
+      }
+    }
+    for (let x = 0; x < w; x++) {
+      let acc = 0;
+      for (let y = -r; y <= r; y++) acc += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
+      for (let y = 0; y < h; y++) {
+        out[y * w + x] = acc / (2 * r + 1);
+        acc -= tmp[Math.max(0, y - r) * w + x];
+        acc += tmp[Math.min(h - 1, y + r + 1) * w + x];
+      }
+    }
+    return out;
+  }
+
+  function stretchContrast(gray) {
     const hist = new Uint32Array(256);
     for (let i = 0; i < gray.length; i++) hist[gray[i]]++;
     const total = gray.length;
@@ -355,34 +515,69 @@
     let acc = 0;
     for (let v = 0; v < 256; v++) {
       acc += hist[v];
-      if (acc > total * 0.02) {
-        lo = v;
-        break;
-      }
+      if (acc > total * 0.02) { lo = v; break; }
     }
     acc = 0;
     for (let v = 255; v >= 0; v--) {
       acc += hist[v];
-      if (acc > total * 0.02) {
-        hi = v;
-        break;
-      }
+      if (acc > total * 0.02) { hi = v; break; }
     }
     const span = Math.max(1, hi - lo);
-    for (let i = 0, g = 0; i < d.length; i += 4, g++) {
-      let v = ((gray[g] - lo) * 255) / span;
-      v = v < 0 ? 0 : v > 255 ? 255 : v;
-      // Gentle gamma keeps thin Georgian strokes instead of thresholding them away.
-      v = 255 * Math.pow(v / 255, 0.9);
-      d[i] = d[i + 1] = d[i + 2] = v;
-      d[i + 3] = 255;
+    for (let i = 0; i < gray.length; i++) {
+      let v = ((gray[i] - lo) * 255) / span;
+      // Gentle gamma keeps thin Georgian strokes instead of washing them out.
+      v = 255 * Math.pow(Math.min(1, Math.max(0, v / 255)), 0.9);
+      gray[i] = v;
     }
-    ctx.putImageData(img, 0, 0);
+  }
 
-    return {
-      dataUrl: canvas.toDataURL("image/jpeg", 0.86),
-      blob: await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.86)),
-    };
+  // Recovers definition lost to soft focus / camera shake.
+  function unsharpMask(gray, w, h, amount) {
+    const blur = boxBlur(gray, w, h, 1);
+    for (let i = 0; i < gray.length; i++) {
+      const v = gray[i] + amount * (gray[i] - blur[i]);
+      gray[i] = v > 255 ? 255 : v < 0 ? 0 : v;
+    }
+  }
+
+  // Sauvola-style local threshold — the classic rescue for faint or blurry ink
+  // where a single global cut-off either eats strokes or keeps the shadows.
+  function adaptiveThreshold(gray, w, h) {
+    const r = Math.max(6, Math.round(Math.max(w, h) / 120));
+    const mean = boxBlur(gray, w, h, r);
+    const sq = new Float32Array(gray.length);
+    for (let i = 0; i < gray.length; i++) sq[i] = gray[i] * gray[i];
+    const meanSq = boxBlur(sq, w, h, r);
+    const k = 0.28;
+    const R = 128;
+    for (let i = 0; i < gray.length; i++) {
+      const variance = Math.max(0, meanSq[i] - mean[i] * mean[i]);
+      const std = Math.sqrt(variance);
+      const t = mean[i] * (1 + k * (std / R - 1));
+      gray[i] = gray[i] < t ? 0 : 255;
+    }
+  }
+
+  function grayToCanvas(gray, w, h, upscale) {
+    const src = document.createElement("canvas");
+    src.width = w;
+    src.height = h;
+    const sctx = src.getContext("2d");
+    const img = sctx.createImageData(w, h);
+    for (let i = 0, o = 0; i < gray.length; i++, o += 4) {
+      img.data[o] = img.data[o + 1] = img.data[o + 2] = gray[i];
+      img.data[o + 3] = 255;
+    }
+    sctx.putImageData(img, 0, 0);
+    if (!upscale || upscale === 1) return src;
+    const out = document.createElement("canvas");
+    out.width = w * upscale;
+    out.height = h * upscale;
+    const octx = out.getContext("2d");
+    octx.imageSmoothingEnabled = true;
+    octx.imageSmoothingQuality = "high";
+    octx.drawImage(src, 0, 0, out.width, out.height);
+    return out;
   }
 
   function blobToBitmap(blob) {
@@ -454,7 +649,7 @@
   async function ocrLocal(blob, lang) {
     const worker = await tessWorkerFor(lang);
     const { data } = await worker.recognize(blob);
-    return data.text || "";
+    return { text: data.text || "", confidence: typeof data.confidence === "number" ? data.confidence : 0 };
   }
 
   // ── Run ────────────────────────────────────────────────────────────────────
@@ -492,30 +687,133 @@
   async function scanOnePage(page) {
     page.status = "working";
     try {
-      const pre = await preprocess(page);
-      let text = "";
-      let engine = "";
+      const lang = state.lang;
+      const attempts = [];
+
+      // Pass 1 — enhanced greyscale, the best input for clean-ish photos.
+      const enhanced = await preprocess(page, "enhanced");
       if (state.tier0 !== false) {
         try {
-          text = await withRetry(() => ocrGateway(pre.dataUrl, state.lang));
-          engine = "neural";
+          const text = await withRetry(() => ocrGateway(enhanced.dataUrl, lang, ocrHint(page, lang)));
+          attempts.push({ text, engine: "neural", score: scoreText(text, lang) });
         } catch (err) {
           console.warn("[scanner] tier 0 failed, falling back:", err && err.message);
         }
       }
-      if (!text) {
-        text = await ocrLocal(pre.blob, state.lang);
-        engine = "offline";
+      if (!attempts.length) {
+        const r = await ocrLocal(enhanced.blob, lang);
+        attempts.push({ text: r.text, engine: "offline", score: scoreText(r.text, lang) * (0.5 + r.confidence / 200) });
       }
-      page.text = cleanPageText(text, state.lang);
-      page.engine = engine;
+
+      // Pass 2 — only when the first pass looks weak (blurry photo, faint ink,
+      // low light). The adaptive-threshold variant recovers text a greyscale
+      // pass drops; we keep whichever transcription scores higher.
+      const first = attempts[0];
+      const shaky = (page._sharpness || 0) < 90 || (page._exposure || 128) < 70 || (page._exposure || 128) > 215;
+      if (first.score < 0.62 || shaky) {
+        try {
+          const binary = await preprocess(page, "binary");
+          if (state.tier0 !== false) {
+            const text = await withRetry(() => ocrGateway(binary.dataUrl, lang, ocrHint(page, lang)));
+            attempts.push({ text, engine: "neural+recovery", score: scoreText(text, lang) });
+          } else {
+            const r = await ocrLocal(binary.blob, lang);
+            attempts.push({ text: r.text, engine: "offline+recovery", score: scoreText(r.text, lang) * (0.5 + r.confidence / 200) });
+          }
+        } catch (err) {
+          console.warn("[scanner] recovery pass failed:", err && err.message);
+        }
+      }
+
+      const best = attempts.sort((a, b) => b.score - a.score)[0] || { text: "", engine: "" };
+      page.text = repairText(cleanPageText(best.text, lang), lang);
+      page.engine = best.engine;
+      page.quality = Math.round((best.score || 0) * 100);
+      page.warning = qualityWarning(page, best.score);
       page.status = page.text ? "done" : "empty";
       page.error = null;
+      page._base = null; // release the cached pixel buffer
     } catch (err) {
       console.error("[scanner] page failed:", err);
       page.status = "error";
       page.error = (err && err.message) || "failed";
+      page._base = null;
     }
+  }
+
+  // Nudges the vision model with what we already know about the page so it
+  // guesses damaged glyphs in the right alphabet instead of inventing Latin.
+  function ocrHint(page, lang) {
+    const bits = [];
+    if (lang === "kat") bits.push("The page is Georgian (Mkhedruli). Never transliterate into Latin letters.");
+    if (lang === "eng") bits.push("The page is English prose.");
+    if ((page._sharpness || 999) < 90) bits.push("The photo is slightly blurry — reconstruct partially visible words from context, do not skip them.");
+    if ((page._exposure || 128) < 70) bits.push("The photo is under-exposed/dark.");
+    if ((page._exposure || 128) > 215) bits.push("The photo is over-exposed with glare.");
+    return bits.join(" ");
+  }
+
+  // Cheap language-aware confidence: how much of the output looks like real
+  // words in the expected script, penalising OCR garbage runs.
+  function scoreText(text, lang) {
+    const t = (text || "").trim();
+    if (!t) return 0;
+    const letters = (t.match(/\p{L}/gu) || []).length;
+    if (letters < 8) return 0.05;
+    const ka = (t.match(/[\u10A0-\u10FF]/g) || []).length;
+    const latin = (t.match(/[A-Za-z]/g) || []).length;
+    const expected = lang === "kat" ? ka : lang === "eng" ? latin : Math.max(ka, latin);
+    let score = expected / letters; // right-script ratio
+    const junk = (t.match(/[^\p{L}\p{N}\s.,;:!?'"()\[\]«»„“”\-—–…]/gu) || []).length;
+    score -= Math.min(0.35, junk / Math.max(40, t.length) * 2);
+    const words = t.split(/\s+/).filter(Boolean);
+    const single = words.filter((w) => w.length === 1).length;
+    score -= Math.min(0.25, single / Math.max(10, words.length)); // shredded words
+    score += Math.min(0.1, words.length / 3000); // reward fuller pages
+    return Math.max(0, Math.min(1, score));
+  }
+
+  function qualityWarning(page, score) {
+    if ((page._sharpness || 999) < 45) return "Photo looks blurry — re-shoot for best accuracy.";
+    if ((page._exposure || 128) < 60) return "Photo is very dark — add light and re-shoot.";
+    if ((page._exposure || 128) > 220) return "Glare/over-exposure detected — avoid direct light.";
+    if (score < 0.5) return "Low recognition confidence — please check this page.";
+    return null;
+  }
+
+  // Deterministic repair of the OCR mistakes each language actually makes.
+  function repairText(text, lang) {
+    let t = text || "";
+    if (!t) return t;
+    const isKa = lang === "kat" || (lang === "auto" && detectLang(t) === "kat");
+    if (isKa) {
+      // Latin/Cyrillic look-alikes leaking into Georgian words.
+      const map = { o: "ო", e: "ე", a: "ა", c: "ც", g: "გ", b: "ბ", m: "მ", n: "ნ", p: "პ", h: "ჰ", "3": "ვ", "0": "ო" };
+      t = t.replace(/[\u10A0-\u10FF]+[A-Za-z0-9]+[\u10A0-\u10FF]*|[A-Za-z0-9]+[\u10A0-\u10FF]+/g, (chunk) =>
+        chunk.replace(/[A-Za-z0-9]/g, (c) => map[c.toLowerCase()] || ""),
+      );
+      t = t.replace(/([\u10A0-\u10FF])\s+([,.;:!?])/g, "$1$2");
+    } else {
+      // Classic English confusions, applied only inside alphabetic words so we
+      // never damage real numbers. "1" is ambiguous (i or l), so it is resolved
+      // from its neighbours: consonant + 1 + vowel is almost always "l"
+      // (Eng1ish → English), otherwise "i" (Th1s → This).
+      t = t.replace(/\b(?=[A-Za-z]*[0-9])(?=[0-9]*[A-Za-z])[A-Za-z0-9]{2,}\b/g, (w) =>
+        w.replace(/[015]/g, (c, i) => {
+          if (c === "0") return "o";
+          if (c === "5") return "s";
+          const prev = (w[i - 1] || "").toLowerCase();
+          const next = (w[i + 1] || "").toLowerCase();
+          const isVowel = (ch) => /[aeiou]/.test(ch);
+          return !isVowel(prev) && prev && isVowel(next) ? "l" : "i";
+        }),
+      );
+      t = t.replace(/([a-z])\|([a-z])/g, "$1l$2");
+      t = t.replace(/(^|\s)l(?=\s+(?:am|was|will|have|had|would|could|should|think|know|said)\b)/g, "$1I");
+    }
+    // Quotes/dashes normalisation shared by both languages.
+    t = t.replace(/\s+([,.;:!?])/g, "$1").replace(/([,.;:!?])(?=\p{L})/gu, "$1 ");
+    return t.replace(/[ \t]{2,}/g, " ").trim();
   }
 
   async function withRetry(fn) {

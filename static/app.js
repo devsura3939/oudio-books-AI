@@ -937,9 +937,8 @@ function cacheDOM() {
 
         // Voice & ElevenLabs Modal
         voiceModalSelect: document.getElementById('voiceModalSelect'),
-        optgroupMale: document.getElementById('optgroupMale'),
-        optgroupFemale: document.getElementById('optgroupFemale'),
-        optgroupOther: document.getElementById('optgroupOther'),
+        voiceModalHint: document.getElementById('voiceModalHint'),
+
         modalSpeedSlider: document.getElementById('modalSpeedSlider'),
         modalSpeedVal: document.getElementById('modalSpeedVal'),
         modalPitchSlider: document.getElementById('modalPitchSlider'),
@@ -1510,63 +1509,113 @@ function saveElevenLabsSettings() {
 }
 
 // ── Voice Management ────────────────────────────────────────────────────────
+// The picker lists the REAL EngBot narrators (neural voices served by /api/tts)
+// first, because those are the ones that actually produce audio on mobile.
+// Device (speechSynthesis) voices are appended as an extra group when the
+// browser exposes any — on Android inside an iframe that list is usually empty,
+// which is why the old browser-only picker looked completely blank.
+const ENGBOT_VOICES = [
+    { id: 'en-gb-male',        label: 'Oliver — British male',            group: '🇬🇧 English · British',  lang: 'en' },
+    { id: 'en-gb-female',      label: 'Amelia — British female',          group: '🇬🇧 English · British',  lang: 'en' },
+    { id: 'en-us-male',        label: 'Ethan — American male',            group: '🇺🇸 English · American', lang: 'en' },
+    { id: 'en-us-female',      label: 'Nova — American female',           group: '🇺🇸 English · American', lang: 'en' },
+    { id: 'en-us-storyteller', label: 'Fable — American storyteller',     group: '🇺🇸 English · American', lang: 'en' },
+    { id: 'en-neutral',        label: 'Alloy — neutral narrator',         group: '🇺🇸 English · American', lang: 'en' },
+    { id: 'ka-male',           label: 'გიორგი — ქართული მამრობითი',       group: '🇬🇪 ქართული (Georgian)', lang: 'ka' },
+    { id: 'ka-female',         label: 'ეკა — ქართული მდედრობითი',         group: '🇬🇪 ქართული (Georgian)', lang: 'ka' },
+    { id: 'ka-soft',           label: 'ნინო — რბილი ქართული ტონი',        group: '🇬🇪 ქართული (Georgian)', lang: 'ka' },
+    { id: 'multi-puck',        label: 'Puck — multilingual',              group: '🌍 Multilingual',        lang: 'multi' },
+    { id: 'multi-fenrir',      label: 'Fenrir — multilingual',            group: '🌍 Multilingual',        lang: 'multi' },
+];
+
+function engbotVoice(id) {
+    return ENGBOT_VOICES.find(v => v.id === id) || null;
+}
+
+/** Currently selected EngBot preset for a language ('en' | 'ka'). */
+function selectedEngbotPreset(lang) {
+    const savedEn = localStorage.getItem('lumina_voice_preset_en') || 'en-us-female';
+    const savedKa = localStorage.getItem('lumina_voice_preset_ka') || 'ka-male';
+    return lang === 'ka' ? savedKa : savedEn;
+}
+
 function populateVoiceList() {
-    if (!('speechSynthesis' in window)) return;
-    const voices = window.speechSynthesis.getVoices();
-    if (!voices || voices.length === 0) return;
+    const select = DOM.voiceModalSelect;
+    if (!select) return;
 
-    if (DOM.optgroupMale) DOM.optgroupMale.innerHTML = '';
-    if (DOM.optgroupFemale) DOM.optgroupFemale.innerHTML = '';
-    if (DOM.optgroupOther) DOM.optgroupOther.innerHTML = '';
+    const groups = new Map();
+    const addOption = (groupLabel, value, text) => {
+        if (!groups.has(groupLabel)) groups.set(groupLabel, []);
+        groups.get(groupLabel).push({ value, text });
+    };
 
-    const savedVoice = localStorage.getItem('lumina_selected_voice_uri');
+    ENGBOT_VOICES.forEach(v => addOption(v.group, 'preset:' + v.id, v.label));
 
-    const maleKeywords = ['male', 'david', 'mark', 'george', 'guy', 'christopher', 'ryan', 'james', 'daniel', 'thomas', 'stefan'];
-    const femaleKeywords = ['female', 'zira', 'jenny', 'susan', 'aria', 'sonia', 'hazel', 'linda', 'catherine', 'heera', 'emily', 'anna'];
-
+    // Device voices (when the browser exposes any) stay available as a group.
+    const voices = ('speechSynthesis' in window) ? (window.speechSynthesis.getVoices() || []) : [];
     voices.forEach(v => {
-        const option = document.createElement('option');
-        option.value = v.voiceURI || v.name;
-        option.textContent = `${v.name} (${v.lang})`;
-
-        const nameLower = v.name.toLowerCase();
-        const isMale = maleKeywords.some(k => nameLower.includes(k));
-        const isFemale = femaleKeywords.some(k => nameLower.includes(k));
-
-        if (isMale && DOM.optgroupMale) {
-            DOM.optgroupMale.appendChild(option);
-        } else if (isFemale && DOM.optgroupFemale) {
-            DOM.optgroupFemale.appendChild(option);
-        } else if (DOM.optgroupOther) {
-            DOM.optgroupOther.appendChild(option);
-        }
+        addOption('📱 Device voices', 'device:' + (v.voiceURI || v.name), `${v.name} (${v.lang})`);
     });
 
-    const freeKaFemale = document.createElement('option');
-    freeKaFemale.value = 'ka-GE-EkaNeural - ka-GE (Female)';
-    freeKaFemale.textContent = 'Eka (Georgian Female) [Cloud Free]';
-    if (DOM.optgroupFemale) DOM.optgroupFemale.appendChild(freeKaFemale);
+    select.innerHTML = '';
+    groups.forEach((options, label) => {
+        const og = document.createElement('optgroup');
+        og.label = label;
+        options.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o.value;
+            opt.textContent = o.text;
+            og.appendChild(opt);
+        });
+        select.appendChild(og);
+    });
 
-    const freeKaMale = document.createElement('option');
-    freeKaMale.value = 'ka-GE-GiorgiNeural - ka-GE (Male)';
-    freeKaMale.textContent = 'Giorgi (Georgian Male) [Cloud Free]';
-    if (DOM.optgroupMale) DOM.optgroupMale.appendChild(freeKaMale);
-
-    if (savedVoice) {
-        selectedVoiceURI = savedVoice;
-    } else {
-        const defaultMale = voices.find(v =>
-            v.name.toLowerCase().includes('david') ||
-            (v.name.toLowerCase().includes('male') && v.lang.startsWith('en'))
-        );
-        if (defaultMale) {
-            selectedVoiceURI = defaultMale.voiceURI || defaultMale.name;
-        } else if (voices.length > 0) {
-            selectedVoiceURI = voices[0].voiceURI || voices[0].name;
-        }
+    // Restore the selection: whichever narrator matches the language currently
+    // being read, so the picker always shows what you will actually hear.
+    const stored = localStorage.getItem('lumina_voice_choice');
+    let value = stored;
+    if (!value || !select.querySelector(`option[value="${CSS.escape(value)}"]`)) {
+        value = 'preset:' + selectedEngbotPreset(currentLang === 'ka' ? 'ka' : 'en');
     }
+    select.value = value;
+    applyVoiceChoice(value, { silent: true });
+    updateTopVoiceBadge();
+}
 
-    if (DOM.voiceModalSelect) DOM.voiceModalSelect.value = selectedVoiceURI;
+/**
+ * Applies a picker value. `preset:<id>` selects a neural EngBot narrator and is
+ * remembered per language; `device:<uri>` selects a browser voice.
+ */
+function applyVoiceChoice(value, opts = {}) {
+    if (!value) return;
+    localStorage.setItem('lumina_voice_choice', value);
+    if (value.startsWith('preset:')) {
+        const id = value.slice(7);
+        const v = engbotVoice(id);
+        if (v) {
+            if (v.lang === 'ka') localStorage.setItem('lumina_voice_preset_ka', id);
+            else if (v.lang === 'en') localStorage.setItem('lumina_voice_preset_en', id);
+            else {
+                localStorage.setItem('lumina_voice_preset_en', id);
+                localStorage.setItem('lumina_voice_preset_ka', id);
+            }
+            localStorage.setItem('lumina_voice_preset', id);
+        }
+        // Neural narration is the active engine: clear any device voice pin.
+        selectedVoiceURI = '';
+        localStorage.removeItem('lumina_selected_voice_uri');
+    } else if (value.startsWith('device:')) {
+        selectedVoiceURI = value.slice(7);
+        localStorage.setItem('lumina_selected_voice_uri', selectedVoiceURI);
+    }
+    if (DOM.voiceModalHint) {
+        DOM.voiceModalHint.textContent = value.startsWith('preset:')
+            ? 'High-fidelity EngBot narration — works on mobile, English and Georgian.'
+            : 'Device voice — availability depends on your phone/browser.';
+    }
+    // Clear buffered audio so the new narrator is heard from the next sentence
+    // (no chapter restart, no repeated sentence).
+    clearNarrationBuffers();
     updateTopVoiceBadge();
 }
 
@@ -1576,29 +1625,62 @@ function updateTopVoiceBadge() {
         DOM.topVoiceBadge.textContent = `✨ ElevenLabs Studio`;
         return;
     }
-
-    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-    const matched = voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI);
-    if (matched) {
-        const maleKeywords = ['male', 'david', 'mark', 'ryan', 'george', 'guy', 'james'];
-        const isMale = maleKeywords.some(k => matched.name.toLowerCase().includes(k));
-        DOM.topVoiceBadge.textContent = `${isMale ? '👨' : '👩'} ${matched.name.split(' - ')[0].replace(/Microsoft |Google /g, '')}`;
-    } else {
-        DOM.topVoiceBadge.textContent = `🎙️ Studio Narrator`;
+    const choice = localStorage.getItem('lumina_voice_choice') || '';
+    if (choice.startsWith('device:')) {
+        const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+        const matched = voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI);
+        DOM.topVoiceBadge.textContent = matched
+            ? `📱 ${matched.name.split(' - ')[0].replace(/Microsoft |Google /g, '')}`
+            : `🎙️ Studio Narrator`;
+        return;
     }
+    const preset = engbotVoice(selectedEngbotPreset(currentLang === 'ka' ? 'ka' : 'en'));
+    DOM.topVoiceBadge.textContent = preset ? `🎙️ ${preset.label.split(' — ')[0]}` : '🎙️ Studio Narrator';
+}
+
+/** Preview whatever is selected in the picker, in its own language. */
+function previewSelectedNarrator() {
+    const value = (DOM.voiceModalSelect && DOM.voiceModalSelect.value) || '';
+    const isKa = value.startsWith('preset:') && (engbotVoice(value.slice(7)) || {}).lang === 'ka';
+    if (isKa) testGeorgianVoicePreview();
+    else testVoicePreview();
 }
 
 function testVoicePreview() {
-    const text = "Hello! Welcome to Lumina Audio Studio. Enjoy your high-fidelity reading and listening experience.";
+    const text = "Hello! This is your EngBot narrator. Enjoy your high-fidelity reading and listening experience.";
+    if (gatewayTTSAvailable) { void previewGatewayVoice(text, 'en'); return; }
     speakStandardSentence(text, 'en');
 }
 
 function testGeorgianVoicePreview() {
-    const text = "გამარჯობა! მოგესალმებით ლუმინას ქართულ აუდიო და მთვარის წამკითხველში. ომის ხელოვნება 25 თავისგან შედგება.";
+    const text = "გამარჯობა! მე ვარ თქვენი ქართული მთხრობელი. სასიამოვნო მოსმენა გისურვებთ.";
+    if (gatewayTTSAvailable) { void previewGatewayVoice(text, 'ka'); return; }
     const isCloudKaVoice = selectedVoiceURI === 'ka-GE-EkaNeural - ka-GE (Female)' || selectedVoiceURI === 'ka-GE-GiorgiNeural - ka-GE (Male)';
     const voiceId = isCloudKaVoice ? selectedVoiceURI : 'ka-GE-GiorgiNeural - ka-GE (Male)';
     speakFreeGeorgianNeural(text, voiceId);
 }
+
+/** One-off neural preview that never touches the reading player state. */
+async function previewGatewayVoice(text, lang) {
+    try {
+        const url = await fetchGatewaySpeechUrl(text, lang);
+        if (!url) {
+            if (lang === 'ka') speakFreeGeorgianNeural(text);
+            else speakStandardSentence(text, lang);
+            return;
+        }
+        if (window._voicePreviewAudio) {
+            try { window._voicePreviewAudio.pause(); } catch (e) {}
+        }
+        const audio = new Audio(url);
+        audio.playbackRate = currentGlobalSpeed;
+        window._voicePreviewAudio = audio;
+        await audio.play();
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('Voice preview failed — try again.', 'error');
+    }
+}
+
 
 // ══════════════════════════════════════════════════════════════════════════
 // ██ 1. ZERO-BLANK-PAGE MOON+ READER ENGINE ██
@@ -1648,8 +1730,12 @@ async function openReader(bookId, chapterId, lang = 'en') {
 
     DOM.readerBookTitle.textContent = readerBook.title;
     updateReaderLangUI();
-    paginateChapter();
-    renderCurrentPage();
+    // Measured pagination needs the reader box to have a real size first.
+    requestAnimationFrame(() => {
+        paginateChapter();
+        renderCurrentPage();
+        initReaderGestures();
+    });
 }
 
 function closeReader() {
@@ -1726,47 +1812,44 @@ function paginateChapter() {
         rawText = "No chapter text available.";
     }
 
-    const sentences = splitIntoNaturalSentences(rawText);
+    const sentences = splitIntoNaturalSentences(rawText).map(x => x.trim()).filter(Boolean);
     readerPages = [];
     readerSentenceToPageMap = {};
 
-    // Density: dynamically adjust based on font size AND screen width.
-    // Narrow screens hold fewer words per line, so cap words per page lower
-    // to keep page count sane and text readable on phones.
-    const vw = window.innerWidth;
-    let baseWords;
-    if (vw < 480)       baseWords = 55;
-    else if (vw < 640)  baseWords = 75;
-    else if (vw < 900)  baseWords = 110;
-    else if (vw < 1300) baseWords = 135;
-    else                baseWords = 150;
-
-    const fontRatio = 18 / readerFontSize;
-    const WORDS_PER_PAGE = Math.max(25, Math.floor(baseWords * fontRatio * fontRatio));
-    let curPageSentences = [];
-    let curPageWords = 0;
-    let pageIndex = 0;
-
-    sentences.forEach((sent, globalIdx) => {
-        const clean = sent.trim();
-        if (!clean) return;
-
-        const wordCount = clean.split(/\s+/).length;
-        curPageSentences.push({ text: clean, globalIndex: globalIdx });
-        curPageWords += wordCount;
-        readerSentenceToPageMap[globalIdx] = pageIndex;
-
-        if (curPageWords >= WORDS_PER_PAGE) {
-            readerPages.push(curPageSentences);
-            curPageSentences = [];
-            curPageWords = 0;
-            pageIndex++;
-        }
-    });
-
-    if (curPageSentences.length > 0) {
-        readerPages.push(curPageSentences);
+    // Measured pagination: we lay the sentences out in an invisible clone of the
+    // real page box and cut a page exactly where the text stops fitting. The old
+    // words-per-page estimate is what made text overflow the card (or leave half
+    // the page empty) on different screens and font sizes.
+    const measured = measurePages(sentences);
+    if (measured) {
+        readerPages = measured;
+    } else {
+        const vw = window.innerWidth;
+        let baseWords;
+        if (vw < 480)       baseWords = 55;
+        else if (vw < 640)  baseWords = 75;
+        else if (vw < 900)  baseWords = 110;
+        else if (vw < 1300) baseWords = 135;
+        else                baseWords = 150;
+        const fontRatio = 18 / readerFontSize;
+        const WORDS_PER_PAGE = Math.max(25, Math.floor(baseWords * fontRatio * fontRatio));
+        let cur = [];
+        let curWords = 0;
+        sentences.forEach((clean, globalIdx) => {
+            cur.push({ text: clean, globalIndex: globalIdx });
+            curWords += clean.split(/\s+/).length;
+            if (curWords >= WORDS_PER_PAGE) {
+                readerPages.push(cur);
+                cur = [];
+                curWords = 0;
+            }
+        });
+        if (cur.length) readerPages.push(cur);
     }
+
+    readerPages.forEach((page, pageIndex) => {
+        page.forEach(item => { readerSentenceToPageMap[item.globalIndex] = pageIndex; });
+    });
 
     if (readerPages.length === 0) {
         readerPages.push([{ text: rawText, globalIndex: 0 }]);
@@ -1775,6 +1858,147 @@ function paginateChapter() {
 
     readerCurrentPage = Math.max(1, Math.min(readerCurrentPage, readerPages.length));
 }
+
+/**
+ * Lays sentences out in an off-screen box that matches the real page card
+ * (same width, padding, font, line-height) and returns the exact pages that
+ * fit. Returns null in scroll mode or when the reader box is not measurable
+ * yet, in which case the caller falls back to the word estimate.
+ */
+function measurePages(sentences) {
+    try {
+        if (readerMode === 'scroll') return null;
+        const spread = DOM.readerPageSpread;
+        const container = DOM.readerScrollContainer;
+        if (!spread || !container || !readerActive) return null;
+
+        const isDual = readerMode === 'dual' && window.innerWidth >= 900;
+        const style = getComputedStyle(container);
+        const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        const padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+        let boxW = (container.clientWidth - padX);
+        if (isDual) boxW = (boxW - 24) / 2;
+        boxW = Math.min(boxW, isDual ? 640 : 1300);
+        // Page-card padding from CSS breakpoints.
+        const vw = window.innerWidth;
+        const cardPadX = vw <= 400 ? 20 : vw <= 640 ? 28 : vw <= 1024 ? 40 : 80;
+        const cardPadY = vw <= 400 ? 24 : vw <= 640 ? 32 : vw <= 1024 ? 44 : 64;
+        const innerW = Math.max(160, boxW - cardPadX);
+        const innerH = Math.max(160, container.clientHeight - padY - cardPadY - 34 /* page footer */ - 8 /* safety */);
+        // Page 1 also carries the chapter header, so it fits less text.
+        const headerReserve = vw <= 640 ? 92 : 116;
+
+        const probe = document.createElement('div');
+        probe.className = readerFontFamily;
+        probe.style.cssText = `position:absolute;left:-99999px;top:0;visibility:hidden;width:${innerW}px;font-size:${readerFontSize}px;line-height:1.85;`;
+        document.body.appendChild(probe);
+
+        // Reserve the chapter-header space while filling the first page.
+        const spacer = document.createElement('div');
+        spacer.style.height = headerReserve + 'px';
+        probe.appendChild(spacer);
+
+        const pages = [];
+        let current = [];
+        let buffer = [];
+        const flushParagraph = () => {
+            if (!buffer.length) return;
+            const p = document.createElement('p');
+            p.className = 'text-justify indent-6';
+            p.textContent = buffer.join(' ');
+            probe.appendChild(p);
+            buffer = [];
+        };
+
+        for (let i = 0; i < sentences.length; i++) {
+            const text = sentences[i];
+            buffer.push(text);
+            current.push({ text, globalIndex: i });
+            if (buffer.length >= 3) flushParagraph();
+            // Measure with the pending buffer included.
+            const pending = buffer.length ? buffer.join(' ') : '';
+            let extra = null;
+            if (pending) {
+                extra = document.createElement('p');
+                extra.className = 'text-justify indent-6';
+                extra.textContent = pending;
+                probe.appendChild(extra);
+            }
+            const overflows = probe.scrollHeight > innerH;
+            if (extra) probe.removeChild(extra);
+
+            if (overflows && current.length > 1) {
+                const last = current.pop();
+                pages.push(current);
+                current = [last];
+                buffer = [last.text];
+                probe.innerHTML = ''; // header space only applies to page 1
+            } else if (overflows) {
+                pages.push(current);
+                current = [];
+                buffer = [];
+                probe.innerHTML = '';
+            }
+        }
+        if (current.length) pages.push(current);
+        probe.remove();
+        return pages.length ? pages : null;
+    } catch (e) {
+        console.warn('[reader] measurement failed, using estimate:', e);
+        return null;
+    }
+}
+
+// Re-paginate on rotate / resize / font change while keeping the reader on the
+// same sentence instead of jumping back to page 1.
+let readerRepaginateTimer = null;
+function repaginateKeepingPosition() {
+    if (!readerActive || !readerBook) return;
+    const anchorPage = readerPages[readerCurrentPage - 1] || [];
+    const anchorIndex = anchorPage.length ? anchorPage[0].globalIndex : 0;
+    paginateChapter();
+    const target = readerSentenceToPageMap[anchorIndex];
+    readerCurrentPage = Math.max(1, Math.min((typeof target === 'number' ? target : 0) + 1, readerPages.length));
+    renderCurrentPage();
+}
+window.repaginateKeepingPosition = repaginateKeepingPosition;
+
+function scheduleRepaginate() {
+    clearTimeout(readerRepaginateTimer);
+    readerRepaginateTimer = setTimeout(repaginateKeepingPosition, 180);
+}
+
+window.addEventListener('resize', scheduleRepaginate);
+window.addEventListener('orientationchange', scheduleRepaginate);
+
+// Swipe / tap page turning — what makes it feel like a real reader on a phone.
+function initReaderGestures() {
+    const el = DOM.readerScrollContainer;
+    if (!el || el._gesturesBound) return;
+    el._gesturesBound = true;
+    let x0 = 0, y0 = 0, t0 = 0, moved = false;
+    el.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        x0 = e.touches[0].clientX;
+        y0 = e.touches[0].clientY;
+        t0 = Date.now();
+        moved = false;
+    }, { passive: true });
+    el.addEventListener('touchmove', () => { moved = true; }, { passive: true });
+    el.addEventListener('touchend', (e) => {
+        if (readerMode === 'scroll') return;
+        const t = e.changedTouches[0];
+        if (!t) return;
+        const dx = t.clientX - x0;
+        const dy = t.clientY - y0;
+        const dt = Date.now() - t0;
+        if (!moved || dt > 800) return;
+        if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+        if (window.getSelection && String(window.getSelection())) return; // user is selecting text
+        if (dx < 0) readerNextPage(); else readerPrevPage();
+    }, { passive: true });
+}
+window.initReaderGestures = initReaderGestures;
 
 function renderCurrentPage() {
     if (!readerBook || !DOM.readerPageSpread) return;
@@ -2181,13 +2405,13 @@ function setReaderTheme(theme) {
 function changeReaderFontSize(delta) {
     readerFontSize = Math.max(14, Math.min(32, readerFontSize + delta));
     if (DOM.readerModalFontSizeText) DOM.readerModalFontSizeText.textContent = `${readerFontSize}px`;
-    paginateChapter();
-    renderCurrentPage();
+    // Keep the reader on the same sentence after re-flowing.
+    repaginateKeepingPosition();
 }
 
 function changeReaderFontFamily(fontClass) {
     readerFontFamily = fontClass;
-    renderCurrentPage();
+    repaginateKeepingPosition();
 }
 
 function toggleReaderFullscreen() {
@@ -3803,6 +4027,9 @@ async function speakCurrentSentence() {
 }
 
 let currentSpeechToken = 0;
+// Bumped only on a real stop/seek/chapter change — NOT when advancing to the
+// next sentence — so the rolling prefetch window survives sentence transitions.
+let narrationGeneration = 0;
 
 function playUltimateFallbackTTS(text, lang, token) {
     const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.slice(0, 200))}`;
@@ -3949,14 +4176,24 @@ let gatewayTTSAvailable = true;
 const gatewayTTSCache = new Map(); // `${preset}|${text}` -> blob url
 
 function gatewayPresetForLang(lang) {
-    const saved = localStorage.getItem('lumina_voice_preset');
-    if (lang === 'ka') {
-        if (saved && saved.startsWith('ka-')) return saved;
-        return (selectedVoiceURI || '').includes('Eka') ? 'ka-female' : 'ka-male';
-    }
-    if (saved && !saved.startsWith('ka-') && saved !== 'custom') return saved;
-    return 'en-us-female';
+    return selectedEngbotPreset(lang === 'ka' ? 'ka' : 'en');
 }
+
+/**
+ * Drops buffered narration audio without stopping playback, so a narrator or
+ * speed change is heard from the next sentence instead of restarting the
+ * chapter. The audio playing right now finishes normally.
+ */
+function clearNarrationBuffers() {
+    georgianAudioPrefetchCache.forEach(a => {
+        try { a.pause(); a.src = ''; } catch (e) {}
+    });
+    georgianAudioPrefetchCache.clear();
+    gatewayTTSCache.forEach(url => { try { URL.revokeObjectURL(url); } catch (e) {} });
+    gatewayTTSCache.clear();
+}
+window.clearNarrationBuffers = clearNarrationBuffers;
+
 
 async function fetchGatewaySpeechUrl(text, lang) {
     if (!gatewayTTSAvailable) return null;
@@ -3996,28 +4233,50 @@ async function fetchGatewaySpeechUrl(text, lang) {
     }
 }
 
+// ── Rolling prefetch window ────────────────────────────────────────────────
+// Fetching one sentence at a time, only after the current one started playing,
+// is what produced the long silences between sentences (worst on scanned books
+// with very long "sentences"). We keep the next few sentences already
+// synthesized, so the next clip is ready the moment the current one ends.
+const GATEWAY_PREFETCH_AHEAD = 4;
+const gatewayPrefetchInFlight = new Set();
+
 function prefetchNextGatewaySentence(index, lang) {
     if (index >= sentenceQueue.length || index < 0) return;
-    if (georgianAudioPrefetchCache.has(index)) return;
+    if (georgianAudioPrefetchCache.has(index) || gatewayPrefetchInFlight.has(index)) return;
     const nextText = sentenceQueue[index];
     if (!nextText || !nextText.trim()) return;
-    const myToken = currentSpeechToken;
+    const myGen = narrationGeneration;
+    gatewayPrefetchInFlight.add(index);
     fetchGatewaySpeechUrl(nextText, lang).then(url => {
-        if (myToken !== currentSpeechToken || !url) return;
+        gatewayPrefetchInFlight.delete(index);
+        if (myGen !== narrationGeneration || !url) return;
         const audio = new Audio(url);
         audio.preload = 'auto';
+        try { audio.load(); } catch (e) {}
         prefetchCachePut(index, audio);
-    }).catch(() => {});
+    }).catch(() => { gatewayPrefetchInFlight.delete(index); });
 }
 
+/** Keeps the next GATEWAY_PREFETCH_AHEAD sentences warm, in reading order. */
+function primeGatewayPrefetchWindow(fromIndex, lang) {
+    for (let i = 1; i <= GATEWAY_PREFETCH_AHEAD; i++) {
+        prefetchNextGatewaySentence(fromIndex + i, lang);
+    }
+}
+window.primeGatewayPrefetchWindow = primeGatewayPrefetchWindow;
+
 async function speakGatewayNeural(text, lang) {
-    stopCurrentSpeechAudio();
+    stopCurrentSpeechAudio(true); // keep the prefetch window warm
     const myToken = currentSpeechToken;
     updatePlayerUIState(true);
 
     try {
         let audioToPlay = prefetchCacheTake(currentSentenceIndex);
         if (!audioToPlay) {
+            // Nothing buffered: start the window immediately so the *following*
+            // sentences are fetched in parallel with this one.
+            primeGatewayPrefetchWindow(currentSentenceIndex, lang);
             const url = await fetchGatewaySpeechUrl(text, lang);
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             if (url) audioToPlay = new Audio(url);
@@ -4028,7 +4287,8 @@ async function speakGatewayNeural(text, lang) {
         currentElevenAudio = audioToPlay;
         currentElevenAudio.playbackRate = currentGlobalSpeed;
 
-        prefetchNextGatewaySentence(currentSentenceIndex + 1, lang);
+        primeGatewayPrefetchWindow(currentSentenceIndex, lang);
+
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
@@ -4058,11 +4318,11 @@ function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
     const nextText = sentenceQueue[index];
     if (!nextText || !nextText.trim()) return;
 
-    const myToken = currentSpeechToken;
+    const myGen = narrationGeneration;
     fetchGeorgianSpeechAudioUrl(nextText, voiceId, ratePct, pitchHz).then(url => {
         // A prefetch resolving after a stop/seek must not enter the cache:
         // the entry would replay stale audio for a future sentence.
-        if (myToken !== currentSpeechToken) return;
+        if (myGen !== narrationGeneration) return;
         if (url) {
             const audio = new Audio(url);
             audio.preload = 'auto';
@@ -4142,7 +4402,7 @@ async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
 }
 
 async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)') {
-    stopCurrentSpeechAudio();
+    stopCurrentSpeechAudio(true); // keep the prefetch window warm
     const myToken = currentSpeechToken;
     updatePlayerUIState(true);
 
@@ -4174,7 +4434,10 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
         currentElevenAudio.playbackRate = currentGlobalSpeed;
 
         // Trigger prefetch for next sentence in background
-        prefetchNextGeorgianSentence(currentSentenceIndex + 1, voiceId, ratePct, pitchHz);
+        // Rolling window (not just +1) so the next clips are already synthesized.
+        for (let i = 1; i <= GATEWAY_PREFETCH_AHEAD; i++) {
+            prefetchNextGeorgianSentence(currentSentenceIndex + i, voiceId, ratePct, pitchHz);
+        }
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
@@ -4231,7 +4494,7 @@ function elevenLabsVoiceSettings(modelId, sentenceType) {
 }
 
 async function speakElevenLabsSentence(text) {
-    stopCurrentSpeechAudio();
+    stopCurrentSpeechAudio(true); // keep the prefetch window warm
     const myToken = currentSpeechToken;
     updatePlayerUIState(true);
 
@@ -4286,8 +4549,11 @@ async function speakElevenLabsSentence(text) {
     }
 }
 
-function stopCurrentSpeechAudio() {
+function stopCurrentSpeechAudio(keepBuffers = false) {
     currentSpeechToken++; // Invalidate any running asynchronous audio fetches
+    // Prefetches survive a sentence advance but not a real stop/seek.
+    if (!keepBuffers) narrationGeneration++;
+
     if (utteranceTimeout) {
         clearTimeout(utteranceTimeout);
         utteranceTimeout = null;
@@ -4307,8 +4573,16 @@ function stopCurrentSpeechAudio() {
             window.speechSynthesis.cancel();
         } catch(e) {}
     }
-    georgianAudioPrefetchCache.clear();
+    // Advancing from one sentence to the next must NOT throw away the
+    // prefetched clips (that was why the rolling buffer never helped and every
+    // sentence started with a fresh network round-trip = long silences).
+    if (!keepBuffers) {
+        georgianAudioPrefetchCache.forEach(a => { try { a.pause(); a.src = ''; } catch (e) {} });
+        georgianAudioPrefetchCache.clear();
+        gatewayPrefetchInFlight.clear();
+    }
     isSpeakingLock = false;
+
 }
 
 // ── Playback Controls ───────────────────────────────────────────────────────
@@ -4911,8 +5185,9 @@ function splitIntoNaturalSentences(text) {
     for (let i = 0; i < matches.length; i++) {
         const s = matches[i].replace(/__DOT__/g, '.').trim();
         if (s.length > 0) {
-            if (s.split(/\s+/).length > 60) {
-                sentences.push(...chunkByWords(s, 50));
+            if (s.split(/\s+/).length > 34) {
+                sentences.push(...splitLongIntoClauses(s, 34));
+
             } else {
                 sentences.push(s);
             }
@@ -4935,6 +5210,37 @@ function chunkByWords(text, limit) {
     if (current.length > 0) chunks.push(current.join(' '));
     return chunks;
 }
+
+/**
+ * Splits an over-long sentence at natural clause boundaries (, ; : — and
+ * Georgian conjunctions) instead of at an arbitrary word count. Shorter,
+ * naturally-bounded pieces synthesize much faster, which is what removes the
+ * long pauses between sentences on scanned books where punctuation is sparse.
+ */
+function splitLongIntoClauses(text, limit) {
+    const parts = String(text)
+        .split(/(?<=[,;:—–])\s+/)
+        .flatMap(p => (p.split(/\s+/).length > limit ? chunkByWords(p, limit) : [p]));
+
+    const out = [];
+    let buf = [];
+    let count = 0;
+    for (const p of parts) {
+        const n = p.split(/\s+/).length;
+        // Merge tiny fragments so the narrator does not stutter over "and,".
+        if (count + n <= limit || count === 0) {
+            buf.push(p);
+            count += n;
+        } else {
+            out.push(buf.join(' '));
+            buf = [p];
+            count = n;
+        }
+    }
+    if (buf.length) out.push(buf.join(' '));
+    return out.filter(s => s && s.trim());
+}
+
 
 // ══════════════════════════════════════════════════════════════════════════
 // ██ 6. DIGITAL SHELF & DISCOVER RENDERING ██
@@ -5228,10 +5534,8 @@ function setupEventListeners() {
 
     if (DOM.voiceModalSelect) {
         DOM.voiceModalSelect.addEventListener('change', (e) => {
-            selectedVoiceURI = e.target.value;
-            localStorage.setItem('lumina_selected_voice_uri', selectedVoiceURI);
-            updateTopVoiceBadge();
-            if (isPlaying && !isPaused && !elevenLabsEnabled) speakCurrentSentence();
+            // Applies from the next sentence: no chapter restart, no repeat.
+            applyVoiceChoice(e.target.value);
         });
     }
 
