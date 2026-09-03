@@ -200,5 +200,25 @@ reader, TTS, translation or Georgian-engine code.
 * The player plays audio through one reused `HTMLAudioElement` created inside the first user
   tap — required for mobile autoplay policies. Browser `speechSynthesis` is no longer used
   there because it is silent on most mobile browsers and lacks Georgian voices.
-* The vendored studio (`public/studio/**`) keeps its own TTS stack (edge-TTS Georgian neural
-  endpoints, ElevenLabs, browser voices, Georgian linguistics engine) unchanged.
+* Playback speed is applied client-side (`audio.playbackRate`) and is deliberately NOT part of
+  the TTS request or the audio cache key — otherwise each speed change refetched every clip.
+
+## Studio server tiers (added 2026-09-03)
+
+The vendored studio keeps its full original stack (edge-TTS Georgian mirrors, ElevenLabs,
+browser voices, OpenRouter/Groq/Mistral/Gemini keys, Georgian linguistics engine). Two
+same-origin server tiers were added *in front* of it, both of which self-disable on
+404/401/402/403 (e.g. GitHub Pages static hosting) and hand back to the original engines:
+
+* **Translation Tier 0** — `callLuminaGatewayJSON()` → `src/routes/api/ai.ts`
+  (`google/gemini-3.7-flash`, JSON mode), consulted first inside `callGeminiJSON()`. This is
+  why the engine no longer reports "Machine translation (LOW QUALITY)" without a user key.
+* **Narration** — `speakGatewayNeural()` → `src/routes/api/tts.ts`, chosen first in
+  `speakCurrentSentence()` (after ElevenLabs). Georgian sentences still go through
+  `verbalizeGeorgianTextForTTS()` + `applyGeorgianProsody()` before synthesis. Voice preset is
+  shared with the native player through `localStorage.lumina_voice_preset`.
+
+Mobile rendering: `public/studio/static/styles.css` is now actually linked from
+`index.html` (it never was), and a `max-width: 900px` / reduced-motion block flattens all
+`backdrop-filter` panels and stops the animated mesh — required to stop Android Chrome from
+dropping composited tiles (black panels, stutter) inside the iframe.

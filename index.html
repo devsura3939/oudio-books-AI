@@ -501,7 +501,53 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 9999px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.4); }
+
+/* ── Mobile compositing safety net ──────────────────────────────────────────
+   On Android Chrome (especially inside an iframe) stacking a dozen
+   backdrop-filter layers over a fixed, animated, 40px-blurred mesh makes the
+   compositor drop tiles — panels flash black or vanish mid-scroll, and every
+   scroll/translation update stutters. Phones get flat, opaque surfaces and a
+   static background instead: same palette, no GPU thrash. */
+@media (max-width: 900px), (prefers-reduced-motion: reduce) {
+    .bg-mesh {
+        animation: none !important;
+        filter: blur(24px);
+        position: absolute;
+    }
+
+    .glass-nav,
+    .glass-panel,
+    .glass-card,
+    .glass-surface,
+    .glass-modal,
+    .glass-topbar,
+    [class*="backdrop-blur"] {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    .glass-nav { background: #0d111a !important; }
+    .glass-panel,
+    .glass-card,
+    .glass-surface,
+    .glass-topbar { background: #151a24 !important; }
+    .glass-modal { background: #10141d !important; }
+
+    /* Long text/log surfaces: keep them off their own composited layers. */
+    #wbChunkLog,
+    #wbChapterQueue,
+    #readerPage {
+        will-change: auto !important;
+        transform: none !important;
+    }
+}
     </style>
+    <!-- The studio's own stylesheet was never linked, so the translation panel,
+         chunk log, mini dock and reader layout rendered unstyled (black
+         overlays, clipped controls, cramped "#0AI" rows). Loaded last so it
+         wins over the inline base styles, while the mobile overrides above
+         keep their !important precedence. -->
+    <link rel="stylesheet" href="static/styles.css">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>

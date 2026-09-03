@@ -51,8 +51,12 @@ function StudioPage() {
     };
   }, []);
 
+  // Mobile also has the fixed bottom tab bar (~64px); without subtracting it
+  // the studio's own fixed reader/player controls sit underneath it.
   return (
-    <div className="h-[calc(100vh-65px)] w-full">
+    <div className="h-[calc(100dvh-65px-64px)] w-full md:h-[calc(100dvh-65px)]">
+
+
       {ready ? (
         <iframe
           src={STUDIO_URL}

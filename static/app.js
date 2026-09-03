@@ -134,6 +134,38 @@ function openRouterMarkModelFailed(model) {
 const OPENROUTER_CALL_DEADLINE_MS = 45_000;
 const OPENROUTER_CALL_MAX_ATTEMPTS = 14;
 
+// ── Tier 0: Lumina server AI gateway (no user key required) ─────────────────
+// The app's own same-origin endpoint proxies a strong JSON-mode model through
+// the Lovable AI Gateway. This is the reason the translation engine no longer
+// degrades to "Machine translation (LOW QUALITY)" when the user has entered
+// no OpenRouter/Groq/Mistral/Gemini key. On static hosting (GitHub Pages) the
+// endpoint does not exist, so a single 404 disables the tier permanently and
+// the original key-based chain takes over unchanged.
+let luminaGatewayAvailable = true;
+
+async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+    if (!luminaGatewayAvailable) return null;
+    try {
+        const res = await fetch('/api/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, temperature, maxTokens }),
+        });
+        if (res.status === 404 || res.status === 401 || res.status === 403 || res.status === 402) {
+            luminaGatewayAvailable = false;
+            console.warn('[Lumina AI] gateway unavailable (' + res.status + ') — falling back to key-based providers.');
+            return null;
+        }
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data && data.text ? parseModelJSON(data.text) : null;
+    } catch (e) {
+        luminaGatewayAvailable = false;
+        console.warn('[Lumina AI] gateway unreachable — falling back to key-based providers.', e && e.message);
+        return null;
+    }
+}
+
 async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
     if (!openRouterApiKey) return null;
     // All models cooling from a recent run? Skip the network entirely — the
@@ -2282,7 +2314,12 @@ function readerForwardSentence() {
 // batch sends hundreds of calls, so a single blip must not degrade a chunk
 // to the ML fallback tier.
 async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
-    // Tier 1 (MAIN): OpenRouter free models — zero-cost primary engine.
+    // Tier 0 (MAIN): the app's own server AI gateway — highest quality, no key.
+    {
+        const res = await callLuminaGatewayJSON(prompt, { temperature, maxTokens });
+        if (res !== null) return res;
+    }
+    // Tier 1: OpenRouter free models — zero-cost engine behind the gateway.
     if (openRouterApiKey) {
         const res = await callOpenRouterJSON(prompt, { temperature, maxTokens, retries: retries + 1 });
         if (res !== null) return res;
@@ -3647,6 +3684,10 @@ async function speakCurrentSentence() {
 
     if (elevenLabsEnabled && elevenLabsApiKey) {
         speakElevenLabsSentence(cleanSentence);
+    } else if (gatewayTTSAvailable) {
+        // Real audio file from the app's own TTS endpoint — the only engine
+        // that reliably produces sound on mobile, in Georgian included.
+        void speakGatewayNeural(cleanSentence, currentLang);
     } else if (currentLang === 'ka' && (!hasNativeKaVoice || isCloudKaVoice)) {
         const voiceId = isCloudKaVoice ? selectedVoiceURI : 'ka-GE-GiorgiNeural - ka-GE (Male)';
         speakFreeGeorgianNeural(cleanSentence, voiceId);
@@ -3790,6 +3831,118 @@ function prefetchCacheTake(index) {
         }
     }
     return null;
+}
+
+// ── Neural narration through the app's own TTS endpoint ─────────────────────
+// speechSynthesis is unreliable inside a mobile browser (and has no Georgian
+// voice at all on Android), and the free HF edge-tts mirrors are frequently
+// down — both meant "press play, hear nothing". /api/tts returns a real audio
+// file from the Lovable AI Gateway, which plays everywhere. A 404 (static
+// hosting) disables the tier and the original engines take over untouched.
+let gatewayTTSAvailable = true;
+const gatewayTTSCache = new Map(); // `${preset}|${text}` -> blob url
+
+function gatewayPresetForLang(lang) {
+    const saved = localStorage.getItem('lumina_voice_preset');
+    if (lang === 'ka') {
+        if (saved && saved.startsWith('ka-')) return saved;
+        return (selectedVoiceURI || '').includes('Eka') ? 'ka-female' : 'ka-male';
+    }
+    if (saved && !saved.startsWith('ka-') && saved !== 'custom') return saved;
+    return 'en-us-female';
+}
+
+async function fetchGatewaySpeechUrl(text, lang) {
+    if (!gatewayTTSAvailable) return null;
+    const preset = gatewayPresetForLang(lang);
+    const spoken = lang === 'ka'
+        ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), detectSentenceType(text))
+        : text;
+    if (!spoken || !spoken.trim()) return null;
+
+    const key = preset + '|' + spoken;
+    if (gatewayTTSCache.has(key)) return gatewayTTSCache.get(key);
+
+    try {
+        const res = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: spoken.slice(0, 3800), preset }),
+        });
+        if (res.status === 404 || res.status === 401 || res.status === 403 || res.status === 402) {
+            gatewayTTSAvailable = false;
+            console.warn('[Lumina TTS] gateway unavailable (' + res.status + ') — using browser/HF engines.');
+            return null;
+        }
+        if (!res.ok) return null;
+        const url = URL.createObjectURL(await res.blob());
+        if (gatewayTTSCache.size > 60) {
+            const oldest = gatewayTTSCache.keys().next().value;
+            try { URL.revokeObjectURL(gatewayTTSCache.get(oldest)); } catch (e) {}
+            gatewayTTSCache.delete(oldest);
+        }
+        gatewayTTSCache.set(key, url);
+        return url;
+    } catch (e) {
+        gatewayTTSAvailable = false;
+        console.warn('[Lumina TTS] gateway unreachable — using browser/HF engines.', e && e.message);
+        return null;
+    }
+}
+
+function prefetchNextGatewaySentence(index, lang) {
+    if (index >= sentenceQueue.length || index < 0) return;
+    if (georgianAudioPrefetchCache.has(index)) return;
+    const nextText = sentenceQueue[index];
+    if (!nextText || !nextText.trim()) return;
+    const myToken = currentSpeechToken;
+    fetchGatewaySpeechUrl(nextText, lang).then(url => {
+        if (myToken !== currentSpeechToken || !url) return;
+        const audio = new Audio(url);
+        audio.preload = 'auto';
+        prefetchCachePut(index, audio);
+    }).catch(() => {});
+}
+
+async function speakGatewayNeural(text, lang) {
+    stopCurrentSpeechAudio();
+    const myToken = currentSpeechToken;
+    updatePlayerUIState(true);
+
+    try {
+        let audioToPlay = prefetchCacheTake(currentSentenceIndex);
+        if (!audioToPlay) {
+            const url = await fetchGatewaySpeechUrl(text, lang);
+            if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+            if (url) audioToPlay = new Audio(url);
+        }
+        if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+        if (!audioToPlay) throw new Error('gateway audio unavailable');
+
+        currentElevenAudio = audioToPlay;
+        currentElevenAudio.playbackRate = currentGlobalSpeed;
+
+        prefetchNextGatewaySentence(currentSentenceIndex + 1, lang);
+
+        currentElevenAudio.onended = () => {
+            if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+            currentSentenceIndex++;
+            speakCurrentSentence();
+        };
+        currentElevenAudio.onerror = () => {
+            if (myToken !== currentSpeechToken) return;
+            currentSentenceIndex++;
+            speakCurrentSentence();
+        };
+
+        await currentElevenAudio.play();
+        isSpeakingLock = false;
+    } catch (e) {
+        if (myToken !== currentSpeechToken) return;
+        console.warn('Gateway TTS failed — falling back:', e && e.message);
+        if (lang === 'ka') speakFreeGeorgianNeural(text);
+        else speakStandardSentence(text, lang);
+    }
 }
 
 function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {

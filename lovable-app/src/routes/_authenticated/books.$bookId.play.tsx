@@ -114,9 +114,18 @@ function NowPlaying() {
     activeRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [blockIndex]);
 
+  // Speed is applied on the audio element (playbackRate) rather than baked
+  // into the generated file, so changing it takes effect instantly and the
+  // cached audio stays reusable across speeds.
+  const rateRef = useRef(rate);
+  useEffect(() => {
+    rateRef.current = rate;
+    if (audioRef.current) audioRef.current.playbackRate = rate;
+  }, [rate]);
+
   const fetchAudioUrl = useCallback(
     async (text: string) => {
-      const key = `${presetId}|${customInstructions}|${rate}|${text}`;
+      const key = `${presetId}|${customInstructions}|${text}`;
       const cached = cacheRef.current.get(key);
       if (cached) return cached;
 
@@ -126,7 +135,6 @@ function NowPlaying() {
         body: JSON.stringify({
           text,
           preset: presetId,
-          rate,
           ...(presetId === "custom" && customInstructions
             ? { instructions: customInstructions }
             : {}),
@@ -140,7 +148,7 @@ function NowPlaying() {
       cacheRef.current.set(key, url);
       return url;
     },
-    [presetId, customInstructions, rate],
+    [presetId, customInstructions],
   );
 
   const stopAudio = useCallback(() => {
@@ -185,6 +193,7 @@ function NowPlaying() {
         const url = await fetchAudioUrl(blocks[index]!);
         if (tokenRef.current !== token) return;
         audio.src = url;
+        audio.playbackRate = rateRef.current;
         audio.onended = () => {
           if (tokenRef.current !== token) return;
           if (index + 1 < blocks.length) void playBlock(index + 1);
@@ -359,8 +368,8 @@ function NowPlaying() {
                 onClick={() => {
                   const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length] ?? 1;
                   setRate(next);
-                  cacheRef.current.clear();
-                  if (playing) void playBlock(blockIndex);
+                  // Applies immediately to the audio already playing.
+                  if (audioRef.current) audioRef.current.playbackRate = next;
                 }}
                 className="text-sm font-semibold text-on-surface-variant transition-colors hover:text-primary-container"
               >

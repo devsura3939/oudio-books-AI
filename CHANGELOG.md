@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-09-03 — Playback speed, studio audio, AI translation tier, mobile studio rendering
+
+### Added
+- `src/routes/api/ai.ts` — same-origin JSON-mode LLM endpoint (Lovable AI Gateway,
+  `google/gemini-3.7-flash`). The vendored studio now uses it as **Tier 0** of the
+  translation provider chain, so the Georgian engine runs at AI quality with no
+  user-supplied OpenRouter/Groq/Mistral/Gemini key. Previously, with no key, the chain fell
+  through to Google/MyMemory and the status read "Machine translation (LOW QUALITY)".
+- Studio narration through `/api/tts` (`speakGatewayNeural`, `fetchGatewaySpeechUrl`,
+  `prefetchNextGatewaySentence` in `public/studio/static/app.js`): real audio files, with
+  Georgian text still passed through the original `verbalizeGeorgianTextForTTS` +
+  `applyGeorgianProsody` pipeline. Lookahead prefetch and the existing speech-token
+  cancellation are reused. The voice preset is shared with the native player via
+  `lumina_voice_preset`.
+
+### Fixed
+- **Playback speed had no effect** in `/books/$bookId/play`: speed is no longer part of the
+  TTS request (which forced a re-fetch and discarded the cache); `audio.playbackRate` is set
+  on the live element and on every newly loaded clip, so the change is instant.
+- **The studio stylesheet was never linked.** `public/studio/static/styles.css` (translation
+  panel, live chunk log, mini dock, reader layout and all its mobile media queries) was dead
+  code — the cause of the black overlays, clipped reader controls and cramped `#0AI` rows in
+  the reported screenshots. It is now loaded from `public/studio/index.html`.
+- **Mobile compositing thrash**: on phones (and with reduced-motion) the studio drops all
+  `backdrop-filter` layers to opaque surfaces and stops the animated blurred mesh, which is
+  what made panels flash black and scrolling/translation updates stutter inside the iframe.
+- `/studio` iframe height now subtracts the fixed mobile tab bar (`100dvh - 65px - 64px`), so
+  the studio's own fixed reader/player controls are no longer hidden underneath it.
+
+### Notes
+- All new tiers degrade safely: a 404/401/402/403 on `/api/ai` or `/api/tts` (e.g. on GitHub
+  Pages static hosting) permanently disables that tier and the original key-based providers,
+  HF Georgian mirrors and browser speech take over unchanged.
+
+
+
 ## 2026-09-03 — Real neural TTS in the native player (mobile audio fix)
 
 ### Added
