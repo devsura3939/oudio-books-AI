@@ -1,0 +1,61 @@
+feat: v1.45.0 — LOCATIVE POSTPOSITION DICTIONARY (KA-127 + QA 3.126 + fix 4.112)
+
+Georgian engine release v1.45.0 (GEORGIAN_KNOWLEDGE_VERSION 1.45.0,
+stats 128/127/112/379). Source: gap-scan-v1450 (77 probes) + capture13
+baseline (33 probes on v1.44.0) + attested postposition government
+(Tatoeba / Wiktionary / Glosbe). Capture-then-pin: every pin below was
+captured against the v1.44.0 baseline before implementation.
+
+KB — KA-127 LOCATIVE POSTPOSITIONS:
+  - Case-government doctrine: DATIVE-governing -ზე (-е on), -ში (in),
+    -თან (near), შორის (between, -s); GENITIVE-governing უკან (behind),
+    წინ (in front of), ქვეშ (under), გარეთ (outside), შიგნით (inside),
+    გვერდით (next to / beside), ზემოთ (above); lexicalized
+    აქიდან შორს (far from here) and X-დან შორს (far from X).
+  - Attested examples: ტელეფონის გვერდით, წიგნებს შორის, მაგიდასთან.
+
+FIX 4.112 — LOCATIVE FRAMES (12 postpositions + pronouns + fragments):
+  - Copula-anchored frames: 'the pen is next to the phone' ->
+    'the pen არის phone-ის გვერდით.' (was: 'next to' stranded English).
+  - NP frames: on -> table-ზე, in -> box-ში, under -> bed-ის ქვეშ,
+    behind -> door-ის უკან, in front of -> house-ის წინ,
+    between -> books-ს შორის, near -> window-თან ახლოს,
+    far from here -> აქიდან შორს, far from X -> X-დან შორს,
+    above -> floor-ის ზემოთ, outside -> house-ის გარეთ,
+    inside -> fridge-ის შიგნით.
+  - Pronoun forms: next to me -> ჩემ გვერდით, him/her -> მის გვერდით,
+    them -> მათ გვერდით, us -> ჩვენ გვერდით.
+  - Sentence-initial fragments: 'next to the station' ->
+    'station-ის გვერდით.', 'near the station' -> 'station-თან ახლოს.',
+    'far from the city' -> 'city-დან შორს.'.
+  - ORDERING DOCTRINE (twofold): 4.112 runs BEFORE 4.70's bare
+    next->შემდეგ mapping so 'next to' survives; within 4.112 the
+    'in front of' frame precedes the 'in' frame so 'in front of the
+    house' is not destroyed into 'front of-ში the house'.
+  - Temporal guards preserved: 'the next day' -> მეორე დღეს,
+    'next week' -> მომავალ კვირას, 'next Monday' / 'the next station'
+    keep შემდეგ (already upstream).
+
+QA 3.126 — locative_postposition_untranslated:
+  Three-branch frame detector: (a) English copula + English locative,
+  (b) sentence-initial locative, (c) NEW mixed-residue branch — a
+  Georgian word directly followed by an English locative (e.g. 'the pen
+  არის next to the phone'). Fires only when no KA-127 carrier
+  (-ზე/-ში/-თან/-დან/გვერდით/ქვეშ/უკან/წინ/შორის/ახლოს/ზემოთ/გარეთ/
+  შიგნით/შორს/აქიდან) is present; COMPLETE-surface fencing with
+  Georgian lookbehind/lookahead prevents false positives on legitimate
+  Georgian morphology.
+
+TESTS:
+  - smoke-v1450 (25 checks): 12 core locatives, 4 variants, 2 fragments,
+    4 temporal guards, 3 motion regressions — 25/25 PASS.
+  - test-ka-v1450 (37 tests, 6 sections): version/stats, KB wiring,
+    core locatives, variants/fragments, temporal guards, QA 3.126
+    behavior — 37/37 PASS.
+  - Living suites re-anchored (version/stats pins now >= 1.45 thresholds;
+    'no pronouns at all' copula edge pin moved to the v1.45.0 carrier):
+    v1400 83/83, v1410 66/66, v1420 91/91, v1430 87/87, v1440 103/103.
+    Total battery: 467/467 PASS.
+  - Stash-baseline proof: v1.44.0 baseline scores 7/25 on smoke-v1450
+    and 9/37 on test-ka-v1450 (new pins discriminate the release);
+    restoring v1.45.0 returns 25/25 + 37/37.

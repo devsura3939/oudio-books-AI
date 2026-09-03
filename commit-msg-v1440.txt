@@ -1,0 +1,56 @@
+feat: v1.44.0 — PRESENT SCREEVE DICTIONARY (KA-126 + QA 3.125 + fix 4.111)
+
+The most-requested gap from the v1.43.0 residue scan: present-tense
+lexical verbs ("I know", "he sees", "they drink water") were left
+untranslated. v1.44.0 adds the person-marked PRESENT screeve dictionary,
+mirroring v1.43.0's future dictionary with the same capture-then-pin
+discipline.
+
+RESEARCH (Georgian sources, all 4 mapped persons per verb attested):
+- kahibaro 9.5 Common Irregular Verbs: KNOW-fact ვიცი/იცის/ვიცით/იციან
+  ("ისინი არ იციან ინგლისური"), KNOW-person ვიცნობ ("მე ვიცნობ ნინოს"),
+  MAKE აკეთებენ 3pl; apprenti-polyglotte MAKE/DO table (identical);
+  latinum L76 THINK ვფიქრობ/ფიქრობენ; en.wiktionary ჭამს/სვამ/
+  კითხულობს full conjugation tables (3pl ჭამენ/სვამენ/კითხულობენ);
+  talkpal/sublearn WRITE ვწერ/წერენ.
+
+KB KA-126 PRESENT SCREEVE DICTIONARY: v-class person markers (v- 1sg,
+zero 2sg, -ს 3sg, -თ 1/2pl, -ენ 3pl), 10 attested verb paradigms
+(KNOW-fact/KNOW-person/SEE/EAT/DRINK/READ/WRITE/SAY/THINK/MAKE),
+KNOW disambiguation doctrine (object-pronoun → ცნობნა, bare fact →
+ცოდნა), exclusions (want→4.88-4.89, go/come present→4.81, sleep→
+inversion, love/like→m-class), guards, TACTIC.
+
+FIX 4.111: 53 person-marked SUBJECT+VERB replace lines — 12 KNOW-person
+frames (him/her/them objects FIRST so "I know him"→"მე ვიცნობ მას"
+beats the fact form) + 4 frames × 10 verbs. INVERSION GUARD: a
+temporary \uE000 sentinel inserted between AUX and SUBJECT shields
+question inversions ("will they see", "do I know") from the frames —
+questions stay AI-gated (v1.43.0 doctrine, caught by smoke-v1430's
+"will they see" pin during verification).
+
+GUARDS: 2nd person NEVER maps (T–V იცი vs იცით), it-subjects AI-gated,
+subjectless forms left, do/does questions untouched, negated presents
+stay with 4.93's არ family ("I don't know"→"მე არ know" for AI rebuild).
+
+QA 3.125 present_verb_untranslated: 5 detectors (I/we/they + V, he/she
++ Vs, you + V, it + Vs, bare Vs) + 40-form COMPLETE-surface-form
+carrier regex (v1.43.0 doctrine — Georgian lookbehind/lookahead fence
+stems inside longer words); message carries the full attested paradigm
+travel + T–V/NEGATION/INVERSION notes for the AI pass.
+
+VERSION 1.44.0 · stats {promptBlocks: 127, qaRules: 126, autoFixes: 111,
+researchSources: 378}.
+
+VERIFY: node --check clean; capture12 re-run — all 60 outputs exactly
+as predicted, zero regressions (guards/negation/future/motion/modal
+pins unchanged); smoke-v1440 20/20; test-ka-v1440 103/103; living
+suites re-anchored: test-ka-v1400 83/83, test-ka-v1410 66/66 (3 pins
+re-anchored: "she knows him"/"I see you"/"pronoun at end" — v1.41.0
+expected stranded present verbs, now correctly translated), test-ka-
+v1420 91/91, test-ka-v1430 87/87; smoke-v1410 11/11, smoke-v1420 19/19,
+smoke-v1430 20/20, smoke-v1400 26/26. STASH PROOF: engine stashed →
+test-ka-v1440 scores 50/103; popped → 103/103.
+
+Deferred: "next to"→"შემდეგ to" locative bug (capture bucket L) —
+candidate for v1.45.0.
