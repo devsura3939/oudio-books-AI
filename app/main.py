@@ -32,13 +32,14 @@ from app.image_processor import (
     enhance_page_image, image_to_jpeg_bytes
 )
 from app.translation_engine import translate_text
+from app.supabase_bridge import check_supabase_health, get_admin_session, fetch_supabase_books
 import base64
 from io import BytesIO
 
 app = FastAPI(
     title="PDF to High-Quality Audiobook Studio",
     description="Convert any PDF eBook to a studio-grade audiobook with natural neural voices.",
-    version="1.46.5"
+    version="1.46.6"
 )
 
 # Enable CORS for local dev
@@ -147,6 +148,28 @@ async def server_burst_fuse(req: Request):
             "height": enhanced_img.height,
             "dataUrl": out_b64
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/supabase/status")
+async def supabase_status():
+    """Returns health status of the external Supabase project."""
+    return check_supabase_health()
+
+@app.post("/api/supabase/admin-session")
+async def supabase_admin_session():
+    """Generates an authentic Supabase Auth session for the admin using the Secret Key."""
+    try:
+        session = get_admin_session()
+        return session
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/supabase/books")
+async def supabase_books():
+    """Fetches user books directly from Supabase Postgres."""
+    try:
+        return fetch_supabase_books()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

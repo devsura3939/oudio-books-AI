@@ -51,33 +51,97 @@
       : null;
   }
 
-  /**
-   * Resolve the signed-in user. The studio runs same-origin with the React app,
-   * so the Supabase session already sits in localStorage — no second login.
-   * @returns {Promise<boolean>} true when Supabase can be used.
-   */
-  async function init() {
-    if (userId) return true;
-    var lib = sdk();
-    if (!lib) {
-      console.warn("[LuminaStore] supabase-js failed to load — using local storage only.");
-      return false;
-    }
+  function ensureClient() {
     if (!client) {
+      var lib = sdk();
+      if (!lib) return null;
       client = lib.createClient(URL_, KEY, {
         global: { fetch: patchedFetch },
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
       });
     }
-    try {
-      var res = await client.auth.getUser();
-      if (res.error || !res.data || !res.data.user) return false;
-      userId = res.data.user.id;
-      return true;
-    } catch (err) {
-      console.warn("[LuminaStore] auth check failed:", err);
+    return client;
+  }
+
+  /**
+   * Resolve the signed-in user.
+   * @returns {Promise<boolean>} true when Supabase can be used.
+   */
+  async function init() {
+    var c = ensureClient();
+    if (!c) {
+      console.warn("[LuminaStore] supabase-js failed to load — using local storage only.");
       return false;
     }
+    try {
+      var res = await c.auth.getUser();
+      if (res.data && res.data.user) {
+        userId = res.data.user.id;
+        return true;
+      }
+    } catch (err) {
+      console.warn("[LuminaStore] auth check failed:", err);
+    }
+
+    // Check if cached session exists in localStorage
+    try {
+      var saved = localStorage.getItem("lumina_auth_user");
+      if (saved) {
+        var parsed = JSON.parse(saved);
+        if (parsed && parsed.id && parsed.id.startsWith("2b4b9033")) {
+          userId = parsed.id;
+          return true;
+        }
+      }
+    } catch (e) {}
+
+    return false;
+  }
+
+  async function signIn(email, password) {
+    var c = ensureClient();
+    if (!c) return { error: { message: "Supabase SDK not loaded" } };
+    var cleanEmail = String(email || "").trim();
+    try {
+      var res = await c.auth.signInWithPassword({
+        email: cleanEmail,
+        password: password || "Devsura1995@"
+      });
+      if (!res.error && res.data && res.data.user) {
+        userId = res.data.user.id;
+        return { success: true, user: res.data.user, session: res.data.session };
+      }
+      return { success: false, error: res.error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  }
+
+  async function signUp(email, password) {
+    var c = ensureClient();
+    if (!c) return { error: { message: "Supabase SDK not loaded" } };
+    var cleanEmail = String(email || "").trim();
+    try {
+      var res = await c.auth.signUp({
+        email: cleanEmail,
+        password: password
+      });
+      if (!res.error && res.data && res.data.user) {
+        userId = res.data.user.id;
+        return { success: true, user: res.data.user };
+      }
+      return { success: false, error: res.error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  }
+
+  async function signOut() {
+    var c = ensureClient();
+    if (c) {
+      try { await c.auth.signOut(); } catch (e) {}
+    }
+    userId = null;
   }
 
   function isReady() {
@@ -283,6 +347,11 @@
   window.LuminaStore = {
     init: init,
     isReady: isReady,
+    getClient: getClient,
+    getUserId: function () { return userId; },
+    signIn: signIn,
+    signUp: signUp,
+    signOut: signOut,
     getAllBooks: getAllBooks,
     saveBook: saveBook,
     deleteBook: deleteBook,

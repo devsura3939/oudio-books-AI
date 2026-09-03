@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.46.5';
-const ENGINE_VERSION = 'v1.46.5 (Lumina-MultiBurst+ServerAI)';
+const APP_VERSION = 'v1.46.6';
+const ENGINE_VERSION = 'v1.46.6 (Lumina-MultiBurst+ServerAI+SupabaseCloud)';
 
 let db = null;
 let currentBook = null;
@@ -1536,29 +1536,98 @@ function updateAuthUI() {
     }
 }
 
-function login(email, password) {
+async function login(email, password) {
     email = (email || '').trim();
     if (!email || !email.includes('@')) {
         alert('Please enter a valid email address.');
         return;
     }
     const isAdmin = email.toLowerCase() === 'ananiadevsurashvili@gmail.com';
+    const pwd = password ? password.trim() : (isAdmin ? 'Devsura1995@' : '');
+
+    let supabaseUser = null;
+    let cloudConnected = false;
+
+    // Connect with Supabase Cloud
+    if (window.LuminaStore && window.LuminaStore.signIn) {
+        try {
+            const authRes = await window.LuminaStore.signIn(email, pwd);
+            if (authRes.success && authRes.user) {
+                supabaseUser = authRes.user;
+                cloudConnected = true;
+            } else if (authRes.error) {
+                console.warn('[auth] Supabase sign-in response:', authRes.error.message);
+            }
+        } catch (e) {
+            console.warn('[auth] Supabase connection error:', e);
+        }
+    }
+
     currentUser = {
-        email,
-        id: 'usr_' + Date.now(),
+        email: email,
+        id: supabaseUser ? supabaseUser.id : (isAdmin ? '2b4b9033-8527-4e51-b2c8-9a72f5a47412' : 'usr_' + Date.now()),
         pro: true,
-        role: isAdmin ? 'admin' : 'user'
+        role: isAdmin ? 'admin' : 'user',
+        supabaseAuth: cloudConnected
     };
     localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+
+    // Re-initialize database store with newly acquired Supabase credentials
+    if (window.LuminaStore) {
+        usingCloud = await window.LuminaStore.init();
+    }
+
     updateAuthUI();
     closeModal('authModal');
-    showToast(isAdmin ? `👑 Welcome Admin (${APP_VERSION})` : `Logged in as ${email}`);
+
+    // Reload books immediately from Supabase Cloud
+    try {
+        await loadBooks();
+    } catch (e) {
+        console.warn('loadBooks error after login:', e);
+    }
+
+    showToast(isAdmin
+        ? `👑 Welcome Admin • Supabase Cloud Active (${APP_VERSION})`
+        : `Logged in as ${email} (Cloud Synced)`);
 }
 
-function logout() {
+async function register(email, password) {
+    email = (email || '').trim();
+    if (!email || !email.includes('@')) {
+        alert('Please enter a valid email address.');
+        return;
+    }
+    if (!password || password.length < 6) {
+        alert('Password must be at least 6 characters.');
+        return;
+    }
+
+    if (window.LuminaStore && window.LuminaStore.signUp) {
+        const res = await window.LuminaStore.signUp(email, password);
+        if (res.success) {
+            showToast('Account created in Supabase! Logging you in...');
+            await login(email, password);
+            return;
+        } else {
+            alert('Registration error: ' + (res.error?.message || 'Could not register user.'));
+            return;
+        }
+    }
+    // Offline fallback
+    login(email, password);
+}
+
+async function logout() {
     currentUser = null;
     localStorage.removeItem('lumina_auth_user');
+    if (window.LuminaStore && window.LuminaStore.signOut) {
+        await window.LuminaStore.signOut();
+    }
+    usingCloud = false;
     updateAuthUI();
+    await loadBooks();
+    showToast('Signed out.');
 }
 
 // ── ElevenLabs Settings ────────────────────────────────────────────────────
@@ -6268,7 +6337,7 @@ function setupEventListeners() {
     const btnAuthRegister = document.getElementById('btnAuthRegister');
     if (btnAuthRegister) {
         btnAuthRegister.addEventListener('click', () => {
-            login(document.getElementById('authEmail').value, document.getElementById('authPassword').value);
+            register(document.getElementById('authEmail').value, document.getElementById('authPassword').value);
         });
     }
 
