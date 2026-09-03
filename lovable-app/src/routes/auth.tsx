@@ -217,7 +217,7 @@ function AuthPage() {
           )}
 
           {!sentConfirmation ? (
-            <div className="text-center">
+            <div className="flex flex-col items-center gap-3 text-center">
               <button
                 type="button"
                 onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
@@ -225,6 +225,34 @@ function AuthPage() {
               >
                 {mode === "signin" ? "Create an account" : "I already have an account"}
               </button>
+              {mode === "signin" && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="label-caps text-on-surface-variant/60 transition-colors hover:text-primary-container disabled:opacity-40"
+                  onClick={async () => {
+                    const cleanEmail = email.trim().toLowerCase();
+                    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail)) {
+                      toast.error("Enter your email address above first, then click Forgot password.");
+                      return;
+                    }
+                    setBusy(true);
+                    try {
+                      const { error } = await db.auth.resetPasswordForEmail(cleanEmail, {
+                        redirectTo: `${window.location.origin}/auth/callback`,
+                      });
+                      if (error) throw error;
+                      toast.success("Password reset link sent — check your inbox.");
+                    } catch (err) {
+                      toast.error("Could not send reset link. Try again.");
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Forgot password?
+                </button>
+              )}
             </div>
           ) : null}
         </div>
