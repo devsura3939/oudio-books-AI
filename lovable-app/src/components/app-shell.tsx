@@ -1,0 +1,119 @@
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+
+import { db } from "@/integrations/external-supabase/client";
+
+type NavItem = { to: string; icon: string; label: string };
+
+const NAV: NavItem[] = [
+  { to: "/dashboard", icon: "home", label: "Home" },
+  { to: "/library", icon: "library_music", label: "Library" },
+  { to: "/studio", icon: "graphic_eq", label: "Studio" },
+  { to: "/profile", icon: "account_circle", label: "Profile" },
+];
+
+/**
+ * Stitch "Lumina Audio" chrome: frosted side rail + top bar, radial glow.
+ * Shared by every authenticated screen.
+ */
+export function AppShell({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  async function signOut() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await db.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  }
+
+  return (
+    <div className="relative min-h-screen overflow-x-hidden bg-background text-on-surface">
+      <div className="pointer-events-none fixed top-1/2 left-1/2 -z-10 h-[150vh] w-[150vw] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,rgba(0,240,255,0.08)_0%,rgba(119,1,208,0.05)_40%,rgba(16,19,26,0)_70%)]" />
+
+      {/* Side rail */}
+      <aside className="fixed top-0 left-0 z-50 hidden h-full w-64 flex-col border-r border-white/15 bg-surface-container/60 px-4 py-8 shadow-[0_0_40px_rgba(0,240,255,0.1)] backdrop-blur-[32px] md:flex">
+        <Link to="/dashboard" className="text-2xl font-bold text-primary-container">
+          Lumina Audio
+        </Link>
+        <p className="mt-1 mb-8 text-sm text-on-surface-variant">Premium AI Listening</p>
+
+        <nav className="flex-1 space-y-2">
+          {NAV.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              activeProps={{
+                className:
+                  "bg-white/10 text-primary-fixed-dim border-r-2 border-primary-fixed-dim",
+              }}
+              inactiveProps={{ className: "text-on-surface-variant" }}
+              className="flex items-center gap-3 rounded-lg px-4 py-3 transition-all hover:bg-white/10 hover:text-primary-fixed-dim active:scale-95"
+            >
+              <span className="material-symbols-outlined">{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </nav>
+
+        <Link
+          to="/upload"
+          className="btn-glow mb-6 block rounded-lg bg-primary-container px-4 py-3 text-center font-semibold text-on-primary-container"
+        >
+          Upload PDF
+        </Link>
+
+        <div className="space-y-2 border-t border-white/10 pt-4">
+          <button
+            type="button"
+            onClick={signOut}
+            className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-on-surface-variant transition-all hover:bg-white/10 hover:text-primary-fixed-dim"
+          >
+            <span className="material-symbols-outlined">logout</span>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Top bar */}
+      <nav className="fixed top-0 right-0 z-40 flex w-full items-center justify-between border-b border-white/15 bg-surface/40 px-5 py-4 backdrop-blur-[24px] md:w-[calc(100%-16rem)] md:px-10">
+        <span className="font-bold tracking-tight text-primary-fixed md:text-lg">Lumina Audio</span>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/upload"
+            className="rounded-full p-2 text-on-surface-variant transition-colors hover:text-primary-container md:hidden"
+            aria-label="Upload PDF"
+          >
+            <span className="material-symbols-outlined">upload_file</span>
+          </Link>
+          <Link
+            to="/profile"
+            className="rounded-full p-2 text-on-surface-variant transition-colors hover:text-primary-container"
+            aria-label="Profile"
+          >
+            <span className="material-symbols-outlined">account_circle</span>
+          </Link>
+        </div>
+      </nav>
+
+      <div className="pt-20 pb-24 md:ml-64 md:pt-24">{children}</div>
+
+      {/* Mobile bottom bar */}
+      <nav className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-white/15 bg-surface-container/80 py-2 backdrop-blur-[24px] md:hidden">
+        {NAV.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            activeProps={{ className: "text-primary-fixed-dim" }}
+            inactiveProps={{ className: "text-on-surface-variant" }}
+            className="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px]"
+          >
+            <span className="material-symbols-outlined">{item.icon}</span>
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
+  );
+}

@@ -12,10 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
+import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as AuthenticatedBooksBookIdRouteImport } from './routes/_authenticated/books.$bookId'
+import { Route as AuthenticatedBooksBookIdIndexRouteImport } from './routes/_authenticated/books.$bookId.index'
+import { Route as AuthenticatedBooksBookIdPlayRouteImport } from './routes/_authenticated/books.$bookId.play'
+import { Route as AuthenticatedBooksBookIdSummaryRouteImport } from './routes/_authenticated/books.$bookId.summary'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -31,9 +36,19 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
   id: '/library',
   path: '/library',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
@@ -41,60 +56,117 @@ const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedUploadRoute = AuthenticatedUploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
   getParentRoute: () => AuthRoute,
 } as any)
-const AuthenticatedBooksBookIdRoute =
-  AuthenticatedBooksBookIdRouteImport.update({
-    id: '/books/$bookId',
-    path: '/books/$bookId',
+const AuthenticatedBooksBookIdIndexRoute =
+  AuthenticatedBooksBookIdIndexRouteImport.update({
+    id: '/books/$bookId/',
+    path: '/books/$bookId/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedBooksBookIdPlayRoute =
+  AuthenticatedBooksBookIdPlayRouteImport.update({
+    id: '/books/$bookId/play',
+    path: '/books/$bookId/play',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedBooksBookIdSummaryRoute =
+  AuthenticatedBooksBookIdSummaryRouteImport.update({
+    id: '/books/$bookId/summary',
+    path: '/books/$bookId/summary',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/library': typeof AuthenticatedLibraryRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/upload': typeof AuthenticatedUploadRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/books/$bookId': typeof AuthenticatedBooksBookIdRoute
+  '/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
+  '/books/$bookId/summary': typeof AuthenticatedBooksBookIdSummaryRoute
+  '/books/$bookId/': typeof AuthenticatedBooksBookIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/library': typeof AuthenticatedLibraryRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/upload': typeof AuthenticatedUploadRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/books/$bookId': typeof AuthenticatedBooksBookIdRoute
+  '/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
+  '/books/$bookId/summary': typeof AuthenticatedBooksBookIdSummaryRoute
+  '/books/$bookId': typeof AuthenticatedBooksBookIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
+  '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/_authenticated/books/$bookId': typeof AuthenticatedBooksBookIdRoute
+  '/_authenticated/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
+  '/_authenticated/books/$bookId/summary': typeof AuthenticatedBooksBookIdSummaryRoute
+  '/_authenticated/books/$bookId/': typeof AuthenticatedBooksBookIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/library' | '/studio' | '/auth/callback' | '/books/$bookId'
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/library'
+    | '/profile'
+    | '/studio'
+    | '/upload'
+    | '/auth/callback'
+    | '/books/$bookId/play'
+    | '/books/$bookId/summary'
+    | '/books/$bookId/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/auth' | '/library' | '/studio' | '/auth/callback' | '/books/$bookId'
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/library'
+    | '/profile'
+    | '/studio'
+    | '/upload'
+    | '/auth/callback'
+    | '/books/$bookId/play'
+    | '/books/$bookId/summary'
+    | '/books/$bookId'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/dashboard'
     | '/_authenticated/library'
+    | '/_authenticated/profile'
     | '/_authenticated/studio'
+    | '/_authenticated/upload'
     | '/auth/callback'
-    | '/_authenticated/books/$bookId'
+    | '/_authenticated/books/$bookId/play'
+    | '/_authenticated/books/$bookId/summary'
+    | '/_authenticated/books/$bookId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -126,11 +198,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/library': {
       id: '/_authenticated/library'
       path: '/library'
       fullPath: '/library'
       preLoaderRoute: typeof AuthenticatedLibraryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/studio': {
@@ -140,6 +226,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/upload': {
+      id: '/_authenticated/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof AuthenticatedUploadRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/callback'
@@ -147,26 +240,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof AuthRoute
     }
-    '/_authenticated/books/$bookId': {
-      id: '/_authenticated/books/$bookId'
+    '/_authenticated/books/$bookId/': {
+      id: '/_authenticated/books/$bookId/'
       path: '/books/$bookId'
-      fullPath: '/books/$bookId'
-      preLoaderRoute: typeof AuthenticatedBooksBookIdRouteImport
+      fullPath: '/books/$bookId/'
+      preLoaderRoute: typeof AuthenticatedBooksBookIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/books/$bookId/play': {
+      id: '/_authenticated/books/$bookId/play'
+      path: '/books/$bookId/play'
+      fullPath: '/books/$bookId/play'
+      preLoaderRoute: typeof AuthenticatedBooksBookIdPlayRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/books/$bookId/summary': {
+      id: '/_authenticated/books/$bookId/summary'
+      path: '/books/$bookId/summary'
+      fullPath: '/books/$bookId/summary'
+      preLoaderRoute: typeof AuthenticatedBooksBookIdSummaryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
-  AuthenticatedBooksBookIdRoute: typeof AuthenticatedBooksBookIdRoute
+  AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
+  AuthenticatedBooksBookIdPlayRoute: typeof AuthenticatedBooksBookIdPlayRoute
+  AuthenticatedBooksBookIdSummaryRoute: typeof AuthenticatedBooksBookIdSummaryRoute
+  AuthenticatedBooksBookIdIndexRoute: typeof AuthenticatedBooksBookIdIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
-  AuthenticatedBooksBookIdRoute: AuthenticatedBooksBookIdRoute,
+  AuthenticatedUploadRoute: AuthenticatedUploadRoute,
+  AuthenticatedBooksBookIdPlayRoute: AuthenticatedBooksBookIdPlayRoute,
+  AuthenticatedBooksBookIdSummaryRoute: AuthenticatedBooksBookIdSummaryRoute,
+  AuthenticatedBooksBookIdIndexRoute: AuthenticatedBooksBookIdIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -60,10 +60,22 @@ and `service_role` (Supabase does not grant these by default).
 /auth                      email + password sign in / sign up
 /auth/callback             email-confirmation handler (PKCE + hash tokens)
 /_authenticated/           client-side gate (ssr: false) → redirects to /auth
+                           wraps every child in <AppShell> (Stitch sidebar / topbar / mobile nav)
+  /dashboard               continue listening, library stats, shelf preview
+  /upload                  drag & drop PDF import (processing + complete states)
   /library                 import PDF into Supabase, list & delete books
-  /books/$bookId           simple chapter list + browser-speech narration
+  /books/$bookId           chapter selection (books.$bookId.index.tsx)
+  /books/$bookId/play      Now Playing: browser speech, controls, live transcript
+  /books/$bookId/summary   AI chapter summary (brief/detailed/bullets/takeaways, en/ka)
+  /profile                 display name + account stats
   /studio                  THE FULL ORIGINAL APP (see below)
 ```
+
+Shared building blocks: `src/components/app-shell.tsx` (chrome),
+`src/lib/use-import-pdf.ts` (the single PDF import pipeline used by `/library` and `/upload`),
+`src/lib/summarize.functions.ts` (server function → Lovable AI Gateway, Gemini 2.5 Flash;
+the key never reaches the browser).
+
 
 ## The vendored studio (`public/studio/`)
 

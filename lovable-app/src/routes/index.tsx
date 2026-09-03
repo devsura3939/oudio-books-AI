@@ -90,10 +90,10 @@ function Landing() {
               <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
             </Link>
             <Link
-              to="/library"
+              to="/dashboard"
               className="label-caps rounded-lg border border-white/10 px-6 py-3.5 text-on-surface transition-all hover:border-primary-container/50 hover:bg-white/5"
             >
-              Open my library
+              Open dashboard
             </Link>
           </div>
         </section>

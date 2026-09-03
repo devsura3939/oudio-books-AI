@@ -1,5 +1,40 @@
 # Changelog
 
+## 2026-09-03 — Native Stitch screens: dashboard, upload, chapters, player, summary, profile
+
+### Added
+- `src/components/app-shell.tsx` — the Stitch app chrome (desktop sidebar + topbar, mobile
+  bottom nav) rendered by `src/routes/_authenticated/route.tsx` around every signed-in route.
+- `/dashboard` — continue-listening card, library stats (books / chapters / pages / est.
+  listening time) and shelf preview.
+- `/upload` — drag & drop PDF import with the Stitch processing and completion states.
+- `/books/$bookId` — chapter-selection screen (the old combined route moved to
+  `books.$bookId.index.tsx`).
+- `/books/$bookId/play` — Now Playing: record visual, playback controls (rewind 10s,
+  prev/next chapter, speed cycling), system-voice picker and live highlighted transcript.
+- `/books/$bookId/summary` — AI chapter summaries in brief / detailed / bullets / takeaways,
+  English or Georgian, via `src/lib/summarize.functions.ts` (Lovable AI Gateway,
+  Gemini 2.5 Flash, key stays server-side).
+- `/profile` — display-name editing plus account stats.
+- `src/lib/use-import-pdf.ts` — one shared PDF import pipeline (40 MB cap; parse → `books`
+  row → `chapters` rows → private PDF upload → `ready`) now used by both `/library` and
+  `/upload`, replacing the duplicated logic in the library route.
+
+### Changed
+- Landing page secondary CTA now points at `/dashboard`.
+- Highlighted transcript sentences scale from their left edge, so the first word is no
+  longer clipped by the panel edge.
+
+### Verified (Playwright, signed-in temporary account, later deleted)
+- `/dashboard`, `/upload`, `/profile`, `/library`, `/books/$id`, `/books/$id/play` and
+  `/books/$id/summary` all render with zero console errors; the AI summarizer returned a
+  real summary end-to-end.
+
+### Preserved (unchanged on purpose)
+- The vendored original SPA at `public/studio/**` (`/studio`) keeps the full backend-era
+  parser, TTS engines and Georgian translation engine. Native routes are additive; nothing
+  in the studio engine was replaced.
+
 ## 2026-09-03 — Apply the Google Stitch "Lumina Audio" design system
 
 - Adopted the Stitch Material token set (surface `#10131a`, `primary-container` `#00f0ff`,
