@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-09-04 — Studio: no repeat translate prompts, mobile speed + TTS controls
+
+### Fixed
+- **"This book has not been translated to Georgian yet" asked every time.** Georgian
+  availability was read only from the `translatedLangs` flag, which is lost for books
+  restored from IndexedDB/Supabase even though their chapters carry `text_ka`. New
+  `bookHasGeorgian(book)` derives it from actual chapter text and repairs the flag; used by
+  the reader language toggle, the dock language toggle, the shelf KA badge and the hero badge.
+- Translation is never started from a `confirm()` dialog anymore. When Georgian is genuinely
+  missing the app just says so (`notifyNeedsTranslation()`); the user starts it from the
+  explicit **Translate** button in the reader toolbar / book hero.
+- Mobile dock had no speed or voice controls (they were in a `hidden md:flex` block). The
+  mobile quick-actions row now has `−` / `1.00x` / `+` fine speed steps (0.05, 0.50x–2.00x,
+  id `btnDockSpeedMobile`) plus a Voice & EngBot TTS button opening the voice modal.
+- `setGlobalSpeed()` now also re-speaks the current sentence when the active engine is
+  browser `speechSynthesis` (rate cannot change mid-utterance), so speed changes are audible
+  on every engine, not just gateway/ElevenLabs audio.
+
+
 ## 2026-09-04 — Rebrand: "Lumina Audio Studio" → **EngBot**
 
 ### Changed

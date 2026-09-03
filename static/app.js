@@ -923,6 +923,7 @@ function cacheDOM() {
         playerCurrentTime: document.getElementById('playerCurrentTime'),
         playerTotalTime: document.getElementById('playerTotalTime'),
         btnDockSpeed: document.getElementById('btnDockSpeed'),
+        btnDockSpeedMobile: document.getElementById('btnDockSpeedMobile'),
         btnDockLangToggle: document.getElementById('btnDockLangToggle'),
         dockLangBadge: document.getElementById('dockLangBadge'),
         dockLangBadgeMobile: document.getElementById('dockLangBadgeMobile'),
@@ -1625,7 +1626,7 @@ async function openReader(bookId, chapterId, lang = 'en') {
     readerCurrentPage = 1;
 
     if (readerLang === 'ka') {
-        const hasKa = readerBook.translatedLangs && readerBook.translatedLangs.includes('ka');
+        const hasKa = bookHasGeorgian(readerBook);
         if (!hasKa) {
             const doTranslate = confirm('This book is not yet translated to Georgian. Would you like to translate the whole book now?');
             if (doTranslate) {
@@ -1684,12 +1685,8 @@ function updateReaderLangUI() {
 function toggleReaderLanguage() {
     if (!readerBook) return;
     if (readerLang === 'en') {
-        const hasKa = readerBook.translatedLangs && readerBook.translatedLangs.includes('ka');
-        if (!hasKa) {
-            const doTranslate = confirm('This book has not been translated to Georgian yet. Translate whole book now?');
-            if (doTranslate) {
-                startWholeBookTranslation();
-            }
+        if (!bookHasGeorgian(readerBook)) {
+            notifyNeedsTranslation();
             return;
         }
         readerLang = 'ka';
@@ -4345,15 +4342,51 @@ function stopTimer() {
     }
 }
 
+// ── Georgian availability: derive from actual chapter text, not just the flag ──
+// A book translated in an earlier session (or synced from Supabase) always has
+// `text_ka` on its chapters even if `translatedLangs` was lost, so ask the data.
+function bookHasGeorgian(book) {
+    if (!book) return false;
+    if (book.translatedLangs && book.translatedLangs.includes('ka')) return true;
+    const has = Array.isArray(book.chapters) &&
+        book.chapters.some(c => c && typeof c.text_ka === 'string' && c.text_ka.trim().length > 0);
+    if (has) {
+        if (!book.translatedLangs) book.translatedLangs = [];
+        if (!book.translatedLangs.includes('ka')) book.translatedLangs.push('ka');
+    }
+    return has;
+}
+
+function notifyNeedsTranslation() {
+    // Never a confirm() dialog: the user starts translation explicitly from the
+    // "Translate" button (reader toolbar / book hero).
+    if (typeof showToast === 'function') {
+        showToast('Not translated to Georgian yet — use the Translate button to start.', 'info');
+    } else {
+        alert('This book is not translated to Georgian yet. Use the Translate button to start.');
+    }
+}
+
 function setGlobalSpeed(value) {
     // Fine 0.05 steps across 0.50x–2.00x, applied live to whatever is playing
     // (no restart, so the sentence is not repeated on every nudge).
     const clamped = Math.min(2, Math.max(0.5, Math.round(value * 20) / 20));
     currentGlobalSpeed = clamped;
     if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = `${clamped.toFixed(2)}x`;
+    if (DOM.btnDockSpeedMobile) DOM.btnDockSpeedMobile.textContent = `${clamped.toFixed(2)}x`;
     if (DOM.modalSpeedSlider) DOM.modalSpeedSlider.value = clamped;
     if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = `${clamped.toFixed(2)}x`;
     if (currentElevenAudio) currentElevenAudio.playbackRate = clamped;
+    // Browser speechSynthesis cannot change rate mid-utterance: re-speak the
+    // current sentence at the new rate so the change is audible immediately.
+    if (isPlaying && !isPaused && !currentElevenAudio &&
+        typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.speaking) {
+        try {
+            window.speechSynthesis.cancel();
+            isSpeakingLock = false;
+            speakCurrentSentence();
+        } catch (e) { /* ignore */ }
+    }
 }
 
 function cycleSpeed() {
@@ -4368,12 +4401,8 @@ function nudgeSpeed(delta) {
 function togglePlaybackLanguage() {
     if (!currentBook) return;
     if (currentLang === 'en') {
-        const hasKa = currentBook.translatedLangs && currentBook.translatedLangs.includes('ka');
-        if (!hasKa) {
-            const doTranslate = confirm('This book has not been translated to Georgian yet. Translate the whole book now?');
-            if (doTranslate) {
-                startWholeBookTranslation();
-            }
+        if (!bookHasGeorgian(currentBook)) {
+            notifyNeedsTranslation();
             return;
         }
         currentLang = 'ka';
@@ -4783,7 +4812,7 @@ async function renderDigitalShelf(filterText = '') {
 
     filtered.forEach(book => {
         const isSelected = currentBook && String(currentBook.id) === String(book.id);
-        const hasGeorgian = book.translatedLangs && book.translatedLangs.includes('ka');
+        const hasGeorgian = bookHasGeorgian(book);
         const stats = getBookStats(book);
 
         const div = document.createElement('div');
@@ -4868,7 +4897,7 @@ async function selectBook(bookId, autoPlayFirst = false) {
     DOM.heroCover.src = currentBook.coverUrl;
     DOM.heroTitle.textContent = currentBook.title;
 
-    const hasKa = currentBook.translatedLangs && currentBook.translatedLangs.includes('ka');
+    const hasKa = bookHasGeorgian(currentBook);
     if (DOM.heroGeorgianBadge) {
         if (hasKa) DOM.heroGeorgianBadge.classList.remove('hidden');
         else DOM.heroGeorgianBadge.classList.add('hidden');
