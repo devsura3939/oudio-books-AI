@@ -4383,6 +4383,31 @@ there is/are→არის · there was→იყო · there were→იყო (
 default) | იყვნენ (animate, QA-gated) · there is no→არ არის ·
 X on the table→X ... მაგიდაზეა (-ა fused copula)`;
 
+// KA-127 v1.45.0 — Locative postposition dictionary: English spatial
+//                  prepositions → Georgian postpositions / case suffixes.
+//                  Primary goal: fix the long-standing "next to" bug
+//                  (bare next→შემდეგ) by consuming LOCATIVE "next to"
+//                  BEFORE 4.70's narrative sequencer swap runs.
+const KA_LOCATIVE_POSTPOSITIONS = `
+KA-127 LOCATIVE POSTPOSITIONS — Georgian expresses location mainly via
+POSTPOSITIONS and case endings rather than English-style prepositions.
+Case-government split (attested patterns; see geolang.ru, Wiktionary,
+Glosbe examples, and Tatoeba corpus):
+• DATIVE-governing (often written as suffixes): -ზე (on), -ში (in),
+  -თან (at/near), შორის (between; separate word, takes dative).
+• GENITIVE-governing postpositions: უკან (behind), წინ (in front of),
+  ქვეშ (under), გარეთ (outside), გვერდით (beside/next to).
+• DISTANCE: შორს + -დან/-გან ("far from X" ≈ "X-დან შორს"; "from here"
+  lexicalizes as აქიდან).
+TACTIC (fix 4.112): consume high-confidence English COPULA+LOCATIVE
+frames and emit a Georgian carrier + a lightweight case marker on the
+English noun residue (e.g. table-ზე, house-ის გარეთ). Full noun
+declension (dropping -ს before -ზე/-ში, vowel harmony, Georgian noun
+stems) is AI-pass work; deterministic rules only ensure the correct
+postposition choice and stop the catastrophic next→შემდეგ error.
+GUARDS: temporal "next" (next week/day/station) stays owned by 4.70 and
+calendar rules; only the LOCATIVE bigram next+to is consumed here.`;
+
 // KA-112 v1.30.0 — Bare interrogatives (direct-question wh-words). All
 //                  FRAMED wh-uses are already consumed by earlier rules
 //                  (3.90/4.75 free relatives, 3.104/4.90 reported
@@ -4736,6 +4761,7 @@ function getKaKnowledgeBase() {
         KA_PRESENT_DICT,
         KA_MODALS_AUX,
         KA_SPATIAL_DEICTIC,
+        KA_LOCATIVE_POSTPOSITIONS,
         KA_BARE_INTERROGATIVE,
         KA_IRREGULAR_PAST,
         KA_DEMONSTRATIVES,
@@ -6130,6 +6156,24 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'present_verb_untranslated', message: 'Present screeve untranslated (KA-126): Georgian present (აწმყო) = v-class person markers on a verb-specific stem — a dictionary form. Attested: know(fact)→ვიცი (I ვიცი, we ვიცით, he/she იცის, they იციან) · know(person)→ვიცნობ (ვიცნობ მას I know him; იცნობს/იცნობენ) · see→ვხედავ (ვხედავ/ვხედავთ/ხედავს/ხედავენ) · eat→ვჭამ (ვჭამ/ვჭამთ/ჭამს/ჭამენ) · drink→ვსვამ (ვსვამ/ვსვამთ/სვამს/სვამენ) · read→ვკითხულობ (ვკითხულობ/ვკითხულობთ/კითხულობს/კითხულობენ) · write→ვწერ (ვწერ/ვწერთ/წერს/წერენ) · say→ვამბობ (ვამბობ/ვამბობთ/ამბობს/ამბობენ; "tell someone" takes the ეუბნებ- series — AI decides) · think→ვფიქრობ (ვფიქრობ/ვფიქრობთ/ფიქრობს/ფიქრობენ) · make/do→ვაკეთებ (ვაკეთებ/ვაკეთებთ/აკეთებს/აკეთებენ). 2nd person is T–V gated (იცი vs იცით; AI decides შენ/თქვენ register). it-subjects: AI-gated. do/does-support DROPS — the question is formed by intonation (იცი? do you know). NEGATED present: არ directly before the verb (არ ვიცი, არ ხედავს) — never არ know. Sleeping is an INVERSION verb (მას სძინავს — dative subject, AI rebuild).' });
     }
 
+    // 3.126 Locative postposition residue (v1.45.0, KA-127). Detect the
+    //      high-frequency COPULA+LOCATIVE frames that fix 4.112 maps
+    //      deterministically (next to / on / in / under / behind / in front
+    //      of / between / near / above / outside / inside / far from).
+    const locFrame =
+        /\b(?:is|are|was|were)\s+(?:next\s+to|beside|on|in|under|behind|in\s+front\s+of|between|near|above|outside|inside|far\s+from)\b/i.test(text) ||
+        /^\s*(?:next\s+to|near|far\s+from)\b/i.test(text) ||
+        // Mixed-residue branch: Georgian word directly followed by an
+        // untranslated English locative (e.g. 'the pen არის next to the
+        // phone') — frame reached neither the English-copula branch nor
+        // the string-start branch, but the locative is still stranded.
+        /[\u10A0-\u10FF]\s+(?:next\s+to|beside|on|in|under|behind|in\s+front\s+of|between|near|above|outside|inside|far\s+from)\b/i.test(text);
+    const locCarrier =
+        /-ზე\b|-ში\b|-თან\b|-დან\b|(?<![\u10A0-\u10FF])(?:გვერდით|ქვეშ|უკან|წინ|შორის|ახლოს|ზემოთ|გარეთ|შიგნით|შორს|აქიდან)(?![\u10A0-\u10FF])/.test(text);
+    if (locFrame && !locCarrier) {
+        issues.push({ rule: 'locative_postposition_untranslated', message: 'Locative postposition untranslated (KA-127): Georgian uses postpositions/case endings for location. Attested carriers: -ზე (on), -ში (in), -თან ახლოს (near), X-ის ქვეშ (under), X-ის უკან (behind), X-ის წინ (in front of), X-ს შორის (between), X-ის გარეთ (outside), X-ის შიგნით (inside), X-ის გვერდით (next to/beside), X-ის ზემოთ (above), X-დან შორს / აქიდან შორს (far from). Temporal next (next week/day/…) must stay as შემდეგ/მომავალ; only locative next+to is consumed.' });
+    }
+
     return issues;
 }
 
@@ -6823,6 +6867,61 @@ function correctGeorgianMorphology(text) {
         const tail = tails[d.toLowerCase()];
         return tail ? w + ' ' + tail : m;
     });
+
+    // 4.112 Locative postpositions (KA-127). MUST run BEFORE 4.70's bare
+    //      next→შემდეგ, otherwise "next to" is destroyed into "შემდეგ to".
+    //      Strategy: consume high-confidence copula+locative frames and
+    //      emit a Georgian carrier with a lightweight case marker on the
+    //      (often English) noun residue (e.g. table-ზე, house-ის გარეთ).
+    const kaAttach = (phrase, suffix) => {
+        const parts = (phrase || '').trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return phrase;
+        const last = parts.pop();
+        const isKa = /[\u10A0-\u10FF]/.test(last);
+        const outLast = isKa ? (last + suffix) : (last + '-' + suffix);
+        parts.push(outLast);
+        return parts.join(' ');
+    };
+    const kaGen = (phrase) => kaAttach(phrase, 'ის');
+    const kaDat = (phrase) => kaAttach(phrase, 'ს');
+
+    // far from here → აქიდან შორს (lexicalized)
+    out = out.replace(/\bfar\s+from\s+here\b/gi, 'აქიდან შორს');
+    // far from X → X-დან შორს (place default; person/abstract -გან is AI-pass)
+    out = out.replace(/\bfar\s+from\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, obj) => `${kaAttach(obj, 'დან')} შორს`);
+
+    // next to + determiner phrases ("her friend", "my brother") — drop the
+    // English determiner and attach genitive to the noun head.
+    out = out.replace(/\bnext\s+to\s+(?:my|your|his|her|our|their)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, obj) => `${kaGen(obj)} გვერდით`);
+
+    // next to + pronouns (genitive pronouns are fixed forms)
+    out = out.replace(/\bnext\s+to\s+me\b/gi, 'ჩემ გვერდით');
+    out = out.replace(/\bnext\s+to\s+(?:him|her)\b/gi, 'მის გვერდით');
+    out = out.replace(/\bnext\s+to\s+them\b/gi, 'მათ გვერდით');
+    out = out.replace(/\bnext\s+to\s+us\b/gi, 'ჩვენ გვერდით');
+
+    // next to / beside + NP → NP-ის გვერდით (NP can be 1–2 words)
+    out = out.replace(/\b(?:right\s+)?next\s+to\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, obj) => `${kaGen(obj)} გვერდით`);
+    out = out.replace(/\bbeside\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, obj) => `${kaGen(obj)} გვერდით`);
+
+    // Copula-anchored locatives (avoid touching calendar/time idioms).
+    // IMPORTANT ORDER: the specific "in front of" rule must run BEFORE the
+    // generic "in" rule, otherwise "in front of X" gets degraded into
+    // "front-of-...-ში".
+    out = out.replace(/\b(is|are|was|were)\s+on\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, be, obj) => `${be} ${kaAttach(obj, 'ზე')}`);
+    out = out.replace(/\b(is|are|was|were)\s+in\s+front\s+of\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, be, obj) => `${be} ${kaGen(obj)} წინ`);
+    out = out.replace(/\b(is|are|was|were)\s+in\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, be, obj) => `${be} ${kaAttach(obj, 'ში')}`);
+    out = out.replace(/\b(is|are|was|were)\s+under\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, be, obj) => `${be} ${kaGen(obj)} ქვეშ`);
+    out = out.replace(/\b(is|are|was|were)\s+behind\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, be, obj) => `${be} ${kaGen(obj)} უკან`);
+    out = out.replace(/\b(is|are|was|were)\s+between\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, be, obj) => `${be} ${kaDat(obj)} შორის`);
+    out = out.replace(/\b(is|are|was|were)\s+near\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, be, obj) => `${be} ${kaAttach(obj, 'თან')} ახლოს`);
+    out = out.replace(/\b(is|are|was|were)\s+above\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, be, obj) => `${be} ${kaGen(obj)} ზემოთ`);
+    out = out.replace(/\b(is|are|was|were)\s+outside\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, be, obj) => `${be} ${kaGen(obj)} გარეთ`);
+    out = out.replace(/\b(is|are|was|were)\s+inside\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, be, obj) => `${be} ${kaGen(obj)} შიგნით`);
+
+    // Bare "near X" / "next to X" fragments (common residue shapes)
+    out = out.replace(/(^|[.!?]\s+)near\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, p, obj) => `${p}${kaAttach(obj, 'თან')} ახლოს`);
+    out = out.replace(/(^|[.!?]\s+)next\s+to\s+(?:the\s+)?([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/gi, (m, p, obj) => `${p}${kaGen(obj)} გვერდით`);
 
     // 4.70 Untranslated English sequencers → Georgian narrative chain.
     out = out.replace(/\bfirst of all\b/gi, 'პირველ რიგში');
@@ -8262,12 +8361,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.44.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.45.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 127,
-    qaRules: 126,
-    autoFixes: 111,
-    researchSources: 378
+    promptBlocks: 128,
+    qaRules: 127,
+    autoFixes: 112,
+    researchSources: 379
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────

@@ -1,9 +1,9 @@
 // Smoke test for v1.42.0 — Modals & auxiliaries (KA-124, QA 3.123, Fix 4.109)
 // All expectations CAPTURED from actual v1.42.0 engine output (capture-then-pin).
-// (version guard updated for v1.44.0; all 4.109/QA pins re-verified under 1.44.0)
+// (version guard updated for v1.45.0; all 4.109/QA pins re-verified under 1.45.0)
 const { validateGeorgianTranslation, correctGeorgianMorphology, GEORGIAN_KNOWLEDGE_VERSION, GEORGIAN_KNOWLEDGE_STATS } = require('./static/georgian-linguistics.js');
 console.log('Version:', GEORGIAN_KNOWLEDGE_VERSION, '| stats:', JSON.stringify(GEORGIAN_KNOWLEDGE_STATS));
-if (GEORGIAN_KNOWLEDGE_VERSION !== '1.44.0') { console.error('FAIL: version not 1.44.0'); process.exit(1); }
+if (GEORGIAN_KNOWLEDGE_VERSION !== '1.45.0') { console.error('FAIL: version not 1.45.0'); process.exit(1); }
 
 // --- Fix 4.109: ability — subject+can consumed ATOMICALLY into შე-ძლია
 //     family (person lives in the prefix; he/they consumed INTO the modal);

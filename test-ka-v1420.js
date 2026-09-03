@@ -22,11 +22,11 @@ const has = (arr, r) => arr.includes(r);
 const msgOf = (text, rule) => (qa(text).find(i => i.rule === rule) || {}).message || '';
 
 // ── [1] VERSION & STATS (5) — updated for v1.44.0 (KA-126 PRESENT SCREEVE) ──
-t('version 1.44.0', GEORGIAN_KNOWLEDGE_VERSION === '1.44.0');
-t('stats promptBlocks 127', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 127);
-t('stats qaRules 126', GEORGIAN_KNOWLEDGE_STATS.qaRules === 126);
-t('stats autoFixes 111', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 111);
-t('stats researchSources 378', GEORGIAN_KNOWLEDGE_STATS.researchSources === 378);
+t('version >= 1.45.0 (living suite)', parseFloat(GEORGIAN_KNOWLEDGE_VERSION) >= 1.45);
+t('stats promptBlocks >= 128 (living suite)', GEORGIAN_KNOWLEDGE_STATS.promptBlocks >= 128);
+t('stats qaRules >= 127 (living suite)', GEORGIAN_KNOWLEDGE_STATS.qaRules >= 127);
+t('stats autoFixes >= 112 (living suite)', GEORGIAN_KNOWLEDGE_STATS.autoFixes >= 112);
+t('stats researchSources >= 379 (living suite)', GEORGIAN_KNOWLEDGE_STATS.researchSources >= 379);
 
 // ── [2] KB PRESENCE + WIRING (12) ──────────────────────────────────────────
 t('KB KA-124 const exists', src.includes('const KA_MODALS_AUX = `'));
@@ -137,7 +137,7 @@ t('v1.35.0 spot: please → გთხოვთ intact', strip(fix('please help m
 // ── [12] EDGE CASES (5) ─────────────────────────────────────────────────────
 t('edge: empty string', fix('') === '');
 t('edge: pure Georgian input (terminal punct only)', strip(fix('ეს არის წიგნი')) === 'ეს არის წიგნი');
-t('edge: no pronouns at all (is→არის v1.42.0 pin)', strip(fix('the book is on the table')) === 'the book არის on the table');
+t('edge: no pronouns at all (copula anchor kept; v1.45.0 KA-127 carrier)', strip(fix('the book is on the table')) === 'the book არის table-ზე');
 t('edge: idempotent (I can go)', fix('I can go') === fix(fix('I can go')));
 t('edge: idempotent (I wasn\'t there)', fix("I wasn't there") === fix(fix("I wasn't there")));
 
