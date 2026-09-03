@@ -110,9 +110,19 @@ async function manifest() {
     }
   }
 
-  // 3. Handbook + changelog at the repo root so the next agent reads them first.
-  for (const doc of ["PROJECT.md", "CHANGELOG.md"]) {
-    files.push({ repoPath: doc, localPath: doc });
+  // 3. Handbook + changelog at the repo root so the next agent reads them first,
+  //    plus the Google Stitch design reference screens.
+  for (const doc of [
+    "PROJECT.md",
+    "CHANGELOG.md",
+    "docs/design/stitch-screens.html.txt",
+  ]) {
+    try {
+      await stat(doc);
+      files.push({ repoPath: doc, localPath: doc });
+    } catch {
+      /* optional file */
+    }
   }
   return files;
 }
