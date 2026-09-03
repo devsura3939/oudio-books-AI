@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.46.4';
-const ENGINE_VERSION = 'v1.46.4 (Lumina-VisionPRO)';
+const APP_VERSION = 'v1.46.5';
+const ENGINE_VERSION = 'v1.46.5 (Lumina-MultiBurst+ServerAI)';
 
 let db = null;
 let currentBook = null;
@@ -3644,7 +3644,27 @@ window.applyKaRuleEngine = applyKaRuleEngine;
 // its name (many call sites) but it is now Tier B, not a raw MT passthrough.
 async function translateChunkLocal(clean, targetLang) {
     const srcLang = detectTextLang(clean);
-    // Google Dict-Chrome-Ex first (ultra-stable, zero rate-limiting)
+
+    // Tier 0: Check server-side Python translation engine (/api/server-translate)
+    try {
+        const srvRes = await fetch("/api/server-translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: clean, source_lang: srcLang, target_lang: targetLang })
+        });
+        if (srvRes.ok) {
+            const srvData = await srvRes.json();
+            if (srvData && srvData.translated && srvData.translated.trim()) {
+                const refined = targetLang === 'ka' ? applyKaRuleEngine(srvData.translated) : srvData.translated;
+                recordEngineUse('rules');
+                return refined;
+            }
+        }
+    } catch (e) {
+        // Server not available, fallback to client endpoints
+    }
+
+    // Google Dict-Chrome-Ex (ultra-stable, zero rate-limiting)
     try {
         const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=${srcLang}&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean)}`;
         const gRes = await fetch(gUrl);

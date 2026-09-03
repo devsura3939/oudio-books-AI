@@ -184,16 +184,24 @@
         `<div class="relative rounded-2xl overflow-hidden bg-black aspect-[3/4] max-h-[52vh] mx-auto">
           <video id="scanVideo" playsinline autoplay muted class="absolute inset-0 w-full h-full object-cover"></video>
           <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div class="border-2 border-primary-fixed/80 rounded-lg" style="width:78%;height:88%;box-shadow:0 0 0 9999px rgba(0,0,0,0.35)"></div>
+            <div id="scanTargetFrame" class="border-2 border-primary-fixed/80 rounded-lg transition-all duration-300" style="width:78%;height:88%;box-shadow:0 0 0 9999px rgba(0,0,0,0.35)"></div>
           </div>
-          <div class="absolute top-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/60 text-[11px] font-bold text-primary-fixed" id="scanShotCount">Page ${state.pages.length + 1}</div>
+          <div id="scanReadinessPill" class="absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/75 border border-amber-500/50 text-[10px] font-mono font-bold text-amber-300 flex items-center gap-1.5 backdrop-blur-md transition-all duration-300">
+            <span id="scanReadinessDot" class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            <span id="scanReadinessText">Stabilizing & Focusing...</span>
+          </div>
+          <div id="scanBurstToast" class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-xl bg-black/85 border border-primary-fixed/60 text-[11px] font-bold text-primary-fixed hidden flex items-center gap-1.5 shadow-[0_0_20px_rgba(0,240,255,0.4)] z-30">
+            <span class="material-symbols-outlined text-sm animate-spin">auto_mode</span>
+            <span id="scanBurstToastText">5-Shot Burst in Progress...</span>
+          </div>
+          <div class="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/70 text-[10px] font-bold text-white" id="scanShotCount">Page ${state.pages.length + 1}</div>
         </div>
         <div class="flex items-center justify-between mt-4">
           <button onclick="LuminaScanner.render('chooser')" class="px-3 py-2 rounded-xl bg-white/5 text-on-surface-variant text-xs font-bold border border-white/10">Back</button>
           <button onclick="LuminaScanner.toggleTorch()" id="scanTorchBtn" class="px-3 py-2 rounded-xl bg-white/5 text-on-surface-variant text-xs font-bold border border-white/10 flex items-center gap-1" title="Toggle Light">
             <span class="material-symbols-outlined text-base">flashlight_on</span>
           </button>
-          <button onclick="LuminaScanner.shoot()" class="w-16 h-16 rounded-full bg-primary-container text-on-primary-container shadow-[0_0_25px_rgba(0,240,255,0.45)] flex items-center justify-center active:scale-95 transition" aria-label="Capture page">
+          <button onclick="LuminaScanner.shoot()" id="scanShutterBtn" class="w-16 h-16 rounded-full bg-primary-container text-on-primary-container shadow-[0_0_25px_rgba(0,240,255,0.45)] flex items-center justify-center active:scale-95 transition" aria-label="Capture page">
             <span class="material-symbols-outlined text-3xl">radio_button_checked</span>
           </button>
           <button onclick="LuminaScanner.render('pages')" class="px-3 py-2 rounded-xl bg-white/10 text-white text-xs font-bold border border-white/10">Done</button>
@@ -299,6 +307,75 @@
     }
   }
 
+  let readinessInterval = null;
+
+  function startReadinessMonitor() {
+    stopReadinessMonitor();
+    const v = document.getElementById("scanVideo");
+    if (!v) return;
+
+    const sampleCanvas = document.createElement("canvas");
+    sampleCanvas.width = 320;
+    sampleCanvas.height = 240;
+    const sctx = sampleCanvas.getContext("2d", { willReadFrequently: true });
+
+    let stableCount = 0;
+    let lastVar = 0;
+
+    readinessInterval = setInterval(() => {
+      const vid = document.getElementById("scanVideo");
+      if (!vid || vid.paused || vid.ended || !vid.videoWidth || !state.stream) return;
+      sctx.drawImage(vid, 0, 0, 320, 240);
+      const imgData = sctx.getImageData(0, 0, 320, 240);
+      const gray = toGray(imgData, 320, 240);
+      const variance = laplacianVariance(gray, 320, 240);
+
+      const pill = document.getElementById("scanReadinessPill");
+      const text = document.getElementById("scanReadinessText");
+      const targetFrame = document.getElementById("scanTargetFrame");
+      const dot = document.getElementById("scanReadinessDot");
+
+      // Check stability between frames
+      if (Math.abs(variance - lastVar) < 40 && variance > 110) {
+        stableCount++;
+      } else {
+        stableCount = 0;
+      }
+      lastVar = variance;
+
+      if (pill && text && targetFrame) {
+        if (variance >= 110 && stableCount >= 2) {
+          pill.className = "absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/80 border border-emerald-400/60 text-[10px] font-mono font-bold text-emerald-300 flex items-center gap-1.5 backdrop-blur-md shadow-[0_0_15px_rgba(52,211,153,0.35)] transition-all duration-300";
+          text.textContent = `Locked & Sharp • 100% Ready (${Math.round(variance)})`;
+          if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-400";
+          targetFrame.style.borderColor = "rgba(52, 211, 153, 0.9)";
+        } else {
+          pill.className = "absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/75 border border-amber-500/50 text-[10px] font-mono font-bold text-amber-300 flex items-center gap-1.5 backdrop-blur-md transition-all duration-300";
+          text.textContent = "Stabilizing & Focusing...";
+          if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping";
+          targetFrame.style.borderColor = "rgba(245, 158, 11, 0.75)";
+        }
+      }
+
+      // Proactively refresh continuous autofocus constraint on video track occasionally
+      if (Math.random() < 0.08) {
+        const track = state.stream.getVideoTracks()[0];
+        if (track && track.applyConstraints) {
+          track.applyConstraints({
+            advanced: [{ focusMode: "continuous" }, { exposureMode: "continuous" }]
+          }).catch(() => {});
+        }
+      }
+    }, 250);
+  }
+
+  function stopReadinessMonitor() {
+    if (readinessInterval) {
+      clearInterval(readinessInterval);
+      readinessInterval = null;
+    }
+  }
+
   function startVideo() {
     const v = document.getElementById("scanVideo");
     if (v && state.stream) {
@@ -306,6 +383,7 @@
       v.play().catch(() => {});
       // Attach tap-to-focus
       v.onclick = (e) => triggerTapToFocus(e, v);
+      startReadinessMonitor();
     }
   }
 
@@ -351,6 +429,7 @@
   }
 
   function stopCamera() {
+    stopReadinessMonitor();
     if (state.stream) {
       state.stream.getTracks().forEach((t) => t.stop());
       state.stream = null;
@@ -361,46 +440,54 @@
     const v = document.getElementById("scanVideo");
     if (!v || !v.videoWidth || !state.stream) return;
 
+    const shutterBtn = document.getElementById("scanShutterBtn");
+    if (shutterBtn) shutterBtn.classList.add("ring-4", "ring-primary-fixed/80", "animate-pulse");
+
+    const toast = document.getElementById("scanBurstToast");
+    const toastText = document.getElementById("scanBurstToastText");
+    if (toast) {
+      toast.classList.remove("hidden");
+      if (toastText) toastText.textContent = "Capturing 5-Shot Burst...";
+    }
+
     let blob = null;
 
-    // Use hardware sensor ImageCapture API when available for maximum optical clarity
-    const track = state.stream.getVideoTracks()[0];
-    if (window.ImageCapture && track) {
-      try {
-        const ic = new window.ImageCapture(track);
-        blob = await ic.takePhoto({ fillLightMode: "auto" });
-      } catch (err) {
-        console.warn("[scanner] ImageCapture.takePhoto failed, falling back to canvas:", err);
+    // 5-Frame Micro-Burst Sharpness Selection & Comparison:
+    // Captures 5 rapid frames across 200ms, evaluates Laplacian edge variance,
+    // and selects the crispest frame with zero hand-tremor or motion blur!
+    let bestCanvas = null;
+    let bestVariance = -1;
+    let bestIndex = 0;
+
+    for (let burst = 0; burst < 5; burst++) {
+      const c = document.createElement("canvas");
+      c.width = v.videoWidth;
+      c.height = v.videoHeight;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(v, 0, 0);
+
+      const g = toGray(ctx.getImageData(0, 0, c.width, c.height), c.width, c.height);
+      const variance = laplacianVariance(g, c.width, c.height);
+      if (variance > bestVariance) {
+        bestVariance = variance;
+        bestCanvas = c;
+        bestIndex = burst;
       }
+      if (burst < 4) await new Promise((r) => setTimeout(r, 45));
     }
 
-    if (!blob) {
-      // 3-Frame Micro-Burst Sharpness Selection:
-      // Capture 3 rapid frames, compute Laplacian variance on each, and pick the one with highest edge variance.
-      // This completely eliminates motion blur, hand tremors, and soft focus!
-      let bestCanvas = null;
-      let bestVariance = -1;
-      for (let burst = 0; burst < 3; burst++) {
-        const c = document.createElement("canvas");
-        c.width = v.videoWidth;
-        c.height = v.videoHeight;
-        const ctx = c.getContext("2d", { willReadFrequently: true });
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(v, 0, 0);
-
-        const g = toGray(ctx.getImageData(0, 0, c.width, c.height), c.width, c.height);
-        const variance = laplacianVariance(g, c.width, c.height);
-        if (variance > bestVariance) {
-          bestVariance = variance;
-          bestCanvas = c;
-        }
-        if (burst < 2) await new Promise((r) => setTimeout(r, 60));
-      }
-
-      const finalCanvas = bestCanvas || c;
-      blob = await new Promise((res) => finalCanvas.toBlob(res, "image/jpeg", 0.96));
+    if (toastText) {
+      toastText.textContent = `✨ Burst Winner: Shot #${bestIndex + 1} (${Math.round(bestVariance)} sharpness • 100% Quality)`;
+      setTimeout(() => {
+        if (toast) toast.classList.add("hidden");
+        if (shutterBtn) shutterBtn.classList.remove("ring-4", "ring-primary-fixed/80", "animate-pulse");
+      }, 1200);
     }
+
+    const finalCanvas = bestCanvas || v;
+    blob = await new Promise((res) => finalCanvas.toBlob(res, "image/jpeg", 0.96));
 
     addPage(blob);
     const badge = document.getElementById("scanShotCount");

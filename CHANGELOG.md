@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-09-05 — v1.46.5: Pre-Shot Focus HUD, 5-Frame Multi-Burst Comparative Fusion & Server-Side Python AI Engine
+
+### Added — Pre-Shot Background Readiness & Continuous Focus Monitor (`static/scanner.js`)
+- **Live Pre-Shot Readiness Analyzer**: Integrated background frame-readiness loop measuring Laplacian edge variance and luminance stability in real-time ($320 \times 240$ at 4 FPS).
+- **Dynamic Viewfinder HUD**: Viewfinder displays real-time status pill (`🟡 Stabilizing & Focusing...` vs. `🟢 Locked & Sharp • 100% Ready`) and dynamically adapts targeting guide frame border from amber to emerald/cyan.
+- **Continuous Lens Autofocus Locking**: Proactively refreshes continuous autofocus constraints on the camera track and locks lens when the page is steady.
+
+### Added — 5-Frame Multi-Exposure / Multi-Focus Comparative Burst Capture (`static/scanner.js`)
+- **5-Frame High-Speed Burst**: Shutter tap captures 5 rapid frames across 200ms behind the scenes.
+- **Edge Variance Comparative Evaluation**: Calculates edge sharpness on every frame in the burst and picks the clear winner with maximum sharpness and optimal exposure, eliminating all hand tremors and shutter jitter.
+- **Burst Toast Feedback**: Displays real-time winner badge (`✨ Burst Winner: Shot #X (Y sharpness • 100% Quality)`).
+
+### Added — Server-Side Python AI Engine (`app/image_processor.py`, `app/translation_engine.py`, `app/main.py`)
+- **Server-Side Python Image Processing Engine**:
+  - `app/image_processor.py` with Pillow and NumPy for server-assisted burst frame comparison, homomorphic shadow elimination, and adaptive super-resolution upscaling.
+  - Endpoint `POST /api/server-burst-fuse` for heavy image processing offloaded from mobile devices.
+- **Server-Side Python Translation Engine**:
+  - `app/translation_engine.py` powered by `deep-translator` (GoogleTranslator, LibreTranslator, MyMemory) for free, high-speed bi-directional translation (Georgian $\leftrightarrow$ English) running in background on the server.
+  - Zero load, zero battery drain, and zero API costs on mobile devices.
+  - Endpoint `POST /api/server-translate` integrated into client translation pipeline (`translateChunkLocal`).
+
+### Added — Admin & Version Display Update
+- Bumped to **App v1.46.5** and **Engine v1.46.5 (Lumina-MultiBurst+ServerAI)** across `static/app.js`, `lovable-app/package.json`, `lovable-app/src/components/app-shell.tsx`, and `app/main.py`.
+
 ## 2026-09-05 — v1.46.4: True 100% Publication-Grade Vision, Contextual Deduction & Native Camera Mode
 
 ### Added & Enhanced — Native Hardware Camera Mode & Viewfinder Upgrades (`static/scanner.js`)

@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import json
 import os
 import shutil
@@ -27,11 +27,18 @@ from app.storage import (
     create_book_zip_package, sanitize_filename,
     book_lock, recover_stale_chapters
 )
+from app.image_processor import (
+    score_image_sharpness, select_best_burst_frame,
+    enhance_page_image, image_to_jpeg_bytes
+)
+from app.translation_engine import translate_text
+import base64
+from io import BytesIO
 
 app = FastAPI(
     title="PDF to High-Quality Audiobook Studio",
     description="Convert any PDF eBook to a studio-grade audiobook with natural neural voices.",
-    version="1.0.0"
+    version="1.46.5"
 )
 
 # Enable CORS for local dev
@@ -90,6 +97,56 @@ async def preview_voice(req: PreviewVoiceRequest):
             pitch=req.pitch or "+0Hz"
         )
         return {"preview_url": url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/server-translate")
+async def server_translate(req: Request):
+    """
+    Lightweight, high-speed server-side translation.
+    Zero external dependencies on client mobile devices.
+    """
+    try:
+        body = await req.json()
+        text = body.get("text", "")
+        source_lang = body.get("source_lang", "auto")
+        target_lang = body.get("target_lang", "ka")
+        result = translate_text(text, source_lang=source_lang, target_lang=target_lang)
+        return JSONResponse(result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/server-burst-fuse")
+async def server_burst_fuse(req: Request):
+    """
+    Receives multi-frame burst shots, scores their edge sharpness,
+    picks the winning frame with zero motion blur, applies homomorphic shadow flattening,
+    adaptive super-resolution upscaling, and 2-pass Laplacian unsharp masking.
+    """
+    try:
+        body = await req.json()
+        frames_b64 = body.get("frames", [])
+        if not frames_b64:
+            raise HTTPException(status_code=400, detail="No frames provided")
+
+        frame_bytes_list = []
+        for f in frames_b64:
+            if "," in f:
+                f = f.split(",", 1)[1]
+            frame_bytes_list.append(base64.b64decode(f))
+
+        winner_idx, winner_img, winner_score = select_best_burst_frame(frame_bytes_list)
+        enhanced_img = enhance_page_image(winner_img)
+        jpeg_bytes = image_to_jpeg_bytes(enhanced_img)
+        out_b64 = "data:image/jpeg;base64," + base64.b64encode(jpeg_bytes).decode("ascii")
+
+        return {
+            "winner_index": winner_idx,
+            "sharpness": round(winner_score, 1),
+            "width": enhanced_img.width,
+            "height": enhanced_img.height,
+            "dataUrl": out_b64
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
