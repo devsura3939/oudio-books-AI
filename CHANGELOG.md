@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-09-03 — Apply the Google Stitch "Lumina Audio" design system
+
+- Adopted the Stitch Material token set (surface `#10131a`, `primary-container` `#00f0ff`,
+  `secondary` `#dcb8ff`, `on-surface` `#e1e2eb`) as the app-wide palette in `src/styles.css`,
+  dark-only, with `glass-panel`, `input-glass`, `btn-glow`, `bg-radial-gradient` and
+  `label-caps` utilities lifted from the Stitch screens.
+- Loaded Inter + Space Grotesk + Material Symbols in `src/routes/__root.tsx`; the shell is
+  now `<html class="dark">`.
+- Rebuilt the landing page, sign-in page and library in the Stitch visual language
+  (radial glow background, frosted panels, cyan glow CTAs, Material Symbols icons).
+  No behaviour changed: auth, PDF import, chapter writes and delete use the same code.
+- Retuned the vendored studio (`public/studio/`) from indigo/purple to the Stitch
+  cyan/lavender palette and exact surface values, CSS/token level only — reader, TTS,
+  translation and Georgian engine untouched.
+- Stored the 14 Stitch reference screens at `docs/design/stitch-screens.html.txt` so future
+  agents can diff against the intended design.
+
+
 All notable changes to this project. Newest first.
 Agents: append an entry here for every change set, and keep `PROJECT.md` in sync.
 

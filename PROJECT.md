@@ -148,3 +148,31 @@ rotated; keys never belong in client code.
 * Supabase Auth **Site URL / Redirect URLs** must list the app origins, otherwise confirmation
   emails fall back to `http://localhost:3000`.
 
+
+## Design system (source of truth)
+
+The intended visual design is the Google Stitch project *Lumina Audio*
+(`https://stitch.withgoogle.com/projects/7169823663306117044`). All 14 exported screens are
+committed at `docs/design/stitch-screens.html.txt` — read them before changing any UI.
+
+Tokens (Material 3 export, dark only):
+
+| token | value |
+| --- | --- |
+| `surface` / `background` | `#10131a` |
+| `surface-container` | `#1d2026` |
+| `surface-container-high` | `#272a31` |
+| `primary-container` (CTA fill) | `#00f0ff` |
+| `on-primary-container` (CTA text) | `#00363a` |
+| `primary-fixed-dim` (links) | `#00dbe9` |
+| `secondary` | `#dcb8ff` |
+| `on-surface` / `on-surface-variant` | `#e1e2eb` / `#b9cacb` |
+
+Type: Inter (display/body), Space Grotesk (12px uppercase 0.1em labels). Icons: Material
+Symbols Outlined. Surfaces: `.glass-panel` frosted cards, radial cyan glow backgrounds,
+`.btn-glow` cyan CTAs. In the Lovable app these live as oklch tokens plus `@utility` blocks in
+`src/styles.css`; the vendored studio mirrors the same hexes in its Tailwind CDN config
+(`public/studio/index.html`) and `public/studio/static/styles.css`.
+
+Rule for future agents: restyle by editing tokens/utilities, never by rewriting the studio's
+reader, TTS, translation or Georgian-engine code.

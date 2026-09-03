@@ -1,12 +1,9 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Headphones, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { db } from "@/integrations/external-supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -65,58 +62,105 @@ function AuthPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="w-full max-w-sm">
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2 font-semibold">
-          <Headphones className="size-5 text-primary" /> Lumina Audio Studio
-        </Link>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-radial-gradient px-5 text-on-surface">
+      <div className="pointer-events-none absolute -top-[20%] -left-[10%] size-[50vw] rounded-full bg-primary-container/5 blur-[120px] mix-blend-screen" />
+      <div className="pointer-events-none absolute -right-[10%] -bottom-[20%] size-[60vw] rounded-full bg-secondary/5 blur-[150px] mix-blend-screen" />
 
-        {sentConfirmation ? (
-          <div className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-            We sent a confirmation link to <span className="text-foreground">{email}</span>. Confirm
-            it, then sign in.
-          </div>
-        ) : (
-          <form onSubmit={submit} className="space-y-4 rounded-lg border border-border bg-card p-6">
-            <h1 className="text-lg font-semibold">
-              {mode === "signin" ? "Sign in" : "Create your account"}
-            </h1>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-              {mode === "signin" ? "Sign in" : "Sign up"}
-            </Button>
-            <button
-              type="button"
-              className="w-full text-sm text-muted-foreground hover:text-foreground"
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+      <div className="relative z-10 w-full max-w-md">
+        <div className="glass-panel flex w-full flex-col gap-8 rounded-xl p-8 md:p-10">
+          <Link to="/" className="flex flex-col items-center gap-3 text-center">
+            <span
+              className="material-symbols-outlined text-[48px] text-primary-container"
+              style={{ fontVariationSettings: "'FILL' 1" }}
             >
-              {mode === "signin" ? "No account? Sign up" : "Already have an account? Sign in"}
-            </button>
-          </form>
-        )}
+              graphic_eq
+            </span>
+            <span>
+              <span className="block text-[32px] leading-10 font-bold tracking-[-0.02em]">
+                Lumina Audio
+              </span>
+              <span className="mt-1 block text-on-surface-variant">Premium AI Listening</span>
+            </span>
+          </Link>
+
+          {sentConfirmation ? (
+            <div className="text-center text-sm text-on-surface-variant">
+              <span
+                className="material-symbols-outlined mb-2 block text-[36px] text-primary-container"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                mark_email_read
+              </span>
+              We sent a confirmation link to{" "}
+              <span className="text-on-surface">{email}</span>. Confirm it, then sign in.
+            </div>
+          ) : (
+            <form onSubmit={submit} className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
+                <div className="group relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <span className="material-symbols-outlined text-on-surface-variant transition-colors group-focus-within:text-primary-container">
+                      mail
+                    </span>
+                  </div>
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    placeholder="Email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="input-glass w-full rounded-lg py-3 pr-4 pl-12 text-on-surface transition-all placeholder:text-on-surface-variant/50"
+                  />
+                </div>
+                <div className="group relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <span className="material-symbols-outlined text-on-surface-variant transition-colors group-focus-within:text-primary-container">
+                      lock
+                    </span>
+                  </div>
+                  <input
+                    id="password"
+                    type="password"
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                    required
+                    minLength={8}
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="input-glass w-full rounded-lg py-3 pr-4 pl-12 text-on-surface transition-all placeholder:text-on-surface-variant/50"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="btn-glow mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-primary-container py-3 font-bold text-on-primary-container disabled:opacity-60"
+              >
+                {busy ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                )}
+                {mode === "signin" ? "Sign In" : "Create Account"}
+              </button>
+            </form>
+          )}
+
+          {!sentConfirmation ? (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+                className="label-caps text-primary-fixed-dim transition-colors hover:text-primary-container"
+              >
+                {mode === "signin" ? "Create an account" : "I already have an account"}
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </main>
   );

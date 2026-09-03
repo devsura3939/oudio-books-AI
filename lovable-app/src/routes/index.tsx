@@ -1,19 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, Headphones, ShieldCheck, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Lumina Audio Studio — Turn PDFs into audiobooks" },
+      { title: "Lumina Audio — Premium AI listening for your PDFs" },
       {
         name: "description",
         content:
-          "Upload a PDF, get clean chapters and listen to them as narrated audio. Your library is private, stored in your own database.",
+          "Lumina Audio turns any PDF into a chaptered audiobook with AI narration, Georgian translation and a Moon+ style reader. Your library stays private.",
       },
-      { property: "og:title", content: "Lumina Audio Studio — Turn PDFs into audiobooks" },
+      { property: "og:title", content: "Lumina Audio — Premium AI listening for your PDFs" },
       {
         property: "og:description",
-        content: "Upload a PDF, split it into chapters, and listen chapter by chapter.",
+        content: "AI chaptering, high quality narration and a futuristic glass reader.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -22,62 +21,95 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+const features = [
+  {
+    icon: "auto_stories",
+    title: "AI chapter detection",
+    body: "Outlines first, heading heuristics next, long chapters split into readable parts.",
+  },
+  {
+    icon: "graphic_eq",
+    title: "Premium narration",
+    body: "Neural voices, browser speech or ElevenLabs — resumable sentence by sentence.",
+  },
+  {
+    icon: "translate",
+    title: "Georgian engine",
+    body: "A 1.45.0 knowledge base with 128 prompt blocks and 112 auto-fixes for literary KA.",
+  },
+  {
+    icon: "shield_lock",
+    title: "Private by design",
+    body: "Row level security keeps every book, chapter and audio file scoped to you.",
+  },
+];
+
 function Landing() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
-        <span className="flex items-center gap-2 font-semibold tracking-tight">
-          <Headphones className="size-5 text-primary" /> Lumina Audio Studio
-        </span>
-        <Link
-          to="/auth"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Sign in
-        </Link>
-      </header>
+    <main className="relative min-h-screen overflow-hidden bg-radial-gradient text-on-surface">
+      <div className="pointer-events-none absolute -top-[20%] -left-[10%] size-[50vw] rounded-full bg-primary-container/5 blur-[120px] mix-blend-screen" />
+      <div className="pointer-events-none absolute -right-[10%] -bottom-[20%] size-[60vw] rounded-full bg-secondary/5 blur-[150px] mix-blend-screen" />
 
-      <section className="mx-auto max-w-3xl px-6 pt-16 pb-10 text-center">
-        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-          Your PDFs, read out loud — chapter by chapter
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-muted-foreground">
-          Lumina parses a PDF into real chapters, keeps them in your private library, and narrates
-          them in the browser. Everything is scoped to your account.
-        </p>
-        <Link
-          to="/auth"
-          className="mt-8 inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Sparkles className="size-4" /> Start listening
-        </Link>
-      </section>
+      <div className="relative z-10">
+        <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-6 md:px-10">
+          <div className="flex items-center gap-3">
+            <span
+              className="material-symbols-outlined text-[32px] text-primary-container"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              graphic_eq
+            </span>
+            <div>
+              <p className="text-[18px] leading-5 font-bold text-primary-container">Lumina Audio</p>
+              <p className="text-[12px] text-on-surface-variant">Premium AI Listening</p>
+            </div>
+          </div>
+          <Link
+            to="/auth"
+            className="label-caps rounded-lg border border-white/10 px-4 py-2.5 text-on-surface transition-all hover:border-primary-container/50 hover:bg-white/5"
+          >
+            Sign in
+          </Link>
+        </header>
 
-      <section className="mx-auto grid max-w-5xl gap-4 px-6 pb-20 sm:grid-cols-3">
-        {[
-          {
-            icon: BookOpen,
-            title: "Real chapter detection",
-            body: "Headings first, page buckets as fallback, long chapters split into parts.",
-          },
-          {
-            icon: Headphones,
-            title: "Listen anywhere",
-            body: "Browser narration with adjustable voice and speed, resumable per chapter.",
-          },
-          {
-            icon: ShieldCheck,
-            title: "Private by default",
-            body: "Row level security means only you can read your books, chapters and files.",
-          },
-        ].map(({ icon: Icon, title, body }) => (
-          <article key={title} className="rounded-lg border border-border bg-card p-5">
-            <Icon className="size-5 text-primary" />
-            <h2 className="mt-3 font-medium">{title}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{body}</p>
-          </article>
-        ))}
-      </section>
+        <section className="mx-auto max-w-3xl px-5 pt-16 pb-12 text-center md:px-10">
+          <p className="label-caps text-primary-fixed-dim">AI audiobook studio</p>
+          <h1 className="mt-4 text-[32px] leading-10 font-bold tracking-[-0.02em] md:text-[48px] md:leading-14">
+            Every PDF you own, narrated like a studio audiobook
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-on-surface-variant">
+            Upload a book, let Lumina cut it into real chapters, then read along in the glass reader
+            or listen hands-free with high quality voices and Georgian translation.
+          </p>
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/auth"
+              className="btn-glow flex items-center gap-2 rounded-lg bg-primary-container px-6 py-3 font-bold text-on-primary-container"
+            >
+              Start listening
+              <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+            </Link>
+            <Link
+              to="/library"
+              className="label-caps rounded-lg border border-white/10 px-6 py-3.5 text-on-surface transition-all hover:border-primary-container/50 hover:bg-white/5"
+            >
+              Open my library
+            </Link>
+          </div>
+        </section>
+
+        <section className="mx-auto grid max-w-6xl gap-4 px-5 pb-24 md:grid-cols-2 md:px-10 lg:grid-cols-4">
+          {features.map(({ icon, title, body }) => (
+            <article key={title} className="glass-panel rounded-xl p-6">
+              <span className="material-symbols-outlined text-[28px] text-primary-container">
+                {icon}
+              </span>
+              <h2 className="mt-4 text-[18px] font-semibold">{title}</h2>
+              <p className="mt-2 text-sm text-on-surface-variant">{body}</p>
+            </article>
+          ))}
+        </section>
+      </div>
     </main>
   );
 }
