@@ -862,12 +862,34 @@
   function repairText(text, lang) {
     let t = text || "";
     if (!t) return t;
+
+    // Common print ligatures across all text
+    t = t.replace(/\uFB01/g, "fi")
+         .replace(/\uFB02/g, "fl")
+         .replace(/\uFB00/g, "ff")
+         .replace(/\uFB03/g, "ffi")
+         .replace(/\uFB04/g, "ffl");
+
     const isKa = lang === "kat" || (lang === "auto" && detectLang(t) === "kat");
     if (isKa) {
-      // Latin/Cyrillic look-alikes leaking into Georgian words.
-      const map = { o: "ო", e: "ე", a: "ა", c: "ც", g: "გ", b: "ბ", m: "მ", n: "ნ", p: "პ", h: "ჰ", "3": "ვ", "0": "ო" };
-      t = t.replace(/[\u10A0-\u10FF]+[A-Za-z0-9]+[\u10A0-\u10FF]*|[A-Za-z0-9]+[\u10A0-\u10FF]+/g, (chunk) =>
-        chunk.replace(/[A-Za-z0-9]/g, (c) => map[c.toLowerCase()] || ""),
+      // Comprehensive Latin/Cyrillic look-alikes leaking into Georgian words.
+      const map = {
+        // Latin lower
+        a: "ა", b: "ბ", c: "ც", d: "დ", e: "ე", f: "ფ", g: "გ", h: "ჰ",
+        i: "ი", j: "ჯ", k: "კ", l: "ი", m: "მ", n: "ნ", o: "ო", p: "პ",
+        q: "ყ", r: "რ", s: "ს", t: "ტ", u: "უ", v: "ვ", w: "წ", x: "ხ",
+        y: "ყ", z: "ზ",
+        // Digits & OCR glyphs frequently misread as Georgian letters
+        "0": "ო", "1": "ი", "3": "ვ", "4": "ჩ", "6": "ბ", "8": "გ",
+        "|": "ი", "/": "ი",
+        // Cyrillic look-alikes from Soviet-era fonts / Russian OCR leakage
+        "а": "ა", "б": "ბ", "в": "ვ", "г": "გ", "д": "დ", "е": "ე",
+        "з": "ზ", "и": "ი", "к": "კ", "л": "ლ", "м": "მ", "н": "ნ",
+        "о": "ო", "п": "პ", "р": "რ", "с": "ს", "т": "თ", "у": "უ",
+        "ф": "ფ", "х": "ხ", "ц": "ც", "ч": "ჩ", "ш": "შ"
+      };
+      t = t.replace(/[\u10A0-\u10FF]+[A-Za-z0-9а-яА-Я|/]+[\u10A0-\u10FF]*|[A-Za-z0-9а-яА-Я|/]+[\u10A0-\u10FF]+/g, (chunk) =>
+        chunk.replace(/[A-Za-z0-9а-яА-Я|/]/g, (c) => (map[c.toLowerCase()] !== undefined ? map[c.toLowerCase()] : c)),
       );
       t = t.replace(/([\u10A0-\u10FF])\s+([,.;:!?])/g, "$1$2");
     } else {
@@ -951,8 +973,14 @@
   function cleanPageText(raw, lang) {
     let t = (raw || "").replace(/\r/g, "");
     if (!t.trim()) return "";
-    // Join hyphenated line breaks, then collapse soft line breaks inside a paragraph.
-    t = t.replace(/(\p{L})[-\u2010\u2011]\n(\p{L})/gu, "$1$2");
+    // Join hyphenated line breaks, preserving legitimate hyphenated compounds
+    const compoundPrefixes = /^(self|well|cross|state|half|co|pre|post|non|multi|all|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)$/i;
+    t = t.replace(/(\p{L}+)[-\u2010\u2011]\n(\p{L}+)/gu, (match, before, after) => {
+      if (compoundPrefixes.test(before)) {
+        return before + "-" + after;
+      }
+      return before + after;
+    });
     t = t.replace(/([^\n])\n(?!\n)(?=\S)/g, "$1 ");
     t = t.replace(/[ \t]{2,}/g, " ");
     t = t.replace(/\n{3,}/g, "\n\n");
@@ -1119,9 +1147,11 @@
     if (!state.orderNote) alert("Not enough printed page numbers were recognised to re-order these pages.");
   }
 
-  window.LuminaScanner = {
+  const scannerApi = {
     reorderByPageNumbers,
     _autoOrder: autoOrderPages,
+    _repairText: repairText,
+    _cleanPageText: cleanPageText,
     _state: state,
     open,
     close,
@@ -1139,4 +1169,11 @@
     editPage,
     saveBook,
   };
+
+  if (typeof window !== "undefined") {
+    window.LuminaScanner = scannerApi;
+  }
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = scannerApi;
+  }
 })();

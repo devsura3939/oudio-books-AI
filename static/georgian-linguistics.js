@@ -4408,6 +4408,39 @@ postposition choice and stop the catastrophic next→შემდეგ error.
 GUARDS: temporal "next" (next week/day/station) stays owned by 4.70 and
 calendar rules; only the LOCATIVE bigram next+to is consumed here.`;
 
+// KA-128 v1.46.0 — Everyday verbs, question auxiliary frames, and core adjective collocations
+const KA_EVERYDAY_VERBS_QUESTIONS = `
+KA-128 EVERYDAY VERBS & QUESTION FRAMES —
+1. HIGH-FREQUENCY VERB PARADIGMS:
+   • TAKE (აღება/იღებს): Present: ვიღებ (1sg), ვიღებთ (1pl), იღებს (3sg), იღებენ (3pl). Aorist: ავიღე (1sg), ავიღეთ (1pl), აიღო (3sg, ergative subject: მან აიღო), აიღეს (3pl, მათ აიღეს).
+   • GIVE (მიცემა/აძლევს): Present: ვაძლევ (1sg), ვაძლევთ (1pl), აძლევს (3sg), აძლევენ (3pl). Aorist: მივეცი (1sg), მივეცით (1pl), მისცა (3sg, მან მისცა), მისცეს (3pl, მათ მისცეს).
+   • OPEN (გაღება/აღებს): Present: ვაღებ, ვაღებთ, აღებს, აღებენ. Aorist: გავაღე, გავაღეთ, გააღო, გააღეს.
+   • CLOSE (დახურვა/ხურავს): Present: ვხურავ, ვხურავთ, ხურავს, ხურავენ. Aorist: დავხურე, დავხურეთ, დახურა, დახურეს.
+   • WORK (მუშაობა/მუშაობს): Present: ვმუშაობ, ვმუშაობთ, მუშაობს, მუშაობენ. Aorist: ვიმუშავე, ვიმუშავეთ, იმუშავა, იმუშავეს.
+   • LIVE (ცხოვრება/ცხოვრობს): Present: ვცხოვრობ, ვცხოვრობთ, ცხოვრობს, ცხოვრობენ. Past: ვცხოვრობდი, ვცხოვრობდით, ცხოვრობდა, ცხოვრობდნენ.
+   • BUY (ყიდვა/ყიდულობს): Present: ვყიდულობ, ვყიდულობთ, ყიდულობს, ყიდულობენ. Aorist: ვიყიდე, ვიყიდეთ, იყიდა, იყიდეს.
+   • SELL (გაყიდვა/ყიდის): Present: ვყიდი, ვყიდით, ყიდის, ყიდიან. Aorist: გავყიდე, გავყიდეთ, გაყიდა, გაყიდეს.
+   • WAIT (ლოდინი/ელოდება): Present: ველოდები, ველოდებით, ელოდება, ელოდებიან.
+   • UNDERSTAND (გაგება/ესმის): Present (inversion): მესმის (to me), გვესმის (to us), ესმის (to him/her: მას ესმის), ესმით (to them: მათ ესმით).
+2. QUESTION FRAMES (English auxiliary inversion → Georgian intonation / question particles):
+   • "do you know" → იცი? (fact) / იცნობ? (person)
+   • "will you come" → მოხვალ?
+   • "can you help me" → შეგიძლია დამეხმარო?
+   • "what do you want" → რა გინდა?
+   • "how are you" → როგორ ხარ?
+   • "why not" → რატომ არა?
+   • "where do you live" → სად ცხოვრობ?
+   • "where are you" → სად ხარ?
+3. CORE ADJECTIVES & NOUN COLLOCATIONS:
+   • In Georgian, adjectives precede nouns and take truncated agreement in the nominative:
+     - "big house" → დიდი სახლი
+     - "small dog" → პატარა ძაღლი
+     - "new car" → ახალი მანქანა
+     - "old man" → მოხუცი კაცი
+     - "very good" → ძალიან კარგი
+     - "beautiful day" → ლამაზი დღე
+     - "long road" → გრძელი გზა`;
+
 // KA-112 v1.30.0 — Bare interrogatives (direct-question wh-words). All
 //                  FRAMED wh-uses are already consumed by earlier rules
 //                  (3.90/4.75 free relatives, 3.104/4.90 reported
@@ -4762,6 +4795,7 @@ function getKaKnowledgeBase() {
         KA_MODALS_AUX,
         KA_SPATIAL_DEICTIC,
         KA_LOCATIVE_POSTPOSITIONS,
+        KA_EVERYDAY_VERBS_QUESTIONS,
         KA_BARE_INTERROGATIVE,
         KA_IRREGULAR_PAST,
         KA_DEMONSTRATIVES,
@@ -6174,6 +6208,15 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'locative_postposition_untranslated', message: 'Locative postposition untranslated (KA-127): Georgian uses postpositions/case endings for location. Attested carriers: -ზე (on), -ში (in), -თან ახლოს (near), X-ის ქვეშ (under), X-ის უკან (behind), X-ის წინ (in front of), X-ს შორის (between), X-ის გარეთ (outside), X-ის შიგნით (inside), X-ის გვერდით (next to/beside), X-ის ზემოთ (above), X-დან შორს / აქიდან შორს (far from). Temporal next (next week/day/…) must stay as შემდეგ/მომავალ; only locative next+to is consumed.' });
     }
 
+    // 3.127 Question auxiliary & everyday verb residue (v1.46.0, KA-128). Detect
+    //       untranslated question auxiliaries (do you, will you, can you, what do you)
+    //       or stranded everyday verb forms.
+    const qAuxFrame = /\b(?:do\s+you|will\s+you|can\s+you|what\s+do\s+you|how\s+are\s+you|why\s+not|where\s+do\s+you|where\s+are\s+you)\b/i.test(text);
+    const qAuxCarrier = /(?:იცი|იცნობ|მოხვალ|დამეხმარო|რა\s+გინდა|როგორ\s+ხარ|რატომ\s+არა|სად\s+ცხოვრობ|სად\s+ხარ)/.test(text);
+    if (qAuxFrame && !qAuxCarrier) {
+        issues.push({ rule: 'question_auxiliary_untranslated', message: 'Question auxiliary frame untranslated (KA-128): English auxiliary questions (do you, will you, can you, what do you, how are you) must not leave stranded English auxiliaries. In Georgian, questions drop auxiliaries and are formed by intonation or question particles (e.g. "do you know" → იცი?, "will you come" → მოხვალ?, "what do you want" → რა გინდა?, "how are you" → როგორ ხარ?, "why not" → რატომ არა?).' });
+    }
+
     return issues;
 }
 
@@ -7440,6 +7483,104 @@ function correctGeorgianMorphology(text) {
     //      was shielded inside an inversion is now left unmapped (AI pass).
     out = out.replace(/\uE000/g, '');
 
+    // 4.113 Everyday verb paradigms, Question Frames & Core Adjectives (KA-128, v1.46.0).
+    //       Runs after 4.111 and 4.112. Consumes everyday verb frames, question frames,
+    //       and high-frequency adjective-noun collocations.
+
+    // Question auxiliary frames (consume before bare pronouns or verbs)
+    out = out.replace(/\bdo\s+you\s+know\s+(him|her)\b/gi, 'იცნობ მას?');
+    out = out.replace(/\bdo\s+you\s+know\s+them\b/gi, 'იცნობ მათ?');
+    out = out.replace(/\bdo\s+you\s+know\b/gi, 'იცი?');
+    out = out.replace(/\bwill\s+you\s+come\b/gi, 'მოხვალ?');
+    out = out.replace(/\bcan\s+you\s+help\s+me\b/gi, 'შეგიძლია დამეხმარო?');
+    out = out.replace(/\bcan\s+you\s+help\b/gi, 'შეგიძლია დაეხმარო?');
+    out = out.replace(/\bwhat\s+do\s+you\s+want\b/gi, 'რა გინდა?');
+    out = out.replace(/\bhow\s+are\s+you\b/gi, 'როგორ ხარ?');
+    out = out.replace(/\bwhy\s+not\b/gi, 'რატომ არა?');
+    out = out.replace(/\bwhere\s+do\s+you\s+live\b/gi, 'სად ცხოვრობ?');
+    out = out.replace(/\bwhere\s+are\s+you\b/gi, 'სად ხარ?');
+
+    // Core Adjective-Noun collocations
+    out = out.replace(/\b(?:a\s+|the\s+)?big\s+house\b/gi, 'დიდი სახლი');
+    out = out.replace(/\b(?:a\s+|the\s+)?small\s+dog\b/gi, 'პატარა ძაღლი');
+    out = out.replace(/\b(?:a\s+|the\s+)?new\s+car\b/gi, 'ახალი მანქანა');
+    out = out.replace(/\b(?:an\s+|the\s+)?old\s+man\b/gi, 'მოხუცი კაცი');
+    out = out.replace(/(?:^|\s)(?:very|ძალიან)\s+good\b/gi, m => (m.startsWith(' ') ? ' ძალიან კარგი' : 'ძალიან კარგი'));
+    out = out.replace(/\b(?:a\s+|the\s+)?beautiful\s+day\b/gi, 'ლამაზი დღე');
+    out = out.replace(/\b(?:a\s+|the\s+)?long\s+road\b/gi, 'გრძელი გზა');
+
+    // TAKE (აღება / იღებს)
+    out = out.replace(/\bI\s+take\b/gi, 'მე ვიღებ');
+    out = out.replace(/\bwe\s+take\b/gi, 'ჩვენ ვიღებთ');
+    out = out.replace(/\b(?:he|she)\s+takes\b/gi, 'ის იღებს');
+    out = out.replace(/\bthey\s+take\b/gi, 'ისინი იღებენ');
+    out = out.replace(/\bI\s+took\b/gi, 'მე ავიღე');
+    out = out.replace(/\bwe\s+took\b/gi, 'ჩვენ ავიღეთ');
+    out = out.replace(/\b(?:he|she)\s+took\b/gi, 'მან აიღო');
+    out = out.replace(/\bthey\s+took\b/gi, 'მათ აიღეს');
+
+    // GIVE (მიცემა / აძლევს)
+    out = out.replace(/\bI\s+give\b/gi, 'მე ვაძლევ');
+    out = out.replace(/\bwe\s+give\b/gi, 'ჩვენ ვაძლევთ');
+    out = out.replace(/\b(?:he|she)\s+gives\b/gi, 'ის აძლევს');
+    out = out.replace(/\bthey\s+give\b/gi, 'ისინი აძლევენ');
+    out = out.replace(/\b(?:he|she)\s+gave\b/gi, 'მან მისცა');
+    out = out.replace(/\bthey\s+gave\b/gi, 'მათ მისცეს');
+
+    // OPEN (გაღება / აღებს)
+    out = out.replace(/\bI\s+open\b/gi, 'მე ვაღებ');
+    out = out.replace(/\bwe\s+open\b/gi, 'ჩვენ ვაღებთ');
+    out = out.replace(/\b(?:he|she)\s+opens\b/gi, 'ის აღებს');
+    out = out.replace(/\bthey\s+open\b/gi, 'ისინი აღებენ');
+    out = out.replace(/\b(?:he|she)\s+opened\b/gi, 'მან გააღო');
+
+    // CLOSE (დახურვა / ხურავს)
+    out = out.replace(/\bI\s+close\b/gi, 'მე ვხურავ');
+    out = out.replace(/\bwe\s+close\b/gi, 'ჩვენ ვხურავთ');
+    out = out.replace(/\b(?:he|she)\s+closes\b/gi, 'ის ხურავს');
+    out = out.replace(/\bthey\s+close\b/gi, 'ისინი ხურავენ');
+    out = out.replace(/\b(?:he|she)\s+closed\b/gi, 'მან დახურა');
+
+    // WORK (მუშაობა / მუშაობს)
+    out = out.replace(/\bI\s+work\b/gi, 'მე ვმუშაობ');
+    out = out.replace(/\bwe\s+work\b/gi, 'ჩვენ ვმუშაობთ');
+    out = out.replace(/\b(?:he|she)\s+works\b/gi, 'ის მუშაობს');
+    out = out.replace(/\bthey\s+work\b/gi, 'ისინი მუშაობენ');
+    out = out.replace(/\b(?:he|she)\s+worked\b/gi, 'მან იმუშავა');
+
+    // LIVE (ცხოვრება / ცხოვრობს)
+    out = out.replace(/\bI\s+live\b/gi, 'მე ვცხოვრობ');
+    out = out.replace(/\bwe\s+live\b/gi, 'ჩვენ ვცხოვრობთ');
+    out = out.replace(/\b(?:he|she)\s+lives\b/gi, 'ის ცხოვრობს');
+    out = out.replace(/\bthey\s+live\b/gi, 'ისინი ცხოვრობენ');
+    out = out.replace(/\b(?:he|she)\s+lived\b/gi, 'ის ცხოვრობდა');
+
+    // BUY (ყიდვა / ყიდულობს)
+    out = out.replace(/\bI\s+buy\b/gi, 'მე ვყიდულობ');
+    out = out.replace(/\bwe\s+buy\b/gi, 'ჩვენ ვყიდულობთ');
+    out = out.replace(/\b(?:he|she)\s+buys\b/gi, 'ის ყიდულობს');
+    out = out.replace(/\bthey\s+buy\b/gi, 'ისინი ყიდულობენ');
+    out = out.replace(/\b(?:he|she)\s+bought\b/gi, 'მან იყიდა');
+
+    // SELL (გაყიდვა / ყიდის)
+    out = out.replace(/\bI\s+sell\b/gi, 'მე ვყიდი');
+    out = out.replace(/\bwe\s+sell\b/gi, 'ჩვენ ვყიდით');
+    out = out.replace(/\b(?:he|she)\s+sells\b/gi, 'ის ყიდის');
+    out = out.replace(/\bthey\s+sell\b/gi, 'ისინი ყიდიან');
+    out = out.replace(/\b(?:he|she)\s+sold\b/gi, 'მან გაყიდა');
+
+    // WAIT (ლოდინი / ელოდება)
+    out = out.replace(/\bI\s+wait\b/gi, 'მე ველოდები');
+    out = out.replace(/\bwe\s+wait\b/gi, 'ჩვენ ველოდებით');
+    out = out.replace(/\b(?:he|she)\s+waits\b/gi, 'ის ელოდება');
+    out = out.replace(/\bthey\s+wait\b/gi, 'ისინი ელოდებიან');
+
+    // UNDERSTAND (გაგება / ესმის)
+    out = out.replace(/\bI\s+understand\b/gi, 'მე მესმის');
+    out = out.replace(/\bwe\s+understand\b/gi, 'ჩვენ გვესმის');
+    out = out.replace(/\b(?:he|she)\s+understands\b/gi, 'მას ესმის');
+    out = out.replace(/\bthey\s+understand\b/gi, 'მათ ესმით');
+
     // 4.81 Untranslated English motion verbs. Tense-sensitive carriers from
     //      the suppletive system; past "went to/came to" keeps the goal
     //      phrase in place (წავიდა სახლში). The bare "will go"/"will come"
@@ -8361,12 +8502,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.45.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.46.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 128,
-    qaRules: 127,
-    autoFixes: 112,
-    researchSources: 379
+    promptBlocks: 129,
+    qaRules: 128,
+    autoFixes: 113,
+    researchSources: 382
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────

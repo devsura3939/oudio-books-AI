@@ -2746,11 +2746,20 @@ function extractTranslation(raw) {
     return out.trim();
 }
 
+function detectTextLang(text) {
+    if (!text || typeof text !== 'string') return 'en';
+    const ka = (text.match(/[\u10A0-\u10FF]/g) || []).length;
+    const latin = (text.match(/[A-Za-z]/g) || []).length;
+    return ka > latin ? 'ka' : 'en';
+}
+
 // Stage 1 — literary draft translation. Receives neighbouring sentences as
 // context so pronouns, tense and terminology stay coherent across chunk
 // boundaries (the draft never sees a sentence in isolation).
 async function geminiDraftTranslate(text, targetLang, contextBefore = '', contextAfter = '') {
-    const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
+    const srcLang = detectTextLang(text);
+    const srcLangName = srcLang === 'ka' ? 'Georgian' : 'English';
+    const targetLangName = targetLang === 'ka' ? 'Georgian' : (targetLang === 'en' ? 'English' : targetLang);
     const ctxBefore = contextBefore ? `\n\n[PRECEDING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextBefore.slice(-600)}` : '';
     const ctxAfter = contextAfter ? `\n\n[FOLLOWING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextAfter.slice(0, 600)}` : '';
 
@@ -2761,20 +2770,29 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
     const kaBlock = kaKnowledge
         ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
 
-    const prompt = `You are an elite literary translator (English → ${langName}). Your translations read like the book was originally written in ${langName} — the register of a respected literary publishing house, not a machine.
+    const enStyleGuide = targetLang === 'en' ? `
+=== ENGLISH LITERARY STYLE RULES (mandatory) ===
+- Translate Georgian verb screeves accurately into natural English tenses (Aorist → Simple Past, Imperfect → Past Continuous or 'used to', Present → Present).
+- Resolve Georgian polypersonal verb agreement into clear English subjects, objects, and pronouns.
+- Do not calque Georgian SOV word order: use natural English SVO syntax.
+- Convert Georgian idioms and cultural metaphors into authentic English equivalents.
+- Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
+=== END ENGLISH RULES ===` : '';
+
+    const prompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Your translations read like the book was originally written in ${targetLangName} — the register of a respected literary publishing house, not a machine.
 
 Process:
 1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
 2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
-3. Replace idioms with their natural ${langName} equivalents; never translate them literally.
+3. Replace idioms with their natural ${targetLangName} equivalents; never translate them literally.
 4. Write flowing native prose — no translationese.${targetLang === 'ka' ? '\n   Georgian word order is verb-FINAL: subject/object first, verb last (კაცმა წიგნი წაიკითხა). Weather/feelings are impersonal (წვიმს, ცივა, მშია, მოსწონს) — never invent a dummy subject. Numerals are vigesimal (ორმოცი=40, ოთხმოცდაშვიდი=87); after numerals 2+ the noun stays SINGULAR (ოცი კაცი).' : ''}
-5. Before answering, silently verify every sentence against the grammar rules below (case alignment, verb screeves, agreement).${kaBlock}
+5. Before answering, silently verify every sentence against the grammar rules below (case alignment, verb screeves, agreement).${kaBlock}${enStyleGuide}
 
 TTS note: this translation will be narrated aloud. Use correct terminal punctuation (? ! .) so the voice produces natural prosody.${targetLang === 'ka' ? ' Use Georgian punctuation: „…“ for quotes, a plain full stop "." for sentence end (NEVER the danda "।" or any non-Georgian mark), — for dashes (never " - ").' : ''}
 
-Answer as JSON: {"translation": "..."} — the ${langName} translation ONLY, no notes, no markdown fences.
+Answer as JSON: {"translation": "..."} — the ${targetLangName} translation ONLY, no notes, no markdown fences.
 
-English text:
+${srcLangName} source text:
 ${text}${ctxBefore}${ctxAfter}`;
 
     const data = await callGeminiJSON(prompt, { temperature: 0.25 });
@@ -2796,11 +2814,11 @@ async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
     const kaChecklist = kaReviewerRules
         ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===${kaReviewerRules}\n=== END CHECKLIST ===\nAny violation of the checklist is at least a "major" grammar error.` : '';
 
-    const prompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer. Compare the SOURCE (English) against the TRANSLATION (${langName}) and find every real defect.
+    const prompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer. Compare the SOURCE against the TRANSLATION (${langName}) and find every real defect.
 
 Check, in order of severity:
 1. Accuracy: omissions, additions, reversed meaning, lost negation, changed names/numbers/units.
-2. Grammar & morphology: ${langName} case endings, ergative alignment (aorist transitive subjects take -მა; present takes nominative), verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment: Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Negation: აר (declarative), ვერ (failed ability), ნუ (prohibitive — never არ for commands), one negator per clause.' : ''}
+2. Grammar & morphology: ${langName} case endings, verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment: Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Negation: არ (declarative), ვერ (failed ability), ნუ (prohibitive — never არ for commands), one negator per clause.' : ''}
 3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart).' : ''}
 4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb).' : ''}
 5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before . , ; : punctuation, no foreign sentence marks (।, ฯ, ۔), exactly one terminal mark per sentence, no doubled punctuation.' : ''}${kaChecklist}
@@ -2830,39 +2848,28 @@ async function geminiRefineTranslation(sourceText, translation, errors, targetLa
         .map((e, i) => `${i + 1}. [${e.severity || 'major'}/${e.type || 'style'}] ${e.issue}\n   → ${e.fix || 'fix it'}`)
         .join('\n');
 
-    // The reviser also sees the compact grammar rules so its surgical fixes
-    // don't introduce NEW morphology violations (the classic refinement trap).
-    const kaReviserRules = targetLang === 'ka' && typeof getKaCompactRules === 'function'
-        ? getKaCompactRules() : '';
-    const kaBlock = kaReviserRules
-        ? `\n\n=== GEORGIAN GRAMMAR RULES (your fixes must obey these) ===${kaReviserRules}\n=== END RULES ===` : '';
+    const prompt = `You are a master literary editor. You have a draft ${langName} translation and a confirmed list of defects. Produce the complete REVISED translation with every defect corrected.
 
-    const prompt = `You are the final editor of a ${langName} literary translation. A reviewer found the following defects. Apply EVERY fix precisely while keeping everything that was already correct. Do not re-translate from scratch — surgically correct the listed problems and polish only where a fix demands it.
+Rules:
+1. Fix every listed error cleanly.
+2. Do not touch parts of the translation that are not broken.
+3. Keep register, tone and character voice intact across the revision.
+4. Output the complete revised translation only.
 
-Keep: meaning, names, numbers, length roughly proportional, natural literary ${langName}, TTS-friendly punctuation.${kaBlock}
+Answer as JSON: {"revised_translation": "..."}
 
-Answer as JSON: {"translation": "..."} — the complete corrected ${langName} text, no notes.
-
-SOURCE (English):
+SOURCE:
 ${sourceText}
 
-CURRENT TRANSLATION (${langName}):
+CURRENT DRAFT:
 ${translation}
 
-CONFIRMED DEFECTS:
+DEFECTS TO FIX:
 ${errorList}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.2 });
-    const refined = extractTranslation(data?.translation);
-    if (textHasMarkupLeak(refined)) {
-        console.warn('[Refine] markup leak detected in refined text — rejecting rewrite');
-        return null;
-    }
-    if (refined && refined.length > 40 && refined.length < translation.length * 0.5) {
-        console.warn('[Refine] output suspiciously short vs current translation — rejecting rewrite');
-        return null;
-    }
-    return refined || null;
+    const data = await callGeminiJSON(prompt, { temperature: 0.15 });
+    const revised = extractTranslation(data?.revised_translation);
+    return revised || null;
 }
 
 // Full pipeline for one chunk. geminiPasses gates the depth:
@@ -2922,7 +2929,9 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
 // defects. Typical cost: 1 call per chunk instead of 3-4.
 async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', contextAfter = '') {
     if (!aiTranslationAvailable()) return null;
-    const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
+    const srcLang = detectTextLang(text);
+    const srcLangName = srcLang === 'ka' ? 'Georgian' : 'English';
+    const targetLangName = targetLang === 'ka' ? 'Georgian' : (targetLang === 'en' ? 'English' : targetLang);
     const ctxBefore = contextBefore ? `\n\n[PRECEDING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextBefore.slice(-600)}` : '';
     const ctxAfter = contextAfter ? `\n\n[FOLLOWING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextAfter.slice(0, 600)}` : '';
 
@@ -2930,21 +2939,30 @@ async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', 
     const kaBlock = kaKnowledge
         ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
 
-    const prompt = `You are an elite literary translator (English → ${langName}). Translate the passage below, then audit and correct your own translation BEFORE answering.
+    const enStyleGuide = targetLang === 'en' ? `
+=== ENGLISH LITERARY STYLE RULES (mandatory) ===
+- Translate Georgian verb screeves accurately into natural English tenses (Aorist → Simple Past, Imperfect → Past Continuous or 'used to', Present → Present).
+- Resolve Georgian polypersonal verb agreement into clear English subjects, objects, and pronouns.
+- Do not calque Georgian SOV word order: use natural English SVO syntax.
+- Convert Georgian idioms and cultural metaphors into authentic English equivalents.
+- Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
+=== END ENGLISH RULES ===` : '';
+
+    const prompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Translate the passage below, then audit and correct your own translation BEFORE answering.
 
 Process:
 1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
 2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
-3. Replace idioms with their natural ${langName} equivalents; never translate them literally.
-4. Write flowing native prose — no translationese. Check case alignment, verb screeves and agreement in EVERY sentence.${kaBlock}
-5. Self-audit: review your draft for omissions, wrong verb forms (especially ergative aorists), agreement errors, broken idiom and translationese. Fix every defect you find, then report in "self_check" ONLY the significant defects you corrected (or could not fully fix). If the final text is publication-ready, return an empty errors list.
+3. Replace idioms with their natural ${targetLangName} equivalents; never translate them literally.
+4. Write flowing native prose — no translationese.${kaBlock}${enStyleGuide}
+5. Self-audit: review your draft for omissions, wrong verb forms, agreement errors, broken idiom and translationese. Fix every defect you find, then report in "self_check" ONLY the significant defects you corrected (or could not fully fix). If the final text is publication-ready, return an empty errors list.
 
 TTS note: the translation will be narrated aloud — use correct terminal punctuation (? ! .).
 
 Answer as JSON exactly:
 {"translation": "...", "self_check": {"errors": [{"severity": "critical|major|minor", "type": "accuracy|grammar|style", "issue": "...", "fix": "..."}], "verdict": "approved|needs_revision"}}
 
-English text:
+${srcLangName} source text:
 ${text}${ctxBefore}${ctxAfter}`;
 
     const data = await callGeminiJSON(prompt, { temperature: 0.25, maxTokens: 16384 });
@@ -3493,9 +3511,10 @@ window.applyKaRuleEngine = applyKaRuleEngine;
 // Machine-translation draft + the full rule engine. `translateChunkLocal` keeps
 // its name (many call sites) but it is now Tier B, not a raw MT passthrough.
 async function translateChunkLocal(clean, targetLang) {
+    const srcLang = detectTextLang(clean);
     // Google Dict-Chrome-Ex first (ultra-stable, zero rate-limiting)
     try {
-        const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean)}`;
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=${srcLang}&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean)}`;
         const gRes = await fetch(gUrl);
 
         if (gRes.ok) {
@@ -3520,7 +3539,7 @@ async function translateChunkLocal(clean, targetLang) {
 
     // Google GTX mirror
     try {
-        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean)}`;
+        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcLang}&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean)}`;
         const gRes2 = await fetch(gUrl2);
         if (gRes2.ok) {
             const data2 = await gRes2.json();
@@ -3609,15 +3628,16 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
 async function translateSingleSentence(text, targetLang = 'ka') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
+    const srcLang = detectTextLang(clean);
 
     // Try MyMemory
     try {
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.slice(0, 480))}&langpair=en|${targetLang}`;
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.slice(0, 480))}&langpair=${srcLang}|${targetLang}`;
         const res = await fetch(url);
         if (res.ok) {
             const data = await res.json();
             if (data && data.responseData && data.responseData.translatedText) {
-                const trans = refineGeorgianGrammar(data.responseData.translatedText);
+                const trans = targetLang === 'ka' ? refineGeorgianGrammar(data.responseData.translatedText) : data.responseData.translatedText;
                 if (trans && !trans.includes('MYMEMORY WARNING') && !trans.includes('QUERY LENGTH LIMIT')) {
                     return trans;
                 }
@@ -3629,17 +3649,17 @@ async function translateSingleSentence(text, targetLang = 'ka') {
 
     // Direct Google GTX minimal fallback
     try {
-        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
         const gRes = await fetch(gUrl);
         if (gRes.ok) {
             const gData = await gRes.json();
             if (gData && gData[0]) {
                 const trans = gData[0].map(item => item[0]).filter(Boolean).join('');
-                return refineGeorgianGrammar(trans);
+                return targetLang === 'ka' ? refineGeorgianGrammar(trans) : trans;
             }
         }
     } catch (e) {
-        console.warn('Minimal Google GTX failed:', e);
+        console.warn('Google GTX fallback failed:', e);
     }
 
     return clean;

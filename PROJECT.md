@@ -86,7 +86,7 @@ kept intact rather than rewritten. It is a self-contained vanilla SPA served as 
 | --- | --- |
 | `public/studio/index.html` | glass/futuristic UI, Moon Reader mode, Voice & Studio TTS panel, Gemini AI engine panel, Discover Classics |
 | `public/studio/static/app.js` | paged reader + sentence highlighting + themes/fonts, edge-tts Georgian neural voices via HF mirrors, ElevenLabs option, browser-speech fallback, smart translation routing (Gemini / OpenRouter / Groq / Mistral), whole-book translation with progress & cancel, AI key status probe |
-| `public/studio/static/georgian-linguistics.js` | KA knowledge base v1.45.0 — 128 prompt blocks, 127 QA rules, 112 auto-fixes, `validateGeorgianTranslation`, `correctGeorgianMorphology` |
+| `public/studio/static/georgian-linguistics.js` | KA knowledge base v1.46.0 — 129 prompt blocks, 128 QA rules, 113 auto-fixes, bidirectional translation support, everyday verb paradigms, question auxiliary frames, and robust OCR repair |
 | `public/studio/static/supabase-store.js` | `window.LuminaStore` — the studio's book store, backed by the same Supabase tables the React pages use |
 
 Rules for agents:

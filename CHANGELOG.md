@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-09-05 — v1.46.0: Bidirectional Translation & Robust Transcription Engine
+
+### Added & Fixed — Transcription & OCR Repair (`static/scanner.js`)
+- **Resolved Silent Character Erasure**: Replaced the incomplete 12-character OCR substitution map with a full 26-letter Latin + digits + symbol map (`i`, `l`, `1`, `|` → `ი`, `r` → `რ`, `d` → `დ`, `s` → `ს`, `u` → `უ`, `v` → `ვ`, `x` → `ხ`, `k` → `კ`, `w` → `წ`, `y` → `ყ`). Unmapped characters are no longer silently deleted.
+- **Soviet-Era Cyrillic OCR Leakage Rescue**: Added look-alike recovery for Cyrillic characters emitted by Tesseract on vintage Georgian prints (`с` → `ს`, `р` → `რ`, `у` → `უ`, `х` → `ხ`, `в` → `ვ`, `т` → `თ`, `д` → `დ`, `б` → `ბ`, `г` → `გ`).
+- **Smart English Compound Hyphenation**: Protected hyphenated compound words (`well-known`, `state-of-the-art`, `self-conscious`, `twenty-five`) during paragraph unwrapping in `cleanPageText` so words are not corrupted into single unhyphenated tokens (`wellknown`).
+- **Print Ligature Resolution**: Added normalization for print ligatures (`ﬁ` → `fi`, `ﬂ` → `fl`, `ﬀ` → `ff`, `ﬃ` → `ffi`, `ﬄ` → `ffl`).
+
+### Added & Fixed — Bidirectional Translation (`static/app.js`)
+- **Dynamic Source Language Detection (`detectTextLang`)**: Translation endpoints and AI prompts now automatically detect whether the source text is English or Georgian, eliminating hardcoded `sl=en`.
+- **Bidirectional AI Translation Prompts**:
+  - `English → Georgian`: Injects Georgian Language Mastery Rules (`getKaRulesForPrompt()`).
+  - `Georgian → English`: Injects English Literary Translation Rules (mapping Georgian verbal aspect/screeves, handling polypersonal agreement, enforcing natural English SVO syntax, and translating idioms).
+- **Dynamic Machine Translation Endpoints**: `translateChunkLocal` and `translateSingleSentence` now dynamically parameterize `sl=${sourceLang}&tl=${targetLang}` across Google Dict-Chrome-Ex, Google GTX, and MyMemory endpoints.
+- **Target Language Guard**: Ensured `refineGeorgianGrammar()` only runs when `targetLang === 'ka'`, preventing Georgian morphological rules from corrupting English translations.
+
+### Added — Georgian Linguistic Knowledge Base v1.46.0 (`static/georgian-linguistics.js`)
+- **Everyday Verb Paradigms (KA-128 / Fix 4.113)**: Added person-marked present and aorist paradigms for 10 high-frequency everyday verbs previously left untranslated: *take* (`იღებს`/`აიღო`), *give* (`აძლევს`/`მისცა`), *open* (`აღებს`/`გააღო`), *close* (`ხურავს`/`დახურა`), *work* (`მუშაობს`/`იმუშავა`), *live* (`ცხოვრობს`), *buy* (`ყიდულობს`/`იყიდა`), *sell* (`ყიდის`/`გაყიდა`), *wait* (`ელოდება`), and *understand* (`ესმის`).
+- **Question Auxiliary Frames (KA-128 / Fix 4.113)**: Fixed stranded English question auxiliaries: *"do you know"* → `იცი?`/`იცნობ?`, *"will you come"* → `მოხვალ?`, *"can you help me"* → `შეგიძლია დამეხმარო?`, *"what do you want"* → `რა გინდა?`, *"how are you"* → `როგორ ხარ?`, *"why not"* → `რატომ არა?`, *"where do you live"* → `სად ცხოვრობ?`.
+- **Core Adjective-Noun Collocations (Fix 4.113)**: Added native Georgian adjective agreement for common noun phrases (*big house*, *small dog*, *new car*, *old man*, *very good*, *beautiful day*, *long road*).
+- **QA Rule 3.127 (`question_auxiliary_untranslated`)**: Added automated validation flagging untranslated English question auxiliaries in Georgian translations.
+
 ## 2026-09-05 — Unique accounts, hardcoded admin, and the Training Lab (trainable engine)
 
 ### Added — auth hardening (`src/routes/auth.tsx`, `supabase/external/003_training.sql`)
