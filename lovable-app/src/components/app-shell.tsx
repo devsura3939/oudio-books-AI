@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
+import { StudioHost, TranslationProgressPill } from "@/components/studio-host";
 import { db } from "@/integrations/external-supabase/client";
 
 type NavItem = { to: string; icon: string; label: string };
@@ -98,6 +99,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       <div className="pt-20 pb-24 md:ml-64 md:pt-24">{children}</div>
+
+      {/* Studio frame stays mounted so translations keep running across pages */}
+      <StudioHost />
+      <TranslationProgressPill />
 
       {/* Mobile bottom bar */}
       <nav className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-white/15 bg-surface-container/80 py-2 backdrop-blur-[24px] md:hidden">

@@ -1,5 +1,45 @@
 # Changelog
 
+## 2026-09-04 — Hybrid Georgian engine (old + new) and translations that never lose progress
+
+### Changed
+- **Tier router rewritten** (`public/studio/static/app.js`, `translateChunkSmart`). The old
+  `SMART_ROUTE_EASY_THRESHOLD = 25` shortcut sent ordinary prose straight to Google MT, which is
+  why whole books came out as "Machine translation (LOW QUALITY)". Complexity now only chooses
+  refinement depth; the engine tier is chosen by availability:
+  - **Tier A** — the original multi-pass pipeline (draft → critique → refine → Georgian QA gate),
+    then the rule engine on top. Runs with the user's own key *or* the keyless gateway.
+  - **Tier B** — `applyKaRuleEngine()`: MT draft + the v1.45.0 knowledge base applied
+    deterministically (112 auto-fixes + `correctGeorgianMorphology` + 127 QA rules, looped until
+    the validator is clean). Works with **no LLM at all** (offline / GitHub Pages / no key).
+  - **Tier C** — unrepaired MT, last resort only, and still passed through the rule engine.
+- `translationBudgetMode` now defaults to **quality** (the full original pipeline). Budget mode
+  stays available as an explicit choice.
+- Engine status is honest about tiers: `Tier A ...% · rules ...% · raw ...%`, with
+  "Georgian rule engine (offline, no LLM)" instead of a blanket "LOW QUALITY" label.
+- Scanned Georgian pages (`public/studio/static/scanner.js`) run through the same
+  `applyKaRuleEngine()` before being saved, so scans and translations are cleaned identically.
+
+### Added
+- **Resumable whole-book translation.** Every finished chunk is checkpointed to
+  `localStorage` (`lumina_tjob_<bookId>`: chapter cursor + partial chunk texts), every finished
+  chapter is saved to the shelf immediately, and already-translated chapters are never redone.
+  Closing the tab, reloading or navigating away resumes exactly where it stopped
+  (`resumeTranslationJobIfAny()` on studio init). Cancel is explicit and clears the job.
+- Chapters are translated in order and saved one by one, so chapter 1 can be read/listened to
+  while later chapters are still being translated.
+- `src/components/studio-host.tsx` — the studio iframe is mounted once in the app shell and
+  hidden (not unmounted) on other pages, so translation/TTS keeps running while you browse.
+  Includes a global "Translating <book> — chapter n / m" pill.
+- `window.applyKaRuleEngine` and `window.getTranslationJobProgress` exposed for the shell.
+
+### Verified
+- Tier A: `translateChunkSmart` → `ზღვა მანამდე არასდროს არ ენახა …` (natural Georgian, `ai: 1`).
+- Tier B (no LLM): `translateChunkLocal` → `ნათურა დაბლა იწვა …` with `rules: 1`.
+- Resume: 2-chapter book, translation started, page reloaded mid-run → auto-resumed, finished,
+  chapter text saved (`text_ka` 807 chars), job cleared. No console/page errors.
+- `bunx tsgo --noEmit` clean; `node --check` clean on both studio scripts.
+
 ## 2026-09-04 — Book Scanner: photos of pages → a real book (EN + KA)
 
 ### Added

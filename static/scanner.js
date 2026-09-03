@@ -621,10 +621,17 @@
     }
     try {
       const detected = state.lang === "auto" ? detectLang(pages.map((p) => p.text).join(" ")) : state.lang;
+      const isKa = detected === "kat";
+      // Georgian pages go through the same in-house rule engine (v1.45.0
+      // auto-fixes + QA rules) that the translation engine uses, so scanned
+      // Georgian is cleaned up the same way translated Georgian is.
+      const cleanup = (t) =>
+        isKa && typeof window.applyKaRuleEngine === "function" ? window.applyKaRuleEngine(t) : t;
       await window.createBookFromScannedPages(
-        pages.map((p, i) => ({ index: i + 1, text: p.text.trim(), engine: p.engine || "offline" })),
-        { title: title.trim() || "Scanned book", author: author.trim(), lang: detected === "kat" ? "ka" : "en" },
+        pages.map((p, i) => ({ index: i + 1, text: cleanup(p.text.trim()), engine: p.engine || "offline" })),
+        { title: title.trim() || "Scanned book", author: author.trim(), lang: isKa ? "ka" : "en" },
       );
+
       // Free the object URLs and reset for the next scan.
       state.pages.forEach((p) => URL.revokeObjectURL(p.url));
       state.pages = [];

@@ -1,7 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-
-import { db } from "@/integrations/external-supabase/client";
 
 export const Route = createFileRoute("/_authenticated/studio")({
   ssr: false,
@@ -11,12 +8,13 @@ export const Route = createFileRoute("/_authenticated/studio")({
       {
         name: "description",
         content:
-          "Full audiobook studio: paged reader, neural narration, and the Georgian translation engine.",
+          "Full audiobook studio: paged reader, neural narration, book scanning, and the Georgian translation engine.",
       },
       { property: "og:title", content: "Studio — EngBot" },
       {
         property: "og:description",
-        content: "Paged reader, neural narration, and AI-assisted Georgian translation.",
+        content:
+          "Paged reader, neural narration, page scanning, and the hybrid Georgian translation engine.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -25,50 +23,15 @@ export const Route = createFileRoute("/_authenticated/studio")({
   component: StudioPage,
 });
 
-const STUDIO_URL = "/studio/index.html";
-
+/**
+ * The studio itself lives in `StudioHost` (mounted once in the app shell) so its
+ * long-running jobs survive navigation. This route only reserves the space and
+ * shows a hint while the frame boots.
+ */
 function StudioPage() {
-  const [ready, setReady] = useState(false);
-
-  // The vendored studio app reads its signed-in user from `lumina_auth_user`
-  // on the same origin. Seed it from the real Supabase session so the studio
-  // never has to run its own (previously fake) login form.
-  useEffect(() => {
-    let cancelled = false;
-    void db.auth.getUser().then(({ data }) => {
-      if (cancelled) return;
-      const user = data.user;
-      if (user) {
-        window.localStorage.setItem(
-          "lumina_auth_user",
-          JSON.stringify({ email: user.email ?? "", id: user.id, pro: true }),
-        );
-      }
-      setReady(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Mobile also has the fixed bottom tab bar (~64px); without subtracting it
-  // the studio's own fixed reader/player controls sit underneath it.
   return (
-    <div className="h-[calc(100dvh-65px-64px)] w-full md:h-[calc(100dvh-65px)]">
-
-
-      {ready ? (
-        <iframe
-          src={STUDIO_URL}
-          title="EngBot"
-          className="h-full w-full border-0"
-          allow="autoplay; clipboard-write; fullscreen"
-        />
-      ) : (
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          Opening studio…
-        </div>
-      )}
+    <div className="flex h-[calc(100dvh-65px-64px)] w-full items-center justify-center text-sm text-muted-foreground md:h-[calc(100dvh-65px)]">
+      Opening studio…
     </div>
   );
 }

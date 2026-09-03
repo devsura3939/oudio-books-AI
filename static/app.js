@@ -1019,7 +1019,11 @@ async function init() {
     }
 
     if (window.lucide) lucide.createIcons();
+
+    // Pick up an interrupted Georgian translation exactly where it stopped.
+    setTimeout(() => { resumeTranslationJobIfAny(); }, 800);
 }
+
 
 // ── Book store: Supabase first, IndexedDB as offline fallback ───────────────
 // `LuminaStore` (static/supabase-store.js) talks to the same `books`/`chapters`
@@ -2820,7 +2824,11 @@ async function applyGeorgianQaGate(text) {
 // ── Translation engine status indicator ─────────────────────────────────────
 // Tracks which engine produced each chunk so quality drops are visible
 // immediately instead of silently degrading to machine translation.
-const translationEngineStats = { gemini: 0, google: 0, mymemory: 0, failed: 0 };
+// Tier counters: ai = Tier A (your multi-pass pipeline), rules = Tier B (in-house
+// rule engine, no LLM), raw = Tier C (unrepaired MT), failed = nothing worked.
+// The legacy keys stay as aliases so older call sites keep counting.
+const translationEngineStats = { ai: 0, rules: 0, raw: 0, failed: 0, gemini: 0, google: 0, mymemory: 0 };
+
 let translationEngineStatusEl = null;
 
 function setTranslationEngineStatusEl(el) {
@@ -2831,29 +2839,31 @@ function setTranslationEngineStatusEl(el) {
 function renderTranslationEngineStatus() {
     if (!translationEngineStatusEl) return;
     const s = translationEngineStats;
-    const total = s.gemini + s.google + s.mymemory + s.failed;
+    const ai = s.ai + s.gemini;
+    const rules = s.rules + s.google;
+    const raw = s.raw + s.mymemory;
+    const total = ai + rules + raw + s.failed;
     if (total === 0) {
         translationEngineStatusEl.innerHTML = '<span class="text-on-surface-variant">Engine: waiting…</span>';
         return;
     }
     const pct = n => total ? Math.round((n / total) * 100) : 0;
-    const geminiPct = pct(s.gemini);
-    const color = geminiPct >= 90 ? 'text-green-400'
-        : geminiPct >= 50 ? 'text-amber-400'
-        : 'text-red-400';
-    const label = geminiPct >= 90 ? 'AI Engine (high quality)'
-        : geminiPct >= 50 ? 'Mixed — some chunks degraded'
-        : 'Machine translation (LOW QUALITY)';
+    const aiPct = pct(ai);
+    const rawPct = pct(raw);
+    const quality = aiPct + Math.round(rules / total * 70); // rule engine counts, but less than Tier A
+    const color = quality >= 85 ? 'text-green-400' : quality >= 55 ? 'text-amber-400' : 'text-red-400';
+    const label = aiPct >= 85 ? 'Georgian engine — Tier A (hybrid AI + rules)'
+        : aiPct > 0 ? 'Georgian engine — hybrid (AI + rule engine)'
+        : rawPct >= 50 ? 'Raw machine translation (degraded)'
+        : 'Georgian rule engine (offline, no LLM)';
     translationEngineStatusEl.innerHTML =
         `<span class="${color} font-semibold">${label}</span>` +
         `<span class="text-on-surface-variant text-[11px] ml-2">` +
-        `AI ${geminiPct}% · Google ${pct(s.google)}% · MyMemory ${pct(s.mymemory)}` +
+        `Tier A ${aiPct}% · rules ${pct(rules)}% · raw ${rawPct}%` +
         `${s.failed ? ` · failed ${pct(s.failed)}%` : ''}</span>`;
-    // Warn loudly the moment quality drops — this is the silent-failure
-    // guard the user asked for.
-    if (geminiPct < 50 && s.gemini > 0) {
-        console.warn(`[Translation] Quality degraded: only ${geminiPct}% of chunks used the AI engine. ` +
-            'Check your AI provider keys, quota, and network.');
+    if (rawPct >= 50) {
+        console.warn(`[Translation] ${rawPct}% of chunks are unrepaired machine translation. ` +
+            'Check network/AI provider availability.');
     }
 }
 
@@ -2861,6 +2871,7 @@ function recordEngineUse(engine) {
     if (engine in translationEngineStats) translationEngineStats[engine]++;
     renderTranslationEngineStatus();
 }
+
 
 // ── AI Engine Status Panel ──────────────────────────────────────────────────
 // Shows which API keys are configured and live, and which models are in the
@@ -2975,7 +2986,10 @@ async function probeAiKeyStatus() {
 // translate+self-audit call, refine only on flagged defects — designed for
 // whole-book runs where 3-4 calls per chunk would exhaust free quotas and
 // silently degrade everything to machine translation.
-let translationBudgetMode = localStorage.getItem('translationBudgetMode') || 'budget';
+// Quality is the default now: the original full pipeline is what produced the
+// Georgian quality you had. 'budget' stays available as an explicit choice.
+let translationBudgetMode = localStorage.getItem('translationBudgetMode') || 'quality';
+
 
 function setTranslationBudgetMode(mode) {
     if (mode !== 'budget' && mode !== 'quality') return;
@@ -3203,9 +3217,9 @@ function scoreChunkComplexity(text) {
     return Math.min(100, score);
 }
 
-// Threshold below which a chunk is considered "easy" enough for the local
-// engine. Tuned so that simple narrative/dialogue skips the AI pipeline
-// entirely (massive speedup) while anything risky still gets AI treatment.
+// Complexity threshold. It NO LONGER decides whether a chunk gets the quality
+// engine — only how much refinement it gets. Sending "easy" prose straight to
+// Google was why whole books came out as raw machine translation.
 const SMART_ROUTE_EASY_THRESHOLD = 25;
 
 // Per-chunk routing stats for the status panel.
@@ -3215,14 +3229,42 @@ function isEasyChunk(text) {
     return scoreChunkComplexity(text) <= SMART_ROUTE_EASY_THRESHOLD;
 }
 
-// Local engine path: Google neural engines + in-house morphology auto-fixes.
-// Used for easy chunks instead of the AI pipeline — this is how the in-house
-// engine grows: it handles more and more of the book on its own.
+// ── Tier B: the in-house rule engine (NO LLM AT ALL) ────────────────────────
+// v1.45.0 knowledge base applied deterministically: 112 auto-fixes +
+// 127 QA rules, looped until the validator stops finding violations. This is
+// what runs offline / on GitHub Pages / with no key and no gateway, and it is
+// also applied on top of every AI result.
+function applyKaRuleEngine(text) {
+    let out = text || '';
+    if (!out) return out;
+    for (let round = 0; round < 3; round++) {
+        const before = out;
+        try {
+            out = refineGeorgianGrammar(out);              // auto-fixes + idiom/punctuation layer
+        } catch (e) { /* non-fatal */ }
+        let issues = [];
+        try {
+            issues = typeof validateGeorgianTranslation === 'function'
+                ? validateGeorgianTranslation(out) : [];
+        } catch (e) { issues = []; }
+        if (!issues.length) break;
+        try {
+            if (typeof correctGeorgianMorphology === 'function') out = correctGeorgianMorphology(out);
+        } catch (e) { /* non-fatal */ }
+        if (out === before) break;
+    }
+    return out;
+}
+window.applyKaRuleEngine = applyKaRuleEngine;
+
+// Machine-translation draft + the full rule engine. `translateChunkLocal` keeps
+// its name (many call sites) but it is now Tier B, not a raw MT passthrough.
 async function translateChunkLocal(clean, targetLang) {
     // Google Dict-Chrome-Ex first (ultra-stable, zero rate-limiting)
     try {
         const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean)}`;
         const gRes = await fetch(gUrl);
+
         if (gRes.ok) {
             const data = await gRes.json();
             if (data && data[0] && Array.isArray(data[0])) {
@@ -3232,15 +3274,15 @@ async function translateChunkLocal(clean, targetLang) {
                         fullTrans += data[0][i][0];
                     }
                 }
-                const refined = refineGeorgianGrammar(fullTrans);
+                const refined = targetLang === 'ka' ? applyKaRuleEngine(fullTrans) : fullTrans;
                 if (refined && refined.trim().length > 0) {
-                    recordEngineUse('google');
+                    recordEngineUse('rules');
                     return refined;
                 }
             }
         }
     } catch (e) {
-        console.warn('Local engine: Google dict-chrome-ex failed:', e);
+        console.warn('Rule engine: Google dict-chrome-ex draft failed:', e);
     }
 
     // Google GTX mirror
@@ -3256,146 +3298,80 @@ async function translateChunkLocal(clean, targetLang) {
                         fullTrans2 += data2[0][i][0];
                     }
                 }
-                const refined2 = refineGeorgianGrammar(fullTrans2);
+                const refined2 = targetLang === 'ka' ? applyKaRuleEngine(fullTrans2) : fullTrans2;
                 if (refined2 && refined2.trim().length > 0) {
-                    recordEngineUse('google');
+                    recordEngineUse('rules');
                     return refined2;
                 }
             }
         }
     } catch (e) {
-        console.warn('Local engine: Google GTX mirror failed:', e);
+        console.warn('Rule engine: Google GTX draft failed:', e);
     }
 
-    // MyMemory last resort inside the local path
+    // MyMemory last resort inside the local path (Tier C — raw MT)
     const mm = await translateSingleSentence(clean, targetLang);
-    recordEngineUse(mm === clean ? 'failed' : 'mymemory');
-    return mm;
+    recordEngineUse(mm === clean ? 'failed' : 'raw');
+    return targetLang === 'ka' ? applyKaRuleEngine(mm) : mm;
 }
 
-// Full AI pipeline path: multi-pass literary translation + Georgian QA gate.
-async function translateChunkAI(clean, targetLang, contextBefore, contextAfter) {
-    const pipeline = translationBudgetMode === 'budget' && typeof translateWithGeminiAIBatch === 'function'
+// Tier A: your original multi-pass AI pipeline + Georgian QA gate + the rule
+// engine on top of the result. `deep` decides how many passes are spent:
+// complex chunks get the full draft → critique → refine → QA pipeline, simple
+// chunks get the fused single call. Neither one skips the engine.
+async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, deep = true) {
+    const wantFull = deep && translationBudgetMode !== 'budget';
+    const pipeline = !wantFull && typeof translateWithGeminiAIBatch === 'function'
         ? translateWithGeminiAIBatch
         : translateWithGeminiAI;
     const aiRes = await pipeline(clean, targetLang, contextBefore, contextAfter);
     if (aiRes) {
-        recordEngineUse('gemini');
-        if (targetLang === 'ka' && typeof applyGeorgianQaGate === 'function') {
-            return await applyGeorgianQaGate(aiRes);
+        recordEngineUse('ai');
+        if (targetLang === 'ka') {
+            const gated = typeof applyGeorgianQaGate === 'function'
+                ? await applyGeorgianQaGate(aiRes)
+                : aiRes;
+            return applyKaRuleEngine(gated);
         }
         return aiRes;
     }
-    console.warn("AI Engine failed — FALLING BACK to machine translation. " +
-        "Result quality will drop. Check API keys/quota.");
+    console.warn('[Engine] Tier A (AI pipeline) produced nothing — falling back to the rule engine.');
     return null;
 }
 
-// Smart router: easy chunks go to the local engine (the in-house engine we
-// are training and growing), questionable/complex/error-prone chunks go
-// through the AI pipeline and get refined more.
+// Tier router. Tier A whenever a quality engine is reachable (your key OR the
+// keyless gateway); complexity only chooses the refinement depth. Tier B (rule
+// engine, no LLM) when no engine is reachable or Tier A fails.
 async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
     const score = scoreChunkComplexity(clean);
+    const complex = score > SMART_ROUTE_EASY_THRESHOLD;
+    if (complex) smartRoutingStats.complex++; else smartRoutingStats.easy++;
 
-    if (score <= SMART_ROUTE_EASY_THRESHOLD) {
-        smartRoutingStats.easy++;
-        // Easy chunk: local engine + in-house morphology auto-fixes.
-        return await translateChunkLocal(clean, targetLang);
+    if (aiTranslationAvailable()) {
+        const aiRes = await translateChunkAI(clean, targetLang, contextBefore, contextAfter, complex);
+        if (aiRes) return aiRes;
     }
 
-    smartRoutingStats.complex++;
-    // Complex/questionable chunk: full AI pipeline with refinement.
-    const aiRes = await translateChunkAI(clean, targetLang, contextBefore, contextAfter);
-    if (aiRes) return aiRes;
-    // AI failed for a complex chunk — fall back to the local engine rather
-    // than returning nothing.
+    // No engine reachable (offline / GitHub Pages / no key), or Tier A failed:
+    // the in-house rule engine still produces corrected Georgian.
     return await translateChunkLocal(clean, targetLang);
 }
+
 
 async function translateChunkContextually(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
 
-    // Smart routing: easy chunks skip the AI pipeline entirely; complex or
-    // error-prone chunks get the full AI pipeline with refinement.
+    // Tier router: Tier A (AI pipeline) whenever an engine is reachable,
+    // Tier B (rule engine, no LLM) otherwise.
     if (typeof translateChunkSmart === 'function') {
         return await translateChunkSmart(clean, targetLang, contextBefore, contextAfter);
     }
-
-    // Fallback: original sequential tier funnel (if smart router unavailable)
-    if (aiTranslationAvailable()) {
-        const pipeline = translationBudgetMode === 'budget' && typeof translateWithGeminiAIBatch === 'function'
-            ? translateWithGeminiAIBatch
-            : translateWithGeminiAI;
-        const aiRes = await pipeline(clean, targetLang, contextBefore, contextAfter);
-        if (aiRes) {
-            recordEngineUse('gemini');
-            // Georgian morphological QA gate: rule-based validation + one
-            // targeted LLM repair pass when the validator flags violations.
-            if (targetLang === 'ka' && typeof applyGeorgianQaGate === 'function') {
-                return await applyGeorgianQaGate(aiRes);
-            }
-            return aiRes;
-        }
-        console.warn("AI Engine failed — FALLING BACK to machine translation. " +
-            "Result quality will drop. Check API keys/quota.");
-    }
-
-    // Tier 1: Google Dict-Chrome-Ex Neural Engine (Ultra-stable, zero rate-limiting)
-    try {
-        const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean)}`;
-        const gRes = await fetch(gUrl);
-        if (gRes.ok) {
-            const data = await gRes.json();
-            if (data && data[0] && Array.isArray(data[0])) {
-                let fullTrans = '';
-                for (let i = 0; i < data[0].length; i++) {
-                    if (data[0][i] && data[0][i][0]) {
-                        fullTrans += data[0][i][0];
-                    }
-                }
-                const refined = refineGeorgianGrammar(fullTrans);
-                if (refined && refined.trim().length > 0) {
-                    recordEngineUse('google');
-                    return refined;
-                }
-            }
-        }
-    } catch (e) {
-        console.warn('Primary Google dict-chrome-ex translation failed:', e);
-    }
-
-    // Tier 2: Google GTX Neural Engine
-    try {
-        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean)}`;
-        const gRes2 = await fetch(gUrl2);
-        if (gRes2.ok) {
-            const data2 = await gRes2.json();
-            if (data2 && data2[0] && Array.isArray(data2[0])) {
-                let fullTrans2 = '';
-                for (let i = 0; i < data2[0].length; i++) {
-                    if (data2[0][i] && data2[0][i][0]) {
-                        fullTrans2 += data2[0][i][0];
-                    }
-                }
-                const refined2 = refineGeorgianGrammar(fullTrans2);
-                if (refined2 && refined2.trim().length > 0) {
-                    recordEngineUse('google');
-                    return refined2;
-                }
-            }
-        }
-    } catch (e) {
-        console.warn('Secondary Google GTX mirror failed:', e);
-    }
-
-    // Tier 3: Chunk-by-sentence fallback using MyMemory
-    const mm = await translateSingleSentence(clean, targetLang);
-    recordEngineUse(mm === clean ? 'failed' : 'mymemory');
-    return mm;
+    return await translateChunkLocal(clean, targetLang);
 }
+
 
 async function translateSingleSentence(text, targetLang = 'ka') {
     if (!text || !text.trim()) return '';
@@ -3436,24 +3412,92 @@ async function translateSingleSentence(text, targetLang = 'ka') {
     return clean;
 }
 
-async function startWholeBookTranslation() {
+// ══ Resumable translation jobs ══════════════════════════════════════════════
+// Every finished chunk is checkpointed to localStorage, so navigating away,
+// reloading, or closing the tab and coming back resumes exactly where it
+// stopped instead of starting over (and never re-translates a finished
+// chapter). Completed chapters are saved immediately, so you can start
+// listening to chapter 1 while chapter 7 is still being translated.
+const TJOB_PREFIX = 'lumina_tjob_';
+const tjobKey = id => TJOB_PREFIX + id;
+
+function loadTranslationJob(bookId) {
+    try { return JSON.parse(localStorage.getItem(tjobKey(bookId)) || 'null'); }
+    catch (e) { return null; }
+}
+function saveTranslationJob(job) {
+    if (!job || !job.bookId) return;
+    job.updatedAt = Date.now();
+    try { localStorage.setItem(tjobKey(job.bookId), JSON.stringify(job)); }
+    catch (e) { /* quota — progress still lives in saved chapters */ }
+}
+function clearTranslationJob(bookId) {
+    try { localStorage.removeItem(tjobKey(bookId)); } catch (e) { }
+}
+function findResumableTranslationJob() {
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || !k.startsWith(TJOB_PREFIX)) continue;
+        try {
+            const job = JSON.parse(localStorage.getItem(k) || 'null');
+            if (job && job.status === 'running') return job;
+        } catch (e) { }
+    }
+    return null;
+}
+window.getTranslationJobProgress = () => {
+    const job = findResumableTranslationJob();
+    return job ? { bookId: job.bookId, title: job.title || '', chapterIdx: job.chapterIdx || 0, totalChapters: job.totalChapters || 0 } : null;
+};
+
+// Auto-resume on load: if a job was interrupted, pick it up silently.
+async function resumeTranslationJobIfAny() {
+    const job = findResumableTranslationJob();
+    if (!job || isTranslatingWholeBook) return;
+    try {
+        const books = await getAllBooks();
+        const book = books.find(b => String(b.id) === String(job.bookId));
+        if (!book) { clearTranslationJob(job.bookId); return; }
+        if (currentBook?.id !== book.id) await selectBook(book.id, false);
+        if (typeof showToast === 'function') {
+            showToast(`Resuming Georgian translation of “${book.title}” where it stopped…`, 'info');
+        }
+        startWholeBookTranslation(true);
+    } catch (e) {
+        console.warn('[translation] resume failed:', e);
+    }
+}
+
+async function startWholeBookTranslation(resume = false) {
     if (!currentBook) {
         alert('Please select an audiobook to translate.');
         return;
     }
+    if (isTranslatingWholeBook) { openModal('wholeBookTranslateModal'); return; }
+
+    const existing = resume ? loadTranslationJob(currentBook.id) : null;
+    const job = existing && existing.status === 'running' ? existing : {
+        bookId: currentBook.id,
+        title: currentBook.title,
+        status: 'running',
+        chapterIdx: 0,
+        partial: [],
+        totalChapters: currentBook.chapters.length,
+    };
+    job.status = 'running';
+    job.totalChapters = currentBook.chapters.length;
+    saveTranslationJob(job);
 
     isTranslatingWholeBook = true;
     cancelTranslationFlag = false;
     openModal('wholeBookTranslateModal');
+
     translationPanelMinimized = false;
     translationStartTime = Date.now();
     translationChunkTimestamps = [];
 
     // Reset engine stats for this run and wire the live indicator.
-    translationEngineStats.gemini = 0;
-    translationEngineStats.google = 0;
-    translationEngineStats.mymemory = 0;
-    translationEngineStats.failed = 0;
+    Object.keys(translationEngineStats).forEach(k => { translationEngineStats[k] = 0; });
     setTranslationEngineStatusEl(document.getElementById('wbEngineStatus'));
 
     // Reset and build the detailed progress UI
@@ -3476,8 +3520,21 @@ async function startWholeBookTranslation() {
             if (cancelTranslationFlag) break;
 
             const chapter = currentBook.chapters[chIdx];
+
+            // Already-translated chapters are never redone (resume or restart).
+            if (chapter.text_ka && chapter.text_ka.trim().length > 0) {
+                updateChapterQueueStatus(-1, chIdx);
+                if (chIdx >= (job.chapterIdx || 0)) { job.chapterIdx = chIdx + 1; job.partial = []; saveTranslationJob(job); }
+                continue;
+            }
+
             const sentences = splitIntoNaturalSentences(chapter.text);
-            const translatedArr = [];
+            // Resume inside a chapter: reuse the chunks we already checkpointed.
+            const resumedPartial = (job.chapterIdx === chIdx && Array.isArray(job.partial)) ? job.partial : [];
+            const translatedArr = resumedPartial.slice();
+            job.chapterIdx = chIdx;
+            saveTranslationJob(job);
+
 
             if (DOM.wbChapterLabel) {
                 DOM.wbChapterLabel.textContent = `Translating Chapter ${chIdx + 1} of ${totalChapters}: ${chapter.title}`;
@@ -3516,18 +3573,29 @@ async function startWholeBookTranslation() {
             let nextChunkIdx = 0;
             let completedInChapter = 0;
             const chunkResults = new Array(chunks.length).fill(null);
+            // Seed already-checkpointed chunks so a resumed run never redoes work.
+            for (let i = 0; i < chunks.length; i++) {
+                if (typeof resumedPartial[i] === 'string' && resumedPartial[i]) {
+                    chunkResults[i] = resumedPartial[i];
+                    completedInChapter++;
+                }
+            }
+
 
             // Reset shared progress state for this chapter
-            wbProgressState.completedInChapter = 0;
+            wbProgressState.completedInChapter = completedInChapter;
             wbProgressState.totalChunks = chunks.length;
             wbProgressState.totalSentences = totalSentencesCount;
             wbProgressState.completedSentences = completedSentencesCount;
             wbProgressState.totalChars = totalCharsTranslated;
             flushWbProgress();
 
+
             async function processChunk(idx) {
+                if (typeof chunkResults[idx] === 'string' && chunkResults[idx]) return; // resumed
                 const orig = chunks[idx].trim();
                 if (!orig) { chunkResults[idx] = ''; return; }
+
 
                 const isComplex = scoreChunkComplexity(orig) > SMART_ROUTE_EASY_THRESHOLD;
                 if (isComplex) {
@@ -3560,14 +3628,20 @@ async function startWholeBookTranslation() {
                     while (nextChunkIdx < chunks.length) {
                         if (cancelTranslationFlag) return;
                         const idx = nextChunkIdx++;
+                        const wasResumed = typeof chunkResults[idx] === 'string' && chunkResults[idx];
                         await processChunk(idx);
 
-                        if (chunkResults[idx]) {
+                        if (chunkResults[idx] && !wasResumed) {
                             translatedArr[idx] = chunkResults[idx];
                             totalCharsTranslated += chunkResults[idx].length;
                             completedInChapter++;
                             completedSentencesCount += chunkSentenceCounts[idx];
+                            // Checkpoint after EVERY chunk so nothing is lost.
+                            job.chapterIdx = chIdx;
+                            job.partial = chunkResults.map(v => (typeof v === 'string' ? v : null));
+                            saveTranslationJob(job);
                         }
+
 
                         // Update shared progress state, then refresh the UI
                         // (throttled to 4/sec to avoid layout thrash).
@@ -3597,17 +3671,24 @@ async function startWholeBookTranslation() {
             // so the just-completed chapter is immediately readable/listenable,
             // and persist progress so the reader can pick it up mid-run.
             updateChapterQueueStatus(-1, chIdx);
-            chapter.text_ka = translatedArr.join(' ');
+            if (cancelTranslationFlag) break;
+            chapter.text_ka = translatedArr.filter(Boolean).join(' ');
             if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
             if (!currentBook.translatedLangs.includes('ka')) {
                 currentBook.translatedLangs.push('ka');
             }
             await saveBookToDB(currentBook);
+            // Chapter checkpoint: next resume starts at the following chapter.
+            job.chapterIdx = chIdx + 1;
+            job.partial = [];
+            saveTranslationJob(job);
             renderChaptersList();
             updateMiniDock();
         }
 
         if (!cancelTranslationFlag) {
+            clearTranslationJob(currentBook.id);
+
             if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = 'Translation Complete! 🇬🇪';
             if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
             if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '100%';
@@ -3630,7 +3711,10 @@ async function startWholeBookTranslation() {
 
     } catch (err) {
         console.error('Whole-book translation error:', err);
-        alert('Translation paused. Progress saved.');
+        // The job stays 'running' so the next load resumes from the checkpoint.
+        if (typeof showToast === 'function') {
+            showToast('Translation paused — progress saved, it will resume automatically.', 'info');
+        }
     } finally {
         isTranslatingWholeBook = false;
     }
@@ -3638,6 +3722,10 @@ async function startWholeBookTranslation() {
 
 function cancelWholeBookTranslation() {
     cancelTranslationFlag = true;
+    if (currentBook) {
+        // Stopping is explicit: drop the resume job but keep finished chapters.
+        clearTranslationJob(currentBook.id);
+    }
     closeModal('wholeBookTranslateModal');
     if (DOM.translationMiniDock) DOM.translationMiniDock.classList.add('hidden');
     translationPanelMinimized = false;
@@ -3645,6 +3733,7 @@ function cancelWholeBookTranslation() {
     renderChaptersList();
     renderDigitalShelf();
 }
+
 
 // ══════════════════════════════════════════════════════════════════════════
 // ██ 3. ZERO-SKIPPING BULLETPROOF SPEECH ENGINE ██

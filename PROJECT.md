@@ -252,3 +252,29 @@ Mobile rendering: `public/studio/static/styles.css` is now actually linked from
 `index.html` (it never was), and a `max-width: 900px` / reduced-motion block flattens all
 `backdrop-filter` panels and stops the animated mesh — required to stop Android Chrome from
 dropping composited tiles (black panels, stutter) inside the iframe.
+
+## Georgian translation engine (hybrid, updated 2026-09-04)
+
+`public/studio/static/georgian-linguistics.js` (v1.45.0, 695 KB — 128 prompt blocks, 127 QA
+rules, 112 auto-fixes) is the **read-only authority**. Never rewrite it; extend around it.
+
+Tiers, chosen by availability (not by text complexity):
+
+1. **Tier A — hybrid AI.** `translateChunkAI()` runs the original multi-pass pipeline
+   (`translateWithGeminiAI` full: draft → critique → refine; `translateWithGeminiAIBatch` fused
+   for simple chunks), then `applyGeorgianQaGate()`, then `applyKaRuleEngine()`. Uses the user's
+   configured provider key when present, otherwise the keyless gateway (`/api/ai`).
+2. **Tier B — rule engine, no LLM.** `applyKaRuleEngine()` = MT draft + `refineGeorgianGrammar()`
+   + `correctGeorgianMorphology()` looped against `validateGeorgianTranslation()`. This is the
+   offline / GitHub Pages / no-key path and always runs on Tier A output too.
+3. **Tier C — raw MT.** MyMemory last resort; still rule-repaired, and reported as `raw` in the
+   status line.
+
+`translationBudgetMode` defaults to `quality`. Complexity scoring only picks pipeline depth.
+
+### Resumable jobs
+`lumina_tjob_<bookId>` in `localStorage` holds `{status, chapterIdx, partial[], totalChapters}`.
+Written after every chunk, cleared on completion or explicit cancel. `resumeTranslationJobIfAny()`
+runs on studio init; finished chapters (`chapter.text_ka`) are skipped. The studio iframe lives in
+`src/components/studio-host.tsx` (app-shell level, hidden not unmounted), so jobs survive
+navigation; `TranslationProgressPill` shows progress anywhere in the app.
