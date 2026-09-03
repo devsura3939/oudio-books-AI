@@ -435,3 +435,10 @@ In Authentication → URL Configuration set Site URL to the app's URL and add
 - `/scan` reuses the persistent studio iframe (`src/components/studio-host.tsx`), which posts `{type:'engbot-navigate',view:'scanner'|'library'}` into `public/studio/index.html`.
 - New studio view `#view-scanner` + `renderScanShelf()` in `public/studio/static/app.js` lists books with `extra.source === 'scan'` and reuses existing engines: `selectBook`/`playChapterAudio` (listen), `openReader` (Moon Reader), `startWholeBookTranslation` (Georgian), `exportCurrentBookPDF` (PDF), gateway TTS + JSZip (MP3 export), `deleteBook`.
 - Editing a scanned book (title, author, section titles) writes back through `saveBookToDB`.
+
+## Cover & structure detection for scans and PDFs (2026-09-03)
+
+- New shared detector `detectBookStructure(pages,{isKa})` in `public/studio/static/app.js` (exposed as `window.detectBookStructure`): finds the cover page, the title and author from its display lines, and real chapter/section headings (Chapter/Part/Book/Section/Volume, Prologue/Epilogue/Introduction/Preface/Contents/Appendix, თავი/ნაწილი/შესავალი/სარჩევი…, bare numerals). Long sections are parted at 1800 words; books with no headings fall back to page buckets.
+- Scanner (`public/studio/static/scanner.js`): after recognition it runs the same detector, prefills title/author, labels the detected cover page in review, and passes JPEG thumbnails of the front pages so the photographed cover becomes the book cover on every shelf.
+- Studio PDF import: pdf.js text items are regrouped into visual lines (headings survive), embedded PDF Title/Author are used unless junk ("(anonymous)", "untitled"), and the cover is official art → rendered cover page → generated studio cover. `extra` records `source`, `cover_page`, `detected_title`, `detected_author`, `detected_sections`.
+- React importer (`src/lib/pdf-chapters.ts`, `src/lib/use-import-pdf.ts`): same line rebuilding, heading set, cover-page detection, title/author sanitising; the rendered cover is stored in `books.cover_url`.

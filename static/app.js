@@ -4872,8 +4872,10 @@ function cleanBookTitle(rawName) {
         .trim();
 }
 
-async function fetchBookCoverArt(title) {
+async function fetchBookCoverArt(title, opts) {
+    const allowFallback = !opts || opts.fallback !== false;
     const cleaned = cleanBookTitle(title);
+
     try {
         const gRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(cleaned)}&maxResults=1`);
         if (gRes.ok) {
@@ -4896,8 +4898,9 @@ async function fetchBookCoverArt(title) {
         }
     } catch (e) { console.warn('Open Library failed:', e); }
 
-    return generateDynamicStudioCover(cleaned);
+    return allowFallback ? generateDynamicStudioCover(cleaned) : null;
 }
+
 
 function generateDynamicStudioCover(title) {
     const canvas = document.createElement('canvas');
@@ -4973,42 +4976,72 @@ async function handleFileUpload(file) {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-        let fullText = '';
+        const pageTexts = [];
         const totalPages = pdf.numPages;
 
         for (let i = 1; i <= totalPages; i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
-            fullText += content.items.map(item => item.str).join(' ') + '\n\n';
+            pageTexts.push({ index: i, text: pdfPageLines(content) });
 
             const pct = 15 + Math.round((i / totalPages) * 45);
             DOM.uploadProgressBar.style.width = `${pct}%`;
             DOM.uploadProgressPct.textContent = `${pct}%`;
         }
 
-        DOM.uploadStatusText.textContent = "Searching for official book cover art...";
+        DOM.uploadStatusText.textContent = "Detecting cover, title and chapters...";
         DOM.uploadProgressBar.style.width = '70%';
         DOM.uploadProgressPct.textContent = '70%';
 
-        const coverUrl = await fetchBookCoverArt(file.name);
+        // Embedded PDF metadata is the most reliable title/author when present.
+        let info = {};
+        try { info = (await pdf.getMetadata()).info || {}; } catch (e) { /* optional */ }
+
+        // Producer tools stamp junk metadata ("(anonymous)", "untitled"); ignore it.
+        const usableMeta = (v) => {
+            const t = (v || '').trim();
+            return t.length > 1 && !/^\(?(anonymous|unknown|untitled|none|n\/a|microsoft word.*)\)?$/i.test(t) ? t : null;
+        };
+        const structure = detectBookStructure(pageTexts, { isKa: false });
+        const fileTitle = cleanBookTitle(file.name);
+        const title = usableMeta(info.Title)
+            || structure.title
+            || (fileTitle.charAt(0).toUpperCase() + fileTitle.slice(1));
+        const author = usableMeta(info.Author) || structure.author || 'PDF Audiobook';
+
+        // Cover: official art if the title is a known book, otherwise the PDF's
+        // own detected cover page rendered to an image.
+        let coverUrl = null;
+        try { coverUrl = await fetchBookCoverArt(title, { fallback: false }); } catch (e) { /* optional */ }
+        if (!coverUrl) coverUrl = await renderPdfPageAsCover(pdf, structure.coverIndex || 1);
+        if (!coverUrl) coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
 
         DOM.uploadStatusText.textContent = "Structuring chapters...";
         DOM.uploadProgressBar.style.width = '90%';
         DOM.uploadProgressPct.textContent = '90%';
 
-        const rawTitle = cleanBookTitle(file.name);
-        const chapters = splitIntoChapters(fullText);
+        const chapters = structure.chapters.length
+            ? structure.chapters
+            : splitIntoChapters(pageTexts.map(p => p.text).join('\n\n'));
 
         const newBook = {
             id: 'book_' + Date.now(),
-            title: rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1),
-            author: 'PDF Audiobook',
+            title,
+            author,
             coverUrl: coverUrl,
             chapters: chapters,
             translatedLangs: [],
             dateAdded: new Date().toISOString(),
             lastPlayedChapterId: chapters.length > 0 ? chapters[0].id : null,
-            progressPct: 0
+            progressPct: 0,
+            extra: {
+                source: 'pdf',
+                page_count: totalPages,
+                cover_page: structure.coverIndex || null,
+                detected_title: structure.title || null,
+                detected_author: structure.author || null,
+                detected_sections: chapters.length
+            }
         };
 
         await saveBookToDB(newBook);
@@ -5023,12 +5056,55 @@ async function handleFileUpload(file) {
             selectBook(newBook.id, true);
         }, 800);
 
+
     } catch (err) {
         console.error('PDF Parse Error:', err);
         DOM.uploadStatusText.textContent = "Error parsing PDF document.";
         DOM.uploadStatusText.classList.add('text-error');
     }
 }
+
+/**
+ * pdf.js gives loose text items; rebuilding lines from their Y positions is what
+ * makes chapter/title headings detectable (a flat join destroys them).
+ */
+function pdfPageLines(content) {
+    const rows = [];
+    (content.items || []).forEach(item => {
+        if (!item || typeof item.str !== 'string') return;
+        const y = item.transform ? Math.round(item.transform[5]) : 0;
+        const row = rows.find(r => Math.abs(r.y - y) <= 3);
+        if (row) row.parts.push(item.str);
+        else rows.push({ y, parts: [item.str] });
+    });
+    return rows
+        .sort((a, b) => b.y - a.y)
+        .map(r => r.parts.join(' ').replace(/\s+/g, ' ').trim())
+        .filter(Boolean)
+        .join('\n');
+}
+
+/** Renders a PDF page to a JPEG data URL so it can be used as the book cover. */
+async function renderPdfPageAsCover(pdf, pageNumber) {
+    try {
+        const page = await pdf.getPage(Math.max(1, Math.min(pageNumber || 1, pdf.numPages)));
+        const base = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: Math.min(2, 700 / base.width) });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        return canvas.toDataURL('image/jpeg', 0.82);
+    } catch (e) {
+        console.warn('PDF cover render failed:', e);
+        return null;
+    }
+}
+
+
 
 // ── Scanned books (photos → shelf) ──────────────────────────────────────────
 // Called by static/scanner.js once page images have been transcribed. It lands
@@ -5040,49 +5116,27 @@ async function createBookFromScannedPages(pages, meta) {
     if (!list.length) throw new Error('No recognised page text');
 
     const isKa = (meta && meta.lang) === 'ka';
-    const MAX_WORDS = 600;
-    const chapters = [];
-    let bucket = [];
-    let bucketWords = 0;
-    let firstPage = list[0].index;
+    const structure = detectBookStructure(list, { isKa });
+    const chapters = structure.chapters;
 
-    const flush = (lastPage) => {
-        if (!bucket.length) return;
-        const text = bucket.join('\n\n');
-        const words = text.split(/\s+/).filter(Boolean).length;
-        const id = chapters.length + 1;
-        chapters.push({
-            id,
-            title: firstPage === lastPage ? `Page ${firstPage}` : `Pages ${firstPage}–${lastPage}`,
-            text,
-            // A scanned Georgian book is already Georgian: filling text_ka keeps
-            // bookHasGeorgian() true so the reader never offers to translate it.
-            text_ka: isKa ? text : null,
-            word_count: words,
-            estimated_duration_sec: Math.round((words / 140) * 60)
-        });
-        bucket = [];
-        bucketWords = 0;
-    };
+    const title = ((meta && meta.title) || structure.title || 'Scanned book').trim();
+    const author = ((meta && meta.author) || structure.author || '').trim();
 
-    list.forEach((page, i) => {
-        if (!bucket.length) firstPage = page.index;
-        bucket.push(page.text.trim());
-        bucketWords += page.text.split(/\s+/).filter(Boolean).length;
-        const isLast = i === list.length - 1;
-        if (bucketWords >= MAX_WORDS || isLast) flush(page.index);
-    });
-
-    const title = (meta && meta.title) || 'Scanned book';
-    let coverUrl = null;
-    try {
-        coverUrl = await fetchBookCoverArt(title);
-    } catch (e) { /* cover art is optional */ }
+    // Cover: the photographed cover page itself wins (it *is* the real cover of
+    // this book), then official art, then the generated studio cover.
+    const frontImages = (meta && meta.frontImages) || {};
+    let coverUrl = structure.coverIndex ? frontImages[structure.coverIndex] : null;
+    if (!coverUrl) {
+        try {
+            coverUrl = await fetchBookCoverArt(title, { fallback: false });
+        } catch (e) { /* cover art is optional */ }
+    }
+    if (!coverUrl) coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
 
     const newBook = {
         id: 'book_' + Date.now(),
         title,
-        author: (meta && meta.author) || 'Scanned book',
+        author: author || 'Scanned book',
         coverUrl,
         chapters,
         translatedLangs: isKa ? ['ka'] : [],
@@ -5093,16 +5147,190 @@ async function createBookFromScannedPages(pages, meta) {
             source: 'scan',
             scanned_pages: list.length,
             scan_lang: isKa ? 'ka' : 'en',
-            scan_engines: Array.from(new Set(list.map(p => p.engine).filter(Boolean)))
+            scan_engines: Array.from(new Set(list.map(p => p.engine).filter(Boolean))),
+            cover_page: structure.coverIndex || null,
+            detected_title: structure.title || null,
+            detected_author: structure.author || null,
+            detected_sections: chapters.length
         }
     };
 
     await saveBookToDB(newBook);
     await renderDigitalShelf();
+    if (typeof renderScanShelf === 'function') await renderScanShelf();
     selectBook(newBook.id, false);
     return newBook;
 }
 window.createBookFromScannedPages = createBookFromScannedPages;
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// ██ BOOK STRUCTURE DETECTION (cover · title · author · chapters) ██
+// One implementation used by both intake paths — scanned photos and imported
+// PDFs — so a book looks the same on the shelf however it arrived.
+// ══════════════════════════════════════════════════════════════════════════
+
+const FRONT_MATTER_RE = /^(contents|table of contents|copyright|dedication|acknowledg(e)?ments?|about the author|სარჩევი|შინაარსი|მიძღვნა)\b/i;
+const HEADING_RE = [
+    /^(chapter|part|book|section|volume)\s+([0-9]{1,3}|[ivxlcdm]{1,7})\b[\s.:—–-]*(.{0,70})$/i,
+    /^(prologue|epilogue|introduction|preface|foreword|afterword|appendix|conclusion|interlude)\b[\s.:—–-]*(.{0,70})$/i,
+    /^(თავი|ნაწილი|წიგნი|კარი)\s+([0-9]{1,3}|[ა-ჰ]{1,4})\b[\s.:—–-]*(.{0,70})$/,
+    /^(შესავალი|წინასიტყვაობა|ბოლოსიტყვაობა|დასკვნა|დანართი|პროლოგი|ეპილოგი)\b[\s.:—–-]*(.{0,70})$/,
+];
+
+/** A short standalone line that starts a new chapter, or null. */
+function detectHeadingLine(line) {
+    const t = (line || '').trim().replace(/\s+/g, ' ');
+    if (!t || t.length > 80) return null;
+    if (FRONT_MATTER_RE.test(t)) return t.replace(/\s*[.·]+\s*\d+$/, '');
+    for (const re of HEADING_RE) {
+        if (re.test(t)) return t.replace(/[.:—–-]+$/, '').trim();
+    }
+    // A page whose first line is just a number ("7", "IV") is a chapter opener.
+    if (/^(\d{1,3}|[IVXLCDM]{1,7})[.)]?$/.test(t)) return 'Chapter ' + t.replace(/[.)]$/, '');
+    return null;
+}
+
+function looksLikeCoverPage(text) {
+    const lines = (text || '').split('\n').map(l => l.trim()).filter(Boolean);
+    const wordCount = (text || '').split(/\s+/).filter(Boolean).length;
+    if (!lines.length || wordCount > 120) return false;
+    if (lines.some(l => FRONT_MATTER_RE.test(l))) return false;
+    // Covers are sparse: a few short display lines, no running prose.
+    const longLines = lines.filter(l => l.length > 90).length;
+    return longLines === 0 && lines.length <= 12 && wordCount <= 120;
+}
+
+/** Title/author guessed from the display lines of a cover / title page. */
+function detectTitleAndAuthor(text) {
+    const lines = (text || '')
+        .split('\n')
+        .map(l => l.trim().replace(/\s+/g, ' '))
+        .filter(l => l.length > 1 && l.length < 90 && !/^\d+$/.test(l));
+    if (!lines.length) return { title: null, author: null };
+
+    let author = null;
+    const byIdx = lines.findIndex(l => /^(by|written by|ავტორი|ავტორი:)\s+/i.test(l));
+    if (byIdx >= 0) author = lines[byIdx].replace(/^(by|written by|ავტორი:?)\s+/i, '').trim();
+
+    const candidates = lines.filter((l, i) => i !== byIdx && !/^(a novel|novel|რომანი)$/i.test(l));
+    // The title is normally the longest of the first few display lines.
+    const title = candidates
+        .slice(0, 6)
+        .sort((a, b) => b.length - a.length)[0] || null;
+
+    if (!author && byIdx < 0) {
+        const idx = candidates.indexOf(title);
+        const next = candidates[idx + 1];
+        // A short line right under the title, in Title Case, is usually the author.
+        if (next && next.length <= 40 && /^[A-ZА-Яა-ჰ]/.test(next) && next.split(' ').length <= 5) {
+            author = next;
+        }
+    }
+    return {
+        title: title ? title.replace(/[.,:;]+$/, '') : null,
+        author: author ? author.replace(/[.,:;]+$/, '') : null,
+    };
+}
+
+/**
+ * Turn recognised pages into a structured book.
+ * `pages` is [{ index, text }] — pages from a scan, or per-page PDF text.
+ */
+function detectBookStructure(pages, opts) {
+    const isKa = !!(opts && opts.isKa);
+    const list = (pages || []).filter(p => p && typeof p.text === 'string');
+    if (!list.length) return { coverIndex: null, title: null, author: null, chapters: [] };
+
+    // 1. Cover: only the first two pages can be one.
+    let coverIndex = null;
+    for (const page of list.slice(0, 2)) {
+        if (looksLikeCoverPage(page.text)) { coverIndex = page.index; break; }
+    }
+
+    const cover = coverIndex ? list.find(p => p.index === coverIndex) : null;
+    const detected = detectTitleAndAuthor(cover ? cover.text : list[0].text.split('\n').slice(0, 8).join('\n'));
+
+    // 2. Chapters: split at detected headings, page boundaries preserved.
+    const body = list.filter(p => p.index !== coverIndex);
+    const found = [];
+    let current = null;
+    const push = () => { if (current && current.text.trim()) found.push(current); };
+
+    body.forEach(page => {
+        const lines = page.text.split('\n');
+        lines.forEach(line => {
+            const heading = detectHeadingLine(line);
+            if (heading) {
+                push();
+                current = { title: heading, text: '', firstPage: page.index, lastPage: page.index };
+                return;
+            }
+            if (!current) current = { title: 'Opening', text: '', firstPage: page.index, lastPage: page.index };
+            current.text += (current.text ? '\n' : '') + line;
+            current.lastPage = page.index;
+        });
+    });
+    push();
+
+    let sections = found.filter(c => c.text.split(/\s+/).filter(Boolean).length > 25);
+    if (sections.length < 2) sections = bucketPages(body);
+
+    // 3. Very long chapters are parted so narration and translation stay snappy.
+    const MAX_WORDS = 1800;
+    const chapters = [];
+    sections.forEach(section => {
+        const words = section.text.trim().split(/\s+/).filter(Boolean);
+        const partCount = Math.max(1, Math.ceil(words.length / MAX_WORDS));
+        for (let p = 0; p < partCount; p++) {
+            const slice = words.slice(p * MAX_WORDS, (p + 1) * MAX_WORDS);
+            if (!slice.length) continue;
+            const text = slice.join(' ');
+            chapters.push({
+                id: chapters.length + 1,
+                title: partCount > 1 ? `${section.title} (part ${p + 1})` : section.title,
+                text,
+                text_ka: isKa ? text : null,
+                word_count: slice.length,
+                estimated_duration_sec: Math.round((slice.length / 140) * 60)
+            });
+        }
+    });
+
+    return { coverIndex, title: detected.title, author: detected.author, chapters };
+}
+
+/** Fallback when a book has no detectable headings: read it page by page. */
+function bucketPages(pages) {
+    const MAX_WORDS = 600;
+    const out = [];
+    let bucket = [];
+    let words = 0;
+    let first = pages.length ? pages[0].index : 1;
+    pages.forEach((page, i) => {
+        if (!bucket.length) first = page.index;
+        bucket.push(page.text.trim());
+        words += page.text.split(/\s+/).filter(Boolean).length;
+        if (words >= MAX_WORDS || i === pages.length - 1) {
+            const text = bucket.join('\n\n').trim();
+            if (text) {
+                out.push({
+                    title: first === page.index ? `Page ${first}` : `Pages ${first}–${page.index}`,
+                    text,
+                    firstPage: first,
+                    lastPage: page.index
+                });
+            }
+            bucket = [];
+            words = 0;
+        }
+    });
+    return out;
+}
+
+window.detectBookStructure = detectBookStructure;
+
+
 
 
 

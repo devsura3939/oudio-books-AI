@@ -312,3 +312,6 @@ only correct way to re-flow after resize/orientation/typography changes. Reader 
 
 ### Scanner page
 The Library page was retired. `/scan` opens the studio's Scanner view: scan pages, then read, listen, translate, edit or export (PDF / MP3 zip) each scanned book with the same shared engines. No duplicate reader/TTS/translation code exists.
+
+### Cover / title / chapter detection
+Both intake paths (camera scan and PDF import) run one detector: cover page, title, author and chapter headings are detected automatically; the cover image is the photographed/rendered cover page unless official art is found. Detection results are kept in `books.metadata.extra` (`cover_page`, `detected_title`, `detected_author`, `detected_sections`).

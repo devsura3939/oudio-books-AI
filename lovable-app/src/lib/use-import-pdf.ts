@@ -39,6 +39,7 @@ export function useImportPdf(options?: { onImported?: (book: Book) => void }) {
           user_id: user.id,
           title: parsed.title?.trim() || file.name.replace(/\.pdf$/i, ""),
           author: parsed.author?.trim() || null,
+          cover_url: parsed.coverImage,
           source_filename: file.name,
           page_count: parsed.pageCount,
           total_chapters: parsed.chapters.length,

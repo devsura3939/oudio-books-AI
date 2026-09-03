@@ -32,6 +32,7 @@
     running: false,
     cancel: false,
     tier0: null, // null = unknown, true/false once probed
+    structure: null, // detected cover / title / author after a scan
     tessWorker: null,
     tessLang: null,
   };
@@ -151,10 +152,15 @@
     } else if (view === "review") {
       const words = state.pages.reduce((n, p) => n + countWords(p.text), 0);
       el.innerHTML =
-        header("Review & save", `${state.pages.length} pages · ${words.toLocaleString()} words recognised`) +
+        header("Review & save", `${state.pages.length} pages · ${words.toLocaleString()} words · ${
+          state.structure
+            ? (state.structure.coverIndex ? `cover detected on page ${state.structure.coverIndex}, ` : "") +
+              `${state.structure.chapters.length} section${state.structure.chapters.length === 1 ? "" : "s"} detected`
+            : "structure detected"
+        }`) +
         `<div class="space-y-3">
           <input id="scanTitle" value="${escapeAttr(suggestTitle())}" placeholder="Book title" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
-          <input id="scanAuthor" value="" placeholder="Author (optional)" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
+          <input id="scanAuthor" value="${escapeAttr(suggestAuthor())}" placeholder="Author (optional)" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none">
           <div id="scanReview" class="max-h-[34vh] overflow-y-auto space-y-2"></div>
           <button onclick="LuminaScanner.saveBook()" id="scanSaveBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-bold text-sm shadow-[0_0_25px_rgba(0,240,255,0.35)] flex items-center justify-center gap-2">
             <span class="material-symbols-outlined">library_add</span> Save to my library
@@ -304,7 +310,7 @@
       .map(
         (p, i) => `<details class="rounded-xl border border-white/10 bg-surface/40 p-2">
           <summary class="text-xs font-bold text-white cursor-pointer flex items-center justify-between">
-            <span>Page ${i + 1} · ${countWords(p.text)} words ${p.status === "error" ? '<span class="text-error">failed</span>' : ""}</span>
+            <span>${state.structure && state.structure.coverIndex === i + 1 ? "Cover · " : ""}Page ${i + 1} · ${countWords(p.text)} words ${p.status === "error" ? '<span class="text-error">failed</span>' : ""}</span>
             <span class="text-[10px] text-on-surface-variant">${p.engine || ""}${typeof p.quality === "number" ? " · " + p.quality + "%" : ""}</span>
           </summary>
           ${p.warning ? `<p class="mt-1 text-[10px] text-error">${escapeHtml(p.warning)}</p>` : ""}
@@ -681,6 +687,7 @@
       render("pages");
       return;
     }
+    detectStructure();
     render("review");
   }
 
@@ -894,13 +901,61 @@
     return text.split(/\s+/).filter(Boolean).length;
   }
 
+  // Runs the shared app-wide detector over the recognised pages so the scan gets
+  // the same cover / title / author / chapter detection a PDF import gets.
+  function detectStructure() {
+    const pages = state.pages
+      .filter((p) => p.text && p.text.trim())
+      .map((p, i) => ({ index: i + 1, text: p.text.trim() }));
+    try {
+      state.structure =
+        typeof window.detectBookStructure === "function" && pages.length
+          ? window.detectBookStructure(pages, { isKa: false })
+          : null;
+    } catch (err) {
+      console.warn("[scanner] structure detection failed:", err);
+      state.structure = null;
+    }
+  }
+
   function suggestTitle() {
+    if (state.structure && state.structure.title) return state.structure.title;
     const first = (state.pages.find((p) => p.text) || {}).text || "";
     const line = first
       .split("\n")
       .map((l) => l.trim())
       .find((l) => l.length > 2 && l.length < 80);
     return line ? line.replace(/\s+/g, " ") : "Scanned book";
+  }
+
+  function suggestAuthor() {
+    return (state.structure && state.structure.author) || "";
+  }
+
+  // Small JPEG of a captured page — used as the book cover when the cover page
+  // was photographed, so the shelf shows the real book.
+  async function pageDataUrl(page, maxEdge) {
+    try {
+      const bitmap = await blobToBitmap(page.blob);
+      const rot = page.rotation % 360;
+      const swap = rot === 90 || rot === 270;
+      const srcW = swap ? bitmap.height : bitmap.width;
+      const srcH = swap ? bitmap.width : bitmap.height;
+      const scale = Math.min(1, (maxEdge || 700) / Math.max(srcW, srcH));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(srcW * scale));
+      canvas.height = Math.max(1, Math.round(srcH * scale));
+      const ctx = canvas.getContext("2d");
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((rot * Math.PI) / 180);
+      const dw = swap ? canvas.height : canvas.width;
+      const dh = swap ? canvas.width : canvas.height;
+      ctx.drawImage(bitmap, -dw / 2, -dh / 2, dw, dh);
+      return canvas.toDataURL("image/jpeg", 0.82);
+    } catch (err) {
+      console.warn("[scanner] cover thumbnail failed:", err);
+      return null;
+    }
   }
 
   // ── Save into the shelf ────────────────────────────────────────────────────
@@ -925,14 +980,26 @@
       // Georgian is cleaned up the same way translated Georgian is.
       const cleanup = (t) =>
         isKa && typeof window.applyKaRuleEngine === "function" ? window.applyKaRuleEngine(t) : t;
+      // Photographed cover page → the book's cover image on every shelf.
+      const frontImages = {};
+      for (let i = 0; i < Math.min(2, pages.length); i++) {
+        const url = await pageDataUrl(pages[i], 700);
+        if (url) frontImages[i + 1] = url;
+      }
       await window.createBookFromScannedPages(
         pages.map((p, i) => ({ index: i + 1, text: cleanup(p.text.trim()), engine: p.engine || "offline" })),
-        { title: title.trim() || "Scanned book", author: author.trim(), lang: isKa ? "ka" : "en" },
+        {
+          title: title.trim() || "Scanned book",
+          author: author.trim(),
+          lang: isKa ? "ka" : "en",
+          frontImages,
+        },
       );
 
       // Free the object URLs and reset for the next scan.
       state.pages.forEach((p) => URL.revokeObjectURL(p.url));
       state.pages = [];
+      state.structure = null;
       close();
     } catch (err) {
       console.error("[scanner] save failed:", err);
