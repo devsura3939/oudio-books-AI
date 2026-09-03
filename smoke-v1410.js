@@ -1,8 +1,8 @@
 // Smoke test for v1.41.0 — Personal pronouns (KA-123, QA 3.122, Fix 4.108)
-// (version guard updated for v1.43.0; all 4.108/QA pins re-verified under 1.43.0)
+// (version guard updated for v1.44.0; all 4.108/QA pins re-verified under 1.44.0)
 const { validateGeorgianTranslation, correctGeorgianMorphology, GEORGIAN_KNOWLEDGE_VERSION, GEORGIAN_KNOWLEDGE_STATS } = require('./static/georgian-linguistics.js');
 console.log('Version:', GEORGIAN_KNOWLEDGE_VERSION, '| stats:', JSON.stringify(GEORGIAN_KNOWLEDGE_STATS));
-if (GEORGIAN_KNOWLEDGE_VERSION !== '1.43.0') { console.error('FAIL: version not 1.43.0'); process.exit(1); }
+if (GEORGIAN_KNOWLEDGE_VERSION !== '1.44.0') { console.error('FAIL: version not 1.44.0'); process.exit(1); }
 
 // --- Fix 4.108: bare pronoun swaps (note: fix engine appends । danda via 4.19) ---
 const cases = [

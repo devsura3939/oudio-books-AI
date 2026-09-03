@@ -23,11 +23,11 @@ const has = (arr, r) => arr.includes(r);
 const msgOf = (text, rule) => (qa(text).find(i => i.rule === rule) || {}).message || '';
 
 // ── [1] VERSION & STATS (5) ─────────────────────────────────────────────────
-t('version 1.43.0', GEORGIAN_KNOWLEDGE_VERSION === '1.43.0');
-t('stats promptBlocks 126', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 126);
-t('stats qaRules 125', GEORGIAN_KNOWLEDGE_STATS.qaRules === 125);
-t('stats autoFixes 110', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 110);
-t('stats researchSources 377', GEORGIAN_KNOWLEDGE_STATS.researchSources === 377);
+t('version 1.44.0', GEORGIAN_KNOWLEDGE_VERSION === '1.44.0');
+t('stats promptBlocks 127', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 127);
+t('stats qaRules 126', GEORGIAN_KNOWLEDGE_STATS.qaRules === 126);
+t('stats autoFixes 111', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 111);
+t('stats researchSources 378', GEORGIAN_KNOWLEDGE_STATS.researchSources === 378);
 
 // ── [2] KB PRESENCE + WIRING (12) ──────────────────────────────────────────
 t('KB KA-125 const exists', src.includes('const KA_FUTURE_DICT = `'));

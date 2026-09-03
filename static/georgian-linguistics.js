@@ -4192,6 +4192,79 @@ ALREADY encodes the person — pro-drop may trim the pronoun (3.19).
 Everything else (2nd person, it, subjectless, negated, contracted)
 stays QA-gated for the AI pass.`;
 
+// KA-126 v1.44.0 — Present screeve dictionary: person-marked SUBJECT+VERB
+//                  frames for the closed set of high-frequency verbs whose
+//                  PRESENT (აწმყო, screeve 1) paradigms are fully attested.
+//                  Same playbook as KA-125 (future). Attested: kahibaro.com
+//                  9.5 Common Irregular Verbs (ცოდნა → ვიცი/იცი/იცის/
+//                  ვიცით/იცით/იციან "ისინი არ იციან ინგლისური"; ცნობნა →
+//                  ვიცნობ/იცნობ/იცნობს/ვიცნობთ/იცნობთ/იცნობენ "მე ვიცნობ
+//                  ნინოს"; გაკეთება → ვაკეთებ/აკეთებ/აკეთებს/ვაკეთებთ/
+//                  აკეთებთ/აკეთებენ "მე ვაკეთებ დავალებას"; თქმა →
+//                  ვამბობ/ამბობ/ამბობს...; ხედვა → ვხედავ/ხედავ/ხედავს/
+//                  ვხედავთ), apprenti-polyglotte.net (აკეთებ full table,
+//                  matches kahibaro), latinum.substack L76 (ფიქრობს →
+//                  ვფიქრობ/ფიქრობ/ფიქრობს/ვფიქრობთ/ფიქრობთ/ფიქრობენ),
+//                  L80 (ვამბობ table), en.wiktionary ჭამს (ვჭამ/ჭამ/
+//                  ჭამს/ვჭამთ/ჭამთ/ჭამენ) + სვამ (ვსვამ/სვამ/სვამს/
+//                  ვსვამთ/სვამთ/სვამენ) + კითხულობს (ვკითხულობ/
+//                  კითხულობ/კითხულობს/ვკითხულობთ/კითხულობთ/კითხულობენ),
+//                  talkpal.ai (წერა present ვწერ/წერ/წერს/ვწერთ/წერთ/
+//                  წერენ), sublearn.com (v- + root agreement), cram.com
+//                  (ვამბობ…ამბობენ), polytranslator corpus ("ჩვენ ერთად
+//                  ვჭამთ პურს", "მე ცხელ ჩაის ვსვამ").
+const KA_PRESENT_DICT = `
+KA-126 PRESENT SCREEVE DICTIONARY — the present indicative (აწმყო,
+screeve 1) marks person/number with the v-class series: v- 1sg (ვწერ),
+zero 2sg (წერ), -ს 3sg (წერს), -თ 1pl/2pl (ვწერთ/წერთ), -ენ 3pl
+(წერენ). The STEM is verb-specific (often suppletive: ცოდნა → იც-),
+so the present is a DICTIONARY form, not a productive English-side
+rule (sublearn: "v- + root" is the regular frame; stems vary).
+Person-marked SUBJECT+VERB frames map deterministically (fix 4.111):
+• KNOW a fact (ცოდნა, stem იც-): I→ვიცი · we→ვიცით · he/she→იცის ·
+  they→იციან (kahibaro "ისინი არ იციან ინგლისური").
+• KNOW a person (ცნობნა, stem იცნობ-): I→ვიცნობ · we→ვიცნობთ ·
+  he/she→იცნობს · they→იცნობენ — chosen when the OBJECT is a person
+  pronoun (know him/her/them; kahibaro "მე ვიცნობ ნინოს"). These
+  frames run BEFORE the bare fact frames. Proper-name objects
+  ("I know Nino") are NOT auto-detected — they take the fact form
+  (AI refines).
+• SEE (ხედვა): I→ვხედავ · we→ვხედავთ · he/she→ხედავს · they→ხედავენ
+  (kahibaro 9.5; lingoseven full table).
+• EAT (ჭამა): I→ვჭამ · we→ვჭამთ · he/she→ჭამს · they→ჭამენ
+  (wiktionary ჭამს; polytranslator "ვჭამთ პურს").
+• DRINK (სმა): I→ვსვამ · we→ვსვამთ · he/she→სვამს · they→სვამენ
+  (wiktionary სვამ; polytranslator "მე ცხელ ჩაის ვსვამ").
+• READ (კითხვა): I→ვკითხულობ · we→ვკითხულობთ · he/she→კითხულობს ·
+  they→კითხულობენ (wiktionary კითხულობს full table).
+• WRITE (წერა): I→ვწერ · we→ვწერთ · he/she→წერს · they→წერენ
+  (talkpal.ai; sublearn).
+• SAY (თქმა): I→ვამბობ · we→ვამბობთ · he/she→ამბობს · they→ამბობენ
+  (kahibaro/cram.com; the ეუბნებ- "tell someone" series is AI-pass).
+• THINK (ფიქრი): I→ვფიქრობ · we→ვფიქრობთ · he/she→ფიქრობს ·
+  they→ფიქრობენ (latinum L76).
+• MAKE/DO (გაკეთება): I→ვაკეთებ · we→ვაკეთებთ · he/she→აკეთებს ·
+  they→აკეთებენ (kahibaro; apprenti-polyglotte identical table).
+EXCLUDED (already owned elsewhere): want → 4.88-4.89 psych-verb frames
+(მინდა/გინდა/უნდა — dative-experiencer, KA-124); go/come present →
+4.81 motion (მიდის/მოდის); sleep → inversion verb (ბავშვს სძინავს —
+dative-subject construction, AI-pass only); love/like/hate → m-class
+verbs (KA-104). GUARDS: 2nd person NEVER maps (T–V: იცი vs იცით —
+register AI-decided); "it" subjects AI-gated (4.108); subjectless
+verb forms left (no person → no safe form); negated presents
+("don't/doesn't know") stay with 4.93's არ family + AI rebuild
+(არ ვიცი); do/does-support questions untouched (Georgian drops
+do-support, question formed by intonation).
+MAPPING: know→ვიცი paradigm · know him→ვიცნობ paradigm · see→ვხედავ
+paradigm · eat→ვჭამ paradigm · drink→ვსვამ paradigm ·
+read→ვკითხულობ paradigm · write→ვწერ paradigm · say→ვამბობ paradigm ·
+think→ვფიქრობ paradigm · make→ვაკეთებ paradigm.
+TACTIC: consume SUBJECT+VERB atomically while the subject is still
+visible (before 4.81 bare-go and 4.109/4.108 pronoun swaps); the
+present form ALREADY encodes the person — pro-drop may trim the
+pronoun (3.19). Everything else (2nd person, it, subjectless,
+negated, questions) stays QA-gated for the AI pass (3.125).`;
+
 // KA-124 v1.42.0 — Modals & auxiliaries: bare EN modal/copula tokens →
 //                  Georgian impersonal-modal carriers + the copula
 //                  paradigm. Wires the KA_MODALITY doctrine (KB-only
@@ -4660,6 +4733,7 @@ function getKaKnowledgeBase() {
         KA_POSSESSIVE_DET,
         KA_PERSONAL_PRONOUNS,
         KA_FUTURE_DICT,
+        KA_PRESENT_DICT,
         KA_MODALS_AUX,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
@@ -6033,6 +6107,29 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'future_screeve_untranslated', message: 'Future screeve untranslated (KA-125): Georgian future (მყოფადი) = PREVERB + PRESENT stem, verb-specific — a dictionary form. Attested: see→ვნახავ (I/we ვნახავ/ვნახავთ, he/she ნახავს, they ნახავენ) · write→დავწერ (დავწერ/დავწერთ/დაწერს/დაწერენ) · call→დავრეკავ (დავრეკავ/დავრეკავთ/დარეკავს/დარეკავენ) · help→დავეხმარები (დავეხმარები/დავეხმარებით/დაეხმარება/დაეხმარებიან) · go→წავალ (წავალ/წავალთ/წავა/წავლენ) · come→მოვალ (მოვალ/მოვალთ/მოვა/მოვლენ). 2nd person is T–V gated (წახვალ vs წახვალთ; AI decides შენ/თქვენ register). NEGATED future: არ + future screeve (არ ვნახავ, არ წავა) — never არ will. Contractions: I\'ll/we\'ll = I will/we will (same screeve); he\'ll/she\'ll → ნახავს-class 3sg. it-subjects: AI-gated (anaphora vs dummy). Subjectless "will V": person unknown — AI infers from context.' });
     }
 
+    // 3.125 Present screeve residue (v1.44.0, KA-126). English PRESENT
+    //      frames that fix 4.111 deliberately does NOT map: 2nd person
+    //      (T–V gated იცი vs იცით), it-subjects (AI-gated), bare
+    //      subjectless 3sg forms (knows/sees/… — no visible person),
+    //      do/does-support questions, and negated presents ("don't/
+    //      doesn't know" — 4.93 owns the არ swap; არ + present screeve
+    //      is an AI rebuild). The dictionary verbs' attested present
+    //      paradigms travel in the message so the AI pass (and human
+    //      reviewers) see the exact targets.
+    const prSjv = /\b(?:i|we|they)\s+(?:know|see|eat|drink|read|write|say|think|make)\b/i.test(text);
+    const prHsv = /\b(?:he|she)\s+(?:knows|sees|eats|drinks|reads|writes|says|thinks|makes)\b/i.test(text);
+    const prYou = /\byou\s+(?:know|see|eat|drink|read|write|say|think|make)\b/i.test(text);
+    const prIt = /\bit\s+(?:knows|sees|eats|drinks|reads|writes|says|thinks|makes)\b/i.test(text);
+    const prBare = /\b(?:knows|sees|eats|drinks|reads|writes|says|thinks|makes)\b/i.test(text);
+    //      Carrier uses COMPLETE surface forms (v1.43.0 doctrine — stem
+    //      prefixes like იც/ხედავ never match their inflected outputs:
+    //      იცი is fenced inside იცნობს by the lookahead, ხედავ inside
+    //      ვხედავ by the lookbehind). All 40 forms of fix 4.111 listed.
+    const prCarrier = /(?<![\u10A0-\u10FF])(?:ვიცნობ|ვიცნობთ|იცნობს|იცნობენ|ვიცი|ვიცით|იცის|იციან|ვხედავ|ვხედავთ|ხედავს|ხედავენ|ვჭამ|ვჭამთ|ჭამს|ჭამენ|ვსვამ|ვსვამთ|სვამს|სვამენ|ვკითხულობ|ვკითხულობთ|კითხულობს|კითხულობენ|ვწერ|ვწერთ|წერს|წერენ|ვამბობ|ვამბობთ|ამბობს|ამბობენ|ვფიქრობ|ვფიქრობთ|ფიქრობს|ფიქრობენ|ვაკეთებ|ვაკეთებთ|აკეთებს|აკეთებენ)(?![\u10A0-\u10FF])/.test(text);
+    if ((prSjv || prHsv || prYou || prIt || prBare) && !prCarrier) {
+        issues.push({ rule: 'present_verb_untranslated', message: 'Present screeve untranslated (KA-126): Georgian present (აწმყო) = v-class person markers on a verb-specific stem — a dictionary form. Attested: know(fact)→ვიცი (I ვიცი, we ვიცით, he/she იცის, they იციან) · know(person)→ვიცნობ (ვიცნობ მას I know him; იცნობს/იცნობენ) · see→ვხედავ (ვხედავ/ვხედავთ/ხედავს/ხედავენ) · eat→ვჭამ (ვჭამ/ვჭამთ/ჭამს/ჭამენ) · drink→ვსვამ (ვსვამ/ვსვამთ/სვამს/სვამენ) · read→ვკითხულობ (ვკითხულობ/ვკითხულობთ/კითხულობს/კითხულობენ) · write→ვწერ (ვწერ/ვწერთ/წერს/წერენ) · say→ვამბობ (ვამბობ/ვამბობთ/ამბობს/ამბობენ; "tell someone" takes the ეუბნებ- series — AI decides) · think→ვფიქრობ (ვფიქრობ/ვფიქრობთ/ფიქრობს/ფიქრობენ) · make/do→ვაკეთებ (ვაკეთებ/ვაკეთებთ/აკეთებს/აკეთებენ). 2nd person is T–V gated (იცი vs იცით; AI decides შენ/თქვენ register). it-subjects: AI-gated. do/does-support DROPS — the question is formed by intonation (იცი? do you know). NEGATED present: არ directly before the verb (არ ვიცი, არ ხედავს) — never არ know. Sleeping is an INVERSION verb (მას სძინავს — dative subject, AI rebuild).' });
+    }
+
     return issues;
 }
 
@@ -7154,6 +7251,96 @@ function correctGeorgianMorphology(text) {
     out = out.replace(/\b(?:he|she)\s+will\s+come\b/gi, 'ის მოვა');
     out = out.replace(/\bthey\s+will\s+come\b/gi, 'ისინი მოვლენ');
 
+    // 4.111 Present screeve dictionary (KA-126, v1.44.0). FUNCTION TAIL —
+    //      runs AFTER 4.110 (future frames are longer, will+VERB, and
+    //      must win) and BEFORE 4.81's bare-motion maps: "I go to Tbilisi"
+    //      needs the go frames settled before 4.81 degrades a bare "go".
+    //      Also BEFORE 4.109/4.108's pronoun swaps — the subject must
+    //      still be visible for person marking. Person-marked
+    //      SUBJECT+VERB frames for the closed set of verbs whose present
+    //      (აწმყო) paradigms are fully attested (KA-126):
+    //      KNOW ვიცი · KNOW-person ვიცნობ · SEE ვხედავ · EAT ვჭამ ·
+    //      DRINK ვსვამ · READ ვკითხულობ · WRITE ვწერ · SAY ვამბობ ·
+    //      THINK ვფიქრობ · MAKE ვაკეთებ. GUARDS: 2nd person NEVER maps
+    //      (T–V gated: იცი vs იცით — same doctrine as bare will be);
+    //      "it" subjects excluded (it is AI-gated, 4.108); bare
+    //      subjectless verb forms left (no person → no safe form);
+    //      negated presents ("don't/doesn't know") untouched — 4.93's
+    //      არ family owns them and არ + present is an AI rebuild;
+    //      do/does-support questions untouched.
+    //      NOTE: \b never matches after Georgian chars (JS \b is
+    //      ASCII-word-based) — safe to run after earlier Georgian swaps.
+    //      INVERSION GUARD: SUBJECT+VERB frames must not fire inside
+    //      subject-auxiliary inversions ("will they see", "do I know")
+    //      — questions stay AI-gated (v1.43.0 doctrine, 3.124/4.110
+    //      pins). A sentinel \uE000 is injected between AUX and SUBJECT
+    //      for the duration of this block only (restored right after),
+    //      breaking the subject-verb adjacency that the frames match on.
+    out = out.replace(/\b(will|shall|can|could|may|might|must|should|would|do|does|did|won'?t|don'?t|doesn'?t|didn'?t|can'?t|couldn'?t|shouldn'?t|mustn'?t|wouldn'?t|cannot)\s+(I|we|they|he|she)\b/gi, '$1 $2\uE000');
+    //      KNOW-person FIRST — object pronoun selects ცნობნა (ვიცნობ)
+    //      over ცოდნა (ვიცი); kahibaro "მე ვიცნობ ნინოს"
+    out = out.replace(/\bI\s+know\s+him\b/gi, 'მე ვიცნობ მას');
+    out = out.replace(/\bI\s+know\s+her\b/gi, 'მე ვიცნობ მას');
+    out = out.replace(/\bwe\s+know\s+him\b/gi, 'ჩვენ ვიცნობთ მას');
+    out = out.replace(/\bwe\s+know\s+her\b/gi, 'ჩვენ ვიცნობთ მას');
+    out = out.replace(/\bI\s+know\s+them\b/gi, 'მე ვიცნობ მათ');
+    out = out.replace(/\bwe\s+know\s+them\b/gi, 'ჩვენ ვიცნობთ მათ');
+    out = out.replace(/\b(?:he|she)\s+knows\s+him\b/gi, 'ის იცნობს მას');
+    out = out.replace(/\b(?:he|she)\s+knows\s+her\b/gi, 'ის იცნობს მას');
+    out = out.replace(/\b(?:he|she)\s+knows\s+them\b/gi, 'ის იცნობს მათ');
+    out = out.replace(/\bthey\s+know\s+him\b/gi, 'ისინი იცნობენ მას');
+    out = out.replace(/\bthey\s+know\s+her\b/gi, 'ისინი იცნობენ მას');
+    out = out.replace(/\bthey\s+know\s+them\b/gi, 'ისინი იცნობენ მათ');
+    //      KNOW a fact — ვიცი family (kahibaro ცოდნა)
+    out = out.replace(/\bI\s+know\b/gi, 'მე ვიცი');
+    out = out.replace(/\bwe\s+know\b/gi, 'ჩვენ ვიცით');
+    out = out.replace(/\b(?:he|she)\s+knows\b/gi, 'ის იცის');
+    out = out.replace(/\bthey\s+know\b/gi, 'ისინი იციან');
+    //      SEE — ვხედავ family (kahibaro 9.5; lingoseven)
+    out = out.replace(/\bI\s+see\b/gi, 'მე ვხედავ');
+    out = out.replace(/\bwe\s+see\b/gi, 'ჩვენ ვხედავთ');
+    out = out.replace(/\b(?:he|she)\s+sees\b/gi, 'ის ხედავს');
+    out = out.replace(/\bthey\s+see\b/gi, 'ისინი ხედავენ');
+    //      EAT — ვჭამ family (wiktionary ჭამს; polytranslator corpus)
+    out = out.replace(/\bI\s+eat\b/gi, 'მე ვჭამ');
+    out = out.replace(/\bwe\s+eat\b/gi, 'ჩვენ ვჭამთ');
+    out = out.replace(/\b(?:he|she)\s+eats\b/gi, 'ის ჭამს');
+    out = out.replace(/\bthey\s+eat\b/gi, 'ისინი ჭამენ');
+    //      DRINK — ვსვამ family (wiktionary სვამ; polytranslator corpus)
+    out = out.replace(/\bI\s+drink\b/gi, 'მე ვსვამ');
+    out = out.replace(/\bwe\s+drink\b/gi, 'ჩვენ ვსვამთ');
+    out = out.replace(/\b(?:he|she)\s+drinks\b/gi, 'ის სვამს');
+    out = out.replace(/\bthey\s+drink\b/gi, 'ისინი სვამენ');
+    //      READ — ვკითხულობ family (wiktionary კითხულობს)
+    out = out.replace(/\bI\s+read\b/gi, 'მე ვკითხულობ');
+    out = out.replace(/\bwe\s+read\b/gi, 'ჩვენ ვკითხულობთ');
+    out = out.replace(/\b(?:he|she)\s+reads\b/gi, 'ის კითხულობს');
+    out = out.replace(/\bthey\s+read\b/gi, 'ისინი კითხულობენ');
+    //      WRITE — ვწერ family (talkpal.ai; sublearn). Future დავწერ
+    //      already consumed by 4.110 above.
+    out = out.replace(/\bI\s+write\b/gi, 'მე ვწერ');
+    out = out.replace(/\bwe\s+write\b/gi, 'ჩვენ ვწერთ');
+    out = out.replace(/\b(?:he|she)\s+writes\b/gi, 'ის წერს');
+    out = out.replace(/\bthey\s+write\b/gi, 'ისინი წერენ');
+    //      SAY — ვამბობ family (kahibaro/cram.com თქმა)
+    out = out.replace(/\bI\s+say\b/gi, 'მე ვამბობ');
+    out = out.replace(/\bwe\s+say\b/gi, 'ჩვენ ვამბობთ');
+    out = out.replace(/\b(?:he|she)\s+says\b/gi, 'ის ამბობს');
+    out = out.replace(/\bthey\s+say\b/gi, 'ისინი ამბობენ');
+    //      THINK — ვფიქრობ family (latinum L76)
+    out = out.replace(/\bI\s+think\b/gi, 'მე ვფიქრობ');
+    out = out.replace(/\bwe\s+think\b/gi, 'ჩვენ ვფიქრობთ');
+    out = out.replace(/\b(?:he|she)\s+thinks\b/gi, 'ის ფიქრობს');
+    out = out.replace(/\bthey\s+think\b/gi, 'ისინი ფიქრობენ');
+    //      MAKE/DO — ვაკეთებ family (kahibaro; apprenti-polyglotte)
+    out = out.replace(/\bI\s+make\b/gi, 'მე ვაკეთებ');
+    out = out.replace(/\bwe\s+make\b/gi, 'ჩვენ ვაკეთებთ');
+    out = out.replace(/\b(?:he|she)\s+makes\b/gi, 'ის აკეთებს');
+    out = out.replace(/\bthey\s+make\b/gi, 'ისინი აკეთებენ');
+    //      INVERSION GUARD restore — remove the sentinel; any subject that
+    //      was shielded inside an inversion is now left unmapped (AI pass).
+    out = out.replace(/\uE000/g, '');
+
     // 4.81 Untranslated English motion verbs. Tense-sensitive carriers from
     //      the suppletive system; past "went to/came to" keeps the goal
     //      phrase in place (წავიდა სახლში). The bare "will go"/"will come"
@@ -8075,12 +8262,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.43.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.44.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 126,
-    qaRules: 125,
-    autoFixes: 110,
-    researchSources: 377
+    promptBlocks: 127,
+    qaRules: 126,
+    autoFixes: 111,
+    researchSources: 378
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────

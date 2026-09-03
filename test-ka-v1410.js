@@ -18,12 +18,12 @@ const ruleOf = text => qa(text).map(i => i.rule);
 const has = (arr, r) => arr.includes(r);
 const msgOf = (text, rule) => (qa(text).find(i => i.rule === rule) || {}).message || '';
 
-// ── [1] VERSION & STATS (5) — updated for v1.43.0 (KA-125 FUTURE SCREEVE) ──
-t('version 1.43.0', GEORGIAN_KNOWLEDGE_VERSION === '1.43.0');
-t('stats promptBlocks 126', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 126);
-t('stats qaRules 125', GEORGIAN_KNOWLEDGE_STATS.qaRules === 125);
-t('stats autoFixes 110', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 110);
-t('stats researchSources 377', GEORGIAN_KNOWLEDGE_STATS.researchSources === 377);
+// ── [1] VERSION & STATS (5) — updated for v1.44.0 (KA-126 PRESENT SCREEVE) ──
+t('version 1.44.0', GEORGIAN_KNOWLEDGE_VERSION === '1.44.0');
+t('stats promptBlocks 127', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 127);
+t('stats qaRules 126', GEORGIAN_KNOWLEDGE_STATS.qaRules === 126);
+t('stats autoFixes 111', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 111);
+t('stats researchSources 378', GEORGIAN_KNOWLEDGE_STATS.researchSources === 378);
 
 // ── [2] KB PRESENCE + WIRING (12) ──────────────────────────────────────────
 t('KB KA-123 const exists', src.includes('const KA_PERSONAL_PRONOUNS = `'));
@@ -47,9 +47,9 @@ t('fix: we found it', strip(fix('we found it')) === 'ჩვენ იპოვ�
 t('fix: you and I', strip(fix('you and I')) === 'you და მე');
 t('fix: they came', strip(fix('They came')) === 'ისინი მოვიდა');
 t('fix: he runs', strip(fix('He runs')) === 'ის runs');
-t('fix: she knows him', strip(fix('She knows him')) === 'ის knows მას');
+t('fix: she knows him (v1.44.0 re-anchor: 4.111 maps KNOW-person)', strip(fix('She knows him')) === 'ის იცნობს მას');
 t('fix: we love them (affective frame owns)', strip(fix('We love them')) === 'გვიყვარს მათ');
-t('fix: I see you', strip(fix('I see you')) === 'მე see you');
+t('fix: I see you (v1.44.0 re-anchor: 4.111 maps see, you-object guarded)', strip(fix('I see you')) === 'მე ვხედავ you');
 t('fix: idempotent (I saw him)', fix('I saw him') === fix(fix('I saw him')));
 t('fix: idempotent (they told us)', fix('they told us') === fix(fix('they told us')));
 
@@ -100,7 +100,7 @@ t('edge: empty string', fix('') === '');
 t('edge: pure Georgian input (terminal punct only)', strip(fix('ეს არის წიგნი')) === 'ეს არის წიგნი');
 t('edge: no pronouns at all', strip(fix('the book is on the table')) === 'the book არის on the table');
 t('edge: repeated pronoun', strip(fix('I told him I told him')) === 'მე უთხრა მას მე უთხრა მას');
-t('edge: pronoun at string end', strip(fix('she knows him')) === 'ის knows მას');
+t('edge: pronoun at string end (v1.44.0 re-anchor)', strip(fix('she knows him')) === 'ის იცნობს მას');
 
 console.log(`\nRESULT: ${pass}/${pass + fail} PASS`);
 process.exit(fail > 0 ? 1 : 0);
