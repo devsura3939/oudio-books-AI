@@ -166,6 +166,25 @@ async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 81
     }
 }
 
+// The AI translation pipeline is usable when ANY provider can answer — that
+// includes the keyless server gateway (Tier 0). Gating the pipeline on user
+// keys alone was why every chunk fell through to Google/MyMemory and the
+// status panel reported "Machine translation (LOW QUALITY)".
+function aiTranslationAvailable() {
+    return luminaGatewayAvailable || !!geminiApiKey || !!groqApiKey || !!mistralApiKey || !!openRouterApiKey;
+}
+
+// Georgian rule block for prompts. Quality mode ships the full research
+// knowledge base; budget mode (whole-book runs) ships the compact checklist so
+// hundreds of chunks stay fast without losing the morphology guardrails.
+function getKaRulesForPrompt() {
+    if (translationBudgetMode === 'budget') {
+        return typeof getKaCompactRules === 'function' ? getKaCompactRules() : '';
+    }
+    if (typeof getKaKnowledgeBase === 'function') return getKaKnowledgeBase();
+    return typeof getKaCompactRules === 'function' ? getKaCompactRules() : '';
+}
+
 async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
     if (!openRouterApiKey) return null;
     // All models cooling from a recent run? Skip the network entirely — the
@@ -2487,6 +2506,9 @@ function extractTranslation(raw) {
             break;
         }
     }
+    // Foreign terminal marks (danda, paiyannoi, arabic full stop) sometimes leak
+    // in as a "sentence end" character; they read as garbage and break TTS.
+    out = out.replace(/[\u0964\u0965\u0E4F\u06D4]/g, '.').replace(/\s+\./g, '.');
     return out.trim();
 }
 
@@ -2501,8 +2523,7 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
     // Georgian-native quality: inject the research-derived linguistic
     // knowledge base (morphology, screeves, syntax, defect list, authentic
     // style exemplars from classic and modern Georgian prose).
-    const kaKnowledge = targetLang === 'ka' && typeof getKaKnowledgeBase === 'function'
-        ? getKaKnowledgeBase() : '';
+    const kaKnowledge = targetLang === 'ka' ? getKaRulesForPrompt() : '';
     const kaBlock = kaKnowledge
         ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
 
@@ -2515,7 +2536,7 @@ Process:
 4. Write flowing native prose — no translationese.${targetLang === 'ka' ? '\n   Georgian word order is verb-FINAL: subject/object first, verb last (კაცმა წიგნი წაიკითხა). Weather/feelings are impersonal (წვიმს, ცივა, მშია, მოსწონს) — never invent a dummy subject. Numerals are vigesimal (ორმოცი=40, ოთხმოცდაშვიდი=87); after numerals 2+ the noun stays SINGULAR (ოცი კაცი).' : ''}
 5. Before answering, silently verify every sentence against the grammar rules below (case alignment, verb screeves, agreement).${kaBlock}
 
-TTS note: this translation will be narrated aloud. Use correct terminal punctuation (? ! .) so the voice produces natural prosody.${targetLang === 'ka' ? ' Use Georgian punctuation: „…“ for quotes, । or . for sentence end, — for dashes (never " - ").' : ''}
+TTS note: this translation will be narrated aloud. Use correct terminal punctuation (? ! .) so the voice produces natural prosody.${targetLang === 'ka' ? ' Use Georgian punctuation: „…“ for quotes, a plain full stop "." for sentence end (NEVER the danda "।" or any non-Georgian mark), — for dashes (never " - ").' : ''}
 
 Answer as JSON: {"translation": "..."} — the ${langName} translation ONLY, no notes, no markdown fences.
 
@@ -2548,7 +2569,7 @@ Check, in order of severity:
 2. Grammar & morphology: ${langName} case endings, ergative alignment (aorist transitive subjects take -მა; present takes nominative), verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment: Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Negation: აר (declarative), ვერ (failed ability), ნუ (prohibitive — never არ for commands), one negator per clause.' : ''}
 3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart).' : ''}
 4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb).' : ''}
-5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before । , ; : punctuation, exactly one terminal mark per sentence, no doubled punctuation.' : ''}${kaChecklist}
+5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before . , ; : punctuation, no foreign sentence marks (।, ฯ, ۔), exactly one terminal mark per sentence, no doubled punctuation.' : ''}${kaChecklist}
 
 Be demanding: an accurate but stilted translation still gets flagged under style. If the translation is genuinely publication-ready, return an empty error list. Never invent problems.
 
@@ -2616,7 +2637,7 @@ ${errorList}`;
 //   3 → draft + critique + refine + final QA (verify the revision, keep the
 //       better of the two — a bad refinement can never make things worse)
 async function translateWithGeminiAI(text, targetLang, contextBefore = '', contextAfter = '') {
-    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey) return null;
+    if (!aiTranslationAvailable()) return null;
 
     const draft = await geminiDraftTranslate(text, targetLang, contextBefore, contextAfter);
     if (!draft) return null;
@@ -2666,13 +2687,12 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
 // spends a second call ONLY when that self-check reports critical/major
 // defects. Typical cost: 1 call per chunk instead of 3-4.
 async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', contextAfter = '') {
-    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey) return null;
+    if (!aiTranslationAvailable()) return null;
     const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
     const ctxBefore = contextBefore ? `\n\n[PRECEDING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextBefore.slice(-600)}` : '';
     const ctxAfter = contextAfter ? `\n\n[FOLLOWING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextAfter.slice(0, 600)}` : '';
 
-    const kaKnowledge = targetLang === 'ka' && typeof getKaKnowledgeBase === 'function'
-        ? getKaKnowledgeBase() : '';
+    const kaKnowledge = targetLang === 'ka' ? getKaRulesForPrompt() : '';
     const kaBlock = kaKnowledge
         ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
 
@@ -3308,7 +3328,7 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
     }
 
     // Fallback: original sequential tier funnel (if smart router unavailable)
-    if (geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey) {
+    if (aiTranslationAvailable()) {
         const pipeline = translationBudgetMode === 'budget' && typeof translateWithGeminiAIBatch === 'function'
             ? translateWithGeminiAIBatch
             : translateWithGeminiAI;
@@ -4325,15 +4345,24 @@ function stopTimer() {
     }
 }
 
+function setGlobalSpeed(value) {
+    // Fine 0.05 steps across 0.50x–2.00x, applied live to whatever is playing
+    // (no restart, so the sentence is not repeated on every nudge).
+    const clamped = Math.min(2, Math.max(0.5, Math.round(value * 20) / 20));
+    currentGlobalSpeed = clamped;
+    if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = `${clamped.toFixed(2)}x`;
+    if (DOM.modalSpeedSlider) DOM.modalSpeedSlider.value = clamped;
+    if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = `${clamped.toFixed(2)}x`;
+    if (currentElevenAudio) currentElevenAudio.playbackRate = clamped;
+}
+
 function cycleSpeed() {
-    const speeds = [0.75, 1.0, 1.25, 1.5, 2.0];
-    const idx = speeds.indexOf(currentGlobalSpeed);
-    currentGlobalSpeed = speeds[(idx + 1) % speeds.length];
-    if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = `${currentGlobalSpeed.toFixed(2).replace(/\.00$/, '')}x`;
-    if (DOM.modalSpeedSlider) DOM.modalSpeedSlider.value = currentGlobalSpeed;
-    if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = `${currentGlobalSpeed.toFixed(2)}x`;
-    if (currentElevenAudio) currentElevenAudio.playbackRate = currentGlobalSpeed;
-    if (isPlaying && !isPaused) speakCurrentSentence();
+    const next = currentGlobalSpeed >= 2 ? 0.5 : currentGlobalSpeed + 0.05;
+    setGlobalSpeed(next);
+}
+
+function nudgeSpeed(delta) {
+    setGlobalSpeed(currentGlobalSpeed + delta);
 }
 
 function togglePlaybackLanguage() {
@@ -5014,10 +5043,7 @@ function setupEventListeners() {
 
     if (DOM.modalSpeedSlider) {
         DOM.modalSpeedSlider.addEventListener('input', (e) => {
-            currentGlobalSpeed = parseFloat(e.target.value);
-            if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = `${currentGlobalSpeed.toFixed(2)}x`;
-            if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = `${currentGlobalSpeed.toFixed(2).replace(/\.00$/, '')}x`;
-            if (currentElevenAudio) currentElevenAudio.playbackRate = currentGlobalSpeed;
+            setGlobalSpeed(parseFloat(e.target.value));
         });
     }
 

@@ -213,6 +213,13 @@ same-origin server tiers were added *in front* of it, both of which self-disable
 * **Translation Tier 0** — `callLuminaGatewayJSON()` → `src/routes/api/ai.ts`
   (`google/gemini-3.7-flash`, JSON mode), consulted first inside `callGeminiJSON()`. This is
   why the engine no longer reports "Machine translation (LOW QUALITY)" without a user key.
+  Two gates used to defeat this and are now fixed: the AI pipeline entry points required a
+  *user* key (`aiTranslationAvailable()` now also counts the gateway), and `/api/ai` capped the
+  prompt at 120k while the Georgian mastery prompt is ~218k (cap is now 600k). Prompt rules
+  come from `getKaRulesForPrompt()` — full knowledge base in quality mode, compact checklist in
+  budget mode. Do not reintroduce a key-only gate; it silently degrades every chunk.
+* **Studio speed** — `setGlobalSpeed()` is the single entry point: 0.05 steps, 0.50x–2.00x,
+  applied live to the playing audio (dock `−`/`+`/tap buttons and the modal slider).
 * **Narration** — `speakGatewayNeural()` → `src/routes/api/tts.ts`, chosen first in
   `speakCurrentSentence()` (after ElevenLabs). Georgian sentences still go through
   `verbalizeGeorgianTextForTTS()` + `applyGeorgianProsody()` before synthesis. Voice preset is

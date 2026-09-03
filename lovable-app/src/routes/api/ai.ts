@@ -8,7 +8,10 @@ import { z } from "zod";
  * machine translation whenever no OpenRouter/Groq/Gemini key was entered).
  */
 const schema = z.object({
-  prompt: z.string().min(1).max(120_000),
+  // The Georgian mastery prompt ships a ~220k-char linguistic knowledge base,
+  // so the limit must be well above it — a 400 here silently degraded every
+  // chunk to machine translation.
+  prompt: z.string().min(1).max(600_000),
   temperature: z.number().min(0).max(2).default(0.2),
   maxTokens: z.number().min(256).max(32_000).default(8192),
 });

@@ -902,9 +902,13 @@
             <button onclick="openCurrentBookInReader()" class="p-2 rounded-xl bg-georgian-gold/15 hover:bg-georgian-gold/25 text-georgian-gold text-xs font-semibold flex items-center gap-1 border border-georgian-gold/30 transition" title="Open Moon Reader">
                 <span class="material-symbols-outlined text-base">menu_book</span>
             </button>
-            <button onclick="cycleSpeed()" id="btnDockSpeed" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-primary-fixed text-xs font-bold font-mono border border-white/10 transition">
-                1.0x
-            </button>
+            <div class="flex items-center gap-0.5 rounded-lg border border-white/10 bg-white/5">
+                <button onclick="nudgeSpeed(-0.05)" title="Slower (-0.05x)" class="px-1.5 py-1 text-primary-fixed text-xs font-bold hover:bg-white/10 rounded-l-lg transition">−</button>
+                <button onclick="cycleSpeed()" id="btnDockSpeed" class="px-1 py-1 text-primary-fixed text-xs font-bold font-mono transition" title="Playback speed (tap to step +0.05x)">
+                    1.00x
+                </button>
+                <button onclick="nudgeSpeed(0.05)" title="Faster (+0.05x)" class="px-1.5 py-1 text-primary-fixed text-xs font-bold hover:bg-white/10 rounded-r-lg transition">+</button>
+            </div>
         </div>
     </div>
 

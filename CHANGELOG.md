@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-09-04 — Georgian AI translation actually engages; fine-grained studio speed
+
+### Fixed
+- **Root cause of "Machine translation (LOW QUALITY)"**: `translateWithGeminiAI`,
+  `translateWithGeminiAIBatch` and the funnel in `translateChunkContextually` all returned
+  early unless a *user* API key was present, so the keyless Tier 0 server gateway was never
+  reached and every chunk fell to Google/MyMemory. Replaced those gates with
+  `aiTranslationAvailable()`, which also counts the gateway.
+- **Second root cause**: the Georgian mastery prompt is ~218k chars, but `/api/ai` capped
+  `prompt` at 120k, so every AI translation request 400'd and silently degraded. Limit raised
+  to 600k.
+- Georgian prompts no longer instruct the model to use the Devanagari danda `।` as a sentence
+  end (it produced stray `ฯ`/`।` glyphs that also broke narration); `extractTranslation` now
+  normalizes any leaked foreign terminal mark to `.`.
+- `getKaRulesForPrompt()`: full 218k knowledge base in quality mode, compact 18k checklist in
+  budget mode (whole-book runs), instead of always shipping the full base.
+- Studio playback speed is now continuous in **0.05 steps (0.50x–2.00x)** with `−`/`+` dock
+  buttons and a `setGlobalSpeed()` helper; changing speed applies live to the playing audio
+  instead of restarting the current sentence, and the modal slider shares the same path.
+  Previously `cycleSpeed()` used a 5-value list and reset to 0.75x after any slider use.
+
+
+
 ## 2026-09-03 — Playback speed, studio audio, AI translation tier, mobile studio rendering
 
 ### Added
