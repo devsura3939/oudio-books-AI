@@ -561,9 +561,15 @@
             <span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
             <span class="font-label-caps font-bold tracking-tight text-white">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">PRO</span></span>
         </div>
-        <button onclick="openModal('uploadModal')" class="p-2 -mr-2 rounded-xl text-primary-fixed hover:bg-white/10 transition" aria-label="Upload PDF" title="Upload PDF">
-            <span class="material-symbols-outlined text-2xl">upload_file</span>
-        </button>
+        <div class="flex items-center gap-0.5 -mr-2">
+            <button onclick="LuminaScanner.open()" class="p-2 rounded-xl text-georgian-gold hover:bg-white/10 transition" aria-label="Scan book pages" title="Scan book pages">
+                <span class="material-symbols-outlined text-2xl">document_scanner</span>
+            </button>
+            <button onclick="openModal('uploadModal')" class="p-2 rounded-xl text-primary-fixed hover:bg-white/10 transition" aria-label="Upload PDF" title="Upload PDF">
+                <span class="material-symbols-outlined text-2xl">upload_file</span>
+            </button>
+        </div>
+
     </header>
 
     <!-- ════════════════ Mobile Nav Drawer ════════════════ -->
@@ -602,11 +608,15 @@
                     <span class="material-symbols-outlined text-[20px]">person</span><span id="mobileNavUserName">Sign In</span>
                 </button>
             </nav>
-            <div class="p-4 border-t border-white/10">
+            <div class="p-4 border-t border-white/10 space-y-2">
+                <button onclick="LuminaScanner.open();closeMobileNav()" class="w-full py-3 rounded-xl bg-georgian-gold/15 text-georgian-gold font-semibold border border-georgian-gold/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                    <span class="material-symbols-outlined">document_scanner</span> Scan Book Pages
+                </button>
                 <button onclick="openModal('uploadModal');closeMobileNav()" class="w-full py-3 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-semibold shadow-[0_0_25px_rgba(0,240,255,0.35)] flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_35px_rgba(0,240,255,0.6)] active:scale-[0.98]">
                     <span class="material-symbols-outlined">upload_file</span> Upload PDF Book
                 </button>
             </div>
+
         </div>
     </div>
 
@@ -626,10 +636,16 @@
             </div>
         </div>
 
-        <button id="btnNavUpload" class="mb-6 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-semibold shadow-[0_0_25px_rgba(0,240,255,0.35)] hover:shadow-[0_0_35px_rgba(0,240,255,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 group">
+        <button id="btnNavUpload" class="mb-2 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-semibold shadow-[0_0_25px_rgba(0,240,255,0.35)] hover:shadow-[0_0_35px_rgba(0,240,255,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 group">
             <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">upload_file</span>
             <span>Upload PDF Book</span>
         </button>
+
+        <button onclick="LuminaScanner.open()" class="mb-6 w-full py-3 px-4 rounded-xl bg-georgian-gold/15 text-georgian-gold font-semibold border border-georgian-gold/30 hover:bg-georgian-gold/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5">
+            <span class="material-symbols-outlined text-xl">document_scanner</span>
+            <span>Scan Book Pages</span>
+        </button>
+
 
         <ul class="flex flex-col gap-1.5 flex-grow">
             <li>
@@ -1426,9 +1442,16 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+    <!-- ════════════════ Scan Book Modal (photos → book) ════════════════ -->
+    <div id="scanModal" class="modal-overlay">
+        <div id="scanShell" class="modal-content glass-panel p-6 rounded-3xl max-w-lg w-full border border-white/15 shadow-2xl mx-4"></div>
+    </div>
+
     <script src="static/supabase-store.js"></script>
     <script src="static/georgian-linguistics.js"></script>
     <script src="static/app.js"></script>
+    <script src="static/scanner.js"></script>
+
 
 </body>
 </html>

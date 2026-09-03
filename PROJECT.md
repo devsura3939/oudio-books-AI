@@ -133,6 +133,29 @@ change set — the repo and Pages must never lag behind the Lovable app.
 
 
 
+## Book scanner (added 2026-09-04)
+
+Photos of book pages become a normal book on the studio shelf — the studio is the only
+library; it can both upload PDFs and scan pictures.
+
+* Entry point: **Scan Book Pages** (desktop sidebar, mobile top bar, mobile drawer) →
+  `window.LuminaScanner.open()` in `public/studio/static/scanner.js`.
+* Pipeline: camera/gallery → page queue (reorder/rotate/delete) → canvas preprocess
+  (rotate, 2000px long edge, grayscale, 2%/98% contrast stretch, 0.9 gamma) → OCR →
+  post-process (de-hyphenate, merge soft line breaks, drop page numbers, normalise Georgian
+  punctuation) → `createBookFromScannedPages()` in `app.js` → `saveBookToDB()`.
+* **Tier 0** `src/routes/api/ocr.ts` → Lovable AI Gateway vision (`google/gemini-3.7-flash`,
+  temperature 0). Transcription only — it must never translate; the Georgian rule block bans
+  Latin/Cyrillic look-alikes and foreign terminators such as `।`. Key read inside the handler.
+* **Tier 1** `tesseract.js` 5.1 with `eng`/`kat` from tessdata_best, lazy-loaded from CDN,
+  fully client-side. Used on 404/401/402/403 (e.g. GitHub Pages) or per-page failure. Never
+  remove it — it is what keeps the Pages deployment usable.
+* Chapters follow page boundaries (`Page 3`, `Pages 4–6`, ~600 words). Scan metadata lives in
+  `books.metadata.extra` (`source: 'scan'`, `scan_lang`, `scanned_pages`, `scan_engines`) —
+  no schema change was needed. Georgian scans also fill `chapters.metadata.text_ka` so
+  `bookHasGeorgian()` is true and the reader does not offer to translate an already-Georgian
+  book.
+
 ## Conventions
 
 * Chapter splitting: heading regex (`Chapter/Part/Book N`) first, 10-page buckets as

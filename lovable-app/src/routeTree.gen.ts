@@ -18,6 +18,7 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
 import { Route as ApiAiRouteImport } from './routes/api/ai'
+import { Route as ApiOcrRouteImport } from './routes/api/ocr'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedBooksBookIdIndexRouteImport } from './routes/_authenticated/books.$bookId.index'
@@ -68,6 +69,11 @@ const ApiAiRoute = ApiAiRouteImport.update({
   path: '/api/ai',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOcrRoute = ApiOcrRouteImport.update({
+  id: '/api/ocr',
+  path: '/api/ocr',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTtsRoute = ApiTtsRouteImport.update({
   id: '/api/tts',
   path: '/api/tts',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof AuthenticatedStudioRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/api/ai': typeof ApiAiRoute
+  '/api/ocr': typeof ApiOcrRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/studio': typeof AuthenticatedStudioRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/api/ai': typeof ApiAiRoute
+  '/api/ocr': typeof ApiOcrRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/api/ai': typeof ApiAiRoute
+  '/api/ocr': typeof ApiOcrRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/upload'
     | '/api/ai'
+    | '/api/ocr'
     | '/api/tts'
     | '/auth/callback'
     | '/books/$bookId/play'
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/upload'
     | '/api/ai'
+    | '/api/ocr'
     | '/api/tts'
     | '/auth/callback'
     | '/books/$bookId/play'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio'
     | '/_authenticated/upload'
     | '/api/ai'
+    | '/api/ocr'
     | '/api/tts'
     | '/auth/callback'
     | '/_authenticated/books/$bookId/play'
@@ -198,6 +210,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   ApiAiRoute: typeof ApiAiRoute
+  ApiOcrRoute: typeof ApiOcrRoute
   ApiTtsRoute: typeof ApiTtsRoute
 }
 
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       path: '/api/ai'
       fullPath: '/api/ai'
       preLoaderRoute: typeof ApiAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ocr': {
+      id: '/api/ocr'
+      path: '/api/ocr'
+      fullPath: '/api/ocr'
+      preLoaderRoute: typeof ApiOcrRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/tts': {
@@ -344,6 +364,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   ApiAiRoute: ApiAiRoute,
+  ApiOcrRoute: ApiOcrRoute,
   ApiTtsRoute: ApiTtsRoute,
 }
 export const routeTree = rootRouteImport

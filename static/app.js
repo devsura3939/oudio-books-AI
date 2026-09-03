@@ -4667,6 +4667,82 @@ async function handleFileUpload(file) {
     }
 }
 
+// ── Scanned books (photos → shelf) ──────────────────────────────────────────
+// Called by static/scanner.js once page images have been transcribed. It lands
+// the result in exactly the same shape a PDF import produces, so the reader,
+// TTS and Georgian translation engine work with no special cases. Chapters
+// follow page boundaries so the book still reads page by page.
+async function createBookFromScannedPages(pages, meta) {
+    const list = (pages || []).filter(p => p && p.text && p.text.trim());
+    if (!list.length) throw new Error('No recognised page text');
+
+    const isKa = (meta && meta.lang) === 'ka';
+    const MAX_WORDS = 600;
+    const chapters = [];
+    let bucket = [];
+    let bucketWords = 0;
+    let firstPage = list[0].index;
+
+    const flush = (lastPage) => {
+        if (!bucket.length) return;
+        const text = bucket.join('\n\n');
+        const words = text.split(/\s+/).filter(Boolean).length;
+        const id = chapters.length + 1;
+        chapters.push({
+            id,
+            title: firstPage === lastPage ? `Page ${firstPage}` : `Pages ${firstPage}–${lastPage}`,
+            text,
+            // A scanned Georgian book is already Georgian: filling text_ka keeps
+            // bookHasGeorgian() true so the reader never offers to translate it.
+            text_ka: isKa ? text : null,
+            word_count: words,
+            estimated_duration_sec: Math.round((words / 140) * 60)
+        });
+        bucket = [];
+        bucketWords = 0;
+    };
+
+    list.forEach((page, i) => {
+        if (!bucket.length) firstPage = page.index;
+        bucket.push(page.text.trim());
+        bucketWords += page.text.split(/\s+/).filter(Boolean).length;
+        const isLast = i === list.length - 1;
+        if (bucketWords >= MAX_WORDS || isLast) flush(page.index);
+    });
+
+    const title = (meta && meta.title) || 'Scanned book';
+    let coverUrl = null;
+    try {
+        coverUrl = await fetchBookCoverArt(title);
+    } catch (e) { /* cover art is optional */ }
+
+    const newBook = {
+        id: 'book_' + Date.now(),
+        title,
+        author: (meta && meta.author) || 'Scanned book',
+        coverUrl,
+        chapters,
+        translatedLangs: isKa ? ['ka'] : [],
+        dateAdded: new Date().toISOString(),
+        lastPlayedChapterId: chapters.length ? chapters[0].id : null,
+        progressPct: 0,
+        extra: {
+            source: 'scan',
+            scanned_pages: list.length,
+            scan_lang: isKa ? 'ka' : 'en',
+            scan_engines: Array.from(new Set(list.map(p => p.engine).filter(Boolean)))
+        }
+    };
+
+    await saveBookToDB(newBook);
+    await renderDigitalShelf();
+    selectBook(newBook.id, false);
+    return newBook;
+}
+window.createBookFromScannedPages = createBookFromScannedPages;
+
+
+
 function splitIntoChapters(text) {
     const chapters = [];
     const MAX_WORDS = 600;

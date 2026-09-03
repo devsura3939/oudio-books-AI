@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-09-04 — Book Scanner: photos of pages → a real book (EN + KA)
+
+### Added
+- **Scan Book Pages** button in the studio (desktop sidebar, mobile top bar, mobile drawer).
+  Photos of book pages become a book on the same shelf a PDF import lands on: same chapters,
+  Moon Reader, TTS and Georgian translation engine. No separate library.
+- `public/studio/static/scanner.js` — self-contained scanner module (`window.LuminaScanner`):
+  camera capture with a page-frame overlay + shutter + thumbnail strip, or multi-select from
+  gallery/files; page grid with reorder / rotate / delete; language picker (English /
+  ქართული / Auto); per-page progress with cancel and per-page re-scan; editable text review;
+  title/author before saving.
+- `src/routes/api/ocr.ts` — Tier 0 recognition. One preprocessed page image →
+  Lovable AI Gateway vision (`google/gemini-3.7-flash`, `temperature: 0`), **transcription
+  only** (never translation). Georgian rule block forbids Latin/Cyrillic look-alikes and any
+  foreign sentence terminator (`।` etc.), enforces Mkhedruli and no capitalisation. Headers,
+  footers and page numbers are dropped; hyphenated line breaks are joined. `LOVABLE_API_KEY`
+  is read inside the handler only.
+- Tier 1 fallback: `tesseract.js` 5.1 (`eng` / `kat`, tessdata_best) loaded lazily from CDN and
+  run fully in the browser. Used when `/api/ocr` is unavailable (GitHub Pages static hosting →
+  404, or 401/402/403) or when a page fails there, so the Pages build stays functional.
+- Canvas preprocessing before either tier: rotation, downscale to a 2000px long edge,
+  grayscale, 2%/98% percentile contrast stretch and a 0.9 gamma (keeps thin Georgian strokes),
+  JPEG re-encode — the largest accuracy lever for phone photos.
+- `createBookFromScannedPages(pages, meta)` in `app.js`: page-aware chapters
+  (`Page 3` / `Pages 4–6`, ~600 words), cover art lookup, `extra.source = 'scan'`,
+  `extra.scan_lang`, `extra.scanned_pages`, `extra.scan_engines`. A Georgian scan also fills
+  `text_ka`, so `bookHasGeorgian()` is true and the reader never offers to translate it.
+
+### Verified
+- `/api/ocr` returned exact transcriptions for a printed English page and a printed Georgian
+  page (page number correctly dropped, Georgian punctuation clean).
+- Mobile-viewport browser run: Scan → pick 2 page images → recognise (both pages, neural
+  tier) → review → save → book on the shelf with chapters; no console errors.
+
 ## 2026-09-04 — Studio: no repeat translate prompts, mobile speed + TTS controls
 
 ### Fixed
