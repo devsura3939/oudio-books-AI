@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { db } from "@/integrations/external-supabase/client";
 import type { Book, Chapter } from "@/integrations/external-supabase/types";
+import { VOICE_GROUPS, VOICE_PRESETS, findPreset } from "@/lib/tts-voices";
 
 export const Route = createFileRoute("/_authenticated/books/$bookId/play")({
   head: () => ({
@@ -33,20 +35,40 @@ function splitSentences(text: string): string[] {
     .filter(Boolean);
 }
 
+/** Group sentences into ~600 char utterances so requests stay few and playback is smooth. */
+function groupSentences(sentences: string[], maxChars = 600): string[] {
+  const chunks: string[] = [];
+  let current = "";
+  for (const sentence of sentences) {
+    if (current && current.length + sentence.length + 1 > maxChars) {
+      chunks.push(current);
+      current = sentence;
+    } else {
+      current = current ? `${current} ${sentence}` : sentence;
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks;
+}
+
 const RATES = [0.75, 1, 1.2, 1.5, 1.75, 2];
+const PRESET_STORAGE_KEY = "lumina_voice_preset";
 
 function NowPlaying() {
   const { bookId } = Route.useParams();
   const [chapterIndex, setChapterIndex] = useState(0);
-  const [sentenceIndex, setSentenceIndex] = useState(0);
+  const [blockIndex, setBlockIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [loadingAudio, setLoadingAudio] = useState(false);
   const [rate, setRate] = useState(1);
-  const [voiceName, setVoiceName] = useState<string>("");
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const transcriptRef = useRef<HTMLDivElement>(null);
+  const [presetId, setPresetId] = useState("en-us-female");
+  const [customInstructions, setCustomInstructions] = useState("");
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeRef = useRef<HTMLParagraphElement>(null);
-  const stateRef = useRef({ rate: 1, voiceName: "", sentences: [] as string[] });
+  const cacheRef = useRef(new Map<string, string>());
+  const tokenRef = useRef(0);
 
   const bookQuery = useQuery({
     queryKey: ["book", bookId],
@@ -72,88 +94,155 @@ function NowPlaying() {
 
   const chapters = chaptersQuery.data ?? [];
   const chapter = chapters[chapterIndex] ?? null;
-  const sentences = useMemo(
-    () => (chapter ? splitSentences(chapter.text_content) : []),
+  const blocks = useMemo(
+    () => (chapter ? groupSentences(splitSentences(chapter.text_content)) : []),
     [chapter],
   );
 
-  stateRef.current = { rate, voiceName, sentences };
-
-  // Voice list (async in most browsers)
+  // Restore the saved voice, and default Georgian books to a Georgian voice.
   useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const load = () => setVoices(window.speechSynthesis.getVoices());
-    load();
-    window.speechSynthesis.addEventListener("voiceschanged", load);
-    return () => window.speechSynthesis.removeEventListener("voiceschanged", load);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
+    const saved = typeof window !== "undefined" ? localStorage.getItem(PRESET_STORAGE_KEY) : null;
+    if (saved && VOICE_PRESETS.some((v) => v.id === saved)) {
+      setPresetId(saved);
+      return;
+    }
+    const lang = bookQuery.data?.language;
+    if (lang && lang.toLowerCase().startsWith("ka")) setPresetId("ka-male");
+  }, [bookQuery.data?.language]);
 
   useEffect(() => {
     activeRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [sentenceIndex]);
+  }, [blockIndex]);
 
-  function speakFrom(index: number) {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const { sentences: list, rate: currentRate, voiceName: currentVoice } = stateRef.current;
-    window.speechSynthesis.cancel();
-    if (!list.length || index >= list.length) {
-      setPlaying(false);
-      return;
+  const fetchAudioUrl = useCallback(
+    async (text: string) => {
+      const key = `${presetId}|${customInstructions}|${rate}|${text}`;
+      const cached = cacheRef.current.get(key);
+      if (cached) return cached;
+
+      const response = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          preset: presetId,
+          rate,
+          ...(presetId === "custom" && customInstructions
+            ? { instructions: customInstructions }
+            : {}),
+        }),
+      });
+      if (!response.ok) {
+        const detail = await response.text().catch(() => "");
+        throw new Error(detail || `Speech failed (${response.status})`);
+      }
+      const url = URL.createObjectURL(await response.blob());
+      cacheRef.current.set(key, url);
+      return url;
+    },
+    [presetId, customInstructions, rate],
+  );
+
+  const stopAudio = useCallback(() => {
+    tokenRef.current += 1;
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute("src");
     }
-
-    setSentenceIndex(index);
-    setPlaying(true);
+    setPlaying(false);
     setPaused(false);
+    setLoadingAudio(false);
+  }, []);
 
-    const utterance = new SpeechSynthesisUtterance(list[index]);
-    utterance.rate = currentRate;
-    const voice = window.speechSynthesis.getVoices().find((v) => v.name === currentVoice);
-    if (voice) utterance.voice = voice;
-    utterance.onend = () => {
-      const next = index + 1;
-      if (next < stateRef.current.sentences.length) speakFrom(next);
-      else setPlaying(false);
-    };
-    window.speechSynthesis.speak(utterance);
-  }
+  useEffect(() => () => stopAudio(), [stopAudio]);
+
+  /**
+   * Plays a block. The <audio> element is created inside the first user gesture
+   * and then reused, which is what keeps programmatic playback allowed on mobile.
+   */
+  const playBlock = useCallback(
+    async (index: number) => {
+      if (!blocks.length || index < 0 || index >= blocks.length) {
+        setPlaying(false);
+        return;
+      }
+      const token = ++tokenRef.current;
+
+      if (!audioRef.current) {
+        const audio = new Audio();
+        audio.preload = "auto";
+        audioRef.current = audio;
+      }
+      const audio = audioRef.current;
+
+      setBlockIndex(index);
+      setPlaying(true);
+      setPaused(false);
+      setLoadingAudio(true);
+
+      try {
+        const url = await fetchAudioUrl(blocks[index]!);
+        if (tokenRef.current !== token) return;
+        audio.src = url;
+        audio.onended = () => {
+          if (tokenRef.current !== token) return;
+          if (index + 1 < blocks.length) void playBlock(index + 1);
+          else setPlaying(false);
+        };
+        await audio.play();
+        setLoadingAudio(false);
+        // Warm the next block while this one plays.
+        const next = blocks[index + 1];
+        if (next) void fetchAudioUrl(next).catch(() => {});
+      } catch (error) {
+        if (tokenRef.current !== token) return;
+        setLoadingAudio(false);
+        setPlaying(false);
+        toast.error(
+          error instanceof Error && error.message ? error.message : "Could not generate audio",
+        );
+      }
+    },
+    [blocks, fetchAudioUrl],
+  );
 
   function toggle() {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const audio = audioRef.current;
     if (!playing) {
-      speakFrom(sentenceIndex);
+      void playBlock(blockIndex);
       return;
     }
     if (paused) {
-      window.speechSynthesis.resume();
+      void audio?.play();
       setPaused(false);
     } else {
-      window.speechSynthesis.pause();
+      audio?.pause();
       setPaused(true);
     }
   }
 
   function goToChapter(index: number) {
     if (index < 0 || index >= chapters.length) return;
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
+    stopAudio();
     setChapterIndex(index);
-    setSentenceIndex(0);
-    setPlaying(false);
-    setPaused(false);
+    setBlockIndex(0);
   }
 
-  const progress = sentences.length ? ((sentenceIndex + 1) / sentences.length) * 100 : 0;
-  const estTotalSec = sentences.length * 4;
-  const estDoneSec = (sentenceIndex + 1) * 4;
+  function changePreset(id: string) {
+    setPresetId(id);
+    if (typeof window !== "undefined") localStorage.setItem(PRESET_STORAGE_KEY, id);
+    cacheRef.current.clear();
+    if (playing) {
+      stopAudio();
+      setTimeout(() => void playBlock(blockIndex), 0);
+    }
+  }
+
+  const progress = blocks.length ? ((blockIndex + 1) / blocks.length) * 100 : 0;
+  const estTotalSec = blocks.length * 26;
+  const estDoneSec = (blockIndex + 1) * 26;
+  const preset = findPreset(presetId);
 
   return (
     <main className="mx-auto max-w-7xl px-5 md:px-10">
@@ -206,13 +295,13 @@ function NowPlaying() {
             <input
               type="range"
               min={0}
-              max={Math.max(sentences.length - 1, 0)}
-              value={sentenceIndex}
+              max={Math.max(blocks.length - 1, 0)}
+              value={blockIndex}
               aria-label="Playback position"
               onChange={(event) => {
                 const next = Number(event.target.value);
-                setSentenceIndex(next);
-                if (playing) speakFrom(next);
+                setBlockIndex(next);
+                if (playing) void playBlock(next);
               }}
               className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/20 accent-primary-container"
               style={{
@@ -227,7 +316,7 @@ function NowPlaying() {
             <div className="mt-6 flex items-center justify-center gap-5">
               <button
                 type="button"
-                onClick={() => speakFrom(Math.max(sentenceIndex - 3, 0))}
+                onClick={() => void playBlock(Math.max(blockIndex - 1, 0))}
                 aria-label="Rewind"
                 className="text-on-surface-variant transition-colors hover:text-primary-container"
               >
@@ -249,7 +338,11 @@ function NowPlaying() {
                 className="btn-glow flex size-16 items-center justify-center rounded-full bg-primary-container text-on-primary-container"
               >
                 <span className="material-symbols-outlined text-4xl">
-                  {playing && !paused ? "pause" : "play_arrow"}
+                  {loadingAudio
+                    ? "progress_activity"
+                    : playing && !paused
+                      ? "pause"
+                      : "play_arrow"}
                 </span>
               </button>
               <button
@@ -266,7 +359,8 @@ function NowPlaying() {
                 onClick={() => {
                   const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length] ?? 1;
                   setRate(next);
-                  if (playing) speakFrom(sentenceIndex);
+                  cacheRef.current.clear();
+                  if (playing) void playBlock(blockIndex);
                 }}
                 className="text-sm font-semibold text-on-surface-variant transition-colors hover:text-primary-container"
               >
@@ -274,29 +368,41 @@ function NowPlaying() {
               </button>
             </div>
 
-            {voices.length ? (
-              <div className="mt-6">
-                <label htmlFor="voice" className="label-caps text-on-surface-variant">
-                  Voice
-                </label>
-                <select
-                  id="voice"
-                  value={voiceName}
-                  onChange={(event) => {
-                    setVoiceName(event.target.value);
-                    if (playing) speakFrom(sentenceIndex);
-                  }}
+            <div className="mt-6">
+              <label htmlFor="voice" className="label-caps text-on-surface-variant">
+                Voice / TTS engine
+              </label>
+              <select
+                id="voice"
+                value={presetId}
+                onChange={(event) => changePreset(event.target.value)}
+                className="input-glass mt-2 w-full rounded-lg px-3 py-2.5 text-sm text-on-surface"
+              >
+                {VOICE_GROUPS.map((group) => (
+                  <optgroup key={group} label={group}>
+                    {VOICE_PRESETS.filter((v) => v.group === group).map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              {presetId === "custom" ? (
+                <input
+                  type="text"
+                  value={customInstructions}
+                  onChange={(event) => setCustomInstructions(event.target.value)}
+                  onBlur={() => cacheRef.current.clear()}
+                  placeholder="e.g. deep Irish male voice, slow and dramatic"
                   className="input-glass mt-2 w-full rounded-lg px-3 py-2.5 text-sm text-on-surface"
-                >
-                  <option value="">System default</option>
-                  {voices.map((voice) => (
-                    <option key={voice.name} value={voice.name}>
-                      {voice.name} ({voice.lang})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
+                />
+              ) : (
+                <p className="mt-2 text-xs text-on-surface-variant">
+                  {preset.instructions ?? "Neural cloud voice — plays as real audio on mobile."}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -320,23 +426,20 @@ function NowPlaying() {
               </Link>
             </div>
 
-            <div
-              ref={transcriptRef}
-              className="h-[420px] space-y-4 overflow-y-auto pr-3 text-lg leading-relaxed text-on-surface-variant lg:h-[560px]"
-            >
-              {sentences.length ? (
-                sentences.map((sentence, index) => (
+            <div className="h-[420px] space-y-4 overflow-y-auto pr-3 text-lg leading-relaxed text-on-surface-variant lg:h-[560px]">
+              {blocks.length ? (
+                blocks.map((block, index) => (
                   <p
                     key={index}
-                    ref={index === sentenceIndex ? activeRef : undefined}
-                    onClick={() => speakFrom(index)}
+                    ref={index === blockIndex ? activeRef : undefined}
+                    onClick={() => void playBlock(index)}
                     className={`cursor-pointer transition-all duration-300 ${
-                      index === sentenceIndex
+                      index === blockIndex
                         ? "origin-left scale-[1.02] font-semibold text-primary-fixed [text-shadow:0_0_8px_rgba(0,240,255,0.4)]"
                         : "hover:text-on-surface"
                     }`}
                   >
-                    {sentence}
+                    {block}
                   </p>
                 ))
               ) : (

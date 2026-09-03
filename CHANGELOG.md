@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-09-03 — Real neural TTS in the native player (mobile audio fix)
+
+### Added
+- `src/routes/api/tts.ts` — server route that generates real audio files through the
+  Lovable AI Gateway `/v1/audio/speech` endpoint (OpenAI `gpt-4o-mini-tts` for English
+  accents, Google `gemini-2.5-flash-tts` for Georgian and other languages). Returns
+  `audio/mpeg` or `audio/wav` bytes; `LOVABLE_API_KEY` never leaves the server.
+- `src/lib/tts-voices.ts` — the voice catalogue shared by the route and the UI:
+  British male/female, American male/female/storyteller/neutral, Georgian male/female/soft,
+  two multilingual voices, plus a Custom entry where the listener describes the voice
+  (accent, tone, pacing) in free text.
+
+### Changed
+- `/books/$bookId/play` no longer relies on the browser `speechSynthesis` engine, which
+  produces no sound on most mobile browsers and had no Georgian voice. It now streams
+  generated audio into a single reused `HTMLAudioElement` created inside the first tap, so
+  programmatic playback stays permitted on mobile.
+- Transcript is grouped into ~600-character blocks (fewer requests, natural prosody);
+  tapping a block plays from there, the next block is prefetched while the current plays,
+  and generated clips are cached per voice/speed.
+- Speed changes, voice changes and chapter changes cancel in-flight playback cleanly; TTS
+  failures surface as a toast instead of silence.
+- Georgian books (`language` starting `ka`) default to a Georgian voice; the chosen voice is
+  remembered in `lumina_voice_preset`.
+
+### Verified
+- `POST /api/tts` returned 200 with playable audio for both engines: British preset →
+  `audio/mpeg`, 3.77 s; Georgian preset → `audio/wav`, 3.89 s (mixed Georgian/English input).
+- Type-check clean.
+
+### Notes
+- The vendored studio at `/studio` keeps its own bring-your-own-key TTS providers
+  (edge-TTS Georgian neural endpoints, ElevenLabs, browser voices) untouched.
+
 ## 2026-09-03 — Native Stitch screens: dashboard, upload, chapters, player, summary, profile
 
 ### Added

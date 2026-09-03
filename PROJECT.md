@@ -65,7 +65,7 @@ and `service_role` (Supabase does not grant these by default).
   /upload                  drag & drop PDF import (processing + complete states)
   /library                 import PDF into Supabase, list & delete books
   /books/$bookId           chapter selection (books.$bookId.index.tsx)
-  /books/$bookId/play      Now Playing: browser speech, controls, live transcript
+  /books/$bookId/play      Now Playing: neural cloud TTS (/api/tts), voice picker, transcript
   /books/$bookId/summary   AI chapter summary (brief/detailed/bullets/takeaways, en/ka)
   /profile                 display name + account stats
   /studio                  THE FULL ORIGINAL APP (see below)
@@ -188,3 +188,17 @@ Symbols Outlined. Surfaces: `.glass-panel` frosted cards, radial cyan glow backg
 
 Rule for future agents: restyle by editing tokens/utilities, never by rewriting the studio's
 reader, TTS, translation or Georgian-engine code.
+
+## Native player TTS (added 2026-09-03)
+
+* `src/routes/api/tts.ts` is the only TTS path used by the native `/books/$id/play` route.
+  It proxies the Lovable AI Gateway `/v1/audio/speech` endpoint and returns audio bytes:
+  `openai/gpt-4o-mini-tts` (mp3) for English accent presets, `google/gemini-2.5-flash-tts`
+  (wav) for Georgian and other languages. `LOVABLE_API_KEY` is read inside the handler only.
+* `src/lib/tts-voices.ts` holds the preset catalogue (British / American / Georgian /
+  multilingual / Custom free-text delivery instructions) shared by the route and the picker.
+* The player plays audio through one reused `HTMLAudioElement` created inside the first user
+  tap — required for mobile autoplay policies. Browser `speechSynthesis` is no longer used
+  there because it is silent on most mobile browsers and lacks Georgian voices.
+* The vendored studio (`public/studio/**`) keeps its own TTS stack (edge-TTS Georgian neural
+  endpoints, ElevenLabs, browser voices, Georgian linguistics engine) unchanged.
