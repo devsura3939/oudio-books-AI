@@ -309,3 +309,6 @@ Paged modes use `measurePages()` — an off-screen probe matching the real page 
 holds exactly what fits (page 1 reserves the chapter header). `repaginateKeepingPosition()` is the
 only correct way to re-flow after resize/orientation/typography changes. Reader shell sizing uses
 `100dvh` + safe-area insets; swipe gestures are bound once in `initReaderGestures()`.
+
+### Scanner page
+The Library page was retired. `/scan` opens the studio's Scanner view: scan pages, then read, listen, translate, edit or export (PDF / MP3 zip) each scanned book with the same shared engines. No duplicate reader/TTS/translation code exists.

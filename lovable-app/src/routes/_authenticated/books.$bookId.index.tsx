@@ -53,7 +53,7 @@ function ChapterSelection() {
   return (
     <main className="mx-auto max-w-5xl px-5 md:px-10">
       <Link
-        to="/library"
+        to="/studio"
         className="inline-flex items-center gap-2 text-sm text-on-surface-variant transition-colors hover:text-primary-fixed-dim"
       >
         <span className="material-symbols-outlined text-[20px]">arrow_back</span> Library

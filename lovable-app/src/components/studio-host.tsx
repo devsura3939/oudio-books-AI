@@ -1,5 +1,5 @@
 import { useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { db } from "@/integrations/external-supabase/client";
 
@@ -16,9 +16,22 @@ const STUDIO_URL = "/studio/index.html";
  */
 export function StudioHost() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const onStudio = pathname.startsWith("/studio");
+  const onScan = pathname.startsWith("/scan");
+  const onStudio = pathname.startsWith("/studio") || onScan;
   const [activated, setActivated] = useState(false);
   const [ready, setReady] = useState(false);
+  const frame = useRef<HTMLIFrameElement>(null);
+
+  // Tell the studio which of its views to show (library vs. scanner shelf).
+  useEffect(() => {
+    if (!ready || !onStudio) return;
+    const view = onScan ? "scanner" : "library";
+    const send = () => frame.current?.contentWindow?.postMessage({ type: "engbot-navigate", view }, "*");
+    send();
+    const id = window.setTimeout(send, 900);
+    return () => window.clearTimeout(id);
+  }, [ready, onStudio, onScan]);
+
 
   useEffect(() => {
     if (onStudio) setActivated(true);
@@ -57,6 +70,7 @@ export function StudioHost() {
       }
     >
       <iframe
+        ref={frame}
         src={STUDIO_URL}
         title="EngBot Studio"
         className="h-full w-full border-0"

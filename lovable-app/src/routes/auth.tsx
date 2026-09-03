@@ -29,7 +29,7 @@ function AuthPage() {
 
   useEffect(() => {
     void db.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/library", replace: true });
+      if (data.session) navigate({ to: "/studio", replace: true });
     });
   }, [navigate]);
 
@@ -53,7 +53,7 @@ function AuthPage() {
         const { error } = await db.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      navigate({ to: "/library", replace: true });
+      navigate({ to: "/studio", replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Authentication failed");
     } finally {

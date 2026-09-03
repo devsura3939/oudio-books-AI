@@ -1149,7 +1149,7 @@ function getBookStats(book) {
 
 // ── Navigation & Modals ─────────────────────────────────────────────────────
 function navigate(viewId) {
-    ['library', 'discover'].forEach(id => {
+    ['library', 'discover', 'scanner'].forEach(id => {
         const view = document.getElementById(`view-${id}`);
         const nav = document.getElementById(`nav-${id}`);
         if (view) view.classList.add('hidden');
@@ -5278,6 +5278,7 @@ async function renderDigitalShelf(filterText = '') {
                 <p class="text-xs text-on-surface-variant mt-1">Upload a PDF to get started</p>
             </div>
         `;
+        try { await renderScanShelf(); } catch (e) { /* scanner shelf is optional */ }
         return;
     }
 
@@ -5319,6 +5320,7 @@ async function renderDigitalShelf(filterText = '') {
         `;
         DOM.booksGrid.appendChild(div);
     });
+    try { await renderScanShelf(); } catch (e) { /* scanner shelf is optional */ }
 }
 
 function renderDiscoverClassics() {
@@ -5588,3 +5590,170 @@ function setupEventListeners() {
 
 // Start App
 document.addEventListener('DOMContentLoaded', init);
+
+// ══════════════════════════════════════════════════════════════════════════
+// ██ SCANNER LIBRARY VIEW ██
+// Dedicated shelf for scanned books. Reuses the exact same engines as the
+// main library: selectBook/playChapterAudio for listening, openReader for
+// Moon Reader, startWholeBookTranslation for Georgian, exportCurrentBookPDF
+// for PDF and the gateway TTS pipeline for MP3.
+// ══════════════════════════════════════════════════════════════════════════
+
+function isScannedBook(book) {
+    if (!book) return false;
+    const src = (book.extra && book.extra.source) || book.source;
+    return src === 'scan';
+}
+
+async function renderScanShelf() {
+    const grid = document.getElementById('scanShelfGrid');
+    if (!grid) return;
+    const books = (await getAllBooks()).filter(isScannedBook);
+    const meta = document.getElementById('scanShelfMeta');
+    if (meta) meta.textContent = `${books.length} scanned book${books.length === 1 ? '' : 's'}`;
+
+    if (!books.length) {
+        grid.innerHTML = `
+            <div class="col-span-full py-14 text-center glass-panel rounded-2xl">
+                <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2">document_scanner</span>
+                <p class="text-white font-semibold">No scanned books yet</p>
+                <p class="text-xs text-on-surface-variant mt-1">Tap “Scan pages” to photograph a book — English or Georgian.</p>
+            </div>`;
+        return;
+    }
+
+    grid.innerHTML = '';
+    books.forEach(book => {
+        const stats = getBookStats(book);
+        const hasKa = bookHasGeorgian(book);
+        const pages = (book.extra && book.extra.scanned_pages) || book.scanned_pages || 0;
+        const card = document.createElement('div');
+        card.className = 'glass-card rounded-2xl p-4 flex gap-4';
+        card.innerHTML = `
+            <img src="${book.coverUrl || ''}" class="w-20 h-28 rounded-xl object-cover bg-surface-container flex-shrink-0" alt="">
+            <div class="flex-grow min-w-0">
+                <div class="flex items-start gap-2">
+                    <h4 class="font-bold text-white text-sm truncate flex-grow">${escapeHtml(book.title)}</h4>
+                    ${hasKa ? '<span class="px-2 py-0.5 rounded-full bg-georgian-gold/90 text-[10px] font-bold text-black">🇬🇪 KA</span>' : ''}
+                </div>
+                <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">${escapeHtml(book.author || 'Scanned book')}</p>
+                <p class="text-[11px] text-on-surface-variant mt-0.5">${stats.chaptersCount} Ch • ${pages ? pages + ' pages • ' : ''}${stats.totalFormattedTime}</p>
+                <div class="flex flex-wrap gap-1.5 mt-3">
+                    <button onclick="engbotScanListen('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-primary-container text-on-primary-container text-[11px] font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">play_arrow</span>Listen</button>
+                    <button onclick="engbotScanRead('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/10 text-white text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">menu_book</span>Read</button>
+                    <button onclick="engbotScanTranslate('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-georgian-gold/15 text-georgian-gold text-[11px] font-bold border border-georgian-gold/30 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">translate</span>${hasKa ? 'Re-translate' : 'Translate'}</button>
+                    <button onclick="engbotScanRename('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/5 text-on-surface-variant text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit</span>Edit</button>
+                    <button onclick="engbotScanPdf('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/5 text-on-surface-variant text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">picture_as_pdf</span>PDF</button>
+                    <button onclick="engbotScanMp3('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/5 text-on-surface-variant text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">audio_file</span>MP3</button>
+                    <button onclick="deleteBook(event, '${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/5 text-error text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">delete</span></button>
+                </div>
+            </div>`;
+        grid.appendChild(card);
+    });
+}
+
+async function engbotScanListen(bookId) {
+    await selectBook(bookId, true);
+}
+
+async function engbotScanRead(bookId) {
+    await selectBook(bookId, false);
+    openCurrentBookInReader();
+}
+
+async function engbotScanTranslate(bookId) {
+    await selectBook(bookId, false);
+    startWholeBookTranslation();
+}
+
+async function engbotScanPdf(bookId) {
+    await selectBook(bookId, false);
+    exportCurrentBookPDF();
+}
+
+async function engbotScanRename(bookId) {
+    const books = await getAllBooks();
+    const book = books.find(b => String(b.id) === String(bookId));
+    if (!book) return;
+    const title = prompt('Book title', book.title);
+    if (title === null) return;
+    const author = prompt('Author', book.author || 'Scanned book');
+    if (author === null) return;
+    book.title = title.trim() || book.title;
+    book.author = author.trim() || book.author;
+    for (let i = 0; i < book.chapters.length; i++) {
+        const ch = book.chapters[i];
+        const newTitle = prompt(`Section ${i + 1} title (Cancel to keep the rest)`, ch.title);
+        if (newTitle === null) break;
+        if (newTitle.trim()) ch.title = newTitle.trim();
+    }
+    await saveBookToDB(book);
+    if (currentBook && String(currentBook.id) === String(book.id)) await selectBook(book.id, false);
+    await renderDigitalShelf();
+}
+
+/** Renders a scanned book to real MP3 audio with the same gateway TTS voices used for playback. */
+async function engbotScanMp3(bookId) {
+    const books = await getAllBooks();
+    const book = books.find(b => String(b.id) === String(bookId));
+    if (!book) return;
+
+    const status = document.getElementById('scanExportStatus');
+    const say = (msg) => { if (status) { status.classList.remove('hidden'); status.textContent = msg; } };
+
+    const useKa = bookHasGeorgian(book) && confirm('Export the Georgian narration? (Cancel = original language)');
+    const lang = useKa ? 'ka' : 'en';
+
+    try {
+        const zip = new JSZip();
+        let done = 0;
+        for (const chap of book.chapters) {
+            const text = (useKa ? chap.text_ka : chap.text) || chap.text || '';
+            const chunks = text.match(/[\s\S]{1,3500}(?=\s|$)/g) || [];
+            const parts = [];
+            for (const chunk of chunks) {
+                const url = await fetchGatewaySpeechUrl(chunk, lang);
+                if (!url) throw new Error('gateway-unavailable');
+                parts.push(await (await fetch(url)).blob());
+                say(`Rendering “${chap.title}” — ${parts.length}/${chunks.length} parts…`);
+            }
+            const merged = new Blob(parts, { type: 'audio/mpeg' });
+            zip.file(`${String(++done).padStart(2, '0')}_${chap.title.replace(/[^a-zA-Z0-9]/g, '_')}.mp3`, merged);
+            say(`Rendered ${done}/${book.chapters.length} chapters…`);
+        }
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${book.title.replace(/[^a-zA-Z0-9]/g, '_')}_${lang}_MP3.zip`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        say('MP3 export ready ✓');
+    } catch (e) {
+        say('');
+        alert(e && e.message === 'gateway-unavailable'
+            ? 'MP3 rendering needs the neural voice service, which is currently unavailable. You can still listen in the app with the device voice.'
+            : 'MP3 export failed: ' + (e && e.message ? e.message : e));
+    }
+}
+
+window.renderScanShelf = renderScanShelf;
+window.engbotScanListen = engbotScanListen;
+window.engbotScanRead = engbotScanRead;
+window.engbotScanTranslate = engbotScanTranslate;
+window.engbotScanPdf = engbotScanPdf;
+window.engbotScanRename = engbotScanRename;
+window.engbotScanMp3 = engbotScanMp3;
+
+// The React shell asks the studio to show a specific view (Scanner page).
+window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'engbot-navigate' && data.view) {
+        navigate(data.view);
+        if (data.view === 'scanner') renderScanShelf();
+    }
+    if (data.type === 'engbot-open-scanner' && window.LuminaScanner) {
+        navigate('scanner');
+        window.LuminaScanner.open();
+    }
+});

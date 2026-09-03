@@ -68,7 +68,7 @@ function AuthCallback() {
       const { data } = await db.auth.getUser();
       if (cancelled) return;
       if (data.user) {
-        navigate({ to: "/library", replace: true });
+        navigate({ to: "/studio", replace: true });
       } else {
         setError("This confirmation link is invalid or has already been used.");
       }

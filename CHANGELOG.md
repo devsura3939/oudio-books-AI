@@ -428,3 +428,10 @@ In Authentication → URL Configuration set Site URL to the app's URL and add
 * Roles deliberately live in `user_roles`, never on `profiles`.
 * Lovable Cloud's generated `src/integrations/supabase/*` files remain on disk but are
   unused by app features.
+
+## Scanner page replaces Library (2026-09-03)
+
+- The React `/library` route is removed; the app-shell nav item now points at `/scan` ("Scanner").
+- `/scan` reuses the persistent studio iframe (`src/components/studio-host.tsx`), which posts `{type:'engbot-navigate',view:'scanner'|'library'}` into `public/studio/index.html`.
+- New studio view `#view-scanner` + `renderScanShelf()` in `public/studio/static/app.js` lists books with `extra.source === 'scan'` and reuses existing engines: `selectBook`/`playChapterAudio` (listen), `openReader` (Moon Reader), `startWholeBookTranslation` (Georgian), `exportCurrentBookPDF` (PDF), gateway TTS + JSZip (MP3 export), `deleteBook`.
+- Editing a scanned book (title, author, section titles) writes back through `saveBookToDB`.

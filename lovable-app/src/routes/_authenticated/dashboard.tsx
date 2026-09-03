@@ -127,8 +127,8 @@ function Dashboard() {
       <section className="mt-10">
         <div className="flex items-end justify-between">
           <h2 className="text-2xl font-semibold">Your shelf</h2>
-          <Link to="/library" className="text-sm text-primary-fixed-dim hover:underline">
-            View library
+          <Link to="/studio" className="text-sm text-primary-fixed-dim hover:underline">
+            Open EngBot
           </Link>
         </div>
 
