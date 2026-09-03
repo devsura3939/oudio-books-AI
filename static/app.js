@@ -1415,17 +1415,19 @@ function checkAuthState() {
         try {
             currentUser = JSON.parse(saved);
         } catch (e) {
-            // Corrupted state must never break boot: fall back to signed-out.
             console.warn('Corrupted auth state ignored:', e);
             localStorage.removeItem('lumina_auth_user');
             currentUser = null;
         }
-        updateAuthUI();
     }
+    updateAuthUI();
 }
 
 function updateAuthUI() {
-    const isAdmin = !!(currentUser && currentUser.email && (currentUser.email.toLowerCase() === 'ananiadevsurashvili@gmail.com' || currentUser.role === 'admin'));
+    const emailClean = (currentUser?.email || '').trim().toLowerCase();
+    const isAdmin = !!(emailClean === 'ananiadevsurashvili@gmail.com' || currentUser?.role === 'admin');
+
+    // 1. Desktop Top Bar Pill
     const pill = document.getElementById('adminVersionPill');
     if (pill) {
         if (isAdmin) {
@@ -1438,9 +1440,45 @@ function updateAuthUI() {
         }
     }
 
+    // 2. Mobile Top Bar Pill
+    const mobilePill = document.getElementById('adminVersionPillMobile');
+    if (mobilePill) {
+        if (isAdmin) {
+            mobilePill.classList.remove('hidden');
+            mobilePill.classList.add('flex');
+            mobilePill.innerHTML = `<span>👑 Admin</span><span>${APP_VERSION}</span>`;
+        } else {
+            mobilePill.classList.add('hidden');
+            mobilePill.classList.remove('flex');
+        }
+    }
+
+    // 3. Mobile Nav Drawer Admin Card
+    const mobileAdminCard = document.getElementById('mobileAdminCard');
+    const mobileAdminEmail = document.getElementById('mobileAdminEmail');
+    if (mobileAdminCard) {
+        if (isAdmin) {
+            mobileAdminCard.classList.remove('hidden');
+            if (mobileAdminEmail) mobileAdminEmail.textContent = currentUser.email;
+        } else {
+            mobileAdminCard.classList.add('hidden');
+        }
+    }
+
+    // 4. Mobile Nav Drawer User Name
+    const mobileUserName = document.getElementById('mobileNavUserName');
+    if (mobileUserName) {
+        if (currentUser) {
+            const name = currentUser.email.split('@')[0];
+            mobileUserName.textContent = isAdmin ? `${name} (Admin)` : name;
+        } else {
+            mobileUserName.textContent = "Sign In";
+        }
+    }
+
     if (currentUser) {
         const name = currentUser.email.split('@')[0];
-        if (DOM.sideNavUserName) DOM.sideNavUserName.textContent = name;
+        if (DOM.sideNavUserName) DOM.sideNavUserName.textContent = isAdmin ? `${name} (👑 Admin)` : name;
         if (DOM.topAvatarBadge) DOM.topAvatarBadge.textContent = name.charAt(0).toUpperCase();
         if (DOM.userNavSection) {
             DOM.userNavSection.innerHTML = `
@@ -1469,7 +1507,11 @@ function updateAuthUI() {
                             <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">${ENGINE_VERSION}</span></p>
                         </div>
                     </div>
-                ` : ''}
+                ` : `
+                    <div class="mt-2 px-2 text-[10px] text-on-surface-variant font-mono">
+                        App ${APP_VERSION} • Engine ${ENGINE_VERSION}
+                    </div>
+                `}
             `;
         }
     } else {
@@ -1486,20 +1528,31 @@ function updateAuthUI() {
                         <p class="text-xs text-on-surface-variant">Sync your books</p>
                     </div>
                 </button>
+                <div class="mt-2 px-2 text-[10px] text-on-surface-variant/60 font-mono">
+                    EngBot App ${APP_VERSION}
+                </div>
             `;
         }
     }
 }
 
 function login(email, password) {
+    email = (email || '').trim();
     if (!email || !email.includes('@')) {
         alert('Please enter a valid email address.');
         return;
     }
-    currentUser = { email, id: 'usr_' + Date.now(), pro: true };
+    const isAdmin = email.toLowerCase() === 'ananiadevsurashvili@gmail.com';
+    currentUser = {
+        email,
+        id: 'usr_' + Date.now(),
+        pro: true,
+        role: isAdmin ? 'admin' : 'user'
+    };
     localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
     updateAuthUI();
     closeModal('authModal');
+    showToast(isAdmin ? `👑 Welcome Admin (${APP_VERSION})` : `Logged in as ${email}`);
 }
 
 function logout() {
