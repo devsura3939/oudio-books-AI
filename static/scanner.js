@@ -196,14 +196,34 @@
       return pickFiles(true);
     }
     try {
+      // Continuous autofocus and high resolution for crisp book text
       state.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 2560 }, height: { ideal: 1920 } },
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 3840, min: 1920 },
+          height: { ideal: 2160, min: 1080 },
+          focusMode: { ideal: "continuous" },
+          advanced: [
+            { focusMode: "continuous" },
+            { exposureMode: "continuous" },
+            { whiteBalanceMode: "continuous" }
+          ]
+        },
         audio: false,
       });
       render("camera");
     } catch (err) {
-      console.warn("[scanner] getUserMedia failed, using capture input:", err);
-      pickFiles(true);
+      console.warn("[scanner] getUserMedia with advanced constraints failed, retrying standard:", err);
+      try {
+        state.stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 2560 }, height: { ideal: 1920 } },
+          audio: false,
+        });
+        render("camera");
+      } catch (err2) {
+        console.warn("[scanner] getUserMedia failed, using capture input:", err2);
+        pickFiles(true);
+      }
     }
   }
 
@@ -212,7 +232,50 @@
     if (v && state.stream) {
       v.srcObject = state.stream;
       v.play().catch(() => {});
+      // Attach tap-to-focus
+      v.onclick = (e) => triggerTapToFocus(e, v);
     }
+  }
+
+  async function triggerTapToFocus(e, videoEl) {
+    if (!state.stream) return;
+    const track = state.stream.getVideoTracks()[0];
+    if (!track) return;
+
+    showFocusIndicator(e.clientX, e.clientY);
+
+    try {
+      const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+      const rect = videoEl.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+
+      if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
+        await track.applyConstraints({
+          advanced: [{ focusMode: "continuous", pointsOfInterest: [{ x, y }] }]
+        }).catch(() => {});
+      }
+    } catch (err) {
+      /* ignore non-fatal tap to focus */
+    }
+  }
+
+  function showFocusIndicator(clientX, clientY) {
+    let ring = document.getElementById("scanFocusRing");
+    if (!ring) {
+      ring = document.createElement("div");
+      ring.id = "scanFocusRing";
+      ring.style.cssText = "position:fixed;width:56px;height:56px;border:2px solid #38e8ff;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%) scale(1.3);transition:transform 0.2s, opacity 0.35s;z-index:99999;opacity:1;box-shadow:0 0 10px rgba(56,232,255,0.6);";
+      document.body.appendChild(ring);
+    }
+    ring.style.left = clientX + "px";
+    ring.style.top = clientY + "px";
+    ring.style.opacity = "1";
+    ring.style.transform = "translate(-50%,-50%) scale(1)";
+    setTimeout(() => {
+      ring.style.opacity = "0";
+      ring.style.transform = "translate(-50%,-50%) scale(0.8)";
+    }, 600);
   }
 
   function stopCamera() {
@@ -224,12 +287,32 @@
 
   async function shoot() {
     const v = document.getElementById("scanVideo");
-    if (!v || !v.videoWidth) return;
-    const c = document.createElement("canvas");
-    c.width = v.videoWidth;
-    c.height = v.videoHeight;
-    c.getContext("2d").drawImage(v, 0, 0);
-    const blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.94));
+    if (!v || !v.videoWidth || !state.stream) return;
+
+    let blob = null;
+
+    // Use hardware sensor ImageCapture API when available for maximum optical clarity
+    const track = state.stream.getVideoTracks()[0];
+    if (window.ImageCapture && track) {
+      try {
+        const ic = new window.ImageCapture(track);
+        blob = await ic.takePhoto({ fillLightMode: "auto" });
+      } catch (err) {
+        console.warn("[scanner] ImageCapture.takePhoto failed, falling back to canvas:", err);
+      }
+    }
+
+    if (!blob) {
+      const c = document.createElement("canvas");
+      c.width = v.videoWidth;
+      c.height = v.videoHeight;
+      const ctx = c.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(v, 0, 0);
+      blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.95));
+    }
+
     addPage(blob);
     const badge = document.getElementById("scanShotCount");
     if (badge) badge.textContent = `Page ${state.pages.length + 1}`;
@@ -405,16 +488,25 @@
 
     flattenIllumination(gray, w, h);
     stretchContrast(gray);
+    const isBlurry = (page._sharpness || 999) < 140;
+
     if (variant === "binary") {
       adaptiveThreshold(gray, w, h);
+    } else if (variant === "super_res") {
+      // High-intensity multi-scale unsharp mask for blurry / out-of-focus photos
+      unsharpMask(gray, w, h, 1.8);
+      unsharpMask(gray, w, h, 0.7);
     } else {
-      unsharpMask(gray, w, h, 1.1);
+      // Enhanced pass: adaptive unsharp based on photo sharpness
+      const amount = isBlurry ? 1.5 : 1.1;
+      unsharpMask(gray, w, h, amount);
     }
 
-    const canvas = grayToCanvas(gray, w, h, base.upscale);
+    const upscale = variant === "super_res" ? Math.max(2, base.upscale) : base.upscale;
+    const canvas = grayToCanvas(gray, w, h, upscale);
     return {
-      dataUrl: canvas.toDataURL("image/jpeg", 0.9),
-      blob: await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.9)),
+      dataUrl: canvas.toDataURL("image/jpeg", 0.92),
+      blob: await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.92)),
     };
   }
 
@@ -464,10 +556,12 @@
       gray = toGray(rctx.getImageData(0, 0, w, h), w, h);
     }
 
-    // Small photos (older phones, cropped shots) OCR far better upscaled.
-    const upscale = Math.max(w, h) < 1400 ? 2 : 1;
     page._sharpness = laplacianVariance(gray, w, h);
     page._exposure = meanOf(gray);
+    // Upscaling tactics: photos that are small, cropped, or blurry (< 140 variance)
+    // OCR significantly better when upscaled 2x with bicubic smoothing.
+    const isBlurry = page._sharpness < 140;
+    const upscale = (Math.max(w, h) < 1600 || isBlurry) ? 2 : 1;
     return { gray, w, h, upscale };
   }
 
@@ -656,7 +750,9 @@
   }
 
   function blobToBitmap(blob) {
-    if (window.createImageBitmap) return createImageBitmap(blob);
+    if (window.createImageBitmap) {
+      return createImageBitmap(blob, { imageOrientation: "from-image" }).catch(() => createImageBitmap(blob));
+    }
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
@@ -782,20 +878,20 @@
         attempts.push({ text: r.text, engine: "offline", score: scoreText(r.text, lang) * (0.5 + r.confidence / 200) });
       }
 
-      // Pass 2 — only when the first pass looks weak (blurry photo, faint ink,
-      // low light). The adaptive-threshold variant recovers text a greyscale
-      // pass drops; we keep whichever transcription scores higher.
+      // Pass 2 — when first pass looks weak, blurry, or low light.
       const first = attempts[0];
-      const shaky = (page._sharpness || 0) < 90 || (page._exposure || 128) < 70 || (page._exposure || 128) > 215;
-      if (first.score < 0.62 || shaky) {
+      const isBlurry = (page._sharpness || 999) < 140;
+      const shaky = isBlurry || (page._exposure || 128) < 70 || (page._exposure || 128) > 215;
+      if (first.score < 0.65 || shaky) {
         try {
-          const binary = await preprocess(page, "binary");
+          const recoveryVariant = isBlurry && first.score < 0.55 ? "super_res" : "binary";
+          const recovery = await preprocess(page, recoveryVariant);
           if (state.tier0 !== false) {
-            const text = await withRetry(() => ocrGateway(binary.dataUrl, lang, ocrHint(page, lang)));
-            attempts.push({ text, engine: "neural+recovery", score: scoreText(text, lang) });
+            const text = await withRetry(() => ocrGateway(recovery.dataUrl, lang, ocrHint(page, lang)));
+            attempts.push({ text, engine: `neural+${recoveryVariant}`, score: scoreText(text, lang) });
           } else {
-            const r = await ocrLocal(binary.blob, lang);
-            attempts.push({ text: r.text, engine: "offline+recovery", score: scoreText(r.text, lang) * (0.5 + r.confidence / 200) });
+            const r = await ocrLocal(recovery.blob, lang);
+            attempts.push({ text: r.text, engine: `offline+${recoveryVariant}`, score: scoreText(r.text, lang) * (0.5 + r.confidence / 200) });
           }
         } catch (err) {
           console.warn("[scanner] recovery pass failed:", err && err.message);
@@ -822,9 +918,9 @@
   // guesses damaged glyphs in the right alphabet instead of inventing Latin.
   function ocrHint(page, lang) {
     const bits = [];
-    if (lang === "kat") bits.push("The page is Georgian (Mkhedruli). Never transliterate into Latin letters.");
-    if (lang === "eng") bits.push("The page is English prose.");
-    if ((page._sharpness || 999) < 90) bits.push("The photo is slightly blurry — reconstruct partially visible words from context, do not skip them.");
+    if (lang === "kat") bits.push("The page is Georgian (Mkhedruli). Distinguish visually close letters (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ). Never transliterate into Latin.");
+    if (lang === "eng") bits.push("The page is English prose. Preserve compound hyphenated words (e.g. well-known).");
+    if ((page._sharpness || 999) < 140) bits.push("The photo has softness or blur: deduce faint and degraded character stems from surrounding sentence context, grammar and vocabulary. Transcribe completely without dropping words.");
     if ((page._exposure || 128) < 70) bits.push("The photo is under-exposed/dark.");
     if ((page._exposure || 128) > 215) bits.push("The photo is over-exposed with glare.");
     return bits.join(" ");

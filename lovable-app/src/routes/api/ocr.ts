@@ -19,25 +19,31 @@ const schema = z.object({
   hint: z.string().max(2_000).optional(),
 });
 
-const BASE_RULES = `You are a high-accuracy OCR engine for scanned/photographed book pages.
+const BASE_RULES = `You are a high-accuracy OCR and document reconstruction engine for scanned and photographed book pages.
 Return ONLY the text that is printed on the page, as plain text.
 Rules:
-- Transcribe verbatim. Never translate, never paraphrase, never summarise, never add commentary.
-- Preserve paragraph breaks with a blank line. Join words split across line ends by a hyphen into one word (remove the hyphen).
-- Merge lines inside the same paragraph into flowing text (single spaces, no hard line breaks).
+- Transcribe verbatim and completely. Never translate, never paraphrase, never summarise, never add commentary.
+- Blurry & Degraded Photo Recovery: When ink is faint, blurry, low-contrast, or partially obscured by shadows or spine curvature, use visual letter stems and linguistic context to deduce and reconstruct the full words faithfully. Never skip lines or drop words.
+- Hyphenation & Compounds: Join words split across line breaks by a soft hyphen, but preserve legitimate hyphenated compound words (e.g., well-known, state-of-the-art, twenty-five).
+- Preserve paragraph breaks with a blank line. Merge lines inside the same paragraph into flowing text (single spaces, no hard line breaks).
 - Skip running headers, running footers, page numbers, and library stamps.
 - Keep italic/bold text as plain text. Keep quotation marks and dashes as printed.
 - Keep chapter/section headings on their own line.
-- If a word is unreadable, write it as best you can; do not invent sentences.
 - If the page has no readable body text, return exactly: [[NO_TEXT]]
 Output: the transcription only. No markdown fences, no labels, no explanations.`;
 
 const KA_RULES = `The page is in Georgian (ქართული).
 - Use ONLY Georgian Mkhedruli letters (ა-ჰ). Never substitute Latin or Cyrillic look-alikes.
+- Carefully distinguish visually similar Georgian characters even when slightly blurry:
+  - ვ vs პ vs კ
+  - შ vs წ vs ჭ
+  - რ vs უ vs ყ
+  - ქ vs ფ vs ქ
+  - თ vs ძ vs ხ
 - Georgian has no letter case: never capitalise.
-- Punctuation must be standard Georgian/Latin punctuation: . , ? ! : ; « » " ' – —
+- Punctuation must be standard Georgian/Latin punctuation: . , ? ! : ; « » " ' – — „ “
 - NEVER output the Devanagari danda (।), the Armenian or Arabic full stops, or any other foreign sentence terminator. A sentence ends with a normal period (.).
-- Preserve Georgian quotation marks as printed, and keep the archaic letters (ჱ ჲ ჳ ჴ ჵ ჶ ჷ ჸ) if they really appear.
+- Preserve Georgian quotation marks („...“ or «...») and em dashes (—) as printed, and keep archaic letters (ჱ ჲ ჳ ჴ ჵ ჶ ჷ ჸ) if printed.
 - Do not "modernise" spelling; transcribe what is printed.`;
 
 const EN_RULES = `The page is in English. Preserve original spelling (including British/archaic forms) and punctuation exactly.`;

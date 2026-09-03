@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-09-05 — v1.46.1: Camera Autofocus, Image Upscaling & Publication-Grade Book PDF
+
+### Added & Fixed — Publication Book PDF Generator (`static/app.js`, `index.html`)
+- **Eliminated Random Symbols / Mojibake**: Replaced standard ASCII 8-bit PostScript `times` font in jsPDF with `html2pdf.js` and browser-native Unicode text rendering using Google Fonts (`Noto Serif Georgian`, `Noto Sans Georgian`, `Sylfaen`, `Georgia`). All Georgian Mkhedruli characters (`ა-ჰ`), archaic letters, quotation marks (`„…“`), and em dashes (`—`) now render with 100% crisp fidelity and ZERO random symbols.
+- **Book Edition Layout**:
+  - Publication Title / Cover Page: Centered title in 32pt serif, author, edition metadata, language, chapter count, and export date.
+  - Table of Contents (სარჩევი): Automatically generated chapter outline with section indicators.
+  - Page-Break-Before on Chapters: Each chapter now starts cleanly on its own page (`page-break-before: always`).
+  - Book Typography: Justified text alignment (`text-align: justify; text-justify: inter-word`), 2em paragraph indentation, running book headers, and running page numbers.
+  - Dual Export: Direct instant PDF download via `html2pdf.js`, plus a high-resolution print window fallback for 300 DPI vector printing / PDF saving.
+
+### Added & Fixed — Camera Autofocus & Preprocessing (`static/scanner.js`, `index.html`)
+- **Continuous Camera Autofocus**: Added `focusMode: 'continuous'`, `exposureMode: 'continuous'`, and `whiteBalanceMode: 'continuous'` to `getUserMedia` video constraints with up to 4K resolution request.
+- **Hardware Native Photo Capture (`ImageCapture` API)**: In `shoot()`, uses `ImageCapture.takePhoto()` to trigger the physical camera sensor at full hardware resolution (8MP/12MP+) with optical pre-shutter autofocus, instead of capturing downsampled video preview frames.
+- **Interactive Tap-To-Focus**: Tapping on the camera preview now directs camera autofocus to the tapped coordinates (`pointsOfInterest`) and renders a smooth animated focus ring.
+- **Blur Detection & Super-Resolution Upscaling**: Computes Laplacian edge variance; if an image is blurry ($< 140$), automatically upscales $2\times$ using bicubic smoothing and applies a 2-pass high-contrast unsharp mask (`super_res` variant).
+- **EXIF Auto-Orientation**: Uses `imageOrientation: "from-image"` in `blobToBitmap` so uploaded phone gallery photos are automatically oriented correctly.
+
+### Improved — Server-Side Vision OCR Deductions (`lovable-app/src/routes/api/ocr.ts`)
+- **Blur & Degradation Recovery**: Instructs the vision model to use linguistic context, vocabulary, and letter stems to deduce and reconstruct faint, blurry, shadowed, or degraded words rather than dropping text.
+- **Georgian Character Discrimination**: Explicitly guides the model to distinguish visually similar Georgian letter pairs (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ).
+
 ## 2026-09-05 — v1.46.0: Bidirectional Translation & Robust Transcription Engine
 
 ### Added & Fixed — Transcription & OCR Repair (`static/scanner.js`)

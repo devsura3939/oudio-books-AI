@@ -4823,70 +4823,188 @@ function updateLangToggleUI() {
 // ██ 4. FORMATTED PDF EXPORT GENERATOR ██
 // ══════════════════════════════════════════════════════════════════════════
 
-function exportCurrentBookPDF() {
+async function exportCurrentBookPDF() {
     if (!currentBook) {
         alert('Please select a book to export.');
         return;
     }
 
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert('PDF generator is initializing, please try again in a moment.');
-        return;
+    const isKa = readerLang === 'ka';
+    const langLabel = isKa ? 'ქართული (Georgian)' : 'English (Original)';
+    const bookTitle = currentBook.title || 'Untitled Book';
+    const author = currentBook.author || 'Author Unknown';
+
+    const exportBtn = document.querySelector('button[onclick="exportCurrentBookPDF()"]');
+    const oldBtnContent = exportBtn ? exportBtn.innerHTML : null;
+    if (exportBtn) {
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm align-middle">progress_activity</span> Generating Book PDF…';
     }
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    let html = '';
+    try {
+        const container = document.createElement('div');
+        container.id = 'book-pdf-render-container';
+        container.style.cssText = `
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            width: 794px;
+            background: #ffffff;
+            color: #1a1a1a;
+            font-family: 'Noto Serif Georgian', 'Sylfaen', 'Georgia', 'Times New Roman', serif;
+            font-size: 11pt;
+            line-height: 1.7;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        `;
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 45;
-    const maxLineWidth = pageWidth - margin * 2;
+        // 1. Book Cover / Title Page
+        html = `
+        <div class="book-cover-page" style="page-break-after: always; padding: 140px 60px 80px 60px; text-align: center; min-height: 1050px; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div>
+                <div style="font-size: 10.5pt; letter-spacing: 4px; text-transform: uppercase; color: #666; margin-bottom: 50px;">Lumina AI Studio Edition</div>
+                <h1 style="font-size: 32pt; font-weight: 700; line-height: 1.25; margin: 0 0 25px 0; color: #111; word-break: break-word;">${escapeHtml(bookTitle)}</h1>
+                <div style="width: 100px; height: 2px; background: #222; margin: 0 auto 30px auto;"></div>
+                <h2 style="font-size: 18pt; font-weight: 400; font-style: italic; color: #333; margin: 0 0 20px 0;">${escapeHtml(author)}</h2>
+            </div>
+            <div style="font-size: 9.5pt; color: #666; border-top: 1px solid #ddd; padding-top: 30px; text-align: center;">
+                <p style="margin: 5px 0;"><strong>${isKa ? 'გამოცემის ენა' : 'Language'}:</strong> ${escapeHtml(langLabel)}</p>
+                <p style="margin: 5px 0;"><strong>${isKa ? 'თავების რაოდენობა' : 'Total Chapters'}:</strong> ${currentBook.chapters.length}</p>
+                <p style="margin: 5px 0;"><strong>${isKa ? 'თარიღი' : 'Export Date'}:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+        </div>
+        `;
 
-    doc.setFont("times", "bold");
-    doc.setFontSize(26);
-    doc.text(currentBook.title, margin, 120);
-
-    doc.setFont("times", "normal");
-    doc.setFontSize(13);
-    doc.text(`By ${currentBook.author || 'Author'} • Lumina AI Studio Edition`, margin, 150);
-    doc.text(`Language: ${readerLang === 'ka' ? 'Georgian (ქართული)' : 'English (Original)'}`, margin, 172);
-    doc.text(`Exported on: ${new Date().toLocaleDateString()}`, margin, 194);
-
-    doc.setLineWidth(1);
-    doc.line(margin, 215, pageWidth - margin, 215);
-
-    let yPos = 250;
-
-    currentBook.chapters.forEach((chap, cIdx) => {
-        if (yPos > 650) {
-            doc.addPage();
-            yPos = 60;
+        // 2. Table of Contents (სარჩევი)
+        if (currentBook.chapters.length > 1) {
+            html += `
+            <div class="book-toc-page" style="page-break-after: always; padding: 70px 60px; min-height: 1050px; box-sizing: border-box;">
+                <h2 style="font-size: 22pt; font-weight: 700; text-align: center; margin-bottom: 40px; border-bottom: 2px solid #222; padding-bottom: 12px;">
+                    ${isKa ? 'სარჩევი' : 'Table of Contents'}
+                </h2>
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+            `;
+            currentBook.chapters.forEach((chap, idx) => {
+                const title = chap.title || (isKa ? `თავი ${idx + 1}` : `Chapter ${idx + 1}`);
+                html += `
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding-bottom: 5px; font-size: 11pt;">
+                        <span style="font-weight: 600;">${idx + 1}. ${escapeHtml(title)}</span>
+                        <span style="color: #666;">§ ${idx + 1}</span>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
         }
 
-        doc.setFont("times", "bold");
-        doc.setFontSize(18);
-        doc.text(chap.title, margin, yPos);
-        yPos += 25;
+        // 3. Chapters
+        currentBook.chapters.forEach((chap, idx) => {
+            const title = chap.title || (isKa ? `თავი ${idx + 1}` : `Chapter ${idx + 1}`);
+            const content = (isKa && chap.text_ka) ? chap.text_ka : (chap.text || '');
+            const paragraphs = content.split(/\n\s*\n|\r\n\s*\r\n/).map(p => p.trim()).filter(Boolean);
 
-        doc.setFont("times", "normal");
-        doc.setFontSize(11);
+            html += `
+            <div class="book-chapter-section" style="page-break-before: always; padding: 70px 60px 60px 60px; min-height: 1050px; box-sizing: border-box;">
+                <div style="font-size: 8.5pt; text-transform: uppercase; letter-spacing: 2px; color: #888; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #eaeaea; padding-bottom: 8px;">
+                    ${escapeHtml(bookTitle)} — ${escapeHtml(title)}
+                </div>
+                <h2 style="font-size: 22pt; font-weight: 700; text-align: center; margin: 30px 0 35px 0; color: #111; line-height: 1.3;">
+                    ${escapeHtml(title)}
+                </h2>
+                <div style="text-align: justify; text-justify: inter-word; hyphens: auto;">
+            `;
 
-        const chapterContent = (readerLang === 'ka' && chap.text_ka) ? chap.text_ka : chap.text;
-        const lines = doc.splitTextToSize(chapterContent, maxLineWidth);
+            paragraphs.forEach((p) => {
+                html += `<p style="margin: 0 0 16px 0; text-indent: 2em; line-height: 1.75; font-size: 11pt;">${escapeHtml(p)}</p>`;
+            });
 
-        lines.forEach(line => {
-            if (yPos > 780) {
-                doc.addPage();
-                yPos = 60;
-            }
-            doc.text(line, margin, yPos);
-            yPos += 16;
+            html += `
+                </div>
+                <div style="text-align: center; font-size: 9pt; color: #888; margin-top: 50px; border-top: 1px solid #f0f0f0; padding-top: 12px;">
+                    — ${idx + 1} —
+                </div>
+            </div>
+            `;
         });
 
-        yPos += 30;
-    });
+        container.innerHTML = html;
+        document.body.appendChild(container);
 
-    const safeTitle = currentBook.title.replace(/[^a-zA-Z0-9]/g, '_');
-    doc.save(`${safeTitle}_${readerLang === 'ka' ? 'Georgian' : 'English'}.pdf`);
+        const safeTitle = (bookTitle.replace(/[^a-zA-Z0-9\u10A0-\u10FF]/g, '_') || 'Book').slice(0, 40);
+        const fileName = `${safeTitle}_${isKa ? 'Georgian_Edition' : 'English_Edition'}.pdf`;
+
+        if (window.html2pdf) {
+            const opt = {
+                margin: [0, 0, 0, 0],
+                filename: fileName,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+                jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
+
+            await window.html2pdf().set(opt).from(container).save();
+        } else {
+            openPrintableBookWindow(bookTitle, html);
+        }
+
+        if (container.parentNode) container.parentNode.removeChild(container);
+    } catch (err) {
+        console.error('[exportCurrentBookPDF] Error generating PDF:', err);
+        alert('Could not export PDF automatically. Opening print-friendly book view...');
+        openPrintableBookWindow(bookTitle, html);
+    } finally {
+        if (exportBtn && oldBtnContent) {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = oldBtnContent;
+        }
+    }
+}
+
+function openPrintableBookWindow(bookTitle, bookHtml) {
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+        alert('Please allow pop-ups to view or print the book PDF.');
+        return;
+    }
+    printWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>${escapeHtml(bookTitle)} — Lumina Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Georgian:wght@400;600;700&family=Noto+Sans+Georgian:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 20mm 15mm 20mm 15mm;
+        }
+        body {
+            font-family: 'Noto Serif Georgian', 'Sylfaen', 'Georgia', 'Times New Roman', serif;
+            font-size: 11pt;
+            line-height: 1.7;
+            color: #111;
+            margin: 0;
+            padding: 20px;
+            background: #fff;
+        }
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="position: fixed; top: 15px; right: 15px; background: #0f172a; color: #fff; padding: 10px 18px; border-radius: 8px; font-family: sans-serif; font-size: 13px; font-weight: bold; cursor: pointer; z-index: 99999; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" onclick="window.print()">
+        🖨️ Print / Save as PDF
+    </div>
+    ${bookHtml}
+    <script>
+        setTimeout(() => { window.print(); }, 800);
+    <\/script>
+</body>
+</html>`);
+    printWin.document.close();
 }
 
 // ══════════════════════════════════════════════════════════════════════════
