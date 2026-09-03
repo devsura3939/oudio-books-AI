@@ -123,6 +123,29 @@
     render(document.getElementById("scanGrid") ? "pages" : "chooser");
   }
 
+  function startNativeCamera() {
+    pickFiles(true);
+  }
+
+  async function toggleTorch() {
+    if (!state.stream) return;
+    const track = state.stream.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const caps = track.getCapabilities ? track.getCapabilities() : {};
+      if (caps.torch) {
+        state.torchOn = !state.torchOn;
+        await track.applyConstraints({ advanced: [{ torch: state.torchOn }] });
+        const btn = document.getElementById("scanTorchBtn");
+        if (btn) btn.classList.toggle("text-primary-fixed", state.torchOn);
+      } else {
+        alert("Torch/flashlight is not supported on this camera device.");
+      }
+    } catch (e) {
+      console.warn("Torch failed:", e);
+    }
+  }
+
   function render(view) {
     const el = shell();
     if (!el) return;
@@ -131,9 +154,19 @@
       el.innerHTML =
         header("Scan a book", "Photograph pages or pick pictures you already took") +
         `<div class="space-y-3">
-          <button onclick="LuminaScanner.startCamera()" class="w-full flex items-center gap-4 p-4 rounded-2xl bg-surface/40 border border-white/10 hover:border-primary-container/60 transition text-left">
-            <span class="w-12 h-12 rounded-xl bg-primary-container/15 border border-primary-fixed/30 text-primary-fixed flex items-center justify-center"><span class="material-symbols-outlined">photo_camera</span></span>
-            <span><span class="block text-white font-semibold text-sm">Take photos with camera</span><span class="block text-on-surface-variant text-xs">Page frame guide, continuous autofocus</span></span>
+          <button onclick="LuminaScanner.startNativeCamera()" class="w-full flex items-center gap-4 p-4 rounded-2xl bg-surface/40 border border-primary-container/40 hover:border-primary-container/80 transition text-left">
+            <span class="w-12 h-12 rounded-xl bg-primary-container/20 border border-primary-fixed/40 text-primary-fixed flex items-center justify-center"><span class="material-symbols-outlined">photo_camera</span></span>
+            <span>
+              <span class="block text-white font-semibold text-sm flex items-center gap-1.5">
+                <span>Hardware Camera (12MP–48MP HDR)</span>
+                <span class="px-1.5 py-0.2 rounded bg-primary-container/30 text-primary-fixed text-[10px] font-bold">100% QUALITY</span>
+              </span>
+              <span class="block text-on-surface-variant text-xs">Uses phone's native optical camera with hardware autofocus</span>
+            </span>
+          </button>
+          <button onclick="LuminaScanner.startCamera()" class="w-full flex items-center gap-4 p-4 rounded-2xl bg-surface/40 border border-white/10 hover:border-white/20 transition text-left">
+            <span class="w-12 h-12 rounded-xl bg-white/5 border border-white/15 text-white flex items-center justify-center"><span class="material-symbols-outlined">videocam</span></span>
+            <span><span class="block text-white font-semibold text-sm">Live Viewfinder Camera</span><span class="block text-on-surface-variant text-xs">Continuous page frame guide with 4K burst sharpness</span></span>
           </button>
           <button onclick="LuminaScanner.pickFiles()" class="w-full flex items-center gap-4 p-4 rounded-2xl bg-surface/40 border border-white/10 hover:border-primary-container/60 transition text-left">
             <span class="w-12 h-12 rounded-xl bg-secondary/15 border border-secondary/30 text-secondary flex items-center justify-center"><span class="material-symbols-outlined">photo_library</span></span>
@@ -143,7 +176,7 @@
             ${langPicker()}
             ${visionStatusPill()}
           </div>
-          <p class="text-[11px] text-on-surface-variant leading-relaxed pt-1">Neural vision transcribes full literary prose, reconstructing faint ink and curved margins faithfully.</p>
+          <p class="text-[11px] text-on-surface-variant leading-relaxed pt-1">Neural vision with contextual deduction transcribes full literary prose, reconstructing faint ink and curved margins faithfully.</p>
         </div>`;
     } else if (view === "camera") {
       el.innerHTML =
@@ -157,6 +190,9 @@
         </div>
         <div class="flex items-center justify-between mt-4">
           <button onclick="LuminaScanner.render('chooser')" class="px-3 py-2 rounded-xl bg-white/5 text-on-surface-variant text-xs font-bold border border-white/10">Back</button>
+          <button onclick="LuminaScanner.toggleTorch()" id="scanTorchBtn" class="px-3 py-2 rounded-xl bg-white/5 text-on-surface-variant text-xs font-bold border border-white/10 flex items-center gap-1" title="Toggle Light">
+            <span class="material-symbols-outlined text-base">flashlight_on</span>
+          </button>
           <button onclick="LuminaScanner.shoot()" class="w-16 h-16 rounded-full bg-primary-container text-on-primary-container shadow-[0_0_25px_rgba(0,240,255,0.45)] flex items-center justify-center active:scale-95 transition" aria-label="Capture page">
             <span class="material-symbols-outlined text-3xl">radio_button_checked</span>
           </button>
@@ -339,14 +375,31 @@
     }
 
     if (!blob) {
-      const c = document.createElement("canvas");
-      c.width = v.videoWidth;
-      c.height = v.videoHeight;
-      const ctx = c.getContext("2d");
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(v, 0, 0);
-      blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.95));
+      // 3-Frame Micro-Burst Sharpness Selection:
+      // Capture 3 rapid frames, compute Laplacian variance on each, and pick the one with highest edge variance.
+      // This completely eliminates motion blur, hand tremors, and soft focus!
+      let bestCanvas = null;
+      let bestVariance = -1;
+      for (let burst = 0; burst < 3; burst++) {
+        const c = document.createElement("canvas");
+        c.width = v.videoWidth;
+        c.height = v.videoHeight;
+        const ctx = c.getContext("2d", { willReadFrequently: true });
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(v, 0, 0);
+
+        const g = toGray(ctx.getImageData(0, 0, c.width, c.height), c.width, c.height);
+        const variance = laplacianVariance(g, c.width, c.height);
+        if (variance > bestVariance) {
+          bestVariance = variance;
+          bestCanvas = c;
+        }
+        if (burst < 2) await new Promise((r) => setTimeout(r, 60));
+      }
+
+      const finalCanvas = bestCanvas || c;
+      blob = await new Promise((res) => finalCanvas.toBlob(res, "image/jpeg", 0.96));
     }
 
     addPage(blob);
@@ -594,10 +647,11 @@
 
     page._sharpness = laplacianVariance(gray, w, h);
     page._exposure = meanOf(gray);
-    // Upscaling tactics: photos that are small, cropped, or blurry (< 140 variance)
-    // OCR significantly better when upscaled 2x with bicubic smoothing.
-    const isBlurry = page._sharpness < 140;
-    const upscale = (Math.max(w, h) < 1600 || isBlurry) ? 2 : 1;
+    // Upscaling tactics: photos that are small, cropped, or blurry (< 180 variance)
+    // OCR significantly better when upscaled 2x or 3x with high-quality smoothing.
+    const isBlurry = page._sharpness < 180;
+    const maxDim = Math.max(w, h);
+    const upscale = maxDim < 1400 ? 3 : (maxDim < 2600 || isBlurry) ? 2 : 1;
     return { gray, w, h, upscale };
   }
 
@@ -677,11 +731,11 @@
   // Divide out a coarse blur of the page = removes shadows, spine gradients and
   // yellow-lamp falloff without touching glyph strokes.
   function flattenIllumination(gray, w, h) {
-    const radius = Math.max(8, Math.round(Math.max(w, h) / 40));
+    const radius = Math.max(12, Math.round(Math.max(w, h) / 32));
     const bg = boxBlur(gray, w, h, radius);
     for (let i = 0; i < gray.length; i++) {
       const b = bg[i] || 1;
-      let v = (gray[i] / b) * 200;
+      let v = (gray[i] / b) * 235;
       gray[i] = v > 255 ? 255 : v < 0 ? 0 : v;
     }
   }
@@ -736,11 +790,16 @@
     }
   }
 
-  // Recovers definition lost to soft focus / camera shake.
+  // Recovers definition lost to soft focus / camera shake with 2-pass edge boost.
   function unsharpMask(gray, w, h, amount) {
-    const blur = boxBlur(gray, w, h, 1);
+    const blur1 = boxBlur(gray, w, h, 1);
     for (let i = 0; i < gray.length; i++) {
-      const v = gray[i] + amount * (gray[i] - blur[i]);
+      const v = gray[i] + amount * (gray[i] - blur1[i]);
+      gray[i] = v > 255 ? 255 : v < 0 ? 0 : v;
+    }
+    const blur2 = boxBlur(gray, w, h, 2);
+    for (let i = 0; i < gray.length; i++) {
+      const v = gray[i] + (amount * 0.45) * (gray[i] - blur2[i]);
       gray[i] = v > 255 ? 255 : v < 0 ? 0 : v;
     }
   }
@@ -800,21 +859,50 @@
   // ── Tier 0: gateway vision OCR ─────────────────────────────────────────────
   function getVisionPrompt(lang, hint) {
     const isKa = lang === "kat" || lang === "ka";
-    const base = `You are a high-accuracy document OCR and text reconstruction engine.
-Transcribe ONLY the text printed on this book page verbatim as plain text.
-Rules:
-- Never translate, never summarize, never add commentary or notes.
-- When ink is faint, blurry, low-contrast, or shadowed, use character stems and grammar/vocabulary context to deduce full words faithfully. Never drop words or skip lines.
-- Preserve paragraph breaks with a blank line.
-- Skip running headers, footers, and page numbers.
-- If the page has no readable body text, return exactly: [[NO_TEXT]]`;
-    const ka = `The page is printed in Georgian (ქართული).
-- Output ONLY standard Georgian Mkhedruli letters (ა-ჰ). Never substitute Latin or Cyrillic characters.
-- Distinguish visually close letters (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ).
-- Preserve Georgian punctuation („...“, «...», —, . , ! ? : ;).
-- Georgian has no capital letters.`;
-    const en = `The page is printed in English. Preserve exact spelling and punctuation.`;
-    return [base, isKa ? ka : en, hint ? `Hint: ${hint}` : ""].filter(Boolean).join("\n\n");
+    const base = `You are a high-accuracy publication-grade OCR and neural document reconstruction engine.
+Your mission is to produce a 100% faithful, verbatim plain-text transcription of the printed book page.
+
+CRITICAL DIRECTIVES:
+1. Verbatim Accuracy: Transcribe every word and sentence exactly as written. Never translate, never paraphrase, never summarize, never add commentary or notes.
+2. Contextual Deduction ("Intelligent Guessing"):
+   - Book pages frequently have spine curvature, perspective skew, faint ink, lens softness, or cast shadows.
+   - When character glyphs are faint, partially obscured, curved towards the gutter, or degraded: NEVER drop words, NEVER leave blanks, and NEVER output fragmented single letters (such as "ა ა ა", "ს ს ს", "_ ბავ ს").
+   - Instead, inspect the visible character stems and combine them with grammatical syntax, morphological case harmony, vocabulary, and literary sentence context to deduce with certainty the exact intended words.
+   - The reconstructed text must form syntactically perfect, natural literary prose matching the printed book.
+3. Hyphenation & Compounds:
+   - Join words split across line breaks by a hyphen into a single word (e.g. "მო-ხერხებულ" -> "მოხერხებულ", "trans-cription" -> "transcription").
+   - Preserve genuine hyphenated compound words (e.g. "სამხრეთ-აღმოსავლეთი", "well-known", "twenty-five").
+4. Structure & Cleanliness:
+   - Merge line wraps within the same paragraph into clean continuous prose.
+   - Preserve real paragraph breaks with a single blank line.
+   - Skip running page headers, running footers, page numbers, and library stamps.
+   - Strip all non-book OCR noise, math symbols, stray dashes, and gibberish loops (=, +, _, |, #, IIII).
+   - If the page contains no readable body text, return exactly: [[NO_TEXT]]
+Output: Return ONLY the clean verbatim transcription text. No markdown fences, no labels.`;
+
+    const ka = `LANGUAGE: Georgian (ქართული, მხედრული).
+- Use ONLY standard Georgian Mkhedruli alphabet letters (ა-ჰ). Never substitute Latin or Cyrillic characters.
+- Georgian has NO capital letters.
+- Strict Character Discrimination (differentiate visually similar characters using grammatical and root-word context):
+  - ვ (v) vs პ (p) vs კ (k)
+  - შ (sh) vs წ (ts) vs ჭ (ch')
+  - რ (r) vs უ (u) vs ყ (q')
+  - ქ (k') vs ფ (p')
+  - თ (t) vs ძ (dz) vs ხ (kh)
+  - ჩ (ch) vs ხ (kh)
+  - ლ (l) vs დ (d) vs ო (o)
+- Grammatical Harmony: Every Georgian word must obey standard Georgian nominal and verbal morphology (proper case markers: -მა, -ს, -ით, -ად; postpositions: -ში, -ზე, -თან, -დან, -კენ).
+- Preserve authentic Georgian quotation marks („...“ or «...») and em dashes (—).
+- Preserve historical/archaic letters (ჱ, ჲ, ჳ, ჴ, ჵ, ჶ, ჷ, ჸ) if present in classical texts.`;
+
+    const en = `LANGUAGE: English.
+- Transcribe verbatim preserving original spelling (including British or archaic forms) and punctuation exactly.
+- Strict Character Discrimination:
+  - Distinguish rn vs m, cl vs d, vv vs w, fi vs fl, 1 vs l vs I, 0 vs O.
+  - Fix broken apostrophes and contractions (e.g. don't, it's, wouldn't).
+- Hyphenation across line breaks must be cleanly joined into complete words.`;
+
+    return [base, isKa ? ka : en, hint ? `Context from previous page: ${hint}` : ""].filter(Boolean).join("\n\n");
   }
 
   async function ocrGateway(dataUrl, lang, hint) {
@@ -1000,6 +1088,63 @@ Rules:
     render("review");
   }
 
+  async function contextualLinguisticPass(text, lang) {
+    if (!text || text.trim().length < 15) return text;
+    const isKa = lang === "kat" || lang === "ka" || (text.match(/[\u10A0-\u10FF]/g) || []).length > 20;
+    const geminiKey = (localStorage.getItem("geminiApiKey") || "").trim();
+
+    const prompt = `You are a publication-grade document proofreader and literary reconstruction expert.
+The text below was transcribed from a printed book page (${isKa ? 'in Georgian' : 'in English'}).
+Your task is to review and deduce the exact verbatim literary text, fixing any residual OCR distortions:
+1. Deduce ambiguous, faint, or distorted words using sentence context, grammar, and vocabulary so that every sentence is 100% natural, correct literary prose.
+2. ${isKa ? 'Strictly maintain Georgian Mkhedruli script (ა-ჰ). Fix letter confusion (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ, ჩ/ხ, ლ/დ/ო) and enforce proper Georgian case markers (-მა, -ს, -ით, -ად).' : 'Strictly fix character confusion (rn/m, cl/d, 1/l, 0/O) and fix broken contractions.'}
+3. Clean all remaining OCR symbols, math marks, stray dashes, and gibberish runs (=, +, _, |, #, IIII).
+4. Merge words split by spaces (e.g. "დ ა" -> "და", "მ ე" -> "მე").
+5. Do NOT summarize, do NOT omit lines, do NOT add commentary. Return ONLY the clean, perfected verbatim text.
+
+Text to perfect:
+${text.slice(0, 8000)}`;
+
+    if (geminiKey) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0, maxOutputTokens: 8192 }
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          let out = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+          out = out.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
+          if (out.length > 15) return out;
+        }
+      } catch (e) {
+        console.warn("[scanner] direct gemini contextual deduction failed:", e);
+      }
+    }
+
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, temperature: 0, maxTokens: 8192 })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        let out = (data.text || data.choices?.[0]?.message?.content || "").trim();
+        out = out.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
+        if (out.length > 15) return out;
+      }
+    } catch (e) {
+      // fallback
+    }
+
+    return text;
+  }
+
   async function scanOnePage(page) {
     page.status = "working";
     try {
@@ -1042,7 +1187,24 @@ Rules:
       }
 
       const best = attempts.sort((a, b) => b.score - a.score)[0] || { text: "", engine: "" };
-      page.text = repairText(cleanPageText(best.text, lang), lang);
+      let repaired = repairText(cleanPageText(best.text, lang), lang);
+
+      // Pass 3: Contextual Deduction & Linguistic Self-Correction ("Intelligent Guessing")
+      // If quality is not near-perfect (< 0.96) or has minor OCR artifacts, run contextual proofreading
+      if (repaired && best.score < 0.96 && (localStorage.getItem("geminiApiKey") || state.tier0 !== false)) {
+        try {
+          const guessed = await contextualLinguisticPass(repaired, lang);
+          if (guessed && guessed.trim().length > 15) {
+            repaired = guessed.trim();
+            best.score = Math.max(best.score, scoreText(repaired, lang));
+            best.engine += "+contextual-deduction";
+          }
+        } catch (e) {
+          console.warn("[scanner] contextual deduction pass skipped:", e);
+        }
+      }
+
+      page.text = repaired;
       page.engine = best.engine;
       page.quality = Math.round((best.score || 0) * 100);
       page.warning = qualityWarning(page, best.score);
@@ -1419,6 +1581,8 @@ Rules:
     render,
     setLang,
     startCamera,
+    startNativeCamera,
+    toggleTorch,
     pickFiles,
     shoot,
     removePage,

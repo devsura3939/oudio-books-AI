@@ -19,34 +19,48 @@ const schema = z.object({
   hint: z.string().max(2_000).optional(),
 });
 
-const BASE_RULES = `You are a high-accuracy OCR and document reconstruction engine for scanned and photographed book pages.
-Return ONLY the text that is printed on the page, as plain text.
-Rules:
-- Transcribe verbatim and completely. Never translate, never paraphrase, never summarise, never add commentary.
-- Blurry & Degraded Photo Recovery: When ink is faint, blurry, low-contrast, or partially obscured by shadows or spine curvature, use visual letter stems and linguistic context to deduce and reconstruct the full words faithfully. Never skip lines or drop words.
-- Hyphenation & Compounds: Join words split across line breaks by a soft hyphen, but preserve legitimate hyphenated compound words (e.g., well-known, state-of-the-art, twenty-five).
-- Preserve paragraph breaks with a blank line. Merge lines inside the same paragraph into flowing text (single spaces, no hard line breaks).
-- Skip running headers, running footers, page numbers, and library stamps.
-- Keep italic/bold text as plain text. Keep quotation marks and dashes as printed.
-- Keep chapter/section headings on their own line.
-- If the page has no readable body text, return exactly: [[NO_TEXT]]
-Output: the transcription only. No markdown fences, no labels, no explanations.`;
+const BASE_RULES = `You are a high-accuracy publication-grade OCR and neural document reconstruction engine.
+Your mission is to produce a 100% faithful, verbatim plain-text transcription of the printed book page.
 
-const KA_RULES = `The page is in Georgian (ქართული).
-- Use ONLY Georgian Mkhedruli letters (ა-ჰ). Never substitute Latin or Cyrillic look-alikes.
-- Carefully distinguish visually similar Georgian characters even when slightly blurry:
-  - ვ vs პ vs კ
-  - შ vs წ vs ჭ
-  - რ vs უ vs ყ
-  - ქ vs ფ vs ქ
-  - თ vs ძ vs ხ
-- Georgian has no letter case: never capitalise.
-- Punctuation must be standard Georgian/Latin punctuation: . , ? ! : ; « » " ' – — „ “
-- NEVER output the Devanagari danda (।), the Armenian or Arabic full stops, or any other foreign sentence terminator. A sentence ends with a normal period (.).
-- Preserve Georgian quotation marks („...“ or «...») and em dashes (—) as printed, and keep archaic letters (ჱ ჲ ჳ ჴ ჵ ჶ ჷ ჸ) if printed.
-- Do not "modernise" spelling; transcribe what is printed.`;
+CRITICAL DIRECTIVES:
+1. Verbatim Accuracy: Transcribe every word and sentence exactly as written. Never translate, never paraphrase, never summarize, never add commentary or notes.
+2. Contextual Deduction ("Intelligent Guessing"):
+   - Book pages frequently have spine curvature, perspective skew, faint ink, lens softness, or cast shadows.
+   - When character glyphs are faint, partially obscured, curved towards the gutter, or degraded: NEVER drop words, NEVER leave blanks, and NEVER output fragmented single letters (such as "ა ა ა", "ს ს ს", "_ ბავ ს").
+   - Instead, inspect the visible character stems and combine them with grammatical syntax, morphological case harmony, vocabulary, and literary sentence context to deduce with certainty the exact intended words.
+   - The reconstructed text must form syntactically perfect, natural literary prose matching the printed book.
+3. Hyphenation & Compounds:
+   - Join words split across line breaks by a hyphen into a single word (e.g., "მო-ხერხებულ" -> "მოხერხებულ", "trans-cription" -> "transcription").
+   - Preserve genuine hyphenated compound words (e.g., "სამხრეთ-აღმოსავლეთი", "well-known", "twenty-five").
+4. Structure & Cleanliness:
+   - Merge line wraps within the same paragraph into clean continuous prose.
+   - Preserve real paragraph breaks with a single blank line.
+   - Skip running page headers, running footers, page numbers, and library stamps.
+   - Strip all non-book OCR noise, math symbols, stray dashes, and gibberish loops (=, +, _, |, #, IIII).
+   - If the page contains no readable body text, return exactly: [[NO_TEXT]]
+Output: Return ONLY the clean verbatim transcription text. No markdown fences, no labels.`;
 
-const EN_RULES = `The page is in English. Preserve original spelling (including British/archaic forms) and punctuation exactly.`;
+const KA_RULES = `LANGUAGE: Georgian (ქართული, მხედრული).
+- Use ONLY standard Georgian Mkhedruli alphabet letters (ა-ჰ). Never substitute Latin or Cyrillic characters.
+- Georgian has NO capital letters.
+- Strict Character Discrimination (differentiate visually similar characters using grammatical and root-word context):
+  - ვ (v) vs პ (p) vs კ (k)
+  - შ (sh) vs წ (ts) vs ჭ (ch')
+  - რ (r) vs უ (u) vs ყ (q')
+  - ქ (k') vs ფ (p')
+  - თ (t) vs ძ (dz) vs ხ (kh)
+  - ჩ (ch) vs ხ (kh)
+  - ლ (l) vs დ (d) vs ო (o)
+- Grammatical Harmony: Every Georgian word must obey standard Georgian nominal and verbal morphology (proper case markers: -მა, -ს, -ით, -ად; postpositions: -ში, -ზე, -თან, -დან, -კენ).
+- Preserve authentic Georgian quotation marks („...“ or «...») and em dashes (—).
+- Preserve historical/archaic letters (ჱ, ჲ, ჳ, ჴ, ჵ, ჶ, ჷ, ჸ) if present in classical texts.`;
+
+const EN_RULES = `LANGUAGE: English.
+- Transcribe verbatim preserving original spelling (including British or archaic forms) and punctuation exactly.
+- Strict Character Discrimination:
+  - Distinguish rn vs m, cl vs d, vv vs w, fi vs fl, 1 vs l vs I, 0 vs O.
+  - Fix broken apostrophes and contractions (e.g. don't, it's, wouldn't).
+- Hyphenation across line breaks must be cleanly joined into complete words.`;
 
 export const Route = createFileRoute("/api/ocr")({
   server: {

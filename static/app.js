@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.46.3';
-const ENGINE_VERSION = 'v1.46.3 (Lumina-KA)';
+const APP_VERSION = 'v1.46.4';
+const ENGINE_VERSION = 'v1.46.4 (Lumina-VisionPRO)';
 
 let db = null;
 let currentBook = null;
@@ -6411,17 +6411,17 @@ async function repairTextLinguisticAI(text, lang) {
     // Step 2: Try AI reconstruction if Gemini, OpenRouter, or /api/ai is available
     const geminiKey = (localStorage.getItem('geminiApiKey') || '').trim();
     const isKa = lang === 'ka' || lang === 'kat' || (text.match(/[\u10A0-\u10FF]/g) || []).length > 20;
-    const prompt = `You are an expert high-accuracy document OCR reconstruction and text restoration assistant.
-The text below was photographed and OCR-scanned from a book, but contains severe OCR character confusion, fragmented words, and stray punctuation noise.
-Restore and reconstruct the original text into clean, proper, flowing literary prose:
-- Fix OCR character confusion (${isKa ? 'e.g. ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ' : 'e.g. rn/m, cl/d, 1/l/I'}).
-- Remove OCR artifacts, math symbols, stray underscores, and gibberish runs (=, +, _, |, #, IIII).
-- Merge words split by spaces (e.g. "დ ა" -> "და", "მ ე" -> "მე").
-- Keep exact meaning and narrative flow. Do NOT invent new text or summarize.
-- Return ONLY the clean restored text without markdown fences or commentary.
+    const prompt = `You are an expert publication-grade document OCR reconstruction and literary restoration engine.
+The text below was photographed and OCR-scanned from a printed book, but suffered from OCR character fragmentation, curvature, and noise.
+Restore and reconstruct the original text into 100% clean, proper, flowing literary prose:
+1. Contextual Deduction: Deduce faint or distorted words using sentence context, grammar, and literary vocabulary so that every sentence is coherent and complete.
+2. Character Discrimination: ${isKa ? 'Strictly use Georgian Mkhedruli script (ა-ჰ). Fix letter confusion (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ, ჩ/ხ, ლ/დ/ო) and restore proper Georgian case endings (-მა, -ს, -ით, -ად).' : 'Fix character confusion (rn/m, cl/d, 1/l, 0/O) and restore broken contractions.'}
+3. Cleanliness: Purge all non-book artifacts, math marks, stray underscores, and gibberish runs (=, +, _, |, #, IIII).
+4. Word Merging: Merge words split across lines or spaces (e.g. "დ ა" -> "და", "მ ე" -> "მე", "თ ქ ვ ა" -> "თქვა").
+5. Integrity: Keep exact meaning and literary narrative flow. Never summarize or omit sentences. Return ONLY the clean restored text without markdown fences or commentary.
 
 Text to restore:
-${cleaned.slice(0, 7000)}`;
+${cleaned.slice(0, 7500)}`;
 
     if (geminiKey) {
         try {
