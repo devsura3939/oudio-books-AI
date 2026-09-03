@@ -4142,6 +4142,56 @@ they→ისინი (animate; generic-they → ის per KA_PRONOUN_ECONOMY)
 you→შენ|თქვენ (QA-gated, T–V register) · 1st/2nd-INS → ჩემით/
 შენით/ჩვენით/თქვენით · 3rd-case → ის/მან/მას/მის/მით (suppletive)`;
 
+// KA-125 v1.43.0 — Future screeve dictionary: person-marked will+VERB
+//                  frames for the closed set of high-frequency verbs whose
+//                  future paradigms are fully attested. Attested:
+//                  lingua.ge conjugator (წერა → დავწერ/დაწერ/დაწერს/
+//                  დავწერთ/დაწერენ; დარეკვა → დავრეკავ/დარეკავს/
+//                  დავრეკავთ/დარეკავენ; დახმარება → დავეხმარები/
+//                  დაეხმარება/დავეხმარებით/დაეხმარებიან; მოსვლა →
+//                  მოვალ/მოხვალ/მოვა/მოვალთ/მოხვალთ/მოვლენ),
+//                  cram.com (ნახვა → ვნახავ/ნახავ/ნახავს; წასვლა →
+//                  წავალ/წახვალ/წავა/წავალთ/წახვალთ/წავლენ),
+//                  lingualabs.com ("I will write" → მე დავწერ;
+//                  "I will see you" → გნახავ), kartuliena.eu
+//                  (მე დავწერ წიგნში), Springer screeve numbering
+//                  (future = preverb + present stem: da-c'er-s),
+//                  KB-attested ვნახავ/ვნახავთ (KA-104, Latinum L50).
+const KA_FUTURE_DICT = `
+KA-125 FUTURE SCREEVE DICTIONARY — the future indicative (მყოფადი,
+screeve 4) is PREVERB + PRESENT STEM (Springer: da-c'er-s = დაწერს
+"he will write"); the stem vowel -ებ/-ავ- is verb-class specific, so
+the future is a DICTIONARY form, not a productive English-side rule.
+Person-marked will+VERB frames map deterministically for the closed
+attested set (fix 4.110):
+• SEE (ნახვა): I→ვნახავ · we→ვნახავთ · he/she→ნახავს · they→ნახავენ
+  (KB-attested ვნახავ "I'll see" KA-104; cram.com paradigm).
+• WRITE (წერა): I→დავწერ · we→დავწერთ · he/she→დაწერს ·
+  they→დაწერენ (lingua.ge; kartuliena "მე დავწერ წიგნში").
+• CALL (დარეკვა): I→დავრეკავ · we→დავრეკავთ · he/she→დარეკავს ·
+  they→დარეკავენ (lingua.ge).
+• HELP (დახმარება): I→დავეხმარები · we→დავეხმარებით ·
+  he/she→დაეხმარება · they→დაეხმარებიან (lingua.ge; the -ებ-
+  medial paradigm like გრძნობ → იგრძნობ).
+• GO (წასვლა, suppletive წა-): I→წავალ · we→წავალთ · he/she→წავა ·
+  they→წავლენ (cram.com; KA-95 motion doctrine). Supersedes 4.81's
+  bare will go → წავალ (1sg) which mis-agreed non-1sg subjects.
+• COME (მოსვლა, suppletive მო-): I→მოვალ · we→მოვალთ · he/she→მოვა ·
+  they→მოვლენ (lingua.ge მოსვლა future group).
+GUARDS: 2nd person NEVER maps (T–V: წახვალ vs წახვალთ — same as
+bare will be); "it" subjects AI-gated (4.108); subjectless "will V"
+left (no person → no safe form); negated futures stay with 4.93's
+არ family + AI rebuild; I'll-contractions stay AI-pass (4.108
+placeholder protection; QA 3.124 flags).
+MAPPING: will see→ვნახავ paradigm · will write→დავწერ paradigm ·
+will call→დავრეკავ paradigm · will help→დავეხმარები paradigm ·
+will go→წავალ paradigm · will come→მოვალ paradigm ·
+TACTIC: consume SUBJECT+WILL+VERB atomically while the subject is
+still visible (before 4.109/4.108 pronoun swaps); the future form
+ALREADY encodes the person — pro-drop may trim the pronoun (3.19).
+Everything else (2nd person, it, subjectless, negated, contracted)
+stays QA-gated for the AI pass.`;
+
 // KA-124 v1.42.0 — Modals & auxiliaries: bare EN modal/copula tokens →
 //                  Georgian impersonal-modal carriers + the copula
 //                  paradigm. Wires the KA_MODALITY doctrine (KB-only
@@ -4609,6 +4659,7 @@ function getKaKnowledgeBase() {
         KA_QUANTIFIERS,
         KA_POSSESSIVE_DET,
         KA_PERSONAL_PRONOUNS,
+        KA_FUTURE_DICT,
         KA_MODALS_AUX,
         KA_SPATIAL_DEICTIC,
         KA_BARE_INTERROGATIVE,
@@ -5944,15 +5995,42 @@ function validateGeorgianTranslation(text) {
     //      perfect screeves) is the AI pass's rebuild — flagged but
     //      never mechanically mapped. A mapped carrier (შეძლია-
     //      stems, უნდა, შეიძლება, ვარ/ხარ/არის/ვართ/არიან, იყო/
-    //      იყვნენ/იქნებ, აპირებ) present = already rendered.
+    //      იყვნენ, იქნება family, აპირებს, KA-125 future screeve
+    //      forms ვნახავ…მოვლენ) present = already rendered. Carrier
+    //      list uses COMPLETE surface forms (v1.43.0 fix): stem
+    //      prefixes (ვიქნებ, ნახავ, დავწერ, დაეხმარებ…) never
+    //      matched their inflected outputs — the Georgian
+    //      lookbehind/lookahead reject a match inside a longer word.
     const mdCore = /\b(?:can|could|must|should|may|might)\b/i.test(text);
     const mdObl = /\b(?:have|has|had)\s+to\b/i.test(text);
     const mdBe = /\b(?:will\s+be|am|is|are|was|were)\b/i.test(text)
         && !/\bthere\s+(?:is|are|was|were)\b/i.test(text);
     const mdAux = /\b(?:will|would|do|does|did)\b/i.test(text);
-    const mdCarrier = /(?<![\u10A0-\u10FF])(?:შემიძლია|შეგიძლია|შეუძლია|შემეძლო|შეეძლო|შეგვეძლო|უნდა|შეიძლება|ვარ|ხარ|არის|ვართ|ხართ|არიან|ვიყავ|იყავ|იყო|იყვნენ|ვიქნებ|იქნებ|აპირებ|მინდა)(?![\u10A0-\u10FF])/.test(text);
+    const mdCarrier = /(?<![\u10A0-\u10FF])(?:შემიძლია|შეგიძლია|შეუძლია|შემეძლო|შეეძლო|შეგვეძლო|უნდა|შეიძლება|ვარ|ხარ|არის|ვართ|ხართ|არიან|ვიყავი|იყავი|იყო|იყვნენ|ვიყავით|იყავით|ვიქნები|იქნები|იქნება|ვიქნებით|იქნებით|იქნებიან|აპირებს|აპირებ|მინდა|ვნახავ|ვნახავთ|ნახავს|ნახავენ|დავწერ|დავწერთ|დაწერს|დაწერენ|დავრეკავ|დავრეკავთ|დარეკავს|დარეკავენ|დავეხმარები|დავეხმარებით|დაეხმარება|დაეხმარებიან|წავალ|წავალთ|წავა|წავლენ|მოვალ|მოვალთ|მოვა|მოვლენ)(?![\u10A0-\u10FF])/.test(text);
     if ((mdCore || mdObl || mdBe || mdAux) && !mdCarrier) {
         issues.push({ rule: 'modal_aux_untranslated', message: 'Modal/auxiliary untranslated: Georgian has NO auxiliaries — tense/mood lives on the verb. I can→შემიძლია · he/she can→შეუძლია · we can→შეგვიძლია · they can→შეუძლიათ (impersonal dative-experiencer: person in the prefix, NEVER bare can + verb) · could→შემეძლო series · must/should/have to→უნდა + OPTATIVE (უნდა დავწერო; უნდა is invariable — never *უნდება) · must not/shouldn\'t→არ უნდა · may/might→შეიძლება · will be→იქნება/ვიქნები/იქნებიან · I am→მე ვარ · we are→ჩვენ ვართ · he/she is→ის არის · they are→ისინი არიან · I was→მე ვიყავი · was→იყო · were→იყვნენ (negation precedes: არ ვარ, არ იყო; არ before consonants, არა before vowels) · do/does/did DROP (Georgian has no do-support) · will+VERB/would/have+V-ed → future/conditional/perfect screeve built on the verb itself (დავწერ, ვნახავდი, დაწერილია) — AI-pass rebuilds. you-forms are T–V gated (ხარ vs ხართ; შეგიძლია vs შეგიძლიათ). A mapped carrier (შე...ძლია / უნდა / შეიძლება / ვარ / არის / იყო / იქნებ / აპირებ) present = already rendered.' });
+    }
+
+    // 3.124 Future screeve residue (v1.43.0, KA-125). English FUTURE frames
+    //      that fix 4.110 deliberately does NOT map: 2nd person (T–V
+    //      gated წახვალ vs წახვალთ), it-subjects (AI-gated), subjectless
+    //      "will V" (no person → no safe form), 'll-contractions (4.108
+    //      placeholder-protected) and negated futures (არ + screeve is an
+    //      AI rebuild alongside 4.93's არ swap). The dictionary verbs'
+    //      attested future paradigms travel in the message so the AI pass
+    //      (and human reviewers) see the exact targets.
+    const futYou = /\bwill\s+you\b|\byou\s+will\b/i.test(text);
+    const futIt = /\bit\s+will\b|\bwill\s+it\b/i.test(text);
+    const futBare = /\bwill\s+(?:see|write|call|help|go|come|make|take|give|know|think|say|tell|read|eat|drink|sleep|open|close|find|buy|do|watch|listen|work|play|speak|talk|walk|run|start|finish|meet|wait|send|bring|show|ask|answer|learn|teach|live|stay|visit|return|move|change|try|use|need|want|love|like|hear|feel|remember|forget|decide|hope|plan|drive|cook|clean|wash|wear|sing|dance|laugh|smile|cry|win|lose|pay|cost|sell|build|break|cut|hold|carry|throw|catch|choose|grow|study)\b/i.test(text);
+    const futCon = /\b(?:I|you|we|they|he|she|it)'ll\b/i.test(text);
+    const futNeg = /\b(?:won'?t|will\s+not)\s+[a-z]+/i.test(text);
+    //      Carrier uses COMPLETE surface forms (v1.43.0): stem prefixes
+    //      (ნახავ, დავწერ, დარეკავ, დაეხმარებ) never matched their
+    //      inflected outputs — ნახავ is fenced inside ვნახავ by the
+    //      lookbehind, დავწერ inside დავწერთ by the lookahead.
+    const futCarrier = /(?<![\u10A0-\u10FF])(?:ვნახავ|ვნახავთ|ნახავს|ნახავენ|დავწერ|დავწერთ|დაწერს|დაწერენ|დავრეკავ|დავრეკავთ|დარეკავს|დარეკავენ|დავეხმარები|დავეხმარებით|დაეხმარება|დაეხმარებიან|წავალ|წავალთ|წავა|წავლენ|მოვალ|მოვალთ|მოვა|მოვლენ)(?![\u10A0-\u10FF])/.test(text);
+    if ((futYou || futIt || futBare || futCon || futNeg) && !futCarrier) {
+        issues.push({ rule: 'future_screeve_untranslated', message: 'Future screeve untranslated (KA-125): Georgian future (მყოფადი) = PREVERB + PRESENT stem, verb-specific — a dictionary form. Attested: see→ვნახავ (I/we ვნახავ/ვნახავთ, he/she ნახავს, they ნახავენ) · write→დავწერ (დავწერ/დავწერთ/დაწერს/დაწერენ) · call→დავრეკავ (დავრეკავ/დავრეკავთ/დარეკავს/დარეკავენ) · help→დავეხმარები (დავეხმარები/დავეხმარებით/დაეხმარება/დაეხმარებიან) · go→წავალ (წავალ/წავალთ/წავა/წავლენ) · come→მოვალ (მოვალ/მოვალთ/მოვა/მოვლენ). 2nd person is T–V gated (წახვალ vs წახვალთ; AI decides შენ/თქვენ register). NEGATED future: არ + future screeve (არ ვნახავ, არ წავა) — never არ will. Contractions: I\'ll/we\'ll = I will/we will (same screeve); he\'ll/she\'ll → ნახავს-class 3sg. it-subjects: AI-gated (anaphora vs dummy). Subjectless "will V": person unknown — AI infers from context.' });
     }
 
     return issues;
@@ -7023,13 +7101,65 @@ function correctGeorgianMorphology(text) {
 
     // ── v1.19.0 additions ──
 
+    // 4.110 Future screeve dictionary (KA-125, v1.43.0). FUNCTION TAIL —
+    //      runs BEFORE 4.81's motion maps: its bare "will go"/"will come"
+    //      (→ 1sg წავალ/მოვალ regardless of subject) and bare go/come
+    //      maps would otherwise mis-agree the future ("we წავალ") or
+    //      degrade it to a present form. Also runs BEFORE 4.109/4.108's
+    //      pronoun swaps — the subject must still be visible for person
+    //      marking. Person-marked SUBJECT+WILL+VERB frames for the closed
+    //      set of verbs whose future paradigms are fully attested (KA-125):
+    //      SEE ვნახავ · WRITE დავწერ · CALL დავრეკავ · HELP დავეხმარები ·
+    //      GO წავალ · COME მოვალ. GUARDS: 2nd person NEVER maps (T–V
+    //      gated: წახვალ vs წახვალთ — same doctrine as bare will be);
+    //      "it" subjects excluded (it is AI-gated, 4.108); bare
+    //      subjectless "will V" left (no person → no safe form); negated
+    //      futures ("won't/will not V") untouched — 4.93's არ family owns
+    //      them and the negated screeve is an AI rebuild; contractions
+    //      (I'll...) are placeholder-protected by 4.108 and stay AI-pass
+    //      (QA 3.124 flags the residue).
+    //      NOTE: \b never matches after Georgian chars (JS \b is
+    //      ASCII-word-based) — safe to run after earlier Georgian swaps.
+    //      SEE — ვნახავ family (cram.com; KB-attested ვნახავ KA-104)
+    out = out.replace(/\bI\s+will\s+see\b/gi, 'მე ვნახავ');
+    out = out.replace(/\bwe\s+will\s+see\b/gi, 'ჩვენ ვნახავთ');
+    out = out.replace(/\b(?:he|she)\s+will\s+see\b/gi, 'ის ნახავს');
+    out = out.replace(/\bthey\s+will\s+see\b/gi, 'ისინი ნახავენ');
+    //      WRITE — დავწერ family (lingua.ge წერა; kartuliena მე დავწერ)
+    out = out.replace(/\bI\s+will\s+write\b/gi, 'მე დავწერ');
+    out = out.replace(/\bwe\s+will\s+write\b/gi, 'ჩვენ დავწერთ');
+    out = out.replace(/\b(?:he|she)\s+will\s+write\b/gi, 'ის დაწერს');
+    out = out.replace(/\bthey\s+will\s+write\b/gi, 'ისინი დაწერენ');
+    //      CALL — დავრეკავ family (lingua.ge დარეკვა)
+    out = out.replace(/\bI\s+will\s+call\b/gi, 'მე დავრეკავ');
+    out = out.replace(/\bwe\s+will\s+call\b/gi, 'ჩვენ დავრეკავთ');
+    out = out.replace(/\b(?:he|she)\s+will\s+call\b/gi, 'ის დარეკავს');
+    out = out.replace(/\bthey\s+will\s+call\b/gi, 'ისინი დარეკავენ');
+    //      HELP — დავეხმარები family (lingua.ge დახმარება)
+    out = out.replace(/\bI\s+will\s+help\b/gi, 'მე დავეხმარები');
+    out = out.replace(/\bwe\s+will\s+help\b/gi, 'ჩვენ დავეხმარებით');
+    out = out.replace(/\b(?:he|she)\s+will\s+help\b/gi, 'ის დაეხმარება');
+    out = out.replace(/\bthey\s+will\s+help\b/gi, 'ისინი დაეხმარებიან');
+    //      GO — წავალ family (cram.com წასვლა; KA-95 suppletive წა-).
+    //      Supersedes 4.81's bare will go → წავალ (1sg) which mis-agreed
+    //      with we/they/he subjects ("we წავალ", "he წავალ").
+    out = out.replace(/\bI\s+will\s+go\b/gi, 'მე წავალ');
+    out = out.replace(/\bwe\s+will\s+go\b/gi, 'ჩვენ წავალთ');
+    out = out.replace(/\b(?:he|she)\s+will\s+go\b/gi, 'ის წავა');
+    out = out.replace(/\bthey\s+will\s+go\b/gi, 'ისინი წავლენ');
+    //      COME — მოვალ family (lingua.ge მოსვლა; KA-95 suppletive მო-).
+    //      Supersedes 4.81's bare will come → მოვალ (1sg).
+    out = out.replace(/\bI\s+will\s+come\b/gi, 'მე მოვალ');
+    out = out.replace(/\bwe\s+will\s+come\b/gi, 'ჩვენ მოვალთ');
+    out = out.replace(/\b(?:he|she)\s+will\s+come\b/gi, 'ის მოვა');
+    out = out.replace(/\bthey\s+will\s+come\b/gi, 'ისინი მოვლენ');
+
     // 4.81 Untranslated English motion verbs. Tense-sensitive carriers from
     //      the suppletive system; past "went to/came to" keeps the goal
-    //      phrase in place (წავიდა სახლში). Future forms FIRST — bare
-    //      "go"/"come" would otherwise consume them (same ordering class
-    //      as 4.78's "one and the same" / 4.80's "but also").
-    out = out.replace(/\bwill go\b/gi, 'წავალ');
-    out = out.replace(/\bwill come\b/gi, 'მოვალ');
+    //      phrase in place (წავიდა სახლში). The bare "will go"/"will come"
+    //      1sg maps (წავალ/მოვალ) MOVED to 4.110's person-marked dictionary
+    //      (v1.43.0) — the 1sg form mis-agreed with we/they/he subjects
+    //      ("we წავალ"); 4.110 runs before this rule.
     out = out.replace(/\bgoing to\b/gi, 'მიდის');
     out = out.replace(/\bgoes to\b/gi, 'მიდის');
     out = out.replace(/\bgo to\b/gi, 'მიდის');
@@ -7945,12 +8075,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.42.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.43.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 125,
-    qaRules: 124,
-    autoFixes: 109,
-    researchSources: 376
+    promptBlocks: 126,
+    qaRules: 125,
+    autoFixes: 110,
+    researchSources: 377
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────

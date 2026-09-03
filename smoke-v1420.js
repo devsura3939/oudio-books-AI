@@ -2,7 +2,7 @@
 // All expectations CAPTURED from actual v1.42.0 engine output (capture-then-pin).
 const { validateGeorgianTranslation, correctGeorgianMorphology, GEORGIAN_KNOWLEDGE_VERSION, GEORGIAN_KNOWLEDGE_STATS } = require('./static/georgian-linguistics.js');
 console.log('Version:', GEORGIAN_KNOWLEDGE_VERSION, '| stats:', JSON.stringify(GEORGIAN_KNOWLEDGE_STATS));
-if (GEORGIAN_KNOWLEDGE_VERSION !== '1.42.0') { console.error('FAIL: version not 1.42.0'); process.exit(1); }
+if (GEORGIAN_KNOWLEDGE_VERSION !== '1.43.0') { console.error('FAIL: version not 1.43.0'); process.exit(1); }
 
 // --- Fix 4.109: ability — subject+can consumed ATOMICALLY into შე-ძლია
 //     family (person lives in the prefix; he/they consumed INTO the modal);

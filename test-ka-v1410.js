@@ -18,12 +18,12 @@ const ruleOf = text => qa(text).map(i => i.rule);
 const has = (arr, r) => arr.includes(r);
 const msgOf = (text, rule) => (qa(text).find(i => i.rule === rule) || {}).message || '';
 
-// ── [1] VERSION & STATS (5) — updated for v1.42.0 (KA-124 MODALS & AUX) ────
-t('version 1.42.0', GEORGIAN_KNOWLEDGE_VERSION === '1.42.0');
-t('stats promptBlocks 125', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 125);
-t('stats qaRules 124', GEORGIAN_KNOWLEDGE_STATS.qaRules === 124);
-t('stats autoFixes 109', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 109);
-t('stats researchSources 376', GEORGIAN_KNOWLEDGE_STATS.researchSources === 376);
+// ── [1] VERSION & STATS (5) — updated for v1.43.0 (KA-125 FUTURE SCREEVE) ──
+t('version 1.43.0', GEORGIAN_KNOWLEDGE_VERSION === '1.43.0');
+t('stats promptBlocks 126', GEORGIAN_KNOWLEDGE_STATS.promptBlocks === 126);
+t('stats qaRules 125', GEORGIAN_KNOWLEDGE_STATS.qaRules === 125);
+t('stats autoFixes 110', GEORGIAN_KNOWLEDGE_STATS.autoFixes === 110);
+t('stats researchSources 377', GEORGIAN_KNOWLEDGE_STATS.researchSources === 377);
 
 // ── [2] KB PRESENCE + WIRING (12) ──────────────────────────────────────────
 t('KB KA-123 const exists', src.includes('const KA_PERSONAL_PRONOUNS = `'));
