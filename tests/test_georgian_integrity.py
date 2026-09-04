@@ -274,7 +274,7 @@ for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", 
 print("  [PASS] Adjective case concord and expanded calque replacements verified")
 
 # ----------------------------------------------------------------------------
-# 19. Cross-Script Global Lexical Scope Collision & Version 1.46.9 Parity
+# 19. Cross-Script Global Lexical Scope Collision & Version 1.47.0 Parity
 # ----------------------------------------------------------------------------
 for base_dir, label in [(os.path.join(REPO_DIR, "static"), "root static/"),
                         (os.path.join(REPO_DIR, "lovable-app", "public", "studio", "static"), "studio static/")]:
@@ -291,24 +291,36 @@ for base_dir, label in [(os.path.join(REPO_DIR, "static"), "root static/"),
             assert decl not in seen_lexical, f"FATAL LEXICAL COLLISION: '{decl}' declared with const/let in both {seen_lexical[decl]} and {sf} in {label}"
             seen_lexical[decl] = sf
 
-# Version 1.46.9 across all entry points & cache busters
+# Version 1.47.0 across all entry points, cache busters, and early controller
 with open(os.path.join(REPO_DIR, "index.html"), "r", encoding="utf-8") as f:
     root_html = f.read()
-assert "v=1.46.9" in root_html, "FAIL: index.html missing v=1.46.9 cache buster"
-assert "v1.46.9" in root_html, "FAIL: index.html missing v1.46.9 text"
+assert "v=1.47.0" in root_html, "FAIL: index.html missing v=1.47.0 cache buster"
+assert "v1.47.0" in root_html, "FAIL: index.html missing v1.47.0 text"
+assert "Early Auth Gate Controller" in root_html, "FAIL: index.html missing Early Auth Gate Controller"
+assert "gateBtnForgot" in root_html, "FAIL: index.html missing gateBtnForgot ID"
+assert "gateBtnQuickFillAdmin" in root_html, "FAIL: index.html missing gateBtnQuickFillAdmin ID"
 
 with open(os.path.join(REPO_DIR, "lovable-app", "public", "studio", "index.html"), "r", encoding="utf-8") as f:
     studio_html = f.read()
-assert "v=1.46.9" in studio_html, "FAIL: studio/index.html missing v=1.46.9 cache buster"
-assert "v1.46.9" in studio_html, "FAIL: studio/index.html missing v1.46.9 text"
+assert "v=1.47.0" in studio_html, "FAIL: studio/index.html missing v=1.47.0 cache buster"
+assert "v1.47.0" in studio_html, "FAIL: studio/index.html missing v1.47.0 text"
+assert "Early Auth Gate Controller" in studio_html, "FAIL: studio/index.html missing Early Auth Gate Controller"
 
-for path_name, content in [("static/app.js", app_content), ("studio/static/app.js", studio_app_content)]:
+with open(STATIC_APP, "r", encoding="utf-8") as f:
+    current_app_content = f.read()
+with open(STUDIO_APP, "r", encoding="utf-8") as f:
+    current_studio_app_content = f.read()
+
+for path_name, content in [("static/app.js", current_app_content), ("studio/static/app.js", current_studio_app_content)]:
     assert "handleGateSignIn" in content, f"FAIL: handleGateSignIn missing from {path_name}"
     assert "fillAdminCredentials" in content, f"FAIL: fillAdminCredentials missing from {path_name}"
     assert "updateAuthGateVisibility" in content, f"FAIL: updateAuthGateVisibility missing from {path_name}"
+    assert "_realHandleGateSignIn" in content, f"FAIL: _realHandleGateSignIn missing from {path_name}"
+    assert "v1.47.0" in content, f"FAIL: v1.47.0 missing from {path_name}"
 
-print("  [PASS] 0 top-level lexical collisions across all scripts & v1.46.9 parity verified")
+print("  [PASS] 0 top-level lexical collisions across all scripts, early controller & v1.47.0 parity verified")
 
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
+
 
 

@@ -581,10 +581,168 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="static/styles.css?v=1.46.9">
+    <link rel="stylesheet" href="static/styles.css?v=1.47.0">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
+
+    <!-- ════════════════ Early Auth Gate Controller (v1.47.0) ════════════════ -->
+    <script>
+    (function() {
+        window.setGateError = function(msg) {
+            var errEl = document.getElementById('gateErrorMsg');
+            var succEl = document.getElementById('gateSuccessMsg');
+            if (succEl) succEl.classList.add('hidden');
+            if (errEl) {
+                if (msg) {
+                    errEl.textContent = msg;
+                    errEl.classList.remove('hidden');
+                } else {
+                    errEl.textContent = '';
+                    errEl.classList.add('hidden');
+                }
+            }
+        };
+
+        window.setGateSuccess = function(msg) {
+            var errEl = document.getElementById('gateErrorMsg');
+            var succEl = document.getElementById('gateSuccessMsg');
+            if (errEl) errEl.classList.add('hidden');
+            if (succEl) {
+                if (msg) {
+                    succEl.textContent = msg;
+                    succEl.classList.remove('hidden');
+                } else {
+                    succEl.textContent = '';
+                    succEl.classList.add('hidden');
+                }
+            }
+        };
+
+        window.switchGateMode = function(mode) {
+            var signInForm = document.getElementById('gateSignInForm');
+            var registerForm = document.getElementById('gateRegisterForm');
+            var forgotForm = document.getElementById('gateForgotForm');
+            var resetForm = document.getElementById('gateResetForm');
+            var tabs = document.getElementById('gateTabs');
+            var tabSignIn = document.getElementById('gateTabSignIn');
+            var tabRegister = document.getElementById('gateTabRegister');
+            var subtitle = document.getElementById('gateSubtitle');
+
+            window.setGateError('');
+            window.setGateSuccess('');
+
+            if (mode === 'reset') {
+                if (signInForm) signInForm.classList.add('hidden');
+                if (registerForm) registerForm.classList.add('hidden');
+                if (forgotForm) forgotForm.classList.add('hidden');
+                if (resetForm) resetForm.classList.remove('hidden');
+                if (tabs) tabs.classList.add('hidden');
+                if (subtitle) subtitle.textContent = 'Create a secure new password for your account';
+                var newPwdInput = document.getElementById('gateNewPassword');
+                if (newPwdInput) newPwdInput.focus();
+            } else if (mode === 'register') {
+                if (signInForm) signInForm.classList.add('hidden');
+                if (forgotForm) forgotForm.classList.add('hidden');
+                if (resetForm) resetForm.classList.add('hidden');
+                if (registerForm) registerForm.classList.remove('hidden');
+                if (tabs) tabs.classList.remove('hidden');
+                if (tabSignIn) {
+                    tabSignIn.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95';
+                }
+                if (tabRegister) {
+                    tabRegister.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
+                }
+                if (subtitle) subtitle.textContent = 'Create your free Studio account to sync books across devices';
+                var regInput = document.getElementById('gateRegEmail');
+                if (regInput) regInput.focus();
+            } else if (mode === 'forgot') {
+                if (signInForm) signInForm.classList.add('hidden');
+                if (registerForm) registerForm.classList.add('hidden');
+                if (resetForm) resetForm.classList.add('hidden');
+                if (forgotForm) forgotForm.classList.remove('hidden');
+                if (tabs) tabs.classList.add('hidden');
+                if (subtitle) subtitle.textContent = 'Enter your email to receive a password reset recovery link';
+                var forgotInput = document.getElementById('gateForgotEmail');
+                var signinEmail = document.getElementById('gateEmail');
+                if (forgotInput && signinEmail && signinEmail.value) {
+                    forgotInput.value = signinEmail.value;
+                }
+                if (forgotInput) forgotInput.focus();
+            } else {
+                // signin
+                if (registerForm) registerForm.classList.add('hidden');
+                if (forgotForm) forgotForm.classList.add('hidden');
+                if (resetForm) resetForm.classList.add('hidden');
+                if (signInForm) signInForm.classList.remove('hidden');
+                if (tabs) tabs.classList.remove('hidden');
+                if (tabSignIn) {
+                    tabSignIn.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
+                }
+                if (tabRegister) {
+                    tabRegister.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95';
+                }
+                if (subtitle) subtitle.textContent = 'Sign in to access your personal audiobooks, scanned books, and studio workspace';
+            }
+        };
+
+        window.fillAdminCredentials = function() {
+            var emailInput = document.getElementById('gateEmail');
+            var pwdInput = document.getElementById('gatePassword');
+            if (emailInput) {
+                emailInput.value = 'ananiadevsurashvili@gmail.com';
+                emailInput.classList.add('ring-2', 'ring-primary-container');
+            }
+            if (pwdInput) {
+                pwdInput.value = 'anania39';
+                pwdInput.classList.add('ring-2', 'ring-primary-container');
+            }
+            setTimeout(function() {
+                if (emailInput) emailInput.classList.remove('ring-2', 'ring-primary-container');
+                if (pwdInput) pwdInput.classList.remove('ring-2', 'ring-primary-container');
+            }, 1500);
+        };
+
+        window.handleGateSignIn = function() {
+            if (window._realHandleGateSignIn) return window._realHandleGateSignIn();
+            var btn = document.getElementById('btnGateSignIn');
+            if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Signing In...</span>';
+            var poll = setInterval(function() {
+                if (window._realHandleGateSignIn) {
+                    clearInterval(poll);
+                    window._realHandleGateSignIn();
+                }
+            }, 80);
+            setTimeout(function() { clearInterval(poll); }, 8000);
+        };
+
+        window.handleGateRegister = function() {
+            if (window._realHandleGateRegister) return window._realHandleGateRegister();
+            var btn = document.getElementById('btnGateRegister');
+            if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Registering...</span>';
+            var poll = setInterval(function() {
+                if (window._realHandleGateRegister) {
+                    clearInterval(poll);
+                    window._realHandleGateRegister();
+                }
+            }, 80);
+            setTimeout(function() { clearInterval(poll); }, 8000);
+        };
+
+        window.handleGateForgot = function() {
+            if (window._realHandleGateForgot) return window._realHandleGateForgot();
+            var btn = document.getElementById('btnGateForgot');
+            if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Sending...</span>';
+            var poll = setInterval(function() {
+                if (window._realHandleGateForgot) {
+                    clearInterval(poll);
+                    window._realHandleGateForgot();
+                }
+            }, 80);
+            setTimeout(function() { clearInterval(poll); }, 8000);
+        };
+    })();
+    </script>
 
     <!-- ════════════════ Auth Gate Screen (shown when not logged in) ════════════════ -->
     <div id="authGateScreen" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#0c1017] p-4 sm:p-6 overflow-y-auto">
@@ -605,7 +763,7 @@
                 <div>
                     <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center justify-center gap-2">
                         <span>EngBot Studio</span>
-                        <span class="text-primary-container text-[11px] font-mono px-2 py-0.5 rounded-full bg-primary-container/15 border border-primary-container/30">v1.46.9</span>
+                        <span class="text-primary-container text-[11px] font-mono px-2 py-0.5 rounded-full bg-primary-container/15 border border-primary-container/30">v1.47.0</span>
                     </h1>
                     <p class="text-xs sm:text-sm text-on-surface-variant mt-1" id="gateSubtitle">
                         Sign in to access your personal audiobooks, scanned books, and studio workspace
@@ -615,8 +773,8 @@
 
             <!-- Mode Selector Tabs (Sign In / Register) -->
             <div class="flex p-1 rounded-2xl bg-white/5 border border-white/10 text-xs font-semibold" id="gateTabs">
-                <button type="button" onclick="switchGateMode('signin')" id="gateTabSignIn" class="flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all">Sign In</button>
-                <button type="button" onclick="switchGateMode('register')" id="gateTabRegister" class="flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all">Create Account</button>
+                <button type="button" onclick="switchGateMode('signin')" id="gateTabSignIn" class="flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95">Sign In</button>
+                <button type="button" onclick="switchGateMode('register')" id="gateTabRegister" class="flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95">Create Account</button>
             </div>
 
             <!-- Error and Success Banners -->
@@ -633,7 +791,7 @@
                 <div class="space-y-1.5">
                     <div class="flex justify-between items-center text-xs">
                         <label class="font-medium text-on-surface-variant" for="gatePassword">Password</label>
-                        <button type="button" onclick="switchGateMode('forgot')" class="text-primary-fixed-dim hover:text-primary-container transition">
+                        <button type="button" id="gateBtnForgot" onclick="switchGateMode('forgot')" class="text-primary-fixed-dim hover:text-primary-container transition cursor-pointer active:scale-95">
                             Forgot password?
                         </button>
                     </div>
@@ -655,7 +813,7 @@
 
                 <!-- Quick Admin Demo Fill Shortcut for the Owner -->
                 <div class="pt-1 text-center">
-                    <button type="button" onclick="fillAdminCredentials()" class="text-[11px] text-on-surface-variant/70 hover:text-primary-container transition flex items-center justify-center gap-1 mx-auto">
+                    <button type="button" id="gateBtnQuickFillAdmin" onclick="fillAdminCredentials()" class="text-[11px] text-on-surface-variant/70 hover:text-primary-container transition flex items-center justify-center gap-1 mx-auto cursor-pointer active:scale-95">
                         <span>👑 Quick-fill Admin credentials</span>
                     </button>
                 </div>
@@ -687,7 +845,7 @@
                 </button>
 
                 <p class="text-[11px] text-center text-on-surface-variant">
-                    Already registered? <button type="button" onclick="switchGateMode('signin')" class="text-primary-container underline hover:brightness-125">Log In</button>
+                    Already registered? <button type="button" id="gateBtnToSignInFromReg" onclick="switchGateMode('signin')" class="text-primary-container underline hover:brightness-125 cursor-pointer active:scale-95">Log In</button>
                 </p>
             </form>
 
@@ -707,7 +865,7 @@
                     <span>Send Recovery Link</span>
                 </button>
 
-                <button type="button" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition border border-white/10 text-center">
+                <button type="button" id="gateBtnToSignInFromForgot" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition border border-white/10 text-center cursor-pointer active:scale-95">
                     ← Back to Sign In
                 </button>
             </form>
@@ -737,7 +895,7 @@
                     <span>Update Password & Enter Studio</span>
                 </button>
 
-                <button type="button" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition border border-white/10 text-center">
+                <button type="button" id="gateBtnToSignInFromReset" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition border border-white/10 text-center cursor-pointer active:scale-95">
                     ← Back to Sign In
                 </button>
             </form>
@@ -745,11 +903,42 @@
             <!-- Bottom Branding Security Note -->
             <div class="pt-2 text-center flex flex-col items-center gap-2">
                 <div class="text-[10px] text-on-surface-variant/60 font-mono">
-                    Encrypted Vault • Supabase Cloud Sync • EngBot v1.46.9
+                    Encrypted Vault • Supabase Cloud Sync • EngBot v1.47.0
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Direct Touch and Click Event Attacher for Auth Gate (v1.47.0) -->
+    <script>
+    (function() {
+        function bindGateTouchEvents() {
+            var map = [
+                ['gateTabSignIn', function() { window.switchGateMode('signin'); }],
+                ['gateTabRegister', function() { window.switchGateMode('register'); }],
+                ['gateBtnForgot', function() { window.switchGateMode('forgot'); }],
+                ['gateBtnQuickFillAdmin', function() { window.fillAdminCredentials(); }],
+                ['gateBtnToSignInFromReg', function() { window.switchGateMode('signin'); }],
+                ['gateBtnToSignInFromForgot', function() { window.switchGateMode('signin'); }],
+                ['gateBtnToSignInFromReset', function() { window.switchGateMode('signin'); }]
+            ];
+            map.forEach(function(item) {
+                var el = document.getElementById(item[0]);
+                if (el) {
+                    el.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        item[1]();
+                    });
+                }
+            });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindGateTouchEvents);
+        } else {
+            bindGateTouchEvents();
+        }
+    })();
+    </script>
 
     <!-- ════════════════ App Main Container (hidden when not logged in) ════════════════ -->
     <div id="appMainContainer" class="hidden flex-1 flex flex-col md:flex-row w-full min-h-screen">
@@ -760,9 +949,9 @@
         </button>
         <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
-            <span class="font-label-caps font-bold tracking-tight text-white">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">v1.46.9</span></span>
+            <span class="font-label-caps font-bold tracking-tight text-white">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">v1.47.0</span></span>
             <div id="adminVersionPillMobile" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)]">
-                <span>👑</span><span>v1.46.9</span>
+                <span>👑</span><span>v1.47.0</span>
             </div>
         </div>
         <div class="flex items-center gap-0.5 -mr-2">
@@ -791,7 +980,7 @@
                     </div>
                     <div>
                         <span class="font-label-caps font-bold text-white block leading-tight">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">PRO</span></span>
-                        <span class="text-[10px] text-on-surface-variant font-mono">App v1.46.9 • Engine v1.46.9</span>
+                        <span class="text-[10px] text-on-surface-variant font-mono">App v1.47.0 • Engine v1.47.0</span>
                     </div>
                 </div>
                 <button onclick="closeMobileNav()" class="p-1.5 rounded-lg hover:bg-white/10 transition" aria-label="Close menu">
@@ -807,8 +996,8 @@
                 </div>
                 <p class="text-white text-[10px] truncate mt-0.5 font-sans" id="mobileAdminEmail"></p>
                 <div class="mt-1 pt-1 border-t border-white/10 space-y-0.5">
-                    <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">v1.46.9</span></p>
-                    <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">v1.46.9 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)</span></p>
+                    <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">v1.47.0</span></p>
+                    <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">v1.47.0 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)</span></p>
                 </div>
             </div>
 
@@ -936,9 +1125,9 @@
             <div id="adminVersionPill" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-primary-container/20 border border-primary-container/40 text-[11px] font-mono text-primary-fixed font-bold shadow-[0_0_15px_rgba(0,240,255,0.2)]">
                 <span>👑 Admin</span>
                 <span class="opacity-40">•</span>
-                <span>App v1.46.9</span>
+                <span>App v1.47.0</span>
                 <span class="opacity-40">•</span>
-                <span>Engine v1.46.9</span>
+                <span>Engine v1.47.0</span>
             </div>
 
             <button onclick="openCurrentBookInReader()" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-georgian-gold/15 hover:bg-georgian-gold/25 border border-georgian-gold/30 text-xs font-bold text-georgian-gold transition shadow-sm" title="Open Moon+ Reader view">
@@ -1440,7 +1629,7 @@
             <!-- Footer info -->
             <div class="pt-2 text-center text-[10px] text-on-surface-variant/70 border-t border-white/10 flex items-center justify-between px-1">
                 <span>EngBot Audiobooks AI</span>
-                <span class="font-mono">v1.46.9 Multi-Domain</span>
+                <span class="font-mono">v1.47.0 Multi-Domain</span>
             </div>
         </div>
     </div>
@@ -1981,11 +2170,11 @@
         <div id="scanShell" class="modal-content glass-panel p-6 rounded-3xl max-w-lg w-full border border-white/15 shadow-2xl mx-4"></div>
     </div>
 
-    <script src="static/supabase-store.js?v=1.46.9"></script>
-    <script src="static/georgian-linguistics.js?v=1.46.9"></script>
-    <script src="static/app.js?v=1.46.9"></script>
-    <script src="static/engine-pack.js?v=1.46.9"></script>
-    <script src="static/scanner.js?v=1.46.9"></script>
+    <script src="static/supabase-store.js?v=1.47.0"></script>
+    <script src="static/app.js?v=1.47.0"></script>
+    <script src="static/georgian-linguistics.js?v=1.47.0"></script>
+    <script src="static/engine-pack.js?v=1.47.0"></script>
+    <script src="static/scanner.js?v=1.47.0"></script>
 
 
 </body>

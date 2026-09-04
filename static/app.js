@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.46.9';
-const ENGINE_VERSION = 'v1.46.9 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
+const APP_VERSION = 'v1.47.0';
+const ENGINE_VERSION = 'v1.47.0 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
 
 let db = null;
 let currentBook = null;
@@ -2344,7 +2344,7 @@ function updateCabinetUI() {
     if (avatar) avatar.textContent = userEmail.charAt(0).toUpperCase();
     if (email) email.textContent = userEmail;
     if (roleBadge) {
-        roleBadge.textContent = isAdmin ? '👑 Administrator v1.46.9' : '🎧 PRO Listener';
+        roleBadge.textContent = isAdmin ? '👑 Administrator v1.47.0' : '🎧 PRO Listener';
         roleBadge.className = isAdmin
             ? 'px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold'
             : 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-white';
@@ -2637,7 +2637,10 @@ async function handleGateForgot() {
 
     try {
         if (window.LuminaStore && window.LuminaStore.resetPassword) {
-            const res = await window.LuminaStore.resetPassword(email);
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Password reset request timed out. Please check your network connection.')), 12000)
+            );
+            const res = await Promise.race([window.LuminaStore.resetPassword(email), timeoutPromise]);
             if (res.success) {
                 setGateSuccess('Password recovery email sent! Check your inbox for the reset link.');
             } else {
@@ -2785,7 +2788,10 @@ async function sendPasswordReset() {
 
     try {
         if (window.LuminaStore && window.LuminaStore.resetPassword) {
-            const res = await window.LuminaStore.resetPassword(email);
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Password reset request timed out. Please check your network connection.')), 12000)
+            );
+            const res = await Promise.race([window.LuminaStore.resetPassword(email), timeoutPromise]);
             if (res.success) {
                 setAuthSuccess('Password recovery email sent! Check your inbox for the reset link.');
             } else {
@@ -2839,7 +2845,10 @@ async function login(email, password, rememberParam) {
         // Connect with Supabase Cloud
         if (window.LuminaStore && window.LuminaStore.signIn) {
             try {
-                const authRes = await window.LuminaStore.signIn(email, pwd);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Sign in timed out. Please check your network connection.')), 12000)
+                );
+                const authRes = await Promise.race([window.LuminaStore.signIn(email, pwd), timeoutPromise]);
                 if (authRes.success && authRes.user) {
                     supabaseUser = authRes.user;
                     cloudConnected = true;
@@ -2947,7 +2956,10 @@ async function register(email, password, rememberParam) {
 
     try {
         if (window.LuminaStore && window.LuminaStore.signUp) {
-            const res = await window.LuminaStore.signUp(email, password);
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Registration timed out. Please check your network connection.')), 12000)
+            );
+            const res = await Promise.race([window.LuminaStore.signUp(email, password), timeoutPromise]);
             if (res.success) {
                 setAuthSuccess('Account created! Signing you in...');
                 await login(email, password, rememberMe);
@@ -3013,6 +3025,10 @@ window.handleGateSignIn = handleGateSignIn;
 window.handleGateRegister = handleGateRegister;
 window.handleGateForgot = handleGateForgot;
 window.handleGateSetNewPassword = handleGateSetNewPassword;
+window._realHandleGateSignIn = handleGateSignIn;
+window._realHandleGateRegister = handleGateRegister;
+window._realHandleGateForgot = handleGateForgot;
+window._realHandleGateSetNewPassword = handleGateSetNewPassword;
 window.updateAuthGateVisibility = updateAuthGateVisibility;
 window.recoverAllLocalBooks = recoverAllLocalBooks;
 window.loadBooks = loadBooks;
