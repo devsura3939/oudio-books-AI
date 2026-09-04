@@ -19,6 +19,30 @@ const schema = z.object({
 export const Route = createFileRoute("/api/ai")({
   server: {
     handlers: {
+      GET: async () => {
+        const apiKey = process.env["LOVABLE_API_KEY"];
+        if (!apiKey) {
+          return json({ status: "unconfigured", error: "LOVABLE_API_KEY not set" }, 200);
+        }
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 6000);
+          const upstream = await fetch("https://ai.gateway.lovable.dev/v1/models", {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            signal: ctrl.signal,
+          });
+          clearTimeout(tid);
+          if (upstream.status === 402) {
+            return json({ status: "depleted", code: 402, error: "AI gateway out of credits" }, 200);
+          }
+          if (upstream.ok) {
+            return json({ status: "healthy", code: 200 }, 200);
+          }
+          return json({ status: "degraded", code: upstream.status }, 200);
+        } catch (e: any) {
+          return json({ status: "unreachable", error: e?.message || "timeout" }, 200);
+        }
+      },
       POST: async ({ request }) => {
         const apiKey = process.env["LOVABLE_API_KEY"];
         if (!apiKey) {
@@ -54,11 +78,16 @@ export const Route = createFileRoute("/api/ai")({
         }
 
         const data = (await upstream.json()) as {
-          choices?: { message?: { content?: string } }[];
+          choices?: { message?: { content?: string }; finish_reason?: string }[];
         };
-        const text = data.choices?.[0]?.message?.content ?? "";
+        const choice = data.choices?.[0];
+        const text = choice?.message?.content ?? "";
+        const finishReason = choice?.finish_reason;
         if (!text) return json({ error: "Empty AI response" }, 502);
-        return json({ text }, 200);
+        if (finishReason === "length") {
+          return json({ error: "Response truncated by token limit", text, finish_reason: finishReason, truncated: true }, 422);
+        }
+        return json({ text, finish_reason: finishReason }, 200);
       },
     },
   },

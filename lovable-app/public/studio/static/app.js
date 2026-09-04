@@ -291,15 +291,16 @@ function aiTranslationAvailable() {
         || !!(customProviderUrl && customProviderModel);
 }
 
-// Georgian rule block for prompts. Quality mode ships the full research
-// knowledge base; budget mode (whole-book runs) ships the compact checklist so
-// hundreds of chunks stay fast without losing the morphology guardrails.
+// Georgian rule block for prompts. Quality mode ships the compact research
+// knowledge base (~12k chars) with core morphology, verbs, defects, decision table,
+// punctuation, wordbank, preverbs, and case system; preventing prompt blowout,
+// 429 quota traps, and 20-minute stalls.
 function getKaRulesForPrompt() {
-    if (translationBudgetMode === 'budget') {
-        return (typeof getKaCompactRules === 'function' ? getKaCompactRules() : '') + kaTrainedAddendum();
+    if (typeof getKaCompactRules === 'function') {
+        return getKaCompactRules() + kaTrainedAddendum();
     }
     if (typeof getKaKnowledgeBase === 'function') return getKaKnowledgeBase() + kaTrainedAddendum();
-    return (typeof getKaCompactRules === 'function' ? getKaCompactRules() : '') + kaTrainedAddendum();
+    return kaTrainedAddendum();
 }
 
 // Trained rules from the Training Lab, appended to (never replacing) the built-in
@@ -729,6 +730,9 @@ function georgianOrdinalToWords(n) {
 }
 
 // ── Advanced Georgian Linguistic Verbalizer for Flawless Native Speech ───────
+const KA_CHARS = (typeof window !== 'undefined' && window.KA_CHARS) || '\\u10A0-\\u10FF';
+const kaWord = (typeof window !== 'undefined' && window.kaWord) || ((src, flags = 'g') => new RegExp(`(?<![${KA_CHARS}])(?:${src})(?![${KA_CHARS}])`, flags));
+
 function verbalizeGeorgianTextForTTS(text) {
     if (!text) return '';
     let out = normalizeGeorgian(text);
@@ -741,7 +745,7 @@ function verbalizeGeorgianTextForTTS(text) {
         'XV': 'მეთხუთმეტე', 'XVI': 'მეთექვსმეტე', 'XVII': 'მეჩვიდმეტე', 'XVIII': 'მეთვრამეტე',
         'XIX': 'მეცხრამეტე', 'XX': 'მეოცე'
     };
-    out = out.replace(/\b(თავი|ნაწილი|წიგნი|ტომი|კარი)\s+([IVXLCDM]+)\b/gi, (match, prefix, roman) => {
+    out = out.replace(new RegExp(`(?<![${KA_CHARS}])(თავი|ნაწილი|წიგნი|ტომი|კარი)\\s+([IVXLCDM]+)\\b`, 'gi'), (match, prefix, roman) => {
         const upper = roman.toUpperCase();
         return `${prefix} ${romanToGeorgian[upper] || roman}`;
     });
@@ -775,16 +779,16 @@ function verbalizeGeorgianTextForTTS(text) {
 
     // 5. Common Abbreviations
     const abbrevMap = [
-        [/\bდა\s*ა\.შ\./g, 'და ასე შემდეგ'],
-        [/\bე\.ი\./g, 'ესე იგი'],
-        [/\bე\.წ\./g, 'ეგრეთ წოდებული'],
-        [/\bმაგ\./g, 'მაგალითად'],
-        [/\bბ-ნი\b/g, 'ბატონი'],
-        [/\bქ-ნი\b/g, 'ქალბატონი'],
-        [/\bდოქტ\./g, 'დოქტორი'],
-        [/\bპროფ\./g, 'პროფესორი'],
-        [/\bწ\./g, 'წელი'],
-        [/\bსს\./g, 'საუკუნე']
+        [kaWord('და\\s*ა\\.შ\\.', 'g'), 'და ასე შემდეგ'],
+        [kaWord('ე\\.ი\\.', 'g'), 'ესე იგი'],
+        [kaWord('ე\\.წ\\.', 'g'), 'ეგრეთ წოდებული'],
+        [kaWord('მაგ\\.', 'g'), 'მაგალითად'],
+        [kaWord('ბ-ნი', 'g'), 'ბატონი'],
+        [kaWord('ქ-ნი', 'g'), 'ქალბატონი'],
+        [kaWord('დოქტ\\.', 'g'), 'დოქტორი'],
+        [kaWord('პროფ\\.', 'g'), 'პროფესორი'],
+        [kaWord('წ\\.', 'g'), 'წელი'],
+        [kaWord('სს\\.', 'g'), 'საუკუნე']
     ];
     abbrevMap.forEach(([regex, repl]) => {
         out = out.replace(regex, repl);
@@ -875,24 +879,24 @@ function refineGeorgianGrammar(text) {
     // 1. Critical Idiom, Metaphor & Vulgarity Filters from English MT artifacts
     const idiomFixes = [
         // "how anal I can get" -> "რამდენად პედანტური/დეტალური შემიძლია ვიყო"
-        [/\b(?:თუ\s+)?როგორი\s+ანალის\s+მიღება\s+შემიძლია\b/gi, 'თუ რამდენად პედანტური და ზედმიწევნითი შემიძლია ვიყო'],
-        [/\bანალის\s+მიღება\b/gi, 'ზედმიწევნითობა'],
-        [/\bროგორი\s+ანალი\b/gi, 'როგორი პედანტი'],
+        [kaWord('(?:თუ\\s+)?როგორი\\s+ანალის\\s+მიღება\\s+შემიძლია', 'gi'), 'თუ რამდენად პედანტური და ზედმიწევნითი შემიძლია ვიყო'],
+        [kaWord('ანალის\\s+მიღება', 'gi'), 'ზედმიწევნითობა'],
+        [kaWord('როგორი\\s+ანალი', 'gi'), 'როგორი პედანტი'],
 
         // "got to me" (moved to tears / affected me deeply) -> "ცრემლებამდე ამაღელვა"
-        [/\bეს\s+რომანები\s+მომივიდა\b/gi, 'ამ რომანებმა ცრემლებამდე ამაღელვა'],
-        [/\bმომივიდა\s+გულზე\b/gi, 'გულზე მომხვდა'],
+        [kaWord('ეს\\s+რომანები\\s+მომივიდა', 'gi'), 'ამ რომანებმა ცრემლებამდე ამაღელვა'],
+        [kaWord('მომივიდა\\s+გულზე', 'gi'), 'გულზე მომხვდა'],
 
         // "choking up" -> "ცრემლებს ძლივს ვიკავებდი" (NOT "ვხრჩობდი")
-        [/\bვიჯექი\s+და\s+ვხრჩობდი\b/gi, 'ვიჯექი და ცრემლებს ძლივს ვიკავებდი'],
-        [/\bდა\s+ვხრჩობდი\b/gi, 'და ემოციებისგან ყელში ბურთი მებჯინებოდა'],
+        [kaWord('ვიჯექი\\s+და\\s+ვხრჩობდი', 'gi'), 'ვიჯექი და ცრემლებს ძლივს ვიკავებდი'],
+        [kaWord('და\\s+ვხრჩობდი', 'gi'), 'და ემოციებისგან ყელში ბურთი მებჯინებოდა'],
 
         // "backs away / backwards" -> "უკან იხევს / აჭიანურებს"
-        [/\bუკუღმა\s+მოძრაობს\b/gi, 'უკან იხევს და საქმეს აჭიანურებს'],
-        [/\bუკუღმა\s+წავიკითხე\b/gi, 'თავიდან ბოლომდე, ერთი ამოსუნთქვით წავიკითხე'],
+        [kaWord('უკუღმა\\s+მოძრაობს', 'gi'), 'უკან იხევს და საქმეს აჭიანურებს'],
+        [kaWord('უკუღმა\\s+წავიკითხე', 'gi'), 'თავიდან ბოლომდე, ერთი ამოსუნთქვით წავიკითხე'],
 
         // "Resistance" (War of Art core theme) -> "შინაგანი წინააღმდეგობა"
-        [/\bსხვა\s+სიტყვებით\s+რომ\s+ვთქვათ,\s+წინააღმდეგობა\b/gi, 'სხვა სიტყვებით რომ ვთქვათ — შინაგანი წინააღმდეგობა'],
+        [kaWord('სხვა\\s+სიტყვებით\\s+რომ\\s+ვთქვათ,\\s+წინააღმდეგობა', 'gi'), 'სხვა სიტყვებით რომ ვთქვათ — შინაგანი წინააღმდეგობა'],
 
         // "writer's block" / "the block" -> "შემოქმედებითი ბლოკი"
         [/როგორც\s+„ბლოკი“,\s+დამბლა/gi, 'როგორც „შემოქმედებითი დამბლა“ და ბლოკი'],
@@ -901,13 +905,13 @@ function refineGeorgianGrammar(text) {
         [/ზამთარი,\s*ხსნის\s*არმია/gi, 'ზამთარი და საქველმოქმედო ყუთი'],
 
         // General Idioms
-        [/\bერთხელ\s+დროში\b/gi, 'იყო და არა იყო რა'],
-        [/\bსხვა\s+მხრივ\b/gi, 'მეორეს მხრივ'],
-        [/\bყველაფერში\s+ყველაფერში\b/gi, 'საბოლოო ჯამში'],
-        [/\bსაქმის\s+ფაქტად\b/gi, 'სინამდვილეში'],
-        [/\bსხვა\s+სიტყვებით\b/gi, 'სხვა სიტყვებით რომ ვთქვათ'],
-        [/\bზედმეტია\s+იმის\s+თქმა\b/gi, 'რა თქმა უნდა'],
-        [/\bთავის\s+თავად\b/gi, 'თავისთავად']
+        [kaWord('ერთხელ\\s+დროში', 'gi'), 'იყო და არა იყო რა'],
+        [kaWord('სხვა\\s+მხრივ', 'gi'), 'მეორეს მხრივ'],
+        [kaWord('ყველაფერში\\s+ყველაფერში', 'gi'), 'საბოლოო ჯამში'],
+        [kaWord('საქმის\\s+ფაქტად', 'gi'), 'სინამდვილეში'],
+        [kaWord('სხვა\\s+სიტყვებით', 'gi'), 'სხვა სიტყვებით რომ ვთქვათ'],
+        [kaWord('ზედმეტია\\s+იმის\\s+თქმა', 'gi'), 'რა თქმა უნდა'],
+        [kaWord('თავის\\s+თავად', 'gi'), 'თავისთავად']
     ];
     idiomFixes.forEach(([pattern, repl]) => {
         out = out.replace(pattern, repl);
@@ -915,10 +919,10 @@ function refineGeorgianGrammar(text) {
 
     // 2. Historical & Literary Name Localization
     const nameReplacements = [
-        [/\bსუნ\s+ცუ\b/gi, 'სუნ ძი'],
-        [/\bსუნ\s+ტზუ\b/gi, 'სუნ ძი'],
-        [/\bალექსანდრე\s+დიდი\b/gi, 'ალექსანდრე მაკედონელი'],
-        [/\bიულიუს\s+ცეზარი\b/gi, 'იულიუს კეისარი']
+        [kaWord('სუნ\\s+ცუ', 'gi'), 'სუნ ძი'],
+        [kaWord('სუნ\\s+ტზუ', 'gi'), 'სუნ ძი'],
+        [kaWord('ალექსანდრე\\s+დიდი', 'gi'), 'ალექსანდრე მაკედონელი'],
+        [kaWord('იულიუს\\s+ცეზარი', 'gi'), 'იულიუს კეისარი']
     ];
     nameReplacements.forEach(([pat, repl]) => {
         out = out.replace(pat, repl);
@@ -934,8 +938,8 @@ function refineGeorgianGrammar(text) {
         'მოიტანა', 'წაიყვანა', 'მიატოვა', 'აირჩია', 'შექმნა', 'შეჭამა'
     ];
     ergativeVerbs.forEach(verb => {
-        out = out.replace(new RegExp(`\\bის\\s+(${verb})\\b`, 'g'), 'მან $1');
-        out = out.replace(new RegExp(`\\bის\\s+([ა-ჰ]+ად|[ა-ჰ]+ადვე|[ა-ჰ]+თ)\\s+(${verb})\\b`, 'g'), 'მან $1 $2');
+        out = out.replace(kaWord(`ის\\s+(${verb})`, 'g'), 'მან $1');
+        out = out.replace(kaWord(`ის\\s+([ა-ჰ]+ად|[ა-ჰ]+ადვე|[ა-ჰ]+თ)\\s+(${verb})`, 'g'), 'მან $1 $2');
     });
 
     // 4. Format Authentic Georgian Literary Quotations: „...“
@@ -4156,11 +4160,18 @@ function parseModelJSON(raw) {
         let candidate = s;
         if (inStr) candidate += '"';
         candidate = candidate.replace(/,\s*$/, '').replace(/:\s*$/, '');
+        const wasTruncated = inStr || stack.length > 0;
         while (stack.length) {
             const open = stack.pop();
             candidate += open === '{' ? '}' : ']';
         }
-        try { return JSON.parse(candidate); } catch { /* give up */ }
+        try {
+            const res = JSON.parse(candidate);
+            if (res && typeof res === 'object' && wasTruncated) {
+                res._truncated = true;
+            }
+            return res;
+        } catch { /* give up */ }
     }
     return null;
 }
@@ -4950,6 +4961,57 @@ function applyKaRuleEngine(text) {
 }
 window.applyKaRuleEngine = applyKaRuleEngine;
 
+/**
+ * Strict Translation Quality Gate (P0-2, P0-3)
+ * Blocks identical source leaks, wrong alphabets, corrupt outputs, and runaway loops
+ * from ever reaching text_ka or being persisted to database.
+ */
+function assessTranslation(src, out, targetLang = 'ka') {
+    if (!out || typeof out !== 'string' || !out.trim()) {
+        return { ok: false, reason: 'empty_output' };
+    }
+    const cleanOut = out.trim();
+    const cleanSrc = (src || '').trim();
+    if (!cleanSrc) return { ok: true };
+
+    // 1. Identical to source (case-insensitive) — primary source-leak defect
+    if (cleanOut.toLowerCase() === cleanSrc.toLowerCase()) {
+        return { ok: false, reason: 'identical_to_source' };
+    }
+
+    if (targetLang === 'ka') {
+        // 2. Georgian script ratio:
+        // Count Georgian letters (U+10A0 - U+10FF) vs total Latin/Cyrillic letters
+        const kaLetters = (cleanOut.match(/[\u10A0-\u10FF]/g) || []).length;
+        const latinLetters = (cleanOut.match(/[a-zA-Z]/g) || []).length;
+        const totalAlphabet = kaLetters + latinLetters;
+        
+        // If there are significant alphabetic characters, Georgian must dominate (at least 60%)
+        if (totalAlphabet >= 8 && (kaLetters / totalAlphabet) < 0.60) {
+            return { ok: false, reason: 'wrong_script_ratio', kaRatio: kaLetters / totalAlphabet };
+        }
+
+        // 3. Extreme length ratio check (for inputs of substantial length >= 30 chars)
+        if (cleanSrc.length >= 30) {
+            const ratio = cleanOut.length / cleanSrc.length;
+            if (ratio < 0.35 || ratio > 2.80) {
+                return { ok: false, reason: 'extreme_length_ratio', ratio };
+            }
+        }
+
+        // 4. Raw JSON or markdown artifact leaks
+        if (/```(?:json)?\s*[\{\[]/i.test(cleanOut) || /^\{\s*"(?:translated|text|chunk|output)"\s*:/i.test(cleanOut)) {
+            return { ok: false, reason: 'raw_json_leak' };
+        }
+        if (/<think>|<\/think>/i.test(cleanOut)) {
+            return { ok: false, reason: 'model_thinking_leak' };
+        }
+    }
+
+    return { ok: true };
+}
+window.assessTranslation = assessTranslation;
+
 // Machine-translation draft + the full rule engine. `translateChunkLocal` keeps
 // its name (many call sites) but it is now Tier B, not a raw MT passthrough.
 async function translateChunkLocal(clean, targetLang) {
@@ -4971,8 +5033,11 @@ async function translateChunkLocal(clean, targetLang) {
                 const srvData = await srvRes.json();
                 if (srvData && srvData.translated && srvData.translated.trim()) {
                     const refined = targetLang === 'ka' ? applyKaRuleEngine(srvData.translated) : srvData.translated;
-                    recordEngineUse('rules');
-                    return refined;
+                    const assess = assessTranslation(clean, refined, targetLang);
+                    if (assess.ok) {
+                        recordEngineUse('rules');
+                        return refined;
+                    }
                 }
             }
         } catch (e) {
@@ -4988,19 +5053,25 @@ async function translateChunkLocal(clean, targetLang) {
             let batch = '';
             for (const s of sentences) {
                 if (batch.length + s.length > 400 && batch.trim()) {
-                    translatedParts.push(await translateSingleSentence(batch.trim(), targetLang));
+                    const transPart = await translateSingleSentence(batch.trim(), targetLang);
+                    if (transPart) translatedParts.push(transPart);
                     batch = s + ' ';
                 } else {
                     batch += s + ' ';
                 }
             }
             if (batch.trim()) {
-                translatedParts.push(await translateSingleSentence(batch.trim(), targetLang));
+                const transPart = await translateSingleSentence(batch.trim(), targetLang);
+                if (transPart) translatedParts.push(transPart);
             }
             const full = translatedParts.filter(Boolean).join(' ');
             if (full && full.trim().length > 0) {
-                recordEngineUse('rules');
-                return targetLang === 'ka' ? applyKaRuleEngine(full) : full;
+                const refined = targetLang === 'ka' ? applyKaRuleEngine(full) : full;
+                const assess = assessTranslation(clean, refined, targetLang);
+                if (assess.ok) {
+                    recordEngineUse('rules');
+                    return refined;
+                }
             }
         } catch (e) {
             console.warn('Sentence-split translation failed:', e);
@@ -5026,8 +5097,11 @@ async function translateChunkLocal(clean, targetLang) {
                 }
                 const refined = targetLang === 'ka' ? applyKaRuleEngine(fullTrans) : fullTrans;
                 if (refined && refined.trim().length > 0) {
-                    recordEngineUse('rules');
-                    return refined;
+                    const assess = assessTranslation(clean, refined, targetLang);
+                    if (assess.ok) {
+                        recordEngineUse('rules');
+                        return refined;
+                    }
                 }
             }
         }
@@ -5053,8 +5127,11 @@ async function translateChunkLocal(clean, targetLang) {
                 }
                 const refined2 = targetLang === 'ka' ? applyKaRuleEngine(fullTrans2) : fullTrans2;
                 if (refined2 && refined2.trim().length > 0) {
-                    recordEngineUse('rules');
-                    return refined2;
+                    const assess = assessTranslation(clean, refined2, targetLang);
+                    if (assess.ok) {
+                        recordEngineUse('rules');
+                        return refined2;
+                    }
                 }
             }
         }
@@ -5064,27 +5141,35 @@ async function translateChunkLocal(clean, targetLang) {
 
     // MyMemory last resort inside the local path
     const mm = await translateSingleSentence(clean, targetLang);
-    recordEngineUse(mm === clean ? 'failed' : 'raw');
-    return targetLang === 'ka' ? applyKaRuleEngine(mm) : mm;
+    if (mm) {
+        const trans = targetLang === 'ka' ? applyKaRuleEngine(mm) : mm;
+        const assess = assessTranslation(clean, trans, targetLang);
+        if (assess.ok) {
+            recordEngineUse('raw');
+            return trans;
+        }
+    }
+
+    recordEngineUse('failed');
+    return null;
 }
 
 // Tier A: AI pipeline with literary prompt and Georgian mastery rules.
-// Uses the fused batch pipeline (draft + self-critique in 1 call, with 1 refine
-// pass only when defects are flagged) to maintain frontier quality without
-// hitting API rate limits or quota traps.
 async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, deep = true) {
     const pipeline = typeof translateWithGeminiAIBatch === 'function'
         ? translateWithGeminiAIBatch
         : translateWithGeminiAI;
     const aiRes = await pipeline(clean, targetLang, contextBefore, contextAfter);
     if (aiRes) {
-        recordEngineUse('ai');
-        if (targetLang === 'ka') {
-            return applyKaRuleEngine(aiRes);
+        const refined = targetLang === 'ka' ? applyKaRuleEngine(aiRes) : aiRes;
+        const assess = assessTranslation(clean, refined, targetLang);
+        if (assess.ok) {
+            recordEngineUse('ai');
+            return refined;
         }
-        return aiRes;
+        console.warn('[Engine] Tier A (AI pipeline) rejected by assessTranslation:', assess.reason);
     }
-    console.warn('[Engine] Tier A (AI pipeline) produced nothing — falling back to the rule engine.');
+    console.warn('[Engine] Tier A (AI pipeline) produced nothing or failed quality gate — falling back to rule engine.');
     return null;
 }
 
@@ -5106,7 +5191,6 @@ async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', 
     return await translateChunkLocal(clean, targetLang);
 }
 
-
 async function translateChunkContextually(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
@@ -5119,22 +5203,25 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
     return await translateChunkLocal(clean, targetLang);
 }
 
-
 async function translateSingleSentence(text, targetLang = 'ka') {
-    if (!text || !text.trim()) return '';
+    if (!text || !text.trim()) return null;
     const clean = text.trim();
     const srcLang = detectTextLang(clean);
 
     // Try MyMemory
     try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 10000);
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.slice(0, 480))}&langpair=${srcLang}|${targetLang}`;
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(tid);
         if (res.ok) {
             const data = await res.json();
             if (data && data.responseData && data.responseData.translatedText) {
                 const trans = targetLang === 'ka' ? refineGeorgianGrammar(data.responseData.translatedText) : data.responseData.translatedText;
                 if (trans && !trans.includes('MYMEMORY WARNING') && !trans.includes('QUERY LENGTH LIMIT')) {
-                    return trans;
+                    const check = assessTranslation(clean, trans, targetLang);
+                    if (check.ok) return trans;
                 }
             }
         }
@@ -5144,20 +5231,26 @@ async function translateSingleSentence(text, targetLang = 'ka') {
 
     // Direct Google GTX minimal fallback
     try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 10000);
         const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
-        const gRes = await fetch(gUrl);
+        const gRes = await fetch(gUrl, { signal: ctrl.signal });
+        clearTimeout(tid);
         if (gRes.ok) {
             const gData = await gRes.json();
             if (gData && gData[0]) {
                 const trans = gData[0].map(item => item[0]).filter(Boolean).join('');
-                return targetLang === 'ka' ? refineGeorgianGrammar(trans) : trans;
+                const refined = targetLang === 'ka' ? refineGeorgianGrammar(trans) : trans;
+                const check = assessTranslation(clean, refined, targetLang);
+                if (check.ok) return refined;
             }
         }
     } catch (e) {
         console.warn('Google GTX fallback failed:', e);
     }
 
-    return clean;
+    // NEVER return raw source text as translation! Return null on failure.
+    return null;
 }
 
 // ══ Resumable translation jobs ══════════════════════════════════════════════
@@ -5366,14 +5459,36 @@ async function startWholeBookTranslation(resume = false) {
 
                 const isComplex = scoreChunkComplexity(orig) > SMART_ROUTE_EASY_THRESHOLD;
                 let engineUsed = 'local';
+                let chunkRes = null;
                 try {
                     const before = idx > 0 ? chunks[idx - 1].trim() : '';
                     const after = idx < chunks.length - 1 ? chunks[idx + 1].trim() : '';
-                    chunkResults[idx] = await translateChunkSmart(orig, 'ka', before, after);
-                    if (isComplex) engineUsed = 'ai';
+                    chunkRes = await translateChunkSmart(orig, 'ka', before, after);
+                    if (isComplex && chunkRes) engineUsed = 'ai';
                 } catch (e) {
                     console.warn(`Chunk ${idx} translation error:`, e);
-                    chunkResults[idx] = await translateChunkLocal(orig, 'ka');
+                }
+
+                if (!chunkRes) {
+                    try {
+                        chunkRes = await translateChunkLocal(orig, 'ka');
+                        engineUsed = 'local';
+                    } catch (e) {
+                        console.warn(`Chunk ${idx} local fallback error:`, e);
+                    }
+                }
+
+                if (chunkRes) {
+                    const assess = assessTranslation(orig, chunkRes, 'ka');
+                    if (assess.ok) {
+                        chunkResults[idx] = chunkRes;
+                    } else {
+                        console.warn(`[translation] Chunk ${idx} rejected by assessTranslation:`, assess.reason);
+                        chunkResults[idx] = null;
+                        engineUsed = 'fail';
+                    }
+                } else {
+                    chunkResults[idx] = null;
                     engineUsed = 'fail';
                 }
 
@@ -5426,16 +5541,32 @@ async function startWholeBookTranslation(resume = false) {
             // and persist progress so the reader can pick it up mid-run.
             updateChapterQueueStatus(-1, chIdx);
             if (cancelTranslationFlag) break;
-            chapter.text_ka = translatedArr.filter(Boolean).join(' ');
-            if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
-            if (!currentBook.translatedLangs.includes('ka')) {
-                currentBook.translatedLangs.push('ka');
+
+            const validChunks = translatedArr.filter(t => typeof t === 'string' && t.trim().length > 0);
+            const allChunksSucceeded = validChunks.length === chunks.length;
+
+            if (validChunks.length > 0) {
+                // Join chunks preserving paragraph rhythm
+                chapter.text_ka = translatedArr.filter(Boolean).join('\n\n');
             }
-            await saveBookToDB(currentBook);
-            try {
-                await saveTranslatedBookEdition(currentBook);
-            } catch (e) {
-                console.warn('[translation] saveTranslatedBookEdition checkpoint error:', e);
+
+            // Only mark book as having 'ka' if all chunks in the chapter succeeded
+            if (allChunksSucceeded && chapter.text_ka && chapter.text_ka.trim().length > 0) {
+                if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
+                if (!currentBook.translatedLangs.includes('ka')) {
+                    currentBook.translatedLangs.push('ka');
+                }
+                await saveBookToDB(currentBook);
+                try {
+                    await saveTranslatedBookEdition(currentBook);
+                } catch (e) {
+                    console.warn('[translation] saveTranslatedBookEdition checkpoint error:', e);
+                }
+            } else if (validChunks.length > 0) {
+                await saveBookToDB(currentBook);
+                console.warn(`[translation] Chapter ${chIdx + 1} partially translated (${validChunks.length}/${chunks.length} chunks).`);
+            } else {
+                console.error(`[translation] Chapter ${chIdx + 1} translation failed completely. text_ka not populated with corrupt or source data.`);
             }
             // Chapter checkpoint: next resume starts at the following chapter.
             job.chapterIdx = chIdx + 1;

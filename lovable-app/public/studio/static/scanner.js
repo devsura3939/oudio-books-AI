@@ -1196,10 +1196,40 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
     render("review");
   }
 
+  function calculateTextSimilarity(a, b) {
+    if (!a || !b) return 0;
+    const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+    const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+    if (wordsA.size === 0 || wordsB.size === 0) return 0;
+    let intersection = 0;
+    for (const w of wordsA) {
+      if (wordsB.has(w)) intersection++;
+    }
+    return intersection / Math.max(wordsA.size, wordsB.size);
+  }
+
   async function contextualLinguisticPass(text, lang) {
     if (!text || text.trim().length < 15) return text;
     const isKa = lang === "kat" || lang === "ka" || (text.match(/[\u10A0-\u10FF]/g) || []).length > 20;
     const geminiKey = (localStorage.getItem("geminiApiKey") || "").trim();
+
+    function validateRewrite(orig, rewrite) {
+      if (!rewrite || typeof rewrite !== "string" || rewrite.trim().length < 15) return null;
+      const cleanRewrite = rewrite.trim();
+      if (orig.length >= 50) {
+        const lenRatio = cleanRewrite.length / orig.length;
+        if (lenRatio < 0.50 || lenRatio > 1.80) {
+          console.warn(`[scanner] contextual rewrite rejected (extreme length ratio: ${lenRatio.toFixed(2)})`);
+          return null;
+        }
+        const sim = calculateTextSimilarity(orig, cleanRewrite);
+        if (sim < 0.40) {
+          console.warn(`[scanner] contextual rewrite rejected (hallucination / low similarity: ${sim.toFixed(2)})`);
+          return null;
+        }
+      }
+      return cleanRewrite;
+    }
 
     const prompt = `You are a world-class literary editor and neural document reconstruction expert.
 The text below was transcribed from a printed book page (${isKa ? 'in Georgian' : 'in English'}).
@@ -1233,7 +1263,8 @@ ${text.slice(0, 10000)}`;
             const data = await res.json();
             let out = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
             out = out.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
-            if (out.length > 15) return out;
+            const valid = validateRewrite(text, out);
+            if (valid) return valid;
           } else if (res.status === 429) {
             console.warn(`[scanner] Gemini ${model} rate-limited in linguistic pass, trying fallback...`);
             continue;
@@ -1254,7 +1285,8 @@ ${text.slice(0, 10000)}`;
         const data = await res.json();
         let out = (data.text || data.choices?.[0]?.message?.content || "").trim();
         out = out.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
-        if (out.length > 15) return out;
+        const valid = validateRewrite(text, out);
+        if (valid) return valid;
       }
     } catch (e) {
       // fallback
@@ -1280,7 +1312,8 @@ ${text.slice(0, 10000)}`;
           const data = await res.json();
           let out = (data.choices?.[0]?.message?.content || "").trim();
           out = out.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
-          if (out.length > 15) return out;
+          const valid = validateRewrite(text, out);
+          if (valid) return valid;
         }
       } catch (e) {
         console.warn("[scanner] groq contextual deduction failed:", e);
@@ -1309,7 +1342,8 @@ ${text.slice(0, 10000)}`;
           const data = await res.json();
           let out = (data?.choices?.[0]?.message?.content || data?.text || "").trim();
           out = out.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
-          if (out.length > 15) return out;
+          const valid = validateRewrite(text, out);
+          if (valid) return valid;
         }
       } catch (e) {
         console.warn("[scanner] custom provider contextual deduction failed:", e);
@@ -1382,7 +1416,12 @@ ${text.slice(0, 10000)}`;
       page.engine = best.engine;
       page.quality = Math.round((best.score || 0) * 100);
       page.warning = qualityWarning(page, best.score);
-      page.status = page.text ? "done" : "empty";
+      if (best.score < 0.55) {
+        page.status = "unreadable";
+        page.warning = page.warning || "Unreadable OCR (<55% word validity) — photo needs rescan.";
+      } else {
+        page.status = page.text ? "done" : "empty";
+      }
       page.error = null;
       page._base = null; // release the cached pixel buffer
     } catch (err) {
@@ -1419,12 +1458,28 @@ ${text.slice(0, 10000)}`;
     const junk = (t.match(/[^\p{L}\p{N}\s.,;:!?'"()\[\]«»„“”\-—–…]/gu) || []).length;
     score -= Math.min(0.40, (junk / Math.max(30, t.length)) * 2.5);
     const words = t.split(/\s+/).filter(Boolean);
-    const single = words.filter((w) => w.length === 1).length;
+    const single = words.filter((w) => w.length === 1 && w !== 'I' && w !== 'a' && w !== 'A').length;
     const singleRatio = single / Math.max(1, words.length);
     // Severe penalty for shredded words (which was the hallmark of 50-60% Tesseract garble)
     if (singleRatio > 0.15) {
-      score *= Math.max(0.05, 1 - (singleRatio - 0.15) * 3);
+      score *= Math.max(0.05, 1 - (singleRatio - 0.15) * 4);
     }
+
+    // Georgian word validity gate: every valid Georgian word must have vowels (ა, ე, ი, ო, უ)
+    if (ka > 10) {
+      const kaWords = words.filter(w => /[\u10A0-\u10FF]/.test(w));
+      let validKaWords = 0;
+      for (const w of kaWords) {
+        if (w.length < 2 || /[აეიოუ]/.test(w)) {
+          validKaWords++;
+        }
+      }
+      const kaValidityRatio = validKaWords / Math.max(1, kaWords.length);
+      if (kaValidityRatio < 0.55) {
+        score *= Math.max(0.05, kaValidityRatio);
+      }
+    }
+
     score += Math.min(0.1, words.length / 3000); // reward fuller pages
     return Math.max(0, Math.min(1, score));
   }
@@ -1433,8 +1488,8 @@ ${text.slice(0, 10000)}`;
     if ((page._sharpness || 999) < 45) return "Photo looks blurry — re-shoot for best accuracy.";
     if ((page._exposure || 128) < 60) return "Photo is very dark — add light and re-shoot.";
     if ((page._exposure || 128) > 220) return "Glare/over-exposure detected — avoid direct light.";
-    if (score < 0.45) return "Garbled OCR detected — re-transcribe with AI Neural Vision.";
-    if (score < 0.65) return "Low recognition confidence — please check this page.";
+    if (score < 0.55) return "Unreadable or garbled OCR (<55% validity) — photo needs rescan.";
+    if (score < 0.70) return "Low recognition confidence — please check this page.";
     return null;
   }
 

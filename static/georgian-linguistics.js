@@ -381,6 +381,14 @@
 // rule-based validator + corrector for deterministic post-processing.
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ── 0. UNICODE GEORGIAN BOUNDARY HELPERS (P0-4) ─────────────────────────────
+const KA_CHARS = '\\u10A0-\\u10FF';
+const kaWord = (src, flags = 'g') => new RegExp(`(?<![${KA_CHARS}])(?:${src})(?![${KA_CHARS}])`, flags);
+if (typeof window !== 'undefined') {
+    window.KA_CHARS = KA_CHARS;
+    window.kaWord = kaWord;
+}
+
 // ── 1. PROMPT-READY KNOWLEDGE BLOCKS ────────────────────────────────────────
 // Each block is a separate string so pipeline stages can load exactly what
 // they need and stay within token budgets.
@@ -604,14 +612,13 @@ const KA_PUNCTUATION = `
 GEORGIAN PUNCTUATION — NATIVE RULES (obey exactly, never copy English punctuation habits):
 
 SENTENCE BOUNDARIES:
-• A Georgian sentence ends with ។ — NOT the English period "."
-• ។ replaces ALL English periods at sentence end.
+• A Georgian sentence ends with . ? ! or … exactly like standard literary prose; never leave a sentence unterminated.
 • Question sentences end with ? (same as English).
 • Exclamation sentences end with ! (same as English).
 • Trailing thought / hesitation / unfinished sentence → … (ellipsis, three dots).
-• NEVER leave a sentence without terminal punctuation — TTS prosody depends on it.
-• A new sentence starts after ។ / ? / ! / … followed by one space.
-• Do NOT insert a comma or dash where a sentence should end — if the thought is complete, use ។
+• NEVER leave a sentence without terminal punctuation — TTS prosody and reader layout depend on it.
+• A new sentence starts after . / ? / ! / … followed by one space.
+• Do NOT insert a comma or dash where a sentence should end — if the thought is complete, terminate with a period (.).
 
 COMMA RULES (dramatically different from English):
 • NO comma before და (and) joining two clauses — even if English would put one there.
@@ -638,13 +645,12 @@ TAUTOLOGY (AVOID):
 • If two adjacent words mean the same thing, delete one.
 
 SEMICOLONS & COLONS:
-• Semicolon (;) — use sparingly, only between closely related independent clauses. Most English semicolons should become ។ in Georgian.
+• Semicolon (;) — use sparingly, only between closely related independent clauses. Most English semicolons should become a period (.) or comma in Georgian.
 • Colon (:) — before lists, explanations, or quoted material. Rare in narrative prose.
 
 WHAT NEVER APPEARS IN GEORGIAN TEXT:
 • English straight quotes " " → use „ … “
-• English period . at sentence end → use ។
-• Semicolons in dialogue → replace with ។ or comma.
+• Semicolons in dialogue → replace with a period (.) or comma.
 • Apostrophes ' → Georgian has no apostrophes in native words (only in transliterated foreign names).
 • Capital letters → Georgian Mkhedruli has none.`;
 
@@ -973,7 +979,7 @@ PRODUCTION CORPUS DEFECTS — REAL PATTERNS OBSERVED IN TRANSLATED CHAPTERS. AVO
   at the start of a chunk; if the chunk starts mid-word, complete it from context.
 • "ეს არის X" as a plain copula — prefer ეს X-ა/-აა (ეს სიცოცხლისა და სიკვდილის საკითხაა) or
   inversion: X არის ეს. Reserve "ეს არის" for genuine definitions ("this is the study of...").
-• Semicolons stacking parallel clauses — Georgian prose prefers და-chaining or ។ breaks.
+• Semicolons stacking parallel clauses — Georgian prose prefers და-chaining or sentence period (.) breaks.
 • Over-literal "have": "ომის ხელოვნებას მნიშვნელობა აქვს" is fine (inversion), but
   "სახელმწიფოს აქვს ომის ხელოვნება" (SVO have) is a calque — keep აქვს/არის final.
 • მაგრამ needs a comma BEFORE it when joining clauses: ..., მაგრამ ....
@@ -982,7 +988,7 @@ PRODUCTION CORPUS DEFECTS — REAL PATTERNS OBSERVED IN TRANSLATED CHAPTERS. AVO
 • Speech attribution: "სუნ ძიმ თქვა:" — native books use სუნ ძიმ თქვა: with the colon kept,
   or სუნ ძიმის სიტყვებით. Keep proper-noun agreement: სუნ ძის (genitive), სუნ ძისგან.
 • ხოლო contrast chains are fine but vary with მაგრამ/თუმცა to avoid monotony.
-• Punctuation discipline: one ។ per sentence; no space before ។ , ; :; single space after.`;
+• Punctuation discipline: one terminal mark (. ? ! …) per sentence; no space before . , ; :; single space after.`;
 
 const KA_DISCOURSE = `
 DISCOURSE MARKERS & PARTICLES — WHAT MAKES PROSE FLOW LIKE NATIVE GEORGIAN (v1.7.0 research):
@@ -4870,7 +4876,7 @@ function validateGeorgianTranslation(text) {
     }
 
     // 3.8 Double negation: არ + ვერ in one clause
-    if (/(?<![\u10A0-\u10FF])არ\s+ვერ\b|(?<![\u10A0-\u10FF])ვერ\s+არ\b/.test(text)) {
+    if (/(?<![\u10A0-\u10FF])არ\s+ვერ(?![\u10A0-\u10FF])|(?<![\u10A0-\u10FF])ვერ\s+არ(?![\u10A0-\u10FF])/.test(text)) {
         issues.push({ rule: 'double_neg', message: 'Double negation არ...ვერ in one clause — keep exactly one negator.' });
     }
 
@@ -4970,12 +4976,8 @@ function validateGeorgianTranslation(text) {
 
     // ── v1.3.0 additions: punctuation, tautology, syntax ──
 
-    // 3.20 English-style period at sentence end: Georgian narrative prose uses
-    //      ។ in the target house style. Flag Latin full stops directly after
-    //      a Georgian word (sentence-final position).
-    if (/(?<=[\u10A0-\u10FF])\.(?=\s|$)/.test(text)) {
-        issues.push({ rule: 'latin_period', message: 'English-style period "." after a Georgian word — the house style ends sentences with ។ (or ? ! …).' });
-    }
+    // 3.20 Terminal punctuation check: ensure sentences terminate with a proper mark (. ? ! …)
+    // (Latin periods are standard in modern Georgian; they are never flagged as errors).
 
     // 3.21 Comma before და joining clauses (English calque). Flag ", და" but
     //      allow list commas ("a, b, და c" pattern is list-final, still
@@ -4995,7 +4997,7 @@ function validateGeorgianTranslation(text) {
     while ((m10 = noCommaContrastRe.exec(text)) !== null) {
         const before = text.slice(Math.max(0, m10.index - 1), m10.index);
         if (before !== ',') {
-            issues.push({ rule: 'missing_comma_contrast', message: `Missing comma before "${m10[1]}" — contrast/concession connectors take a comma: ..., მაგრაม ...` });
+            issues.push({ rule: 'missing_comma_contrast', message: `Missing comma before "${m10[1]}" — contrast/concession connectors take a comma: ..., მაგრამ ...` });
             break;
         }
     }
@@ -5020,7 +5022,7 @@ function validateGeorgianTranslation(text) {
 
     // 3.26 Semicolon inside Georgian narrative (English habit; rare in native prose).
     if (/[\u10A0-\u10FF]\s*;/.test(text)) {
-        issues.push({ rule: 'semicolon', message: 'Semicolon in Georgian prose — native style prefers ។ or a comma; replace unless clearly needed.' });
+        issues.push({ rule: 'semicolon_hint', severity: 'hint', message: 'Semicolon in Georgian prose — native style prefers a period (.) or comma; replace unless clearly needed.' });
     }
 
     // 3.27 Space before punctuation (typo artifact): "word ." / "word ,"
@@ -6203,7 +6205,7 @@ function validateGeorgianTranslation(text) {
         // the string-start branch, but the locative is still stranded.
         /[\u10A0-\u10FF]\s+(?:next\s+to|beside|on|in|under|behind|in\s+front\s+of|between|near|above|outside|inside|far\s+from)\b/i.test(text);
     const locCarrier =
-        /-ზე\b|-ში\b|-თან\b|-დან\b|(?<![\u10A0-\u10FF])(?:გვერდით|ქვეშ|უკან|წინ|შორის|ახლოს|ზემოთ|გარეთ|შიგნით|შორს|აქიდან)(?![\u10A0-\u10FF])/.test(text);
+        /-(?:ზე|ში|თან|დან)(?![\u10A0-\u10FF])|(?<![\u10A0-\u10FF])(?:გვერდით|ქვეშ|უკან|წინ|შორის|ახლოს|ზემოთ|გარეთ|შიგნით|შორს|აქიდან)(?![\u10A0-\u10FF])/.test(text);
     if (locFrame && !locCarrier) {
         issues.push({ rule: 'locative_postposition_untranslated', message: 'Locative postposition untranslated (KA-127): Georgian uses postpositions/case endings for location. Attested carriers: -ზე (on), -ში (in), -თან ახლოს (near), X-ის ქვეშ (under), X-ის უკან (behind), X-ის წინ (in front of), X-ს შორის (between), X-ის გარეთ (outside), X-ის შიგნით (inside), X-ის გვერდით (next to/beside), X-ის ზემოთ (above), X-დან შორს / აქიდან შორს (far from). Temporal next (next week/day/…) must stay as შემდეგ/მომავალ; only locative next+to is consumed.' });
     }
@@ -6279,22 +6281,22 @@ function correctGeorgianMorphology(text) {
     // 4.14 Collapse adjacent tautology: same word repeated (≥3 chars, not hyphenated reduplication)
     out = out.replace(/(?<![\u10A0-\u10FF])([ა-ჰ]{3,})\s+\1(?![\u10A0-\u10FF])/g, '$1');
 
-    // 4.15 Replace English period at sentence end with Georgian 
-    out = out.replace(/(?<=[\u10A0-\u10FF])\.(?=\s|$)/g, '');
+    // 4.15 Collapse duplicate periods and normalize sentence boundaries
+    out = out.replace(/([\u10A0-\u10FF“”»)])\s*\.\s*\./g, '$1.');
 
     // 4.16 Remove apostrophe inside Georgian words
     out = out.replace(/([\u10A0-\u10FF])'([\u10A0-\u10FF])/g, '$1$2');
 
-    // 4.17 Replace semicolons in Georgian narrative with period
-    out = out.replace(/([\u10A0-\u10FF])\s*;(?=\s|$)/g, '$1');
+    // 4.17 Semicolons in narrative: normalize spacing (never strip)
+    out = out.replace(/([\u10A0-\u10FF])\s*;\s*/g, '$1; ');
 
     // 4.18 Fix ", ," or " ," artifacts
     out = out.replace(/\s+,/g, ',');
     out = out.replace(/,\s*,/g, ',');
 
-    // 4.19 Ensure terminal punctuation at end of text
-    if (out.trim().length > 0 && !/[.!?…]$/.test(out.trim())) {
-        out = out.trim() + '';
+    // 4.19 Ensure terminal punctuation at end of text (never leave unterminated)
+    if (out.trim().length > 0 && !/[.!?…]["“”»)]?$/.test(out.trim())) {
+        out = out.trim() + '.';
     }
 
     // ── v1.4.0 additions ──
@@ -8304,10 +8306,10 @@ function correctGeorgianMorphology(text) {
     //      ability renders as ვერ + verb screeve (the ვერ already
     //      sits before the verb residue), never as a bare
     //      subjectless ვერ (KA-124: dative-experiencer frame).
-    out = out.replace(/\bI\s+ვერ\b/gi, 'მე ვერ');
-    out = out.replace(/\bwe\s+ვერ\b/gi, 'ჩვენ ვერ');
-    out = out.replace(/\b(?:he|she)\s+ვერ\b/gi, 'ის ვერ');
-    out = out.replace(/\bthey\s+ვერ\b/gi, 'ისინი ვერ');
+    out = out.replace(/\bI\s+ვერ(?![\u10A0-\u10FF])/gi, 'მე ვერ');
+    out = out.replace(/\bwe\s+ვერ(?![\u10A0-\u10FF])/gi, 'ჩვენ ვერ');
+    out = out.replace(/\b(?:he|she)\s+ვერ(?![\u10A0-\u10FF])/gi, 'ის ვერ');
+    out = out.replace(/\bthey\s+ვერ(?![\u10A0-\u10FF])/gi, 'ისინი ვერ');
     //      2. OBLIGATION — must/should/have-to → უნდა (invariable).
     //      Negated frames first (mustn't/shouldn't): არ უნდა. The
     //      subject pronoun STAYS — the optative rebuild needs the
@@ -8513,6 +8515,8 @@ const GEORGIAN_KNOWLEDGE_STATS = {
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        KA_CHARS,
+        kaWord,
         getKaKnowledgeBase,
         getKaCompactRules,
         getKaRepairRules,

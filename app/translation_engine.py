@@ -9,10 +9,10 @@ def clean_georgian_morphology(text: str) -> str:
         return text
     t = text
     # Standardize Georgian quotes and dashes
-    t = re.sub(r'"([^"]+)"', r'„“', t)
+    t = re.sub(r'"([^"]+)"', r'„\g<1>“', t)
     t = re.sub(r'--+', '—', t)
     # Fix common spacing before punctuation
-    t = re.sub(r'\s+([.,;:!?])', r'', t)
+    t = re.sub(r'\s+([.,;:!?])', r'\g<1>', t)
     # Merge split words
     common = ["და", "არ", "კი", "რა", "ეს", "ის", "თუ", "მე", "მის", "მას", "რომ", "თქვა", "იყო", "მერე", "როცა", "ხოლო"]
     for w in common:
