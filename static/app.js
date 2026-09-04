@@ -232,37 +232,52 @@ function openRouterMarkModelFailed(model) {
 // rotation continues; the moment every model is cooling, the call bails and
 // the provider chain drops to the next tier. The 60s windows are short, so
 // OpenRouter re-enters rotation naturally on a later chunk.
-const OPENROUTER_CALL_DEADLINE_MS = 45_000;
-const OPENROUTER_CALL_MAX_ATTEMPTS = 14;
+const OPENROUTER_CALL_DEADLINE_MS = 20_000;
+const OPENROUTER_CALL_MAX_ATTEMPTS = 4;
 
-// ── Tier 0: Lumina server AI gateway (no user key required) ─────────────────
-// The app's own same-origin endpoint proxies a strong JSON-mode model through
-// the Lovable AI Gateway. This is the reason the translation engine no longer
-// degrades to "Machine translation (LOW QUALITY)" when the user has entered
-// no OpenRouter/Groq/Mistral/Gemini key. On static hosting (GitHub Pages) the
-// endpoint does not exist, so a single 404 disables the tier permanently and
-// the original key-based chain takes over unchanged.
-let luminaGatewayAvailable = true;
+// // Auto-detect static GitHub Pages hosting — /api/* endpoints don't exist there,
+// so skip the gateway entirely and go straight to key-based providers.
+// GitHub Pages always uses *.github.io, and we also skip for any host that
+// looks like a plain static CDN (no localhost / no vercel / no railway etc).
+const _isStaticHost = (() => {
+    try {
+        const h = location.hostname;
+        return h.endsWith('.github.io') || h.endsWith('.pages.dev') || h.endsWith('.netlify.app');
+    } catch (e) { return false; }
+})();
+let luminaGatewayAvailable = !_isStaticHost;
 
 async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
     if (!luminaGatewayAvailable) return null;
     try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 5000); // 5s max
         const res = await fetch('/api/ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, temperature, maxTokens }),
+            signal: controller.signal,
         });
+        clearTimeout(tid);
         if (res.status === 404 || res.status === 401 || res.status === 403 || res.status === 402) {
             luminaGatewayAvailable = false;
             console.warn('[Lumina AI] gateway unavailable (' + res.status + ') — falling back to key-based providers.');
             return null;
         }
         if (!res.ok) return null;
+        // Check Content-Type: static hosts return HTML for unknown paths
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            luminaGatewayAvailable = false;
+            console.warn('[Lumina AI] gateway returned non-JSON (' + ct + ') — this is likely GitHub Pages. Disabling gateway.');
+            return null;
+        }
         const data = await res.json();
         return data && data.text ? parseModelJSON(data.text) : null;
     } catch (e) {
         luminaGatewayAvailable = false;
         console.warn('[Lumina AI] gateway unreachable — falling back to key-based providers.', e && e.message);
+
         return null;
     }
 }
@@ -272,7 +287,8 @@ async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 81
 // keys alone was why every chunk fell through to Google/MyMemory and the
 // status panel reported "Machine translation (LOW QUALITY)".
 function aiTranslationAvailable() {
-    return luminaGatewayAvailable || !!geminiApiKey || !!groqApiKey || !!mistralApiKey || !!openRouterApiKey;
+    return luminaGatewayAvailable || !!geminiApiKey || !!groqApiKey || !!mistralApiKey || !!openRouterApiKey
+        || !!(customProviderUrl && customProviderModel);
 }
 
 // Georgian rule block for prompts. Quality mode ships the full research
@@ -304,6 +320,7 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
     const started = Date.now();
 
     for (let attempt = 0; attempt < OPENROUTER_CALL_MAX_ATTEMPTS; attempt++) {
+        if (Date.now() - started > OPENROUTER_CALL_DEADLINE_MS) return null;
         const { model, idx } = openRouterNextModel();
         openRouterModelIndex = (idx + 1) % OPENROUTER_FREE_MODELS.length;
         const preferred = openRouterModel && (openRouterModelCooldown[openRouterModel] || 0) <= Date.now()
@@ -311,6 +328,10 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
             : model;
 
         try {
+            // AbortController with 25s per-request timeout — prevents a single
+            // hanging OpenRouter request from blocking the whole translation run.
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 25000);
             const response = await fetch(OPENROUTER_API_URL, {
                 method: 'POST',
                 headers: {
@@ -319,14 +340,20 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
                     'HTTP-Referer': location.origin,
                     'X-Title': 'Lumina Audio',
                 },
+                // NOTE: response_format json_object is intentionally omitted —
+                // most free OpenRouter models don't support it and return 400/422,
+                // causing every chunk to cycle through all attempts and freeze.
+                // We rely on the prompt-level JSON instruction instead and parse
+                // with parseModelJSON which handles markdown fences and trailing text.
                 body: JSON.stringify({
                     model: preferred,
                     messages: [{ role: 'user', content: prompt }],
                     temperature,
                     max_tokens: maxTokens,
-                    response_format: { type: 'json_object' },
                 }),
+                signal: ctrl.signal,
             });
+            clearTimeout(tid);
 
             if (response.status === 429 || response.status >= 500) {
                 openRouterMarkModelFailed(preferred);
@@ -360,9 +387,10 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
             openRouterMarkModelFailed(preferred);
             continue;
         } catch (e) {
-            console.warn('OpenRouter network error:', e);
+            console.warn('OpenRouter network error:', e && e.message);
+            openRouterMarkModelFailed(preferred);
             if (Date.now() - started > OPENROUTER_CALL_DEADLINE_MS) return null;
-            await new Promise(r => setTimeout(r, 1500));
+            await new Promise(r => setTimeout(r, 500));
         }
     }
     return null;
@@ -382,11 +410,13 @@ let groqApiKey = localStorage.getItem('groqApiKey') || '';
 let mistralApiKey = localStorage.getItem('mistralApiKey') || '';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-// Groq retired its llama-3.x models; these are the current production
-// catalog entries (verified live: /models 200 + chat completions 200 with
-// JSON mode). All are reasoning-capable, so we send reasoning_effort:'low'
-// to keep reasoning tokens from eating the translation output budget.
-const GROQ_MODELS = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
+// Production Groq catalog models: ultra-fast Llama 3.3 70B, Llama 3.1 8B, Mixtral, Gemma 2
+const GROQ_MODELS = [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'mixtral-8x7b-32768',
+    'gemma2-9b-it',
+];
 const GROQ_MODEL_COOLDOWN_MS = 60_000;
 const groqModelCooldown = {}; // model -> earliest ms it may be retried
 
@@ -467,24 +497,29 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
 
     for (const model of candidates) {
         try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 20000); // 20s max
+
+            const payload = {
+                model,
+                messages: [{ role: 'user', content: prompt }],
+                temperature,
+                max_tokens: maxTokens,
+            };
+            if (model.includes('deepseek-r1') || model.includes('o1-')) {
+                payload.reasoning_effort = 'low';
+            }
+
             const response = await fetch(baseUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    model,
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature,
-                    max_tokens: maxTokens,
-                    // Both Groq catalog models are reasoning models — keep
-                    // reasoning minimal so the output budget stays available
-                    // for the actual translation JSON.
-                    reasoning_effort: 'low',
-                    response_format: { type: 'json_object' },
-                }),
+                body: JSON.stringify(payload),
+                signal: ctrl.signal,
             });
+            clearTimeout(tid);
 
             if (response.status === 429 || response.status >= 500) {
                 cooldownMap[model] = Date.now() + cooldownMs;
@@ -513,9 +548,6 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
             console.warn(`[${providerLabel}] returned unparseable JSON from`, model);
             cooldownMap[model] = Date.now() + cooldownMs;
         } catch (e) {
-            // TypeError from fetch here is usually a CORS preflight failure —
-            // the browser cannot read the response, so retrying immediately
-            // would just burn time on every subsequent chunk.
             console.warn(`[${providerLabel}] network error:`, e?.message || e);
             cooldownMap[model] = Date.now() + cooldownMs;
             return null;
@@ -526,7 +558,9 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
 
 async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
     if (!groqApiKey) return null;
-    return callOpenAICompatibleJSON(GROQ_API_URL, GROQ_MODELS, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, groqApiKey, prompt, { temperature, maxTokens, providerLabel: 'Groq' });
+    const selected = (localStorage.getItem('groqSelectedModel') || '').trim();
+    const models = selected ? [selected, ...GROQ_MODELS.filter(m => m !== selected)] : GROQ_MODELS;
+    return callOpenAICompatibleJSON(GROQ_API_URL, models, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, groqApiKey, prompt, { temperature, maxTokens, providerLabel: 'Groq' });
 }
 
 async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
@@ -3949,48 +3983,58 @@ function readerForwardSentence() {
 
 // ── AI call funnel ──────────────────────────────────────────────────────────
 // One JSON-mode call to the AI tier, routed through the provider chain:
-//   OpenRouter free models (MAIN) → Groq → Mistral → Gemini.
-// Each tier is skipped when its key is absent, in cooldown, or CORS-blocked,
+//   Gemini (Frontier Flagship) → Groq (Ultra-Fast) → Custom Provider → OpenRouter → Mistral.
+// Each tier is skipped when its key is absent, in cooldown, or blocked,
 // so a whole-book batch keeps running on AI quality even when one or two
 // providers exhaust their free quota mid-run. Returns parsed JSON or null.
-// Retries transient failures (429/5xx) with linear backoff — the whole-book
-// batch sends hundreds of calls, so a single blip must not degrade a chunk
-// to the ML fallback tier.
 async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
-    // Tier 0 (MAIN): the app's own server AI gateway — highest quality, no key.
-    {
-        const res = await callLuminaGatewayJSON(prompt, { temperature, maxTokens });
-        if (res !== null) return res;
-    }
-    // Tier 1: OpenRouter free models — zero-cost engine behind the gateway.
-    if (openRouterApiKey) {
-        const res = await callOpenRouterJSON(prompt, { temperature, maxTokens, retries: retries + 1 });
-        if (res !== null) return res;
-        console.warn('OpenRouter tier failed — trying Groq free tier.');
-    }
-    // Tier 2: Groq (free, ~500K tokens/day) — first fallback.
-    if (groqApiKey) {
-        const res = await callGroqJSON(prompt, { temperature, maxTokens });
-        if (res !== null) return res;
-        console.warn('Groq tier failed — trying Mistral free tier.');
-    }
-    // Tier 3: Mistral (free experiment plan) — second fallback.
-    if (mistralApiKey) {
-        const res = await callMistralJSON(prompt, { temperature, maxTokens });
-        if (res !== null) return res;
-        console.warn('Mistral tier failed — trying Gemini.');
-    }
-    // Tier 4: Gemini (user key) — last in chain.
+    // Tier 1: Gemini (user's direct Google AI Studio key: 2.5 Pro / Flash / 2.0 Flash)
     if (geminiApiKey) {
         const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries });
         if (res !== null) return res;
-        console.warn('Gemini tier failed — no providers left.');
+        console.warn('Gemini direct tier failed — trying Groq fallback.');
+    }
+    // Tier 2: Groq (free, ~500K tokens/day, ultra-fast)
+    if (groqApiKey) {
+        const res = await callGroqJSON(prompt, { temperature, maxTokens });
+        if (res !== null) return res;
+        console.warn('Groq tier failed — trying Custom Provider.');
+    }
+    // Tier 3: Custom provider (user-configured OpenAI-compatible endpoint)
+    if (customProviderUrl && customProviderModel) {
+        const txt = await callCustomProviderText(prompt, { temperature, maxTokens });
+        if (txt) {
+            const parsed = parseModelJSON(txt);
+            if (parsed) return parsed;
+        }
+        console.warn('Custom provider failed — trying OpenRouter.');
+    }
+    // Tier 4: OpenRouter free models
+    if (openRouterApiKey) {
+        const res = await callOpenRouterJSON(prompt, { temperature, maxTokens });
+        if (res !== null) return res;
+        console.warn('OpenRouter tier failed — trying Mistral.');
+    }
+    // Tier 5: Mistral (free experiment plan)
+    if (mistralApiKey) {
+        const res = await callMistralJSON(prompt, { temperature, maxTokens });
+        if (res !== null) return res;
+    }
+    // Tier 6: Server gateway (only if available, e.g. local backend)
+    if (luminaGatewayAvailable) {
+        const res = await callLuminaGatewayJSON(prompt, { temperature, maxTokens });
+        if (res !== null) return res;
     }
     return null;
 }
 
 async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
     if (!geminiApiKey) return null;
+
+    // Sanitize preferred model
+    if (!GEMINI_FALLBACK_MODELS.includes(geminiModel)) {
+        geminiModel = 'gemini-2.5-flash';
+    }
 
     // Build the candidate model chain: preferred model first, then fallbacks
     // that aren't in cooldown, ordered by descending capability.
@@ -4002,6 +4046,8 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
     for (const model of candidates) {
         for (let attempt = 0; attempt <= retries; attempt++) {
             try {
+                const ctrl = new AbortController();
+                const tid = setTimeout(() => ctrl.abort(), 25000); // 25s max
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -4012,8 +4058,10 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
                             maxOutputTokens: maxTokens,
                             responseMimeType: 'application/json'
                         }
-                    })
+                    }),
+                    signal: ctrl.signal,
                 });
+                clearTimeout(tid);
 
                 if (response.status === 429 || response.status >= 500) {
                     // Model-level quota exhaustion → blacklist briefly and try
@@ -4907,29 +4955,65 @@ window.applyKaRuleEngine = applyKaRuleEngine;
 async function translateChunkLocal(clean, targetLang) {
     const srcLang = detectTextLang(clean);
 
-    // Tier 0: Check server-side Python translation engine (/api/server-translate)
-    try {
-        const srvRes = await fetch("/api/server-translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: clean, source_lang: srcLang, target_lang: targetLang })
-        });
-        if (srvRes.ok) {
-            const srvData = await srvRes.json();
-            if (srvData && srvData.translated && srvData.translated.trim()) {
-                const refined = targetLang === 'ka' ? applyKaRuleEngine(srvData.translated) : srvData.translated;
-                recordEngineUse('rules');
-                return refined;
+    // Tier 0: Check server-side Python translation engine (/api/server-translate) only if not static host
+    if (!_isStaticHost) {
+        try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 6000);
+            const srvRes = await fetch("/api/server-translate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: clean, source_lang: srcLang, target_lang: targetLang }),
+                signal: ctrl.signal,
+            });
+            clearTimeout(tid);
+            if (srvRes.ok) {
+                const srvData = await srvRes.json();
+                if (srvData && srvData.translated && srvData.translated.trim()) {
+                    const refined = targetLang === 'ka' ? applyKaRuleEngine(srvData.translated) : srvData.translated;
+                    recordEngineUse('rules');
+                    return refined;
+                }
             }
+        } catch (e) {
+            // Server not available, fallback to client endpoints
         }
-    } catch (e) {
-        // Server not available, fallback to client endpoints
     }
 
-    // Google Dict-Chrome-Ex (ultra-stable, zero rate-limiting)
+    // If clean text is longer than 500 chars, split into sentences for reliable HTTP GET queries
+    if (clean.length > 500) {
+        try {
+            const sentences = splitIntoNaturalSentences(clean);
+            const translatedParts = [];
+            let batch = '';
+            for (const s of sentences) {
+                if (batch.length + s.length > 400 && batch.trim()) {
+                    translatedParts.push(await translateSingleSentence(batch.trim(), targetLang));
+                    batch = s + ' ';
+                } else {
+                    batch += s + ' ';
+                }
+            }
+            if (batch.trim()) {
+                translatedParts.push(await translateSingleSentence(batch.trim(), targetLang));
+            }
+            const full = translatedParts.filter(Boolean).join(' ');
+            if (full && full.trim().length > 0) {
+                recordEngineUse('rules');
+                return targetLang === 'ka' ? applyKaRuleEngine(full) : full;
+            }
+        } catch (e) {
+            console.warn('Sentence-split translation failed:', e);
+        }
+    }
+
+    // Google Dict-Chrome-Ex (ultra-stable)
     try {
-        const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=${srcLang}&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean)}`;
-        const gRes = await fetch(gUrl);
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 8000);
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=${srcLang}&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean.slice(0, 800))}`;
+        const gRes = await fetch(gUrl, { signal: ctrl.signal });
+        clearTimeout(tid);
 
         if (gRes.ok) {
             const data = await gRes.json();
@@ -4953,8 +5037,11 @@ async function translateChunkLocal(clean, targetLang) {
 
     // Google GTX mirror
     try {
-        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcLang}&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean)}`;
-        const gRes2 = await fetch(gUrl2);
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 8000);
+        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcLang}&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean.slice(0, 800))}`;
+        const gRes2 = await fetch(gUrl2, { signal: ctrl.signal });
+        clearTimeout(tid);
         if (gRes2.ok) {
             const data2 = await gRes2.json();
             if (data2 && data2[0] && Array.isArray(data2[0])) {
@@ -4975,29 +5062,25 @@ async function translateChunkLocal(clean, targetLang) {
         console.warn('Rule engine: Google GTX draft failed:', e);
     }
 
-    // MyMemory last resort inside the local path (Tier C — raw MT)
+    // MyMemory last resort inside the local path
     const mm = await translateSingleSentence(clean, targetLang);
     recordEngineUse(mm === clean ? 'failed' : 'raw');
     return targetLang === 'ka' ? applyKaRuleEngine(mm) : mm;
 }
 
-// Tier A: your original multi-pass AI pipeline + Georgian QA gate + the rule
-// engine on top of the result. `deep` decides how many passes are spent:
-// complex chunks get the full draft → critique → refine → QA pipeline, simple
-// chunks get the fused single call. Neither one skips the engine.
+// Tier A: AI pipeline with literary prompt and Georgian mastery rules.
+// Uses the fused batch pipeline (draft + self-critique in 1 call, with 1 refine
+// pass only when defects are flagged) to maintain frontier quality without
+// hitting API rate limits or quota traps.
 async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, deep = true) {
-    const wantFull = deep && translationBudgetMode !== 'budget';
-    const pipeline = !wantFull && typeof translateWithGeminiAIBatch === 'function'
+    const pipeline = typeof translateWithGeminiAIBatch === 'function'
         ? translateWithGeminiAIBatch
         : translateWithGeminiAI;
     const aiRes = await pipeline(clean, targetLang, contextBefore, contextAfter);
     if (aiRes) {
         recordEngineUse('ai');
         if (targetLang === 'ka') {
-            const gated = typeof applyGeorgianQaGate === 'function'
-                ? await applyGeorgianQaGate(aiRes)
-                : aiRes;
-            return applyKaRuleEngine(gated);
+            return applyKaRuleEngine(aiRes);
         }
         return aiRes;
     }
@@ -5005,9 +5088,8 @@ async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, 
     return null;
 }
 
-// Tier router. Tier A whenever a quality engine is reachable (your key OR the
-// keyless gateway); complexity only chooses the refinement depth. Tier B (rule
-// engine, no LLM) when no engine is reachable or Tier A fails.
+// Tier router. Tier A whenever a quality engine is reachable (user key OR gateway);
+// Tier B (rule engine, no LLM) when no engine is reachable or Tier A fails.
 async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
@@ -5020,8 +5102,7 @@ async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', 
         if (aiRes) return aiRes;
     }
 
-    // No engine reachable (offline / GitHub Pages / no key), or Tier A failed:
-    // the in-house rule engine still produces corrected Georgian.
+    // Fallback: rule engine
     return await translateChunkLocal(clean, targetLang);
 }
 
@@ -5240,11 +5321,11 @@ async function startWholeBookTranslation(resume = false) {
                 chunkSentenceCounts.push(currentChunkSCount);
             }
 
-            // ══ PARALLEL BATCH TRANSLATION ══
-            // Worker pool: local-engine chunks run freely; AI-routed chunks
-            // are throttled to CONCURRENT_AI_LIMIT to respect rate limits.
-            // Removes the sequential bottleneck and the per-chunk 200ms delay.
-            const CONCURRENT_AI_LIMIT = 3;
+            // ══ BATCH TRANSLATION ══
+            // Sequential processing (1 worker at a time) ensures we stay well
+            // within API rate limits (e.g. Gemini 15 RPM / Groq 30 RPM), prevents
+            // 429 quota traps, and gives continuous real-time UI updates on every chunk.
+            const CONCURRENT_AI_LIMIT = 1;
             let aiRunning = 0;
             let nextChunkIdx = 0;
             let completedInChapter = 0;
@@ -5257,7 +5338,6 @@ async function startWholeBookTranslation(resume = false) {
                 }
             }
 
-
             // Reset shared progress state for this chapter
             wbProgressState.completedInChapter = completedInChapter;
             wbProgressState.totalChunks = chunks.length;
@@ -5266,21 +5346,25 @@ async function startWholeBookTranslation(resume = false) {
             wbProgressState.totalChars = totalCharsTranslated;
             flushWbProgress();
 
-
             async function processChunk(idx) {
                 if (typeof chunkResults[idx] === 'string' && chunkResults[idx]) return; // resumed
                 const orig = chunks[idx].trim();
                 if (!orig) { chunkResults[idx] = ''; return; }
 
-
-                const isComplex = scoreChunkComplexity(orig) > SMART_ROUTE_EASY_THRESHOLD;
-                if (isComplex) {
-                    while (aiRunning >= CONCURRENT_AI_LIMIT) {
-                        await new Promise(r => setTimeout(r, 100));
-                    }
-                    aiRunning++;
+                // Live preview: show current chunk text immediately so the UI is responsive
+                if (DOM.wbLiveOriginal) {
+                    DOM.wbLiveOriginal.textContent = orig.slice(0, 260) + (orig.length > 260 ? '…' : '');
+                }
+                if (DOM.wbLiveGeorgian) {
+                    const engineName = geminiApiKey ? `Gemini (${geminiModel})` : (groqApiKey ? 'Groq' : (customProviderUrl ? 'Custom Provider' : (openRouterApiKey ? 'OpenRouter' : 'Rule Engine')));
+                    DOM.wbLiveGeorgian.textContent = `Translating chunk ${idx + 1} of ${chunks.length} using ${engineName}…`;
+                }
+                if (translationEngineStatusEl) {
+                    const engineName = geminiApiKey ? `Gemini (${geminiModel})` : (groqApiKey ? 'Groq' : (customProviderUrl ? 'Custom' : (openRouterApiKey ? 'OpenRouter' : 'Rules')));
+                    translationEngineStatusEl.innerHTML = `<span class="text-primary font-semibold">Engine: ${engineName} (translating chunk ${idx + 1}/${chunks.length})</span>`;
                 }
 
+                const isComplex = scoreChunkComplexity(orig) > SMART_ROUTE_EASY_THRESHOLD;
                 let engineUsed = 'local';
                 try {
                     const before = idx > 0 ? chunks[idx - 1].trim() : '';
@@ -5291,8 +5375,10 @@ async function startWholeBookTranslation(resume = false) {
                     console.warn(`Chunk ${idx} translation error:`, e);
                     chunkResults[idx] = await translateChunkLocal(orig, 'ka');
                     engineUsed = 'fail';
-                } finally {
-                    if (isComplex) aiRunning--;
+                }
+
+                if (DOM.wbLiveGeorgian && chunkResults[idx]) {
+                    DOM.wbLiveGeorgian.textContent = chunkResults[idx];
                 }
                 appendChunkLog(idx, engineUsed, orig.slice(0, 60));
                 updateChunkRate();
@@ -5318,19 +5404,11 @@ async function startWholeBookTranslation(resume = false) {
                             saveTranslationJob(job);
                         }
 
-
                         // Update shared progress state, then refresh the UI
-                        // (throttled to 4/sec to avoid layout thrash).
                         wbProgressState.completedInChapter = completedInChapter;
                         wbProgressState.completedSentences = completedSentencesCount;
                         wbProgressState.totalChars = totalCharsTranslated;
-                        if (DOM.wbLiveGeorgian && chunkResults[idx]) {
-                            DOM.wbLiveGeorgian.textContent = chunkResults[idx];
-                        }
-                        if (DOM.wbLiveOriginal && chunks[idx]) {
-                            DOM.wbLiveOriginal.textContent = chunks[idx].trim().slice(0, 200);
-                        }
-                        renderWbProgress();
+                        flushWbProgress();
                     }
                 })());
             }
