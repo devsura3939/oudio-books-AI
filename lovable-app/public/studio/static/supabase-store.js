@@ -88,7 +88,7 @@
       var saved = localStorage.getItem("lumina_auth_user");
       if (saved) {
         var parsed = JSON.parse(saved);
-        if (parsed && parsed.id && parsed.id.startsWith("2b4b9033")) {
+        if (parsed && parsed.id && (parsed.id.length >= 32 || !parsed.id.startsWith("usr_"))) {
           userId = parsed.id;
           return true;
         }

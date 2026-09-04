@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <p className="mt-1 truncate text-[10px] text-on-surface-variant">{userEmail || "ananiadevsurashvili@gmail.com"}</p>
             <div className="mt-2 border-t border-white/10 pt-1.5 space-y-0.5 text-[10px]">
               <p><span className="text-on-surface-variant">App:</span> <span className="text-white font-bold">v1.46.7</span></p>
-              <p><span className="text-on-surface-variant">Engine:</span> <span className="text-white font-bold">v1.46.7 (Lumina-MultiBurst+ServerAI)</span></p>
+              <p><span className="text-on-surface-variant">Engine:</span> <span className="text-white font-bold">v1.46.7 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)</span></p>
             </div>
           </div>
         )}

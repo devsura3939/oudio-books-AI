@@ -1434,9 +1434,18 @@ function updateAuthUI() {
             pill.classList.remove('hidden');
             pill.classList.add('flex');
             pill.innerHTML = `<span>👑 Admin</span><span class="opacity-40">•</span><span>App ${APP_VERSION}</span><span class="opacity-40">•</span><span>Engine ${ENGINE_VERSION}</span>`;
+            pill.style.cursor = 'pointer';
+            pill.title = 'Click to open AI Training Lab';
+            pill.onclick = function () {
+                var target = window.location.hostname.includes('github.io')
+                    ? 'https://audible-architect.lovable.app/training'
+                    : '/training';
+                window.location.href = target;
+            };
         } else {
             pill.classList.add('hidden');
             pill.classList.remove('flex');
+            pill.onclick = null;
         }
     }
 
@@ -1447,9 +1456,18 @@ function updateAuthUI() {
             mobilePill.classList.remove('hidden');
             mobilePill.classList.add('flex');
             mobilePill.innerHTML = `<span>👑 Admin</span><span>${APP_VERSION}</span>`;
+            mobilePill.style.cursor = 'pointer';
+            mobilePill.title = 'Click to open AI Training Lab';
+            mobilePill.onclick = function () {
+                var target = window.location.hostname.includes('github.io')
+                    ? 'https://audible-architect.lovable.app/training'
+                    : '/training';
+                window.location.href = target;
+            };
         } else {
             mobilePill.classList.add('hidden');
             mobilePill.classList.remove('flex');
+            mobilePill.onclick = null;
         }
     }
 
@@ -1460,8 +1478,17 @@ function updateAuthUI() {
         if (isAdmin) {
             mobileAdminCard.classList.remove('hidden');
             if (mobileAdminEmail) mobileAdminEmail.textContent = currentUser.email;
+            mobileAdminCard.style.cursor = 'pointer';
+            mobileAdminCard.title = 'Click to open AI Training Lab';
+            mobileAdminCard.onclick = function () {
+                var target = window.location.hostname.includes('github.io')
+                    ? 'https://audible-architect.lovable.app/training'
+                    : '/training';
+                window.location.href = target;
+            };
         } else {
             mobileAdminCard.classList.add('hidden');
+            mobileAdminCard.onclick = null;
         }
     }
 
@@ -6261,6 +6288,20 @@ function formatTime(sec) {
 
 // ── Event Listeners Binding ─────────────────────────────────────────────────
 function setupEventListeners() {
+    // Host bridge navigation listener (for Lovable app shell and embedded frames)
+    window.addEventListener('message', (e) => {
+        if (!e || !e.data) return;
+        if (e.data.type === 'engbot-navigate') {
+            if (e.data.view === 'scanner') {
+                if (typeof navigate === 'function') navigate('scanner');
+                if (typeof renderScanShelf === 'function') renderScanShelf();
+            } else if (e.data.view === 'library') {
+                if (typeof navigate === 'function') navigate('library');
+                if (typeof renderDigitalShelf === 'function') renderDigitalShelf();
+            }
+        }
+    });
+
     const btnNavUpload = document.getElementById('btnNavUpload');
     if (btnNavUpload) {
         btnNavUpload.addEventListener('click', () => openModal('uploadModal'));

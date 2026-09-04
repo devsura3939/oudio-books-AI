@@ -65,7 +65,7 @@ export function StudioHost() {
       aria-hidden={!onStudio}
       className={
         onStudio
-          ? "fixed top-[65px] right-0 bottom-16 left-0 z-30 md:bottom-0 md:left-64"
+          ? "fixed inset-0 z-50 h-full w-full overflow-hidden bg-[#0c1017]"
           : "pointer-events-none fixed top-0 left-0 -z-50 h-px w-px overflow-hidden opacity-0"
       }
     >

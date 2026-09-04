@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-09-05 — v1.46.7: Multi-Domain Parity, Supabase Cloud Vault & Host Bridge Sync
+
+### Enhanced — Dual-Domain Uniform App Experience
+- **Unified App Delivery Across Both Domains**:
+  - `https://audible-architect.lovable.app/` and `https://devsura3939.github.io/oudio-books-AI/` now deliver the identical, seamless EngBot Audiobook Studio experience.
+  - Lovable root route (`/`) seamlessly renders the full-screen Studio app, eliminating login barriers for visitors.
+  - Unauthenticated guest access enabled for `/studio` and `/scan`, with zero double-sidebars and zero nested chrome.
+- **Host Bridge Message Protocol**:
+  - Connected `engbot-navigate` postMessage listener across embedded frames to synchronize library and scanner views dynamically.
+- **Interactive Admin Training Lab Shortcuts**:
+  - Clicking on the desktop or mobile Admin version HUD pill (`👑 Admin • App v1.46.7 • Engine v1.46.7`) instantly navigates to the cloud Training Lab (`/training`).
+
+### Fixed — Bug Fixes & Session Restoral
+- **Supabase User Session Restoral**:
+  - Removed rigid hardcoded user ID prefix check in `supabase-store.js`, allowing any valid Supabase UUID account to cleanly restore cloud sessions across reloads.
+- **Test Suite Alignment**:
+  - Updated `test-book-pdf.js` to match v1.46.5+ 5-frame burst capture and publication-grade OCR contextual deduction prompts (15/15 tests passing, 59/59 across all suites).
+- **Version Alignment**:
+  - Bumped version to `v1.46.7` across `lovable-app/package.json`, `lovable-app/src/components/app-shell.tsx`, `index.html`, and `static/app.js`.
+
 ## 2026-09-05 — v1.46.5: Pre-Shot Focus HUD, 5-Frame Multi-Burst Comparative Fusion & Server-Side Python AI Engine
 
 ### Added — Pre-Shot Background Readiness & Continuous Focus Monitor (`static/scanner.js`)
