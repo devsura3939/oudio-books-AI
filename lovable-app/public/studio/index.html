@@ -610,6 +610,14 @@
                     <input type="password" id="gatePassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required autocomplete="current-password">
                 </div>
 
+                <!-- Remember Me Checkbox -->
+                <div class="flex items-center gap-2 py-0.5">
+                    <input type="checkbox" id="gateRememberMe" class="w-4 h-4 rounded bg-white/10 border border-white/20 text-primary-fixed accent-primary-container cursor-pointer">
+                    <label for="gateRememberMe" class="text-xs text-on-surface-variant select-none cursor-pointer hover:text-white transition">
+                        Remember me on this device (stays signed in)
+                    </label>
+                </div>
+
                 <button type="submit" id="btnGateSignIn" class="w-full py-3.5 bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 active:scale-[0.98] transition shadow-[0_0_25px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-lg">login</span>
                     <span>Log In to Studio</span>
@@ -633,6 +641,14 @@
                 <div class="space-y-1.5">
                     <label class="block text-xs font-medium text-on-surface-variant" for="gateRegPassword">Create Password (min 6 chars)</label>
                     <input type="password" id="gateRegPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required minlength="6" autocomplete="new-password">
+                </div>
+
+                <!-- Remember Me Checkbox -->
+                <div class="flex items-center gap-2 py-0.5">
+                    <input type="checkbox" id="gateRegRememberMe" class="w-4 h-4 rounded bg-white/10 border border-white/20 text-primary-fixed accent-primary-container cursor-pointer">
+                    <label for="gateRegRememberMe" class="text-xs text-on-surface-variant select-none cursor-pointer hover:text-white transition">
+                        Remember me on this device (stays signed in)
+                    </label>
                 </div>
 
                 <button type="submit" id="btnGateRegister" class="w-full py-3.5 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 active:scale-[0.98] transition shadow-[0_0_25px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2">
@@ -759,7 +775,7 @@
                     <span>👑 Admin Logged In</span>
                     <span class="text-[9px] px-1.5 py-0.5 rounded bg-primary-container/25">ACTIVE</span>
                 </div>
-                <p class="text-white text-[10px] truncate mt-0.5 font-sans" id="mobileAdminEmail">ananiadevsurashvili@gmail.com</p>
+                <p class="text-white text-[10px] truncate mt-0.5 font-sans" id="mobileAdminEmail"></p>
                 <div class="mt-1 pt-1 border-t border-white/10 space-y-0.5">
                     <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">v1.46.8</span></p>
                     <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">v1.46.8 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)</span></p>
@@ -1315,13 +1331,13 @@
             <!-- User Status Card -->
             <div id="cabinetUserCard" class="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-4">
                 <div id="cabinetAvatar" class="w-12 h-12 rounded-full bg-gradient-to-tr from-primary-container to-secondary flex items-center justify-center text-on-primary-container font-extrabold text-xl shadow-[0_0_20px_rgba(0,240,255,0.3)]">
-                    A
+                    👤
                 </div>
                 <div class="overflow-hidden flex-1 min-w-0">
-                    <p id="cabinetEmail" class="text-sm font-bold text-white truncate">ananiadevsurashvili@gmail.com</p>
+                    <p id="cabinetEmail" class="text-sm font-bold text-white truncate">Not signed in</p>
                     <div class="flex items-center gap-1.5 mt-1 flex-wrap">
                         <span id="cabinetRoleBadge" class="px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold">
-                            👑 Administrator v1.46.8
+                            User
                         </span>
                         <span id="cabinetCloudBadge" class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">
                             ☁️ Supabase Cloud
@@ -1791,6 +1807,13 @@
                     <a href="/auth" class="text-primary-fixed-dim hover:text-primary-container transition text-[11px]">
                         Full portal ↗
                     </a>
+                </div>
+
+                <div class="flex items-center gap-2 py-0.5 px-1">
+                    <input type="checkbox" id="authRememberMe" class="w-4 h-4 rounded bg-white/10 border border-white/20 text-primary-fixed accent-primary-container cursor-pointer">
+                    <label for="authRememberMe" class="text-xs text-on-surface-variant select-none cursor-pointer hover:text-white transition">
+                        Remember me on this device
+                    </label>
                 </div>
 
                 <div class="flex gap-2.5 pt-1">

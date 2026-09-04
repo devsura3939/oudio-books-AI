@@ -32,11 +32,24 @@ let currentUser = null;
 (function() {
     try {
         var explicitlyLoggedOut = localStorage.getItem('lumina_explicitly_logged_out') === 'true';
-        var saved = localStorage.getItem('lumina_auth_user');
         var isAuthed = false;
-        if (saved && !explicitlyLoggedOut) {
-            var u = JSON.parse(saved);
-            if (u && u.email) isAuthed = true;
+        if (!explicitlyLoggedOut) {
+            // 1. Prioritize sessionStorage (strictly isolated per window/tab, empty in new Incognito windows)
+            var sessionUser = sessionStorage.getItem('lumina_auth_user');
+            if (sessionUser) {
+                var u = JSON.parse(sessionUser);
+                if (u && u.email) isAuthed = true;
+            } else if (localStorage.getItem('lumina_remember_me') === 'true') {
+                // 2. Only allow persistent localStorage if user explicitly opted in with "Remember me"
+                var saved = localStorage.getItem('lumina_auth_user');
+                if (saved) {
+                    var u2 = JSON.parse(saved);
+                    if (u2 && u2.email) {
+                        isAuthed = true;
+                        try { sessionStorage.setItem('lumina_auth_user', saved); } catch(err) {}
+                    }
+                }
+            }
         }
         if (!isAuthed) {
             var appEl = document.getElementById('appMainContainer');
@@ -1728,17 +1741,41 @@ function checkAuthState() {
     const explicitlyLoggedOut = localStorage.getItem('lumina_explicitly_logged_out') === 'true';
     if (explicitlyLoggedOut) {
         currentUser = null;
-        localStorage.removeItem('lumina_auth_user');
+        try {
+            sessionStorage.removeItem('lumina_auth_user');
+            localStorage.removeItem('lumina_auth_user');
+            localStorage.removeItem('lumina_remember_me');
+        } catch (e) {}
     } else {
-        const saved = localStorage.getItem('lumina_auth_user');
-        if (saved) {
-            try {
-                currentUser = JSON.parse(saved);
-            } catch (e) {
-                console.warn('Corrupted auth state ignored:', e);
-                localStorage.removeItem('lumina_auth_user');
-                currentUser = null;
+        currentUser = null;
+        // 1. Check current tab/window session first (empty in fresh incognito windows)
+        try {
+            const sessionSaved = sessionStorage.getItem('lumina_auth_user');
+            if (sessionSaved) {
+                currentUser = JSON.parse(sessionSaved);
             }
+        } catch (e) {
+            sessionStorage.removeItem('lumina_auth_user');
+        }
+
+        // 2. Only check localStorage if user explicitly opted in with "Remember me"
+        if (!currentUser && localStorage.getItem('lumina_remember_me') === 'true') {
+            const saved = localStorage.getItem('lumina_auth_user');
+            if (saved) {
+                try {
+                    currentUser = JSON.parse(saved);
+                    if (currentUser && currentUser.email) {
+                        try { sessionStorage.setItem('lumina_auth_user', saved); } catch(err) {}
+                    }
+                } catch (e) {
+                    console.warn('Corrupted auth state ignored:', e);
+                    localStorage.removeItem('lumina_auth_user');
+                    currentUser = null;
+                }
+            }
+        } else if (!currentUser) {
+            // Not remembered and no active tab session: clean up any stale localStorage user
+            localStorage.removeItem('lumina_auth_user');
         }
     }
     updateAuthUI();
@@ -2175,6 +2212,7 @@ function setGateSuccess(msg) {
 async function handleGateSignIn() {
     const email = (document.getElementById('gateEmail')?.value || '').trim();
     const password = (document.getElementById('gatePassword')?.value || '').trim();
+    const rememberMe = Boolean(document.getElementById('gateRememberMe')?.checked);
     const btn = document.getElementById('btnGateSignIn');
     const origHtml = btn ? btn.innerHTML : '';
 
@@ -2195,7 +2233,7 @@ async function handleGateSignIn() {
     }
 
     try {
-        await login(email, password);
+        await login(email, password, rememberMe);
         if (!currentUser) {
             const modalErr = document.getElementById('authErrorMsg')?.textContent;
             if (modalErr) setGateError(modalErr);
@@ -2213,6 +2251,7 @@ async function handleGateSignIn() {
 async function handleGateRegister() {
     const email = (document.getElementById('gateRegEmail')?.value || '').trim();
     const password = (document.getElementById('gateRegPassword')?.value || '').trim();
+    const rememberMe = Boolean(document.getElementById('gateRegRememberMe')?.checked);
     const btn = document.getElementById('btnGateRegister');
     const origHtml = btn ? btn.innerHTML : '';
 
@@ -2233,7 +2272,7 @@ async function handleGateRegister() {
     }
 
     try {
-        await register(email, password);
+        await register(email, password, rememberMe);
     } catch (e) {
         setGateError(e.message || 'Registration failed.');
     } finally {
@@ -2326,7 +2365,9 @@ async function handleGateSetNewPassword() {
             role: isAdmin ? 'admin' : 'user',
             supabaseAuth: true
         };
+        try { sessionStorage.setItem('lumina_auth_user', JSON.stringify(currentUser)); } catch (e) {}
         localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+        localStorage.setItem('lumina_remember_me', 'true');
 
         if (window.parent && window.parent !== window) {
             try {
@@ -2428,7 +2469,7 @@ async function sendPasswordReset() {
     }
 }
 
-async function login(email, password) {
+async function login(email, password, rememberParam) {
     email = (email || '').trim();
     if (!email || !email.includes('@')) {
         setAuthError('Please enter a valid email address.');
@@ -2441,6 +2482,10 @@ async function login(email, password) {
         setAuthError('Please enter your password.');
         return;
     }
+
+    const rememberMe = (typeof rememberParam === 'boolean')
+        ? rememberParam
+        : Boolean(document.getElementById('gateRememberMe')?.checked || document.getElementById('gateRegRememberMe')?.checked || document.getElementById('authRememberMe')?.checked);
 
     setAuthError('');
     setAuthSuccess('');
@@ -2489,7 +2534,20 @@ async function login(email, password) {
             role: isAdmin ? 'admin' : 'user',
             supabaseAuth: cloudConnected
         };
-        localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+
+        // Always store in sessionStorage for current tab/window session
+        try {
+            sessionStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+        } catch (e) {}
+
+        // Only persist across device restarts if user explicitly checked "Remember me"
+        if (rememberMe) {
+            localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+            localStorage.setItem('lumina_remember_me', 'true');
+        } else {
+            localStorage.removeItem('lumina_auth_user');
+            localStorage.removeItem('lumina_remember_me');
+        }
         localStorage.removeItem('lumina_explicitly_logged_out');
 
         if (window.parent && window.parent !== window) {
@@ -2527,7 +2585,7 @@ async function login(email, password) {
     }
 }
 
-async function register(email, password) {
+async function register(email, password, rememberParam) {
     email = (email || '').trim();
     if (!email || !email.includes('@')) {
         setAuthError('Please enter a valid email address.');
@@ -2537,6 +2595,10 @@ async function register(email, password) {
         setAuthError('Password must be at least 6 characters.');
         return;
     }
+
+    const rememberMe = (typeof rememberParam === 'boolean')
+        ? rememberParam
+        : Boolean(document.getElementById('gateRegRememberMe')?.checked || document.getElementById('gateRememberMe')?.checked || document.getElementById('authRememberMe')?.checked);
 
     setAuthError('');
     setAuthSuccess('');
@@ -2553,7 +2615,7 @@ async function register(email, password) {
             const res = await window.LuminaStore.signUp(email, password);
             if (res.success) {
                 setAuthSuccess('Account created! Signing you in...');
-                await login(email, password);
+                await login(email, password, rememberMe);
                 return;
             } else {
                 setAuthError('Registration error: ' + (res.error?.message || 'Could not register user.'));
@@ -2561,7 +2623,7 @@ async function register(email, password) {
             }
         }
         // Offline fallback
-        await login(email, password);
+        await login(email, password, rememberMe);
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -2572,8 +2634,22 @@ async function register(email, password) {
 
 async function logout() {
     currentUser = null;
-    localStorage.removeItem('lumina_auth_user');
-    localStorage.setItem('lumina_explicitly_logged_out', 'true');
+    try {
+        sessionStorage.removeItem('lumina_auth_user');
+        sessionStorage.clear();
+    } catch (e) {}
+    try {
+        localStorage.removeItem('lumina_auth_user');
+        localStorage.removeItem('lumina_remember_me');
+        localStorage.setItem('lumina_explicitly_logged_out', 'true');
+        // Clear all Supabase auth tokens so they cannot revive session
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('sb-')) {
+                localStorage.removeItem(k);
+            }
+        }
+    } catch (e) {}
     closeAccountCabinet();
     if (window.LuminaStore && window.LuminaStore.signOut) {
         await window.LuminaStore.signOut();

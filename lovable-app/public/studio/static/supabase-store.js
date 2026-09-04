@@ -80,6 +80,28 @@
       console.warn("[LuminaStore] supabase-js failed to load — using local storage only.");
       return false;
     }
+
+    // Require an active authenticated session in the current tab/window or explicit "Remember me"
+    var hasActiveSession = false;
+    try {
+      var explicitlyLoggedOut = localStorage.getItem("lumina_explicitly_logged_out") === "true";
+      var sessionUser = sessionStorage.getItem("lumina_auth_user");
+      var rememberMe = localStorage.getItem("lumina_remember_me") === "true";
+      var localUser = localStorage.getItem("lumina_auth_user");
+      if (!explicitlyLoggedOut) {
+        if (sessionUser) {
+          hasActiveSession = true;
+        } else if (rememberMe && localUser) {
+          hasActiveSession = true;
+        }
+      }
+    } catch (e) {}
+
+    if (!hasActiveSession) {
+      userId = null;
+      return false;
+    }
+
     try {
       var res = await c.auth.getUser();
       if (res.data && res.data.user) {
@@ -90,9 +112,9 @@
       console.warn("[LuminaStore] auth check failed:", err);
     }
 
-    // Check if cached session exists in localStorage
+    // Check if cached session exists in sessionStorage or remembered localStorage
     try {
-      var saved = localStorage.getItem("lumina_auth_user");
+      var saved = sessionStorage.getItem("lumina_auth_user") || (localStorage.getItem("lumina_remember_me") === "true" ? localStorage.getItem("lumina_auth_user") : null);
       if (saved) {
         var parsed = JSON.parse(saved);
         if (parsed && parsed.id && (parsed.id.length >= 32 || !parsed.id.startsWith("usr_"))) {
@@ -258,8 +280,17 @@
     }
     userId = null;
     try {
+      sessionStorage.removeItem("lumina_auth_user");
+      sessionStorage.clear();
       localStorage.removeItem("lumina_auth_user");
+      localStorage.removeItem("lumina_remember_me");
       localStorage.setItem("lumina_explicitly_logged_out", "true");
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (k && k.startsWith("sb-")) {
+          localStorage.removeItem(k);
+        }
+      }
     } catch (e) {}
     if (typeof window !== "undefined" && window.parent && window.parent !== window) {
       try {
