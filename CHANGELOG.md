@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-09-05 — v1.46.8: Fixed Supabase Authentication & Added Password Recovery Flow
+
+### Fixed — Supabase Client Request Body Preservation
+- **Restored Supabase POST Authentication (`client.ts`)**:
+  - Fixed regression where `input instanceof Request` was reduced to `input.url`, stripping HTTP POST methods and JSON bodies.
+  - Replaced with `new Request(input, { ...init, headers })`, ensuring all credentials and tokens are faithfully transmitted. Fixes the `405 Method Not Allowed` / `Wrong email or password` error.
+
+### Added — Studio In-Modal Password Recovery & Direct Auth Links
+- **Interactive Password Recovery Form in `#authModal` (`index.html` & `static/app.js`)**:
+  - Added "Forgot password?" toggle button directly in the Studio Sign In modal.
+  - Integrated `#authForgotForm` with email submission and asynchronous recovery link dispatching via Supabase `auth.resetPasswordForEmail`.
+  - Added direct link to the full `/auth` portal for users preferring the dedicated login screen.
+  - Added prominent error and success message banners (`#authErrorMsg`, `#authSuccessMsg`) inside the modal with clear feedback.
+  - Added Enter key submit handlers for email, password, and reset input fields.
+- **Synchronized Stores & Mirrored Files**:
+  - Added `resetPassword(email)` to `supabase-store.js` with redirect target `https://audible-architect.lovable.app/auth/callback`.
+  - Maintained 100% exact file parity between root assets (`index.html`, `static/*`) and Lovable Studio assets (`lovable-app/public/studio/*`).
+
 ## 2026-09-05 — v1.46.7: Multi-Domain Parity, Supabase Cloud Vault & Host Bridge Sync
 
 ### Enhanced — Dual-Domain Uniform App Experience

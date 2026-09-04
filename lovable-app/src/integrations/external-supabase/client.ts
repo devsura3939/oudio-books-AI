@@ -12,9 +12,8 @@ export const EXTERNAL_SUPABASE_PUBLISHABLE_KEY =
 // with apikey only. User JWTs (which start with "eyJ") are preserved untouched.
 function supabaseFetch(key: string): typeof fetch {
   return (input, init) => {
-    const headers = new Headers(
-      typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined,
-    );
+    const isReq = typeof Request !== "undefined" && input instanceof Request;
+    const headers = new Headers(isReq ? input.headers : undefined);
     if (init?.headers) {
       new Headers(init.headers as HeadersInit).forEach((value, name) => headers.set(name, value));
     }
@@ -26,7 +25,11 @@ function supabaseFetch(key: string): typeof fetch {
     }
     // Always set apikey for Supabase routing.
     headers.set("apikey", key);
-    return fetch(input instanceof Request ? input.url : input, { ...init, headers });
+
+    if (isReq) {
+      return fetch(new Request(input, { ...init, headers }));
+    }
+    return fetch(input, { ...init, headers });
   };
 }
 

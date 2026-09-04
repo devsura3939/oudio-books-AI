@@ -28,9 +28,8 @@
 
   // New-format sb_* keys are opaque strings, not JWTs: send them as `apikey` only.
   function patchedFetch(input, init) {
-    var headers = new Headers(
-      typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined,
-    );
+    var isReq = typeof Request !== "undefined" && input instanceof Request;
+    var headers = new Headers(isReq ? input.headers : undefined);
     if (init && init.headers) {
       new Headers(init.headers).forEach(function (value, name) {
         headers.set(name, value);
@@ -38,7 +37,11 @@
     }
     if (headers.get("Authorization") === "Bearer " + KEY) headers.delete("Authorization");
     headers.set("apikey", KEY);
-    return fetch(input, Object.assign({}, init, { headers: headers }));
+    var options = Object.assign({}, init, { headers: headers });
+    if (isReq) {
+      return fetch(new Request(input, options));
+    }
+    return fetch(input, options);
   }
 
   var client = null;
@@ -61,6 +64,10 @@
       });
     }
     return client;
+  }
+
+  function getClient() {
+    return ensureClient();
   }
 
   /**
@@ -131,6 +138,22 @@
         return { success: true, user: res.data.user };
       }
       return { success: false, error: res.error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  }
+
+  async function resetPassword(email) {
+    var c = ensureClient();
+    if (!c) return { error: { message: "Supabase SDK not loaded" } };
+    var cleanEmail = String(email || "").trim().toLowerCase();
+    try {
+      var callbackUrl = "https://audible-architect.lovable.app/auth/callback";
+      var res = await c.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: callbackUrl,
+      });
+      if (res.error) throw res.error;
+      return { success: true };
     } catch (err) {
       return { success: false, error: err };
     }
@@ -462,6 +485,7 @@
     signIn: signIn,
     signUp: signUp,
     signOut: signOut,
+    resetPassword: resetPassword,
     getAllBooks: getAllBooks,
     saveBook: saveBook,
     deleteBook: deleteBook,

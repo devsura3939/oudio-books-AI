@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.46.7';
-const ENGINE_VERSION = 'v1.46.7 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
+const APP_VERSION = 'v1.46.8';
+const ENGINE_VERSION = 'v1.46.8 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
 
 let db = null;
 let currentBook = null;
@@ -1184,6 +1184,11 @@ function navigate(viewId) {
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
+        if (modalId === 'authModal') {
+            if (typeof toggleAuthForgot === 'function') toggleAuthForgot(false);
+            if (typeof setAuthError === 'function') setAuthError('');
+            if (typeof setAuthSuccess === 'function') setAuthSuccess('');
+        }
         if (modalId === 'aiSettingsModal') {
             const keyInput = document.getElementById('geminiApiKeyInput');
             if (keyInput) keyInput.value = geminiApiKey || '';
@@ -1216,7 +1221,14 @@ function openModal(modalId) {
 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+        if (modalId === 'authModal') {
+            if (typeof toggleAuthForgot === 'function') toggleAuthForgot(false);
+            if (typeof setAuthError === 'function') setAuthError('');
+            if (typeof setAuthSuccess === 'function') setAuthSuccess('');
+        }
+        modal.classList.remove('active');
+    }
     if (!document.querySelector('.modal-overlay.active')) {
         document.body.classList.remove('modal-open');
     }
@@ -1563,87 +1575,242 @@ function updateAuthUI() {
     }
 }
 
+function setAuthError(msg) {
+    const errEl = document.getElementById('authErrorMsg');
+    const succEl = document.getElementById('authSuccessMsg');
+    if (succEl) succEl.classList.add('hidden');
+    if (errEl) {
+        if (msg) {
+            errEl.textContent = msg;
+            errEl.classList.remove('hidden');
+        } else {
+            errEl.textContent = '';
+            errEl.classList.add('hidden');
+        }
+    }
+}
+
+function setAuthSuccess(msg) {
+    const errEl = document.getElementById('authErrorMsg');
+    const succEl = document.getElementById('authSuccessMsg');
+    if (errEl) errEl.classList.add('hidden');
+    if (succEl) {
+        if (msg) {
+            succEl.textContent = msg;
+            succEl.classList.remove('hidden');
+        } else {
+            succEl.textContent = '';
+            succEl.classList.add('hidden');
+        }
+    }
+}
+
+function toggleAuthForgot(showForgot) {
+    const mainForm = document.getElementById('authMainForm');
+    const forgotForm = document.getElementById('authForgotForm');
+    const titleEl = document.getElementById('authTitle');
+    const subtitleEl = document.getElementById('authSubtitle');
+    const emailVal = (document.getElementById('authEmail')?.value || '').trim();
+    const forgotEmailInput = document.getElementById('authForgotEmail');
+
+    setAuthError('');
+    setAuthSuccess('');
+
+    if (showForgot) {
+        if (mainForm) mainForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.remove('hidden');
+        if (titleEl) titleEl.textContent = 'Reset Password';
+        if (subtitleEl) subtitleEl.textContent = 'Receive a secure recovery link';
+        if (forgotEmailInput && emailVal) {
+            forgotEmailInput.value = emailVal;
+        }
+        if (forgotEmailInput) forgotEmailInput.focus();
+    } else {
+        if (forgotForm) forgotForm.classList.add('hidden');
+        if (mainForm) mainForm.classList.remove('hidden');
+        if (titleEl) titleEl.textContent = 'Sign In';
+        if (subtitleEl) subtitleEl.textContent = 'Sync books across your devices';
+    }
+}
+
+async function sendPasswordReset() {
+    const input = document.getElementById('authForgotEmail');
+    const email = (input ? input.value : '').trim();
+    if (!email || !email.includes('@')) {
+        setAuthError('Please enter a valid email address.');
+        return;
+    }
+    const btn = document.getElementById('btnAuthSendReset');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Sending...</span>';
+    }
+    setAuthError('');
+    setAuthSuccess('');
+
+    try {
+        if (window.LuminaStore && window.LuminaStore.resetPassword) {
+            const res = await window.LuminaStore.resetPassword(email);
+            if (res.success) {
+                setAuthSuccess('Password recovery email sent! Check your inbox for the reset link.');
+            } else {
+                setAuthError(res.error?.message || 'Could not send reset email. Please try again.');
+            }
+        } else {
+            setAuthError('Authentication service not connected.');
+        }
+    } catch (e) {
+        setAuthError(e.message || 'Error sending recovery link.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
 async function login(email, password) {
     email = (email || '').trim();
     if (!email || !email.includes('@')) {
-        alert('Please enter a valid email address.');
+        setAuthError('Please enter a valid email address.');
         return;
     }
     const isAdmin = email.toLowerCase() === 'ananiadevsurashvili@gmail.com';
     const pwd = password ? password.trim() : (isAdmin ? 'Devsura1995@' : '');
 
+    if (!pwd) {
+        setAuthError('Please enter your password.');
+        return;
+    }
+
+    setAuthError('');
+    setAuthSuccess('');
+
+    const btn = document.getElementById('btnAuthSignIn');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Signing In...</span>';
+    }
+
     let supabaseUser = null;
     let cloudConnected = false;
 
-    // Connect with Supabase Cloud
-    if (window.LuminaStore && window.LuminaStore.signIn) {
-        try {
-            const authRes = await window.LuminaStore.signIn(email, pwd);
-            if (authRes.success && authRes.user) {
-                supabaseUser = authRes.user;
-                cloudConnected = true;
-            } else if (authRes.error) {
-                console.warn('[auth] Supabase sign-in response:', authRes.error.message);
+    try {
+        // Connect with Supabase Cloud
+        if (window.LuminaStore && window.LuminaStore.signIn) {
+            try {
+                const authRes = await window.LuminaStore.signIn(email, pwd);
+                if (authRes.success && authRes.user) {
+                    supabaseUser = authRes.user;
+                    cloudConnected = true;
+                } else if (authRes.error) {
+                    console.warn('[auth] Supabase sign-in response:', authRes.error.message);
+                    const errMsg = authRes.error.message || '';
+                    let userMsg = errMsg;
+                    if (errMsg.toLowerCase().includes('invalid login credentials') || errMsg.toLowerCase().includes('invalid credentials')) {
+                        userMsg = 'Wrong email or password. Check your credentials or click "Forgot password?" below.';
+                    } else if (errMsg.toLowerCase().includes('email not confirmed')) {
+                        userMsg = 'Please confirm your email address first. Check your inbox.';
+                    }
+                    setAuthError(userMsg);
+                    return;
+                }
+            } catch (e) {
+                console.warn('[auth] Supabase connection error:', e);
+                setAuthError('Authentication error: ' + (e.message || 'Could not connect to server'));
+                return;
             }
+        }
+
+        currentUser = {
+            email: email,
+            id: supabaseUser ? supabaseUser.id : (isAdmin ? '2b4b9033-8527-4e51-b2c8-9a72f5a47412' : 'usr_' + Date.now()),
+            pro: true,
+            role: isAdmin ? 'admin' : 'user',
+            supabaseAuth: cloudConnected
+        };
+        localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+
+        // Re-initialize database store with newly acquired Supabase credentials
+        if (window.LuminaStore) {
+            usingCloud = await window.LuminaStore.init();
+        }
+
+        updateAuthUI();
+        closeModal('authModal');
+
+        // Reload books immediately from Supabase Cloud
+        try {
+            await loadBooks();
         } catch (e) {
-            console.warn('[auth] Supabase connection error:', e);
+            console.warn('loadBooks error after login:', e);
+        }
+
+        showToast(isAdmin
+            ? `👑 Welcome Admin • Supabase Cloud Active (${APP_VERSION})`
+            : `Logged in as ${email} (Cloud Synced)`);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
         }
     }
-
-    currentUser = {
-        email: email,
-        id: supabaseUser ? supabaseUser.id : (isAdmin ? '2b4b9033-8527-4e51-b2c8-9a72f5a47412' : 'usr_' + Date.now()),
-        pro: true,
-        role: isAdmin ? 'admin' : 'user',
-        supabaseAuth: cloudConnected
-    };
-    localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
-
-    // Re-initialize database store with newly acquired Supabase credentials
-    if (window.LuminaStore) {
-        usingCloud = await window.LuminaStore.init();
-    }
-
-    updateAuthUI();
-    closeModal('authModal');
-
-    // Reload books immediately from Supabase Cloud
-    try {
-        await loadBooks();
-    } catch (e) {
-        console.warn('loadBooks error after login:', e);
-    }
-
-    showToast(isAdmin
-        ? `👑 Welcome Admin • Supabase Cloud Active (${APP_VERSION})`
-        : `Logged in as ${email} (Cloud Synced)`);
 }
 
 async function register(email, password) {
     email = (email || '').trim();
     if (!email || !email.includes('@')) {
-        alert('Please enter a valid email address.');
+        setAuthError('Please enter a valid email address.');
         return;
     }
     if (!password || password.length < 6) {
-        alert('Password must be at least 6 characters.');
+        setAuthError('Password must be at least 6 characters.');
         return;
     }
 
-    if (window.LuminaStore && window.LuminaStore.signUp) {
-        const res = await window.LuminaStore.signUp(email, password);
-        if (res.success) {
-            showToast('Account created in Supabase! Logging you in...');
-            await login(email, password);
-            return;
-        } else {
-            alert('Registration error: ' + (res.error?.message || 'Could not register user.'));
-            return;
+    setAuthError('');
+    setAuthSuccess('');
+
+    const btn = document.getElementById('btnAuthRegister');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Registering...</span>';
+    }
+
+    try {
+        if (window.LuminaStore && window.LuminaStore.signUp) {
+            const res = await window.LuminaStore.signUp(email, password);
+            if (res.success) {
+                setAuthSuccess('Account created! Signing you in...');
+                await login(email, password);
+                return;
+            } else {
+                setAuthError('Registration error: ' + (res.error?.message || 'Could not register user.'));
+                return;
+            }
+        }
+        // Offline fallback
+        await login(email, password);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
         }
     }
-    // Offline fallback
-    login(email, password);
 }
+
+window.setAuthError = setAuthError;
+window.setAuthSuccess = setAuthSuccess;
+window.toggleAuthForgot = toggleAuthForgot;
+window.sendPasswordReset = sendPasswordReset;
+window.login = login;
+window.register = register;
+window.logout = logout;
+window.openModal = openModal;
+window.closeModal = closeModal;
 
 async function logout() {
     currentUser = null;
@@ -6398,6 +6565,45 @@ function setupEventListeners() {
     if (btnAuthRegister) {
         btnAuthRegister.addEventListener('click', () => {
             register(document.getElementById('authEmail').value, document.getElementById('authPassword').value);
+        });
+    }
+
+    const authEmailInput = document.getElementById('authEmail');
+    if (authEmailInput) {
+        authEmailInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const pwd = document.getElementById('authPassword');
+                if (pwd && !pwd.value) pwd.focus();
+                else login(authEmailInput.value, pwd ? pwd.value : '');
+            }
+        });
+    }
+
+    const authPasswordInput = document.getElementById('authPassword');
+    if (authPasswordInput) {
+        authPasswordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                login(document.getElementById('authEmail').value, authPasswordInput.value);
+            }
+        });
+    }
+
+    const authForgotEmailInput = document.getElementById('authForgotEmail');
+    if (authForgotEmailInput) {
+        authForgotEmailInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendPasswordReset();
+            }
+        });
+    }
+
+    const btnAuthSendReset = document.getElementById('btnAuthSendReset');
+    if (btnAuthSendReset) {
+        btnAuthSendReset.addEventListener('click', () => {
+            sendPasswordReset();
         });
     }
 
