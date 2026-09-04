@@ -146,10 +146,42 @@
     }
   }
 
+  async function checkUserExists(email) {
+    var clean = String(email || "").trim().toLowerCase();
+    if (!clean) return false;
+    var host = (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin.includes("github.io"))
+      ? "https://audible-architect.lovable.app"
+      : "";
+    try {
+      var resp = await fetch(host + "/api/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: clean })
+      });
+      if (resp.ok) {
+        var data = await resp.json();
+        return Boolean(data && data.exists);
+      }
+    } catch (e) {
+      console.warn("[supabase-store] check-email failed:", e);
+    }
+    return null;
+  }
+
   async function resetPassword(email) {
     var c = ensureClient();
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     var cleanEmail = String(email || "").trim().toLowerCase();
+
+    // 1. Requirement: Check if mail exists in registered user list
+    var exists = await checkUserExists(cleanEmail);
+    if (exists === false) {
+      return {
+        success: false,
+        error: { message: "No registered account found with email " + cleanEmail + ". Please check your spelling or create an account." }
+      };
+    }
+
     var callbackUrl = (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin.includes("github.io"))
       ? window.location.href.split("?")[0].split("#")[0]
       : "https://audible-architect.lovable.app/auth/callback";
@@ -176,12 +208,64 @@
     }
   }
 
+  async function handleRecoverySession() {
+    var c = ensureClient();
+    if (!c || typeof window === "undefined") return null;
+    try {
+      var hashStr = (window.location.hash || "").replace(/^#/, "");
+      var searchStr = (window.location.search || "").replace(/^\?/, "");
+      var hashParams = new URLSearchParams(hashStr);
+      var searchParams = new URLSearchParams(searchStr);
+
+      var code = searchParams.get("code") || hashParams.get("code");
+      var accessToken = hashParams.get("access_token") || searchParams.get("access_token");
+      var refreshToken = hashParams.get("refresh_token") || searchParams.get("refresh_token");
+
+      if (code) {
+        var resCode = await c.auth.exchangeCodeForSession(code);
+        if (resCode.data && resCode.data.user) {
+          userId = resCode.data.user.id;
+          return { success: true, user: resCode.data.user };
+        }
+      }
+
+      if (accessToken && refreshToken) {
+        var resSession = await c.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        if (resSession.data && resSession.data.user) {
+          userId = resSession.data.user.id;
+          return { success: true, user: resSession.data.user };
+        }
+      }
+
+      var userRes = await c.auth.getUser();
+      if (userRes.data && userRes.data.user) {
+        userId = userRes.data.user.id;
+        return { success: true, user: userRes.data.user };
+      }
+    } catch (e) {
+      console.warn("[supabase-store] handleRecoverySession failed:", e);
+    }
+    return null;
+  }
+
   async function signOut() {
     var c = ensureClient();
     if (c) {
       try { await c.auth.signOut(); } catch (e) {}
     }
     userId = null;
+    try {
+      localStorage.removeItem("lumina_auth_user");
+      localStorage.setItem("lumina_explicitly_logged_out", "true");
+    } catch (e) {}
+    if (typeof window !== "undefined" && window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({ type: "engbot-logout" }, "*");
+      } catch (e) {}
+    }
   }
 
   function isReady() {
@@ -508,7 +592,9 @@
     signOut: signOut,
     resetPassword: resetPassword,
     resetPasswordForEmail: resetPassword,
+    checkUserExists: checkUserExists,
     updatePassword: updatePassword,
+    handleRecoverySession: handleRecoverySession,
     getAllBooks: getAllBooks,
     saveBook: saveBook,
     deleteBook: deleteBook,

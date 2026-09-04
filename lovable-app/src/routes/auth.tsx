@@ -28,7 +28,11 @@ type Mode = "signin" | "signup" | "forgot" | "reset";
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<Mode>("signin");
+  const isRecoveryInitial = typeof window !== "undefined" && (
+    new URLSearchParams(window.location.search).get("type") === "recovery" ||
+    new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery"
+  );
+  const [mode, setMode] = useState<Mode>(isRecoveryInitial ? "reset" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -56,15 +60,26 @@ function AuthPage() {
     }
   }, []);
 
-  // If already signed in, skip to studio (but not during password reset or after confirmation)
+  // If already signed in, skip to studio (but NOT during password reset or after confirmation)
   useEffect(() => {
-    if (mode === "reset") return;
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const search = new URLSearchParams(window.location.search);
+    const isRecovery =
+      search.get("type") === "recovery" ||
+      hash.get("type") === "recovery" ||
+      mode === "reset" ||
+      isRecoveryInitial;
+
+    if (isRecovery) {
+      setMode("reset");
+      return;
+    }
     if (search.get("confirmed") === "true") return;
+
     void db.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/studio", replace: true });
+      if (data.session && !isRecovery) navigate({ to: "/studio", replace: true });
     });
-  }, [navigate, mode]);
+  }, [navigate, mode, isRecoveryInitial]);
 
   function friendly(message: string) {
     const m = message.toLowerCase();
@@ -134,6 +149,25 @@ function AuthPage() {
       }
       setBusy(true);
       try {
+        // Verify user exists in database first
+        try {
+          const checkRes = await fetch("/api/check-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: cleanEmail }),
+          });
+          if (checkRes.ok) {
+            const checkData = (await checkRes.json()) as { exists: boolean };
+            if (!checkData.exists) {
+              setBusy(false);
+              toast.error(`No registered account found with email ${cleanEmail}. Please check spelling or create an account.`);
+              return;
+            }
+          }
+        } catch (checkErr) {
+          console.warn("[auth] /api/check-email unavailable:", checkErr);
+        }
+
         const { error } = await db.auth.resetPasswordForEmail(cleanEmail, {
           redirectTo: CALLBACK_URL,
         });
@@ -141,7 +175,7 @@ function AuthPage() {
         setSentReset(true);
         toast.success("Password reset link sent - check your inbox.");
       } catch (err) {
-        toast.error("Could not send reset link. Try again.");
+        toast.error(friendly(err instanceof Error ? err.message : "Could not send reset link. Try again."));
       } finally {
         setBusy(false);
       }

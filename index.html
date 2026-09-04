@@ -680,6 +680,36 @@
                 </button>
             </form>
 
+            <!-- 4. Set New Password Form (opened when clicking recovery link) -->
+            <form id="gateResetForm" onsubmit="event.preventDefault(); handleGateSetNewPassword();" class="hidden space-y-4">
+                <div class="p-3 rounded-2xl bg-primary-container/15 border border-primary-container/30 text-xs text-primary-fixed flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">lock_reset</span>
+                    <span class="truncate">Set new password for <strong id="gateResetEmailBadge" class="text-white">your account</strong></span>
+                </div>
+                <p class="text-xs text-on-surface-variant leading-relaxed">
+                    Create a secure new password for your account (minimum 6 characters).
+                </p>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-medium text-on-surface-variant" for="gateNewPassword">New Password</label>
+                    <input type="password" id="gateNewPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required minlength="6" autocomplete="new-password">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-medium text-on-surface-variant" for="gateConfirmNewPassword">Confirm New Password</label>
+                    <input type="password" id="gateConfirmNewPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required minlength="6" autocomplete="new-password">
+                </div>
+
+                <button type="submit" id="btnGateSetNewPassword" class="w-full py-3.5 bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 active:scale-[0.98] transition shadow-[0_0_25px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-lg">check_circle</span>
+                    <span>Update Password & Enter Studio</span>
+                </button>
+
+                <button type="button" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition border border-white/10 text-center">
+                    ← Back to Sign In
+                </button>
+            </form>
+
             <!-- Bottom Guest & Branding Link -->
             <div class="pt-2 text-center flex flex-col items-center gap-2">
                 <button type="button" onclick="closeAuthGate()" class="text-xs text-primary-fixed-dim hover:text-primary-container font-medium hover:underline transition">

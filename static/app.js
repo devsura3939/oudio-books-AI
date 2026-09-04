@@ -1635,14 +1635,20 @@ function renderToCDrawerList() {
 
 // ── Authentication ──────────────────────────────────────────────────────────
 function checkAuthState() {
-    const saved = localStorage.getItem('lumina_auth_user');
-    if (saved) {
-        try {
-            currentUser = JSON.parse(saved);
-        } catch (e) {
-            console.warn('Corrupted auth state ignored:', e);
-            localStorage.removeItem('lumina_auth_user');
-            currentUser = null;
+    const explicitlyLoggedOut = localStorage.getItem('lumina_explicitly_logged_out') === 'true';
+    if (explicitlyLoggedOut) {
+        currentUser = null;
+        localStorage.removeItem('lumina_auth_user');
+    } else {
+        const saved = localStorage.getItem('lumina_auth_user');
+        if (saved) {
+            try {
+                currentUser = JSON.parse(saved);
+            } catch (e) {
+                console.warn('Corrupted auth state ignored:', e);
+                localStorage.removeItem('lumina_auth_user');
+                currentUser = null;
+            }
         }
     }
     updateAuthUI();
@@ -1899,14 +1905,16 @@ function updateAuthGateVisibility() {
     const gateScreen = document.getElementById('authGateScreen');
     const appContainer = document.getElementById('appMainContainer');
 
-    const isLoggedIn = Boolean(currentUser && currentUser.email);
+    const explicitlyLoggedOut = localStorage.getItem('lumina_explicitly_logged_out') === 'true';
+    const isLoggedIn = Boolean(currentUser && currentUser.email) && !explicitlyLoggedOut;
     const hash = (window.location.hash || '').toLowerCase();
     const search = (window.location.search || '').toLowerCase();
 
-    // Check if user explicitly requested auth / recovery screen via URL
-    const wantsAuth = hash.includes('login') || hash.includes('auth') || hash.includes('signin') || search.includes('mode=auth') || search.includes('mode=login');
+    // Check if recovery / reset is explicitly in URL
+    const isRecovery = hash.includes('type=recovery') || search.includes('type=recovery');
     const wantsRegister = hash.includes('register') || hash.includes('signup');
-    const wantsForgot = hash.includes('forgot') || hash.includes('recovery') || hash.includes('reset');
+    const wantsForgot = hash.includes('forgot');
+    const wantsAuth = hash.includes('login') || hash.includes('auth') || hash.includes('signin') || search.includes('mode=auth') || search.includes('mode=login');
 
     // Update the already-logged-in banner if present
     const loggedInBanner = document.getElementById('gateAlreadyLoggedInBanner');
@@ -1920,7 +1928,21 @@ function updateAuthGateVisibility() {
         }
     }
 
-    if (wantsRegister) {
+    if (isRecovery) {
+        if (gateScreen) {
+            gateScreen.classList.remove('hidden');
+            switchGateMode('reset');
+        }
+        if (appContainer) appContainer.classList.add('hidden');
+        if (window.LuminaStore && window.LuminaStore.handleRecoverySession) {
+            window.LuminaStore.handleRecoverySession().then(res => {
+                if (res?.user?.email) {
+                    const badge = document.getElementById('gateResetEmailBadge');
+                    if (badge) badge.textContent = res.user.email;
+                }
+            }).catch(e => console.warn('Recovery session check error:', e));
+        }
+    } else if (wantsRegister) {
         if (gateScreen) {
             gateScreen.classList.remove('hidden');
             switchGateMode('register');
@@ -1954,6 +1976,7 @@ function switchGateMode(mode) {
     const signInForm = document.getElementById('gateSignInForm');
     const registerForm = document.getElementById('gateRegisterForm');
     const forgotForm = document.getElementById('gateForgotForm');
+    const resetForm = document.getElementById('gateResetForm');
     const tabs = document.getElementById('gateTabs');
     const tabSignIn = document.getElementById('gateTabSignIn');
     const tabRegister = document.getElementById('gateTabRegister');
@@ -1962,9 +1985,19 @@ function switchGateMode(mode) {
     setGateError('');
     setGateSuccess('');
 
-    if (mode === 'register') {
+    if (mode === 'reset') {
+        if (signInForm) signInForm.classList.add('hidden');
+        if (registerForm) registerForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.add('hidden');
+        if (resetForm) resetForm.classList.remove('hidden');
+        if (tabs) tabs.classList.add('hidden');
+        if (subtitle) subtitle.textContent = 'Create a secure new password for your account';
+        const newPwdInput = document.getElementById('gateNewPassword');
+        if (newPwdInput) newPwdInput.focus();
+    } else if (mode === 'register') {
         if (signInForm) signInForm.classList.add('hidden');
         if (forgotForm) forgotForm.classList.add('hidden');
+        if (resetForm) resetForm.classList.add('hidden');
         if (registerForm) registerForm.classList.remove('hidden');
         if (tabs) tabs.classList.remove('hidden');
         if (tabSignIn) {
@@ -1979,6 +2012,7 @@ function switchGateMode(mode) {
     } else if (mode === 'forgot') {
         if (signInForm) signInForm.classList.add('hidden');
         if (registerForm) registerForm.classList.add('hidden');
+        if (resetForm) resetForm.classList.add('hidden');
         if (forgotForm) forgotForm.classList.remove('hidden');
         if (tabs) tabs.classList.add('hidden');
         if (subtitle) subtitle.textContent = 'Enter your email to receive a password reset recovery link';
@@ -1992,6 +2026,7 @@ function switchGateMode(mode) {
         // signin
         if (registerForm) registerForm.classList.add('hidden');
         if (forgotForm) forgotForm.classList.add('hidden');
+        if (resetForm) resetForm.classList.add('hidden');
         if (signInForm) signInForm.classList.remove('hidden');
         if (tabs) tabs.classList.remove('hidden');
         if (tabSignIn) {
@@ -2161,6 +2196,87 @@ async function handleGateForgot() {
     }
 }
 
+async function handleGateSetNewPassword() {
+    const newPassword = (document.getElementById('gateNewPassword')?.value || '').trim();
+    const confirmPassword = (document.getElementById('gateConfirmNewPassword')?.value || '').trim();
+    const btn = document.getElementById('btnGateSetNewPassword');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    if (!newPassword || newPassword.length < 6) {
+        setGateError('Password must be at least 6 characters long.');
+        return;
+    }
+    if (newPassword !== confirmPassword) {
+        setGateError('Passwords do not match. Please re-enter.');
+        return;
+    }
+
+    setGateError('');
+    setGateSuccess('');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Updating Password...</span>';
+    }
+
+    try {
+        if (!window.LuminaStore || !window.LuminaStore.updatePassword) {
+            throw new Error('Supabase database service not available.');
+        }
+
+        const res = await window.LuminaStore.updatePassword(newPassword);
+        if (!res.success) {
+            throw new Error(res.error?.message || 'Failed to update password.');
+        }
+
+        localStorage.removeItem('lumina_explicitly_logged_out');
+        const updatedUser = res.user;
+        const email = updatedUser?.email || currentUser?.email || 'User';
+        const isAdmin = email.toLowerCase() === 'ananiadevsurashvili@gmail.com';
+
+        currentUser = {
+            email: email,
+            id: updatedUser?.id || currentUser?.id || 'usr_' + Date.now(),
+            pro: true,
+            role: isAdmin ? 'admin' : 'user',
+            supabaseAuth: true
+        };
+        localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({ type: 'engbot-login-success', user: currentUser }, '*');
+            } catch (e) {}
+        }
+
+        // Clean up recovery query/hash from URL so reloads don't reopen reset mode
+        if (window.history && window.history.replaceState) {
+            try {
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState(null, '', cleanUrl);
+            } catch (e) {}
+        }
+
+        setGateSuccess('Password updated successfully! Entering your profile...');
+        showToast('Password updated! Welcome back.');
+
+        setTimeout(async () => {
+            closeAuthGate();
+            updateAuthUI();
+            openAccountCabinet();
+            try {
+                await loadBooks();
+            } catch (e) {}
+        }, 600);
+    } catch (err) {
+        setGateError(err.message || 'Could not update password. Please try again or request a new recovery link.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
 function toggleAuthForgot(showForgot) {
     const mainForm = document.getElementById('authMainForm');
     const forgotForm = document.getElementById('authForgotForm');
@@ -2288,6 +2404,13 @@ async function login(email, password) {
             supabaseAuth: cloudConnected
         };
         localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+        localStorage.removeItem('lumina_explicitly_logged_out');
+
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({ type: 'engbot-login-success', user: currentUser }, '*');
+            } catch (e) {}
+        }
 
         // Re-initialize database store with newly acquired Supabase credentials
         if (window.LuminaStore) {
@@ -2295,8 +2418,10 @@ async function login(email, password) {
         }
 
         updateAuthUI();
+        closeAuthGate();
         updateAuthGateVisibility();
         closeModal('authModal');
+        openAccountCabinet();
 
         // Reload books immediately from Supabase Cloud + Local merge
         try {
@@ -2362,6 +2487,8 @@ async function register(email, password) {
 async function logout() {
     currentUser = null;
     localStorage.removeItem('lumina_auth_user');
+    localStorage.setItem('lumina_explicitly_logged_out', 'true');
+    closeAccountCabinet();
     if (window.LuminaStore && window.LuminaStore.signOut) {
         await window.LuminaStore.signOut();
     }
@@ -2369,7 +2496,7 @@ async function logout() {
     updateAuthUI();
     updateAuthGateVisibility();
     await loadBooks();
-    showToast('Signed out.');
+    showToast('Signed out successfully.');
 }
 
 window.setAuthError = setAuthError;
@@ -2388,6 +2515,7 @@ window.setGateSuccess = setGateSuccess;
 window.handleGateSignIn = handleGateSignIn;
 window.handleGateRegister = handleGateRegister;
 window.handleGateForgot = handleGateForgot;
+window.handleGateSetNewPassword = handleGateSetNewPassword;
 window.updateAuthGateVisibility = updateAuthGateVisibility;
 window.recoverAllLocalBooks = recoverAllLocalBooks;
 window.loadBooks = loadBooks;
@@ -2399,6 +2527,10 @@ window.updateCabinetUI = updateCabinetUI;
 window.openAuthGate = openAuthGate;
 window.closeAuthGate = closeAuthGate;
 window.openTrainingLab = openTrainingLab;
+
+window.addEventListener('hashchange', () => {
+    updateAuthGateVisibility();
+});
 
 // ── ElevenLabs Settings ────────────────────────────────────────────────────
 function loadElevenLabsSettings() {

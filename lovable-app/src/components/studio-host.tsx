@@ -37,13 +37,22 @@ export function StudioHost() {
     if (onStudio) setActivated(true);
   }, [onStudio]);
 
-  // The studio reads its signed-in user from `lumina_auth_user` on the same
-  // origin; seed it from the real Supabase session before the frame loads.
   useEffect(() => {
     if (!activated || ready) return;
     let cancelled = false;
+
+    // If user explicitly signed out, do not auto-seed session
+    if (window.localStorage.getItem("lumina_explicitly_logged_out") === "true") {
+      setReady(true);
+      return;
+    }
+
     void db.auth.getUser().then(({ data }) => {
       if (cancelled) return;
+      if (window.localStorage.getItem("lumina_explicitly_logged_out") === "true") {
+        setReady(true);
+        return;
+      }
       const user = data.user;
       if (user) {
         const isAdmin = user.email?.toLowerCase() === "ananiadevsurashvili@gmail.com";
@@ -63,7 +72,25 @@ export function StudioHost() {
     };
   }, [activated, ready]);
 
+  // Listen for logout or login messages from the vendored studio frame
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === "engbot-logout") {
+        window.localStorage.removeItem("lumina_auth_user");
+        window.localStorage.setItem("lumina_explicitly_logged_out", "true");
+        void db.auth.signOut();
+      } else if (event.data?.type === "engbot-login-success") {
+        window.localStorage.removeItem("lumina_explicitly_logged_out");
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
   const sendSync = () => {
+    if (window.localStorage.getItem("lumina_explicitly_logged_out") === "true") {
+      return;
+    }
     void db.auth.getUser().then(({ data }) => {
       const user = data.user;
       if (user) {
