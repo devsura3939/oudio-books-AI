@@ -1070,26 +1070,203 @@ function initLocalDB() {
 }
 
 async function saveBookToDB(book) {
-    if (usingCloud) {
+    if (!book) return;
+    // Dual persistence: always store in local IndexedDB for instant offline access
+    try {
+        await saveBookToLocalDB(book);
+    } catch (localErr) {
+        console.warn('[store] Local IndexedDB save warning:', localErr);
+    }
+
+    // And persist to Supabase Cloud if user is authenticated
+    if (usingCloud && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
         try {
             await window.LuminaStore.saveBook(book);
-            return;
         } catch (err) {
-            console.error('[store] Supabase save failed, keeping a local copy:', err);
+            console.error('[store] Supabase save failed, keeping local copy:', err);
         }
     }
-    return saveBookToLocalDB(book);
+}
+
+function readBooksFromIndexedDB(dbName) {
+    return new Promise((resolve) => {
+        try {
+            if (typeof indexedDB === 'undefined') return resolve([]);
+            const req = indexedDB.open(dbName);
+            req.onsuccess = (e) => {
+                const dbInst = e.target.result;
+                if (!dbInst.objectStoreNames.contains('books')) {
+                    dbInst.close();
+                    return resolve([]);
+                }
+                try {
+                    const tx = dbInst.transaction('books', 'readonly');
+                    const store = tx.objectStore('books');
+                    const getAllReq = store.getAll();
+                    getAllReq.onsuccess = () => {
+                        const res = getAllReq.result || [];
+                        dbInst.close();
+                        resolve(res);
+                    };
+                    getAllReq.onerror = () => {
+                        dbInst.close();
+                        resolve([]);
+                    };
+                } catch (err) {
+                    dbInst.close();
+                    resolve([]);
+                }
+            };
+            req.onerror = () => resolve([]);
+        } catch (err) {
+            resolve([]);
+        }
+    });
+}
+
+async function recoverAllLocalBooks() {
+    const candidateDBs = [
+        'LuminaAudioStudioDB_v12',
+        'LuminaAudioStudioDB_v11',
+        'LuminaAudioStudioDB_v10',
+        'LuminaAudioStudioDB',
+        'AudioReadStudioDB',
+        'AudiobookStudioDB'
+    ];
+
+    if (typeof indexedDB !== 'undefined' && typeof indexedDB.databases === 'function') {
+        try {
+            const list = await indexedDB.databases();
+            if (Array.isArray(list)) {
+                for (const dbInfo of list) {
+                    if (dbInfo && dbInfo.name && !candidateDBs.includes(dbInfo.name)) {
+                        candidateDBs.push(dbInfo.name);
+                    }
+                }
+            }
+        } catch (e) {
+            console.debug('[recovery] indexedDB.databases() not available:', e);
+        }
+    }
+
+    const recoveredBooks = [];
+
+    for (const dbName of candidateDBs) {
+        try {
+            const books = await readBooksFromIndexedDB(dbName);
+            for (const book of books) {
+                if (!book || !book.title) continue;
+                const isUserBook = book.isUserUploaded ||
+                    (book.extra && (book.extra.source === 'scan' || book.extra.scanned_pages)) ||
+                    (book.chapters && book.chapters.length > 0 && !DISCOVER_CLASSICS.some(c => c.id === book.id && c.chapters.length === book.chapters.length));
+
+                if (isUserBook || (book.chapters && book.chapters.length > 0)) {
+                    const key = (book.title || '').trim().toLowerCase();
+                    const exists = recoveredBooks.find(b => (b.title || '').trim().toLowerCase() === key || String(b.id) === String(book.id));
+                    if (!exists) {
+                        recoveredBooks.push(book);
+                    } else if (book.chapters && book.chapters.length > (exists.chapters ? exists.chapters.length : 0)) {
+                        const idx = recoveredBooks.indexOf(exists);
+                        recoveredBooks[idx] = book;
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    // Re-save recovered books into active local store LuminaAudioStudioDB_v12 and Supabase
+    for (const book of recoveredBooks) {
+        try {
+            await saveBookToLocalDB(book);
+        } catch (e) {}
+        if (usingCloud && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
+            try {
+                await window.LuminaStore.saveBook(book);
+            } catch (e) {}
+        }
+    }
+
+    return recoveredBooks;
 }
 
 async function getAllBooks() {
-    if (usingCloud) {
+    let cloudBooks = [];
+    let localBooks = [];
+
+    if (usingCloud && window.LuminaStore) {
         try {
-            return await window.LuminaStore.getAllBooks();
+            cloudBooks = await window.LuminaStore.getAllBooks();
         } catch (err) {
             console.error('[store] Supabase read failed, falling back to local copy:', err);
         }
     }
-    return getAllLocalBooks();
+
+    try {
+        localBooks = await getAllLocalBooks();
+    } catch (err) {
+        console.warn('[store] Local IndexedDB read error:', err);
+    }
+
+    const bookMap = new Map();
+
+    const getBookKey = (b) => {
+        if (!b) return '';
+        if (b.id && String(b.id).startsWith('classic_')) return String(b.id);
+        const normTitle = (b.title || '').trim().toLowerCase();
+        return normTitle || String(b.slug || b.id || b.row_id || '');
+    };
+
+    // First populate from local DB
+    for (const lb of localBooks) {
+        const key = getBookKey(lb);
+        if (key) bookMap.set(key, lb);
+    }
+
+    // Merge cloud books (which represent authoritative user account products)
+    for (const cb of cloudBooks) {
+        const key = getBookKey(cb);
+        if (!key) continue;
+        if (!bookMap.has(key)) {
+            bookMap.set(key, cb);
+        } else {
+            const existing = bookMap.get(key);
+            const existingChapters = (existing.chapters || []).length;
+            const cloudChapters = (cb.chapters || []).length;
+            if (cloudChapters >= existingChapters) {
+                if (!cb.coverUrl && existing.coverUrl) cb.coverUrl = existing.coverUrl;
+                bookMap.set(key, cb);
+            } else {
+                // Local copy has more chapters: merge local chapters into cloud object
+                cb.chapters = existing.chapters;
+                if (!cb.coverUrl && existing.coverUrl) cb.coverUrl = existing.coverUrl;
+                bookMap.set(key, cb);
+                if (usingCloud && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
+                    window.LuminaStore.saveBook(cb).catch(e => console.warn('[store] Background sync failed:', e));
+                }
+            }
+        }
+    }
+
+    const merged = Array.from(bookMap.values());
+    return merged.length > 0 ? merged : localBooks;
+}
+
+async function loadBooks() {
+    try {
+        await recoverAllLocalBooks();
+    } catch (e) {
+        console.warn('[store] Recovery warning in loadBooks:', e);
+    }
+    await renderDigitalShelf();
+    renderDiscoverClassics();
+    try {
+        if (typeof renderScanShelf === 'function') await renderScanShelf();
+    } catch (e) {}
+
+    const books = await getAllBooks();
+    if (books.length > 0 && (!currentBook || !books.find(b => String(b.id) === String(currentBook.id)))) {
+        selectBook(books[0].id, false);
+    }
 }
 
 async function deleteBookFromDB(id) {
@@ -1433,6 +1610,7 @@ function checkAuthState() {
         }
     }
     updateAuthUI();
+    updateAuthGateVisibility();
 }
 
 function updateAuthUI() {
@@ -1588,6 +1766,7 @@ function setAuthError(msg) {
             errEl.classList.add('hidden');
         }
     }
+    setGateError(msg);
 }
 
 function setAuthSuccess(msg) {
@@ -1601,6 +1780,239 @@ function setAuthSuccess(msg) {
         } else {
             succEl.textContent = '';
             succEl.classList.add('hidden');
+        }
+    }
+    setGateSuccess(msg);
+}
+
+function updateAuthGateVisibility() {
+    const gateScreen = document.getElementById('authGateScreen');
+    const appContainer = document.getElementById('appMainContainer');
+
+    const isLoggedIn = Boolean(currentUser && currentUser.email);
+
+    if (isLoggedIn) {
+        if (gateScreen) gateScreen.classList.add('hidden');
+        if (appContainer) appContainer.classList.remove('hidden');
+    } else {
+        if (gateScreen) {
+            gateScreen.classList.remove('hidden');
+            switchGateMode('signin');
+        }
+        if (appContainer) {
+            appContainer.classList.add('hidden');
+        }
+        try { closeModal('authModal'); } catch (e) {}
+    }
+}
+
+function switchGateMode(mode) {
+    const signInForm = document.getElementById('gateSignInForm');
+    const registerForm = document.getElementById('gateRegisterForm');
+    const forgotForm = document.getElementById('gateForgotForm');
+    const tabs = document.getElementById('gateTabs');
+    const tabSignIn = document.getElementById('gateTabSignIn');
+    const tabRegister = document.getElementById('gateTabRegister');
+    const subtitle = document.getElementById('gateSubtitle');
+
+    setGateError('');
+    setGateSuccess('');
+
+    if (mode === 'register') {
+        if (signInForm) signInForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.add('hidden');
+        if (registerForm) registerForm.classList.remove('hidden');
+        if (tabs) tabs.classList.remove('hidden');
+        if (tabSignIn) {
+            tabSignIn.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all';
+        }
+        if (tabRegister) {
+            tabRegister.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold';
+        }
+        if (subtitle) subtitle.textContent = 'Create your free Studio account to sync books across devices';
+        const regInput = document.getElementById('gateRegEmail');
+        if (regInput) regInput.focus();
+    } else if (mode === 'forgot') {
+        if (signInForm) signInForm.classList.add('hidden');
+        if (registerForm) registerForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.remove('hidden');
+        if (tabs) tabs.classList.add('hidden');
+        if (subtitle) subtitle.textContent = 'Enter your email to receive a password reset recovery link';
+        const forgotInput = document.getElementById('gateForgotEmail');
+        const signinEmail = document.getElementById('gateEmail');
+        if (forgotInput && signinEmail && signinEmail.value) {
+            forgotInput.value = signinEmail.value;
+        }
+        if (forgotInput) forgotInput.focus();
+    } else {
+        // signin
+        if (registerForm) registerForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.add('hidden');
+        if (signInForm) signInForm.classList.remove('hidden');
+        if (tabs) tabs.classList.remove('hidden');
+        if (tabSignIn) {
+            tabSignIn.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold';
+        }
+        if (tabRegister) {
+            tabRegister.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all';
+        }
+        if (subtitle) subtitle.textContent = 'Sign in to access your personal audiobooks, scanned books, and studio workspace';
+    }
+}
+
+function fillAdminCredentials() {
+    const emailInput = document.getElementById('gateEmail');
+    const pwdInput = document.getElementById('gatePassword');
+    if (emailInput) {
+        emailInput.value = 'ananiadevsurashvili@gmail.com';
+        emailInput.classList.add('ring-2', 'ring-primary-container');
+    }
+    if (pwdInput) {
+        pwdInput.value = 'Devsura1995@';
+        pwdInput.classList.add('ring-2', 'ring-primary-container');
+    }
+    setTimeout(() => {
+        if (emailInput) emailInput.classList.remove('ring-2', 'ring-primary-container');
+        if (pwdInput) pwdInput.classList.remove('ring-2', 'ring-primary-container');
+    }, 1500);
+}
+
+function setGateError(msg) {
+    const errEl = document.getElementById('gateErrorMsg');
+    const succEl = document.getElementById('gateSuccessMsg');
+    if (succEl) succEl.classList.add('hidden');
+    if (errEl) {
+        if (msg) {
+            errEl.textContent = msg;
+            errEl.classList.remove('hidden');
+        } else {
+            errEl.textContent = '';
+            errEl.classList.add('hidden');
+        }
+    }
+}
+
+function setGateSuccess(msg) {
+    const errEl = document.getElementById('gateErrorMsg');
+    const succEl = document.getElementById('gateSuccessMsg');
+    if (errEl) errEl.classList.add('hidden');
+    if (succEl) {
+        if (msg) {
+            succEl.textContent = msg;
+            succEl.classList.remove('hidden');
+        } else {
+            succEl.textContent = '';
+            succEl.classList.add('hidden');
+        }
+    }
+}
+
+async function handleGateSignIn() {
+    const email = (document.getElementById('gateEmail')?.value || '').trim();
+    const password = (document.getElementById('gatePassword')?.value || '').trim();
+    const btn = document.getElementById('btnGateSignIn');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    if (!email || !email.includes('@')) {
+        setGateError('Please enter a valid email address.');
+        return;
+    }
+    if (!password) {
+        setGateError('Please enter your password.');
+        return;
+    }
+
+    setGateError('');
+    setGateSuccess('');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Signing In...</span>';
+    }
+
+    try {
+        await login(email, password);
+        if (!currentUser) {
+            const modalErr = document.getElementById('authErrorMsg')?.textContent;
+            if (modalErr) setGateError(modalErr);
+        }
+    } catch (e) {
+        setGateError(e.message || 'Could not log in. Please check your credentials.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+async function handleGateRegister() {
+    const email = (document.getElementById('gateRegEmail')?.value || '').trim();
+    const password = (document.getElementById('gateRegPassword')?.value || '').trim();
+    const btn = document.getElementById('btnGateRegister');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    if (!email || !email.includes('@')) {
+        setGateError('Please enter a valid email address.');
+        return;
+    }
+    if (!password || password.length < 6) {
+        setGateError('Password must be at least 6 characters.');
+        return;
+    }
+
+    setGateError('');
+    setGateSuccess('');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Registering...</span>';
+    }
+
+    try {
+        await register(email, password);
+    } catch (e) {
+        setGateError(e.message || 'Registration failed.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+async function handleGateForgot() {
+    const email = (document.getElementById('gateForgotEmail')?.value || '').trim();
+    const btn = document.getElementById('btnGateForgot');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    if (!email || !email.includes('@')) {
+        setGateError('Please enter a valid email address.');
+        return;
+    }
+
+    setGateError('');
+    setGateSuccess('');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Sending...</span>';
+    }
+
+    try {
+        if (window.LuminaStore && window.LuminaStore.resetPassword) {
+            const res = await window.LuminaStore.resetPassword(email);
+            if (res.success) {
+                setGateSuccess('Password recovery email sent! Check your inbox for the reset link.');
+            } else {
+                setGateError(res.error?.message || 'Could not send recovery link.');
+            }
+        } else {
+            setGateError('Authentication service not connected.');
+        }
+    } catch (e) {
+        setGateError(e.message || 'Error sending recovery link.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
         }
     }
 }
@@ -1739,9 +2151,10 @@ async function login(email, password) {
         }
 
         updateAuthUI();
+        updateAuthGateVisibility();
         closeModal('authModal');
 
-        // Reload books immediately from Supabase Cloud
+        // Reload books immediately from Supabase Cloud + Local merge
         try {
             await loadBooks();
         } catch (e) {
@@ -1802,6 +2215,19 @@ async function register(email, password) {
     }
 }
 
+async function logout() {
+    currentUser = null;
+    localStorage.removeItem('lumina_auth_user');
+    if (window.LuminaStore && window.LuminaStore.signOut) {
+        await window.LuminaStore.signOut();
+    }
+    usingCloud = false;
+    updateAuthUI();
+    updateAuthGateVisibility();
+    await loadBooks();
+    showToast('Signed out.');
+}
+
 window.setAuthError = setAuthError;
 window.setAuthSuccess = setAuthSuccess;
 window.toggleAuthForgot = toggleAuthForgot;
@@ -1811,18 +2237,16 @@ window.register = register;
 window.logout = logout;
 window.openModal = openModal;
 window.closeModal = closeModal;
-
-async function logout() {
-    currentUser = null;
-    localStorage.removeItem('lumina_auth_user');
-    if (window.LuminaStore && window.LuminaStore.signOut) {
-        await window.LuminaStore.signOut();
-    }
-    usingCloud = false;
-    updateAuthUI();
-    await loadBooks();
-    showToast('Signed out.');
-}
+window.switchGateMode = switchGateMode;
+window.fillAdminCredentials = fillAdminCredentials;
+window.setGateError = setGateError;
+window.setGateSuccess = setGateSuccess;
+window.handleGateSignIn = handleGateSignIn;
+window.handleGateRegister = handleGateRegister;
+window.handleGateForgot = handleGateForgot;
+window.updateAuthGateVisibility = updateAuthGateVisibility;
+window.recoverAllLocalBooks = recoverAllLocalBooks;
+window.loadBooks = loadBooks;
 
 // ── ElevenLabs Settings ────────────────────────────────────────────────────
 function loadElevenLabsSettings() {
@@ -6273,9 +6697,13 @@ async function renderDigitalShelf(filterText = '') {
         div.className = 'group relative cursor-pointer';
         div.onclick = () => selectBook(book.id, true);
 
+        const coverSrc = (book.coverUrl && typeof book.coverUrl === 'string' && book.coverUrl.trim().length > 5 && !book.coverUrl.includes('undefined'))
+            ? book.coverUrl
+            : (typeof generateDynamicStudioCover === 'function' ? generateDynamicStudioCover(book.title || 'Audiobook') : '');
+
         div.innerHTML = `
             <div class="aspect-[2/3] rounded-2xl overflow-hidden mb-2 relative glass-card p-1.5 ${isSelected ? 'border-primary-container ring-2 ring-primary-container/30 shadow-[0_0_25px_rgba(0,240,255,0.25)]' : 'border border-white/5'}">
-                <img src="${book.coverUrl}" class="w-full h-full object-cover rounded-xl group-hover:scale-[1.03] transition-transform duration-500 bg-surface-container">
+                <img src="${coverSrc}" class="w-full h-full object-cover rounded-xl group-hover:scale-[1.03] transition-transform duration-500 bg-surface-container">
                 
                 <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center rounded-2xl gap-3">
                     <div class="flex items-center gap-3">
@@ -6640,8 +7068,9 @@ document.addEventListener('DOMContentLoaded', init);
 
 function isScannedBook(book) {
     if (!book) return false;
-    const src = (book.extra && book.extra.source) || book.source;
-    return src === 'scan';
+    const src = (book.extra && (book.extra.source || (book.extra.extra && book.extra.extra.source))) || book.source;
+    const pages = (book.extra && (book.extra.scanned_pages || (book.extra.extra && book.extra.extra.scanned_pages))) || book.scanned_pages;
+    return src === 'scan' || Boolean(pages);
 }
 
 async function renderScanShelf() {
@@ -6665,11 +7094,14 @@ async function renderScanShelf() {
     books.forEach(book => {
         const stats = getBookStats(book);
         const hasKa = bookHasGeorgian(book);
-        const pages = (book.extra && book.extra.scanned_pages) || book.scanned_pages || 0;
+        const pages = (book.extra && (book.extra.scanned_pages || (book.extra.extra && book.extra.extra.scanned_pages))) || book.scanned_pages || 0;
+        const coverSrc = (book.coverUrl && typeof book.coverUrl === 'string' && book.coverUrl.trim().length > 5 && !book.coverUrl.includes('undefined'))
+            ? book.coverUrl
+            : (typeof generateDynamicStudioCover === 'function' ? generateDynamicStudioCover(book.title || 'Scanned Book') : '');
         const card = document.createElement('div');
         card.className = 'glass-card rounded-2xl p-4 flex gap-4';
         card.innerHTML = `
-            <img src="${book.coverUrl || ''}" class="w-20 h-28 rounded-xl object-cover bg-surface-container flex-shrink-0" alt="">
+            <img src="${coverSrc}" class="w-20 h-28 rounded-xl object-cover bg-surface-container flex-shrink-0" alt="">
             <div class="flex-grow min-w-0">
                 <div class="flex items-start gap-2">
                     <h4 class="font-bold text-white text-sm truncate flex-grow">${escapeHtml(book.title)}</h4>

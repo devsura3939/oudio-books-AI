@@ -148,7 +148,9 @@
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     var cleanEmail = String(email || "").trim().toLowerCase();
     try {
-      var callbackUrl = "https://audible-architect.lovable.app/auth/callback";
+      var callbackUrl = (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin.includes("github.io"))
+        ? window.location.href.split("?")[0].split("#")[0]
+        : "https://audible-architect.lovable.app/auth/callback";
       var res = await c.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: callbackUrl,
       });
@@ -178,6 +180,9 @@
   // ── row → studio object ──────────────────────────────────────────────────
   function toStudioBook(bookRow, chapterRows) {
     var meta = bookRow.metadata || {};
+    var flattenedExtra = (meta.extra && meta.extra.extra)
+      ? Object.assign({}, meta.extra, meta.extra.extra)
+      : (meta.extra || {});
     var chapters = (chapterRows || [])
       .slice()
       .sort(function (a, b) {
@@ -201,7 +206,7 @@
         return chapter;
       });
 
-    return Object.assign({}, meta.extra || {}, {
+    return Object.assign({}, flattenedExtra, {
       id: bookRow.slug || bookRow.id,
       row_id: bookRow.id,
       title: bookRow.title,
@@ -212,6 +217,7 @@
       dateAdded: meta.dateAdded || bookRow.created_at,
       lastPlayedChapterId: meta.lastPlayedChapterId ?? (chapters[0] ? chapters[0].id : null),
       progressPct: meta.progressPct || 0,
+      extra: flattenedExtra,
     });
   }
 

@@ -1,22 +1,32 @@
 # Changelog
 
-## 2026-09-05 — v1.46.8: Fixed Supabase Authentication & Added Password Recovery Flow
+## 2026-09-05 — v1.46.8: Dedicated Auth Landing Gate Screen, Local Book Recovery Scanner & Dual-Store Shelf Sync
 
-### Fixed — Supabase Client Request Body Preservation
-- **Restored Supabase POST Authentication (`client.ts`)**:
-  - Fixed regression where `input instanceof Request` was reduced to `input.url`, stripping HTTP POST methods and JSON bodies.
-  - Replaced with `new Request(input, { ...init, headers })`, ensuring all credentials and tokens are faithfully transmitted. Fixes the `405 Method Not Allowed` / `Wrong email or password` error.
+### Added — Dedicated Auth Landing Gate Screen (`#authGateScreen`)
+- **Protected Internal Studio Workspace**:
+  - Visiting `https://devsura3939.github.io/oudio-books-AI/` or `/studio` unauthenticated now presents the branded **Auth Landing Gate Screen** first.
+  - The internal studio workspace and cabinet (`#appMainContainer`) remain completely hidden until sign-in or account registration succeeds.
+  - Signing out immediately hides the workspace and resets the view to `#authGateScreen`.
+- **Complete In-Gate Auth Suite**:
+  - Built-in tab switching between **Sign In**, **Create Account**, and **Forgot Password** recovery.
+  - Prominent banner alerts for error messages and success notifications.
+  - Owner shortcut: **👑 Quick-fill Admin credentials** automatically populates `ananiadevsurashvili@gmail.com` and `Devsura1995@` to prevent mobile typing mistakes.
+  - Dynamic password reset callback redirect detecting `github.io` vs `lovable.app` domain origins.
 
-### Added — Studio In-Modal Password Recovery & Direct Auth Links
-- **Interactive Password Recovery Form in `#authModal` (`index.html` & `static/app.js`)**:
-  - Added "Forgot password?" toggle button directly in the Studio Sign In modal.
-  - Integrated `#authForgotForm` with email submission and asynchronous recovery link dispatching via Supabase `auth.resetPasswordForEmail`.
-  - Added direct link to the full `/auth` portal for users preferring the dedicated login screen.
-  - Added prominent error and success message banners (`#authErrorMsg`, `#authSuccessMsg`) inside the modal with clear feedback.
-  - Added Enter key submit handlers for email, password, and reset input fields.
-- **Synchronized Stores & Mirrored Files**:
-  - Added `resetPassword(email)` to `supabase-store.js` with redirect target `https://audible-architect.lovable.app/auth/callback`.
-  - Maintained 100% exact file parity between root assets (`index.html`, `static/*`) and Lovable Studio assets (`lovable-app/public/studio/*`).
+### Fixed — Missing Uploaded & Scanned Books Recovery
+- **Multi-Store Legacy Scanner (`recoverAllLocalBooks()`)**:
+  - Automatically queries `indexedDB.databases()` and candidate stores (`LuminaAudioStudioDB_v12`, `AudioReadStudioDB`, `LuminaAudioStudioDB`, etc.).
+  - Recovers any orphaned scanned and uploaded books from local storage and syncs them directly into Supabase Cloud.
+- **Authoritative Shelf Merging (`getAllBooks()`)**:
+  - Seamlessly merges Supabase cloud books (`2b4b9033-8527-4e51-b2c8-9a72f5a47412`: 6 books, 194 chapters) with local IndexedDB records.
+  - Cleans up duplicates (e.g. `**Final_The War of Art_6x9_Final**` 16 chapters) and retains full chapter content.
+  - Preserves 154-chapter Georgian edition of `ოდისეა` and scanned book `ათენას გამოცხადება`.
+- **Dynamic Luxury Studio Book Covers (`generateDynamicStudioCover`)**:
+  - Added canvas-generated gradient book covers as automatic fallbacks for books without uploaded cover images (`!book.coverUrl`).
+- **Dual Persistence on Save (`saveBookToDB`)**:
+  - Dual-stores all new books and chapters in both local IndexedDB (instant offline playback) and Supabase Cloud (cross-device synchronization).
+- **Parity Across Domains**:
+  - 100% exact parity maintained between root assets (`index.html`, `static/*`) and `lovable-app/public/studio/*`. All 64/64 automated tests passing.
 
 ## 2026-09-05 — v1.46.7: Multi-Domain Parity, Supabase Cloud Vault & Host Bridge Sync
 
