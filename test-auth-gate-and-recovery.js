@@ -122,11 +122,11 @@ test('2. Admin quick-fill sets owner credentials accurately', () => {
         const emailInput = document.getElementById('gateEmail');
         const pwdInput = document.getElementById('gatePassword');
         if (emailInput) emailInput.value = 'ananiadevsurashvili@gmail.com';
-        if (pwdInput) pwdInput.value = 'Devsura1995@';
+        if (pwdInput) pwdInput.value = 'anania39';
     }
     fillAdminCredentials();
     assert.strictEqual(elements.gateEmail.value, 'ananiadevsurashvili@gmail.com');
-    assert.strictEqual(elements.gatePassword.value, 'Devsura1995@');
+    assert.strictEqual(elements.gatePassword.value, 'anania39');
 });
 
 // Test 3: Mode switching (signin, register, forgot)

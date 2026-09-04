@@ -1868,7 +1868,7 @@ function fillAdminCredentials() {
         emailInput.classList.add('ring-2', 'ring-primary-container');
     }
     if (pwdInput) {
-        pwdInput.value = 'Devsura1995@';
+        pwdInput.value = 'anania39';
         pwdInput.classList.add('ring-2', 'ring-primary-container');
     }
     setTimeout(() => {
@@ -2089,7 +2089,7 @@ async function login(email, password) {
         return;
     }
     const isAdmin = email.toLowerCase() === 'ananiadevsurashvili@gmail.com';
-    const pwd = password ? password.trim() : (isAdmin ? 'Devsura1995@' : '');
+    const pwd = password ? password.trim() : (isAdmin ? 'anania39' : '');
 
     if (!pwd) {
         setAuthError('Please enter your password.');

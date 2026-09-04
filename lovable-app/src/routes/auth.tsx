@@ -1,4 +1,4 @@
-﻿import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -47,9 +47,20 @@ function AuthPage() {
     }
   }, []);
 
-  // If already signed in, skip to studio (but not during password reset)
+  // Detect if redirected from successful email confirmation
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search);
+    if (search.get("confirmed") === "true") {
+      toast.success("Account confirmed successfully! Please sign in with your password.");
+      setMode("signin");
+    }
+  }, []);
+
+  // If already signed in, skip to studio (but not during password reset or after confirmation)
   useEffect(() => {
     if (mode === "reset") return;
+    const search = new URLSearchParams(window.location.search);
+    if (search.get("confirmed") === "true") return;
     void db.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/studio", replace: true });
     });

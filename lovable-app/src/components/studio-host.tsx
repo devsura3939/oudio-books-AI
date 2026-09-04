@@ -46,10 +46,15 @@ export function StudioHost() {
       if (cancelled) return;
       const user = data.user;
       if (user) {
-        window.localStorage.setItem(
-          "lumina_auth_user",
-          JSON.stringify({ email: user.email ?? "", id: user.id, pro: true }),
-        );
+        const isAdmin = user.email?.toLowerCase() === "ananiadevsurashvili@gmail.com";
+        const payload = {
+          email: user.email ?? "",
+          id: user.id,
+          pro: true,
+          role: isAdmin ? "admin" : "user",
+          supabaseAuth: true,
+        };
+        window.localStorage.setItem("lumina_auth_user", JSON.stringify(payload));
       }
       setReady(true);
     });
@@ -57,6 +62,26 @@ export function StudioHost() {
       cancelled = true;
     };
   }, [activated, ready]);
+
+  const sendSync = () => {
+    void db.auth.getUser().then(({ data }) => {
+      const user = data.user;
+      if (user) {
+        const isAdmin = user.email?.toLowerCase() === "ananiadevsurashvili@gmail.com";
+        const payload = {
+          email: user.email ?? "",
+          id: user.id,
+          pro: true,
+          role: isAdmin ? "admin" : "user",
+          supabaseAuth: true,
+        };
+        frame.current?.contentWindow?.postMessage(
+          { type: "engbot-auth-sync", user: payload },
+          "*"
+        );
+      }
+    });
+  };
 
   if (!activated || !ready) return null;
 
@@ -75,6 +100,7 @@ export function StudioHost() {
         title="EngBot Studio"
         className="h-full w-full border-0"
         allow="autoplay; clipboard-write; fullscreen; camera"
+        onLoad={sendSync}
       />
     </div>
   );

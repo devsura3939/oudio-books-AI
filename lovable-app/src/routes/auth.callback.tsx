@@ -1,4 +1,4 @@
-﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { db } from "@/integrations/external-supabase/client";
 import { Button } from "@/components/ui/button";
@@ -85,9 +85,9 @@ function AuthCallback() {
           navigate({ to: "/auth", search: { type: "recovery" }, replace: true });
           return;
         }
-        // Email confirmation or magic link - go straight to studio
-        setStatus("Account confirmed! Redirecting to your studio...");
-        navigate({ to: "/studio", replace: true });
+        // Email confirmation or magic link - redirect to log in page after success as requested
+        setStatus("Account confirmed! Redirecting to sign in...");
+        navigate({ to: "/auth", search: { confirmed: "true" }, replace: true });
       } else {
         setError("This link is invalid or has already been used. Please request a new one.");
       }

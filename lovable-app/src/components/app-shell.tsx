@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -23,6 +23,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, userEmail } = useIsAdmin();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isStudio = pathname.startsWith("/studio") || pathname.startsWith("/scan");
+
   // Admin-only Training Lab entry (owner account).
   const nav = isAdmin ? [...NAV, { to: "/training", icon: "model_training", label: "Training" }] : NAV;
 
@@ -31,6 +34,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     queryClient.clear();
     await db.auth.signOut();
     navigate({ to: "/auth", replace: true });
+  }
+
+  // When on Studio view, render the studio 100% full-screen without outer chrome
+  // to perfectly match GitHub Pages and avoid double headers / footers on mobile.
+  if (isStudio) {
+    return (
+      <div className="fixed inset-0 z-50 h-screen w-screen overflow-hidden bg-[#0c1017]">
+        <StudioHost />
+        <TranslationProgressPill />
+      </div>
+    );
   }
 
   return (

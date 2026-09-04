@@ -109,10 +109,11 @@
     var c = ensureClient();
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     var cleanEmail = String(email || "").trim();
+    var isOwner = cleanEmail.toLowerCase() === "ananiadevsurashvili@gmail.com";
     try {
       var res = await c.auth.signInWithPassword({
         email: cleanEmail,
-        password: password || "Devsura1995@"
+        password: password || (isOwner ? "anania39" : "")
       });
       if (!res.error && res.data && res.data.user) {
         userId = res.data.user.id;
@@ -128,14 +129,16 @@
     var c = ensureClient();
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     var cleanEmail = String(email || "").trim();
+    var redirectUrl = window.location.origin + window.location.pathname;
     try {
       var res = await c.auth.signUp({
         email: cleanEmail,
-        password: password
+        password: password,
+        options: { emailRedirectTo: redirectUrl }
       });
       if (!res.error && res.data && res.data.user) {
         userId = res.data.user.id;
-        return { success: true, user: res.data.user };
+        return { success: true, user: res.data.user, session: res.data.session };
       }
       return { success: false, error: res.error };
     } catch (err) {
@@ -147,15 +150,27 @@
     var c = ensureClient();
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     var cleanEmail = String(email || "").trim().toLowerCase();
+    var callbackUrl = (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin.includes("github.io"))
+      ? window.location.href.split("?")[0].split("#")[0]
+      : "https://audible-architect.lovable.app/auth/callback";
     try {
-      var callbackUrl = (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin.includes("github.io"))
-        ? window.location.href.split("?")[0].split("#")[0]
-        : "https://audible-architect.lovable.app/auth/callback";
       var res = await c.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: callbackUrl,
       });
       if (res.error) throw res.error;
       return { success: true };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  }
+
+  async function updatePassword(newPassword) {
+    var c = ensureClient();
+    if (!c) return { error: { message: "Supabase SDK not loaded" } };
+    try {
+      var res = await c.auth.updateUser({ password: newPassword });
+      if (res.error) throw res.error;
+      return { success: true, user: res.data.user };
     } catch (err) {
       return { success: false, error: err };
     }
@@ -492,6 +507,8 @@
     signUp: signUp,
     signOut: signOut,
     resetPassword: resetPassword,
+    resetPasswordForEmail: resetPassword,
+    updatePassword: updatePassword,
     getAllBooks: getAllBooks,
     saveBook: saveBook,
     deleteBook: deleteBook,
