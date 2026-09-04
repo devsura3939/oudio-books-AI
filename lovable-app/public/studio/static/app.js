@@ -990,14 +990,19 @@ function refineGeorgianGrammar(text) {
         // "Salvation Army" in clothing pile context -> "საქველმოქმედო გროვა"
         [/ზამთარი,\s*ხსნის\s*არმია/gi, 'ზამთარი და საქველმოქმედო ყუთი'],
 
-        // General Idioms
+        // General Idioms & Calque Fixes
         [kaWord('ერთხელ\\s+დროში', 'gi'), 'იყო და არა იყო რა'],
         [kaWord('სხვა\\s+მხრივ', 'gi'), 'მეორეს მხრივ'],
         [kaWord('ყველაფერში\\s+ყველაფერში', 'gi'), 'საბოლოო ჯამში'],
         [kaWord('საქმის\\s+ფაქტად', 'gi'), 'სინამდვილეში'],
         [kaWord('სხვა\\s+სიტყვებით', 'gi'), 'სხვა სიტყვებით რომ ვთქვათ'],
         [kaWord('ზედმეტია\\s+იმის\\s+თქმა', 'gi'), 'რა თქმა უნდა'],
-        [kaWord('თავის\\s+თავად', 'gi'), 'თავისთავად']
+        [kaWord('თავის\\s+თავად', 'gi'), 'თავისთავად'],
+        // English calque fixes
+        [kaWord('ჯერ,?\\s*ბოლოს\\s*და\\s*ყოველთვის', 'gi'), 'უპირველეს ყოვლისა და მუდამ'],
+        [kaWord('ხვალში\\s+ყვავის', 'gi'), 'მომავალში ისხამს ნაყოფს'],
+        [kaWord('მაგნიტური\\s+ჯოხივით', 'gi'), 'მაგნიტივით'],
+        [kaWord('ყოველ\\s+დღეს', 'gi'), 'ყოველდღე']
     ];
     idiomFixes.forEach(([pattern, repl]) => {
         out = out.replace(pattern, repl);
@@ -1028,11 +1033,17 @@ function refineGeorgianGrammar(text) {
         out = out.replace(kaWord(`ის\\s+([ა-ჰ]+ად|[ა-ჰ]+ადვე|[ა-ჰ]+თ)\\s+(${verb})`, 'g'), 'მან $1 $2');
     });
 
-    // 4. Format Authentic Georgian Literary Quotations: „...“
+    // 4. Strip dummy leading "რომ" at sentence or paragraph starts (calque of English "That...")
+    out = out.replace(/(^|[\n\r]+|[.!?…]\s+)([„"“]?)\s*რომ\s+([ა-ჰ])/g, '$1$2$3');
+
+    // 5. Ensure comma precedes Georgian subordinate conjunctions (რომ, რომელიც, როდესაც, რადგან, თუმცა, ხოლო, სანამ, ვიდრე)
+    out = out.replace(/([ა-ჰ0-9])\s+(რომ|რომელიც|როდესაც|რადგან|რადგანაც|თუმცა|ხოლო|სანამ|ვიდრე)(?![ა-ჰ])/g, '$1, $2');
+
+    // 6. Format Authentic Georgian Literary Quotations: „...“
     out = out.replace(/(^|[\s(\[])["“]([^\s"”])/g, '$1„$2');
     out = out.replace(/([^\s"„])["”]([\s)\].,!?;:]|$)/g, '$1“$2');
 
-    // 5. Fix Machine Translation Spacing Artifacts Around Punctuation
+    // 7. Fix Machine Translation Spacing Artifacts Around Punctuation
     out = out.replace(/\s+([,.:;!?])/g, '$1');
     out = out.replace(/([,.:;!?])(?=[ა-ჰA-Za-z0-9])/g, '$1 ');
 
@@ -3307,14 +3318,14 @@ function measurePages(sentences) {
         const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
         const padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
         let boxW = (container.clientWidth - padX);
-        if (isDual) boxW = (boxW - 24) / 2;
-        boxW = Math.min(boxW, isDual ? 640 : 1300);
-        // Page-card padding from CSS breakpoints.
+        if (isDual) boxW = (boxW - 20) / 2;
+        boxW = Math.min(boxW, isDual ? 860 : 1720);
+        // Page-card padding matching .book-page-card CSS breakpoints.
         const vw = window.innerWidth;
-        const cardPadX = vw <= 400 ? 20 : vw <= 640 ? 28 : vw <= 1024 ? 40 : 80;
-        const cardPadY = vw <= 400 ? 24 : vw <= 640 ? 32 : vw <= 1024 ? 44 : 64;
+        const cardPadX = vw <= 400 ? 20 : vw <= 640 ? 28 : vw <= 900 ? 40 : vw <= 1200 ? 56 : 72;
+        const cardPadY = vw <= 400 ? 24 : vw <= 640 ? 28 : vw <= 900 ? 36 : vw <= 1200 ? 44 : 52;
         const innerW = Math.max(160, boxW - cardPadX);
-        const clientH = container.clientHeight || (window.innerHeight - 150);
+        const clientH = container.clientHeight || (window.innerHeight - 124);
         const innerH = Math.max(180, clientH - padY - cardPadY - 42 /* page footer */ - 12 /* safety */);
         // Page 1 also carries the chapter header, so it fits less text.
         const headerReserve = vw <= 640 ? 92 : 116;
@@ -3335,7 +3346,7 @@ function measurePages(sentences) {
         const flushParagraph = () => {
             if (!buffer.length) return;
             const p = document.createElement('p');
-            p.className = 'text-justify indent-6';
+            p.className = 'book-prose indent-6';
             p.textContent = buffer.join(' ');
             probe.appendChild(p);
             buffer = [];
@@ -3351,7 +3362,7 @@ function measurePages(sentences) {
             let extra = null;
             if (pending) {
                 extra = document.createElement('p');
-                extra.className = 'text-justify indent-6';
+                extra.className = 'book-prose indent-6';
                 extra.textContent = pending;
                 probe.appendChild(extra);
             }
@@ -3366,7 +3377,7 @@ function measurePages(sentences) {
                 probe.innerHTML = ''; // header space only applies to page 1
                 // Re-prime the probe with carryover sentence so next page accounts for its height!
                 const p = document.createElement('p');
-                p.className = 'text-justify indent-6';
+                p.className = 'book-prose indent-6';
                 p.textContent = last.text;
                 probe.appendChild(p);
             } else if (overflows) {
@@ -3605,7 +3616,7 @@ function renderCurrentPage() {
 
 function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPage, spineClass) {
     let cardHtml = `
-        <div class="book-page-card ${spineClass}" style="height: max-content; min-height: 100%;">
+        <div class="book-page-card ${spineClass}">
             <div class="flex-grow">
     `;
 
@@ -3629,7 +3640,7 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
 
         if (pBuffer.length >= 3 || idx === sentences.length - 1) {
             const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
-            cardHtml += `<p class="text-justify indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
+            cardHtml += `<p class="book-prose indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
             pBuffer = [];
             isFirstParagraph = false;
         }
@@ -7475,21 +7486,20 @@ function splitIntoNaturalSentences(text) {
     const regex = /[^.!?…\n]+(?:[.!?…]+["„”'»)]*(?=\s+|$)|[\n]{2,}|$)/g;
     const matches = clean.match(regex);
 
-    if (!matches) return chunkByWords(text.trim(), 40);
+    if (!matches) return chunkByWords(text.trim(), 16);
 
     const sentences = [];
     for (let i = 0; i < matches.length; i++) {
         const s = matches[i].replace(/__DOT__/g, '.').trim();
         if (s.length > 0) {
-            if (s.split(/\s+/).length > 34) {
-                sentences.push(...splitLongIntoClauses(s, 34));
-
+            if (s.split(/\s+/).length > 16) {
+                sentences.push(...splitLongIntoClauses(s, 16));
             } else {
                 sentences.push(s);
             }
         }
     }
-    return sentences.length > 0 ? sentences : chunkByWords(text.trim(), 40);
+    return sentences.length > 0 ? sentences : chunkByWords(text.trim(), 16);
 }
 
 function chunkByWords(text, limit) {
@@ -7510,10 +7520,10 @@ function chunkByWords(text, limit) {
 /**
  * Splits an over-long sentence at natural clause boundaries (, ; : — and
  * Georgian conjunctions) instead of at an arbitrary word count. Shorter,
- * naturally-bounded pieces synthesize much faster, which is what removes the
- * long pauses between sentences on scanned books where punctuation is sparse.
+ * naturally-bounded pieces synthesize much faster and produce clean, comfortable
+ * reading highlights (1-2 lines) instead of highlighting giant 50-word walls.
  */
-function splitLongIntoClauses(text, limit) {
+function splitLongIntoClauses(text, limit = 16) {
     const parts = String(text)
         .split(/(?<=[,;:—–])\s+/)
         .flatMap(p => (p.split(/\s+/).length > limit ? chunkByWords(p, limit) : [p]));

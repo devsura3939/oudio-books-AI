@@ -439,6 +439,16 @@ GEORGIAN VERB SYSTEM — CORE RULES (obey exactly):
 // 1c. Syntax and literary style (from authentic-corpus calibration).
 const KA_SYNTAX = `
 GEORGIAN SYNTAX & STYLE (for natural literary Georgian):
+• DO NOT CALQUE ENGLISH SENTENCE STRUCTURE: English builds sentences with rigid SVO, passive nominalizations, and dangling prepositional chains. Georgian builds sentences with Topic-Comment and flexible SOV order, placing the verb naturally. Never translate word-for-word or clause-by-clause.
+• NO DUMMY LEADING "რომ": Never start an independent sentence or paragraph with a dummy leading "რომ" (e.g. *„რომ ჯერ...“ is a dead giveaway of machine calque). Direct declarative thoughts must start with the main clause or topic.
+• MANDATORY SUBORDINATE CLAUSE COMMAS: In Georgian grammar, every subordinate clause introduced by რომ, რომელიც, როდესაც, რადგან, რადგანაც, თუმცა, სანამ, ვიდრე, ხოლო MUST have a comma preceding it! Independent clauses must not run into each other without commas, semicolons, or periods.
+• TERMINAL PUNCTUATION: Every sentence MUST end with clear terminal punctuation (. ! ? …). Never fuse separate sentences together into a run-on without punctuation.
+• IDIOMATIC NATIVE EQUIVALENTS:
+  - "first, last, and always" → უპირველეს ყოვლისა და მუდამ (NOT *ჯერ, ბოლოს და ყოველთვის)
+  - "blooms in the tomorrow of..." → მომავალში ისხამს ნაყოფს / ხვალინდელ დღეს ამშვენებს (NOT *ხვალში ყვავის)
+  - "like a magnetic rod" → მაგნიტივით / მაგნიტურ ძალად (NOT *მაგნიტური ჯოხივით)
+  - "every day" → ყოველდღე (adverbial ყოველდღე, NOT *ყოველ დღეს)
+  - "in X's words:" → X-ის სიტყვებით:
 • Default SOV; verb not sentence-final when focusing an element — focused word goes immediately before the verb.
 • Context-clear pronouns: DROP ის/მას/მათ unless disambiguation is needed. Verb morphology already encodes person/number.
 • For emphasis/contrast: use the particle კი after the focused word or ეს კი "as for this"; use -ც (აფხაზებმაც) for "even/too".
@@ -446,8 +456,7 @@ GEORGIAN SYNTAX & STYLE (for natural literary Georgian):
 • Dialogue: mark speaker turns with a leading em-dash — „quote“ style is for quoted speech inside narration, titles, citations.
 • Quotation marks: „ … “ (low opening, high closing), never straight quotes.
 • No capitalization at all — not sentence starts, not proper names.
-• Dashes: spaced en-dash – for parentheticals; ranges 1918–1921; numeral ranges use hyphen 1-2.
-• Commas: no comma before და (and) joining clauses (unlike English), no comma before რომ when იმედი მაქვს, რომ...; comma before თუმცა, მაგრამ, რადგან, ვინაიდან.
+• Dashes: spaced em-dash — for major parentheticals and dialogue breaks; numeral ranges use en-dash 1918–1921.
 • და-chaining: literary narration links clauses with და rhythmically instead of subordinate connectors; do not over-translate "while/then/as" — a plain და is often native.
 • Ellipsis rhythm: Georgian prose uses "…" for trailing thought and hesitation, exactly like the masters (ვაი შენ, ჩემო თერგო…).
 • Authentic rhythm: mix short and long sentences; participial modification (გაშენებული, მიმდინარე) instead of stacked relative clauses; homely concrete similes rather than abstract phrasing.`;
@@ -4817,8 +4826,9 @@ function getKaKnowledgeBase() {
 
 // Compact rule set for refinement stages (targeted, smaller).
 function getKaCompactRules() {
-    return [KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
+    return [KA_SYNTAX, KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
 }
+
 
 // Focused set for QA repair passes (small, defect-driven).
 function getKaRepairRules() {

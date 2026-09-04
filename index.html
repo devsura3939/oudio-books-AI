@@ -169,95 +169,112 @@
         /* ════════════════ Moon+ Reader Fullscreen View ════════════════ */
         #readerView {
             position: fixed; inset: 0; z-index: 90;
-            /* dvh + safe areas: on mobile browsers 100vh sits under the URL bar,
-               which is what clipped the bottom playbar and page text. */
+            /* dvh + safe areas for modern browsers and mobile */
             height: 100dvh;
             padding-bottom: env(safe-area-inset-bottom);
             overscroll-behavior: contain;
             display: flex; flex-direction: column;
-            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
-            transform: translateY(100%);
+            will-change: transform, opacity;
+            transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+            transform: scale(0.975);
             opacity: 0; pointer-events: none;
             user-select: text;
         }
         #readerView.active {
-            transform: translateY(0);
+            transform: scale(1);
             opacity: 1; pointer-events: auto;
         }
 
         /* Full Real-Estate Book Page Spread */
         .book-page-spread {
             width: 100%;
-            max-width: 1300px;
-            margin: 0 auto;
-            min-height: 60dvh;
+            max-width: min(97vw, 1720px);
+            margin: auto;
+            height: calc(100dvh - 124px);
+            min-height: calc(100dvh - 124px);
+            max-height: calc(100dvh - 124px);
             display: flex;
-            gap: 24px;
-            transition: all 0.3s ease;
+            gap: 20px;
+            align-items: stretch;
+            transition: gap 0.25s ease;
         }
 
         /* Individual Book Page Card */
         .book-page-card {
             flex: 1;
             min-width: 0;
-            border-radius: 12px;
-            box-shadow: 0 8px 35px rgba(0, 0, 0, 0.2), 0 0 2px rgba(0, 0, 0, 0.3);
+            height: 100%;
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.22);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             position: relative;
-            padding: 32px 40px;
-            transition: all 0.25s ease;
+            padding: 26px 36px;
+            overflow: hidden;
+            transition: padding 0.25s ease, box-shadow 0.25s ease;
         }
 
         /* Book Spine Shadows */
         .book-spine-left {
-            box-shadow: inset -15px 0 25px -10px rgba(0,0,0,0.12), 0 8px 35px rgba(0, 0, 0, 0.2);
+            box-shadow: inset -15px 0 25px -10px rgba(0,0,0,0.12), 0 10px 40px rgba(0, 0, 0, 0.18);
         }
         .book-spine-right {
-            box-shadow: inset 15px 0 25px -10px rgba(0,0,0,0.12), 0 8px 35px rgba(0, 0, 0, 0.2);
+            box-shadow: inset 15px 0 25px -10px rgba(0,0,0,0.12), 0 10px 40px rgba(0, 0, 0, 0.18);
         }
 
-        @media (max-width: 1024px) {
+        @media (max-width: 1200px) {
+            .book-page-spread {
+                max-width: 98vw;
+                gap: 14px;
+            }
+            .book-page-card {
+                padding: 22px 28px;
+            }
+        }
+
+        @media (max-width: 900px) {
             .book-page-spread {
                 flex-direction: column;
-                max-width: 800px;
+                max-width: min(96vw, 860px);
+                height: calc(100dvh - 116px);
+                min-height: calc(100dvh - 116px);
+                max-height: calc(100dvh - 116px);
                 gap: 0;
             }
             .book-page-card {
-                padding: 22px 20px;
+                padding: 18px 20px;
                 border-radius: 10px;
             }
         }
 
         @media (max-width: 640px) {
             .book-page-spread {
-                min-height: calc(100dvh - 168px);
-                gap: 0;
+                height: calc(100dvh - 110px);
+                min-height: calc(100dvh - 110px);
+                max-height: calc(100dvh - 110px);
             }
             .book-page-card {
-                padding: 16px 14px;
+                padding: 14px 14px;
                 border-radius: 8px;
             }
             .book-drop-cap::first-letter {
-                font-size: 2.6em;
-                padding-right: 6px;
+                font-size: 2.5em;
+                padding-right: 5px;
             }
         }
 
         @media (max-width: 400px) {
-            .book-page-spread {
-                min-height: calc(100dvh - 150px);
-            }
             .book-page-card {
                 padding: 12px 10px;
                 border-radius: 6px;
             }
             .book-drop-cap::first-letter {
-                font-size: 2.2em;
+                font-size: 2.1em;
                 padding-right: 4px;
             }
         }
+
 
         /* Drop Cap for Book Typography */
         .book-drop-cap::first-letter {
@@ -301,12 +318,13 @@
             background-color: rgba(180, 135, 80, 0.18);
         }
         .reader-theme-sepia .reader-sentence.active-sentence {
-            background-color: rgba(200, 145, 45, 0.38);
+            background-color: rgba(200, 145, 45, 0.26);
             color: #120b04;
             border-bottom: 2px solid #a67215;
-            box-shadow: 0 0 14px rgba(200, 145, 45, 0.35);
-            border-radius: 4px;
+            box-shadow: 0 1px 6px rgba(200, 145, 45, 0.22);
+            border-radius: 3px;
         }
+
         .reader-theme-sepia .reader-btn {
             color: #2c2013 !important;
             background: rgba(150, 115, 75, 0.16) !important;
@@ -496,10 +514,22 @@
         /* Interactive Sentence Element */
         .reader-sentence {
             cursor: pointer;
-            transition: all 0.18s ease;
-            padding: 2px 3px;
-            border-radius: 3px;
+            transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+            padding: 1px 3px;
+            margin: 0 1px;
+            border-radius: 4px;
             display: inline;
+            box-decoration-break: clone;
+            -webkit-box-decoration-break: clone;
+        }
+
+        /* Fluid, River-Free Literary Typography */
+        .book-prose {
+            text-align: justify;
+            text-justify: inter-word;
+            hyphens: auto;
+            word-break: break-word;
+            text-wrap: pretty;
         }
 
         /* Scrollbar */

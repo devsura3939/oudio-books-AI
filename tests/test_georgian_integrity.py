@@ -123,4 +123,34 @@ assert "." in gold_prose and ";" in gold_prose
 assert re.search(r'Harry Potter', gold_prose) is not None
 print("  [PASS] Gold Georgian literary sample retains all structure and punctuation")
 
+# ----------------------------------------------------------------------------
+# 10. Georgian Anti-Calque & Clause Cadence Integrity
+# ----------------------------------------------------------------------------
+STUDIO_APP = os.path.join(REPO_DIR, "lovable-app", "public", "studio", "static", "app.js")
+with open(STUDIO_APP, "r", encoding="utf-8") as f:
+    studio_app_content = f.read()
+
+for path_name, content in [("static/app.js", app_content), ("studio/static/app.js", studio_app_content)]:
+    assert "უპირველეს ყოვლისა და მუდამ" in content, f"FAIL: Anti-calque rule missing from {path_name}"
+    assert "მომავალში ისხამს ნაყოფს" in content, f"FAIL: Future blossoming calque fix missing from {path_name}"
+    assert "მაგნიტივით" in content, f"FAIL: Magnet calque fix missing from {path_name}"
+    assert "splitLongIntoClauses(s, 16)" in content, f"FAIL: Clause split limit 16 missing from {path_name}"
+    assert "book-prose indent-6" in content, f"FAIL: book-prose class missing from {path_name}"
+print("  [PASS] Georgian anti-calque rules and 16-word clause limits verified in app.js and studio/app.js")
+
+# ----------------------------------------------------------------------------
+# 11. Moon Reader Real Estate & CSS Animation Transitions
+# ----------------------------------------------------------------------------
+INDEX_HTML = os.path.join(REPO_DIR, "index.html")
+STUDIO_INDEX = os.path.join(REPO_DIR, "lovable-app", "public", "studio", "index.html")
+for path_name, path in [("index.html", INDEX_HTML), ("studio/index.html", STUDIO_INDEX)]:
+    with open(path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+    assert "max-width: min(97vw, 1720px);" in html_content, f"FAIL: Spread max-width missing from {path_name}"
+    assert "calc(100dvh - 124px)" in html_content, f"FAIL: Responsive height missing from {path_name}"
+    assert ".book-prose" in html_content, f"FAIL: .book-prose styles missing from {path_name}"
+    assert "box-decoration-break: clone" in html_content, f"FAIL: box-decoration-break missing from {path_name}"
+    assert "transform: scale(0.975)" in html_content, f"FAIL: Reader scale transition missing from {path_name}"
+print("  [PASS] Moon Reader 1720px real estate, .book-prose, and smooth transitions verified in index.html")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
