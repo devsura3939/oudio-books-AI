@@ -6219,6 +6219,20 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'question_auxiliary_untranslated', message: 'Question auxiliary frame untranslated (KA-128): English auxiliary questions (do you, will you, can you, what do you, how are you) must not leave stranded English auxiliaries. In Georgian, questions drop auxiliaries and are formed by intonation or question particles (e.g. "do you know" → იცი?, "will you come" → მოხვალ?, "what do you want" → რა გინდა?, "how are you" → როგორ ხარ?, "why not" → რატომ არა?).' });
     }
 
+    const BLOCKING_RULES = new Set([
+        'wrong_script', 'o_gen', 'double_neg', 'double_neg_clause', 'tts_symbols',
+        'neg_digit', 'latin_frag', 'terminal_punct', 'neg_imperative', 'calqued_idiom',
+        'tha_redundant', 'pronoun_postpos_s', 'decimal_point', 'decimal_point_ka',
+        'english_ordinal', 'chunk_truncation', 'locative_postposition_untranslated',
+        'question_auxiliary_untranslated'
+    ]);
+
+    for (const issue of issues) {
+        if (!issue.severity) {
+            issue.severity = BLOCKING_RULES.has(issue.rule) ? 'blocking' : 'hint';
+        }
+    }
+
     return issues;
 }
 

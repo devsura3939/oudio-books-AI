@@ -8,10 +8,10 @@ import { z } from "zod";
  * machine translation whenever no OpenRouter/Groq/Gemini key was entered).
  */
 const schema = z.object({
-  // The Georgian mastery prompt ships a ~220k-char linguistic knowledge base,
-  // so the limit must be well above it — a 400 here silently degraded every
-  // chunk to machine translation.
+  // The Georgian mastery prompt ships linguistic knowledge base and instructions,
+  // so the limit must accommodate prompt caching and context.
   prompt: z.string().min(1).max(600_000),
+  systemPrompt: z.string().max(200_000).optional(),
   temperature: z.number().min(0).max(2).default(0.2),
   maxTokens: z.number().min(256).max(32_000).default(8192),
 });
@@ -56,6 +56,13 @@ export const Route = createFileRoute("/api/ai")({
           return json({ error: "Invalid request" }, 400);
         }
 
+        const messages = input.systemPrompt
+          ? [
+              { role: "system", content: input.systemPrompt },
+              { role: "user", content: input.prompt },
+            ]
+          : [{ role: "user", content: input.prompt }];
+
         const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -64,7 +71,7 @@ export const Route = createFileRoute("/api/ai")({
           },
           body: JSON.stringify({
             model: "google/gemini-3.7-flash",
-            messages: [{ role: "user", content: input.prompt }],
+            messages,
             temperature: input.temperature,
             max_tokens: input.maxTokens,
             response_format: { type: "json_object" },

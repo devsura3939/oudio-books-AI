@@ -22,7 +22,7 @@
   const TESS_CORE = "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core-simd.wasm.js";
   const TESS_LANGS = "https://tessdata.projectnaptha.com/4.0.0_best";
 
-  const MAX_EDGE = 2000; // long-edge px fed to OCR — the sweet spot for accuracy/size
+  const MAX_EDGE = 1800; // long-edge px fed to OCR — sweet spot for accuracy and keeping payload under 800KB
   const CONCURRENCY = 2;
 
   const state = {
@@ -681,8 +681,8 @@
     const upscale = variant === "super_res" ? Math.max(2, base.upscale) : base.upscale;
     const canvas = grayToCanvas(gray, w, h, upscale);
     return {
-      dataUrl: canvas.toDataURL("image/jpeg", 0.92),
-      blob: await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.92)),
+      dataUrl: canvas.toDataURL("image/jpeg", 0.85),
+      blob: await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.85)),
     };
   }
 

@@ -247,15 +247,17 @@ const _isStaticHost = (() => {
 })();
 let luminaGatewayAvailable = !_isStaticHost;
 
-async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!luminaGatewayAvailable) return null;
     try {
         const controller = new AbortController();
         const tid = setTimeout(() => controller.abort(), 5000); // 5s max
+        const payload = { prompt, temperature, maxTokens };
+        if (systemPrompt) payload.systemPrompt = systemPrompt;
         const res = await fetch('/api/ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, temperature, maxTokens }),
+            body: JSON.stringify(payload),
             signal: controller.signal,
         });
         clearTimeout(tid);
@@ -312,7 +314,7 @@ function kaTrainedAddendum() {
     } catch (e) { return ''; }
 }
 
-async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!openRouterApiKey) return null;
     // All models cooling from a recent run? Skip the network entirely — the
     // 60s windows are short, so OpenRouter re-enters rotation on a later
@@ -333,6 +335,9 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
             // hanging OpenRouter request from blocking the whole translation run.
             const ctrl = new AbortController();
             const tid = setTimeout(() => ctrl.abort(), 25000);
+            const messages = systemPrompt
+                ? [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }]
+                : [{ role: 'user', content: prompt }];
             const response = await fetch(OPENROUTER_API_URL, {
                 method: 'POST',
                 headers: {
@@ -348,7 +353,7 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
                 // with parseModelJSON which handles markdown fences and trailing text.
                 body: JSON.stringify({
                     model: preferred,
-                    messages: [{ role: 'user', content: prompt }],
+                    messages,
                     temperature,
                     max_tokens: maxTokens,
                 }),
@@ -447,17 +452,20 @@ function setCustomProvider(url, model, key) {
 }
 
 // Call custom provider (OpenAI-compatible chat completions). Returns text or null.
-async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8192 } = {}) {
+async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!customProviderUrl || !customProviderModel) return null;
     try {
         const headers = { 'Content-Type': 'application/json' };
         if (customProviderKey) headers['Authorization'] = `Bearer ${customProviderKey}`;
+        const messages = systemPrompt
+            ? [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }]
+            : [{ role: 'user', content: prompt }];
         const res = await fetch(customProviderUrl, {
             method: 'POST',
             headers,
             body: JSON.stringify({
                 model: customProviderModel,
-                messages: [{ role: 'user', content: prompt }],
+                messages,
                 temperature,
                 max_tokens: maxTokens,
             }),
@@ -491,7 +499,7 @@ function setMistralApiKey(key) {
 
 // Generic OpenAI-compatible JSON-mode call with model rotation. Used by both
 // Groq and Mistral (identical request shape). Returns parsed JSON or null.
-async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs, apiKey, prompt, { temperature = 0.2, maxTokens = 8192, providerLabel = 'provider' } = {}) {
+async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs, apiKey, prompt, { temperature = 0.2, maxTokens = 8192, providerLabel = 'provider', systemPrompt = null } = {}) {
     const now = Date.now();
     const candidates = models.filter(m => (cooldownMap[m] || 0) <= now);
     if (!candidates.length) return null;
@@ -501,9 +509,13 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
             const ctrl = new AbortController();
             const tid = setTimeout(() => ctrl.abort(), 20000); // 20s max
 
+            const messages = systemPrompt
+                ? [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }]
+                : [{ role: 'user', content: prompt }];
+
             const payload = {
                 model,
-                messages: [{ role: 'user', content: prompt }],
+                messages,
                 temperature,
                 max_tokens: maxTokens,
             };
@@ -557,17 +569,17 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
     return null;
 }
 
-async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!groqApiKey) return null;
     const selected = (localStorage.getItem('groqSelectedModel') || '').trim();
     const models = selected ? [selected, ...GROQ_MODELS.filter(m => m !== selected)] : GROQ_MODELS;
-    return callOpenAICompatibleJSON(GROQ_API_URL, models, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, groqApiKey, prompt, { temperature, maxTokens, providerLabel: 'Groq' });
+    return callOpenAICompatibleJSON(GROQ_API_URL, models, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, groqApiKey, prompt, { temperature, maxTokens, providerLabel: 'Groq', systemPrompt });
 }
 
-async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!mistralApiKey) return null;
     if (Date.now() < mistralCorsBlockedUntil) return null; // CORS parked — fail fast to the next tier
-    const result = await callOpenAICompatibleJSON(MISTRAL_API_URL, MISTRAL_MODELS, mistralModelCooldown, MISTRAL_MODEL_COOLDOWN_MS, mistralApiKey, prompt, { temperature, maxTokens, providerLabel: 'Mistral' });
+    const result = await callOpenAICompatibleJSON(MISTRAL_API_URL, MISTRAL_MODELS, mistralModelCooldown, MISTRAL_MODEL_COOLDOWN_MS, mistralApiKey, prompt, { temperature, maxTokens, providerLabel: 'Mistral', systemPrompt });
     if (result) {
         mistralCorsFailures = 0; // healthy again
     } else {
@@ -733,6 +745,63 @@ function georgianOrdinalToWords(n) {
 const KA_CHARS = (typeof window !== 'undefined' && window.KA_CHARS) || '\\u10A0-\\u10FF';
 const kaWord = (typeof window !== 'undefined' && window.kaWord) || ((src, flags = 'g') => new RegExp(`(?<![${KA_CHARS}])(?:${src})(?![${KA_CHARS}])`, flags));
 
+function transliterateLatinWordToGeorgian(word) {
+    if (!word || typeof word !== 'string') return '';
+    const lower = word.toLowerCase();
+    
+    // Known literary names, titles, and locations
+    const commonNames = {
+        'mr': 'მისტერ', 'mrs': 'მისის', 'ms': 'მის', 'dr': 'დოქტორ', 'prof': 'პროფესორ',
+        'sir': 'სერ', 'lord': 'ლორდ', 'lady': 'ლედი',
+        'john': 'ჯონ', 'james': 'ჯეიმს', 'george': 'ჯორჯ', 'william': 'უილიამ', 'charles': 'ჩარლზ',
+        'david': 'დავით', 'robert': 'რობერტ', 'edward': 'ედუარდ', 'henry': 'ჰენრი', 'thomas': 'თომას',
+        'mary': 'მერი', 'elizabeth': 'ელიზაბეთ', 'sarah': 'სარა', 'jane': 'ჯეინ', 'emma': 'ემა',
+        'harry': 'ჰარი', 'potter': 'პოტერი', 'sherlock': 'შერლოკ', 'holmes': 'ჰოლმსი', 'watson': 'ვატსონი',
+        'london': 'ლონდონი', 'england': 'ინგლისი', 'paris': 'პარიზი', 'france': 'საფრანგეთი',
+        'america': 'ამერიკა', 'york': 'იორკი', 'street': 'სტრიტი'
+    };
+    if (commonNames[lower]) return commonNames[lower];
+
+    let s = lower;
+    s = s.replace(/sch/g, 'შ')
+         .replace(/tch/g, 'ჩ')
+         .replace(/ch/g, 'ჩ')
+         .replace(/sh/g, 'შ')
+         .replace(/th/g, 'თ')
+         .replace(/ph/g, 'ფ')
+         .replace(/kh/g, 'ხ')
+         .replace(/zh/g, 'ჟ')
+         .replace(/gh/g, 'ღ')
+         .replace(/ts/g, 'ც')
+         .replace(/dz/g, 'ძ')
+         .replace(/ck/g, 'კ')
+         .replace(/qu/g, 'კვ')
+         .replace(/ee/g, 'ი')
+         .replace(/ea/g, 'ი')
+         .replace(/oo/g, 'უ')
+         .replace(/ou/g, 'აუ')
+         .replace(/ai|ay|ei|ey/g, 'ეი');
+
+    s = s.replace(/c([eiy])/g, 'ს$1')
+         .replace(/c/g, 'კ')
+         .replace(/g([eiy])/g, 'ჯ$1')
+         .replace(/g/g, 'გ');
+
+    const map = {
+        'a': 'ა', 'b': 'ბ', 'd': 'დ', 'e': 'ე', 'f': 'ფ', 'h': 'ჰ', 'i': 'ი', 'j': 'ჯ',
+        'k': 'კ', 'l': 'ლ', 'm': 'მ', 'n': 'ნ', 'o': 'ო', 'p': 'პ', 'q': 'კ', 'r': 'რ',
+        's': 'ს', 't': 'ტ', 'u': 'უ', 'v': 'ვ', 'w': 'ვ', 'x': 'ქს', 'y': 'ი', 'z': 'ზ'
+    };
+    return s.split('').map(ch => map[ch] || ch).join('');
+}
+
+function transliterateLatinInGeorgian(text) {
+    if (!text || !/[a-zA-Z]/.test(text)) return text;
+    return text.replace(/\b[A-Za-z]+(?:'[A-Za-z]+)?\b/g, (match) => {
+        return transliterateLatinWordToGeorgian(match);
+    });
+}
+
 function verbalizeGeorgianTextForTTS(text) {
     if (!text) return '';
     let out = normalizeGeorgian(text);
@@ -794,10 +863,27 @@ function verbalizeGeorgianTextForTTS(text) {
         out = out.replace(regex, repl);
     });
 
+    // 5.5 Year ranges: 1939-1945 -> ათას ცხრაას ოცდაცხრამეტიდან ათას ცხრაას ორმოცდახუთ წლამდე
+    out = out.replace(/(\b\d{4})\s*[-–—]\s*(\d{4}\b)/g, (match, y1, y2) => {
+        const n1 = parseInt(y1, 10);
+        const n2 = parseInt(y2, 10);
+        if (n1 >= 1000 && n1 <= 2100 && n2 >= 1000 && n2 <= 2100) {
+            const w1 = georgianNumberToWords(n1);
+            const w2 = georgianNumberToWords(n2);
+            const from1 = w1.endsWith('ი') ? w1.slice(0, -1) + 'იდან' : w1 + 'დან';
+            const to2 = w2.endsWith('ი') ? w2.slice(0, -1) : w2;
+            return `${from1} ${to2} წლამდე`;
+        }
+        return match;
+    });
+
     // 6. Standalone numbers: 1984 -> ათას ცხრაას ოთხმოცდაოთხი
     out = out.replace(/\b(\d{1,9})\b/g, (match, num) => {
         return georgianNumberToWords(parseInt(num, 10));
     });
+
+    // 6.5 Latin names and proper nouns in Georgian text -> phonetic Mkhedruli
+    out = transliterateLatinInGeorgian(out);
 
     // 7. Dialogue & Punctuation cadence
     out = out
@@ -3991,22 +4077,22 @@ function readerForwardSentence() {
 // Each tier is skipped when its key is absent, in cooldown, or blocked,
 // so a whole-book batch keeps running on AI quality even when one or two
 // providers exhaust their free quota mid-run. Returns parsed JSON or null.
-async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
+async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null } = {}) {
     // Tier 1: Gemini (user's direct Google AI Studio key: 2.5 Pro / Flash / 2.0 Flash)
     if (geminiApiKey) {
-        const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries });
+        const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries, systemPrompt });
         if (res !== null) return res;
         console.warn('Gemini direct tier failed — trying Groq fallback.');
     }
     // Tier 2: Groq (free, ~500K tokens/day, ultra-fast)
     if (groqApiKey) {
-        const res = await callGroqJSON(prompt, { temperature, maxTokens });
+        const res = await callGroqJSON(prompt, { temperature, maxTokens, systemPrompt });
         if (res !== null) return res;
         console.warn('Groq tier failed — trying Custom Provider.');
     }
     // Tier 3: Custom provider (user-configured OpenAI-compatible endpoint)
     if (customProviderUrl && customProviderModel) {
-        const txt = await callCustomProviderText(prompt, { temperature, maxTokens });
+        const txt = await callCustomProviderText(prompt, { temperature, maxTokens, systemPrompt });
         if (txt) {
             const parsed = parseModelJSON(txt);
             if (parsed) return parsed;
@@ -4015,24 +4101,24 @@ async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, ret
     }
     // Tier 4: OpenRouter free models
     if (openRouterApiKey) {
-        const res = await callOpenRouterJSON(prompt, { temperature, maxTokens });
+        const res = await callOpenRouterJSON(prompt, { temperature, maxTokens, systemPrompt });
         if (res !== null) return res;
         console.warn('OpenRouter tier failed — trying Mistral.');
     }
     // Tier 5: Mistral (free experiment plan)
     if (mistralApiKey) {
-        const res = await callMistralJSON(prompt, { temperature, maxTokens });
+        const res = await callMistralJSON(prompt, { temperature, maxTokens, systemPrompt });
         if (res !== null) return res;
     }
     // Tier 6: Server gateway (only if available, e.g. local backend)
     if (luminaGatewayAvailable) {
-        const res = await callLuminaGatewayJSON(prompt, { temperature, maxTokens });
+        const res = await callLuminaGatewayJSON(prompt, { temperature, maxTokens, systemPrompt });
         if (res !== null) return res;
     }
     return null;
 }
 
-async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
+async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null } = {}) {
     if (!geminiApiKey) return null;
 
     // Sanitize preferred model
@@ -4052,17 +4138,21 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
             try {
                 const ctrl = new AbortController();
                 const tid = setTimeout(() => ctrl.abort(), 25000); // 25s max
+                const requestPayload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature,
+                        maxOutputTokens: maxTokens,
+                        responseMimeType: 'application/json'
+                    }
+                };
+                if (systemPrompt) {
+                    requestPayload.systemInstruction = { parts: [{ text: systemPrompt }] };
+                }
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: {
-                            temperature,
-                            maxOutputTokens: maxTokens,
-                            responseMimeType: 'application/json'
-                        }
-                    }),
+                    body: JSON.stringify(requestPayload),
                     signal: ctrl.signal,
                 });
                 clearTimeout(tid);
@@ -4202,6 +4292,12 @@ function detectTextLang(text) {
     return ka > latin ? 'ka' : 'en';
 }
 
+function getBookGlossaryBlock() {
+    if (!currentBook || !Array.isArray(currentBook.glossary) || currentBook.glossary.length === 0) return '';
+    const lines = currentBook.glossary.map(g => `- "${g.en}" -> "${g.ka}"`).join('\n');
+    return `\n\n=== BOOK GLOSSARY (MANDATORY CHARACTER NAMES & TERMS) ===\nUse these exact translations consistently across all chapters:\n${lines}\n=== END BOOK GLOSSARY ===`;
+}
+
 // Stage 1 — literary draft translation. Receives neighbouring sentences as
 // context so pronouns, tense and terminology stay coherent across chunk
 // boundaries (the draft never sees a sentence in isolation).
@@ -4217,7 +4313,7 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
     // style exemplars from classic and modern Georgian prose).
     const kaKnowledge = targetLang === 'ka' ? getKaRulesForPrompt() : '';
     const kaBlock = kaKnowledge
-        ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
+        ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===\n${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
 
     const enStyleGuide = targetLang === 'en' ? `
 === ENGLISH LITERARY STYLE RULES (mandatory) ===
@@ -4228,14 +4324,16 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
 - Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
 === END ENGLISH RULES ===` : '';
 
-    const prompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Your translations read like the book was originally written in ${targetLangName} — the register of a respected literary publishing house, not a machine.
+    const glossaryBlock = getBookGlossaryBlock();
+    const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Your translations read like the book was originally written in ${targetLangName} — the register of a respected literary publishing house, not a machine.${kaBlock}${enStyleGuide}${glossaryBlock}`;
 
-Process:
+    const prompt = `Process:
 1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
 2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
 3. Replace idioms with their natural ${targetLangName} equivalents; never translate them literally.
 4. Write flowing native prose — no translationese.${targetLang === 'ka' ? '\n   Georgian word order is verb-FINAL: subject/object first, verb last (კაცმა წიგნი წაიკითხა). Weather/feelings are impersonal (წვიმს, ცივა, მშია, მოსწონს) — never invent a dummy subject. Numerals are vigesimal (ორმოცი=40, ოთხმოცდაშვიდი=87); after numerals 2+ the noun stays SINGULAR (ოცი კაცი).' : ''}
-5. Before answering, silently verify every sentence against the grammar rules below (case alignment, verb screeves, agreement).${kaBlock}${enStyleGuide}
+5. Maintain all paragraph breaks (separate paragraphs with blank lines \\n\\n) matching the source structure.
+6. Before answering, silently verify every sentence against the grammar rules (case alignment, verb screeves, agreement).
 
 TTS note: this translation will be narrated aloud. Use correct terminal punctuation (? ! .) so the voice produces natural prosody.${targetLang === 'ka' ? ' Use Georgian punctuation: „…“ for quotes, a plain full stop "." for sentence end (NEVER the danda "।" or any non-Georgian mark), — for dashes (never " - ").' : ''}
 
@@ -4244,7 +4342,7 @@ Answer as JSON: {"translation": "..."} — the ${targetLangName} translation ONL
 ${srcLangName} source text:
 ${text}${ctxBefore}${ctxAfter}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.25 });
+    const data = await callGeminiJSON(prompt, { temperature: 0.25, systemPrompt });
     const translation = extractTranslation(data?.translation);
     return translation || null;
 }
@@ -4261,16 +4359,18 @@ async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
     const kaReviewerRules = targetLang === 'ka' && typeof getKaCompactRules === 'function'
         ? getKaCompactRules() : '';
     const kaChecklist = kaReviewerRules
-        ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===${kaReviewerRules}\n=== END CHECKLIST ===\nAny violation of the checklist is at least a "major" grammar error.` : '';
+        ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===\n${kaReviewerRules}\n=== END CHECKLIST ===\nAny violation of the checklist is at least a "major" grammar error.` : '';
 
-    const prompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer. Compare the SOURCE against the TRANSLATION (${langName}) and find every real defect.
+    const systemPrompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer.${kaChecklist}`;
+
+    const prompt = `Compare the SOURCE against the TRANSLATION (${langName}) and find every real defect.
 
 Check, in order of severity:
 1. Accuracy: omissions, additions, reversed meaning, lost negation, changed names/numbers/units.
 2. Grammar & morphology: ${langName} case endings, verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment: Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Negation: არ (declarative), ვერ (failed ability), ნუ (prohibitive — never არ for commands), one negator per clause.' : ''}
 3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart).' : ''}
 4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb).' : ''}
-5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before . , ; : punctuation, no foreign sentence marks (।, ฯ, ۔), exactly one terminal mark per sentence, no doubled punctuation.' : ''}${kaChecklist}
+5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before . , ; : punctuation, no foreign sentence marks (।, ฯ, ۔), exactly one terminal mark per sentence, no doubled punctuation.' : ''}
 
 Be demanding: an accurate but stilted translation still gets flagged under style. If the translation is genuinely publication-ready, return an empty error list. Never invent problems.
 
@@ -4283,7 +4383,7 @@ ${sourceText}
 TRANSLATION:
 ${translation}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.1 });
+    const data = await callGeminiJSON(prompt, { temperature: 0.1, systemPrompt });
     if (!data || !Array.isArray(data.errors)) return null;
     return data;
 }
@@ -4297,13 +4397,14 @@ async function geminiRefineTranslation(sourceText, translation, errors, targetLa
         .map((e, i) => `${i + 1}. [${e.severity || 'major'}/${e.type || 'style'}] ${e.issue}\n   → ${e.fix || 'fix it'}`)
         .join('\n');
 
-    const prompt = `You are a master literary editor. You have a draft ${langName} translation and a confirmed list of defects. Produce the complete REVISED translation with every defect corrected.
+    const systemPrompt = `You are a master literary editor. Produce the complete REVISED translation in ${langName} with every defect corrected.`;
 
-Rules:
+    const prompt = `Rules:
 1. Fix every listed error cleanly.
 2. Do not touch parts of the translation that are not broken.
 3. Keep register, tone and character voice intact across the revision.
-4. Output the complete revised translation only.
+4. Maintain all paragraph breaks (separate paragraphs with blank lines \\n\\n) matching the source structure.
+5. Output the complete revised translation only.
 
 Answer as JSON: {"revised_translation": "..."}
 
@@ -4316,7 +4417,7 @@ ${translation}
 DEFECTS TO FIX:
 ${errorList}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.15 });
+    const data = await callGeminiJSON(prompt, { temperature: 0.15, systemPrompt });
     const revised = extractTranslation(data?.revised_translation);
     return revised || null;
 }
@@ -4343,7 +4444,7 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
         return draft;
     }
 
-    const blocking = critique.errors.filter(e => e.severity === 'critical' || e.severity === 'major');
+    const blocking = critique.errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major' || e.severity === 'blocking'));
     if (critique.verdict === 'approved' || blocking.length === 0) {
         return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
     }
@@ -4361,7 +4462,7 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
     // better than the draft — a bad refinement can never make things worse.
     const revisedAudit = await geminiCritiqueTranslation(text, revised, targetLang);
     const revisedBlocking = revisedAudit
-        ? revisedAudit.errors.filter(e => e.severity === 'critical' || e.severity === 'major').length
+        ? revisedAudit.errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major' || e.severity === 'blocking')).length
         : blocking.length;
     if (revisedBlocking < blocking.length || revisedAudit?.verdict === 'approved') {
         return targetLang === 'ka' ? refineGeorgianGrammar(revised) : revised;
@@ -4370,7 +4471,7 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
 }
 
 // Budget pipeline for whole-book jobs. Whole books translate ~120k+ chars in
-// 3000-char chunks; the interactive 3-4 call pipeline per chunk exhausts
+// 2000-char chunks; the interactive 3-4 call pipeline per chunk exhausts
 // free-tier quotas within the first chapter and the rest silently degrades
 // to machine translation. This variant fuses draft + self-critique into ONE
 // call (the model audits its own draft against the same grammar rules), and
@@ -4386,7 +4487,7 @@ async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', 
 
     const kaKnowledge = targetLang === 'ka' ? getKaRulesForPrompt() : '';
     const kaBlock = kaKnowledge
-        ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
+        ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===\n${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
 
     const enStyleGuide = targetLang === 'en' ? `
 === ENGLISH LITERARY STYLE RULES (mandatory) ===
@@ -4397,14 +4498,18 @@ async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', 
 - Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
 === END ENGLISH RULES ===` : '';
 
-    const prompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Translate the passage below, then audit and correct your own translation BEFORE answering.
+    const glossaryBlock = getBookGlossaryBlock();
+    const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Translate faithfully, preserving literary register and character voice.${kaBlock}${enStyleGuide}${glossaryBlock}`;
+
+    const prompt = `Translate the passage below, then audit and correct your own translation BEFORE answering.
 
 Process:
 1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
 2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
 3. Replace idioms with their natural ${targetLangName} equivalents; never translate them literally.
-4. Write flowing native prose — no translationese.${kaBlock}${enStyleGuide}
-5. Self-audit: review your draft for omissions, wrong verb forms, agreement errors, broken idiom and translationese. Fix every defect you find, then report in "self_check" ONLY the significant defects you corrected (or could not fully fix). If the final text is publication-ready, return an empty errors list.
+4. Write flowing native prose — no translationese.
+5. Maintain all paragraph breaks (separate paragraphs with blank lines \\n\\n) matching the source structure.
+6. Self-audit: review your draft for omissions, wrong verb forms, agreement errors, broken idiom and translationese. Fix every defect you find, then report in "self_check" ONLY the significant defects you corrected (or could not fully fix). If the final text is publication-ready, return an empty errors list.
 
 TTS note: the translation will be narrated aloud — use correct terminal punctuation (? ! .).
 
@@ -4414,21 +4519,24 @@ Answer as JSON exactly:
 ${srcLangName} source text:
 ${text}${ctxBefore}${ctxAfter}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.25, maxTokens: 16384 });
+    const data = await callGeminiJSON(prompt, { temperature: 0.25, maxTokens: 16384, systemPrompt });
     let result = extractTranslation(data?.translation);
     if (!result) return null;
 
     // Spend a refine call only when the fused self-check reports significant
     // defects — the same targeted surgical editor as the interactive pipeline.
     const errors = Array.isArray(data?.self_check?.errors) ? data.self_check.errors : [];
-    const blocking = errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major'));
+    const blocking = errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major' || e.severity === 'blocking'));
     if (blocking.length && typeof geminiRefineTranslation === 'function') {
         console.log(`[Batch] self-check flagged ${blocking.length} defect(s) — one refine pass`);
         const refined = await geminiRefineTranslation(text, result, blocking, targetLang);
         if (refined && !textHasMarkupLeak(refined)) result = refined;
     }
 
-    return targetLang === 'ka' ? refineGeorgianGrammar(result) : result;
+    if (result && targetLang === 'ka') {
+        return refineGeorgianGrammar(result);
+    }
+    return result;
 }
 
 // ── Georgian morphological QA gate ──────────────────────────────────────────
@@ -4497,18 +4605,24 @@ async function applyGeorgianQaGate(text) {
     georgianQaStats.checked++;
     if (!issues.length) return text;
 
+    // Gate LLM repair: only trigger expensive model refinement for blocking grammatical/syntax issues
+    const blocking = issues.filter(i => i.severity === 'blocking');
+    if (!blocking.length) {
+        return text; // Stylistic hints are handled without extra LLM roundtrips
+    }
+
     georgianQaStats.violations++;
-    console.warn(`[Georgian QA] ${issues.length} rule violation(s): ${issues.map(i => i.rule).join(', ')}`);
+    console.warn(`[Georgian QA] ${blocking.length} blocking rule violation(s): ${blocking.map(i => i.rule).join(', ')}`);
 
     // One targeted LLM repair pass (cheap, surgical). Any key source works —
     // callGeminiJSON dispatches to Gemini or OpenRouter free models. The
     // result is only accepted if it passes the degradation guard — free
     // models sometimes corrupt correct text while "fixing" it.
     try {
-        const prompt = georgianQaRepairPrompt(text, issues);
+        const prompt = georgianQaRepairPrompt(text, blocking);
         const data = await callGeminiJSON(prompt, { temperature: 0.1, maxTokens: 4096 });
         const repaired = extractTranslation(data?.translation);
-        if (georgianRepairIsAcceptable(text, repaired, issues)) {
+        if (georgianRepairIsAcceptable(text, repaired, blocking)) {
             georgianQaStats.repaired++;
             return repaired;
         }
@@ -5366,6 +5480,38 @@ async function startWholeBookTranslation(resume = false) {
     }
 
     try {
+        // ── Book-Level Glossary Pre-Pass ────────────────────────────────────
+        // Automatically extract consistent terminology & character names from the book
+        // prologue/first chapter if not already generated.
+        if (aiTranslationAvailable() && (!currentBook.glossary || !currentBook.glossary.length)) {
+            try {
+                if (DOM.wbChapterLabel) {
+                    DOM.wbChapterLabel.textContent = `Extracting book glossary & character names for “${currentBook.title}”…`;
+                }
+                const sampleText = currentBook.chapters.slice(0, 2).map(c => c.text || '').join('\n\n').slice(0, 3000).trim();
+                if (sampleText.length > 80) {
+                    const glossaryPrompt = `Extract key character names, titles, and unique terminology from this book opening. Provide authoritative literary Georgian (ქართული) translations or transliterations so they remain 100% consistent throughout the entire book.
+
+Book Title: "${currentBook.title}"
+Sample Text:
+${sampleText}
+
+Answer as JSON strictly:
+{"glossary": [{"en": "English Name/Term", "ka": "ქართული შესატყვისი"}]}
+Max 15-20 key entries.`;
+
+                    const gRes = await callGeminiJSON(glossaryPrompt, { temperature: 0.1, maxTokens: 2048 });
+                    if (gRes && Array.isArray(gRes.glossary) && gRes.glossary.length > 0) {
+                        currentBook.glossary = gRes.glossary.filter(item => item && item.en && item.ka);
+                        await saveBookToDB(currentBook);
+                        console.log(`[translation] Book glossary created (${currentBook.glossary.length} entries):`, currentBook.glossary);
+                    }
+                }
+            } catch (e) {
+                console.warn('[translation] Glossary extraction pass warning:', e);
+            }
+        }
+
         for (let chIdx = 0; chIdx < totalChapters; chIdx++) {
             if (cancelTranslationFlag) break;
 
@@ -5378,13 +5524,21 @@ async function startWholeBookTranslation(resume = false) {
                 continue;
             }
 
-            const sentences = splitIntoNaturalSentences(chapter.text);
+            // Paragraph-aware chunking: preserve authentic paragraph breaks (\n\n)
+            const rawParagraphs = (chapter.text || '')
+                .split(/\n\s*\n/)
+                .map(p => p.trim())
+                .filter(Boolean);
+
+            const paragraphs = rawParagraphs.length > 0
+                ? rawParagraphs
+                : [(chapter.text || '').trim()].filter(Boolean);
+
             // Resume inside a chapter: reuse the chunks we already checkpointed.
             const resumedPartial = (job.chapterIdx === chIdx && Array.isArray(job.partial)) ? job.partial : [];
             const translatedArr = resumedPartial.slice();
             job.chapterIdx = chIdx;
             saveTranslationJob(job);
-
 
             if (DOM.wbChapterLabel) {
                 DOM.wbChapterLabel.textContent = `Translating Chapter ${chIdx + 1} of ${totalChapters}: ${chapter.title}`;
@@ -5393,24 +5547,29 @@ async function startWholeBookTranslation(resume = false) {
             updateMiniDock();
 
             const chunks = [];
-            let currentChunk = '';
-            let chunkSentenceCounts = [];
+            let currentChunkParas = [];
+            let currentChunkLen = 0;
             let currentChunkSCount = 0;
-            
-            for (let i = 0; i < sentences.length; i++) {
-                // MASSIVE Context Window (3000 chars) to force NMT into semantic translation mode
-                if (currentChunk.length + sentences[i].length > 3000 && currentChunk.trim().length > 0) {
-                    chunks.push(currentChunk);
+            let chunkSentenceCounts = [];
+
+            for (const para of paragraphs) {
+                const pSentences = splitIntoNaturalSentences(para);
+                const pSCount = Math.max(1, pSentences.length);
+                // Chunk boundary: ~1,800 - 2,200 chars sweet spot
+                if (currentChunkLen + para.length > 2000 && currentChunkParas.length > 0) {
+                    chunks.push(currentChunkParas.join('\n\n'));
                     chunkSentenceCounts.push(currentChunkSCount);
-                    currentChunk = sentences[i] + ' ';
-                    currentChunkSCount = 1;
+                    currentChunkParas = [para];
+                    currentChunkLen = para.length;
+                    currentChunkSCount = pSCount;
                 } else {
-                    currentChunk += sentences[i] + ' ';
-                    currentChunkSCount++;
+                    currentChunkParas.push(para);
+                    currentChunkLen += (currentChunkLen > 0 ? 2 : 0) + para.length;
+                    currentChunkSCount += pSCount;
                 }
             }
-            if (currentChunk.trim().length > 0) {
-                chunks.push(currentChunk);
+            if (currentChunkParas.length > 0) {
+                chunks.push(currentChunkParas.join('\n\n'));
                 chunkSentenceCounts.push(currentChunkSCount);
             }
 
