@@ -171,6 +171,17 @@
   async function checkUserExists(email) {
     var clean = String(email || "").trim().toLowerCase();
     if (!clean) return false;
+    var c = ensureClient();
+    if (c && typeof c.rpc === "function") {
+      try {
+        var rpcRes = await c.rpc("check_user_exists", { lookup_email: clean });
+        if (rpcRes && typeof rpcRes.data === "boolean") {
+          return rpcRes.data;
+        }
+      } catch (errRpc) {
+        console.warn("[supabase-store] check_user_exists RPC warning:", errRpc);
+      }
+    }
     var host = (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin.includes("github.io"))
       ? "https://audible-architect.lovable.app"
       : "";

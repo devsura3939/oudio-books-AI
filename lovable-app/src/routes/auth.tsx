@@ -149,23 +149,33 @@ function AuthPage() {
       }
       setBusy(true);
       try {
-        // Verify user exists in database first
+        // Verify user exists in database first via Supabase RPC
         try {
-          const checkRes = await fetch("/api/check-email", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: cleanEmail }),
-          });
-          if (checkRes.ok) {
-            const checkData = (await checkRes.json()) as { exists: boolean };
-            if (!checkData.exists) {
+          const { data: exists, error: rpcErr } = await db.rpc("check_user_exists", { lookup_email: cleanEmail });
+          if (!rpcErr && typeof exists === "boolean") {
+            if (!exists) {
               setBusy(false);
               toast.error(`No registered account found with email ${cleanEmail}. Please check spelling or create an account.`);
               return;
             }
+          } else {
+            // Fallback to /api/check-email
+            const checkRes = await fetch("/api/check-email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: cleanEmail }),
+            });
+            if (checkRes.ok) {
+              const checkData = (await checkRes.json()) as { exists: boolean };
+              if (!checkData.exists) {
+                setBusy(false);
+                toast.error(`No registered account found with email ${cleanEmail}. Please check spelling or create an account.`);
+                return;
+              }
+            }
           }
         } catch (checkErr) {
-          console.warn("[auth] /api/check-email unavailable:", checkErr);
+          console.warn("[auth] user check warning:", checkErr);
         }
 
         const { error } = await db.auth.resetPasswordForEmail(cleanEmail, {

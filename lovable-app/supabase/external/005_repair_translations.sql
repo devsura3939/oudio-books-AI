@@ -36,6 +36,13 @@ BEGIN
 
   RAISE NOTICE 'Found % chapters with corrupted or untranslated text_ka.', corrupted_count;
 
+  -- Step 1.5: Sanitize Khmer characters (U+17D4) in otherwise valid Georgian text_ka
+  UPDATE public.chapters
+  SET
+    metadata = jsonb_set(metadata, '{text_ka}', to_jsonb(replace(metadata->>'text_ka', E'\u17D4', '. '))),
+    updated_at = now()
+  WHERE metadata->>'text_ka' ~ E'\u17D4';
+
   -- Step 2: Clear metadata->'text_ka' on corrupted rows
   UPDATE public.chapters
   SET
@@ -100,3 +107,25 @@ BEGIN
   GET DIAGNOSTICS repaired_books = ROW_COUNT;
   RAISE NOTICE 'Migration 005 completed: % corrupted chapters cleaned, % books synchronized.', corrupted_count, repaired_books;
 END $$;
+
+-- ============================================================================
+-- RPC: check_user_exists
+-- Allows client applications to securely verify if an email exists before sending
+-- password reset links, returning false instead of generic success.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.check_user_exists(lookup_email text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM auth.users 
+    WHERE lower(trim(email)) = lower(trim(lookup_email))
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.check_user_exists(text) TO anon, authenticated, service_role;
+
