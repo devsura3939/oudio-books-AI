@@ -1516,6 +1516,24 @@ ${text.slice(0, 10000)}`;
 
     const isKa = lang === "kat" || (lang === "auto" && detectLang(t) === "kat");
     if (isKa) {
+      // Normalize Mtavruli titles, Asomtavruli drop caps, and archaic letters to standard Mkhedruli
+      const nchars = [];
+      for (let i = 0; i < t.length; i++) {
+        const c = t.charCodeAt(i);
+        if (c >= 0x1C90 && c <= 0x1CBF) nchars.push(String.fromCharCode(c - 0x1C90 + 0x10D0));
+        else if (c >= 0x10A0 && c <= 0x10C5) nchars.push(String.fromCharCode(c + 0x30));
+        else if (c === 0x10F3) nchars.push('ვ');
+        else if (c === 0x10F4) nchars.push('ხ');
+        else if (c === 0x10F5) nchars.push('ჰ');
+        else if (c === 0x10F6) nchars.push('ფ');
+        else nchars.push(t[i]);
+      }
+      t = nchars.join("");
+
+      // Strip printed book footnote superscripts and trailing footnote markers on words
+      t = t.replace(/([\u10A0-\u10FF]+)[¹²³⁴⁵⁶⁷⁸⁹⁰*†‡§]+/g, "$1");
+      t = t.replace(/([\u10A0-\u10FF]+)[0-9](?=[,.;:!?\s]|$)/g, "$1");
+
       // Collapse repeated Georgian vowels/consonants that never appear in real print
       t = t.replace(/([ა-ჰ])\1{3,}/g, "$1$1");
       // Remove runs of identical isolated single letters (e.g. ს ს ს -> ს)
@@ -1534,7 +1552,12 @@ ${text.slice(0, 10000)}`;
         [/(?<![\u10A0-\u10FF])უფლისწუღი(?![ა-ჰ])/g, 'უფლისწული'],
         [/(?<![\u10A0-\u10FF])თვითმფრინავო(?![ა-ჰ])/g, 'თვითმფრინავი'],
         [/(?<![\u10A0-\u10FF])მახრჩობეღა(?![ა-ჰ])/g, 'მახრჩობელა'],
-        [/(?<![\u10A0-\u10FF])მეგობარო(?=\s+ჩემი|\s+თქვა)/g, 'მეგობარი']
+        [/(?<![\u10A0-\u10FF])მეგობარო(?=\s+ჩემი|\s+თქვა)/g, 'მეგობარი'],
+        [/(?<![\u10A0-\u10FF])გამარჯოპა(?![ა-ჰ])/g, 'გამარჯობა'],
+        [/(?<![\u10A0-\u10FF])სიყვარუღი(?![ა-ჰ])/g, 'სიყვარული'],
+        [/(?<![\u10A0-\u10FF])სინათღე(?![ა-ჰ])/g, 'სინათლე'],
+        [/(?<![\u10A0-\u10FF])მშვენიეღი(?![ა-ჰ])/g, 'მშვენიერი'],
+        [/(?<![\u10A0-\u10FF])სამყაყო(?![ა-ჰ])/g, 'სამყარო']
       ];
       for (const [re, repl] of ocrFixes) {
         t = t.replace(re, repl);

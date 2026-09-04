@@ -227,5 +227,51 @@ assert fixed_experiencer == "მას შია და სცივა", f"Expe
 
 print("  [PASS] Functional linguistic simulation passed with 100% precision")
 
+# ----------------------------------------------------------------------------
+# 16. Roman Numerals, Fractions, Metrics & Compound Words Verbalization
+# ----------------------------------------------------------------------------
+for path_name, content in [("static/app.js", app_content), ("studio/static/app.js", studio_app_content)]:
+    assert "romanToOrdinalKa" in content, f"FAIL: Roman numeral verbalizer missing from {path_name}"
+    assert "ოცდამეერთე" in content, f"FAIL: 21st ordinal missing from {path_name}"
+    assert "ნახევარი" in content, f"FAIL: 1/2 fraction verbalizer missing from {path_name}"
+    assert "მეოთხედი" in content, f"FAIL: 1/4 fraction verbalizer missing from {path_name}"
+    assert "კილომეტრი" in content, f"FAIL: Metric km verbalizer missing from {path_name}"
+    assert "გრადუსი ცელსიუსით" in content, f"FAIL: Celsius verbalizer missing from {path_name}"
+    assert "$1 $2" in content, f"FAIL: Compound words hyphen preservation missing from {path_name}"
+print("  [PASS] Roman numerals, fractions, metric units, and compound word hyphen preservation verified")
+
+# ----------------------------------------------------------------------------
+# 17. Scanner Mtavruli / Asomtavruli & Footnote Stripping
+# ----------------------------------------------------------------------------
+for path_name, path in [("static/scanner.js", STATIC_SCANNER), ("studio/static/scanner.js", STUDIO_SCANNER)]:
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "0x1C90" in content and "0x10A0" in content, f"FAIL: Mtavruli/Asomtavruli conversion missing from {path_name}"
+    assert "¹²³⁴⁵⁶⁷⁸⁹⁰" in content, f"FAIL: Footnote superscript stripping missing from {path_name}"
+    assert "სიყვარული" in content, f"FAIL: Love OCR repair missing from {path_name}"
+    assert "სინათლე" in content, f"FAIL: Light OCR repair missing from {path_name}"
+    assert "სამყარო" in content, f"FAIL: World OCR repair missing from {path_name}"
+print("  [PASS] Scanner Mtavruli/Asomtavruli normalization, footnote stripping, and expanded confusables verified")
+
+# ----------------------------------------------------------------------------
+# 18. Adjective Concord & Expanded Calque Idiom Repairs
+# ----------------------------------------------------------------------------
+for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), ("studio/static/georgian-linguistics.js", STUDIO_LING)]:
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "ADJECTIVE CASE CONCORD" in content, f"FAIL: Adjective concord rule missing from {path_name}"
+    assert "POSTPOSITION INTEGRATION" in content, f"FAIL: Postposition integration rule missing from {path_name}"
+    assert "მოხდა / გაიმართა / ჩატარდა" in content, f"FAIL: Take place idiom rule missing from {path_name}"
+
+for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert r"ადგილი\s+დაიკავა" in content or r"ადგილი\\s+დაიკავა" in content, f"FAIL: Take place calque fix missing from {path_name}"
+    assert r"ნაწილი\s+მიიღო" in content or r"ნაწილი\\s+მიიღო" in content, f"FAIL: Take part calque fix missing from {path_name}"
+    assert r"ყურადღება\s+გადაიხადა" in content or r"ყურადღება\\s+გადაიხადა" in content, f"FAIL: Pay attention calque fix missing from {path_name}"
+    assert r"ხელი\s+ხელში" in content or r"ხელი\\s+ხელში" in content, f"FAIL: Hand in hand calque fix missing from {path_name}"
+    assert r"აზრს\s+არ\s+აკეთებს" in content or r"აზრს\\s+არ\\s+აკეთებს" in content, f"FAIL: Make sense calque fix missing from {path_name}"
+print("  [PASS] Adjective case concord and expanded calque replacements verified")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
 

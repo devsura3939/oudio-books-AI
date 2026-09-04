@@ -455,13 +455,25 @@ GEORGIAN SYNTAX & STYLE (for natural literary Georgian):
 • NO DUMMY LEADING "რომ": Never start an independent sentence or paragraph with a dummy leading "რომ" (e.g. *„რომ ჯერ...“ is a dead giveaway of machine calque). Direct declarative thoughts must start with the main clause or topic.
 • MANDATORY SUBORDINATE CLAUSE COMMAS: In Georgian grammar, every subordinate clause introduced by რომ, რომელიც, როდესაც, რადგან, რადგანაც, თუმცა, სანამ, ვიდრე, ხოლო, რაკი MUST have a comma preceding it! Independent clauses must not run into each other without commas, semicolons, or periods.
 • PARTICIPIAL ECONOMY: Prefer concise Georgian participles (გადაყლაპული სპილო, დაზიანებული ძრავა, გამოკვეთილი აზრი) instead of stacked clunky relative clauses (*სპილო, რომელიც გადაყლაპული იყო).
-• TERMINAL PUNCTUATION: Every sentence MUST end with clear terminal punctuation (. ! ? …). Never fuse separate sentences together into a run-on without punctuation.
+• ADJECTIVE CASE CONCORD: Attributive adjectives preceding Dative/Instrumental nouns use truncated bare stem (NEVER repeat case ending -ს):
+  - "to the big man" → დიდ ადამიანს (NEVER *დიდს ადამიანს)
+  - "to the little boy" → პატარა ბიჭს (NEVER *პატარას ბიჭს)
+  - "to the beautiful flower" → ლამაზ ყვავილს (NEVER *ლამაზს ყვავილს)
+• POSTPOSITION INTEGRATION: Georgian has NO prepositions. Enclitic postpositions attach to inflected noun stems:
+  - "about the book" → წიგნის შესახებ (NEVER *შესახებ წიგნი)
+  - "towards people" → ადამიანების მიმართ / ხალხისკენ (NEVER *მიმართ ადამიანები)
+  - "together with him" → მასთან ერთად (NEVER *ერთად მასთან)
 • IDIOMATIC NATIVE EQUIVALENTS:
   - "first, last, and always" → უპირველეს ყოვლისა და მუდამ (NOT *ჯერ, ბოლოს და ყოველთვის)
   - "blooms in the tomorrow of..." → მომავალში ისხამს ნაყოფს / ხვალინდელ დღეს ამშვენებს (NOT *ხვალში ყვავის)
   - "like a magnetic rod" → მაგნიტივით / მაგნიტურ ძალად (NOT *მაგნიტური ჯოხივით)
   - "every day" → ყოველდღე (adverbial ყოველდღე, NOT *ყოველ დღეს)
   - "in X's words:" → X-ის სიტყვებით:
+  - "took place" → მოხდა / გაიმართა / ჩატარდა (NOT *ადგილი დაიკავა / *ადგილი ჰქონდა)
+  - "took part in" → მონაწილეობა მიიღო (NOT *ნაწილი მიიღო)
+  - "paid attention" → ყურადღება მიაქცია (NOT *ყურადღება გადაიხადა)
+  - "as soon as possible" → რაც შეიძლება მალე (NOT *რაც შეიძლება სწრაფად)
+  - "makes sense" → აზრი აქვს / სავსებით ლოგიკურია (NOT *აზრს აკეთებს / *სრული აზრი აქვს)
 • Default SOV; verb not sentence-final when focusing an element — focused word goes immediately before the verb.
 • Context-clear pronouns: DROP ის/მას/მათ unless disambiguation is needed. Verb morphology already encodes person/number.
 • For emphasis/contrast: use the particle კი after the focused word or ეს კი "as for this"; use -ც (აფხაზებმაც) for "even/too".

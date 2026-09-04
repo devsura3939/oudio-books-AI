@@ -634,8 +634,21 @@ function normalizeGeorgian(text) {
     const res = [];
     for (let i = 0; i < text.length; i++) {
         const code = text.charCodeAt(i);
-        if (code >= 0x1C90 && code <= 0x1CBA) {
+        // Mtavruli (Georgian All-Caps Unicode block U+1C90-U+1CBF) -> Mkhedruli
+        if (code >= 0x1C90 && code <= 0x1CBF) {
             res.push(String.fromCharCode(code - 0x1C90 + 0x10D0));
+        // Asomtavruli (Classic Georgian Capitals U+10A0-U+10C5) -> Mkhedruli
+        } else if (code >= 0x10A0 && code <= 0x10C5) {
+            res.push(String.fromCharCode(code + 0x30));
+        // Archaic letters frequently found in vintage Georgian books
+        } else if (code === 0x10F3) { // ჳ (vie)
+            res.push('ვ');
+        } else if (code === 0x10F4) { // ჴ (qhar)
+            res.push('ხ');
+        } else if (code === 0x10F5) { // ჵ (hoe)
+            res.push('ჰ');
+        } else if (code === 0x10F6) { // ჶ (fi)
+            res.push('ფ');
         } else {
             res.push(text[i]);
         }
@@ -831,9 +844,37 @@ function verbalizeGeorgianTextForTTS(text) {
         return ord;
     });
 
-    // 3. Percentages: 50% -> ორმოცდაათი პროცენტი
-    out = out.replace(/(\d+)\s*%/g, (match, num) => {
+    // 3. Percentages & Decimals
+    out = out.replace(/(\b\d{1,9})\s*%/g, (match, num) => {
         return georgianNumberToWords(parseInt(num, 10)) + ' პროცენტი';
+    });
+    out = out.replace(/(\b\d{1,9})\.(\d{1,4})\b/g, (match, intPart, decPart) => {
+        return georgianNumberToWords(parseInt(intPart, 10)) + ' მთელი ' + georgianNumberToWords(parseInt(decPart, 10));
+    });
+
+    // 3.5 Common Fractions
+    out = out.replace(/(?<!\d)1\/2(?!\d)/g, 'ნახევარი');
+    out = out.replace(/(?<!\d)1\/3(?!\d)/g, 'მესამედი');
+    out = out.replace(/(?<!\d)1\/4(?!\d)/g, 'მეოთხედი');
+    out = out.replace(/(?<!\d)3\/4(?!\d)/g, 'სამი მეოთხედი');
+
+    // 3.6 Metric Measurements
+    out = out.replace(/(\b\d{1,9})\s*(კმ|კილომეტრი|კილომეტრში)(?![\u10A0-\u10FF])/g, (m, n, u) => {
+        const w = georgianNumberToWords(parseInt(n, 10));
+        return u === 'კილომეტრში' ? `${w} კილომეტრში` : `${w} კილომეტრი`;
+    });
+    out = out.replace(/(\b\d{1,9})\s*(მ|მეტრი|მეტრში)(?![\u10A0-\u10FF])/g, (m, n, u) => {
+        const w = georgianNumberToWords(parseInt(n, 10));
+        return u === 'მეტრში' ? `${w} მეტრში` : `${w} მეტრი`;
+    });
+    out = out.replace(/(\b\d{1,9})\s*(კგ|კილოგრამი)(?![\u10A0-\u10FF])/g, (m, n) => {
+        return georgianNumberToWords(parseInt(n, 10)) + ' კილოგრამი';
+    });
+    out = out.replace(/(\b\d{1,9})\s*(სმ|სანტიმეტრი)(?![\u10A0-\u10FF])/g, (m, n) => {
+        return georgianNumberToWords(parseInt(n, 10)) + ' სანტიმეტრი';
+    });
+    out = out.replace(/(\b\d{1,9})\s*°C\b/g, (m, n) => {
+        return georgianNumberToWords(parseInt(n, 10)) + ' გრადუსი ცელსიუსით';
     });
 
     // 4. Currencies: $100, 100₾, 100€
@@ -867,6 +908,34 @@ function verbalizeGeorgianTextForTTS(text) {
         out = out.replace(regex, repl);
     });
 
+    // 5.4 Roman Numerals in Chapter/Book Headings, Centuries & Monarchs
+    const romanToOrdinalKa = {
+        'I': 'პირველი', 'II': 'მეორე', 'III': 'მესამე', 'IV': 'მეოთხე', 'V': 'მეხუთე',
+        'VI': 'მეექვსე', 'VII': 'მეშვიდე', 'VIII': 'მერვე', 'IX': 'მეცხრე', 'X': 'მეათე',
+        'XI': 'მეთერთმეტე', 'XII': 'მეთორმეტე', 'XIII': 'მეცამეტე', 'XIV': 'მეთოთხმეტე', 'XV': 'მეთხუთმეტე',
+        'XVI': 'მეთექვსმეტე', 'XVII': 'მეჩვიდმეტე', 'XVIII': 'მეთვრამეტე', 'XIX': 'მეცხრამეტე', 'XX': 'მეოცე',
+        'XXI': 'ოცდამეერთე', 'XXII': 'ოცდამეორე', 'XXIII': 'ოცდამესამე', 'XXIV': 'ოცდამეოთხე', 'XXV': 'ოცდამეხუთე',
+        'XXVI': 'ოცდამეექვსე', 'XXVII': 'ოცდამეშვიდე', 'XXVIII': 'ოცდამერვე', 'XXIX': 'ოცდამეცხრე', 'XXX': 'ოცდამეათე'
+    };
+
+    // A. Headings: "თავი IV" -> "თავი მეოთხე", "ნაწილი II" -> "ნაწილი მეორე"
+    out = out.replace(/(?<![A-Za-z0-9])(თავი|კარი|ნაწილი|წიგნი|ტომი|გვერდი)\s+([IVXLCDM]+)(?![A-Za-z0-9])/gi, (m, prefix, rom) => {
+        const u = rom.toUpperCase();
+        return romanToOrdinalKa[u] ? `${prefix} ${romanToOrdinalKa[u]}` : m;
+    });
+
+    // B. Centuries: "XXI საუკუნე" -> "ოცდამეერთე საუკუნე", "XX საუკუნეში" -> "მეოცე საუკუნეში"
+    out = out.replace(/(?<![A-Za-z0-9])([IVXLCDM]+)\s+(საუკუნე(?:ში|დან|მდე|ს)?)(?![A-Za-z0-9])/gi, (m, rom, suffix) => {
+        const u = rom.toUpperCase();
+        return romanToOrdinalKa[u] ? `${romanToOrdinalKa[u]} ${suffix}` : m;
+    });
+
+    // C. Monarchs & Popes: "ერეკლე II" -> "ერეკლე მეორე", "ლუი XIV" -> "ლუი მეთოთხმეტე"
+    out = out.replace(/([ა-ჰ]+)\s+([IVXLCDM]+)(?![A-Za-z0-9])/g, (m, name, rom) => {
+        const u = rom.toUpperCase();
+        return romanToOrdinalKa[u] ? `${name} ${romanToOrdinalKa[u]}` : m;
+    });
+
     // 5.5 Year ranges: 1939-1945 -> ათას ცხრაას ოცდაცხრამეტიდან ათას ცხრაას ორმოცდახუთ წლამდე
     out = out.replace(/(\b\d{4})\s*[-–—]\s*(\d{4}\b)/g, (match, y1, y2) => {
         const n1 = parseInt(y1, 10);
@@ -882,7 +951,7 @@ function verbalizeGeorgianTextForTTS(text) {
     });
 
     // 5.6 Standalone Years: 1909 წელს -> ათას ცხრაას ცხრა წელს, 1920 წელს -> ათას ცხრაას ოც წელს
-    out = out.replace(/(\b\d{4})\s+(წელს|წლიდან|წლამდე|წლის|წლები|წლებში)\b/g, (match, y, suffix) => {
+    out = out.replace(/(\b\d{4})\s+(წელს|წლიდან|წლამდე|წლის|წლები|წლებში)(?![\u10A0-\u10FF])/g, (match, y, suffix) => {
         const n = parseInt(y, 10);
         if (n >= 1000 && n <= 2100) {
             const w = georgianNumberToWords(n);
@@ -906,18 +975,20 @@ function verbalizeGeorgianTextForTTS(text) {
     out = transliterateLatinInGeorgian(out);
 
     // 7. Dialogue & Punctuation cadence
+    // Keep compound words like "ნელ-ნელა" fluid ("ნელ ნელა") without awkward mid-word comma pause
     out = out
         .replace(/[""„“«»]/g, '')
-        .replace(/\s*—\s*/g, ', ')
-        .replace(/\s*–\s*/g, ', ')
-        .replace(/\s*-\s*/g, ', ')
+        .replace(/(^|[\r\n\s])[—–-]\s+/g, '$1, ')
+        .replace(/\s+[—–-](\s|$)/g, ', $1')
+        .replace(/\s*[—–]\s*/g, ', ')
+        .replace(/([ა-ჰ]+)-([ა-ჰ]+)/g, '$1 $2')
         .replace(/;/g, '.')
         .replace(/:/g, ',')
         .replace(/\s+/g, ' ')
         .trim();
 
     // 8. Natural breath pause before Georgian conjunctions
-    out = out.replace(/([^,.;:!?])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|როდესაც|რომელიც|რომ|სანამ|ვიდრე)\b/g, '$1, $2');
+    out = out.replace(/([^,.;:!?])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|როდესაც|რომელიც|რომ|სანამ|ვიდრე)(?![\u10A0-\u10FF])/g, '$1, $2');
 
     // 9. Interrogative & Question Mark Acoustic Prosody
     out = out.replace(/\s*\?\s*/g, '? ');
@@ -935,10 +1006,10 @@ function detectSentenceType(text) {
     const t = String(text || '').trim();
     if (!t) return 'statement';
 
-    if (/[?]\s*$/.test(t) || /^(ვინ|რა|სად|როდის|როგორ|რატომ|რამდენი|რომელ|ხომ|განა|ნუთუ)\b/i.test(t)) return 'question';
+    if (/[?]\s*$/.test(t) || /^(ვინ|რა|სად|როდის|როგორ|რატომ|რამდენი|რომელ|ხომ|განა|ნუთუ)(?![\u10A0-\u10FF])/i.test(t)) return 'question';
     if (/[!]\s*$/.test(t)) return 'exclamation';
-    if (/^["“„«][^"”“»]{2,}["””»]/.test(t) || /^—\s?\S/.test(t) || /^–\s?\S/.test(t)) return 'dialogue';
-    if (/^(დიახ|არა|კი)\b[.,!]?$/i.test(t)) return 'short';
+    if (/^["“„«][^"”“»]{2,}["””»]/.test(t) || /^[—–-]\s*\S/.test(t)) return 'dialogue';
+    if (/^(დიახ|არა|კი|ჰო)(?![\u10A0-\u10FF])[.,!]?$/i.test(t)) return 'short';
     if (t.split(/\s+/).length <= 3) return 'short';
     return 'statement';
 }
@@ -951,19 +1022,25 @@ function applyGeorgianProsody(text, sentenceType) {
     let out = text;
     switch (sentenceType) {
         case 'question':
-            // Slight lead-in pause, then the rising terminal.
-            out = out.replace(/\?$/, '?');
+            // Ensure proper terminal question inflection with micro-breath
+            if (!/[?]$/.test(out.trim())) {
+                out = out.replace(/[.!]?$/, '?');
+            }
             break;
         case 'exclamation':
-            // Emphatic terminal — keep energy, no trailing silence.
-            out = out.replace(/!+$/, '!');
+            // Emphatic terminal — keep energy, crisp punctuation
+            if (!/[!]$/.test(out.trim())) {
+                out = out.replace(/[.?]?$/, '!');
+            }
             break;
         case 'dialogue':
-            // Breathing pause after the opening quote/dash mark.
-            out = out.replace(/^([“„«—–]\s*)/, '$1, ');
+            // Spoken dialogue: ensure leading breath pause for natural actor cadence
+            if (!/^[,\s]/.test(out)) {
+                out = ', ' + out;
+            }
             break;
         case 'short':
-            // Punchy delivery: no comma inserted, crisp ending.
+            // Punchy delivery: crisp ending
             break;
         default:
             break;
@@ -1025,7 +1102,20 @@ function refineGeorgianGrammar(text) {
         [kaWord('ყოველ\\s+დღეს', 'gi'), 'ყოველდღე'],
         [kaWord('დროის\\s+გასვლასთან\\s+ერთად', 'gi'), 'დროთა განმავლობაში'],
         [kaWord('მიიღო\\s+გადაწყვეტილება', 'gi'), 'გადაწყვიტა'],
-        [kaWord('მოახდინა\\s+გავლენა', 'gi'), 'გავლენა იქონია']
+        [kaWord('მოახდინა\\s+გავლენა', 'gi'), 'გავლენა იქონია'],
+        [kaWord('ადგილი\\s+დაიკავა', 'gi'), 'მოხდა'],
+        [kaWord('ადგილი\\s+ჰქონდა', 'gi'), 'მოხდა'],
+        [kaWord('ნაწილი\\s+მიიღო', 'gi'), 'მონაწილეობა მიიღო'],
+        [kaWord('ყურადღება\\s+გადაიხადა', 'gi'), 'ყურადღება მიაქცია'],
+        [kaWord('რაც\\s+შეიძლება\\s+სწრაფად', 'gi'), 'რაც შეიძლება მალე'],
+        [kaWord('დროიდან\\s+დრომდე', 'gi'), 'დროდადრო'],
+        [kaWord('ნაბიჯით\\s+ნაბიჯზე', 'gi'), 'ნაბიჯ-ნაბიჯ'],
+        [kaWord('დღიდან\\s+დღემდე', 'gi'), 'დღითიდღე'],
+        [kaWord('ხელი\\s+ხელში', 'gi'), 'ხელიხელჩაკიდებული'],
+        [kaWord('სრული\\s+აზრი\\s+აქვს', 'gi'), 'სავსებით ლოგიკურია'],
+        [kaWord('აზრს\\s+არ\\s+აკეთებს', 'gi'), 'აზრი არ აქვს'],
+        [kaWord('გააკეთა\\s+დარწმუნებული', 'gi'), 'დარწმუნდა'],
+        [kaWord('დარწმუნებული\\s+გახადა', 'gi'), 'დაარწმუნა']
     ];
     idiomFixes.forEach(([pattern, repl]) => {
         out = out.replace(pattern, repl);
@@ -7286,12 +7376,12 @@ window.appendScannedPagesToBook = appendScannedPagesToBook;
 // PDFs — so a book looks the same on the shelf however it arrived.
 // ══════════════════════════════════════════════════════════════════════════
 
-const FRONT_MATTER_RE = /^(contents|table of contents|copyright|dedication|acknowledg(e)?ments?|about the author|სარჩევი|შინაარსი|მიძღვნა)\b/i;
+const FRONT_MATTER_RE = /^(contents|table of contents|copyright|dedication|acknowledg(e)?ments?|about the author|სარჩევი|შინაარსი|მიძღვნა)(?![\u10A0-\u10FFa-zA-Z])/i;
 const HEADING_RE = [
     /^(chapter|part|book|section|volume)\s+([0-9]{1,3}|[ivxlcdm]{1,7})\b[\s.:—–-]*(.{0,70})$/i,
     /^(prologue|epilogue|introduction|preface|foreword|afterword|appendix|conclusion|interlude)\b[\s.:—–-]*(.{0,70})$/i,
-    /^(თავი|ნაწილი|წიგნი|კარი)\s+([0-9]{1,3}|[ა-ჰ]{1,4})\b[\s.:—–-]*(.{0,70})$/,
-    /^(შესავალი|წინასიტყვაობა|ბოლოსიტყვაობა|დასკვნა|დანართი|პროლოგი|ეპილოგი)\b[\s.:—–-]*(.{0,70})$/,
+    /^(თავი|ნაწილი|წიგნი|კარი)\s+([0-9]{1,3}|[ა-ჰ]{1,4})(?![\u10A0-\u10FFa-zA-Z])[\s.:—–-]*(.{0,70})$/,
+    /^(შესავალი|წინასიტყვაობა|ბოლოსიტყვაობა|დასკვნა|დანართი|პროლოგი|ეპილოგი)(?![\u10A0-\u10FFa-zA-Z])[\s.:—–-]*(.{0,70})$/,
 ];
 
 /** A short standalone line that starts a new chapter, or null. */
@@ -7504,7 +7594,7 @@ function splitIntoNaturalSentences(text) {
     if (!text || !text.trim()) return [];
 
     // 1. Clean PDF broken hyphenations: "con- \n tinue" -> "continue"
-    let clean = text.replace(/(\b[a-zA-Zა-ჰ]+)-\s*[\r\n]+\s*([a-zA-Zა-ჰ]+\b)/g, '$1$2');
+    let clean = text.replace(/(?<![\u10A0-\u10FFa-zA-Z])([a-zA-Zა-ჰ]+)-\s*[\r\n]+\s*([a-zA-Zა-ჰ]+)(?![\u10A0-\u10FFa-zA-Z])/g, '$1$2');
     clean = clean.replace(/[ \t\f]+/g, ' ');
 
     // 2. Protect standard title abbreviations
@@ -7515,7 +7605,7 @@ function splitIntoNaturalSentences(text) {
     clean = clean.replace(/\b(e\.g\.|i\.e\.|etc\.|vs\.)/gi, (m) => m.replace(/\./g, '__DOT__'));
 
     // 4. Protect Georgian abbreviations
-    clean = clean.replace(/\b(ე\.ი\.|ე\.წ\.|და\s*ა\.შ\.|და\s*სხვ\.)/g, (m) => m.replace(/\./g, '__DOT__'));
+    clean = clean.replace(/(?<![\u10A0-\u10FF])(ე\.ი\.|ე\.წ\.|და\s*ა\.შ\.|და\s*სხვ\.)/g, (m) => m.replace(/\./g, '__DOT__'));
 
     // 5. Protect decimals and currency
     clean = clean.replace(/(\d+)\.(\d+)/g, '$1__DOT__$2');
