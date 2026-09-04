@@ -440,8 +440,21 @@ GEORGIAN VERB SYSTEM — CORE RULES (obey exactly):
 const KA_SYNTAX = `
 GEORGIAN SYNTAX & STYLE (for natural literary Georgian):
 • DO NOT CALQUE ENGLISH SENTENCE STRUCTURE: English builds sentences with rigid SVO, passive nominalizations, and dangling prepositional chains. Georgian builds sentences with Topic-Comment and flexible SOV order, placing the verb naturally. Never translate word-for-word or clause-by-clause.
+• DATIVE EXPERIENCER INVERSION: Sensation, emotion, state, and need verbs MUST use Dative subject + Inverted verb (NEVER nominative copulas):
+  - "where he is hungry and cold" → სადაც მას შია და სცივა (NEVER *ის არის მშიერი და ცივი)
+  - "he needs cheering up" → მას გამხნევება სჭირდება (NEVER *ის საჭიროებს გამხნევებას)
+  - "I am thirsty / afraid" → მწყურია / მეშინია (NEVER *მე ვარ მწყურვალი / შეშინებული)
+  - Experiencer verbs: შია (hungry), სცივა (cold), სწყურია (thirsty), ეშინია (afraid), სჭირდება (needs), უნდა (wants), ახსოვს (remembers), ესმის (understands), უყვარს (loves), მოსწონს (likes), აქვს/ჰყავს (has).
+• ERGATIVE CASE IN PAST AORIST: In transitive past actions (წყვეტილი), the subject MUST take Ergative case (-მა / მან):
+  - "The grown-ups advised me" → დიდებმა მირჩიეს (NEVER *დიდები მირჩიეს)
+  - "My friend smiled" → ჩემმა მეგობარმა გამიღიმა (NEVER *ჩემი მეგობარი გამიღიმა)
+  - "He drew / He said / He noticed" → მან დახატა / მან თქვა / მან შეამჩნია (NEVER *ის დახატა / ის თქვა)
+• REPORTED SPEECH & EVIDENTIAL CLITICS:
+  - First-person quoted thoughts/speech: attach -მეთქი (e.g. ვკითხე, თუ შეგეშინდათ-მეთქი; ვუთხარი, არ ვიცი-მეთქი).
+  - Third-person reported speech/hearsay: attach -ო (e.g. ამბობდნენ, რომ საჭმელი მოინელონო; მეუბნებოდნენ — „ქუდიაო“; რა მშვენიერი სახლი ყოფილაო!).
 • NO DUMMY LEADING "რომ": Never start an independent sentence or paragraph with a dummy leading "რომ" (e.g. *„რომ ჯერ...“ is a dead giveaway of machine calque). Direct declarative thoughts must start with the main clause or topic.
-• MANDATORY SUBORDINATE CLAUSE COMMAS: In Georgian grammar, every subordinate clause introduced by რომ, რომელიც, როდესაც, რადგან, რადგანაც, თუმცა, სანამ, ვიდრე, ხოლო MUST have a comma preceding it! Independent clauses must not run into each other without commas, semicolons, or periods.
+• MANDATORY SUBORDINATE CLAUSE COMMAS: In Georgian grammar, every subordinate clause introduced by რომ, რომელიც, როდესაც, რადგან, რადგანაც, თუმცა, სანამ, ვიდრე, ხოლო, რაკი MUST have a comma preceding it! Independent clauses must not run into each other without commas, semicolons, or periods.
+• PARTICIPIAL ECONOMY: Prefer concise Georgian participles (გადაყლაპული სპილო, დაზიანებული ძრავა, გამოკვეთილი აზრი) instead of stacked clunky relative clauses (*სპილო, რომელიც გადაყლაპული იყო).
 • TERMINAL PUNCTUATION: Every sentence MUST end with clear terminal punctuation (. ! ? …). Never fuse separate sentences together into a run-on without punctuation.
 • IDIOMATIC NATIVE EQUIVALENTS:
   - "first, last, and always" → უპირველეს ყოვლისა და მუდამ (NOT *ჯერ, ბოლოს და ყოველთვის)

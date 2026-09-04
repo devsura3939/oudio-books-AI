@@ -1511,6 +1511,9 @@ ${text.slice(0, 10000)}`;
          .replace(/\uFB03/g, "ffi")
          .replace(/\uFB04/g, "ffl");
 
+    // Rejoin soft-hyphenated line breaks from printed books
+    t = t.replace(/([\u10A0-\u10FFa-zA-Z]+)-\s*[\r\n]+\s*([\u10A0-\u10FFa-zA-Z]+)/g, "$1$2");
+
     const isKa = lang === "kat" || (lang === "auto" && detectLang(t) === "kat");
     if (isKa) {
       // Collapse repeated Georgian vowels/consonants that never appear in real print
@@ -1524,6 +1527,25 @@ ${text.slice(0, 10000)}`;
         t = t.replace(new RegExp(`(?:^|\\s)${spaced}(?=\\s|$)`, "g"), " " + w + " ");
       }
 
+      // Disambiguate common OCR-garbled core words
+      const ocrFixes = [
+        [/(?<![\u10A0-\u10FF])კატარა(?![ა-ჰ])/g, 'პატარა'],
+        [/(?<![\u10A0-\u10FF])ვატარა(?![ა-ჰ])/g, 'პატარა'],
+        [/(?<![\u10A0-\u10FF])უფლისწუღი(?![ა-ჰ])/g, 'უფლისწული'],
+        [/(?<![\u10A0-\u10FF])თვითმფრინავო(?![ა-ჰ])/g, 'თვითმფრინავი'],
+        [/(?<![\u10A0-\u10FF])მახრჩობეღა(?![ა-ჰ])/g, 'მახრჩობელა'],
+        [/(?<![\u10A0-\u10FF])მეგობარო(?=\s+ჩემი|\s+თქვა)/g, 'მეგობარი']
+      ];
+      for (const [re, repl] of ocrFixes) {
+        t = t.replace(re, repl);
+      }
+
+      // Dialogue dashes for lines starting with hyphen: "- გამარჯობა" -> "— გამარჯობა"
+      t = t.replace(/(^|[\r\n]+)\s*[-–]\s+([\u10A0-\u10FF])/g, "$1— $2");
+      // Format authentic Georgian quotation marks: „...“
+      t = t.replace(/(^|[\s(\[])["“]([^\s"”])/g, "$1„$2");
+      t = t.replace(/([^\s"„])["”]([\s)\].,!?;:]|$)/g, "$1“$2");
+
       // Comprehensive Latin/Cyrillic look-alikes leaking into Georgian words.
       const map = {
         // Latin lower
@@ -1536,7 +1558,7 @@ ${text.slice(0, 10000)}`;
         "|": "ი", "/": "ი",
         // Cyrillic look-alikes from Soviet-era fonts / Russian OCR leakage
         "а": "ა", "б": "ბ", "в": "ვ", "г": "გ", "д": "დ", "е": "ე",
-        "з": "ზ", "и": "ი", "к": "კ", "л": "ლ", "м": "მ", "н": "ნ",
+        "з": "ზ", "ი": "ი", "к": "კ", "л": "ლ", "м": "მ", "ნ": "ნ",
         "о": "ო", "п": "პ", "р": "რ", "с": "ს", "т": "თ", "у": "უ",
         "ф": "ფ", "х": "ხ", "ц": "ც", "ч": "ჩ", "ш": "შ"
       };

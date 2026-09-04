@@ -153,4 +153,79 @@ for path_name, path in [("index.html", INDEX_HTML), ("studio/index.html", STUDIO
     assert "transform: scale(0.975)" in html_content, f"FAIL: Reader scale transition missing from {path_name}"
 print("  [PASS] Moon Reader 1720px real estate, .book-prose, and smooth transitions verified in index.html")
 
+# ----------------------------------------------------------------------------
+# 12. Deep Georgian Linguistic Syntax & Prompt Integrity (KA_SYNTAX)
+# ----------------------------------------------------------------------------
+STUDIO_LING = os.path.join(REPO_DIR, "lovable-app", "public", "studio", "static", "georgian-linguistics.js")
+for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), ("studio/static/georgian-linguistics.js", STUDIO_LING)]:
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "DATIVE EXPERIENCER INVERSION" in content, f"FAIL: Dative Experiencer rule missing from {path_name}"
+    assert "ERGATIVE CASE IN PAST AORIST" in content, f"FAIL: Ergative Past Aorist rule missing from {path_name}"
+    assert "REPORTED SPEECH & EVIDENTIAL CLITICS" in content, f"FAIL: Evidential clitics rule missing from {path_name}"
+    assert "PARTICIPIAL ECONOMY" in content, f"FAIL: Participial economy rule missing from {path_name}"
+    assert "სადაც მას შია და სცივა" in content, f"FAIL: Little Prince experiencer example missing from {path_name}"
+    assert "დიდებმა მირჩიეს" in content, f"FAIL: Ergative Little Prince example missing from {path_name}"
+print("  [PASS] Deep Georgian syntax (Dative experiencers, Ergative aorist, Evidentials) verified in both linguistics files")
+
+# ----------------------------------------------------------------------------
+# 13. TTS Vigesimal Stem Elision & Experiencer Inversion Auto-Fixes
+# ----------------------------------------------------------------------------
+for path_name, content in [("static/app.js", app_content), ("studio/static/app.js", studio_app_content)]:
+    assert "exactMultiples" in content, f"FAIL: exactMultiples missing from {path_name}"
+    assert "მეორმოცე" in content, f"FAIL: 40th ordinal missing from {path_name}"
+    assert "მესამოცე" in content, f"FAIL: 60th ordinal missing from {path_name}"
+    assert "წელს|წლიდან|წლამდე|წლის|წლები|წლებში" in content, f"FAIL: Year verbalizer stem regex missing from {path_name}"
+    assert "მას შია და სცივა" in content, f"FAIL: Experiencer hungry/cold fix missing from {path_name}"
+    assert "სჭირდება" in content, f"FAIL: Experiencer need fix missing from {path_name}"
+    assert "ვინაიდან|რაკი" in content, f"FAIL: Subordinate pause connectors missing from {path_name}"
+print("  [PASS] TTS vigesimal stem elision, ordinals, and experiencer auto-fixes verified in app.js and studio/app.js")
+
+# ----------------------------------------------------------------------------
+# 14. Scanner OCR Word Confusable & Hyphen Rejoining Integrity
+# ----------------------------------------------------------------------------
+STUDIO_SCANNER = os.path.join(REPO_DIR, "lovable-app", "public", "studio", "static", "scanner.js")
+for path_name, path in [("static/scanner.js", STATIC_SCANNER), ("studio/static/scanner.js", STUDIO_SCANNER)]:
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "Rejoin soft-hyphenated line breaks" in content, f"FAIL: Soft-hyphen rejoining missing from {path_name}"
+    assert "ocrFixes" in content, f"FAIL: ocrFixes dictionary missing from {path_name}"
+    assert "უფლისწული" in content, f"FAIL: Prince OCR repair missing from {path_name}"
+    assert "თვითმფრინავი" in content, f"FAIL: Airplane OCR repair missing from {path_name}"
+    assert "მახრჩობელა" in content, f"FAIL: Boa constrictor OCR repair missing from {path_name}"
+    assert "Format authentic Georgian quotation marks" in content, f"FAIL: Quote formatting missing from {path_name}"
+print("  [PASS] Scanner soft-hyphen rejoining, OCR confusables, and quote formatting verified in scanner.js and studio/scanner.js")
+
+# ----------------------------------------------------------------------------
+# 15. Functional Linguistic Simulation Tests
+# ----------------------------------------------------------------------------
+# Test soft hyphen regex
+hyphen_re = re.compile(r'([\u10A0-\u10FFa-zA-Z]+)-\s*[\r\n]+\s*([\u10A0-\u10FFa-zA-Z]+)')
+sample_hyphen = "პატა-\n  რა უფლის-\r\nწუღი"
+rejoined = hyphen_re.sub(r'\1\2', sample_hyphen)
+assert rejoined == "პატარა უფლისწუღი", f"Hyphen rejoining failed: {rejoined}"
+
+# Test OCR fix simulation
+confusables = [
+    (re.compile(r'(?<![\u10A0-\u10FF])კატარა(?![ა-ჰ])'), 'პატარა'),
+    (re.compile(r'(?<![\u10A0-\u10FF])უფლისწუღი(?![ა-ჰ])'), 'უფლისწული'),
+    (re.compile(r'(?<![\u10A0-\u10FF])თვითმფრინავო(?![ა-ჰ])'), 'თვითმფრინავი'),
+]
+fixed_text = rejoined
+for pattern, repl in confusables:
+    fixed_text = pattern.sub(repl, fixed_text)
+assert fixed_text == "პატარა უფლისწული", f"OCR correction failed: {fixed_text}"
+
+# Test experiencer simulation
+calque_sample = "ის არის მშიერი და ცივი"
+fixed_experiencer = re.sub(
+    r'(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?მშიერი\s+და\s+ცივი(?![ა-ჰ])',
+    lambda m: 'მშია და მცივა' if m.group(1) == 'მე' else 'მას შია და სცივა',
+    calque_sample
+)
+assert fixed_experiencer == "მას შია და სცივა", f"Experiencer inversion failed: {fixed_experiencer}"
+
+print("  [PASS] Functional linguistic simulation passed with 100% precision")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
+

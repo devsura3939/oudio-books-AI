@@ -727,9 +727,13 @@ function georgianOrdinalToWords(n) {
         16: 'მეთექვსმეტე', 17: 'მეჩვიდმეტე', 18: 'მეთვრამეტე', 19: 'მეცხრამეტე'
     };
     if (teensStem[n]) return teensStem[n];
-    if (n === 20) return 'მეოცე';
-    if (n === 100) return 'მეასე';
-    if (n === 1000) return 'მეათასე';
+    const exactMultiples = {
+        20: 'მეოცე', 40: 'მეორმოცე', 60: 'მესამოცე', 80: 'მეოთხმოცე',
+        100: 'მეასე', 200: 'მეორასე', 300: 'მესამასე', 400: 'მეოთხასე',
+        500: 'მეხუთასე', 600: 'მეექვსასე', 700: 'მეშვიდასე', 800: 'მერვაასე', 900: 'მეცხრაასე',
+        1000: 'მეათასე'
+    };
+    if (exactMultiples[n]) return exactMultiples[n];
 
     const last20 = n % 20;
     const base = Math.floor(n / 20) * 20;
@@ -877,6 +881,22 @@ function verbalizeGeorgianTextForTTS(text) {
         return match;
     });
 
+    // 5.6 Standalone Years: 1909 წელს -> ათას ცხრაას ცხრა წელს, 1920 წელს -> ათას ცხრაას ოც წელს
+    out = out.replace(/(\b\d{4})\s+(წელს|წლიდან|წლამდე|წლის|წლები|წლებში)\b/g, (match, y, suffix) => {
+        const n = parseInt(y, 10);
+        if (n >= 1000 && n <= 2100) {
+            const w = georgianNumberToWords(n);
+            const stem = w.endsWith('ი') ? w.slice(0, -1) : w;
+            if (suffix === 'წელს') return `${stem} წელს`;
+            if (suffix === 'წლიდან') return `${stem} წლიდან`;
+            if (suffix === 'წლამდე') return `${stem} წლამდე`;
+            if (suffix === 'წლის') return `${stem} წლის`;
+            if (suffix === 'წლებში') return `${stem} წლებში`;
+            if (suffix === 'წლები') return `${w} წლები`;
+        }
+        return match;
+    });
+
     // 6. Standalone numbers: 1984 -> ათას ცხრაას ოთხმოცდაოთხი
     out = out.replace(/\b(\d{1,9})\b/g, (match, num) => {
         return georgianNumberToWords(parseInt(num, 10));
@@ -897,7 +917,7 @@ function verbalizeGeorgianTextForTTS(text) {
         .trim();
 
     // 8. Natural breath pause before Georgian conjunctions
-    out = out.replace(/([^,.;:!?])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|როდესაც|რომელიც)\b/g, '$1, $2');
+    out = out.replace(/([^,.;:!?])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|როდესაც|რომელიც|რომ|სანამ|ვიდრე)\b/g, '$1, $2');
 
     // 9. Interrogative & Question Mark Acoustic Prosody
     out = out.replace(/\s*\?\s*/g, '? ');
@@ -1002,7 +1022,10 @@ function refineGeorgianGrammar(text) {
         [kaWord('ჯერ,?\\s*ბოლოს\\s*და\\s*ყოველთვის', 'gi'), 'უპირველეს ყოვლისა და მუდამ'],
         [kaWord('ხვალში\\s+ყვავის', 'gi'), 'მომავალში ისხამს ნაყოფს'],
         [kaWord('მაგნიტური\\s+ჯოხივით', 'gi'), 'მაგნიტივით'],
-        [kaWord('ყოველ\\s+დღეს', 'gi'), 'ყოველდღე']
+        [kaWord('ყოველ\\s+დღეს', 'gi'), 'ყოველდღე'],
+        [kaWord('დროის\\s+გასვლასთან\\s+ერთად', 'gi'), 'დროთა განმავლობაში'],
+        [kaWord('მიიღო\\s+გადაწყვეტილება', 'gi'), 'გადაწყვიტა'],
+        [kaWord('მოახდინა\\s+გავლენა', 'gi'), 'გავლენა იქონია']
     ];
     idiomFixes.forEach(([pattern, repl]) => {
         out = out.replace(pattern, repl);
@@ -1033,22 +1056,37 @@ function refineGeorgianGrammar(text) {
         out = out.replace(kaWord(`ის\\s+([ა-ჰ]+ად|[ა-ჰ]+ადვე|[ა-ჰ]+თ)\\s+(${verb})`, 'g'), 'მან $1 $2');
     });
 
-    // 4. Strip dummy leading "რომ" at sentence or paragraph starts (calque of English "That...")
+    // 4. Fix Machine Translation Dative Experiencer Inversion Errors
+    // (translating "I/he is hungry/cold/afraid" as nominative copula instead of dative experiencer)
+    out = out.replace(/(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?მშიერი\s+და\s+ცივი(?![ა-ჰ])/g, (m, subj) => subj === 'მე' ? 'მშია და მცივა' : 'მას შია და სცივა');
+    out = out.replace(/(?<![ა-ჰ])მშიერი\s+და\s+ცივი(?![ა-ჰ])/g, 'მშია და სცივა');
+    out = out.replace(/(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?მშიერი(?![ა-ჰ])/g, (m, subj) => subj === 'მე' ? 'მშია' : 'მას შია');
+    out = out.replace(/(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?ცივი(?![ა-ჰ])/g, (m, subj) => subj === 'მე' ? 'მცივა' : 'მას სცივა');
+    out = out.replace(/(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?მწყურვალი(?![ა-ჰ])/g, (m, subj) => subj === 'მე' ? 'მწყურია' : 'მას სწყურია');
+    out = out.replace(/(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?შეშინებული(?![ა-ჰ])/g, (m, subj) => subj === 'მე' ? 'მეშინია' : 'მას ეშინია');
+    out = out.replace(/(?<![ა-ჰ])(ის\s+საჭიროებს|მას\s+აქვს\s+საჭიროება)\s+([ა-ჰ]+ს)(?![ა-ჰ])/g, 'მას $2 სჭირდება');
+    out = out.replace(/(?<![ა-ჰ])მე\s+მჭირდება\s+([ა-ჰ]+ს)(?![ა-ჰ])/g, 'მჭირდება $1');
+
+    // 5. Strip dummy leading "რომ" at sentence or paragraph starts (calque of English "That...")
     out = out.replace(/(^|[\n\r]+|[.!?…]\s+)([„"“]?)\s*რომ\s+([ა-ჰ])/g, '$1$2$3');
 
-    // 5. Ensure comma precedes Georgian subordinate conjunctions (რომ, რომელიც, როდესაც, რადგან, თუმცა, ხოლო, სანამ, ვიდრე)
-    out = out.replace(/([ა-ჰ0-9])\s+(რომ|რომელიც|როდესაც|რადგან|რადგანაც|თუმცა|ხოლო|სანამ|ვიდრე)(?![ა-ჰ])/g, '$1, $2');
+    // 6. Ensure comma precedes Georgian subordinate conjunctions (რომ, რომელიც, როდესაც, რადგან, რადგანაც, ვინაიდან, რაკი, თუმცა, ხოლო, სანამ, ვიდრე)
+    out = out.replace(/([ა-ჰ0-9])\s+(რომ|რომელიც|როდესაც|რადგან|რადგანაც|ვინაიდან|რაკი|თუმცა|ხოლო|სანამ|ვიდრე)(?![ა-ჰ])/g, '$1, $2');
 
-    // 6. Format Authentic Georgian Literary Quotations: „...“
+    // 7. Dialogue dashes for spoken lines: "- გამარჯობა" -> "— გამარჯობა"
+    out = out.replace(/(^|[\r\n]+)\s*[-–]\s+([ა-ჰ])/g, '$1— $2');
+
+    // 8. Format Authentic Georgian Literary Quotations: „...“
     out = out.replace(/(^|[\s(\[])["“]([^\s"”])/g, '$1„$2');
     out = out.replace(/([^\s"„])["”]([\s)\].,!?;:]|$)/g, '$1“$2');
 
-    // 7. Fix Machine Translation Spacing Artifacts Around Punctuation
+    // 9. Fix Machine Translation Spacing Artifacts Around Punctuation
     out = out.replace(/\s+([,.:;!?])/g, '$1');
     out = out.replace(/([,.:;!?])(?=[ა-ჰA-Za-z0-9])/g, '$1 ');
 
     return out.trim();
 }
+
 
 const GEORGIAN_TO_PHONETIC = {
     'ა': 'a', 'ბ': 'b', 'გ': 'g', 'დ': 'd', 'ე': 'e',
