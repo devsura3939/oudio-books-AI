@@ -79,20 +79,86 @@ let currentElevenAudio = null;
 let isTranslatingWholeBook = false;
 let cancelTranslationFlag = false;
 
+// ── Global Toast Feedback System ──────────────────────────────────────────
+function showToast(message, type = 'info', duration = 3500) {
+    if (!message) return;
+    try {
+        let container = document.getElementById('globalToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'globalToastContainer';
+            container.className = 'fixed bottom-20 md:bottom-6 right-4 left-4 md:left-auto md:max-w-md z-[9999] pointer-events-none flex flex-col gap-2.5 items-center md:items-end transition-all duration-300';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-xl text-xs font-semibold transform transition-all duration-300 translate-y-4 opacity-0';
+
+        let icon = 'info';
+        let bgClass = 'bg-[#101926]/95 text-cyan-100 border-cyan-500/40 shadow-[0_4px_25px_rgba(6,182,212,0.25)]';
+        let iconColor = 'text-cyan-400';
+
+        if (type === 'success') {
+            icon = 'check_circle';
+            bgClass = 'bg-[#0f1d18]/95 text-emerald-100 border-emerald-500/40 shadow-[0_4px_25px_rgba(16,185,129,0.25)]';
+            iconColor = 'text-emerald-400';
+        } else if (type === 'error') {
+            icon = 'error';
+            bgClass = 'bg-[#221115]/95 text-rose-100 border-rose-500/40 shadow-[0_4px_25px_rgba(244,63,94,0.25)]';
+            iconColor = 'text-rose-400';
+        } else if (type === 'warning') {
+            icon = 'warning';
+            bgClass = 'bg-[#241a0d]/95 text-amber-100 border-amber-500/40 shadow-[0_4px_25px_rgba(245,158,11,0.25)]';
+            iconColor = 'text-amber-400';
+        }
+
+        toast.className += ' ' + bgClass;
+        const iconSpan = document.createElement('span');
+        iconSpan.className = `material-symbols-outlined text-lg ${iconColor} flex-shrink-0`;
+        iconSpan.textContent = icon;
+        
+        const textSpan = document.createElement('span');
+        textSpan.className = 'leading-snug';
+        textSpan.textContent = String(message);
+
+        toast.appendChild(iconSpan);
+        toast.appendChild(textSpan);
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-4', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        });
+
+        setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 300);
+        }, duration);
+    } catch (e) {
+        console.log('[Toast]', type, message);
+    }
+}
+window.showToast = showToast;
+
 // Gemini AI State
 let geminiApiKey = localStorage.getItem('geminiApiKey') || '';
-let geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.5-pro';
+let storedGeminiModel = localStorage.getItem('geminiModel') || 'gemini-2.5-pro';
+if (storedGeminiModel.includes('2.0')) {
+    storedGeminiModel = 'gemini-2.5-pro';
+    try { localStorage.setItem('geminiModel', storedGeminiModel); } catch(e) {}
+}
+let geminiModel = storedGeminiModel;
 // Translation depth: 1 = draft only, 2 = draft + AI review, 3 = full pipeline
 // (draft → structured critique → refinement → final QA). Default: full.
 let geminiPasses = parseInt(localStorage.getItem('geminiPasses') || '3', 10);
 if (![1, 2, 3].includes(geminiPasses)) geminiPasses = 3;
 
-// Gemini fallback chain: when the preferred model is rate-limited (429) or
-// unavailable, cheaper/speedier models in the same key's free tier take over
-// instead of the whole AI tier failing to machine translation. Flash models
-// carry much larger free-tier quotas than Pro — this alone rescues most
-// whole-book runs that currently die at "Gemini 0%".
-const GEMINI_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+// Gemini fallback chain: when preferred frontier model is rate-limited (429),
+// automatically fall back across frontier variants (Pro -> Flash -> Flash Lite):
+const GEMINI_FALLBACK_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-8b', 'gemini-2.5-flash-lite'];
 const geminiModelCooldown = {}; // model -> earliest ms it may be retried
 const GEMINI_MODEL_COOLDOWN_MS = 60_000;
 
@@ -7470,6 +7536,19 @@ async function engbotScanRetranscribe(bookId) {
     if (titleEl) {
         titleEl.textContent = `“${book.title}” • ${book.chapters ? book.chapters.length : 0} sections`;
     }
+
+    const key = (localStorage.getItem('geminiApiKey') || geminiApiKey || '').trim();
+    let model = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.5-pro';
+    if (model.includes('2.0')) model = 'gemini-2.5-pro';
+    const aiTitleEl = document.getElementById('retranscribeAiStatusTitle');
+    const aiSubEl = document.getElementById('retranscribeAiStatusSub');
+    if (aiTitleEl) {
+        aiTitleEl.textContent = `Frontier AI: ${model}`;
+    }
+    if (aiSubEl) {
+        aiSubEl.textContent = key ? '✓ Custom Gemini API Key Active (High Precision)' : '⚡ Standard / Server AI Engine (Add Key for Pro Limits)';
+    }
+
     const prog = document.getElementById('retranscribeProgressArea');
     if (prog) prog.classList.add('hidden');
 
@@ -7553,11 +7632,18 @@ async function executeRetranscribeRepair() {
             await selectBook(book.id, false);
         }
 
-        showToast(`Successfully repaired and reconstructed “${book.title}”!`);
+        if (typeof showToast === 'function') {
+            showToast(`Successfully repaired and reconstructed “${book.title}”!`, 'success');
+        }
+        if (prog) prog.classList.add('hidden');
         closeModal('retranscribeModal');
     } catch (err) {
         console.error('Retranscribe repair failed:', err);
-        alert('Repair encountered an error: ' + (err.message || 'unknown error'));
+        if (typeof showToast === 'function') {
+            showToast('Repair failed: ' + (err.message || 'unknown error'), 'error');
+        } else {
+            alert('Repair encountered an error: ' + (err.message || 'unknown error'));
+        }
     } finally {
         if (btnRepair) btnRepair.classList.remove('pointer-events-none', 'opacity-50');
         if (btnRescan) btnRescan.classList.remove('pointer-events-none', 'opacity-50');
@@ -7572,38 +7658,110 @@ async function repairTextLinguisticAI(text, lang) {
     let cleaned = cleanOcrGarbage(text, lang);
 
     // Step 2: Try AI reconstruction if Gemini, OpenRouter, or /api/ai is available
-    const geminiKey = (localStorage.getItem('geminiApiKey') || '').trim();
+    const geminiKey = (localStorage.getItem('geminiApiKey') || geminiApiKey || '').trim();
     const isKa = lang === 'ka' || lang === 'kat' || (text.match(/[\u10A0-\u10FF]/g) || []).length > 20;
-    const prompt = `You are an expert publication-grade document OCR reconstruction and literary restoration engine.
-The text below was photographed and OCR-scanned from a printed book, but suffered from OCR character fragmentation, curvature, and noise.
-Restore and reconstruct the original text into 100% clean, proper, flowing literary prose:
-1. Contextual Deduction: Deduce faint or distorted words using sentence context, grammar, and literary vocabulary so that every sentence is coherent and complete.
-2. Character Discrimination: ${isKa ? 'Strictly use Georgian Mkhedruli script (ა-ჰ). Fix letter confusion (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ, ჩ/ხ, ლ/დ/ო) and restore proper Georgian case endings (-მა, -ს, -ით, -ად).' : 'Fix character confusion (rn/m, cl/d, 1/l, 0/O) and restore broken contractions.'}
-3. Cleanliness: Purge all non-book artifacts, math marks, stray underscores, and gibberish runs (=, +, _, |, #, IIII).
-4. Word Merging: Merge words split across lines or spaces (e.g. "დ ა" -> "და", "მ ე" -> "მე", "თ ქ ვ ა" -> "თქვა").
-5. Integrity: Keep exact meaning and literary narrative flow. Never summarize or omit sentences. Return ONLY the clean restored text without markdown fences or commentary.
+
+    const prompt = `You are a world-class literary restoration and document reconstruction AI engine, operating at frontier intelligence.
+The text below was photographed and OCR-scanned from a printed book, but suffers from optical distortion, page curvature, lens blur, gutter shadows, and OCR misrecognitions.
+
+RECONSTRUCTION OBJECTIVES:
+1. DETECT & RESTORE GLITCHES & NOISE:
+   - Identify scanner artifacts, page curvature warping, speckles, stray lines, or hyphenated line breaks.
+   - Purge non-text noise (=, +, _, |, #, IIII, %%%, ~~~, stray forward slashes) and repeated garbage characters.
+   - Reconstruct split syllables and merged lines into smooth, flowing literary prose.
+
+2. DETECT & RESTORE MISSING SYMBOLS & PUNCTUATION:
+   - Actively analyze the dialogue and narrative structure to detect and insert MISSING punctuation:
+     * Quotation marks: ${isKa ? 'Strictly use authentic Georgian quotes: „ at the start and “ at the end (e.g. „გამარჯობა“, თქვა მან), or «...».' : 'Use authentic double quotes ("...") for speech.'}
+     * Dialogue dashes: Use proper em-dashes (—) for dialogue turns and dramatic parentheticals.
+     * Clause punctuation: Insert missing commas (,), colons (:), semicolons (;), periods (.), question marks (?), and exclamation marks (!). Never leave trailing run-ons or unclosed dialogue.
+
+3. DETECT & DEDUCE MISSING OR CLIPPED WORDS:
+   - Identify words or syllables that were clipped at page edges, gutter margins, or smudged by faint print.
+   - Using surrounding sentence context, story flow, grammar, and literary vocabulary, deduce and restore the complete words with 100% natural continuity.
+
+4. ACCURATE CHARACTER DISCRIMINATION:
+   ${isKa ? `- Strictly use Georgian Mkhedruli script (ა-ჰ).
+   - Eliminate common OCR optical confusions:
+     * ვ (v) vs პ (p) vs კ (k)
+     * შ (sh) vs წ (ts) vs ჭ (ch')
+     * რ (r) vs უ (u) vs ყ (q')
+     * ქ (k') vs ფ (p')
+     * თ (t) vs ძ (dz) vs ხ (kh)
+     * ჩ (ch) vs ხ (kh)
+     * ლ (l) vs დ (d) vs ო (o)
+     * ზ (z) vs გ (g)
+   - Ensure perfect Georgian grammatical harmony (case endings: -მა, -ს, -ით, -ად; postpositions: -ში, -ზე, -თან, -დან; verb subject-object agreements).
+   - Preserve historical/archaic Georgian letters (ჱ, ჲ, ჳ, ჴ, ჵ) if occurring in classical or biblical passages.` : `- Eliminate character confusions (rn vs m, cl vs d, vv vs w, 1 vs l vs I, 0 vs O). Fix broken apostrophes and contractions (don't, wouldn't, it's).`}
+
+5. INTEGRITY & FORMATTING DIRECTIVES:
+   - Deliver the FULL verbatim restored chapter/passage.
+   - NEVER summarize, NEVER truncate, NEVER omit sentences, NEVER invent unrelated content.
+   - Output ONLY the clean restored literary text. Do NOT wrap in markdown code fences (no \`\`\`), do NOT include conversational remarks ("Here is...", "Sure!").
 
 Text to restore:
-${cleaned.slice(0, 7500)}`;
+${cleaned.slice(0, 12000)}`;
+
+    let prefModel = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.5-pro';
+    if (prefModel.includes('2.0')) prefModel = 'gemini-2.5-pro';
+    const modelsToTry = [prefModel, 'gemini-2.5-pro', 'gemini-2.5-flash'].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
     if (geminiKey) {
+        for (const model of modelsToTry) {
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            temperature: 0.1,
+                            maxOutputTokens: 8192
+                        }
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    let out = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+                    out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
+                    if (out.length > 20) return out;
+                } else if (res.status === 429) {
+                    console.warn(`[repair] Gemini ${model} rate-limited, trying fallback model...`);
+                    continue;
+                }
+            } catch (e) {
+                console.warn(`[repair] direct gemini call failed for ${model}:`, e);
+            }
+        }
+    }
+
+    const orKey = (localStorage.getItem('openRouterApiKey') || openRouterApiKey || '').trim();
+    if (orKey) {
         try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+            const orModel = localStorage.getItem('openRouterModel') || openRouterModel || 'google/gemini-2.5-flash';
+            const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Authorization': `Bearer ${orKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': location.origin,
+                    'X-Title': 'Lumina Audio'
+                },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+                    model: orModel,
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.1,
+                    max_tokens: 8192
                 })
             });
             if (res.ok) {
                 const data = await res.json();
-                let out = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
-                out = out.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '').trim();
+                let out = (data.choices?.[0]?.message?.content || '').trim();
+                out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
                 if (out.length > 20) return out;
             }
         } catch (e) {
-            console.warn('[repair] direct gemini call failed:', e);
+            console.warn('[repair] openrouter call failed:', e);
         }
     }
 
@@ -7616,7 +7774,7 @@ ${cleaned.slice(0, 7500)}`;
         if (res.ok) {
             const data = await res.json();
             let out = (data.text || data.choices?.[0]?.message?.content || '').trim();
-            out = out.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '').trim();
+            out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
             if (out.length > 20) return out;
         }
     } catch (e) {

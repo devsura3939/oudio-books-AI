@@ -946,26 +946,35 @@
   // ── Tier 0: gateway vision OCR ─────────────────────────────────────────────
   function getVisionPrompt(lang, hint) {
     const isKa = lang === "kat" || lang === "ka";
-    const base = `You are a high-accuracy publication-grade OCR and neural document reconstruction engine.
+    const base = `You are a world-class high-accuracy publication-grade OCR, vision transcription, and document restoration engine.
 Your mission is to produce a 100% faithful, verbatim plain-text transcription of the printed book page.
 
-CRITICAL DIRECTIVES:
-1. Verbatim Accuracy: Transcribe every word and sentence exactly as written. Never translate, never paraphrase, never summarize, never add commentary or notes.
-2. Contextual Deduction ("Intelligent Guessing"):
-   - Book pages frequently have spine curvature, perspective skew, faint ink, lens softness, or cast shadows.
-   - When character glyphs are faint, partially obscured, curved towards the gutter, or degraded: NEVER drop words, NEVER leave blanks, and NEVER output fragmented single letters (such as "ა ა ა", "ს ს ს", "_ ბავ ს").
-   - Instead, inspect the visible character stems and combine them with grammatical syntax, morphological case harmony, vocabulary, and literary sentence context to deduce with certainty the exact intended words.
-   - The reconstructed text must form syntactically perfect, natural literary prose matching the printed book.
-3. Hyphenation & Compounds:
+CRITICAL RECONSTRUCTION DIRECTIVES:
+1. Verbatim Accuracy & Integrity:
+   - Transcribe every word and sentence exactly as written. Never translate, never paraphrase, never summarize, never add commentary or notes.
+   - Return ONLY the pure reconstructed literary text. No markdown fences, no labels.
+
+2. Glitch & Scanner Noise Recovery:
+   - Book scans frequently suffer from gutter shadows, perspective skew, lens softness, scanner lines, or page curvature warping.
+   - Actively identify and eliminate non-text noise (=, +, _, |, #, IIII, %%%, ~~~, stray slashes) and repeated artifact characters.
+   - When character glyphs are faint or distorted near the spine: NEVER drop words, NEVER leave blanks, and NEVER output fragmented single letters (e.g. "ა ა ა", "ს ს ს").
+
+3. Missing Symbols & Punctuation Recovery:
+   - Actively detect and restore MISSING punctuation and symbols:
+     * Quotation marks: ${isKa ? 'Strictly use authentic Georgian quotes: „ at the start and “ at the end (e.g. „გამარჯობა“, თქვა მან), or «...».' : 'Use authentic double quotes ("...") for speech.'}
+     * Dialogue dashes: Use proper em-dashes (—) for dialogue turns and parenthetical pauses.
+     * Punctuation marks: Restore missing commas, colons, semicolons, periods, question marks, and exclamation marks.
+
+4. Missing & Clipped Words Deduction:
+   - Inspect visible character stems of clipped or faint words at margins or line endings.
+   - Combine grammatical syntax, case harmony, and literary context to deduce and restore missing words seamlessly into complete, flowing prose.
+
+5. Hyphenation & Structure:
    - Join words split across line breaks by a hyphen into a single word (e.g. "მო-ხერხებულ" -> "მოხერხებულ", "trans-cription" -> "transcription").
-   - Preserve genuine hyphenated compound words (e.g. "სამხრეთ-აღმოსავლეთი", "well-known", "twenty-five").
-4. Structure & Cleanliness:
-   - Merge line wraps within the same paragraph into clean continuous prose.
-   - Preserve real paragraph breaks with a single blank line.
+   - Preserve genuine hyphenated compound words (e.g. "სამხრეთ-აღმოსავლეთი", "well-known").
+   - Merge line wraps within the same paragraph into clean continuous prose; preserve real paragraph breaks with a single blank line.
    - Skip running page headers, running footers, page numbers, and library stamps.
-   - Strip all non-book OCR noise, math symbols, stray dashes, and gibberish loops (=, +, _, |, #, IIII).
-   - If the page contains no readable body text, return exactly: [[NO_TEXT]]
-Output: Return ONLY the clean verbatim transcription text. No markdown fences, no labels.`;
+   - If the page contains no readable body text, return exactly: [[NO_TEXT]]`;
 
     const ka = `LANGUAGE: Georgian (ქართული, მხედრული).
 - Use ONLY standard Georgian Mkhedruli alphabet letters (ა-ჰ). Never substitute Latin or Cyrillic characters.
@@ -978,6 +987,8 @@ Output: Return ONLY the clean verbatim transcription text. No markdown fences, n
   - თ (t) vs ძ (dz) vs ხ (kh)
   - ჩ (ch) vs ხ (kh)
   - ლ (l) vs დ (d) vs ო (o)
+  - ზ (z) vs გ (g)
+  - ს (s) vs ხ (kh)
 - Grammatical Harmony: Every Georgian word must obey standard Georgian nominal and verbal morphology (proper case markers: -მა, -ს, -ით, -ად; postpositions: -ში, -ზე, -თან, -დან, -კენ).
 - Preserve authentic Georgian quotation marks („...“ or «...») and em dashes (—).
 - Preserve historical/archaic letters (ჱ, ჲ, ჳ, ჴ, ჵ, ჶ, ჷ, ჸ) if present in classical texts.`;
@@ -1017,45 +1028,54 @@ Output: Return ONLY the clean verbatim transcription text. No markdown fences, n
       console.warn("[scanner] /api/ocr request failed, trying client-side vision", err);
     }
 
-    // 2. Direct Client-Side Gemini Vision (CORS supported by Google API)
+    // 2. Direct Client-Side Gemini Vision (Frontier Models: Gemini 2.5 Pro / Flash)
     if (geminiKey) {
-      try {
-        const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
-        const mimeType = match ? match[1] : "image/jpeg";
-        const base64Data = match ? match[2] : dataUrl;
-        const promptRules = getVisionPrompt(lang, hint);
+      let prefModel = localStorage.getItem("geminiModel") || "gemini-2.5-pro";
+      if (prefModel.includes("2.0")) prefModel = "gemini-2.5-pro";
+      const modelsToTry = [prefModel, "gemini-2.5-pro", "gemini-2.5-flash"].filter((m, i, arr) => arr.indexOf(m) === i);
 
-        const gRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    { text: promptRules },
-                    { inlineData: { mimeType, data: base64Data } }
-                  ]
+      for (const model of modelsToTry) {
+        try {
+          const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+          const mimeType = match ? match[1] : "image/jpeg";
+          const base64Data = match ? match[2] : dataUrl;
+          const promptRules = getVisionPrompt(lang, hint);
+
+          const gRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      { text: promptRules },
+                      { inlineData: { mimeType, data: base64Data } }
+                    ]
+                  }
+                ],
+                generationConfig: {
+                  temperature: 0,
+                  maxOutputTokens: 8192
                 }
-              ],
-              generationConfig: {
-                temperature: 0,
-                maxOutputTokens: 8192
-              }
-            })
+              })
+            }
+          );
+          if (gRes.ok) {
+            const gData = await gRes.json();
+            let text = (gData.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+            if (text === "[[NO_TEXT]]") text = "";
+            text = text.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
+            state.tier0 = true;
+            return { text, engine: model };
+          } else if (gRes.status === 429) {
+            console.warn(`[scanner] Gemini vision ${model} rate-limited, trying fallback...`);
+            continue;
           }
-        );
-        if (gRes.ok) {
-          const gData = await gRes.json();
-          let text = (gData.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
-          if (text === "[[NO_TEXT]]") text = "";
-          text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
-          state.tier0 = true;
-          return { text, engine: "gemini-2.0-flash" };
+        } catch (err) {
+          console.warn(`[scanner] direct client gemini call failed for ${model}`, err);
         }
-      } catch (err) {
-        console.warn("[scanner] direct client gemini call failed", err);
       }
     }
 
@@ -1063,6 +1083,7 @@ Output: Return ONLY the clean verbatim transcription text. No markdown fences, n
     if (openRouterKey) {
       try {
         const promptRules = getVisionPrompt(lang, hint);
+        const orModel = localStorage.getItem("openRouterModel") || "google/gemini-2.5-flash";
         const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -1070,7 +1091,7 @@ Output: Return ONLY the clean verbatim transcription text. No markdown fences, n
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: "google/gemini-2.0-flash-exp:free",
+            model: orModel,
             messages: [
               {
                 role: "user",
@@ -1086,7 +1107,7 @@ Output: Return ONLY the clean verbatim transcription text. No markdown fences, n
           const orData = await orRes.json();
           let text = (orData.choices?.[0]?.message?.content ?? "").trim();
           if (text === "[[NO_TEXT]]") text = "";
-          text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
+          text = text.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
           state.tier0 = true;
           return { text, engine: "openrouter-vision" };
         }
@@ -1180,36 +1201,46 @@ Output: Return ONLY the clean verbatim transcription text. No markdown fences, n
     const isKa = lang === "kat" || lang === "ka" || (text.match(/[\u10A0-\u10FF]/g) || []).length > 20;
     const geminiKey = (localStorage.getItem("geminiApiKey") || "").trim();
 
-    const prompt = `You are a publication-grade document proofreader and literary reconstruction expert.
+    const prompt = `You are a world-class literary editor and neural document reconstruction expert.
 The text below was transcribed from a printed book page (${isKa ? 'in Georgian' : 'in English'}).
-Your task is to review and deduce the exact verbatim literary text, fixing any residual OCR distortions:
-1. Deduce ambiguous, faint, or distorted words using sentence context, grammar, and vocabulary so that every sentence is 100% natural, correct literary prose.
-2. ${isKa ? 'Strictly maintain Georgian Mkhedruli script (ა-ჰ). Fix letter confusion (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ, ჩ/ხ, ლ/დ/ო) and enforce proper Georgian case markers (-მა, -ს, -ით, -ად).' : 'Strictly fix character confusion (rn/m, cl/d, 1/l, 0/O) and fix broken contractions.'}
-3. Clean all remaining OCR symbols, math marks, stray dashes, and gibberish runs (=, +, _, |, #, IIII).
-4. Merge words split by spaces (e.g. "დ ა" -> "და", "მ ე" -> "მე").
-5. Do NOT summarize, do NOT omit lines, do NOT add commentary. Return ONLY the clean, perfected verbatim text.
+Your task is to review, detect glitches, restore missing symbols and words, and reconstruct 100% natural, verbatim literary prose:
+1. Detect Glitches & Noise: Identify and eliminate scanner noise, line breaks, stray symbols (=, +, _, |, #, IIII, ~~~), and OCR artifacts.
+2. Missing Symbols & Punctuation: Actively detect and restore missing punctuation (${isKa ? 'authentic Georgian quotes „…“, em-dashes —' : 'quotes "...", em-dashes —'}, commas, colons, semicolons, exclamation and question marks).
+3. Missing Words Deduction: Deduce ambiguous, clipped, or faint words at page margins using sentence grammar, story flow, and vocabulary so that every sentence is complete.
+4. Character Discrimination: ${isKa ? 'Strictly maintain Georgian Mkhedruli script (ა-ჰ). Fix letter confusion (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ, ჩ/ხ, ლ/დ/ო, ზ/გ, ს/ხ) and enforce proper Georgian case markers (-მა, -ს, -ით, -ად).' : 'Strictly fix character confusion (rn/m, cl/d, 1/l, 0/O) and fix broken contractions.'}
+5. Merge words split by spaces (e.g. "დ ა" -> "და", "მ ე" -> "მე", "თ ქ ვ ა" -> "თქვა").
+6. Integrity: Do NOT summarize, do NOT omit lines, do NOT add commentary. Return ONLY the clean, perfected verbatim text without markdown code fences.
 
 Text to perfect:
-${text.slice(0, 8000)}`;
+${text.slice(0, 10000)}`;
 
     if (geminiKey) {
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0, maxOutputTokens: 8192 }
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          let out = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
-          out = out.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
-          if (out.length > 15) return out;
+      let prefModel = localStorage.getItem("geminiModel") || "gemini-2.5-pro";
+      if (prefModel.includes("2.0")) prefModel = "gemini-2.5-pro";
+      const modelsToTry = [prefModel, "gemini-2.5-pro", "gemini-2.5-flash"].filter((m, i, arr) => arr.indexOf(m) === i);
+
+      for (const model of modelsToTry) {
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0, maxOutputTokens: 8192 }
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            let out = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+            out = out.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
+            if (out.length > 15) return out;
+          } else if (res.status === 429) {
+            console.warn(`[scanner] Gemini ${model} rate-limited in linguistic pass, trying fallback...`);
+            continue;
+          }
+        } catch (e) {
+          console.warn(`[scanner] direct gemini contextual deduction failed for ${model}:`, e);
         }
-      } catch (e) {
-        console.warn("[scanner] direct gemini contextual deduction failed:", e);
       }
     }
 
@@ -1222,7 +1253,7 @@ ${text.slice(0, 8000)}`;
       if (res.ok) {
         const data = await res.json();
         let out = (data.text || data.choices?.[0]?.message?.content || "").trim();
-        out = out.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
+        out = out.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
         if (out.length > 15) return out;
       }
     } catch (e) {

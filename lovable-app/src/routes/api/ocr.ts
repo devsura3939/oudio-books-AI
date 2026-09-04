@@ -134,15 +134,17 @@ export const Route = createFileRoute("/api/ocr")({
           }
         }
 
-        // Tier 0B: Direct Google Gemini 2.0 Flash Vision (free, 1500 req/day, world-class Georgian accuracy)
+        // Tier 0B: Direct Google Gemini 2.5 Frontier Vision (Gemini 2.5 Flash / Pro)
         if (geminiKey) {
           try {
             const match = input.image.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
             const mimeType = match ? match[1] : "image/jpeg";
             const base64Data = match ? match[2] : input.image;
+            let geminiModel = request.headers.get("x-gemini-model")?.trim() || "gemini-2.5-flash";
+            if (geminiModel.includes("2.0")) geminiModel = "gemini-2.5-flash";
 
             const gRes = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+              `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -170,7 +172,7 @@ export const Route = createFileRoute("/api/ocr")({
               let text = (gData.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
               if (text === "[[NO_TEXT]]") text = "";
               text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
-              return json({ text, engine: "gemini-2.0-flash" }, 200);
+              return json({ text, engine: geminiModel }, 200);
             } else {
               const gErr = await gRes.text().catch(() => "");
               console.warn(`[ocr] direct gemini error ${gRes.status}: ${gErr.slice(0, 200)}`);
@@ -190,7 +192,7 @@ export const Route = createFileRoute("/api/ocr")({
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                model: "google/gemini-2.0-flash-exp:free",
+                model: "google/gemini-2.5-flash",
                 messages: [
                   {
                     role: "user",
