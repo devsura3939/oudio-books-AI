@@ -171,7 +171,7 @@ if (![1, 2, 3].includes(geminiPasses)) geminiPasses = 3;
 
 // Gemini fallback chain: when preferred frontier model is rate-limited (429),
 // automatically fall back across frontier variants (Pro -> Flash -> Flash Lite):
-const GEMINI_FALLBACK_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-8b', 'gemini-2.5-flash-lite'];
+const GEMINI_FALLBACK_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'];
 const geminiModelCooldown = {}; // model -> earliest ms it may be retried
 const GEMINI_MODEL_COOLDOWN_MS = 60_000;
 
@@ -397,6 +397,49 @@ const MISTRAL_CORS_COOLDOWN_MS = 10 * 60_000; // parked 10 min after CORS failur
 const mistralModelCooldown = {};
 let mistralCorsFailures = 0;
 let mistralCorsBlockedUntil = 0;
+
+// ── Custom Provider (user-supplied OpenAI-compatible endpoint) ────────────────
+let customProviderUrl = localStorage.getItem('customProviderUrl') || '';
+let customProviderModel = localStorage.getItem('customProviderModel') || '';
+let customProviderKey = localStorage.getItem('customProviderKey') || '';
+
+function setCustomProvider(url, model, key) {
+    customProviderUrl = (url || '').trim();
+    customProviderModel = (model || '').trim();
+    customProviderKey = (key || '').trim();
+    if (customProviderUrl) localStorage.setItem('customProviderUrl', customProviderUrl);
+    else localStorage.removeItem('customProviderUrl');
+    if (customProviderModel) localStorage.setItem('customProviderModel', customProviderModel);
+    else localStorage.removeItem('customProviderModel');
+    if (customProviderKey) localStorage.setItem('customProviderKey', customProviderKey);
+    else localStorage.removeItem('customProviderKey');
+}
+
+// Call custom provider (OpenAI-compatible chat completions). Returns text or null.
+async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8192 } = {}) {
+    if (!customProviderUrl || !customProviderModel) return null;
+    try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (customProviderKey) headers['Authorization'] = `Bearer ${customProviderKey}`;
+        const res = await fetch(customProviderUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                model: customProviderModel,
+                messages: [{ role: 'user', content: prompt }],
+                temperature,
+                max_tokens: maxTokens,
+            }),
+        });
+        if (!res.ok) { console.warn('[CustomProvider] status', res.status); return null; }
+        const data = await res.json();
+        const text = (data?.choices?.[0]?.message?.content || data?.text || '').trim();
+        return text.length > 5 ? text : null;
+    } catch (e) {
+        console.warn('[CustomProvider] call failed:', e);
+        return null;
+    }
+}
 
 function setGroqApiKey(key) {
     groqApiKey = key || '';
@@ -1524,8 +1567,18 @@ function openModal(modalId) {
             const groqKeyInput = document.getElementById('groqApiKeyInput');
             if (groqKeyInput) groqKeyInput.value = groqApiKey || '';
 
+            const groqModelSelect = document.getElementById('groqModelSelect');
+            if (groqModelSelect) groqModelSelect.value = localStorage.getItem('groqSelectedModel') || '';
+
             const mistralKeyInput = document.getElementById('mistralApiKeyInput');
             if (mistralKeyInput) mistralKeyInput.value = mistralApiKey || '';
+
+            const cpUrlInput = document.getElementById('customProviderUrlInput');
+            if (cpUrlInput) cpUrlInput.value = customProviderUrl || '';
+            const cpModelInput = document.getElementById('customProviderModelInput');
+            if (cpModelInput) cpModelInput.value = customProviderModel || '';
+            const cpKeyInput = document.getElementById('customProviderKeyInput');
+            if (cpKeyInput) cpKeyInput.value = customProviderKey || '';
 
             renderAiKeyStatusPanel();
             probeAiKeyStatus();
@@ -1569,8 +1622,18 @@ function saveGeminiSettings() {
     const groqKeyInput = document.getElementById('groqApiKeyInput');
     const groqKey = groqKeyInput ? groqKeyInput.value.trim() : '';
 
+    const groqModelSelect = document.getElementById('groqModelSelect');
+    const groqSelectedModel = groqModelSelect ? groqModelSelect.value : '';
+
     const mistralKeyInput = document.getElementById('mistralApiKeyInput');
     const mistralKey = mistralKeyInput ? mistralKeyInput.value.trim() : '';
+
+    const cpUrlInput = document.getElementById('customProviderUrlInput');
+    const cpUrl = cpUrlInput ? cpUrlInput.value.trim() : '';
+    const cpModelInput = document.getElementById('customProviderModelInput');
+    const cpModel = cpModelInput ? cpModelInput.value.trim() : '';
+    const cpKeyInput = document.getElementById('customProviderKeyInput');
+    const cpKey = cpKeyInput ? cpKeyInput.value.trim() : '';
 
     if (orKey) {
         localStorage.setItem('openRouterApiKey', orKey);
@@ -1584,7 +1647,10 @@ function saveGeminiSettings() {
     openRouterModel = orModel;
 
     setGroqApiKey(groqKey);
+    if (groqSelectedModel) localStorage.setItem('groqSelectedModel', groqSelectedModel);
+    else localStorage.removeItem('groqSelectedModel');
     setMistralApiKey(mistralKey);
+    setCustomProvider(cpUrl, cpModel, cpKey);
 
     if (groqKey) {
         // Probe Groq right away: bad keys must surface at save time, not
@@ -1679,6 +1745,12 @@ function saveGeminiSettings() {
             }
         }).catch(() => {
             alert('OpenRouter key saved, but could not reach openrouter.ai (network error).');
+        });
+    }
+    if (cpUrl && cpModel) {
+        callCustomProviderText('Reply with exactly: OK', { maxTokens: 8 }).then(r => {
+            if (r) alert('Custom provider verified — engine is active.');
+            else alert('Custom provider saved, but the probe got no response.\nDouble-check your Base URL, model name, and API key.');
         });
     }
     // Re-probe the panel with the just-saved keys so the status is fresh.
@@ -4485,6 +4557,10 @@ function renderAiKeyStatusPanel() {
     rows.push(geminiApiKey
         ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(geminiApiKey))}</span><br><span class="text-on-surface-variant">Fallback #3 · Model: ${escapeHtml(geminiModel)} · ${geminiPasses}-stage literary pipeline</span></div></div>`
         : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Gemini</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
+
+    rows.push(customProviderUrl && customProviderModel
+        ? `<div class="flex items-start gap-2"><span class="text-blue-400">●</span><div><span class="font-semibold text-white">Custom Provider</span><br><span class="text-on-surface-variant">${escapeHtml(customProviderUrl)} · Model: ${escapeHtml(customProviderModel)}</span></div></div>`
+        : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Custom Provider</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
 
     list.innerHTML = rows.join('');
 }
@@ -7838,6 +7914,39 @@ ${cleaned.slice(0, 12000)}`;
             }
         } catch (e) {
             console.warn('[repair] openrouter call failed:', e);
+        }
+    }
+
+    // Groq fallback for repair
+    if (groqApiKey) {
+        try {
+            const groqModel = localStorage.getItem('groqSelectedModel') || GROQ_MODELS[0];
+            const res = await fetch(GROQ_API_URL, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: groqModel,
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.1,
+                    max_tokens: 8192,
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                let out = (data.choices?.[0]?.message?.content || '').trim();
+                out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
+                if (out.length > 20) return out;
+            }
+        } catch (e) {
+            console.warn('[repair] groq call failed:', e);
+        }
+    }
+
+    // Custom provider fallback for repair
+    {
+        const cpOut = await callCustomProviderText(prompt, { temperature: 0.1, maxTokens: 8192 });
+        if (cpOut && cpOut.length > 20) {
+            return cpOut.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
         }
     }
 

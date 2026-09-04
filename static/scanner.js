@@ -1260,6 +1260,62 @@ ${text.slice(0, 10000)}`;
       // fallback
     }
 
+    // Groq fallback for contextual deduction
+    const groqKey = (localStorage.getItem("groqApiKey") || "").trim();
+    if (groqKey) {
+      try {
+        const groqApiUrl = "https://api.groq.com/openai/v1/chat/completions";
+        const groqModel = localStorage.getItem("groqSelectedModel") || "openai/gpt-oss-120b";
+        const res = await fetch(groqApiUrl, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: groqModel,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0,
+            max_tokens: 8192,
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          let out = (data.choices?.[0]?.message?.content || "").trim();
+          out = out.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
+          if (out.length > 15) return out;
+        }
+      } catch (e) {
+        console.warn("[scanner] groq contextual deduction failed:", e);
+      }
+    }
+
+    // Custom provider fallback
+    const cpUrl = (localStorage.getItem("customProviderUrl") || "").trim();
+    const cpModel = (localStorage.getItem("customProviderModel") || "").trim();
+    const cpKey = (localStorage.getItem("customProviderKey") || "").trim();
+    if (cpUrl && cpModel) {
+      try {
+        const headers = { "Content-Type": "application/json" };
+        if (cpKey) headers["Authorization"] = `Bearer ${cpKey}`;
+        const res = await fetch(cpUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            model: cpModel,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0,
+            max_tokens: 8192,
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          let out = (data?.choices?.[0]?.message?.content || data?.text || "").trim();
+          out = out.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
+          if (out.length > 15) return out;
+        }
+      } catch (e) {
+        console.warn("[scanner] custom provider contextual deduction failed:", e);
+      }
+    }
+
     return text;
   }
 
