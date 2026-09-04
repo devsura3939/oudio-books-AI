@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.46.8';
-const ENGINE_VERSION = 'v1.46.8 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
+const APP_VERSION = 'v1.46.9';
+const ENGINE_VERSION = 'v1.46.9 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
 
 let db = null;
 let currentBook = null;
@@ -759,8 +759,8 @@ function georgianOrdinalToWords(n) {
 }
 
 // ── Advanced Georgian Linguistic Verbalizer for Flawless Native Speech ───────
-const KA_CHARS = (typeof window !== 'undefined' && window.KA_CHARS) || '\\u10A0-\\u10FF';
-const kaWord = (typeof window !== 'undefined' && window.kaWord) || ((src, flags = 'g') => new RegExp(`(?<![${KA_CHARS}])(?:${src})(?![${KA_CHARS}])`, flags));
+var KA_CHARS = (typeof window !== 'undefined' && window.KA_CHARS) || '\\u10A0-\\u10FF';
+var kaWord = (typeof window !== 'undefined' && window.kaWord) || ((src, flags = 'g') => new RegExp(`(?<![${KA_CHARS}])(?:${src})(?![${KA_CHARS}])`, flags));
 
 function transliterateLatinWordToGeorgian(word) {
     if (!word || typeof word !== 'string') return '';
@@ -2344,7 +2344,7 @@ function updateCabinetUI() {
     if (avatar) avatar.textContent = userEmail.charAt(0).toUpperCase();
     if (email) email.textContent = userEmail;
     if (roleBadge) {
-        roleBadge.textContent = isAdmin ? '👑 Administrator v1.46.8' : '🎧 PRO Listener';
+        roleBadge.textContent = isAdmin ? '👑 Administrator v1.46.9' : '🎧 PRO Listener';
         roleBadge.className = isAdmin
             ? 'px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold'
             : 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-white';

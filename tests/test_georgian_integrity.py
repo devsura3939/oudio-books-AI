@@ -273,5 +273,42 @@ for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", 
     assert r"აზრს\s+არ\s+აკეთებს" in content or r"აზრს\\s+არ\\s+აკეთებს" in content, f"FAIL: Make sense calque fix missing from {path_name}"
 print("  [PASS] Adjective case concord and expanded calque replacements verified")
 
+# ----------------------------------------------------------------------------
+# 19. Cross-Script Global Lexical Scope Collision & Version 1.46.9 Parity
+# ----------------------------------------------------------------------------
+for base_dir, label in [(os.path.join(REPO_DIR, "static"), "root static/"),
+                        (os.path.join(REPO_DIR, "lovable-app", "public", "studio", "static"), "studio static/")]:
+    script_files = ["supabase-store.js", "georgian-linguistics.js", "app.js", "engine-pack.js", "scanner.js"]
+    seen_lexical = {}
+    for sf in script_files:
+        full_p = os.path.join(base_dir, sf)
+        if not os.path.exists(full_p):
+            continue
+        with open(full_p, "r", encoding="utf-8") as f:
+            code = f.read()
+        top_decls = re.findall(r'^(?:const|let)\s+([a-zA-Z_$][0-9a-zA-Z_$]*)', code, re.MULTILINE)
+        for decl in top_decls:
+            assert decl not in seen_lexical, f"FATAL LEXICAL COLLISION: '{decl}' declared with const/let in both {seen_lexical[decl]} and {sf} in {label}"
+            seen_lexical[decl] = sf
+
+# Version 1.46.9 across all entry points & cache busters
+with open(os.path.join(REPO_DIR, "index.html"), "r", encoding="utf-8") as f:
+    root_html = f.read()
+assert "v=1.46.9" in root_html, "FAIL: index.html missing v=1.46.9 cache buster"
+assert "v1.46.9" in root_html, "FAIL: index.html missing v1.46.9 text"
+
+with open(os.path.join(REPO_DIR, "lovable-app", "public", "studio", "index.html"), "r", encoding="utf-8") as f:
+    studio_html = f.read()
+assert "v=1.46.9" in studio_html, "FAIL: studio/index.html missing v=1.46.9 cache buster"
+assert "v1.46.9" in studio_html, "FAIL: studio/index.html missing v1.46.9 text"
+
+for path_name, content in [("static/app.js", app_content), ("studio/static/app.js", studio_app_content)]:
+    assert "handleGateSignIn" in content, f"FAIL: handleGateSignIn missing from {path_name}"
+    assert "fillAdminCredentials" in content, f"FAIL: fillAdminCredentials missing from {path_name}"
+    assert "updateAuthGateVisibility" in content, f"FAIL: updateAuthGateVisibility missing from {path_name}"
+
+print("  [PASS] 0 top-level lexical collisions across all scripts & v1.46.9 parity verified")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
+
 

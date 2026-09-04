@@ -382,8 +382,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── 0. UNICODE GEORGIAN BOUNDARY HELPERS (P0-4) ─────────────────────────────
-const KA_CHARS = '\\u10A0-\\u10FF';
-const kaWord = (src, flags = 'g') => new RegExp(`(?<![${KA_CHARS}])(?:${src})(?![${KA_CHARS}])`, flags);
+var KA_CHARS = '\\u10A0-\\u10FF';
+var kaWord = (src, flags = 'g') => new RegExp(`(?<![${KA_CHARS}])(?:${src})(?![${KA_CHARS}])`, flags);
 if (typeof window !== 'undefined') {
     window.KA_CHARS = KA_CHARS;
     window.kaWord = kaWord;
