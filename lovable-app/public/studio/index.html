@@ -565,6 +565,11 @@
         </div>
 
         <div class="relative w-full max-w-md glass-panel p-6 sm:p-8 rounded-3xl border border-white/15 shadow-2xl space-y-6 my-auto">
+            <!-- Close Gate / Back to Studio Button -->
+            <button type="button" onclick="closeAuthGate()" class="absolute top-5 right-5 p-1.5 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-white transition" title="Close / Continue to Studio" aria-label="Close">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+
             <!-- Branding Header -->
             <div class="text-center space-y-2">
                 <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-secondary-container to-primary-container p-0.5 mx-auto shadow-[0_0_25px_rgba(0,240,255,0.3)]">
@@ -580,6 +585,15 @@
                     <p class="text-xs sm:text-sm text-on-surface-variant mt-1" id="gateSubtitle">
                         Sign in to access your personal audiobooks, scanned books, and studio workspace
                     </p>
+                </div>
+            </div>
+
+            <!-- Already Logged In Active Banner -->
+            <div id="gateAlreadyLoggedInBanner" class="hidden p-3 rounded-2xl bg-primary-container/15 border border-primary-container/30 text-xs text-primary-fixed flex items-center justify-between gap-2">
+                <span class="truncate">Active: <strong id="gateLoggedInEmail" class="text-white"></strong></span>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button type="button" onclick="closeAuthGate()" class="px-2.5 py-1 rounded-lg bg-primary-container text-on-primary-container font-bold text-[11px] hover:brightness-110">Studio →</button>
+                    <button type="button" onclick="logout()" class="text-on-surface-variant hover:text-rose-300 text-[11px] underline">Sign Out</button>
                 </div>
             </div>
 
@@ -666,8 +680,14 @@
                 </button>
             </form>
 
-            <div class="pt-2 text-center text-[11px] text-on-surface-variant/60 font-mono">
-                Encrypted Vault • Supabase Cloud Sync • EngBot v1.46.8
+            <!-- Bottom Guest & Branding Link -->
+            <div class="pt-2 text-center flex flex-col items-center gap-2">
+                <button type="button" onclick="closeAuthGate()" class="text-xs text-primary-fixed-dim hover:text-primary-container font-medium hover:underline transition">
+                    Continue to Studio as Guest →
+                </button>
+                <div class="text-[10px] text-on-surface-variant/60 font-mono">
+                    Encrypted Vault • Supabase Cloud Sync • EngBot v1.46.8
+                </div>
             </div>
         </div>
     </div>
@@ -692,6 +712,9 @@
             </button>
             <button onclick="openModal('uploadModal')" class="p-2 rounded-xl text-primary-fixed hover:bg-white/10 transition" aria-label="Upload PDF" title="Upload PDF">
                 <span class="material-symbols-outlined text-2xl">upload_file</span>
+            </button>
+            <button id="mobileTopProfileBtn" onclick="openAccountCabinet()" class="p-2 rounded-xl text-white hover:bg-white/10 transition" aria-label="Account & Cabinet" title="Account & Cabinet">
+                <span class="material-symbols-outlined text-2xl">account_circle</span>
             </button>
         </div>
 
@@ -1023,7 +1046,7 @@
     </main>
 
     <!-- ════════════════ Bottom Floating Player Dock ════════════════ -->
-    <div id="playerDock" class="fixed bottom-3 md:bottom-6 left-1/2 -translate-x-1/2 w-[95%] md:w-[86%] max-w-5xl z-50 p-3 md:px-6 md:py-3 glass-dock rounded-2xl opacity-0 translate-y-12 transition-all duration-500 pointer-events-none flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+    <div id="playerDock" class="fixed bottom-16 md:bottom-6 left-1/2 -translate-x-1/2 w-[95%] md:w-[86%] max-w-5xl z-30 p-3 md:px-6 md:py-3 glass-dock rounded-2xl opacity-0 translate-y-12 transition-all duration-500 pointer-events-none flex flex-col md:flex-row md:items-center justify-between gap-2.5">
         
         <!-- Mobile Top Row / Desktop Left -->
         <div class="flex items-center justify-between md:justify-start gap-3 w-full md:w-1/4 min-w-0">
@@ -1241,7 +1264,118 @@
             </div>
         </div>
     </div>
+
+    <!-- ════════════════ Mobile Bottom Navigation Bar (matches Lovable app shell) ════════════════ -->
+    <nav id="mobileBottomNav" class="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around border-t border-white/15 bg-[#0e131d]/90 py-2 px-3 backdrop-blur-[24px] shadow-[0_-4px_24px_rgba(0,0,0,0.6)]">
+        <button type="button" onclick="navToSection('home')" id="bottomNavHome" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-primary-fixed-dim">
+            <span class="material-symbols-outlined text-2xl">home</span>
+            <span>Home</span>
+        </button>
+        <button type="button" onclick="navToSection('scanner')" id="bottomNavScanner" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
+            <span class="material-symbols-outlined text-2xl">document_scanner</span>
+            <span>Scanner</span>
+        </button>
+        <button type="button" onclick="navToSection('engbot')" id="bottomNavEngbot" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
+            <span class="material-symbols-outlined text-2xl">graphic_eq</span>
+            <span>EngBot</span>
+        </button>
+        <button type="button" onclick="navToSection('profile')" id="bottomNavProfile" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
+            <span class="material-symbols-outlined text-2xl">account_circle</span>
+            <span>Profile</span>
+        </button>
+    </nav>
     </div> <!-- /#appMainContainer -->
+
+    <!-- ════════════════ ACCOUNT / PROFILE CABINET MODAL ════════════════ -->
+    <div id="accountCabinetModal" class="modal-overlay">
+        <div class="modal-content glass-panel p-6 rounded-3xl max-w-md w-full border border-white/15 shadow-2xl mx-4 space-y-5 my-auto">
+            <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-fixed text-xl">account_circle</span>
+                    <h3 class="font-bold text-base text-white">Your Account & Cabinet</h3>
+                </div>
+                <button type="button" onclick="closeAccountCabinet()" class="p-1.5 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-white transition" aria-label="Close modal">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+            </div>
+
+            <!-- User Status Card -->
+            <div id="cabinetUserCard" class="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-4">
+                <div id="cabinetAvatar" class="w-12 h-12 rounded-full bg-gradient-to-tr from-primary-container to-secondary flex items-center justify-center text-on-primary-container font-extrabold text-xl shadow-[0_0_20px_rgba(0,240,255,0.3)]">
+                    A
+                </div>
+                <div class="overflow-hidden flex-1 min-w-0">
+                    <p id="cabinetEmail" class="text-sm font-bold text-white truncate">ananiadevsurashvili@gmail.com</p>
+                    <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span id="cabinetRoleBadge" class="px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold">
+                            👑 Administrator v1.46.8
+                        </span>
+                        <span id="cabinetCloudBadge" class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">
+                            ☁️ Supabase Cloud
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons List -->
+            <div class="space-y-2.5">
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant px-1">
+                    Cabinet Navigation & Actions
+                </div>
+
+                <!-- Admin Training Lab Shortcut -->
+                <button type="button" id="cabinetBtnTraining" onclick="openTrainingLab()" class="w-full py-3 px-4 rounded-xl bg-primary-container/15 hover:bg-primary-container/25 text-primary-fixed border border-primary-container/30 text-xs font-bold transition flex items-center justify-between">
+                    <span class="flex items-center gap-2.5">
+                        <span class="material-symbols-outlined text-base">model_training</span>
+                        <span>AI Training Lab (Admin)</span>
+                    </span>
+                    <span class="material-symbols-outlined text-sm">chevron_right</span>
+                </button>
+
+                <!-- Open Full Auth / Login / Switch Account Screen -->
+                <button type="button" onclick="openAuthGate('signin')" class="w-full py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-medium transition flex items-center justify-between">
+                    <span class="flex items-center gap-2.5">
+                        <span class="material-symbols-outlined text-base text-primary-fixed">login</span>
+                        <span>Log In / Switch Account</span>
+                    </span>
+                    <span class="material-symbols-outlined text-sm text-on-surface-variant">chevron_right</span>
+                </button>
+
+                <!-- Create New Account -->
+                <button type="button" onclick="openAuthGate('register')" class="w-full py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-medium transition flex items-center justify-between">
+                    <span class="flex items-center gap-2.5">
+                        <span class="material-symbols-outlined text-base text-secondary">person_add</span>
+                        <span>Create New Account</span>
+                    </span>
+                    <span class="material-symbols-outlined text-sm text-on-surface-variant">chevron_right</span>
+                </button>
+
+                <!-- Password Recovery / Reset -->
+                <button type="button" onclick="openAuthGate('forgot')" class="w-full py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-medium transition flex items-center justify-between">
+                    <span class="flex items-center gap-2.5">
+                        <span class="material-symbols-outlined text-base text-amber-400">lock_reset</span>
+                        <span>Reset / Recover Password</span>
+                    </span>
+                    <span class="material-symbols-outlined text-sm text-on-surface-variant">chevron_right</span>
+                </button>
+
+                <!-- Sign Out -->
+                <button type="button" onclick="logout(); closeAccountCabinet();" class="w-full py-3 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 text-xs font-bold transition flex items-center justify-between">
+                    <span class="flex items-center gap-2.5">
+                        <span class="material-symbols-outlined text-base">logout</span>
+                        <span>Sign Out & Return to Login Gate</span>
+                    </span>
+                    <span class="material-symbols-outlined text-sm text-rose-300/60">chevron_right</span>
+                </button>
+            </div>
+
+            <!-- Footer info -->
+            <div class="pt-2 text-center text-[10px] text-on-surface-variant/70 border-t border-white/10 flex items-center justify-between px-1">
+                <span>EngBot Audiobooks AI</span>
+                <span class="font-mono">v1.46.8 Multi-Domain</span>
+            </div>
+        </div>
+    </div>
 
     <!-- ════════════════ READER TYPOGRAPHY & THEMES MODAL ════════════════ -->
     <div id="readerThemeModal" class="modal-overlay">

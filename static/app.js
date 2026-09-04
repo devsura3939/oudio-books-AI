@@ -1338,6 +1338,38 @@ function getBookStats(book) {
 }
 
 // ── Navigation & Modals ─────────────────────────────────────────────────────
+function updateBottomNavActive(tab) {
+    ['home', 'scanner', 'engbot', 'profile'].forEach(t => {
+        const btn = document.getElementById('bottomNav' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (btn) {
+            if (t === tab) {
+                btn.className = 'flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-primary-fixed-dim';
+            } else {
+                btn.className = 'flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white';
+            }
+        }
+    });
+}
+
+function navToSection(tab) {
+    updateBottomNavActive(tab);
+    if (tab === 'home') {
+        navigate('library');
+        const shelf = document.getElementById('booksGrid') || document.getElementById('view-library');
+        if (shelf) shelf.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (tab === 'scanner') {
+        navigate('scanner');
+        if (typeof renderScanShelf === 'function') renderScanShelf();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (tab === 'engbot') {
+        navigate('library');
+        const hero = document.getElementById('heroSection');
+        if (hero) hero.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (tab === 'profile') {
+        openAccountCabinet();
+    }
+}
+
 function navigate(viewId) {
     ['library', 'discover', 'scanner'].forEach(id => {
         const view = document.getElementById(`view-${id}`);
@@ -1356,6 +1388,10 @@ function navigate(viewId) {
         activeNav.classList.add('text-primary-fixed-dim', 'bg-white/10', 'border-l-2', 'border-primary-container');
         activeNav.classList.remove('text-on-surface-variant');
     }
+
+    // Keep bottom nav tabs synchronized
+    if (viewId === 'library') updateBottomNavActive('home');
+    else if (viewId === 'scanner') updateBottomNavActive('scanner');
 }
 
 function openModal(modalId) {
@@ -1785,13 +1821,121 @@ function setAuthSuccess(msg) {
     setGateSuccess(msg);
 }
 
+function openAuthGate(mode) {
+    closeAccountCabinet();
+    try { closeModal('authModal'); } catch (e) {}
+    const gateScreen = document.getElementById('authGateScreen');
+    if (gateScreen) {
+        gateScreen.classList.remove('hidden');
+        switchGateMode(mode || 'signin');
+    }
+}
+
+function closeAuthGate() {
+    const gateScreen = document.getElementById('authGateScreen');
+    const appContainer = document.getElementById('appMainContainer');
+    if (gateScreen) gateScreen.classList.add('hidden');
+    if (appContainer) appContainer.classList.remove('hidden');
+}
+
+function openAccountCabinet() {
+    updateCabinetUI();
+    openModal('accountCabinetModal');
+}
+
+function closeAccountCabinet() {
+    closeModal('accountCabinetModal');
+}
+
+function updateCabinetUI() {
+    const avatar = document.getElementById('cabinetAvatar');
+    const email = document.getElementById('cabinetEmail');
+    const roleBadge = document.getElementById('cabinetRoleBadge');
+    const cloudBadge = document.getElementById('cabinetCloudBadge');
+    const btnTraining = document.getElementById('cabinetBtnTraining');
+
+    const userEmail = (currentUser?.email || '').trim();
+    const isAdmin = !!(userEmail.toLowerCase() === 'ananiadevsurashvili@gmail.com' || currentUser?.role === 'admin');
+
+    if (currentUser && userEmail) {
+        if (avatar) avatar.textContent = userEmail.charAt(0).toUpperCase();
+        if (email) email.textContent = userEmail;
+        if (roleBadge) {
+            roleBadge.textContent = isAdmin ? '👑 Administrator v1.46.8' : '🎧 PRO Listener';
+            roleBadge.className = isAdmin
+                ? 'px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold'
+                : 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-white';
+        }
+        if (cloudBadge) {
+            cloudBadge.textContent = usingCloud ? '☁️ Supabase Cloud' : '💾 Local Storage';
+        }
+        if (btnTraining) {
+            if (isAdmin) btnTraining.classList.remove('hidden');
+            else btnTraining.classList.add('hidden');
+        }
+    } else {
+        if (avatar) avatar.textContent = 'G';
+        if (email) email.textContent = 'Guest Listener';
+        if (roleBadge) {
+            roleBadge.textContent = '👤 Guest Mode';
+            roleBadge.className = 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-on-surface-variant';
+        }
+        if (cloudBadge) {
+            cloudBadge.textContent = 'Offline Preview';
+        }
+        if (btnTraining) btnTraining.classList.add('hidden');
+    }
+}
+
+function openTrainingLab() {
+    closeAccountCabinet();
+    const target = window.location.hostname.includes('github.io')
+        ? 'https://audible-architect.lovable.app/training'
+        : '/training';
+    window.location.href = target;
+}
+
 function updateAuthGateVisibility() {
     const gateScreen = document.getElementById('authGateScreen');
     const appContainer = document.getElementById('appMainContainer');
 
     const isLoggedIn = Boolean(currentUser && currentUser.email);
+    const hash = (window.location.hash || '').toLowerCase();
+    const search = (window.location.search || '').toLowerCase();
 
-    if (isLoggedIn) {
+    // Check if user explicitly requested auth / recovery screen via URL
+    const wantsAuth = hash.includes('login') || hash.includes('auth') || hash.includes('signin') || search.includes('mode=auth') || search.includes('mode=login');
+    const wantsRegister = hash.includes('register') || hash.includes('signup');
+    const wantsForgot = hash.includes('forgot') || hash.includes('recovery') || hash.includes('reset');
+
+    // Update the already-logged-in banner if present
+    const loggedInBanner = document.getElementById('gateAlreadyLoggedInBanner');
+    const loggedInEmail = document.getElementById('gateLoggedInEmail');
+    if (loggedInBanner) {
+        if (isLoggedIn) {
+            loggedInBanner.classList.remove('hidden');
+            if (loggedInEmail) loggedInEmail.textContent = currentUser.email;
+        } else {
+            loggedInBanner.classList.add('hidden');
+        }
+    }
+
+    if (wantsRegister) {
+        if (gateScreen) {
+            gateScreen.classList.remove('hidden');
+            switchGateMode('register');
+        }
+    } else if (wantsForgot) {
+        if (gateScreen) {
+            gateScreen.classList.remove('hidden');
+            switchGateMode('forgot');
+        }
+    } else if (wantsAuth) {
+        if (gateScreen) {
+            gateScreen.classList.remove('hidden');
+            switchGateMode('signin');
+        }
+    } else if (isLoggedIn) {
         if (gateScreen) gateScreen.classList.add('hidden');
         if (appContainer) appContainer.classList.remove('hidden');
     } else {
@@ -2247,6 +2391,14 @@ window.handleGateForgot = handleGateForgot;
 window.updateAuthGateVisibility = updateAuthGateVisibility;
 window.recoverAllLocalBooks = recoverAllLocalBooks;
 window.loadBooks = loadBooks;
+window.navToSection = navToSection;
+window.updateBottomNavActive = updateBottomNavActive;
+window.openAccountCabinet = openAccountCabinet;
+window.closeAccountCabinet = closeAccountCabinet;
+window.updateCabinetUI = updateCabinetUI;
+window.openAuthGate = openAuthGate;
+window.closeAuthGate = closeAuthGate;
+window.openTrainingLab = openTrainingLab;
 
 // ── ElevenLabs Settings ────────────────────────────────────────────────────
 function loadElevenLabsSettings() {
