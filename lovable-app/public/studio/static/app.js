@@ -28,6 +28,24 @@ let utteranceTimeout = null;
 let secondsElapsed = 0;
 let timerInterval = null;
 let currentUser = null;
+// Strict Authorization Guard: Lock out dashboard immediately if not authenticated
+(function() {
+    try {
+        var explicitlyLoggedOut = localStorage.getItem('lumina_explicitly_logged_out') === 'true';
+        var saved = localStorage.getItem('lumina_auth_user');
+        var isAuthed = false;
+        if (saved && !explicitlyLoggedOut) {
+            var u = JSON.parse(saved);
+            if (u && u.email) isAuthed = true;
+        }
+        if (!isAuthed) {
+            var appEl = document.getElementById('appMainContainer');
+            if (appEl) appEl.classList.add('hidden');
+            var gateEl = document.getElementById('authGateScreen');
+            if (gateEl) gateEl.classList.remove('hidden');
+        }
+    } catch(e) {}
+})();
 let isSpeakingLock = false;
 
 // Moon+ Reader State
@@ -1002,6 +1020,7 @@ function cacheDOM() {
 // ── Initialization ──────────────────────────────────────────────────────────
 async function init() {
     cacheDOM();
+    checkAuthState(); // Immediately lock dashboard if not authenticated
     await initDB();
     setupEventListeners();
     setupKeyboardAndTouchControls();
@@ -1021,19 +1040,20 @@ async function init() {
         localStorage.setItem(seedFlag, 'true');
     }
 
+    if (currentUser && currentUser.email) {
+        await renderDigitalShelf();
+        renderDiscoverClassics();
 
-    await renderDigitalShelf();
-    renderDiscoverClassics();
-
-    const books = await getAllBooks();
-    if (books.length > 0) {
-        selectBook(books[0].id, false);
+        const books = await getAllBooks();
+        if (books.length > 0) {
+            selectBook(books[0].id, false);
+        }
     }
 
     if (window.lucide) lucide.createIcons();
 
     // Pick up an interrupted Georgian translation exactly where it stopped.
-    setTimeout(() => { resumeTranslationJobIfAny(); }, 800);
+    setTimeout(() => { if (currentUser && currentUser.email) resumeTranslationJobIfAny(); }, 800);
 }
 
 
@@ -1395,6 +1415,10 @@ function navigate(viewId) {
 }
 
 function openModal(modalId) {
+    if (modalId === 'authModal') {
+        openAuthGate('signin');
+        return;
+    }
     const modal = document.getElementById(modalId);
     if (modal) {
         if (modalId === 'authModal') {
@@ -1775,16 +1799,16 @@ function updateAuthUI() {
         }
     } else {
         if (DOM.sideNavUserName) DOM.sideNavUserName.textContent = "Sign In / Register";
-        if (DOM.topAvatarBadge) DOM.topAvatarBadge.textContent = "G";
+        if (DOM.topAvatarBadge) DOM.topAvatarBadge.textContent = "🔐";
         if (DOM.userNavSection) {
             DOM.userNavSection.innerHTML = `
-                <button onclick="openModal('authModal')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-on-surface-variant hover:text-white transition-all text-sm font-medium">
+                <button onclick="openAuthGate('signin')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-on-surface-variant hover:text-white transition-all text-sm font-medium">
                     <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-primary-fixed">
-                        <span class="material-symbols-outlined text-lg">person</span>
+                        <span class="material-symbols-outlined text-lg">login</span>
                     </div>
                     <div class="text-left overflow-hidden">
                         <p class="text-sm font-medium text-white truncate">Sign In</p>
-                        <p class="text-xs text-on-surface-variant">Sync your books</p>
+                        <p class="text-xs text-on-surface-variant">Authorization Required</p>
                     </div>
                 </button>
                 <div class="mt-2 px-2 text-[10px] text-on-surface-variant/60 font-mono">
@@ -1831,6 +1855,8 @@ function openAuthGate(mode) {
     closeAccountCabinet();
     try { closeModal('authModal'); } catch (e) {}
     const gateScreen = document.getElementById('authGateScreen');
+    const appContainer = document.getElementById('appMainContainer');
+    if (appContainer) appContainer.classList.add('hidden');
     if (gateScreen) {
         gateScreen.classList.remove('hidden');
         switchGateMode(mode || 'signin');
@@ -1838,6 +1864,10 @@ function openAuthGate(mode) {
 }
 
 function closeAuthGate() {
+    if (!currentUser || !currentUser.email) {
+        // STRICT LOCKOUT: Unauthenticated user cannot close auth gate
+        return;
+    }
     const gateScreen = document.getElementById('authGateScreen');
     const appContainer = document.getElementById('appMainContainer');
     if (gateScreen) gateScreen.classList.add('hidden');
@@ -1845,6 +1875,10 @@ function closeAuthGate() {
 }
 
 function openAccountCabinet() {
+    if (!currentUser || !currentUser.email) {
+        openAuthGate('signin');
+        return;
+    }
     updateCabinetUI();
     openModal('accountCabinetModal');
 }
@@ -1863,33 +1897,26 @@ function updateCabinetUI() {
     const userEmail = (currentUser?.email || '').trim();
     const isAdmin = !!(userEmail.toLowerCase() === 'ananiadevsurashvili@gmail.com' || currentUser?.role === 'admin');
 
-    if (currentUser && userEmail) {
-        if (avatar) avatar.textContent = userEmail.charAt(0).toUpperCase();
-        if (email) email.textContent = userEmail;
-        if (roleBadge) {
-            roleBadge.textContent = isAdmin ? '👑 Administrator v1.46.8' : '🎧 PRO Listener';
-            roleBadge.className = isAdmin
-                ? 'px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold'
-                : 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-white';
-        }
-        if (cloudBadge) {
-            cloudBadge.textContent = usingCloud ? '☁️ Supabase Cloud' : '💾 Local Storage';
-        }
-        if (btnTraining) {
-            if (isAdmin) btnTraining.classList.remove('hidden');
-            else btnTraining.classList.add('hidden');
-        }
-    } else {
-        if (avatar) avatar.textContent = 'G';
-        if (email) email.textContent = 'Guest Listener';
-        if (roleBadge) {
-            roleBadge.textContent = '👤 Guest Mode';
-            roleBadge.className = 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-on-surface-variant';
-        }
-        if (cloudBadge) {
-            cloudBadge.textContent = 'Offline Preview';
-        }
-        if (btnTraining) btnTraining.classList.add('hidden');
+    if (!currentUser || !userEmail) {
+        closeAccountCabinet();
+        openAuthGate('signin');
+        return;
+    }
+
+    if (avatar) avatar.textContent = userEmail.charAt(0).toUpperCase();
+    if (email) email.textContent = userEmail;
+    if (roleBadge) {
+        roleBadge.textContent = isAdmin ? '👑 Administrator v1.46.8' : '🎧 PRO Listener';
+        roleBadge.className = isAdmin
+            ? 'px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold'
+            : 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-white';
+    }
+    if (cloudBadge) {
+        cloudBadge.textContent = usingCloud ? '☁️ Supabase Cloud' : '💾 Local Storage';
+    }
+    if (btnTraining) {
+        if (isAdmin) btnTraining.classList.remove('hidden');
+        else btnTraining.classList.add('hidden');
     }
 }
 
@@ -1914,26 +1941,12 @@ function updateAuthGateVisibility() {
     const isRecovery = hash.includes('type=recovery') || search.includes('type=recovery');
     const wantsRegister = hash.includes('register') || hash.includes('signup');
     const wantsForgot = hash.includes('forgot');
-    const wantsAuth = hash.includes('login') || hash.includes('auth') || hash.includes('signin') || search.includes('mode=auth') || search.includes('mode=login');
 
-    // Update the already-logged-in banner if present
-    const loggedInBanner = document.getElementById('gateAlreadyLoggedInBanner');
-    const loggedInEmail = document.getElementById('gateLoggedInEmail');
-    if (loggedInBanner) {
-        if (isLoggedIn) {
-            loggedInBanner.classList.remove('hidden');
-            if (loggedInEmail) loggedInEmail.textContent = currentUser.email;
-        } else {
-            loggedInBanner.classList.add('hidden');
-        }
-    }
-
+    // 1. Password Recovery Flow
     if (isRecovery) {
-        if (gateScreen) {
-            gateScreen.classList.remove('hidden');
-            switchGateMode('reset');
-        }
         if (appContainer) appContainer.classList.add('hidden');
+        if (gateScreen) gateScreen.classList.remove('hidden');
+        switchGateMode('reset');
         if (window.LuminaStore && window.LuminaStore.handleRecoverySession) {
             window.LuminaStore.handleRecoverySession().then(res => {
                 if (res?.user?.email) {
@@ -1942,33 +1955,40 @@ function updateAuthGateVisibility() {
                 }
             }).catch(e => console.warn('Recovery session check error:', e));
         }
-    } else if (wantsRegister) {
-        if (gateScreen) {
-            gateScreen.classList.remove('hidden');
+        return;
+    }
+
+    // 2. STRICT ENFORCEMENT: Unauthenticated users are completely LOCKED OUT of dashboard.
+    // There is NO guest mode and NO entering the dashboard without logging in or registering.
+    if (!isLoggedIn) {
+        if (appContainer) appContainer.classList.add('hidden');
+        if (gateScreen) gateScreen.classList.remove('hidden');
+        try { closeModal('authModal'); } catch (e) {}
+        closeAccountCabinet();
+        try { if (typeof stopAudio === 'function') stopAudio(); } catch (e) {}
+
+        if (wantsRegister) {
             switchGateMode('register');
-        }
-    } else if (wantsForgot) {
-        if (gateScreen) {
-            gateScreen.classList.remove('hidden');
+        } else if (wantsForgot) {
             switchGateMode('forgot');
-        }
-    } else if (wantsAuth) {
-        if (gateScreen) {
-            gateScreen.classList.remove('hidden');
+        } else {
             switchGateMode('signin');
         }
-    } else if (isLoggedIn) {
+        return;
+    }
+
+    // 3. User is authenticated: allow access to dashboard
+    if (wantsRegister) {
+        if (appContainer) appContainer.classList.add('hidden');
+        if (gateScreen) gateScreen.classList.remove('hidden');
+        switchGateMode('register');
+    } else if (wantsForgot) {
+        if (appContainer) appContainer.classList.add('hidden');
+        if (gateScreen) gateScreen.classList.remove('hidden');
+        switchGateMode('forgot');
+    } else {
         if (gateScreen) gateScreen.classList.add('hidden');
         if (appContainer) appContainer.classList.remove('hidden');
-    } else {
-        if (gateScreen) {
-            gateScreen.classList.remove('hidden');
-            switchGateMode('signin');
-        }
-        if (appContainer) {
-            appContainer.classList.add('hidden');
-        }
-        try { closeModal('authModal'); } catch (e) {}
     }
 }
 

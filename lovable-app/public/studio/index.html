@@ -565,11 +565,6 @@
         </div>
 
         <div class="relative w-full max-w-md glass-panel p-6 sm:p-8 rounded-3xl border border-white/15 shadow-2xl space-y-6 my-auto">
-            <!-- Close Gate / Back to Studio Button -->
-            <button type="button" onclick="closeAuthGate()" class="absolute top-5 right-5 p-1.5 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-white transition" title="Close / Continue to Studio" aria-label="Close">
-                <span class="material-symbols-outlined text-lg">close</span>
-            </button>
-
             <!-- Branding Header -->
             <div class="text-center space-y-2">
                 <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-secondary-container to-primary-container p-0.5 mx-auto shadow-[0_0_25px_rgba(0,240,255,0.3)]">
@@ -585,15 +580,6 @@
                     <p class="text-xs sm:text-sm text-on-surface-variant mt-1" id="gateSubtitle">
                         Sign in to access your personal audiobooks, scanned books, and studio workspace
                     </p>
-                </div>
-            </div>
-
-            <!-- Already Logged In Active Banner -->
-            <div id="gateAlreadyLoggedInBanner" class="hidden p-3 rounded-2xl bg-primary-container/15 border border-primary-container/30 text-xs text-primary-fixed flex items-center justify-between gap-2">
-                <span class="truncate">Active: <strong id="gateLoggedInEmail" class="text-white"></strong></span>
-                <div class="flex items-center gap-2 flex-shrink-0">
-                    <button type="button" onclick="closeAuthGate()" class="px-2.5 py-1 rounded-lg bg-primary-container text-on-primary-container font-bold text-[11px] hover:brightness-110">Studio →</button>
-                    <button type="button" onclick="logout()" class="text-on-surface-variant hover:text-rose-300 text-[11px] underline">Sign Out</button>
                 </div>
             </div>
 
@@ -710,11 +696,8 @@
                 </button>
             </form>
 
-            <!-- Bottom Guest & Branding Link -->
+            <!-- Bottom Branding Security Note -->
             <div class="pt-2 text-center flex flex-col items-center gap-2">
-                <button type="button" onclick="closeAuthGate()" class="text-xs text-primary-fixed-dim hover:text-primary-container font-medium hover:underline transition">
-                    Continue to Studio as Guest →
-                </button>
                 <div class="text-[10px] text-on-surface-variant/60 font-mono">
                     Encrypted Vault • Supabase Cloud Sync • EngBot v1.46.8
                 </div>
@@ -723,7 +706,7 @@
     </div>
 
     <!-- ════════════════ App Main Container (hidden when not logged in) ════════════════ -->
-    <div id="appMainContainer" class="flex-1 flex flex-col md:flex-row w-full min-h-screen">
+    <div id="appMainContainer" class="hidden flex-1 flex flex-col md:flex-row w-full min-h-screen">
     <!-- ════════════════ Mobile Top Bar (visible < md) ════════════════ -->
     <header class="md:hidden glass-header fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4">
         <button onclick="openMobileNav()" class="p-2 -ml-2 rounded-xl text-white hover:bg-white/10 transition" aria-label="Open menu" title="Menu">

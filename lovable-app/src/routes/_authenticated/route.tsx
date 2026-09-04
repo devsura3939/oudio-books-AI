@@ -5,11 +5,7 @@ import { AppShell } from "@/components/app-shell";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async ({ location }) => {
-    if (location.pathname.startsWith("/studio") || location.pathname.startsWith("/scan")) {
-      const { data } = await db.auth.getUser();
-      return { user: data?.user ?? null };
-    }
+  beforeLoad: async () => {
     const { data, error } = await db.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
     return { user: data.user };
