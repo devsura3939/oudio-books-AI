@@ -622,6 +622,7 @@
 
         #voiceModalSelect,
         #elevenLabsVoiceSelect,
+        #elevenLabsVoiceSelectKa,
         .glass-select {
             color-scheme: dark !important;
             background-color: #121620 !important;
@@ -631,19 +632,22 @@
         }
 
         #voiceModalSelect:focus,
-        #elevenLabsVoiceSelect:focus {
+        #elevenLabsVoiceSelect:focus,
+        #elevenLabsVoiceSelectKa:focus {
             border-color: #38bdf8 !important;
             box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
         }
 
         #voiceModalSelect option,
-        #elevenLabsVoiceSelect option {
+        #elevenLabsVoiceSelect option,
+        #elevenLabsVoiceSelectKa option {
             background-color: #121620 !important;
             color: #ffffff !important;
         }
 
         #voiceModalSelect optgroup,
-        #elevenLabsVoiceSelect optgroup {
+        #elevenLabsVoiceSelect optgroup,
+        #elevenLabsVoiceSelectKa optgroup {
             background-color: #090d15 !important;
             color: #38bdf8 !important;
         }
@@ -2032,18 +2036,77 @@
                     </label>
                 </div>
 
-                <div id="elevenLabsKeySection" class="hidden space-y-2 pt-2 border-t border-white/10">
-                    <input type="password" id="elevenLabsApiKey" placeholder="Enter your ElevenLabs API Key (sk_...)" class="w-full glass-input rounded-xl p-2.5 text-xs text-white outline-none">
-                    <div class="flex gap-2">
-                        <select id="elevenLabsVoiceSelect" class="flex-grow glass-input rounded-xl p-2 text-xs text-white outline-none">
-                            <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Warm & Natural Female)</option>
-                            <option value="pNInz6obpgDQGcFmaJgB">Adam (Deep Male Narrator)</option>
-                            <option value="ErXwobaYiN019PkySvjV">Antoni (Energetic Storyteller)</option>
-                            <option value="JBFqnCBsd6RMkjVDRZzb">George (British Audiobook Voice)</option>
-                            <option value="EXAVITQu4vr4xnSDxMaL">Bella (Expressive Female)</option>
-                            <option value="VR6AewLTigWG4xSOukaG">Arnold (Crisp & Articulate)</option>
+                <div id="elevenLabsKeySection" class="hidden space-y-3 pt-2 border-t border-white/10">
+                    <div class="space-y-1">
+                        <label class="block text-[11px] font-semibold text-white/80">ElevenLabs API Key</label>
+                        <div class="flex gap-2">
+                            <input type="password" id="elevenLabsApiKey" placeholder="Enter your ElevenLabs API Key (sk_...)" class="flex-grow glass-input rounded-xl p-2.5 text-xs text-white outline-none">
+                            <button id="btnSyncElevenVoices" onclick="fetchElevenLabsUserVoices(true)" title="Fetch and sync voices from your ElevenLabs account" class="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/15 text-primary-fixed font-bold text-xs rounded-xl flex items-center gap-1 transition whitespace-nowrap">
+                                <span class="material-symbols-outlined text-sm">sync</span>
+                                Sync Voices
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- English Voice Selector -->
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-[11px] font-semibold text-white/80">🇺🇸 English Narrator</label>
+                            <button onclick="previewElevenLabsVoice('en')" class="text-[10px] text-primary-fixed hover:underline flex items-center gap-0.5">
+                                <span class="material-symbols-outlined text-xs">volume_up</span> Test English
+                            </button>
+                        </div>
+                        <select id="elevenLabsVoiceSelect" class="w-full glass-input rounded-xl p-2 text-xs text-white outline-none">
+                            <optgroup label="✨ Curated English Voices">
+                                <option value="pNInz6obpgDQGcFmaJgB">Adam (Deep Male Narrator)</option>
+                                <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Warm & Natural Female)</option>
+                                <option value="JBFqnCBsd6RMkjVDRZzb">George (Classic British Storyteller)</option>
+                                <option value="ErXwobaYiN019PkySvjV">Antoni (Energetic Storyteller)</option>
+                                <option value="EXAVITQu4vr4xnSDxMaL">Bella (Expressive Dramatic Female)</option>
+                                <option value="TX3LPaxmHKxFdv7VOQHJ">Liam (Articulate Young Male)</option>
+                                <option value="VR6AewLTigWG4xSOukaG">Arnold (Crisp & Articulate)</option>
+                            </optgroup>
+                            <optgroup label="🎙️ From Your ElevenLabs Account" id="elevenUserVoicesEn">
+                                <option disabled>Click "Sync Voices" above to load account voices</option>
+                            </optgroup>
                         </select>
-                        <button onclick="saveElevenLabsSettings()" class="px-3 py-2 bg-primary-container text-on-primary-container font-bold text-xs rounded-xl hover:brightness-110 transition">Save</button>
+                    </div>
+
+                    <!-- Georgian Voice Selector -->
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-[11px] font-semibold text-georgian-gold flex items-center gap-1">
+                                <span>🇬🇪</span> Georgian Narrator (High Quality)
+                            </label>
+                            <button onclick="previewElevenLabsVoice('ka')" class="text-[10px] text-georgian-gold hover:underline flex items-center gap-0.5">
+                                <span class="material-symbols-outlined text-xs">volume_up</span> Test Georgian
+                            </button>
+                        </div>
+                        <select id="elevenLabsVoiceSelectKa" onchange="onElevenLabsVoiceKaChange(this.value)" class="w-full glass-input rounded-xl p-2 text-xs text-white outline-none">
+                            <optgroup label="🇬🇪 Curated for Georgian Storytelling">
+                                <option value="nPczCjzI2devNBz1zQrb" selected>Brian (Deep Resonant Literary Epic Narrator - Recommended)</option>
+                                <option value="JBFqnCBsd6RMkjVDRZzb">George (Warm & Engaging Classic Storyteller)</option>
+                                <option value="pNInz6obpgDQGcFmaJgB">Adam (Deep & Calm Natural Narrator)</option>
+                                <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Calm & Clear Expressive Female)</option>
+                                <option value="XB0fDUnXU5powFXDhCwa">Charlotte (Poetic & Expressive Female Voice)</option>
+                                <option value="TX3LPaxmHKxFdv7VOQHJ">Liam (Articulate & Clear Modern Voice)</option>
+                                <option value="Xb7hH8MSUJpSbSDYk0k2">Alice (Confident & Dramatic Female Voice)</option>
+                                <option value="onwK4e9ZLuTAKqWW03F9">Daniel (Authoritative & Solemn Narrator)</option>
+                                <option value="pqHfZKP75CvOlQylNhV4">Bill (Mature & Trustworthy Storyteller)</option>
+                            </optgroup>
+                            <optgroup label="🎙️ From Your ElevenLabs Account" id="elevenUserVoicesKa">
+                                <option disabled>Click "Sync Voices" above to load account voices</option>
+                            </optgroup>
+                            <optgroup label="Custom Voice">
+                                <option value="custom">-- Enter Custom Voice ID below --</option>
+                            </optgroup>
+                        </select>
+                        <input type="text" id="elevenLabsCustomVoiceIdKa" placeholder="Enter custom ElevenLabs Voice ID for Georgian..." class="w-full glass-input rounded-xl p-2 text-xs text-white outline-none mt-1 hidden">
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="text-[10px] text-white/50">Uses Eleven Multilingual v2 with Georgian emotional inflection</span>
+                        <button onclick="saveElevenLabsSettings()" class="px-4 py-2 bg-primary-container text-on-primary-container font-bold text-xs rounded-xl hover:brightness-110 transition shadow-md">Save Settings</button>
                     </div>
                 </div>
             </div>
@@ -2272,6 +2335,9 @@
     <div id="scanModal" class="modal-overlay">
         <div id="scanShell" class="modal-content glass-panel p-6 rounded-3xl max-w-lg w-full border border-white/15 shadow-2xl mx-4"></div>
     </div>
+
+    <!-- Continuous Silent Audio Loop: keeps OS audio hardware pipeline awake for lock-screen & background narration -->
+    <audio id="backgroundKeepAliveAudio" preload="auto" loop playsinline webkit-playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA" style="display:none;"></audio>
 
     <script src="static/supabase-store.js?v=1.47.4"></script>
     <script src="static/app.js?v=1.47.4"></script>

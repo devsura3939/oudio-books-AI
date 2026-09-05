@@ -84,9 +84,15 @@ let touchEndY = 0;
 // ElevenLabs Audio State
 let elevenLabsEnabled = false;
 let elevenLabsApiKey = '';
-let elevenLabsVoiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam
+let elevenLabsVoiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam (English default)
+let elevenLabsVoiceIdKa = localStorage.getItem('lumina_el_voice_ka') || 'nPczCjzI2devNBz1zQrb'; // Brian (Georgian recommended)
 let elevenLabsModelId = localStorage.getItem('lumina_el_model') || 'eleven_multilingual_v2';
 let currentElevenAudio = null;
+
+// Lock-Screen Background Audio Keep-Alive & Wake Lock State
+let backgroundKeepAliveAudio = null;
+let screenWakeLock = null;
+const SILENT_AUDIO_URI = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
 
 // Whole Book Translation State
 let isTranslatingWholeBook = false;
@@ -1814,6 +1820,10 @@ function cacheDOM() {
         elevenLabsKeySection: document.getElementById('elevenLabsKeySection'),
         elevenLabsApiKey: document.getElementById('elevenLabsApiKey'),
         elevenLabsVoiceSelect: document.getElementById('elevenLabsVoiceSelect'),
+        elevenLabsVoiceSelectKa: document.getElementById('elevenLabsVoiceSelectKa'),
+        elevenLabsCustomVoiceIdKa: document.getElementById('elevenLabsCustomVoiceIdKa'),
+        btnSyncElevenVoices: document.getElementById('btnSyncElevenVoices'),
+        backgroundKeepAliveAudio: document.getElementById('backgroundKeepAliveAudio'),
 
         // Moon+ Reader View
         readerView: document.getElementById('readerView'),
@@ -1857,6 +1867,8 @@ function cacheDOM() {
 async function init() {
     if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
     cacheDOM();
+    initBackgroundAudioKeepAlive();
+    initMediaSessionHandlers();
     checkAuthState(); // Immediately lock dashboard if not authenticated
     await initDB();
     try { await restoreAccountSettingsForCurrentUser(); } catch (e) {}
@@ -2279,6 +2291,7 @@ function getCurrentAccountSettings() {
         elevenLabsEnabled: (typeof elevenLabsEnabled !== 'undefined') ? Boolean(elevenLabsEnabled) : (local.elevenLabsEnabled !== undefined ? Boolean(local.elevenLabsEnabled) : (localStorage.getItem('lumina_el_enabled') === 'true')),
         elevenLabsApiKey: (typeof elevenLabsApiKey !== 'undefined' && elevenLabsApiKey) ? elevenLabsApiKey : (local.elevenLabsApiKey || localStorage.getItem('lumina_el_key') || localStorage.getItem('lumina_saved_el_key') || ''),
         elevenLabsVoiceId: (typeof elevenLabsVoiceId !== 'undefined' && elevenLabsVoiceId) ? elevenLabsVoiceId : (local.elevenLabsVoiceId || localStorage.getItem('lumina_el_voice') || 'pNInz6obpgDQGcFmaJgB'),
+        elevenLabsVoiceIdKa: (typeof elevenLabsVoiceIdKa !== 'undefined' && elevenLabsVoiceIdKa) ? elevenLabsVoiceIdKa : (local.elevenLabsVoiceIdKa || localStorage.getItem('lumina_el_voice_ka') || 'nPczCjzI2devNBz1zQrb'),
         updatedAt: local.updatedAt || new Date().toISOString()
     };
 }
@@ -2515,6 +2528,10 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
     if (settings.elevenLabsVoiceId !== undefined) {
         elevenLabsVoiceId = String(settings.elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
         if (saveToLegacyStorage) localStorage.setItem('lumina_el_voice', elevenLabsVoiceId);
+    }
+    if (settings.elevenLabsVoiceIdKa !== undefined) {
+        elevenLabsVoiceIdKa = String(settings.elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb');
+        if (saveToLegacyStorage) localStorage.setItem('lumina_el_voice_ka', elevenLabsVoiceIdKa);
     }
 
     syncSettingsToDOMInputs();
@@ -3895,6 +3912,161 @@ window.addEventListener('hashchange', () => {
     updateAuthGateVisibility();
 });
 
+// ── ElevenLabs Voice Collection Engine ─────────────────────────────────────
+function onElevenLabsVoiceKaChange(val) {
+    const customInput = document.getElementById('elevenLabsCustomVoiceIdKa');
+    if (!customInput) return;
+    if (val === 'custom') {
+        customInput.classList.remove('hidden');
+        customInput.focus();
+    } else {
+        customInput.classList.add('hidden');
+    }
+}
+window.onElevenLabsVoiceKaChange = onElevenLabsVoiceKaChange;
+
+function populateElevenLabsVoiceDropdowns(accountVoices = []) {
+    const enSelect = document.getElementById('elevenLabsVoiceSelect');
+    const kaSelect = document.getElementById('elevenLabsVoiceSelectKa');
+    if (!enSelect || !kaSelect) return;
+
+    const userGroupEn = document.getElementById('elevenUserVoicesEn');
+    const userGroupKa = document.getElementById('elevenUserVoicesKa');
+
+    if (accountVoices && accountVoices.length > 0) {
+        if (userGroupEn) {
+            userGroupEn.innerHTML = accountVoices.map(v => {
+                const category = v.category ? ` [${v.category}]` : '';
+                return `<option value="${v.voice_id}">${escapeHtml(v.name)}${category}</option>`;
+            }).join('');
+        }
+        if (userGroupKa) {
+            userGroupKa.innerHTML = accountVoices.map(v => {
+                const isKa = (v.name && /georgian|ქართული|ka\b/i.test(v.name)) || (v.labels && JSON.stringify(v.labels).toLowerCase().includes('georgian'));
+                const badge = isKa ? '🇬🇪 ' : '';
+                const category = v.category ? ` [${v.category}]` : '';
+                return `<option value="${v.voice_id}">${badge}${escapeHtml(v.name)}${category}</option>`;
+            }).join('');
+        }
+    }
+
+    if (elevenLabsVoiceId) enSelect.value = elevenLabsVoiceId;
+    if (elevenLabsVoiceIdKa) {
+        const optionExists = Array.from(kaSelect.options).some(o => o.value === elevenLabsVoiceIdKa);
+        if (optionExists) {
+            kaSelect.value = elevenLabsVoiceIdKa;
+        } else {
+            kaSelect.value = 'custom';
+            const customInput = document.getElementById('elevenLabsCustomVoiceIdKa');
+            if (customInput) {
+                customInput.classList.remove('hidden');
+                customInput.value = elevenLabsVoiceIdKa;
+            }
+        }
+    }
+}
+
+async function fetchElevenLabsUserVoices(showFeedback = true) {
+    const key = (DOM.elevenLabsApiKey ? DOM.elevenLabsApiKey.value.trim() : '') || elevenLabsApiKey;
+    if (!key) {
+        if (showFeedback) {
+            if (typeof showToast === 'function') showToast("Please enter an ElevenLabs API key first.");
+            else alert("Please enter an ElevenLabs API key first.");
+        }
+        return;
+    }
+
+    const syncBtn = document.getElementById('btnSyncElevenVoices');
+    if (syncBtn) {
+        syncBtn.disabled = true;
+        syncBtn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Syncing...';
+    }
+
+    try {
+        const res = await fetch('https://api.elevenlabs.io/v1/voices', {
+            headers: { 'xi-api-key': key }
+        });
+        if (!res.ok) throw new Error(`ElevenLabs API returned ${res.status}`);
+        const data = await res.json();
+        const voices = data.voices || [];
+        populateElevenLabsVoiceDropdowns(voices);
+        try {
+            localStorage.setItem('lumina_cached_el_voices', JSON.stringify(voices));
+        } catch (e) {}
+        if (showFeedback) {
+            if (typeof showToast === 'function') showToast(`Loaded ${voices.length} voices from your ElevenLabs collection! 🎙️`);
+        }
+    } catch (err) {
+        console.warn('[ElevenLabs] Failed to fetch account voices:', err);
+        if (showFeedback) {
+            if (typeof showToast === 'function') showToast("Could not sync voices. Please check your ElevenLabs API Key.");
+            else alert("Could not sync voices. Please check your ElevenLabs API Key.");
+        }
+    } finally {
+        if (syncBtn) {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = '<span class="material-symbols-outlined text-sm">sync</span> Sync Voices';
+        }
+    }
+}
+window.fetchElevenLabsUserVoices = fetchElevenLabsUserVoices;
+
+async function previewElevenLabsVoice(lang = 'en') {
+    const key = (DOM.elevenLabsApiKey ? DOM.elevenLabsApiKey.value.trim() : '') || elevenLabsApiKey;
+    if (!key) {
+        if (typeof showToast === 'function') showToast("Enter your ElevenLabs API Key to test voice preview");
+        else alert("Enter your ElevenLabs API Key to test voice preview");
+        return;
+    }
+
+    const isKa = (lang === 'ka');
+    let voiceId = 'pNInz6obpgDQGcFmaJgB';
+    if (isKa) {
+        const kaSelect = document.getElementById('elevenLabsVoiceSelectKa');
+        const customInput = document.getElementById('elevenLabsCustomVoiceIdKa');
+        const customVal = customInput ? customInput.value.trim() : '';
+        const selectVal = kaSelect ? kaSelect.value : '';
+        voiceId = (selectVal === 'custom' && customVal) ? customVal : (selectVal || elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb');
+    } else {
+        const enSelect = document.getElementById('elevenLabsVoiceSelect');
+        voiceId = (enSelect ? enSelect.value : '') || elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB';
+    }
+
+    const sampleText = isKa
+        ? "გამარჯობა! ეს არის ქართული ნარაციის ხმის ნიმუში."
+        : "Hello! This is a preview of your selected ElevenLabs audiobook narrator.";
+
+    if (typeof showToast === 'function') showToast(`Generating ${isKa ? 'Georgian 🇬🇪' : 'English 🇺🇸'} sample audio...`);
+
+    try {
+        const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'xi-api-key': key,
+                'Content-Type': 'application/json',
+                'Accept': 'audio/mpeg'
+            },
+            body: JSON.stringify({
+                text: sampleText,
+                model_id: 'eleven_multilingual_v2',
+                voice_settings: { stability: 0.35, similarity_boost: 0.85, style: 0.25, use_speaker_boost: true }
+            })
+        });
+
+        if (!res.ok) throw new Error(`ElevenLabs API returned ${res.status}`);
+        const blob = await res.blob();
+        const testAudio = new Audio(URL.createObjectURL(blob));
+        startBackgroundKeepAlive();
+        await testAudio.play();
+    } catch (e) {
+        console.warn('[ElevenLabs] preview failed:', e);
+        if (typeof showToast === 'function') showToast("Voice preview failed. Verify your ElevenLabs API Key and Voice ID.");
+        else alert("Voice preview failed. Verify your ElevenLabs API Key and Voice ID.");
+    }
+}
+window.previewElevenLabsVoice = previewElevenLabsVoice;
+
 // ── ElevenLabs Settings ────────────────────────────────────────────────────
 function loadElevenLabsSettings() {
     const acc = getCachedAccountSettings();
@@ -3902,15 +4074,40 @@ function loadElevenLabsSettings() {
         if (acc.elevenLabsEnabled !== undefined) elevenLabsEnabled = Boolean(acc.elevenLabsEnabled);
         if (acc.elevenLabsApiKey !== undefined) elevenLabsApiKey = String(acc.elevenLabsApiKey || '').trim();
         if (acc.elevenLabsVoiceId !== undefined) elevenLabsVoiceId = String(acc.elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
+        if (acc.elevenLabsVoiceIdKa !== undefined) elevenLabsVoiceIdKa = String(acc.elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb');
     } else {
         elevenLabsEnabled = localStorage.getItem('lumina_el_enabled') === 'true';
         elevenLabsApiKey = localStorage.getItem('lumina_el_key') || '';
         elevenLabsVoiceId = localStorage.getItem('lumina_el_voice') || 'pNInz6obpgDQGcFmaJgB';
+        elevenLabsVoiceIdKa = localStorage.getItem('lumina_el_voice_ka') || 'nPczCjzI2devNBz1zQrb';
     }
 
     if (DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = elevenLabsEnabled;
     if (DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = elevenLabsApiKey;
     if (DOM.elevenLabsVoiceSelect) DOM.elevenLabsVoiceSelect.value = elevenLabsVoiceId;
+    if (DOM.elevenLabsVoiceSelectKa) DOM.elevenLabsVoiceSelectKa.value = elevenLabsVoiceIdKa;
+
+    // Load cached voices if available
+    try {
+        const cachedRaw = localStorage.getItem('lumina_cached_el_voices');
+        if (cachedRaw) {
+            const cachedVoices = JSON.parse(cachedRaw);
+            populateElevenLabsVoiceDropdowns(cachedVoices);
+        }
+    } catch (e) {}
+
+    if (elevenLabsVoiceIdKa) {
+        const kaSelect = document.getElementById('elevenLabsVoiceSelectKa');
+        const customInput = document.getElementById('elevenLabsCustomVoiceIdKa');
+        if (kaSelect && customInput) {
+            const exists = Array.from(kaSelect.options).some(o => o.value === elevenLabsVoiceIdKa);
+            if (!exists) {
+                kaSelect.value = 'custom';
+                customInput.classList.remove('hidden');
+                customInput.value = elevenLabsVoiceIdKa;
+            }
+        }
+    }
 
     if (elevenLabsEnabled && DOM.elevenLabsKeySection) {
         DOM.elevenLabsKeySection.classList.remove('hidden');
@@ -3947,6 +4144,13 @@ function saveElevenLabsSettings() {
         elevenLabsVoiceId = DOM.elevenLabsVoiceSelect.value;
         localStorage.setItem('lumina_el_voice', elevenLabsVoiceId);
     }
+    if (DOM.elevenLabsVoiceSelectKa) {
+        const selectVal = DOM.elevenLabsVoiceSelectKa.value;
+        const customInput = document.getElementById('elevenLabsCustomVoiceIdKa');
+        const customVal = customInput ? customInput.value.trim() : '';
+        elevenLabsVoiceIdKa = (selectVal === 'custom' && customVal) ? customVal : (selectVal || 'nPczCjzI2devNBz1zQrb');
+        localStorage.setItem('lumina_el_voice_ka', elevenLabsVoiceIdKa);
+    }
     if (DOM.elevenLabsToggle) {
         elevenLabsEnabled = DOM.elevenLabsToggle.checked;
         localStorage.setItem('lumina_el_enabled', elevenLabsEnabled ? 'true' : 'false');
@@ -3956,6 +4160,7 @@ function saveElevenLabsSettings() {
     const accountSettings = getCurrentAccountSettings();
     accountSettings.elevenLabsApiKey = elevenLabsApiKey;
     accountSettings.elevenLabsVoiceId = elevenLabsVoiceId;
+    accountSettings.elevenLabsVoiceIdKa = elevenLabsVoiceIdKa;
     accountSettings.elevenLabsEnabled = elevenLabsEnabled;
     accountSettings.updatedAt = new Date().toISOString();
 
@@ -3972,8 +4177,16 @@ function saveElevenLabsSettings() {
         });
     }
 
-    alert('ElevenLabs settings saved to your account successfully!');
+    if (typeof showToast === 'function') {
+        showToast('ElevenLabs settings saved to your account successfully! ✨');
+    } else {
+        alert('ElevenLabs settings saved to your account successfully!');
+    }
     updateTopVoiceBadge();
+
+    if (elevenLabsApiKey) {
+        fetchElevenLabsUserVoices(false);
+    }
 }
 
 // ── Voice Management ────────────────────────────────────────────────────────
@@ -7100,6 +7313,206 @@ function cancelWholeBookTranslation() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
+// ██ LOCK-SCREEN BACKGROUND AUDIO & HARDWARE MEDIA SESSION ENGINE ██
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Initializes and manages continuous low-volume / silent background audio loop.
+ * Mobile platforms (iOS Safari, Android Chrome, mobile WebView) freeze background
+ * timers and fetch queues between TTS sentences if no audio element is actively playing.
+ * Running an inaudible loop keeps the OS audio pipeline and JS event loop alive across
+ * lock-screen and device sleep events.
+ */
+function initBackgroundAudioKeepAlive() {
+    if (!backgroundKeepAliveAudio) {
+        backgroundKeepAliveAudio = (DOM && DOM.backgroundKeepAliveAudio) || document.getElementById('backgroundKeepAliveAudio');
+    }
+    if (!backgroundKeepAliveAudio) {
+        try {
+            backgroundKeepAliveAudio = new Audio(SILENT_AUDIO_URI);
+            backgroundKeepAliveAudio.id = 'backgroundKeepAliveAudio';
+            backgroundKeepAliveAudio.loop = true;
+            backgroundKeepAliveAudio.volume = 0.001;
+            document.body.appendChild(backgroundKeepAliveAudio);
+        } catch (e) {
+            console.warn('[KeepAlive] Audio element creation error:', e);
+        }
+    }
+    if (backgroundKeepAliveAudio) {
+        backgroundKeepAliveAudio.volume = 0.001;
+        backgroundKeepAliveAudio.loop = true;
+    }
+}
+window.initBackgroundAudioKeepAlive = initBackgroundAudioKeepAlive;
+
+function startBackgroundKeepAlive() {
+    try {
+        if (!backgroundKeepAliveAudio) {
+            initBackgroundAudioKeepAlive();
+        }
+        if (backgroundKeepAliveAudio && backgroundKeepAliveAudio.paused) {
+            backgroundKeepAliveAudio.play().catch(err => {
+                // Audio autoplay might wait for user gesture, which is fine
+                console.debug('[KeepAlive] Silent audio play deferred or auto-play prevented:', err && err.message);
+            });
+        }
+    } catch (e) {
+        console.warn('[KeepAlive] Failed to start silent audio:', e);
+    }
+}
+window.startBackgroundKeepAlive = startBackgroundKeepAlive;
+
+function stopBackgroundKeepAlive() {
+    try {
+        if (backgroundKeepAliveAudio && !backgroundKeepAliveAudio.paused) {
+            backgroundKeepAliveAudio.pause();
+        }
+    } catch (e) {}
+}
+window.stopBackgroundKeepAlive = stopBackgroundKeepAlive;
+
+/**
+ * Screen Wake Lock API to prevent the screen from turning off while reading/listening
+ */
+async function requestScreenWakeLock() {
+    if ('wakeLock' in navigator && !screenWakeLock) {
+        try {
+            screenWakeLock = await navigator.wakeLock.request('screen');
+            screenWakeLock.addEventListener('release', () => {
+                screenWakeLock = null;
+            });
+        } catch (e) {
+            // Wake lock may fail if battery saver is active or document is hidden
+            console.debug('[WakeLock] Request failed:', e && e.message);
+        }
+    }
+}
+window.requestScreenWakeLock = requestScreenWakeLock;
+
+function releaseScreenWakeLock() {
+    if (screenWakeLock) {
+        try {
+            screenWakeLock.release();
+        } catch (e) {}
+        screenWakeLock = null;
+    }
+}
+window.releaseScreenWakeLock = releaseScreenWakeLock;
+
+// Re-acquire wake lock if page becomes visible while playing
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isPlaying && !isPaused) {
+        requestScreenWakeLock();
+    }
+});
+
+/**
+ * Updates OS lock-screen Media Session controls, artwork, title, author, and chapter info
+ */
+function updateMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+
+    try {
+        const bookTitle = (currentBook && currentBook.title) ? currentBook.title : 'Audiobook';
+        const author = (currentBook && currentBook.author) ? currentBook.author : 'Lumina Audio';
+        const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
+        const chapterTitle = currentChap ? currentChap.title : `Chapter ${currentPlayingChapterId || 1}`;
+        
+        let coverUrl = (currentBook && currentBook.coverUrl) ? currentBook.coverUrl : '';
+        if (coverUrl && !coverUrl.startsWith('http') && !coverUrl.startsWith('data:') && !coverUrl.startsWith('blob:')) {
+            coverUrl = window.location.origin + '/' + coverUrl.replace(/^\//, '');
+        }
+
+        const artwork = coverUrl ? [
+            { src: coverUrl, sizes: '96x96', type: 'image/png' },
+            { src: coverUrl, sizes: '128x128', type: 'image/png' },
+            { src: coverUrl, sizes: '256x256', type: 'image/png' },
+            { src: coverUrl, sizes: '512x512', type: 'image/png' }
+        ] : [];
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: chapterTitle,
+            artist: author,
+            album: bookTitle,
+            artwork: artwork
+        });
+
+        navigator.mediaSession.playbackState = (isPlaying && !isPaused) ? 'playing' : 'paused';
+
+        // Update position state if supported
+        if ('setPositionState' in navigator.mediaSession && currentChap && currentChap.estimated_duration_sec) {
+            try {
+                navigator.mediaSession.setPositionState({
+                    duration: Math.max(1, currentChap.estimated_duration_sec),
+                    playbackRate: currentGlobalSpeed || 1.0,
+                    position: Math.min(secondsElapsed, currentChap.estimated_duration_sec)
+                });
+            } catch (posErr) {}
+        }
+    } catch (err) {
+        console.warn('[MediaSession] Metadata update error:', err);
+    }
+}
+window.updateMediaSession = updateMediaSession;
+
+/**
+ * Registers Media Session hardware / headphone / lock-screen action handlers
+ */
+function initMediaSessionHandlers() {
+    if (!('mediaSession' in navigator)) return;
+
+    const actionMap = [
+        ['play', () => {
+            if (isPaused || !isPlaying) togglePlayPause();
+        }],
+        ['pause', () => {
+            if (isPlaying && !isPaused) togglePlayPause();
+        }],
+        ['previoustrack', () => {
+            if (currentSentenceIndex > 2) {
+                currentSentenceIndex = Math.max(0, currentSentenceIndex - 3);
+                speakCurrentSentence();
+            } else {
+                playPrevChapter();
+            }
+        }],
+        ['nexttrack', () => {
+            if (sentenceQueue.length > 0 && currentSentenceIndex < sentenceQueue.length - 3) {
+                currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 3);
+                speakCurrentSentence();
+            } else {
+                playNextChapter();
+            }
+        }],
+        ['seekbackward', (details) => {
+            const seekSec = (details && details.seekOffset) ? details.seekOffset : 10;
+            secondsElapsed = Math.max(0, secondsElapsed - seekSec);
+            currentSentenceIndex = Math.max(0, currentSentenceIndex - 2);
+            speakCurrentSentence();
+        }],
+        ['seekforward', (details) => {
+            const seekSec = (details && details.seekOffset) ? details.seekOffset : 10;
+            secondsElapsed += seekSec;
+            currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 2);
+            speakCurrentSentence();
+        }],
+        ['stop', () => {
+            stopSpeech();
+        }]
+    ];
+
+    actionMap.forEach(([action, handler]) => {
+        try {
+            navigator.mediaSession.setActionHandler(action, handler);
+        } catch (err) {
+            // Action may not be supported by this browser
+        }
+    });
+}
+window.initMediaSessionHandlers = initMediaSessionHandlers;
+
+
+// ══════════════════════════════════════════════════════════════════════════
 // ██ 3. ZERO-SKIPPING BULLETPROOF SPEECH ENGINE ██
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -7151,8 +7564,12 @@ async function speakCurrentSentence() {
     const choice = localStorage.getItem('lumina_voice_choice') || '';
     const isDeviceVoice = choice.startsWith('device:');
 
+    startBackgroundKeepAlive();
+    requestScreenWakeLock();
+    updateMediaSession();
+
     if (elevenLabsEnabled && elevenLabsApiKey) {
-        speakElevenLabsSentence(cleanSentence);
+        speakElevenLabsSentence(cleanSentence, currentLang);
     } else if (gatewayTTSAvailable) {
         // Real audio file from the app's own TTS endpoint — the only engine
         // that reliably produces sound on mobile, in Georgian included.
@@ -7178,7 +7595,11 @@ let narrationGeneration = 0;
 function playUltimateFallbackTTS(text, lang, token) {
     const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.slice(0, 200))}`;
     const audio = new Audio(url);
+    currentElevenAudio = audio;
     audio.playbackRate = currentGlobalSpeed;
+    startBackgroundKeepAlive();
+    requestScreenWakeLock();
+    updateMediaSession();
     audio.onended = () => {
         if (token !== currentSpeechToken || !isPlaying || isPaused) return;
         currentSentenceIndex++;
@@ -7297,6 +7718,10 @@ function speakStandardSentence(text, lang) {
             }, 300);
         }
     };
+
+    startBackgroundKeepAlive();
+    requestScreenWakeLock();
+    updateMediaSession();
 
     window._activeUtterance = utter;
     window.speechSynthesis.speak(utter);
@@ -7462,6 +7887,10 @@ async function speakGatewayNeural(text, lang) {
 
         currentElevenAudio = audioToPlay;
         currentElevenAudio.playbackRate = currentGlobalSpeed;
+
+        startBackgroundKeepAlive();
+        requestScreenWakeLock();
+        updateMediaSession();
 
         primeGatewayPrefetchWindow(currentSentenceIndex, lang);
 
@@ -7640,6 +8069,10 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
         currentElevenAudio = audioToPlay;
         currentElevenAudio.playbackRate = currentGlobalSpeed;
 
+        startBackgroundKeepAlive();
+        requestScreenWakeLock();
+        updateMediaSession();
+
         // Trigger prefetch for next sentences in background
         for (let i = 1; i <= GATEWAY_PREFETCH_AHEAD; i++) {
             prefetchNextNeuralSentence(currentSentenceIndex + i, voiceId, ratePct, pitchHz, lang);
@@ -7715,14 +8148,17 @@ function elevenLabsVoiceSettings(modelId, sentenceType) {
     return { stability: 0.35, similarity_boost: 0.85, style: sentenceType === 'exclamation' ? 0.45 : 0.25, use_speaker_boost: true };
 }
 
-async function speakElevenLabsSentence(text) {
+async function speakElevenLabsSentence(text, lang = null) {
     stopCurrentSpeechAudio(true); // keep the prefetch window warm
     const myToken = currentSpeechToken;
     updatePlayerUIState(true);
 
     try {
-        const voiceId = elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB';
-        const modelId = elevenLabsModelId || 'eleven_multilingual_v2';
+        const actualLang = lang || currentLang || 'en';
+        const isKa = (actualLang === 'ka');
+        const voiceId = isKa ? (elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb') : (elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
+        const modelId = isKa ? 'eleven_multilingual_v2' : (elevenLabsModelId || 'eleven_multilingual_v2');
+        const textToRead = isKa ? verbalizeGeorgianTextForTTS(text) : verbalizeEnglishTextForTTS(text);
         const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
 
         const res = await fetch(url, {
@@ -7733,9 +8169,9 @@ async function speakElevenLabsSentence(text) {
                 'Accept': 'audio/mpeg'
             },
             body: JSON.stringify({
-                text: elevenLabsExpressiveText(text, modelId),
+                text: elevenLabsExpressiveText(textToRead, modelId),
                 model_id: modelId,
-                voice_settings: elevenLabsVoiceSettings(modelId, detectSentenceType(text))
+                voice_settings: elevenLabsVoiceSettings(modelId, detectSentenceType(textToRead))
             })
         });
 
@@ -7749,25 +8185,50 @@ async function speakElevenLabsSentence(text) {
         currentElevenAudio = audio;
         audio.playbackRate = currentGlobalSpeed;
 
+        startBackgroundKeepAlive();
+        requestScreenWakeLock();
+        updateMediaSession();
+
         audio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            currentSentenceIndex++;
+            // Organic human breathing pause between sentences
+            let breathDelay = 220;
+            const trimmed = String(textToRead || '').trim();
+            if (/[?!]$/.test(trimmed)) {
+                breathDelay = 320;
+            } else if (/(\.{3}|…)$/.test(trimmed)) {
+                breathDelay = 420;
+            }
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
-                if (myToken === currentSpeechToken && isPlaying && !isPaused) speakCurrentSentence();
-            }, 200);
+                if (myToken === currentSpeechToken && isPlaying && !isPaused) {
+                    currentSentenceIndex++;
+                    speakCurrentSentence();
+                }
+            }, breathDelay);
         };
 
         audio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
-            speakStandardSentence(text, currentLang);
+            console.warn('[ElevenLabs] Audio playback error — falling back to neural TTS');
+            if (gatewayTTSAvailable) {
+                speakGatewayNeural(text, actualLang);
+            } else {
+                speakFreeNeural(text, actualLang);
+            }
         };
 
         await audio.play();
 
     } catch (err) {
         if (myToken !== currentSpeechToken) return;
-        speakStandardSentence(text, currentLang);
+        console.warn('[ElevenLabs] Fetch/synthesis failed — falling back to neural TTS:', err && err.message);
+        const actualLang = lang || currentLang || 'en';
+        if (gatewayTTSAvailable) {
+            speakGatewayNeural(text, actualLang);
+        } else {
+            speakFreeNeural(text, actualLang);
+        }
     }
 }
 
@@ -7853,6 +8314,9 @@ function playChapterAudio(chapId, startSentenceIdx = 0, forceReload = false) {
 
     updateLangToggleUI();
     startTimer();
+    startBackgroundKeepAlive();
+    requestScreenWakeLock();
+    updateMediaSession();
     speakCurrentSentence();
     renderChaptersList();
 
@@ -7892,11 +8356,17 @@ function togglePlayPause() {
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
         if (currentElevenAudio) currentElevenAudio.pause();
         if (window.speechSynthesis) window.speechSynthesis.pause();
+        stopBackgroundKeepAlive();
+        releaseScreenWakeLock();
         stopTimer();
         updatePlayerUIState(false);
+        updateMediaSession();
     } else if (isPlaying && isPaused) {
         isPaused = false;
         startTimer();
+        startBackgroundKeepAlive();
+        requestScreenWakeLock();
+        updateMediaSession();
         if (currentElevenAudio) {
             currentElevenAudio.play().catch(() => speakCurrentSentence());
         } else if (window.speechSynthesis && window.speechSynthesis.paused) {
@@ -7919,6 +8389,7 @@ function updatePlayerUIState(speaking) {
         else DOM.dockVisualizer.classList.add('hidden');
     }
     renderChaptersList();
+    updateMediaSession();
 }
 
 function stopSpeech() {
@@ -7928,8 +8399,11 @@ function stopSpeech() {
     currentSentenceIndex = 0;
     if (utteranceTimeout) clearTimeout(utteranceTimeout);
     stopCurrentSpeechAudio();
+    stopBackgroundKeepAlive();
+    releaseScreenWakeLock();
     stopTimer();
     updatePlayerUIState(false);
+    updateMediaSession();
 }
 
 function startTimer() {
