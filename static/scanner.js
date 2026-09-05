@@ -1030,9 +1030,9 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
 
     // 2. Direct Client-Side Gemini Vision (Frontier Models: Gemini 2.5 Pro / Flash)
     if (geminiKey) {
-      let prefModel = localStorage.getItem("geminiModel") || "gemini-2.5-pro";
-      if (prefModel.includes("2.0")) prefModel = "gemini-2.5-pro";
-      const modelsToTry = [prefModel, "gemini-2.5-pro", "gemini-2.5-flash"].filter((m, i, arr) => arr.indexOf(m) === i);
+      let prefModel = localStorage.getItem("geminiModel") || "gemini-2.0-flash";
+      if (prefModel.includes("2.5") || prefModel.includes("2.0-pro-exp") || prefModel.includes("-exp")) prefModel = "gemini-2.0-flash";
+      const modelsToTry = [prefModel, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"].filter((m, i, arr) => arr.indexOf(m) === i);
 
       for (const model of modelsToTry) {
         try {
@@ -1083,7 +1083,7 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
     if (openRouterKey) {
       try {
         const promptRules = getVisionPrompt(lang, hint);
-        const orModel = localStorage.getItem("openRouterModel") || "google/gemini-2.5-flash";
+        const orModel = localStorage.getItem("openRouterModel") || "openrouter/free";
         const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -1245,13 +1245,13 @@ Text to perfect:
 ${text.slice(0, 10000)}`;
 
     if (geminiKey) {
-      let prefModel = localStorage.getItem("geminiModel") || "gemini-2.5-pro";
-      if (prefModel.includes("2.0")) prefModel = "gemini-2.5-pro";
-      const modelsToTry = [prefModel, "gemini-2.5-pro", "gemini-2.5-flash"].filter((m, i, arr) => arr.indexOf(m) === i);
+      let prefModel = localStorage.getItem("geminiModel") || "gemini-2.0-flash";
+      if (prefModel.includes("2.5") || prefModel.includes("2.0-pro-exp") || prefModel.includes("-exp")) prefModel = "gemini-2.0-flash";
+      const modelsToTry = [prefModel, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"].filter((m, i, arr) => arr.indexOf(m) === i);
 
       for (const model of modelsToTry) {
         try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1261,13 +1261,13 @@ ${text.slice(0, 10000)}`;
           });
           if (res.ok) {
             const data = await res.json();
-            let out = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+            const parts = data.candidates?.[0]?.content?.parts;
+            let out = (parts && Array.isArray(parts) ? parts.map(p => p.text || '').join('') : '').trim();
             out = out.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
             const valid = validateRewrite(text, out);
             if (valid) return valid;
           } else if (res.status === 429) {
             console.warn(`[scanner] Gemini ${model} rate-limited in linguistic pass, trying fallback...`);
-            continue;
           }
         } catch (e) {
           console.warn(`[scanner] direct gemini contextual deduction failed for ${model}:`, e);
@@ -1297,7 +1297,8 @@ ${text.slice(0, 10000)}`;
     if (groqKey) {
       try {
         const groqApiUrl = "https://api.groq.com/openai/v1/chat/completions";
-        const groqModel = localStorage.getItem("groqSelectedModel") || "openai/gpt-oss-120b";
+        const rawGroq = (localStorage.getItem("groqSelectedModel") || "").trim();
+        const groqModel = rawGroq.includes("llama") || rawGroq.includes("gemma") ? rawGroq : "llama-3.3-70b-versatile";
         const res = await fetch(groqApiUrl, {
           method: "POST",
           headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
@@ -1322,25 +1323,29 @@ ${text.slice(0, 10000)}`;
 
     // Custom provider fallback
     const cpUrl = (localStorage.getItem("customProviderUrl") || "").trim();
-    const cpModel = (localStorage.getItem("customProviderModel") || "").trim();
+    const cpModel = (localStorage.getItem("customProviderModel") || "default").trim();
     const cpKey = (localStorage.getItem("customProviderKey") || "").trim();
-    if (cpUrl && cpModel) {
+    if (cpUrl) {
       try {
+        let endpoint = cpUrl.replace(/\/+$/, '');
+        if (!endpoint.endsWith('/chat/completions') && !endpoint.includes(':generateContent') && !endpoint.endsWith('/api/chat') && !endpoint.endsWith('/api/generate')) {
+          endpoint = endpoint.endsWith('/v1') ? endpoint + '/chat/completions' : endpoint + '/v1/chat/completions';
+        }
         const headers = { "Content-Type": "application/json" };
         if (cpKey) headers["Authorization"] = `Bearer ${cpKey}`;
-        const res = await fetch(cpUrl, {
+        const res = await fetch(endpoint, {
           method: "POST",
           headers,
           body: JSON.stringify({
             model: cpModel,
             messages: [{ role: "user", content: prompt }],
             temperature: 0,
-            max_tokens: 8192,
+            max_tokens: 4096,
           })
         });
         if (res.ok) {
           const data = await res.json();
-          let out = (data?.choices?.[0]?.message?.content || data?.text || "").trim();
+          let out = (data?.choices?.[0]?.message?.content || data?.message?.content || data?.response || data?.text || data?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
           out = out.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
           const valid = validateRewrite(text, out);
           if (valid) return valid;

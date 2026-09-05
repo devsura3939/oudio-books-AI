@@ -241,6 +241,35 @@
     }
   }
 
+  async function saveAccountSettings(settings) {
+    var c = ensureClient();
+    if (!c) return { success: false, error: { message: "Supabase SDK not loaded" } };
+    try {
+      var res = await c.auth.updateUser({
+        data: { ai_settings: settings }
+      });
+      if (res.error) throw res.error;
+      return { success: true, user: res.data.user };
+    } catch (err) {
+      console.warn("[LuminaStore] saveAccountSettings error:", err);
+      return { success: false, error: err };
+    }
+  }
+
+  async function fetchAccountSettings() {
+    var c = ensureClient();
+    if (!c) return null;
+    try {
+      var res = await c.auth.getUser();
+      if (!res.error && res.data && res.data.user && res.data.user.user_metadata) {
+        return res.data.user.user_metadata.ai_settings || null;
+      }
+    } catch (err) {
+      console.warn("[LuminaStore] fetchAccountSettings error:", err);
+    }
+    return null;
+  }
+
   async function handleRecoverySession() {
     var c = ensureClient();
     if (!c || typeof window === "undefined") return null;
@@ -637,6 +666,8 @@
     checkUserExists: checkUserExists,
     updatePassword: updatePassword,
     handleRecoverySession: handleRecoverySession,
+    saveAccountSettings: saveAccountSettings,
+    fetchAccountSettings: fetchAccountSettings,
     getAllBooks: getAllBooks,
     saveBook: saveBook,
     deleteBook: deleteBook,

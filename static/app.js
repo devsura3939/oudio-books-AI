@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.47.0';
-const ENGINE_VERSION = 'v1.47.0 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
+const APP_VERSION = 'v1.47.2';
+const ENGINE_VERSION = 'v1.47.2 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
 
 let db = null;
 let currentBook = null;
@@ -156,22 +156,66 @@ function showToast(message, type = 'info', duration = 3500) {
 }
 window.showToast = showToast;
 
+// ── Account-Scoped AI Settings & Persistent Storage ─────────────────────────
+function getActiveUserEmail() {
+    if (typeof currentUser !== 'undefined' && currentUser && currentUser.email) {
+        return currentUser.email.trim().toLowerCase();
+    }
+    try {
+        const sessionSaved = sessionStorage.getItem('lumina_auth_user');
+        if (sessionSaved) {
+            const u = JSON.parse(sessionSaved);
+            if (u && u.email) return u.email.trim().toLowerCase();
+        }
+        if (localStorage.getItem('lumina_remember_me') === 'true') {
+            const saved = localStorage.getItem('lumina_auth_user');
+            if (saved) {
+                const u = JSON.parse(saved);
+                if (u && u.email) return u.email.trim().toLowerCase();
+            }
+        }
+    } catch (e) {}
+    return '';
+}
+
+function getAccountSettingsStorageKey(email) {
+    const clean = String(email || getActiveUserEmail() || '').trim().toLowerCase();
+    return clean ? 'lumina_account_settings_' + clean : 'lumina_account_settings_local';
+}
+
+function getCachedAccountSettings(email) {
+    const storageKey = getAccountSettingsStorageKey(email);
+    try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+}
+
+const _initialAcc = getCachedAccountSettings();
+
 // Gemini AI State
-let geminiApiKey = localStorage.getItem('geminiApiKey') || '';
-let storedGeminiModel = localStorage.getItem('geminiModel') || 'gemini-2.5-pro';
-if (storedGeminiModel.includes('2.0')) {
-    storedGeminiModel = 'gemini-2.5-pro';
-    try { localStorage.setItem('geminiModel', storedGeminiModel); } catch(e) {}
+let geminiApiKey = (_initialAcc && _initialAcc.geminiApiKey !== undefined)
+    ? _initialAcc.geminiApiKey
+    : (localStorage.getItem('geminiApiKey') || '');
+
+let storedGeminiModel = (_initialAcc && _initialAcc.geminiModel)
+    ? _initialAcc.geminiModel
+    : (localStorage.getItem('geminiModel') || 'gemini-2.0-flash');
+if (storedGeminiModel.includes('2.5') || storedGeminiModel.includes('2.0-pro-exp') || storedGeminiModel.includes('flash-exp') || !storedGeminiModel) {
+    storedGeminiModel = 'gemini-2.0-flash';
+    try { localStorage.setItem('geminiModel', storedGeminiModel); } catch (e) {}
 }
 let geminiModel = storedGeminiModel;
 // Translation depth: 1 = draft only, 2 = draft + AI review, 3 = full pipeline
 // (draft → structured critique → refinement → final QA). Default: full.
-let geminiPasses = parseInt(localStorage.getItem('geminiPasses') || '3', 10);
+let geminiPasses = (_initialAcc && _initialAcc.geminiPasses !== undefined)
+    ? parseInt(_initialAcc.geminiPasses, 10)
+    : parseInt(localStorage.getItem('geminiPasses') || '3', 10);
 if (![1, 2, 3].includes(geminiPasses)) geminiPasses = 3;
 
-// Gemini fallback chain: when preferred frontier model is rate-limited (429),
-// automatically fall back across frontier variants (Pro -> Flash -> Flash Lite):
-const GEMINI_FALLBACK_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+// Gemini fallback chain: real production Google AI Studio models
+const GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash-lite'];
 const geminiModelCooldown = {}; // model -> earliest ms it may be retried
 const GEMINI_MODEL_COOLDOWN_MS = 60_000;
 
@@ -196,8 +240,12 @@ const OPENROUTER_FREE_MODELS = [
     'nvidia/nemotron-3-super-120b-a12b:free',
     'nvidia/nemotron-3-ultra-550b-a55b:free',
 ];
-let openRouterApiKey = localStorage.getItem('openRouterApiKey') || OPENROUTER_DEFAULT_KEY;
-let openRouterModel = localStorage.getItem('openRouterModel') || '';
+let openRouterApiKey = (_initialAcc && _initialAcc.openRouterApiKey !== undefined)
+    ? _initialAcc.openRouterApiKey
+    : (localStorage.getItem('openRouterApiKey') || OPENROUTER_DEFAULT_KEY);
+let openRouterModel = (_initialAcc && _initialAcc.openRouterModel !== undefined)
+    ? _initialAcc.openRouterModel
+    : (localStorage.getItem('openRouterModel') || '');
 // Monotonic index into OPENROUTER_FREE_MODELS — the first model with no recent
 // failure is tried first. A 429/5xx marks the model dead for a cool-off window
 // so the batch loop does not hammer a rate-limited provider.
@@ -412,15 +460,23 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192,
 //     headers are inconsistent for direct browser calls, so failures are
 //     detected at runtime and the provider is parked briefly instead of
 //     stalling every chunk on a preflight error.
-let groqApiKey = localStorage.getItem('groqApiKey') || '';
-let mistralApiKey = localStorage.getItem('mistralApiKey') || '';
+let groqApiKey = (_initialAcc && _initialAcc.groqApiKey !== undefined)
+    ? _initialAcc.groqApiKey
+    : (localStorage.getItem('groqApiKey') || '');
+// groqSelectedModel is a first-class module variable (account-scoped settings restore writes it here)
+let groqSelectedModel = (_initialAcc && _initialAcc.groqSelectedModel !== undefined)
+    ? _initialAcc.groqSelectedModel
+    : (localStorage.getItem('groqSelectedModel') || '');
+let mistralApiKey = (_initialAcc && _initialAcc.mistralApiKey !== undefined)
+    ? _initialAcc.mistralApiKey
+    : (localStorage.getItem('mistralApiKey') || '');
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-// Production Groq catalog models: ultra-fast Llama 3.3 70B, Llama 3.1 8B, Mixtral, Gemma 2
+// Current Groq production catalog: ultra-fast Llama 3.3 70B & Llama 3.1 8B.
 const GROQ_MODELS = [
     'llama-3.3-70b-versatile',
     'llama-3.1-8b-instant',
-    'mixtral-8x7b-32768',
+    'llama3-70b-8192',
     'gemma2-9b-it',
 ];
 const GROQ_MODEL_COOLDOWN_MS = 60_000;
@@ -435,9 +491,15 @@ let mistralCorsFailures = 0;
 let mistralCorsBlockedUntil = 0;
 
 // ── Custom Provider (user-supplied OpenAI-compatible endpoint) ────────────────
-let customProviderUrl = localStorage.getItem('customProviderUrl') || '';
-let customProviderModel = localStorage.getItem('customProviderModel') || '';
-let customProviderKey = localStorage.getItem('customProviderKey') || '';
+let customProviderUrl = (_initialAcc && _initialAcc.customProviderUrl !== undefined)
+    ? _initialAcc.customProviderUrl
+    : (localStorage.getItem('customProviderUrl') || '');
+let customProviderModel = (_initialAcc && _initialAcc.customProviderModel !== undefined)
+    ? _initialAcc.customProviderModel
+    : (localStorage.getItem('customProviderModel') || '');
+let customProviderKey = (_initialAcc && _initialAcc.customProviderKey !== undefined)
+    ? _initialAcc.customProviderKey
+    : (localStorage.getItem('customProviderKey') || '');
 
 function setCustomProvider(url, model, key) {
     customProviderUrl = (url || '').trim();
@@ -451,31 +513,94 @@ function setCustomProvider(url, model, key) {
     else localStorage.removeItem('customProviderKey');
 }
 
-// Call custom provider (OpenAI-compatible chat completions). Returns text or null.
+// Normalize user-entered custom provider URLs. If user provides only a base URL (e.g.
+// http://localhost:11434 or https://api.together.xyz/v1), auto-append /chat/completions.
+function normalizeCustomProviderUrl(url) {
+    if (!url) return '';
+    let u = url.trim().replace(/\/+$/, '');
+    if (u.endsWith('/chat/completions') || u.includes(':generateContent') || u.endsWith('/api/chat') || u.endsWith('/api/generate')) {
+        return u;
+    }
+    if (u.endsWith('/v1')) {
+        return u + '/chat/completions';
+    }
+    return u + '/v1/chat/completions';
+}
+
+// Call custom provider (OpenAI-compatible OR Gemini-compatible endpoint). Returns text or null.
+// Handles multiple response shapes:
+//   1. OpenAI-compatible: choices[0].message.content
+//   2. Ollama native:     message.content or response
+//   3. Gemini REST:       candidates[0].content.parts[0].text
+//   4. Plain text wrappers: data.text, data.output, data.result, or raw response text
 async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8192, systemPrompt = null } = {}) {
-    if (!customProviderUrl || !customProviderModel) return null;
+    if (!customProviderUrl) return null;
     try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 30000); // 30s max
+
         const headers = { 'Content-Type': 'application/json' };
-        if (customProviderKey) headers['Authorization'] = `Bearer ${customProviderKey}`;
+        if (customProviderKey && customProviderKey.trim()) {
+            headers['Authorization'] = `Bearer ${customProviderKey.trim()}`;
+        }
+
+        const endpoint = normalizeCustomProviderUrl(customProviderUrl);
+        const effectiveModel = (customProviderModel || 'default').trim();
+        // Safe maxTokens limit to avoid context length overflow on local/custom models
+        const safeTokens = Math.min(maxTokens || 4096, 4096);
+
         const messages = systemPrompt
             ? [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }]
             : [{ role: 'user', content: prompt }];
-        const res = await fetch(customProviderUrl, {
+        const body = JSON.stringify({
+            model: effectiveModel,
+            messages,
+            temperature,
+            max_tokens: safeTokens,
+        });
+
+        const res = await fetch(endpoint, {
             method: 'POST',
             headers,
-            body: JSON.stringify({
-                model: customProviderModel,
-                messages,
-                temperature,
-                max_tokens: maxTokens,
-            }),
+            body,
+            signal: ctrl.signal,
         });
-        if (!res.ok) { console.warn('[CustomProvider] status', res.status); return null; }
-        const data = await res.json();
-        const text = (data?.choices?.[0]?.message?.content || data?.text || '').trim();
+        clearTimeout(tid);
+
+        if (!res.ok) {
+            const errText = await res.text().catch(() => '');
+            console.warn('[CustomProvider] HTTP', res.status, endpoint, errText.slice(0, 200));
+            return null;
+        }
+
+        const rawText = await res.text();
+        let data = null;
+        try {
+            data = JSON.parse(rawText);
+        } catch {
+            // Not JSON — might be raw plain text from custom proxy/service
+            if (rawText && rawText.trim().length > 5) {
+                return rawText.trim();
+            }
+            return null;
+        }
+
+        // Shape 1: OpenAI-compatible
+        let text = (data?.choices?.[0]?.message?.content || '').trim();
+        // Shape 2: Ollama chat / generate
+        if (!text) text = (data?.message?.content || data?.response || '').trim();
+        // Shape 3: Gemini REST API
+        if (!text) text = (data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '').trim();
+        // Shape 4: generic text / output wrappers
+        if (!text) text = (data?.text || data?.output || data?.result || '').trim();
+
         return text.length > 5 ? text : null;
     } catch (e) {
-        console.warn('[CustomProvider] call failed:', e);
+        if (e && e.name === 'AbortError') {
+            console.warn('[CustomProvider] request timed out after 30s');
+        } else {
+            console.warn('[CustomProvider] call failed:', e?.message || e);
+        }
         return null;
     }
 }
@@ -558,6 +683,10 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
             }
             const parsed = parseModelJSON(text);
             if (parsed) return parsed;
+            // If the model responded with translation text directly instead of JSON, salvage it
+            if (text && text.trim().length > 5) {
+                return { translation: text.trim() };
+            }
             console.warn(`[${providerLabel}] returned unparseable JSON from`, model);
             cooldownMap[model] = Date.now() + cooldownMs;
         } catch (e) {
@@ -571,9 +700,16 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
 
 async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!groqApiKey) return null;
-    const selected = (localStorage.getItem('groqSelectedModel') || '').trim();
+    // Read from module-level variable (kept in sync with account settings), fallback to localStorage.
+    // IMPORTANT: only use selected model if it's a known Groq model ID — prevents OpenRouter
+    // model IDs (e.g. 'openai/gpt-oss-120b') from being sent to api.groq.com and getting blacklisted.
+    const rawSelected = (groqSelectedModel || localStorage.getItem('groqSelectedModel') || '').trim();
+    const selected = GROQ_MODELS.includes(rawSelected) ? rawSelected : '';
     const models = selected ? [selected, ...GROQ_MODELS.filter(m => m !== selected)] : GROQ_MODELS;
-    return callOpenAICompatibleJSON(GROQ_API_URL, models, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, groqApiKey, prompt, { temperature, maxTokens, providerLabel: 'Groq', systemPrompt });
+    // CRITICAL: Groq models have a strict max output token limit (8192 or 4096).
+    // Passing > 8192 (e.g. 16384 from whole-book batch) causes an immediate HTTP 400 rejection from api.groq.com.
+    const safeTokens = Math.min(maxTokens || 4096, 8192);
+    return callOpenAICompatibleJSON(GROQ_API_URL, models, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, groqApiKey.trim(), prompt, { temperature, maxTokens: safeTokens, providerLabel: 'Groq', systemPrompt });
 }
 
 async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
@@ -1407,6 +1543,9 @@ async function init() {
     cacheDOM();
     checkAuthState(); // Immediately lock dashboard if not authenticated
     await initDB();
+    if (currentUser && currentUser.email) {
+        try { await restoreAccountSettingsForCurrentUser(); } catch (e) {}
+    }
     setupEventListeners();
     setupKeyboardAndTouchControls();
     checkAuthState();
@@ -1799,6 +1938,273 @@ function navigate(viewId) {
     else if (viewId === 'scanner') updateBottomNavActive('scanner');
 }
 
+function getCurrentAccountSettings() {
+    const email = getActiveUserEmail();
+    const local = getCachedAccountSettings(email) || {};
+
+    return {
+        geminiApiKey: (typeof geminiApiKey !== 'undefined' && geminiApiKey) ? geminiApiKey : (local.geminiApiKey || localStorage.getItem('geminiApiKey') || ''),
+        geminiModel: (typeof geminiModel !== 'undefined' && geminiModel) ? geminiModel : (local.geminiModel || localStorage.getItem('geminiModel') || 'gemini-2.0-flash'),
+        geminiPasses: (typeof geminiPasses !== 'undefined' && [1, 2, 3].includes(geminiPasses)) ? geminiPasses : (local.geminiPasses || parseInt(localStorage.getItem('geminiPasses') || '3', 10) || 3),
+        openRouterApiKey: (typeof openRouterApiKey !== 'undefined' && openRouterApiKey) ? openRouterApiKey : (local.openRouterApiKey || localStorage.getItem('openRouterApiKey') || ''),
+        openRouterModel: (typeof openRouterModel !== 'undefined' && openRouterModel) ? openRouterModel : (local.openRouterModel || localStorage.getItem('openRouterModel') || ''),
+        groqApiKey: (typeof groqApiKey !== 'undefined' && groqApiKey) ? groqApiKey : (local.groqApiKey || localStorage.getItem('groqApiKey') || ''),
+        groqSelectedModel: (typeof groqSelectedModel !== 'undefined' && groqSelectedModel) ? groqSelectedModel : (local.groqSelectedModel || localStorage.getItem('groqSelectedModel') || ''),
+        mistralApiKey: (typeof mistralApiKey !== 'undefined' && mistralApiKey) ? mistralApiKey : (local.mistralApiKey || localStorage.getItem('mistralApiKey') || ''),
+        customProviderUrl: (typeof customProviderUrl !== 'undefined' && customProviderUrl) ? customProviderUrl : (local.customProviderUrl || localStorage.getItem('customProviderUrl') || ''),
+        customProviderModel: (typeof customProviderModel !== 'undefined' && customProviderModel) ? customProviderModel : (local.customProviderModel || localStorage.getItem('customProviderModel') || ''),
+        customProviderKey: (typeof customProviderKey !== 'undefined' && customProviderKey) ? customProviderKey : (local.customProviderKey || localStorage.getItem('customProviderKey') || ''),
+        elevenLabsEnabled: (typeof elevenLabsEnabled !== 'undefined') ? Boolean(elevenLabsEnabled) : (local.elevenLabsEnabled !== undefined ? Boolean(local.elevenLabsEnabled) : (localStorage.getItem('lumina_el_enabled') === 'true')),
+        elevenLabsApiKey: (typeof elevenLabsApiKey !== 'undefined' && elevenLabsApiKey) ? elevenLabsApiKey : (local.elevenLabsApiKey || localStorage.getItem('lumina_el_key') || ''),
+        elevenLabsVoiceId: (typeof elevenLabsVoiceId !== 'undefined' && elevenLabsVoiceId) ? elevenLabsVoiceId : (local.elevenLabsVoiceId || localStorage.getItem('lumina_el_voice') || 'pNInz6obpgDQGcFmaJgB'),
+        updatedAt: local.updatedAt || new Date().toISOString()
+    };
+}
+
+function syncSettingsToDOMInputs() {
+    const keyInput = document.getElementById('geminiApiKeyInput');
+    if (keyInput) keyInput.value = geminiApiKey || '';
+
+    const modelSelect = document.getElementById('geminiModelSelect');
+    if (modelSelect && geminiModel) {
+        let found = false;
+        for (let i = 0; i < modelSelect.options.length; i++) {
+            if (modelSelect.options[i].value === geminiModel) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            const opt = document.createElement('option');
+            opt.value = geminiModel;
+            opt.textContent = geminiModel;
+            modelSelect.appendChild(opt);
+        }
+        modelSelect.value = geminiModel;
+    }
+
+    const passesSelect = document.getElementById('geminiPassesSelect');
+    if (passesSelect && geminiPasses) passesSelect.value = String(geminiPasses);
+
+    const orKeyInput = document.getElementById('openRouterApiKeyInput');
+    if (orKeyInput) orKeyInput.value = openRouterApiKey || '';
+
+    const orModelSelect = document.getElementById('openRouterModelSelect');
+    if (orModelSelect && openRouterModel) {
+        let found = false;
+        for (let i = 0; i < orModelSelect.options.length; i++) {
+            if (orModelSelect.options[i].value === openRouterModel) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            const opt = document.createElement('option');
+            opt.value = openRouterModel;
+            opt.textContent = openRouterModel;
+            orModelSelect.appendChild(opt);
+        }
+        orModelSelect.value = openRouterModel;
+    }
+
+    const groqKeyInput = document.getElementById('groqApiKeyInput');
+    if (groqKeyInput) groqKeyInput.value = groqApiKey || '';
+
+    const groqModelSelect = document.getElementById('groqModelSelect');
+    // Use module-level groqSelectedModel (synced with account settings), fallback to localStorage.
+    const groqSaved = (groqSelectedModel || localStorage.getItem('groqSelectedModel') || '').trim();
+    if (groqModelSelect && groqSaved) {
+        // Only add the saved value as a custom option if it's a known Groq model ID.
+        // Prevents stale OpenRouter model IDs from appearing in the Groq dropdown.
+        if (GROQ_MODELS.includes(groqSaved)) {
+            let found = false;
+            for (let i = 0; i < groqModelSelect.options.length; i++) {
+                if (groqModelSelect.options[i].value === groqSaved) { found = true; break; }
+            }
+            if (!found) {
+                const opt = document.createElement('option');
+                opt.value = groqSaved;
+                opt.textContent = groqSaved;
+                groqModelSelect.appendChild(opt);
+            }
+            groqModelSelect.value = groqSaved;
+        } else {
+            // Saved model is not a valid Groq ID — reset to Auto to avoid confusion
+            groqModelSelect.value = '';
+        }
+    }
+
+    const mistralKeyInput = document.getElementById('mistralApiKeyInput');
+    if (mistralKeyInput) mistralKeyInput.value = mistralApiKey || '';
+
+    const cpUrlInput = document.getElementById('customProviderUrlInput');
+    if (cpUrlInput) cpUrlInput.value = customProviderUrl || '';
+    const cpModelInput = document.getElementById('customProviderModelInput');
+    if (cpModelInput) cpModelInput.value = customProviderModel || '';
+    const cpKeyInput = document.getElementById('customProviderKeyInput');
+    if (cpKeyInput) cpKeyInput.value = customProviderKey || '';
+
+    if (DOM && DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = Boolean(elevenLabsEnabled);
+    if (DOM && DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = elevenLabsApiKey || '';
+    if (DOM && DOM.elevenLabsVoiceSelect && elevenLabsVoiceId) DOM.elevenLabsVoiceSelect.value = elevenLabsVoiceId;
+    if (DOM && DOM.elevenLabsKeySection) {
+        if (elevenLabsEnabled) DOM.elevenLabsKeySection.classList.remove('hidden');
+        else DOM.elevenLabsKeySection.classList.add('hidden');
+    }
+    if (typeof updateTopVoiceBadge === 'function') updateTopVoiceBadge();
+}
+
+function applyAccountSettings(settings, saveToLegacyStorage = true) {
+    if (!settings || typeof settings !== 'object') return;
+
+    if (settings.geminiApiKey !== undefined) {
+        geminiApiKey = String(settings.geminiApiKey || '').trim();
+        if (saveToLegacyStorage) {
+            if (geminiApiKey) localStorage.setItem('geminiApiKey', geminiApiKey);
+            else localStorage.removeItem('geminiApiKey');
+        }
+    }
+    if (settings.geminiModel) {
+        geminiModel = String(settings.geminiModel);
+        if (saveToLegacyStorage) localStorage.setItem('geminiModel', geminiModel);
+    }
+    if (settings.geminiPasses !== undefined) {
+        const p = parseInt(settings.geminiPasses, 10);
+        geminiPasses = [1, 2, 3].includes(p) ? p : 3;
+        if (saveToLegacyStorage) localStorage.setItem('geminiPasses', String(geminiPasses));
+    }
+    if (settings.openRouterApiKey !== undefined) {
+        openRouterApiKey = String(settings.openRouterApiKey || '').trim();
+        if (saveToLegacyStorage) {
+            if (openRouterApiKey) localStorage.setItem('openRouterApiKey', openRouterApiKey);
+            else localStorage.removeItem('openRouterApiKey');
+        }
+    }
+    if (settings.openRouterModel !== undefined) {
+        openRouterModel = String(settings.openRouterModel || '');
+        if (saveToLegacyStorage) {
+            if (openRouterModel) localStorage.setItem('openRouterModel', openRouterModel);
+            else localStorage.removeItem('openRouterModel');
+        }
+    }
+    if (settings.groqApiKey !== undefined) {
+        groqApiKey = String(settings.groqApiKey || '').trim();
+        if (saveToLegacyStorage) {
+            if (groqApiKey) localStorage.setItem('groqApiKey', groqApiKey);
+            else localStorage.removeItem('groqApiKey');
+        }
+        if (typeof groqModelCooldownClear === 'function') groqModelCooldownClear();
+    }
+    if (settings.groqSelectedModel !== undefined) {
+        const gm = String(settings.groqSelectedModel || '');
+        groqSelectedModel = gm; // update module-level variable
+        if (saveToLegacyStorage) {
+            if (gm) localStorage.setItem('groqSelectedModel', gm);
+            else localStorage.removeItem('groqSelectedModel');
+        }
+    }
+    if (settings.mistralApiKey !== undefined) {
+        mistralApiKey = String(settings.mistralApiKey || '').trim();
+        if (saveToLegacyStorage) {
+            if (mistralApiKey) localStorage.setItem('mistralApiKey', mistralApiKey);
+            else localStorage.removeItem('mistralApiKey');
+        }
+    }
+    if (settings.customProviderUrl !== undefined || settings.customProviderModel !== undefined || settings.customProviderKey !== undefined) {
+        customProviderUrl = String(settings.customProviderUrl || '').trim();
+        customProviderModel = String(settings.customProviderModel || '').trim();
+        customProviderKey = String(settings.customProviderKey || '').trim();
+        if (saveToLegacyStorage) {
+            if (customProviderUrl) localStorage.setItem('customProviderUrl', customProviderUrl);
+            else localStorage.removeItem('customProviderUrl');
+            if (customProviderModel) localStorage.setItem('customProviderModel', customProviderModel);
+            else localStorage.removeItem('customProviderModel');
+            if (customProviderKey) localStorage.setItem('customProviderKey', customProviderKey);
+            else localStorage.removeItem('customProviderKey');
+        }
+    }
+    if (settings.elevenLabsEnabled !== undefined) {
+        elevenLabsEnabled = Boolean(settings.elevenLabsEnabled);
+        if (saveToLegacyStorage) localStorage.setItem('lumina_el_enabled', elevenLabsEnabled ? 'true' : 'false');
+    }
+    if (settings.elevenLabsApiKey !== undefined) {
+        elevenLabsApiKey = String(settings.elevenLabsApiKey || '').trim();
+        if (saveToLegacyStorage) {
+            if (elevenLabsApiKey) localStorage.setItem('lumina_el_key', elevenLabsApiKey);
+            else localStorage.removeItem('lumina_el_key');
+        }
+    }
+    if (settings.elevenLabsVoiceId !== undefined) {
+        elevenLabsVoiceId = String(settings.elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
+        if (saveToLegacyStorage) localStorage.setItem('lumina_el_voice', elevenLabsVoiceId);
+    }
+
+    syncSettingsToDOMInputs();
+}
+
+async function restoreAccountSettingsForCurrentUser() {
+    const email = getActiveUserEmail();
+    const storageKey = getAccountSettingsStorageKey(email);
+    let localSettings = null;
+    try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) localSettings = JSON.parse(raw);
+    } catch (e) {}
+
+    // 1. Immediately apply local cached account settings so inputs and engines have ZERO latency
+    if (localSettings) {
+        applyAccountSettings(localSettings, true);
+    }
+
+    // 2. If logged in and Supabase Cloud is available, fetch and sync cloud settings
+    if (email && window.LuminaStore && typeof window.LuminaStore.fetchAccountSettings === 'function') {
+        try {
+            const cloudSettings = await window.LuminaStore.fetchAccountSettings();
+            if (cloudSettings && typeof cloudSettings === 'object' && Object.keys(cloudSettings).length > 0) {
+                const merged = Object.assign({}, localSettings || {}, cloudSettings);
+                localStorage.setItem(storageKey, JSON.stringify(merged));
+                applyAccountSettings(merged, true);
+                console.info('[AccountSettings] Restored and synced AI settings from Supabase Cloud for', email);
+                return;
+            } else if (localSettings && Object.keys(localSettings).length > 0) {
+                window.LuminaStore.saveAccountSettings(localSettings).catch(err => {
+                    console.warn('[AccountSettings] Initial cloud push warning:', err);
+                });
+            }
+        } catch (err) {
+            console.warn('[AccountSettings] Cloud fetch error, using local cache:', err);
+        }
+    }
+}
+
+function clearActiveAiSettings() {
+    geminiApiKey = '';
+    openRouterApiKey = OPENROUTER_DEFAULT_KEY;
+    openRouterModel = '';
+    groqApiKey = '';
+    groqSelectedModel = ''; // clear module-level variable
+    mistralApiKey = '';
+    customProviderUrl = '';
+    customProviderModel = '';
+    customProviderKey = '';
+    elevenLabsApiKey = '';
+    elevenLabsEnabled = false;
+
+    localStorage.removeItem('geminiApiKey');
+    localStorage.removeItem('openRouterApiKey');
+    localStorage.removeItem('openRouterModel');
+    localStorage.removeItem('groqApiKey');
+    localStorage.removeItem('groqSelectedModel');
+    localStorage.removeItem('mistralApiKey');
+    localStorage.removeItem('customProviderUrl');
+    localStorage.removeItem('customProviderModel');
+    localStorage.removeItem('customProviderKey');
+    localStorage.removeItem('lumina_el_key');
+    localStorage.removeItem('lumina_el_enabled');
+
+    syncSettingsToDOMInputs();
+}
+
 function openModal(modalId) {
     if (modalId === 'authModal') {
         openAuthGate('signin');
@@ -1812,37 +2218,7 @@ function openModal(modalId) {
             if (typeof setAuthSuccess === 'function') setAuthSuccess('');
         }
         if (modalId === 'aiSettingsModal') {
-            const keyInput = document.getElementById('geminiApiKeyInput');
-            if (keyInput) keyInput.value = geminiApiKey || '';
-            
-            const modelSelect = document.getElementById('geminiModelSelect');
-            if (modelSelect) modelSelect.value = geminiModel || 'gemini-2.5-pro';
-
-            const passesSelect = document.getElementById('geminiPassesSelect');
-            if (passesSelect) passesSelect.value = String(geminiPasses || 3);
-
-            const orKeyInput = document.getElementById('openRouterApiKeyInput');
-            if (orKeyInput) orKeyInput.value = openRouterApiKey || '';
-
-            const orModelSelect = document.getElementById('openRouterModelSelect');
-            if (orModelSelect) orModelSelect.value = openRouterModel || '';
-
-            const groqKeyInput = document.getElementById('groqApiKeyInput');
-            if (groqKeyInput) groqKeyInput.value = groqApiKey || '';
-
-            const groqModelSelect = document.getElementById('groqModelSelect');
-            if (groqModelSelect) groqModelSelect.value = localStorage.getItem('groqSelectedModel') || '';
-
-            const mistralKeyInput = document.getElementById('mistralApiKeyInput');
-            if (mistralKeyInput) mistralKeyInput.value = mistralApiKey || '';
-
-            const cpUrlInput = document.getElementById('customProviderUrlInput');
-            if (cpUrlInput) cpUrlInput.value = customProviderUrl || '';
-            const cpModelInput = document.getElementById('customProviderModelInput');
-            if (cpModelInput) cpModelInput.value = customProviderModel || '';
-            const cpKeyInput = document.getElementById('customProviderKeyInput');
-            if (cpKeyInput) cpKeyInput.value = customProviderKey || '';
-
+            syncSettingsToDOMInputs();
             renderAiKeyStatusPanel();
             probeAiKeyStatus();
         }
@@ -1871,7 +2247,7 @@ function saveGeminiSettings() {
     const key = keyInput ? keyInput.value.trim() : '';
 
     const modelSelect = document.getElementById('geminiModelSelect');
-    const model = modelSelect ? modelSelect.value : 'gemini-2.5-pro';
+    const model = modelSelect ? modelSelect.value : 'gemini-2.0-flash';
 
     const passesSelect = document.getElementById('geminiPassesSelect');
     const passes = passesSelect ? parseInt(passesSelect.value, 10) : 3;
@@ -1885,8 +2261,8 @@ function saveGeminiSettings() {
     const groqKeyInput = document.getElementById('groqApiKeyInput');
     const groqKey = groqKeyInput ? groqKeyInput.value.trim() : '';
 
-    const groqModelSelect = document.getElementById('groqModelSelect');
-    const groqSelectedModel = groqModelSelect ? groqModelSelect.value : '';
+    const groqModelSelectEl = document.getElementById('groqModelSelect');
+    const groqSelectedModelVal = groqModelSelectEl ? groqModelSelectEl.value : '';
 
     const mistralKeyInput = document.getElementById('mistralApiKeyInput');
     const mistralKey = mistralKeyInput ? mistralKeyInput.value.trim() : '';
@@ -1910,35 +2286,13 @@ function saveGeminiSettings() {
     openRouterModel = orModel;
 
     setGroqApiKey(groqKey);
-    if (groqSelectedModel) localStorage.setItem('groqSelectedModel', groqSelectedModel);
+    // Update module-level groqSelectedModel so callGroqJSON sees the new value immediately
+    groqSelectedModel = groqSelectedModelVal;
+    if (groqSelectedModelVal) localStorage.setItem('groqSelectedModel', groqSelectedModelVal);
     else localStorage.removeItem('groqSelectedModel');
     setMistralApiKey(mistralKey);
     setCustomProvider(cpUrl, cpModel, cpKey);
 
-    if (groqKey) {
-        // Probe Groq right away: bad keys must surface at save time, not
-        // silently degrade a 2-hour batch translation. The probe walks the
-        // whole model catalog, so a retired model can't fail a valid key.
-        probeOpenAICompatibleKey(GROQ_API_URL, groqKey, GROQ_MODELS).then(res => {
-            if (res.ok) alert('Groq API key verified — free-tier fallback engine is active.');
-            else if (res.status === 401 || res.status === 403) alert('Groq key saved, but it was rejected (status ' + res.status + ').\nCheck the key at console.groq.com/keys.');
-            else if (res.status === 429) alert('Groq key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
-            else if (res.status === 0) alert('Groq key saved, but could not reach api.groq.com (network error).');
-            else alert('Groq key saved, but the probe returned status ' + res.status + '.');
-        });
-    }
-    if (mistralKey) {
-        // Same save-time probe for Mistral. A CORS-style network failure is
-        // reported distinctly so the user knows the key may still work
-        // in non-browser contexts but not from this page.
-        probeOpenAICompatibleKey(MISTRAL_API_URL, mistralKey, MISTRAL_MODELS).then(res => {
-            if (res.ok) alert('Mistral API key verified — free-tier fallback engine is active.');
-            else if (res.status === 401 || res.status === 403) alert('Mistral key saved, but it was rejected (status ' + res.status + ').\nCheck the key at console.mistral.ai.');
-            else if (res.status === 429) alert('Mistral key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
-            else if (res.status === 0) alert('Mistral key saved, but the browser could not reach api.mistral.ai.\nThis is usually a CORS restriction — Mistral will be skipped automatically and the chain continues with the other providers.');
-            else alert('Mistral key saved, but the probe returned status ' + res.status + '.');
-        });
-    }
 
     if (key) {
         localStorage.setItem('geminiApiKey', key);
@@ -1954,10 +2308,79 @@ function saveGeminiSettings() {
     localStorage.setItem('geminiPasses', String([1, 2, 3].includes(passes) ? passes : 3));
     geminiPasses = [1, 2, 3].includes(passes) ? passes : 3;
 
+    // Persist into user's account settings (Local + Supabase Cloud)
+    const email = getActiveUserEmail();
+    const accountSettings = getCurrentAccountSettings();
+    accountSettings.geminiApiKey = key;
+    accountSettings.geminiModel = model;
+    accountSettings.geminiPasses = geminiPasses;
+    accountSettings.openRouterApiKey = orKey;
+    accountSettings.openRouterModel = orModel;
+    accountSettings.groqApiKey = groqKey;
+    accountSettings.groqSelectedModel = groqSelectedModel;
+    accountSettings.mistralApiKey = mistralKey;
+    accountSettings.customProviderUrl = cpUrl;
+    accountSettings.customProviderModel = cpModel;
+    accountSettings.customProviderKey = cpKey;
+    accountSettings.updatedAt = new Date().toISOString();
+
+    const storageKey = getAccountSettingsStorageKey(email);
+    localStorage.setItem(storageKey, JSON.stringify(accountSettings));
+
+    if (email && window.LuminaStore && typeof window.LuminaStore.saveAccountSettings === 'function') {
+        window.LuminaStore.saveAccountSettings(accountSettings).then((res) => {
+            if (res && res.success) {
+                console.info('[AccountSettings] Synced AI settings with Supabase account for', email);
+            }
+        }).catch(err => {
+            console.warn('[AccountSettings] Cloud sync warning:', err);
+        });
+    }
+
+    showToast(email ? `AI settings saved to account ${email} (Cloud Synced)` : 'AI settings saved successfully');
+
+    if (groqKey) {
+        probeOpenAICompatibleKey(GROQ_API_URL, groqKey, GROQ_MODELS).then(res => {
+            if (res.ok) alert('Groq API key verified — free-tier fallback engine is active.');
+            else if (res.status === 401 || res.status === 403) alert('Groq key saved, but it was rejected (status ' + res.status + ').\nCheck the key at console.groq.com/keys.');
+            else if (res.status === 429) alert('Groq key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
+            else if (res.status === 0) alert('Groq key saved, but could not reach api.groq.com (network error).');
+            else alert('Groq key saved, but the probe returned status ' + res.status + '.');
+        });
+    }
+    if (mistralKey) {
+        probeOpenAICompatibleKey(MISTRAL_API_URL, mistralKey, MISTRAL_MODELS).then(res => {
+            if (res.ok) alert('Mistral API key verified — free-tier fallback engine is active.');
+            else if (res.status === 401 || res.status === 403) alert('Mistral key saved, but it was rejected (status ' + res.status + ').\nCheck the key at console.mistral.ai.');
+            else if (res.status === 429) alert('Mistral key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
+            else if (res.status === 0) alert('Mistral key saved, but the browser could not reach api.mistral.ai.\nThis is usually a CORS restriction — Mistral will be skipped automatically and the chain continues with the other providers.');
+            else alert('Mistral key saved, but the probe returned status ' + res.status + '.');
+        });
+    }
+
+    if (cpUrl) {
+        const normUrl = normalizeCustomProviderUrl(cpUrl);
+        const headers = { 'Content-Type': 'application/json' };
+        if (cpKey && cpKey.trim()) headers['Authorization'] = `Bearer ${cpKey.trim()}`;
+        fetch(normUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                model: cpModel || 'default',
+                messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                max_tokens: 8
+            })
+        }).then(r => {
+            if (r.ok) alert('Custom Provider connected and verified successfully!');
+            else alert('Custom Provider saved, but returned HTTP ' + r.status + ' from ' + normUrl + '.\nCheck endpoint URL and model name.');
+        }).catch(() => {
+            alert('Custom Provider saved, but network connection failed.\nCheck that your endpoint is running and CORS is allowed.');
+        });
+    }
+
     if (key) {
-        // Probe the key right away so a bad key is caught HERE, not silently
-        // during a 2-hour batch translation that degrades to machine output.
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`, {
+        const probeModel = GEMINI_FALLBACK_MODELS.includes(geminiModel) ? geminiModel : 'gemini-2.0-flash';
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/${probeModel}:generateContent?key=${key.trim()}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1968,11 +2391,13 @@ function saveGeminiSettings() {
             if (r.ok) {
                 alert('Gemini API key verified — all translation stages are active!');
             } else if (r.status === 400 || r.status === 403) {
-                alert('Key saved, but Gemini rejected it (status ' + r.status + ').\n\nTranslation will fall back to machine quality.\nCheck the key is a valid Google AI Studio API key.');
+                alert('Key saved, but Gemini rejected it (status ' + r.status + ').\nCheck that the key is a valid Google AI Studio API key.');
+            } else if (r.status === 404) {
+                alert('Key saved, but model ' + probeModel + ' returned status 404.\nSwitching to gemini-2.0-flash is recommended.');
             } else if (r.status === 429) {
-                alert('Key saved, but quota is exhausted (429).\n\nTranslation will fall back to machine quality until quota resets.');
+                alert('Key saved, but quota is exhausted (429).\nTranslation will fall back to other engines until quota resets.');
             } else {
-                alert('Key saved, but Gemini returned status ' + r.status + '. Translation may fall back to machine quality.');
+                alert('Key saved, but Gemini returned status ' + r.status + '.');
             }
         }).catch(() => {
             alert('Key saved, but could not reach Gemini (network error).\nTranslation will use fallback engines until connection is restored.');
@@ -1981,8 +2406,6 @@ function saveGeminiSettings() {
         alert("Gemini AI Engine disabled (no key). Model preference saved.");
     }
     if (orKey) {
-        // Probe the OpenRouter key the same way: a bad key must surface here,
-        // not silently degrade a batch translation to machine output.
         fetch(OPENROUTER_API_URL, {
             method: 'POST',
             headers: {
@@ -2016,7 +2439,6 @@ function saveGeminiSettings() {
             else alert('Custom provider saved, but the probe got no response.\nDouble-check your Base URL, model name, and API key.');
         });
     }
-    // Re-probe the panel with the just-saved keys so the status is fresh.
     setTimeout(probeAiKeyStatus, 0);
     closeModal('aiSettingsModal');
 }
@@ -2112,6 +2534,11 @@ function checkAuthState() {
             // Not remembered and no active tab session: clean up any stale localStorage user
             localStorage.removeItem('lumina_auth_user');
         }
+    }
+    if (currentUser && currentUser.email) {
+        try {
+            restoreAccountSettingsForCurrentUser();
+        } catch (e) {}
     }
     updateAuthUI();
     updateAuthGateVisibility();
@@ -2706,6 +3133,7 @@ async function handleGateSetNewPassword() {
         try { sessionStorage.setItem('lumina_auth_user', JSON.stringify(currentUser)); } catch (e) {}
         localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
         localStorage.setItem('lumina_remember_me', 'true');
+        try { restoreAccountSettingsForCurrentUser(); } catch (e) {}
 
         if (window.parent && window.parent !== window) {
             try {
@@ -2905,6 +3333,20 @@ async function login(email, password, rememberParam) {
             usingCloud = await window.LuminaStore.init();
         }
 
+        // Restore and activate account-scoped AI settings immediately
+        try {
+            if (supabaseUser && supabaseUser.user_metadata && supabaseUser.user_metadata.ai_settings) {
+                const cloudSettings = supabaseUser.user_metadata.ai_settings;
+                const storageKey = getAccountSettingsStorageKey(email);
+                localStorage.setItem(storageKey, JSON.stringify(cloudSettings));
+                applyAccountSettings(cloudSettings, true);
+            } else {
+                await restoreAccountSettingsForCurrentUser();
+            }
+        } catch (e) {
+            console.warn('[AccountSettings] restore error after login:', e);
+        }
+
         updateAuthUI();
         closeAuthGate();
         updateAuthGateVisibility();
@@ -2997,6 +3439,7 @@ async function logout() {
             }
         }
     } catch (e) {}
+    clearActiveAiSettings();
     closeAccountCabinet();
     if (window.LuminaStore && window.LuminaStore.signOut) {
         await window.LuminaStore.signOut();
@@ -3040,6 +3483,15 @@ window.updateCabinetUI = updateCabinetUI;
 window.openAuthGate = openAuthGate;
 window.closeAuthGate = closeAuthGate;
 window.openTrainingLab = openTrainingLab;
+window.saveGeminiSettings = saveGeminiSettings;
+window.saveElevenLabsSettings = saveElevenLabsSettings;
+window.toggleElevenLabsMode = toggleElevenLabsMode;
+window.loadElevenLabsSettings = loadElevenLabsSettings;
+window.restoreAccountSettingsForCurrentUser = restoreAccountSettingsForCurrentUser;
+window.applyAccountSettings = applyAccountSettings;
+window.getCurrentAccountSettings = getCurrentAccountSettings;
+window.getCachedAccountSettings = getCachedAccountSettings;
+window.clearActiveAiSettings = clearActiveAiSettings;
 
 window.addEventListener('hashchange', () => {
     updateAuthGateVisibility();
@@ -3047,9 +3499,16 @@ window.addEventListener('hashchange', () => {
 
 // ── ElevenLabs Settings ────────────────────────────────────────────────────
 function loadElevenLabsSettings() {
-    elevenLabsEnabled = localStorage.getItem('lumina_el_enabled') === 'true';
-    elevenLabsApiKey = localStorage.getItem('lumina_el_key') || '';
-    elevenLabsVoiceId = localStorage.getItem('lumina_el_voice') || 'pNInz6obpgDQGcFmaJgB';
+    const acc = getCachedAccountSettings();
+    if (acc) {
+        if (acc.elevenLabsEnabled !== undefined) elevenLabsEnabled = Boolean(acc.elevenLabsEnabled);
+        if (acc.elevenLabsApiKey !== undefined) elevenLabsApiKey = String(acc.elevenLabsApiKey || '').trim();
+        if (acc.elevenLabsVoiceId !== undefined) elevenLabsVoiceId = String(acc.elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
+    } else {
+        elevenLabsEnabled = localStorage.getItem('lumina_el_enabled') === 'true';
+        elevenLabsApiKey = localStorage.getItem('lumina_el_key') || '';
+        elevenLabsVoiceId = localStorage.getItem('lumina_el_voice') || 'pNInz6obpgDQGcFmaJgB';
+    }
 
     if (DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = elevenLabsEnabled;
     if (DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = elevenLabsApiKey;
@@ -3068,18 +3527,54 @@ function toggleElevenLabsMode(enabled) {
         else DOM.elevenLabsKeySection.classList.add('hidden');
     }
     updateTopVoiceBadge();
+
+    const email = getActiveUserEmail();
+    const storageKey = getAccountSettingsStorageKey(email);
+    const accountSettings = getCurrentAccountSettings();
+    accountSettings.elevenLabsEnabled = enabled;
+    accountSettings.updatedAt = new Date().toISOString();
+    localStorage.setItem(storageKey, JSON.stringify(accountSettings));
+    if (email && window.LuminaStore && typeof window.LuminaStore.saveAccountSettings === 'function') {
+        window.LuminaStore.saveAccountSettings(accountSettings).catch(() => {});
+    }
 }
 
 function saveElevenLabsSettings() {
     if (DOM.elevenLabsApiKey) {
         elevenLabsApiKey = DOM.elevenLabsApiKey.value.trim();
-        localStorage.setItem('lumina_el_key', elevenLabsApiKey);
+        if (elevenLabsApiKey) localStorage.setItem('lumina_el_key', elevenLabsApiKey);
+        else localStorage.removeItem('lumina_el_key');
     }
     if (DOM.elevenLabsVoiceSelect) {
         elevenLabsVoiceId = DOM.elevenLabsVoiceSelect.value;
         localStorage.setItem('lumina_el_voice', elevenLabsVoiceId);
     }
-    alert('ElevenLabs settings saved successfully!');
+    if (DOM.elevenLabsToggle) {
+        elevenLabsEnabled = DOM.elevenLabsToggle.checked;
+        localStorage.setItem('lumina_el_enabled', elevenLabsEnabled ? 'true' : 'false');
+    }
+
+    const email = getActiveUserEmail();
+    const accountSettings = getCurrentAccountSettings();
+    accountSettings.elevenLabsApiKey = elevenLabsApiKey;
+    accountSettings.elevenLabsVoiceId = elevenLabsVoiceId;
+    accountSettings.elevenLabsEnabled = elevenLabsEnabled;
+    accountSettings.updatedAt = new Date().toISOString();
+
+    const storageKey = getAccountSettingsStorageKey(email);
+    localStorage.setItem(storageKey, JSON.stringify(accountSettings));
+
+    if (email && window.LuminaStore && typeof window.LuminaStore.saveAccountSettings === 'function') {
+        window.LuminaStore.saveAccountSettings(accountSettings).then((res) => {
+            if (res && res.success) {
+                console.info('[AccountSettings] Synced ElevenLabs settings with Supabase account for', email);
+            }
+        }).catch(err => {
+            console.warn('[AccountSettings] ElevenLabs cloud sync warning:', err);
+        });
+    }
+
+    alert('ElevenLabs settings saved to your account successfully!');
     updateTopVoiceBadge();
 }
 
@@ -4233,7 +4728,7 @@ function readerForwardSentence() {
 // so a whole-book batch keeps running on AI quality even when one or two
 // providers exhaust their free quota mid-run. Returns parsed JSON or null.
 async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null } = {}) {
-    // Tier 1: Gemini (user's direct Google AI Studio key: 2.5 Pro / Flash / 2.0 Flash)
+    // Tier 1: Gemini (user's direct Google AI Studio key: 2.0 Flash / 1.5 Pro / 1.5 Flash)
     if (geminiApiKey) {
         const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries, systemPrompt });
         if (res !== null) return res;
@@ -4245,12 +4740,16 @@ async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, ret
         if (res !== null) return res;
         console.warn('Groq tier failed — trying Custom Provider.');
     }
-    // Tier 3: Custom provider (user-configured OpenAI-compatible endpoint)
-    if (customProviderUrl && customProviderModel) {
+    // Tier 3: Custom provider (user-configured OpenAI-compatible or local endpoint)
+    if (customProviderUrl) {
         const txt = await callCustomProviderText(prompt, { temperature, maxTokens, systemPrompt });
         if (txt) {
             const parsed = parseModelJSON(txt);
             if (parsed) return parsed;
+            // If custom provider responded with translation text directly instead of JSON:
+            if (txt.trim().length > 5) {
+                return { translation: txt.trim() };
+            }
         }
         console.warn('Custom provider failed — trying OpenRouter.');
     }
@@ -4276,15 +4775,13 @@ async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, ret
 async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null } = {}) {
     if (!geminiApiKey) return null;
 
-    // Sanitize preferred model
-    if (!GEMINI_FALLBACK_MODELS.includes(geminiModel)) {
-        geminiModel = 'gemini-2.5-flash';
-    }
+    // Select candidate model without mutating user's saved preference
+    const preferredModel = GEMINI_FALLBACK_MODELS.includes(geminiModel) ? geminiModel : 'gemini-2.0-flash';
 
     // Build the candidate model chain: preferred model first, then fallbacks
     // that aren't in cooldown, ordered by descending capability.
     const now = Date.now();
-    const candidates = [geminiModel, ...GEMINI_FALLBACK_MODELS.filter(m => m !== geminiModel)]
+    const candidates = [preferredModel, ...GEMINI_FALLBACK_MODELS.filter(m => m !== preferredModel)]
         .filter(m => (geminiModelCooldown[m] || 0) <= now);
     if (!candidates.length) return null;
 
@@ -4297,14 +4794,14 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: {
                         temperature,
-                        maxOutputTokens: maxTokens,
+                        maxOutputTokens: Math.min(maxTokens || 8192, 8192),
                         responseMimeType: 'application/json'
                     }
                 };
                 if (systemPrompt) {
                     requestPayload.systemInstruction = { parts: [{ text: systemPrompt }] };
                 }
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey.trim()}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestPayload),
@@ -4338,10 +4835,12 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
                 }
 
                 const data = await response.json();
-                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                const parts = data?.candidates?.[0]?.content?.parts;
+                const text = parts && Array.isArray(parts) ? parts.map(p => p.text || '').join('').trim() : '';
                 if (!text) break;
                 const parsed = parseModelJSON(text);
                 if (parsed) return parsed;
+                if (text.length > 5) return { translation: text };
                 console.warn('Gemini returned unparseable JSON');
                 break;
             } catch (e) {
@@ -4883,11 +5382,11 @@ function renderAiKeyStatusPanel() {
         : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Mistral (free tier)</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
 
     rows.push(geminiApiKey
-        ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(geminiApiKey))}</span><br><span class="text-on-surface-variant">Fallback #3 · Model: ${escapeHtml(geminiModel)} · ${geminiPasses}-stage literary pipeline</span></div></div>`
+        ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(geminiApiKey))}</span><br><span class="text-on-surface-variant">Tier 1 (Frontier) · Model: ${escapeHtml(geminiModel)} · ${geminiPasses}-stage literary pipeline</span></div></div>`
         : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Gemini</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
 
-    rows.push(customProviderUrl && customProviderModel
-        ? `<div class="flex items-start gap-2"><span class="text-blue-400">●</span><div><span class="font-semibold text-white">Custom Provider</span><br><span class="text-on-surface-variant">${escapeHtml(customProviderUrl)} · Model: ${escapeHtml(customProviderModel)}</span></div></div>`
+    rows.push(customProviderUrl
+        ? `<div class="flex items-start gap-2"><span class="text-blue-400">●</span><div><span class="font-semibold text-white">Custom Provider</span><br><span class="text-on-surface-variant">Tier 3 · ${escapeHtml(customProviderModel || 'default')} · ${escapeHtml(customProviderUrl.slice(0, 45))}</span></div></div>`
         : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Custom Provider</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
 
     list.innerHTML = rows.join('');
@@ -4900,27 +5399,42 @@ async function probeAiKeyStatus() {
     if (!list || aiKeyStatusProbeBusy) return;
     aiKeyStatusProbeBusy = true;
     try {
-        const results = { gemini: null, groq: null, mistral: null, openrouter: null };
+        const results = { gemini: null, groq: null, custom: null, mistral: null, openrouter: null };
 
         const tasks = [];
         if (geminiApiKey) {
-            tasks.push(fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
+            const probeModel = GEMINI_FALLBACK_MODELS.includes(geminiModel) ? geminiModel : 'gemini-2.0-flash';
+            tasks.push(fetch(`https://generativelanguage.googleapis.com/v1beta/models/${probeModel}:generateContent?key=${geminiApiKey.trim()}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with exactly: OK' }] }], generationConfig: { maxOutputTokens: 8 } })
             }).then(r => { results.gemini = r.ok; }).catch(() => { results.gemini = false; }));
         }
         if (groqApiKey) {
-            tasks.push(probeOpenAICompatibleKey(GROQ_API_URL, groqApiKey, GROQ_MODELS).then(res => { results.groq = res.ok; }));
+            tasks.push(probeOpenAICompatibleKey(GROQ_API_URL, groqApiKey.trim(), GROQ_MODELS).then(res => { results.groq = res.ok; }));
+        }
+        if (customProviderUrl) {
+            const endpoint = normalizeCustomProviderUrl(customProviderUrl);
+            const headers = { 'Content-Type': 'application/json' };
+            if (customProviderKey && customProviderKey.trim()) headers['Authorization'] = `Bearer ${customProviderKey.trim()}`;
+            tasks.push(fetch(endpoint, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    model: customProviderModel || 'default',
+                    messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                    max_tokens: 8,
+                })
+            }).then(r => { results.custom = r.ok; }).catch(() => { results.custom = false; }));
         }
         if (mistralApiKey) {
-            tasks.push(probeOpenAICompatibleKey(MISTRAL_API_URL, mistralApiKey, MISTRAL_MODELS).then(res => { results.mistral = res.ok; }));
+            tasks.push(probeOpenAICompatibleKey(MISTRAL_API_URL, mistralApiKey.trim(), MISTRAL_MODELS).then(res => { results.mistral = res.ok; }));
         }
         if (openRouterApiKey) {
             tasks.push(fetch(OPENROUTER_API_URL, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${openRouterApiKey}`,
+                    'Authorization': `Bearer ${openRouterApiKey.trim()}`,
                     'Content-Type': 'application/json',
                     'HTTP-Referer': location.origin,
                     'X-Title': 'Lumina Audio',
@@ -4942,10 +5456,11 @@ async function probeAiKeyStatus() {
                 : '<span class="text-red-400 font-bold">● FAILED</span>';
 
         const rows = [];
-        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">OpenRouter free models</span> <span class="text-on-surface-variant">${openRouterApiKey ? escapeHtml(maskKey(openRouterApiKey)) + ' · Main Engine · ' + OPENROUTER_FREE_MODELS.length + ' models in rotation' : ''}</span> ${openRouterApiKey ? badge(results.openrouter) : badge(null)}</div>`);
-        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Groq (free tier)</span> <span class="text-on-surface-variant">${groqApiKey ? escapeHtml(maskKey(groqApiKey)) + ' · Fallback #1 · ' + GROQ_MODELS.join(', ') : ''}</span> ${groqApiKey ? badge(results.groq) : badge(null)}</div>`);
-        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Mistral (free tier)</span> <span class="text-on-surface-variant">${mistralApiKey ? escapeHtml(maskKey(mistralApiKey)) + ' · Fallback #2 · ' + MISTRAL_MODELS.join(', ') : ''}</span> ${mistralApiKey ? badge(results.mistral) : badge(null)}</div>`);
-        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${geminiApiKey ? escapeHtml(maskKey(geminiApiKey)) + ' · Fallback #3 · ' + escapeHtml(geminiModel) : ''}</span> ${geminiApiKey ? badge(results.gemini) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${geminiApiKey ? escapeHtml(maskKey(geminiApiKey)) + ' · Tier 1 (Frontier) · ' + escapeHtml(geminiModel) : ''}</span> ${geminiApiKey ? badge(results.gemini) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Groq</span> <span class="text-on-surface-variant">${groqApiKey ? escapeHtml(maskKey(groqApiKey)) + ' · Tier 2 (Ultra-Fast) · ' + GROQ_MODELS.slice(0, 2).join(', ') : ''}</span> ${groqApiKey ? badge(results.groq) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Custom Provider</span> <span class="text-on-surface-variant">${customProviderUrl ? escapeHtml(customProviderModel || 'default') + ' · ' + escapeHtml(customProviderUrl.slice(0, 35)) : ''}</span> ${customProviderUrl ? badge(results.custom) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">OpenRouter</span> <span class="text-on-surface-variant">${openRouterApiKey ? escapeHtml(maskKey(openRouterApiKey)) + ' · ' + OPENROUTER_FREE_MODELS.length + ' free models' : ''}</span> ${openRouterApiKey ? badge(results.openrouter) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Mistral</span> <span class="text-on-surface-variant">${mistralApiKey ? escapeHtml(maskKey(mistralApiKey)) : ''}</span> ${mistralApiKey ? badge(results.mistral) : badge(null)}</div>`);
         rows.push(`<div class="text-on-surface-variant pt-1 border-t border-white/10">Free models in rotation: ${OPENROUTER_FREE_MODELS.map(m => `<span class="inline-block px-1.5 py-0.5 rounded bg-white/10 mr-1 mt-1">${escapeHtml(m)}</span>`).join('')}</div>`);
 
         list.innerHTML = rows.join('');
@@ -8212,8 +8727,8 @@ async function engbotScanRetranscribe(bookId) {
     }
 
     const key = (localStorage.getItem('geminiApiKey') || geminiApiKey || '').trim();
-    let model = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.5-pro';
-    if (model.includes('2.0')) model = 'gemini-2.5-pro';
+    let model = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.0-flash';
+    if (model.includes('2.5') || model.includes('2.0-pro-exp')) model = 'gemini-2.0-flash';
     const aiTitleEl = document.getElementById('retranscribeAiStatusTitle');
     const aiSubEl = document.getElementById('retranscribeAiStatusSub');
     if (aiTitleEl) {
@@ -8376,14 +8891,14 @@ RECONSTRUCTION OBJECTIVES:
 Text to restore:
 ${cleaned.slice(0, 12000)}`;
 
-    let prefModel = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.5-pro';
-    if (prefModel.includes('2.0')) prefModel = 'gemini-2.5-pro';
-    const modelsToTry = [prefModel, 'gemini-2.5-pro', 'gemini-2.5-flash'].filter((m, idx, arr) => arr.indexOf(m) === idx);
+    let prefModel = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.0-flash';
+    if (prefModel.includes('2.5') || prefModel.includes('2.0-pro-exp')) prefModel = 'gemini-2.0-flash';
+    const modelsToTry = [prefModel, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
     if (geminiKey) {
         for (const model of modelsToTry) {
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -8396,7 +8911,8 @@ ${cleaned.slice(0, 12000)}`;
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    let out = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+                    const parts = data.candidates?.[0]?.content?.parts;
+                    let out = (parts && Array.isArray(parts) ? parts.map(p => p.text || '').join('') : '').trim();
                     out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
                     if (out.length > 20) return out;
                 } else if (res.status === 429) {
@@ -8412,7 +8928,7 @@ ${cleaned.slice(0, 12000)}`;
     const orKey = (localStorage.getItem('openRouterApiKey') || openRouterApiKey || '').trim();
     if (orKey) {
         try {
-            const orModel = localStorage.getItem('openRouterModel') || openRouterModel || 'google/gemini-2.5-flash';
+            const orModel = localStorage.getItem('openRouterModel') || openRouterModel || 'openrouter/free';
             const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
