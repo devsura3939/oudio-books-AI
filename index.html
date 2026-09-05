@@ -581,14 +581,33 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="static/styles.css?v=1.47.2">
+    <link rel="stylesheet" href="static/styles.css?v=1.47.3">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
 
-    <!-- ════════════════ Early Auth Gate Controller (v1.47.2) ════════════════ -->
+    <!-- ════════════════ Early Auth Gate Controller (v1.47.3) ════════════════ -->
     <script>
     (function() {
+        // Proactively clear bloated translation jobs and stale caches to prevent QuotaExceededError
+        try {
+            var keysToPurge = [];
+            for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (k && (k.indexOf('lumina_tjob_') === 0 || k.indexOf('engbot_pack_') === 0 || k.indexOf('temp_') === 0 || k.indexOf('cached_') === 0)) {
+                    keysToPurge.push(k);
+                } else if (k && k.indexOf('sb-') !== 0 && k.indexOf('lumina_account_settings_') !== 0) {
+                    try {
+                        var v = localStorage.getItem(k);
+                        if (v && v.length > 40000) keysToPurge.push(k);
+                    } catch (e) {}
+                }
+            }
+            for (var j = 0; j < keysToPurge.length; j++) {
+                localStorage.removeItem(keysToPurge[j]);
+            }
+        } catch (e) {}
+
         window.setGateError = function(msg) {
             var errEl = document.getElementById('gateErrorMsg');
             var succEl = document.getElementById('gateSuccessMsg');
@@ -763,7 +782,7 @@
                 <div>
                     <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center justify-center gap-2">
                         <span>EngBot Studio</span>
-                        <span class="text-primary-container text-[11px] font-mono px-2 py-0.5 rounded-full bg-primary-container/15 border border-primary-container/30">v1.47.2</span>
+                        <span class="text-primary-container text-[11px] font-mono px-2 py-0.5 rounded-full bg-primary-container/15 border border-primary-container/30">v1.47.3</span>
                     </h1>
                     <p class="text-xs sm:text-sm text-on-surface-variant mt-1" id="gateSubtitle">
                         Sign in to access your personal audiobooks, scanned books, and studio workspace
@@ -903,13 +922,13 @@
             <!-- Bottom Branding Security Note -->
             <div class="pt-2 text-center flex flex-col items-center gap-2">
                 <div class="text-[10px] text-on-surface-variant/60 font-mono">
-                    Encrypted Vault • Supabase Cloud Sync • EngBot v1.47.2
+                    Encrypted Vault • Supabase Cloud Sync • EngBot v1.47.3
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Direct Touch and Click Event Attacher for Auth Gate (v1.47.2) -->
+    <!-- Direct Touch and Click Event Attacher for Auth Gate (v1.47.3) -->
     <script>
     (function() {
         function bindGateTouchEvents() {
@@ -949,9 +968,9 @@
         </button>
         <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
-            <span class="font-label-caps font-bold tracking-tight text-white">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">v1.47.2</span></span>
+            <span class="font-label-caps font-bold tracking-tight text-white">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">v1.47.3</span></span>
             <div id="adminVersionPillMobile" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)]">
-                <span>👑</span><span>v1.47.2</span>
+                <span>👑</span><span>v1.47.3</span>
             </div>
         </div>
         <div class="flex items-center gap-0.5 -mr-2">
@@ -980,7 +999,7 @@
                     </div>
                     <div>
                         <span class="font-label-caps font-bold text-white block leading-tight">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">PRO</span></span>
-                        <span class="text-[10px] text-on-surface-variant font-mono">App v1.47.2 • Engine v1.47.2</span>
+                        <span class="text-[10px] text-on-surface-variant font-mono">App v1.47.3 • Engine v1.47.3</span>
                     </div>
                 </div>
                 <button onclick="closeMobileNav()" class="p-1.5 rounded-lg hover:bg-white/10 transition" aria-label="Close menu">
@@ -996,8 +1015,8 @@
                 </div>
                 <p class="text-white text-[10px] truncate mt-0.5 font-sans" id="mobileAdminEmail"></p>
                 <div class="mt-1 pt-1 border-t border-white/10 space-y-0.5">
-                    <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">v1.47.2</span></p>
-                    <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">v1.47.2 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)</span></p>
+                    <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">v1.47.3</span></p>
+                    <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">v1.47.3 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)</span></p>
                 </div>
             </div>
 
@@ -1125,9 +1144,9 @@
             <div id="adminVersionPill" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-primary-container/20 border border-primary-container/40 text-[11px] font-mono text-primary-fixed font-bold shadow-[0_0_15px_rgba(0,240,255,0.2)]">
                 <span>👑 Admin</span>
                 <span class="opacity-40">•</span>
-                <span>App v1.47.2</span>
+                <span>App v1.47.3</span>
                 <span class="opacity-40">•</span>
-                <span>Engine v1.47.2</span>
+                <span>Engine v1.47.3</span>
             </div>
 
             <button onclick="openCurrentBookInReader()" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-georgian-gold/15 hover:bg-georgian-gold/25 border border-georgian-gold/30 text-xs font-bold text-georgian-gold transition shadow-sm" title="Open Moon+ Reader view">
@@ -1629,7 +1648,7 @@
             <!-- Footer info -->
             <div class="pt-2 text-center text-[10px] text-on-surface-variant/70 border-t border-white/10 flex items-center justify-between px-1">
                 <span>EngBot Audiobooks AI</span>
-                <span class="font-mono">v1.47.2 Multi-Domain</span>
+                <span class="font-mono">v1.47.3 Multi-Domain</span>
             </div>
         </div>
     </div>
@@ -2169,11 +2188,11 @@
         <div id="scanShell" class="modal-content glass-panel p-6 rounded-3xl max-w-lg w-full border border-white/15 shadow-2xl mx-4"></div>
     </div>
 
-    <script src="static/supabase-store.js?v=1.47.2"></script>
-    <script src="static/app.js?v=1.47.2"></script>
-    <script src="static/georgian-linguistics.js?v=1.47.2"></script>
-    <script src="static/engine-pack.js?v=1.47.2"></script>
-    <script src="static/scanner.js?v=1.47.2"></script>
+    <script src="static/supabase-store.js?v=1.47.3"></script>
+    <script src="static/app.js?v=1.47.3"></script>
+    <script src="static/georgian-linguistics.js?v=1.47.3"></script>
+    <script src="static/engine-pack.js?v=1.47.3"></script>
+    <script src="static/scanner.js?v=1.47.3"></script>
 
 
 </body>

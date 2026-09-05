@@ -54,13 +54,93 @@
       : null;
   }
 
+  function purgeStorageQuotaPressure() {
+    try {
+      var keysToRemove = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k) continue;
+        if (k.indexOf("lumina_tjob_") === 0 || k.indexOf("engbot_pack_") === 0 || k.indexOf("temp_") === 0 || k.indexOf("cached_") === 0) {
+          keysToRemove.push(k);
+        } else {
+          try {
+            var val = localStorage.getItem(k);
+            if (val && val.length > 40000 && k.indexOf("sb-") !== 0 && k.indexOf("lumina_account_settings_") !== 0) {
+              keysToRemove.push(k);
+            }
+          } catch (e) {}
+        }
+      }
+      for (var j = 0; j < keysToRemove.length; j++) {
+        localStorage.removeItem(keysToRemove[j]);
+      }
+      if (keysToRemove.length > 0) {
+        console.info("[Storage] Purged " + keysToRemove.length + " bloated keys from localStorage to prevent quota exhaustion.");
+      }
+    } catch (e) {
+      console.warn("[Storage] Purge error:", e);
+    }
+  }
+  // Immediately free any quota bloat
+  purgeStorageQuotaPressure();
+  window.purgeStorageQuotaPressure = purgeStorageQuotaPressure;
+
+  function createResilientAuthStorage() {
+    var mem = {};
+    return {
+      getItem: function (k) {
+        try {
+          var v = localStorage.getItem(k);
+          if (v !== null && v !== undefined) return v;
+        } catch (e) {}
+        try {
+          var sv = sessionStorage.getItem(k);
+          if (sv !== null && sv !== undefined) return sv;
+        } catch (e) {}
+        return mem[k] !== undefined ? mem[k] : null;
+      },
+      setItem: function (k, v) {
+        try {
+          localStorage.setItem(k, v);
+          return;
+        } catch (e) {
+          console.warn("[LuminaStore] localStorage.setItem hit quota limit — auto-purging bloated keys...", e);
+          purgeStorageQuotaPressure();
+          try {
+            localStorage.setItem(k, v);
+            return;
+          } catch (e2) {
+            console.warn("[LuminaStore] localStorage still full after purge, routing to sessionStorage...", e2);
+            try {
+              sessionStorage.setItem(k, v);
+              return;
+            } catch (e3) {
+              console.warn("[LuminaStore] sessionStorage full, routing to in-memory...", e3);
+              mem[k] = v;
+            }
+          }
+        }
+      },
+      removeItem: function (k) {
+        try { localStorage.removeItem(k); } catch (e) {}
+        try { sessionStorage.removeItem(k); } catch (e) {}
+        delete mem[k];
+      }
+    };
+  }
+
   function ensureClient() {
     if (!client) {
       var lib = sdk();
       if (!lib) return null;
       client = lib.createClient(URL_, KEY, {
         global: { fetch: patchedFetch },
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false,
+          storage: createResilientAuthStorage(),
+        },
       });
     }
     return client;
@@ -141,8 +221,37 @@
         userId = res.data.user.id;
         return { success: true, user: res.data.user, session: res.data.session };
       }
+      if (res.error && res.error.message && (res.error.message.indexOf("quota") !== -1 || res.error.message.indexOf("setItem") !== -1)) {
+        console.warn("[LuminaStore] signIn returned quota error — auto-purging storage and retrying...");
+        purgeStorageQuotaPressure();
+        res = await c.auth.signInWithPassword({
+          email: cleanEmail,
+          password: password || (isOwner ? "anania39" : "")
+        });
+        if (!res.error && res.data && res.data.user) {
+          userId = res.data.user.id;
+          return { success: true, user: res.data.user, session: res.data.session };
+        }
+      }
       return { success: false, error: res.error };
     } catch (err) {
+      if (err && err.message && (err.message.indexOf("quota") !== -1 || err.message.indexOf("setItem") !== -1)) {
+        console.warn("[LuminaStore] signIn caught quota exception — auto-purging storage and retrying...");
+        purgeStorageQuotaPressure();
+        try {
+          var retryRes = await c.auth.signInWithPassword({
+            email: cleanEmail,
+            password: password || (isOwner ? "anania39" : "")
+          });
+          if (!retryRes.error && retryRes.data && retryRes.data.user) {
+            userId = retryRes.data.user.id;
+            return { success: true, user: retryRes.data.user, session: retryRes.data.session };
+          }
+          return { success: false, error: retryRes.error };
+        } catch (e2) {
+          return { success: false, error: e2 };
+        }
+      }
       return { success: false, error: err };
     }
   }

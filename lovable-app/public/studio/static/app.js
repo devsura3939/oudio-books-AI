@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.47.2';
-const ENGINE_VERSION = 'v1.47.2 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
+const APP_VERSION = 'v1.47.3';
+const ENGINE_VERSION = 'v1.47.3 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
 
 let db = null;
 let currentBook = null;
@@ -3283,14 +3283,28 @@ async function login(email, password, rememberParam) {
                 } else if (authRes.error) {
                     console.warn('[auth] Supabase sign-in response:', authRes.error.message);
                     const errMsg = authRes.error.message || '';
-                    let userMsg = errMsg;
-                    if (errMsg.toLowerCase().includes('invalid login credentials') || errMsg.toLowerCase().includes('invalid credentials')) {
-                        userMsg = 'Wrong email or password. Check your credentials or click "Forgot password?" below.';
-                    } else if (errMsg.toLowerCase().includes('email not confirmed')) {
-                        userMsg = 'Please confirm your email address first. Check your inbox.';
+                    if (errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('setitem')) {
+                        if (typeof purgeStorageQuotaPressure === 'function') purgeStorageQuotaPressure();
+                        try {
+                            const retryRes = await window.LuminaStore.signIn(email, pwd);
+                            if (retryRes.success && retryRes.user) {
+                                supabaseUser = retryRes.user;
+                                cloudConnected = true;
+                            }
+                        } catch (e2) {}
                     }
-                    setAuthError(userMsg);
-                    return;
+                    if (!cloudConnected) {
+                        let userMsg = errMsg;
+                        if (errMsg.toLowerCase().includes('invalid login credentials') || errMsg.toLowerCase().includes('invalid credentials')) {
+                            userMsg = 'Wrong email or password. Check your credentials or click "Forgot password?" below.';
+                        } else if (errMsg.toLowerCase().includes('email not confirmed')) {
+                            userMsg = 'Please confirm your email address first. Check your inbox.';
+                        } else if (errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('setitem')) {
+                            userMsg = 'Browser storage was full. Storage has been automatically cleaned — please click "Log In to Studio" again.';
+                        }
+                        setAuthError(userMsg);
+                        return;
+                    }
                 }
             } catch (e) {
                 console.warn('[auth] Supabase connection error:', e);
@@ -6053,8 +6067,19 @@ function loadTranslationJob(bookId) {
 function saveTranslationJob(job) {
     if (!job || !job.bookId) return;
     job.updatedAt = Date.now();
-    try { localStorage.setItem(tjobKey(job.bookId), JSON.stringify(job)); }
-    catch (e) { /* quota — progress still lives in saved chapters */ }
+    try {
+        const lightJob = {
+            bookId: job.bookId,
+            title: job.title || '',
+            status: job.status || 'running',
+            chapterIdx: job.chapterIdx || 0,
+            totalChapters: job.totalChapters || 0,
+            updatedAt: job.updatedAt
+        };
+        localStorage.setItem(tjobKey(job.bookId), JSON.stringify(lightJob));
+    } catch (e) {
+        if (typeof purgeStorageQuotaPressure === 'function') purgeStorageQuotaPressure();
+    }
 }
 function clearTranslationJob(bookId) {
     try { localStorage.removeItem(tjobKey(bookId)); } catch (e) { }
