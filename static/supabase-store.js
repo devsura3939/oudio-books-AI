@@ -65,7 +65,7 @@
         } else {
           try {
             var val = localStorage.getItem(k);
-            if (val && val.length > 40000 && k.indexOf("sb-") !== 0 && k.indexOf("lumina_account_settings_") !== 0) {
+            if (val && val.length > 40000 && k.indexOf("sb-") !== 0 && k.indexOf("lumina_account_settings_") !== 0 && k.indexOf("lumina_saved_") !== 0 && k.indexOf("gemini") === -1 && k.indexOf("groq") === -1 && k.indexOf("openrouter") === -1 && k.indexOf("mistral") === -1 && k.indexOf("custom") === -1 && k.indexOf("lumina_el_") === -1) {
               keysToRemove.push(k);
             }
           } catch (e) {}

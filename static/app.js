@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.47.3';
-const ENGINE_VERSION = 'v1.47.3 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)';
+const APP_VERSION = 'v1.47.4';
+const ENGINE_VERSION = 'v1.47.4 (Lumina-PermanentAIKeys+SafePreserve+AutoHeal)';
 
 let db = null;
 let currentBook = null;
@@ -192,12 +192,138 @@ function getCachedAccountSettings(email) {
     return null;
 }
 
+// ── Universal AI Keys Resilience & Auto-Healing Layer (v1.47.4) ────────────
+// Guarantee: User API keys NEVER get lost across reloads, builds, logouts,
+// or account switches. Scans memory, dedicated storage, backup slots, and all
+// account objects to find and heal active keys across all storage layers.
+function resolveAndPreserveAllAiKeys() {
+    function findBestStringKey(curVal, keysToSearch, accountProp) {
+        if (curVal && typeof curVal === 'string' && curVal.trim().length > 0) {
+            return curVal.trim();
+        }
+        for (const k of keysToSearch) {
+            try {
+                const val = localStorage.getItem(k);
+                if (val && typeof val === 'string' && val.trim().length > 0) return val.trim();
+            } catch (e) {}
+        }
+        // Search current user account
+        try {
+            const email = getActiveUserEmail();
+            const curAcc = getCachedAccountSettings(email);
+            if (curAcc && curAcc[accountProp] && String(curAcc[accountProp]).trim().length > 0) {
+                return String(curAcc[accountProp]).trim();
+            }
+        } catch (e) {}
+        // Search local account
+        try {
+            const locAcc = getCachedAccountSettings('');
+            if (locAcc && locAcc[accountProp] && String(locAcc[accountProp]).trim().length > 0) {
+                return String(locAcc[accountProp]).trim();
+            }
+        } catch (e) {}
+        // Deep scan across ANY lumina_account_settings_* in localStorage
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const lk = localStorage.key(i);
+                if (lk && lk.indexOf('lumina_account_settings_') === 0) {
+                    try {
+                        const parsed = JSON.parse(localStorage.getItem(lk));
+                        if (parsed && parsed[accountProp] && String(parsed[accountProp]).trim().length > 0) {
+                            return String(parsed[accountProp]).trim();
+                        }
+                    } catch (e) {}
+                }
+            }
+        } catch (e) {}
+        return '';
+    }
+
+    // 1. Gemini API Key
+    const resolvedGemini = findBestStringKey((typeof geminiApiKey !== 'undefined' ? geminiApiKey : ''), ['geminiApiKey', 'lumina_saved_gemini_key', 'gemini_api_key'], 'geminiApiKey');
+    if (resolvedGemini) {
+        geminiApiKey = resolvedGemini;
+        try {
+            localStorage.setItem('geminiApiKey', resolvedGemini);
+            localStorage.setItem('lumina_saved_gemini_key', resolvedGemini);
+        } catch (e) {}
+    }
+
+    // 2. OpenRouter API Key
+    const resolvedOR = findBestStringKey((typeof openRouterApiKey !== 'undefined' ? openRouterApiKey : ''), ['openRouterApiKey', 'lumina_saved_openrouter_key', 'openrouter_api_key'], 'openRouterApiKey');
+    if (resolvedOR && resolvedOR !== OPENROUTER_DEFAULT_KEY) {
+        openRouterApiKey = resolvedOR;
+        try {
+            localStorage.setItem('openRouterApiKey', resolvedOR);
+            localStorage.setItem('lumina_saved_openrouter_key', resolvedOR);
+        } catch (e) {}
+    }
+
+    // 3. Groq API Key
+    const resolvedGroq = findBestStringKey((typeof groqApiKey !== 'undefined' ? groqApiKey : ''), ['groqApiKey', 'lumina_saved_groq_key', 'groq_api_key'], 'groqApiKey');
+    if (resolvedGroq) {
+        groqApiKey = resolvedGroq;
+        try {
+            localStorage.setItem('groqApiKey', resolvedGroq);
+            localStorage.setItem('lumina_saved_groq_key', resolvedGroq);
+        } catch (e) {}
+    }
+
+    // 4. Mistral API Key
+    const resolvedMistral = findBestStringKey((typeof mistralApiKey !== 'undefined' ? mistralApiKey : ''), ['mistralApiKey', 'lumina_saved_mistral_key', 'mistral_api_key'], 'mistralApiKey');
+    if (resolvedMistral) {
+        mistralApiKey = resolvedMistral;
+        try {
+            localStorage.setItem('mistralApiKey', resolvedMistral);
+            localStorage.setItem('lumina_saved_mistral_key', resolvedMistral);
+        } catch (e) {}
+    }
+
+    // 5. Custom Provider
+    const resolvedCpKey = findBestStringKey((typeof customProviderKey !== 'undefined' ? customProviderKey : ''), ['customProviderKey', 'lumina_saved_custom_key'], 'customProviderKey');
+    if (resolvedCpKey) {
+        customProviderKey = resolvedCpKey;
+        try {
+            localStorage.setItem('customProviderKey', resolvedCpKey);
+            localStorage.setItem('lumina_saved_custom_key', resolvedCpKey);
+        } catch (e) {}
+    }
+    const resolvedCpUrl = findBestStringKey((typeof customProviderUrl !== 'undefined' ? customProviderUrl : ''), ['customProviderUrl', 'lumina_saved_custom_url'], 'customProviderUrl');
+    if (resolvedCpUrl) {
+        customProviderUrl = resolvedCpUrl;
+        try {
+            localStorage.setItem('customProviderUrl', resolvedCpUrl);
+            localStorage.setItem('lumina_saved_custom_url', resolvedCpUrl);
+        } catch (e) {}
+    }
+    const resolvedCpModel = findBestStringKey((typeof customProviderModel !== 'undefined' ? customProviderModel : ''), ['customProviderModel', 'lumina_saved_custom_model'], 'customProviderModel');
+    if (resolvedCpModel) {
+        customProviderModel = resolvedCpModel;
+        try {
+            localStorage.setItem('customProviderModel', resolvedCpModel);
+            localStorage.setItem('lumina_saved_custom_model', resolvedCpModel);
+        } catch (e) {}
+    }
+
+    // 6. ElevenLabs
+    const resolvedEL = findBestStringKey((typeof elevenLabsApiKey !== 'undefined' ? elevenLabsApiKey : ''), ['lumina_el_key', 'lumina_saved_el_key'], 'elevenLabsApiKey');
+    if (resolvedEL) {
+        elevenLabsApiKey = resolvedEL;
+        try {
+            localStorage.setItem('lumina_el_key', resolvedEL);
+            localStorage.setItem('lumina_saved_el_key', resolvedEL);
+        } catch (e) {}
+    }
+}
+window.resolveAndPreserveAllAiKeys = resolveAndPreserveAllAiKeys;
+
 const _initialAcc = getCachedAccountSettings();
 
 // Gemini AI State
-let geminiApiKey = (_initialAcc && _initialAcc.geminiApiKey !== undefined)
-    ? _initialAcc.geminiApiKey
-    : (localStorage.getItem('geminiApiKey') || '');
+let geminiApiKey = (_initialAcc && _initialAcc.geminiApiKey)
+    || localStorage.getItem('geminiApiKey')
+    || localStorage.getItem('lumina_saved_gemini_key')
+    || '';
 
 let storedGeminiModel = (_initialAcc && _initialAcc.geminiModel)
     ? _initialAcc.geminiModel
@@ -240,9 +366,10 @@ const OPENROUTER_FREE_MODELS = [
     'nvidia/nemotron-3-super-120b-a12b:free',
     'nvidia/nemotron-3-ultra-550b-a55b:free',
 ];
-let openRouterApiKey = (_initialAcc && _initialAcc.openRouterApiKey !== undefined)
-    ? _initialAcc.openRouterApiKey
-    : (localStorage.getItem('openRouterApiKey') || OPENROUTER_DEFAULT_KEY);
+let openRouterApiKey = (_initialAcc && _initialAcc.openRouterApiKey && _initialAcc.openRouterApiKey !== OPENROUTER_DEFAULT_KEY)
+    || localStorage.getItem('openRouterApiKey')
+    || localStorage.getItem('lumina_saved_openrouter_key')
+    || OPENROUTER_DEFAULT_KEY;
 let openRouterModel = (_initialAcc && _initialAcc.openRouterModel !== undefined)
     ? _initialAcc.openRouterModel
     : (localStorage.getItem('openRouterModel') || '');
@@ -460,16 +587,18 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192,
 //     headers are inconsistent for direct browser calls, so failures are
 //     detected at runtime and the provider is parked briefly instead of
 //     stalling every chunk on a preflight error.
-let groqApiKey = (_initialAcc && _initialAcc.groqApiKey !== undefined)
-    ? _initialAcc.groqApiKey
-    : (localStorage.getItem('groqApiKey') || '');
+let groqApiKey = (_initialAcc && _initialAcc.groqApiKey)
+    || localStorage.getItem('groqApiKey')
+    || localStorage.getItem('lumina_saved_groq_key')
+    || '';
 // groqSelectedModel is a first-class module variable (account-scoped settings restore writes it here)
-let groqSelectedModel = (_initialAcc && _initialAcc.groqSelectedModel !== undefined)
-    ? _initialAcc.groqSelectedModel
-    : (localStorage.getItem('groqSelectedModel') || '');
-let mistralApiKey = (_initialAcc && _initialAcc.mistralApiKey !== undefined)
-    ? _initialAcc.mistralApiKey
-    : (localStorage.getItem('mistralApiKey') || '');
+let groqSelectedModel = (_initialAcc && _initialAcc.groqSelectedModel)
+    || localStorage.getItem('groqSelectedModel')
+    || '';
+let mistralApiKey = (_initialAcc && _initialAcc.mistralApiKey)
+    || localStorage.getItem('mistralApiKey')
+    || localStorage.getItem('lumina_saved_mistral_key')
+    || '';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 // Current Groq production catalog: ultra-fast Llama 3.3 70B & Llama 3.1 8B.
@@ -491,15 +620,18 @@ let mistralCorsFailures = 0;
 let mistralCorsBlockedUntil = 0;
 
 // ── Custom Provider (user-supplied OpenAI-compatible endpoint) ────────────────
-let customProviderUrl = (_initialAcc && _initialAcc.customProviderUrl !== undefined)
-    ? _initialAcc.customProviderUrl
-    : (localStorage.getItem('customProviderUrl') || '');
-let customProviderModel = (_initialAcc && _initialAcc.customProviderModel !== undefined)
-    ? _initialAcc.customProviderModel
-    : (localStorage.getItem('customProviderModel') || '');
-let customProviderKey = (_initialAcc && _initialAcc.customProviderKey !== undefined)
-    ? _initialAcc.customProviderKey
-    : (localStorage.getItem('customProviderKey') || '');
+let customProviderUrl = (_initialAcc && _initialAcc.customProviderUrl)
+    || localStorage.getItem('customProviderUrl')
+    || localStorage.getItem('lumina_saved_custom_url')
+    || '';
+let customProviderModel = (_initialAcc && _initialAcc.customProviderModel)
+    || localStorage.getItem('customProviderModel')
+    || localStorage.getItem('lumina_saved_custom_model')
+    || '';
+let customProviderKey = (_initialAcc && _initialAcc.customProviderKey)
+    || localStorage.getItem('customProviderKey')
+    || localStorage.getItem('lumina_saved_custom_key')
+    || '';
 
 function setCustomProvider(url, model, key) {
     customProviderUrl = (url || '').trim();
@@ -1540,16 +1672,16 @@ function cacheDOM() {
 
 // ── Initialization ──────────────────────────────────────────────────────────
 async function init() {
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
     cacheDOM();
     checkAuthState(); // Immediately lock dashboard if not authenticated
     await initDB();
-    if (currentUser && currentUser.email) {
-        try { await restoreAccountSettingsForCurrentUser(); } catch (e) {}
-    }
+    try { await restoreAccountSettingsForCurrentUser(); } catch (e) {}
     setupEventListeners();
     setupKeyboardAndTouchControls();
     checkAuthState();
     loadElevenLabsSettings();
+    syncSettingsToDOMInputs();
 
     populateVoiceList();
     if (window.speechSynthesis) {
@@ -1943,27 +2075,32 @@ function getCurrentAccountSettings() {
     const local = getCachedAccountSettings(email) || {};
 
     return {
-        geminiApiKey: (typeof geminiApiKey !== 'undefined' && geminiApiKey) ? geminiApiKey : (local.geminiApiKey || localStorage.getItem('geminiApiKey') || ''),
+        geminiApiKey: (typeof geminiApiKey !== 'undefined' && geminiApiKey) ? geminiApiKey : (local.geminiApiKey || localStorage.getItem('geminiApiKey') || localStorage.getItem('lumina_saved_gemini_key') || ''),
         geminiModel: (typeof geminiModel !== 'undefined' && geminiModel) ? geminiModel : (local.geminiModel || localStorage.getItem('geminiModel') || 'gemini-2.0-flash'),
         geminiPasses: (typeof geminiPasses !== 'undefined' && [1, 2, 3].includes(geminiPasses)) ? geminiPasses : (local.geminiPasses || parseInt(localStorage.getItem('geminiPasses') || '3', 10) || 3),
-        openRouterApiKey: (typeof openRouterApiKey !== 'undefined' && openRouterApiKey) ? openRouterApiKey : (local.openRouterApiKey || localStorage.getItem('openRouterApiKey') || ''),
+        openRouterApiKey: (typeof openRouterApiKey !== 'undefined' && openRouterApiKey && openRouterApiKey !== OPENROUTER_DEFAULT_KEY) ? openRouterApiKey : (local.openRouterApiKey || localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || ''),
         openRouterModel: (typeof openRouterModel !== 'undefined' && openRouterModel) ? openRouterModel : (local.openRouterModel || localStorage.getItem('openRouterModel') || ''),
-        groqApiKey: (typeof groqApiKey !== 'undefined' && groqApiKey) ? groqApiKey : (local.groqApiKey || localStorage.getItem('groqApiKey') || ''),
+        groqApiKey: (typeof groqApiKey !== 'undefined' && groqApiKey) ? groqApiKey : (local.groqApiKey || localStorage.getItem('groqApiKey') || localStorage.getItem('lumina_saved_groq_key') || ''),
         groqSelectedModel: (typeof groqSelectedModel !== 'undefined' && groqSelectedModel) ? groqSelectedModel : (local.groqSelectedModel || localStorage.getItem('groqSelectedModel') || ''),
-        mistralApiKey: (typeof mistralApiKey !== 'undefined' && mistralApiKey) ? mistralApiKey : (local.mistralApiKey || localStorage.getItem('mistralApiKey') || ''),
-        customProviderUrl: (typeof customProviderUrl !== 'undefined' && customProviderUrl) ? customProviderUrl : (local.customProviderUrl || localStorage.getItem('customProviderUrl') || ''),
-        customProviderModel: (typeof customProviderModel !== 'undefined' && customProviderModel) ? customProviderModel : (local.customProviderModel || localStorage.getItem('customProviderModel') || ''),
-        customProviderKey: (typeof customProviderKey !== 'undefined' && customProviderKey) ? customProviderKey : (local.customProviderKey || localStorage.getItem('customProviderKey') || ''),
+        mistralApiKey: (typeof mistralApiKey !== 'undefined' && mistralApiKey) ? mistralApiKey : (local.mistralApiKey || localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || ''),
+        customProviderUrl: (typeof customProviderUrl !== 'undefined' && customProviderUrl) ? customProviderUrl : (local.customProviderUrl || localStorage.getItem('customProviderUrl') || localStorage.getItem('lumina_saved_custom_url') || ''),
+        customProviderModel: (typeof customProviderModel !== 'undefined' && customProviderModel) ? customProviderModel : (local.customProviderModel || localStorage.getItem('customProviderModel') || localStorage.getItem('lumina_saved_custom_model') || ''),
+        customProviderKey: (typeof customProviderKey !== 'undefined' && customProviderKey) ? customProviderKey : (local.customProviderKey || localStorage.getItem('customProviderKey') || localStorage.getItem('lumina_saved_custom_key') || ''),
         elevenLabsEnabled: (typeof elevenLabsEnabled !== 'undefined') ? Boolean(elevenLabsEnabled) : (local.elevenLabsEnabled !== undefined ? Boolean(local.elevenLabsEnabled) : (localStorage.getItem('lumina_el_enabled') === 'true')),
-        elevenLabsApiKey: (typeof elevenLabsApiKey !== 'undefined' && elevenLabsApiKey) ? elevenLabsApiKey : (local.elevenLabsApiKey || localStorage.getItem('lumina_el_key') || ''),
+        elevenLabsApiKey: (typeof elevenLabsApiKey !== 'undefined' && elevenLabsApiKey) ? elevenLabsApiKey : (local.elevenLabsApiKey || localStorage.getItem('lumina_el_key') || localStorage.getItem('lumina_saved_el_key') || ''),
         elevenLabsVoiceId: (typeof elevenLabsVoiceId !== 'undefined' && elevenLabsVoiceId) ? elevenLabsVoiceId : (local.elevenLabsVoiceId || localStorage.getItem('lumina_el_voice') || 'pNInz6obpgDQGcFmaJgB'),
         updatedAt: local.updatedAt || new Date().toISOString()
     };
 }
 
 function syncSettingsToDOMInputs() {
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
+
     const keyInput = document.getElementById('geminiApiKeyInput');
-    if (keyInput) keyInput.value = geminiApiKey || '';
+    const effGemini = geminiApiKey || localStorage.getItem('geminiApiKey') || localStorage.getItem('lumina_saved_gemini_key') || '';
+    if (keyInput) keyInput.value = effGemini;
+    const gemBadge = document.getElementById('geminiSavedBadge');
+    if (gemBadge) gemBadge.classList.toggle('hidden', !effGemini);
 
     const modelSelect = document.getElementById('geminiModelSelect');
     if (modelSelect && geminiModel) {
@@ -1987,7 +2124,10 @@ function syncSettingsToDOMInputs() {
     if (passesSelect && geminiPasses) passesSelect.value = String(geminiPasses);
 
     const orKeyInput = document.getElementById('openRouterApiKeyInput');
-    if (orKeyInput) orKeyInput.value = openRouterApiKey || '';
+    const effOR = (openRouterApiKey && openRouterApiKey !== OPENROUTER_DEFAULT_KEY) ? openRouterApiKey : (localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || '');
+    if (orKeyInput) orKeyInput.value = effOR;
+    const orBadge = document.getElementById('openRouterSavedBadge');
+    if (orBadge) orBadge.classList.toggle('hidden', !effOR);
 
     const orModelSelect = document.getElementById('openRouterModelSelect');
     if (orModelSelect && openRouterModel) {
@@ -2008,14 +2148,15 @@ function syncSettingsToDOMInputs() {
     }
 
     const groqKeyInput = document.getElementById('groqApiKeyInput');
-    if (groqKeyInput) groqKeyInput.value = groqApiKey || '';
+    const effGroq = groqApiKey || localStorage.getItem('groqApiKey') || localStorage.getItem('lumina_saved_groq_key') || '';
+    if (groqKeyInput) groqKeyInput.value = effGroq;
+    const groqBadge = document.getElementById('groqSavedBadge');
+    if (groqBadge) groqBadge.classList.toggle('hidden', !effGroq);
 
     const groqModelSelect = document.getElementById('groqModelSelect');
     // Use module-level groqSelectedModel (synced with account settings), fallback to localStorage.
     const groqSaved = (groqSelectedModel || localStorage.getItem('groqSelectedModel') || '').trim();
     if (groqModelSelect && groqSaved) {
-        // Only add the saved value as a custom option if it's a known Groq model ID.
-        // Prevents stale OpenRouter model IDs from appearing in the Groq dropdown.
         if (GROQ_MODELS.includes(groqSaved)) {
             let found = false;
             for (let i = 0; i < groqModelSelect.options.length; i++) {
@@ -2029,23 +2170,28 @@ function syncSettingsToDOMInputs() {
             }
             groqModelSelect.value = groqSaved;
         } else {
-            // Saved model is not a valid Groq ID — reset to Auto to avoid confusion
             groqModelSelect.value = '';
         }
     }
 
     const mistralKeyInput = document.getElementById('mistralApiKeyInput');
-    if (mistralKeyInput) mistralKeyInput.value = mistralApiKey || '';
+    const effMistral = mistralApiKey || localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || '';
+    if (mistralKeyInput) mistralKeyInput.value = effMistral;
+    const mistralBadge = document.getElementById('mistralSavedBadge');
+    if (mistralBadge) mistralBadge.classList.toggle('hidden', !effMistral);
 
     const cpUrlInput = document.getElementById('customProviderUrlInput');
-    if (cpUrlInput) cpUrlInput.value = customProviderUrl || '';
+    if (cpUrlInput) cpUrlInput.value = customProviderUrl || localStorage.getItem('customProviderUrl') || localStorage.getItem('lumina_saved_custom_url') || '';
     const cpModelInput = document.getElementById('customProviderModelInput');
-    if (cpModelInput) cpModelInput.value = customProviderModel || '';
+    if (cpModelInput) cpModelInput.value = customProviderModel || localStorage.getItem('customProviderModel') || localStorage.getItem('lumina_saved_custom_model') || '';
     const cpKeyInput = document.getElementById('customProviderKeyInput');
-    if (cpKeyInput) cpKeyInput.value = customProviderKey || '';
+    const effCpKey = customProviderKey || localStorage.getItem('customProviderKey') || localStorage.getItem('lumina_saved_custom_key') || '';
+    if (cpKeyInput) cpKeyInput.value = effCpKey;
+    const cpBadge = document.getElementById('customSavedBadge');
+    if (cpBadge) cpBadge.classList.toggle('hidden', !effCpKey && !(customProviderUrl || localStorage.getItem('customProviderUrl')));
 
     if (DOM && DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = Boolean(elevenLabsEnabled);
-    if (DOM && DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = elevenLabsApiKey || '';
+    if (DOM && DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = elevenLabsApiKey || localStorage.getItem('lumina_el_key') || localStorage.getItem('lumina_saved_el_key') || '';
     if (DOM && DOM.elevenLabsVoiceSelect && elevenLabsVoiceId) DOM.elevenLabsVoiceSelect.value = elevenLabsVoiceId;
     if (DOM && DOM.elevenLabsKeySection) {
         if (elevenLabsEnabled) DOM.elevenLabsKeySection.classList.remove('hidden');
@@ -2058,10 +2204,17 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
     if (!settings || typeof settings !== 'object') return;
 
     if (settings.geminiApiKey !== undefined) {
-        geminiApiKey = String(settings.geminiApiKey || '').trim();
-        if (saveToLegacyStorage) {
-            if (geminiApiKey) localStorage.setItem('geminiApiKey', geminiApiKey);
-            else localStorage.removeItem('geminiApiKey');
+        const inKey = String(settings.geminiApiKey || '').trim();
+        if (inKey) {
+            geminiApiKey = inKey;
+            if (saveToLegacyStorage) {
+                try {
+                    localStorage.setItem('geminiApiKey', inKey);
+                    localStorage.setItem('lumina_saved_gemini_key', inKey);
+                } catch (e) {}
+            }
+        } else if (!geminiApiKey) {
+            geminiApiKey = localStorage.getItem('geminiApiKey') || localStorage.getItem('lumina_saved_gemini_key') || '';
         }
     }
     if (settings.geminiModel) {
@@ -2074,53 +2227,85 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
         if (saveToLegacyStorage) localStorage.setItem('geminiPasses', String(geminiPasses));
     }
     if (settings.openRouterApiKey !== undefined) {
-        openRouterApiKey = String(settings.openRouterApiKey || '').trim();
-        if (saveToLegacyStorage) {
-            if (openRouterApiKey) localStorage.setItem('openRouterApiKey', openRouterApiKey);
-            else localStorage.removeItem('openRouterApiKey');
+        const inOR = String(settings.openRouterApiKey || '').trim();
+        if (inOR && inOR !== OPENROUTER_DEFAULT_KEY) {
+            openRouterApiKey = inOR;
+            if (saveToLegacyStorage) {
+                try {
+                    localStorage.setItem('openRouterApiKey', inOR);
+                    localStorage.setItem('lumina_saved_openrouter_key', inOR);
+                } catch (e) {}
+            }
+        } else if (!openRouterApiKey || openRouterApiKey === OPENROUTER_DEFAULT_KEY) {
+            openRouterApiKey = localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || OPENROUTER_DEFAULT_KEY;
         }
     }
     if (settings.openRouterModel !== undefined) {
         openRouterModel = String(settings.openRouterModel || '');
-        if (saveToLegacyStorage) {
-            if (openRouterModel) localStorage.setItem('openRouterModel', openRouterModel);
-            else localStorage.removeItem('openRouterModel');
+        if (saveToLegacyStorage && openRouterModel) {
+            localStorage.setItem('openRouterModel', openRouterModel);
         }
     }
     if (settings.groqApiKey !== undefined) {
-        groqApiKey = String(settings.groqApiKey || '').trim();
-        if (saveToLegacyStorage) {
-            if (groqApiKey) localStorage.setItem('groqApiKey', groqApiKey);
-            else localStorage.removeItem('groqApiKey');
+        const inGroq = String(settings.groqApiKey || '').trim();
+        if (inGroq) {
+            groqApiKey = inGroq;
+            if (saveToLegacyStorage) {
+                try {
+                    localStorage.setItem('groqApiKey', inGroq);
+                    localStorage.setItem('lumina_saved_groq_key', inGroq);
+                } catch (e) {}
+            }
+            if (typeof groqModelCooldownClear === 'function') groqModelCooldownClear();
+        } else if (!groqApiKey) {
+            groqApiKey = localStorage.getItem('groqApiKey') || localStorage.getItem('lumina_saved_groq_key') || '';
         }
-        if (typeof groqModelCooldownClear === 'function') groqModelCooldownClear();
     }
     if (settings.groqSelectedModel !== undefined) {
         const gm = String(settings.groqSelectedModel || '');
-        groqSelectedModel = gm; // update module-level variable
-        if (saveToLegacyStorage) {
-            if (gm) localStorage.setItem('groqSelectedModel', gm);
-            else localStorage.removeItem('groqSelectedModel');
+        if (gm) {
+            groqSelectedModel = gm;
+            if (saveToLegacyStorage) localStorage.setItem('groqSelectedModel', gm);
         }
     }
     if (settings.mistralApiKey !== undefined) {
-        mistralApiKey = String(settings.mistralApiKey || '').trim();
-        if (saveToLegacyStorage) {
-            if (mistralApiKey) localStorage.setItem('mistralApiKey', mistralApiKey);
-            else localStorage.removeItem('mistralApiKey');
+        const inMistral = String(settings.mistralApiKey || '').trim();
+        if (inMistral) {
+            mistralApiKey = inMistral;
+            if (saveToLegacyStorage) {
+                try {
+                    localStorage.setItem('mistralApiKey', inMistral);
+                    localStorage.setItem('lumina_saved_mistral_key', inMistral);
+                } catch (e) {}
+            }
+        } else if (!mistralApiKey) {
+            mistralApiKey = localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || '';
         }
     }
     if (settings.customProviderUrl !== undefined || settings.customProviderModel !== undefined || settings.customProviderKey !== undefined) {
-        customProviderUrl = String(settings.customProviderUrl || '').trim();
-        customProviderModel = String(settings.customProviderModel || '').trim();
-        customProviderKey = String(settings.customProviderKey || '').trim();
-        if (saveToLegacyStorage) {
-            if (customProviderUrl) localStorage.setItem('customProviderUrl', customProviderUrl);
-            else localStorage.removeItem('customProviderUrl');
-            if (customProviderModel) localStorage.setItem('customProviderModel', customProviderModel);
-            else localStorage.removeItem('customProviderModel');
-            if (customProviderKey) localStorage.setItem('customProviderKey', customProviderKey);
-            else localStorage.removeItem('customProviderKey');
+        const inCpUrl = String(settings.customProviderUrl || '').trim();
+        const inCpModel = String(settings.customProviderModel || '').trim();
+        const inCpKey = String(settings.customProviderKey || '').trim();
+        if (inCpUrl) {
+            customProviderUrl = inCpUrl;
+            if (saveToLegacyStorage) {
+                localStorage.setItem('customProviderUrl', inCpUrl);
+                localStorage.setItem('lumina_saved_custom_url', inCpUrl);
+            }
+        }
+        if (inCpModel) {
+            customProviderModel = inCpModel;
+            if (saveToLegacyStorage) {
+                localStorage.setItem('customProviderModel', inCpModel);
+                localStorage.setItem('lumina_saved_custom_model', inCpModel);
+            }
+        }
+        if (inCpKey) {
+            customProviderKey = inCpKey;
+            if (saveToLegacyStorage) {
+                localStorage.setItem('customProviderKey', inCpKey);
+                localStorage.setItem('lumina_saved_custom_key', inCpKey);
+            }
         }
     }
     if (settings.elevenLabsEnabled !== undefined) {
@@ -2128,10 +2313,13 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
         if (saveToLegacyStorage) localStorage.setItem('lumina_el_enabled', elevenLabsEnabled ? 'true' : 'false');
     }
     if (settings.elevenLabsApiKey !== undefined) {
-        elevenLabsApiKey = String(settings.elevenLabsApiKey || '').trim();
-        if (saveToLegacyStorage) {
-            if (elevenLabsApiKey) localStorage.setItem('lumina_el_key', elevenLabsApiKey);
-            else localStorage.removeItem('lumina_el_key');
+        const inEL = String(settings.elevenLabsApiKey || '').trim();
+        if (inEL) {
+            elevenLabsApiKey = inEL;
+            if (saveToLegacyStorage) {
+                localStorage.setItem('lumina_el_key', inEL);
+                localStorage.setItem('lumina_saved_el_key', inEL);
+            }
         }
     }
     if (settings.elevenLabsVoiceId !== undefined) {
@@ -2143,6 +2331,8 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
 }
 
 async function restoreAccountSettingsForCurrentUser() {
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
+
     const email = getActiveUserEmail();
     const storageKey = getAccountSettingsStorageKey(email);
     let localSettings = null;
@@ -2150,6 +2340,12 @@ async function restoreAccountSettingsForCurrentUser() {
         const raw = localStorage.getItem(storageKey);
         if (raw) localSettings = JSON.parse(raw);
     } catch (e) {}
+
+    // If local settings are empty or missing keys, populate from active/preserved keys
+    if (!localSettings || !localSettings.geminiApiKey) {
+        localSettings = Object.assign({}, localSettings || {}, getCurrentAccountSettings());
+        try { localStorage.setItem(storageKey, JSON.stringify(localSettings)); } catch (e) {}
+    }
 
     // 1. Immediately apply local cached account settings so inputs and engines have ZERO latency
     if (localSettings) {
@@ -2161,13 +2357,20 @@ async function restoreAccountSettingsForCurrentUser() {
         try {
             const cloudSettings = await window.LuminaStore.fetchAccountSettings();
             if (cloudSettings && typeof cloudSettings === 'object' && Object.keys(cloudSettings).length > 0) {
-                const merged = Object.assign({}, localSettings || {}, cloudSettings);
+                const merged = Object.assign({}, localSettings || {});
+                for (const k in cloudSettings) {
+                    if (cloudSettings[k] !== undefined && cloudSettings[k] !== '') {
+                        merged[k] = cloudSettings[k];
+                    }
+                }
                 localStorage.setItem(storageKey, JSON.stringify(merged));
                 applyAccountSettings(merged, true);
                 console.info('[AccountSettings] Restored and synced AI settings from Supabase Cloud for', email);
                 return;
-            } else if (localSettings && Object.keys(localSettings).length > 0) {
-                window.LuminaStore.saveAccountSettings(localSettings).catch(err => {
+            } else if (localSettings && (localSettings.geminiApiKey || localSettings.groqApiKey || localSettings.openRouterApiKey)) {
+                window.LuminaStore.saveAccountSettings(localSettings).then(() => {
+                    console.info('[AccountSettings] Backed up AI settings to Supabase Cloud for', email);
+                }).catch(err => {
                     console.warn('[AccountSettings] Initial cloud push warning:', err);
                 });
             }
@@ -2175,33 +2378,12 @@ async function restoreAccountSettingsForCurrentUser() {
             console.warn('[AccountSettings] Cloud fetch error, using local cache:', err);
         }
     }
+    syncSettingsToDOMInputs();
 }
 
 function clearActiveAiSettings() {
-    geminiApiKey = '';
-    openRouterApiKey = OPENROUTER_DEFAULT_KEY;
-    openRouterModel = '';
-    groqApiKey = '';
-    groqSelectedModel = ''; // clear module-level variable
-    mistralApiKey = '';
-    customProviderUrl = '';
-    customProviderModel = '';
-    customProviderKey = '';
-    elevenLabsApiKey = '';
-    elevenLabsEnabled = false;
-
-    localStorage.removeItem('geminiApiKey');
-    localStorage.removeItem('openRouterApiKey');
-    localStorage.removeItem('openRouterModel');
-    localStorage.removeItem('groqApiKey');
-    localStorage.removeItem('groqSelectedModel');
-    localStorage.removeItem('mistralApiKey');
-    localStorage.removeItem('customProviderUrl');
-    localStorage.removeItem('customProviderModel');
-    localStorage.removeItem('customProviderKey');
-    localStorage.removeItem('lumina_el_key');
-    localStorage.removeItem('lumina_el_enabled');
-
+    // API keys are deliberately PRESERVED on the user's device and never wiped on sign out
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
     syncSettingsToDOMInputs();
 }
 
@@ -2243,63 +2425,77 @@ function closeModal(modalId) {
 }
 
 function saveGeminiSettings() {
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
+
     const keyInput = document.getElementById('geminiApiKeyInput');
-    const key = keyInput ? keyInput.value.trim() : '';
+    const inKey = keyInput ? keyInput.value.trim() : '';
+    // Safe preservation: An empty input NEVER erases an existing saved key!
+    const key = inKey || geminiApiKey || localStorage.getItem('geminiApiKey') || localStorage.getItem('lumina_saved_gemini_key') || '';
 
     const modelSelect = document.getElementById('geminiModelSelect');
-    const model = modelSelect ? modelSelect.value : 'gemini-2.0-flash';
+    const model = modelSelect ? modelSelect.value : (geminiModel || 'gemini-2.0-flash');
 
     const passesSelect = document.getElementById('geminiPassesSelect');
-    const passes = passesSelect ? parseInt(passesSelect.value, 10) : 3;
+    const passes = passesSelect ? parseInt(passesSelect.value, 10) : (geminiPasses || 3);
 
     const orKeyInput = document.getElementById('openRouterApiKeyInput');
-    const orKey = orKeyInput ? orKeyInput.value.trim() : '';
+    const inOrKey = orKeyInput ? orKeyInput.value.trim() : '';
+    const orKey = inOrKey || openRouterApiKey || localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || '';
 
     const orModelSelect = document.getElementById('openRouterModelSelect');
-    const orModel = orModelSelect ? orModelSelect.value : '';
+    const orModel = orModelSelect ? orModelSelect.value : (openRouterModel || '');
 
     const groqKeyInput = document.getElementById('groqApiKeyInput');
-    const groqKey = groqKeyInput ? groqKeyInput.value.trim() : '';
+    const inGroqKey = groqKeyInput ? groqKeyInput.value.trim() : '';
+    const groqKey = inGroqKey || groqApiKey || localStorage.getItem('groqApiKey') || localStorage.getItem('lumina_saved_groq_key') || '';
 
     const groqModelSelectEl = document.getElementById('groqModelSelect');
-    const groqSelectedModelVal = groqModelSelectEl ? groqModelSelectEl.value : '';
+    const groqSelectedModelVal = groqModelSelectEl ? groqModelSelectEl.value : (groqSelectedModel || '');
 
     const mistralKeyInput = document.getElementById('mistralApiKeyInput');
-    const mistralKey = mistralKeyInput ? mistralKeyInput.value.trim() : '';
+    const inMistralKey = mistralKeyInput ? mistralKeyInput.value.trim() : '';
+    const mistralKey = inMistralKey || mistralApiKey || localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || '';
 
     const cpUrlInput = document.getElementById('customProviderUrlInput');
-    const cpUrl = cpUrlInput ? cpUrlInput.value.trim() : '';
+    const cpUrl = (cpUrlInput ? cpUrlInput.value.trim() : '') || customProviderUrl || localStorage.getItem('customProviderUrl') || '';
     const cpModelInput = document.getElementById('customProviderModelInput');
-    const cpModel = cpModelInput ? cpModelInput.value.trim() : '';
+    const cpModel = (cpModelInput ? cpModelInput.value.trim() : '') || customProviderModel || localStorage.getItem('customProviderModel') || '';
     const cpKeyInput = document.getElementById('customProviderKeyInput');
-    const cpKey = cpKeyInput ? cpKeyInput.value.trim() : '';
+    const cpKey = (cpKeyInput ? cpKeyInput.value.trim() : '') || customProviderKey || localStorage.getItem('customProviderKey') || '';
 
-    if (orKey) {
+    if (orKey && orKey !== OPENROUTER_DEFAULT_KEY) {
         localStorage.setItem('openRouterApiKey', orKey);
+        localStorage.setItem('lumina_saved_openrouter_key', orKey);
         openRouterApiKey = orKey;
-    } else {
-        localStorage.removeItem('openRouterApiKey');
-        openRouterApiKey = '';
     }
 
-    localStorage.setItem('openRouterModel', orModel);
-    openRouterModel = orModel;
+    if (orModel) {
+        localStorage.setItem('openRouterModel', orModel);
+        openRouterModel = orModel;
+    }
 
-    setGroqApiKey(groqKey);
+    if (groqKey) {
+        setGroqApiKey(groqKey);
+        localStorage.setItem('lumina_saved_groq_key', groqKey);
+    }
     // Update module-level groqSelectedModel so callGroqJSON sees the new value immediately
     groqSelectedModel = groqSelectedModelVal;
     if (groqSelectedModelVal) localStorage.setItem('groqSelectedModel', groqSelectedModelVal);
-    else localStorage.removeItem('groqSelectedModel');
-    setMistralApiKey(mistralKey);
-    setCustomProvider(cpUrl, cpModel, cpKey);
 
+    if (mistralKey) {
+        setMistralApiKey(mistralKey);
+        localStorage.setItem('lumina_saved_mistral_key', mistralKey);
+    }
+
+    setCustomProvider(cpUrl, cpModel, cpKey);
+    if (cpKey) localStorage.setItem('lumina_saved_custom_key', cpKey);
+    if (cpUrl) localStorage.setItem('lumina_saved_custom_url', cpUrl);
+    if (cpModel) localStorage.setItem('lumina_saved_custom_model', cpModel);
 
     if (key) {
         localStorage.setItem('geminiApiKey', key);
+        localStorage.setItem('lumina_saved_gemini_key', key);
         geminiApiKey = key;
-    } else {
-        localStorage.removeItem('geminiApiKey');
-        geminiApiKey = '';
     }
 
     localStorage.setItem('geminiModel', model);
@@ -2326,6 +2522,7 @@ function saveGeminiSettings() {
 
     const storageKey = getAccountSettingsStorageKey(email);
     localStorage.setItem(storageKey, JSON.stringify(accountSettings));
+    try { localStorage.setItem('lumina_account_settings_local', JSON.stringify(accountSettings)); } catch (e) {}
 
     if (email && window.LuminaStore && typeof window.LuminaStore.saveAccountSettings === 'function') {
         window.LuminaStore.saveAccountSettings(accountSettings).then((res) => {
@@ -2338,6 +2535,7 @@ function saveGeminiSettings() {
     }
 
     showToast(email ? `AI settings saved to account ${email} (Cloud Synced)` : 'AI settings saved successfully');
+    syncSettingsToDOMInputs();
 
     if (groqKey) {
         probeOpenAICompatibleKey(GROQ_API_URL, groqKey, GROQ_MODELS).then(res => {
@@ -3349,14 +3547,7 @@ async function login(email, password, rememberParam) {
 
         // Restore and activate account-scoped AI settings immediately
         try {
-            if (supabaseUser && supabaseUser.user_metadata && supabaseUser.user_metadata.ai_settings) {
-                const cloudSettings = supabaseUser.user_metadata.ai_settings;
-                const storageKey = getAccountSettingsStorageKey(email);
-                localStorage.setItem(storageKey, JSON.stringify(cloudSettings));
-                applyAccountSettings(cloudSettings, true);
-            } else {
-                await restoreAccountSettingsForCurrentUser();
-            }
+            await restoreAccountSettingsForCurrentUser();
         } catch (e) {
             console.warn('[AccountSettings] restore error after login:', e);
         }
@@ -8641,6 +8832,10 @@ function setupEventListeners() {
 
 // Start App
 document.addEventListener('DOMContentLoaded', init);
+window.addEventListener('load', function() {
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
+    if (typeof syncSettingsToDOMInputs === 'function') syncSettingsToDOMInputs();
+});
 
 // ══════════════════════════════════════════════════════════════════════════
 // ██ SCANNER LIBRARY VIEW ██

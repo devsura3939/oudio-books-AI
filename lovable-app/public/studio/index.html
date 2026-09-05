@@ -581,12 +581,12 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="static/styles.css?v=1.47.3">
+    <link rel="stylesheet" href="static/styles.css?v=1.47.4">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
 
-    <!-- ════════════════ Early Auth Gate Controller (v1.47.3) ════════════════ -->
+    <!-- ════════════════ Early Auth Gate Controller (v1.47.4) ════════════════ -->
     <script>
     (function() {
         // Proactively clear bloated translation jobs and stale caches to prevent QuotaExceededError
@@ -596,7 +596,7 @@
                 var k = localStorage.key(i);
                 if (k && (k.indexOf('lumina_tjob_') === 0 || k.indexOf('engbot_pack_') === 0 || k.indexOf('temp_') === 0 || k.indexOf('cached_') === 0)) {
                     keysToPurge.push(k);
-                } else if (k && k.indexOf('sb-') !== 0 && k.indexOf('lumina_account_settings_') !== 0) {
+                } else if (k && k.indexOf('sb-') !== 0 && k.indexOf('lumina_account_settings_') !== 0 && k.indexOf('lumina_saved_') !== 0 && k.indexOf('gemini') === -1 && k.indexOf('groq') === -1 && k.indexOf('openrouter') === -1 && k.indexOf('mistral') === -1 && k.indexOf('custom') === -1 && k.indexOf('lumina_el_') === -1) {
                     try {
                         var v = localStorage.getItem(k);
                         if (v && v.length > 40000) keysToPurge.push(k);
@@ -1808,7 +1808,10 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Gemini API Key (Frontier Reasoning)</label>
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>Gemini API Key (Frontier Reasoning)</span>
+                        <span id="geminiSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
+                    </label>
                     <input type="password" id="geminiApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="AIzaSy...">
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Google Gemini API key. Powers frontier deep reasoning, scanner glitch correction, and missing symbol & word recovery. Key: aistudio.google.com/apikey.
@@ -1829,7 +1832,10 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">OpenRouter API Key (Main Engine)</label>
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>OpenRouter API Key (Main Engine)</span>
+                        <span id="openRouterSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
+                    </label>
                     <input type="password" id="openRouterApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-or-v1-...">
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Primary engine — free models on OpenRouter. A default key is built in; your own (openrouter.ai/keys) replaces it.
@@ -1849,7 +1855,10 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Groq API Key (Fallback #1)</label>
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>Groq API Key (Fallback #1)</span>
+                        <span id="groqSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
+                    </label>
                     <input type="password" id="groqApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="gsk_...">
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         First fallback when OpenRouter is rate-limited. Free tier ~500K tokens/day — enough for a whole book. Key: console.groq.com/keys.
@@ -1868,7 +1877,10 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Mistral API Key (Fallback #2)</label>
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>Mistral API Key (Fallback #2)</span>
+                        <span id="mistralSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
+                    </label>
                     <input type="password" id="mistralApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="...">
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Second fallback (~1B free tokens/month). If CORS blocks browser calls it's skipped automatically. Key: console.mistral.ai.
@@ -1887,7 +1899,10 @@
                         <input type="text" id="customProviderModelInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo">
                     </div>
                     <div>
-                        <label class="block text-xs text-on-surface-variant mb-1">API Key (leave blank if not required)</label>
+                        <label class="block text-xs text-on-surface-variant mb-1 flex items-center justify-between">
+                            <span>API Key (leave blank if not required)</span>
+                            <span id="customSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
+                        </label>
                         <input type="password" id="customProviderKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-...">
                     </div>
                 </div>
@@ -2188,11 +2203,11 @@
         <div id="scanShell" class="modal-content glass-panel p-6 rounded-3xl max-w-lg w-full border border-white/15 shadow-2xl mx-4"></div>
     </div>
 
-    <script src="static/supabase-store.js?v=1.47.3"></script>
-    <script src="static/app.js?v=1.47.3"></script>
-    <script src="static/georgian-linguistics.js?v=1.47.3"></script>
-    <script src="static/engine-pack.js?v=1.47.3"></script>
-    <script src="static/scanner.js?v=1.47.3"></script>
+    <script src="static/supabase-store.js?v=1.47.4"></script>
+    <script src="static/app.js?v=1.47.4"></script>
+    <script src="static/georgian-linguistics.js?v=1.47.4"></script>
+    <script src="static/engine-pack.js?v=1.47.4"></script>
+    <script src="static/scanner.js?v=1.47.4"></script>
 
 
 </body>
