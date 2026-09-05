@@ -1243,15 +1243,18 @@ function verbalizeGeorgianTextForTTS(text) {
     out = transliterateLatinInGeorgian(out);
 
     // 7. Dialogue & Punctuation cadence
+    // Strip line-initial dialogue dashes so spoken lines do not begin with an acoustic comma click
+    out = out.replace(/(^|[\r\n]+)\s*[—–-]\s*/g, '$1');
+
     // Keep compound words like "ნელ-ნელა" fluid ("ნელ ნელა") without awkward mid-word comma pause
     out = out
         .replace(/[""„“«»]/g, '')
-        .replace(/(^|[\r\n\s])[—–-]\s+/g, '$1, ')
         .replace(/\s+[—–-](\s|$)/g, ', $1')
         .replace(/\s*[—–]\s*/g, ', ')
         .replace(/([ა-ჰ]+)-([ა-ჰ]+)/g, '$1 $2')
-        .replace(/;/g, '.')
-        .replace(/:/g, ',')
+        .replace(/;/g, ', ')
+        .replace(/:/g, ', ')
+        .replace(/^[,\s]+/, '')
         .replace(/\s+/g, ' ')
         .trim();
 
@@ -1261,6 +1264,11 @@ function verbalizeGeorgianTextForTTS(text) {
     // 9. Interrogative & Question Mark Acoustic Prosody
     out = out.replace(/\s*\?\s*/g, '? ');
     out = out.replace(/\s*!\s*/g, '! ');
+
+    // 10. Terminology and name phonetic pronunciation tuning for Edge-TTS
+    out = out
+        .replace(kaWord('სუნ\\s+ცუ', 'gi'), 'სუნ ძი')
+        .replace(kaWord('სუნ\\s+ტზუ', 'gi'), 'სუნ ძი');
 
     return out;
 }
@@ -1383,7 +1391,19 @@ function refineGeorgianGrammar(text) {
         [kaWord('სრული\\s+აზრი\\s+აქვს', 'gi'), 'სავსებით ლოგიკურია'],
         [kaWord('აზრს\\s+არ\\s+აკეთებს', 'gi'), 'აზრი არ აქვს'],
         [kaWord('გააკეთა\\s+დარწმუნებული', 'gi'), 'დარწმუნდა'],
-        [kaWord('დარწმუნებული\\s+გახადა', 'gi'), 'დაარწმუნა']
+        [kaWord('დარწმუნებული\\s+გახადა', 'gi'), 'დაარწმუნა'],
+        [kaWord('ეს\\s+ხუთი\\s+თავი', 'gi'), 'ეს ხუთი ძირითადი საწყისი'],
+        [kaWord('ხუთი\\s+მუდმივი\\s+ფაქტორით', 'gi'), 'ხუთი მუდმივი პრინციპით'],
+        [kaWord('ვინც\\s+მათ\\s+იცის', 'gi'), 'ვინც მათ ფლობს'],
+        [kaWord('გამარჯვებული\\s+იქნება', 'gi'), 'გაიმარჯვებს'],
+        [kaWord('დამარცხებული\\s+იქნება', 'gi'), 'დამარცხდება'],
+        [kaWord('განასახიერებს\\s+სიბრძნის', 'gi'), 'უნდა ახასიათებდეს სიბრძნის'],
+        [kaWord('დიდსა\\s+და\\s+პატარას', 'gi'), 'დიდსა და მცირეს'],
+        [kaWord('არმიის\\s+სწორი\\s+დაყოფა', 'gi'), 'ჯარის სწორი განაწილება'],
+        [kaWord('მიწა\\s+მოიცავს\\s+დისტანციებს', 'gi'), 'მიწა განსაზღვრავს მანძილს'],
+        [kaWord('სასიცოცხლო\\s+მნიშვნელობა\\s+აქვს\\s+სახელმწიფოსთვის', 'gi'), 'სახელმწიფოსთვის უდიდესი, სასიცოცხლო მნიშვნელობის საქმეა'],
+        [kaWord('იქნა\\s+მიღებული', 'gi'), 'მიიღეს'],
+        [kaWord('უნდა\\s+იქნეს\\s+გაგებული', 'gi'), 'უნდა გავიგოთ']
     ];
     idiomFixes.forEach(([pattern, repl]) => {
         out = out.replace(pattern, repl);
@@ -1479,7 +1499,7 @@ const DISCOVER_CLASSICS = [
                 id: 1,
                 title: 'Chapter 1: Laying Plans',
                 text: "The art of war is of vital importance to the State. It is a matter of life and death, a road either to safety or to ruin. Hence it is a subject of inquiry which can on no account be neglected. The art of war, then, is governed by five constant factors, to be taken into account in one's deliberations, when seeking to determine the conditions obtaining in the field. These are: The Moral Law; Heaven; Earth; The Commander; Method and Discipline. The Moral Law causes the people to be in complete accord with their ruler, so that they will follow him regardless of their lives, undismayed by any danger. Heaven signifies night and day, cold and heat, times and the seasons. Earth comprises distances, great and small; danger and security; open ground and narrow passes; the chances of life and death. The Commander stands for the virtues of wisdom, sincerely, benevolence, courage and strictness. By method and discipline are to be understood the marshaling of the army in its proper subdivisions, the graduations of rank among the officers, the maintenance of roads by which supplies may reach the army, and the control of military expenditure. These five heads should be familiar to every general: he who knows them will be victorious; he who knows them not will fail. Therefore, in your deliberations, when seeking to determine the military conditions, let them be made the basis of a comparison. Which of the two sovereigns is imbued with the Moral law? Which of the two generals has most ability? With whom lie the advantages derived from Heaven and Earth? On which side is discipline most rigorously enforced? Which army is stronger? On which side are officers and men more highly trained? In which army is there the greater constancy both in reward and punishment? By means of these seven considerations I can forecast victory or defeat.",
-                text_ka: "ომის ხელოვნებას სასიცოცხლო მნიშვნელობა აქვს სახელმწიფოსთვის. ეს არის სიცოცხლისა და სიკვდილის საკითხი, გზა ან უსაფრთხოებისკენ, ან დაღუპვისკენ. აქედან გამომდინარე, ეს არის კვლევის საგანი, რომლის უგულებელყოფა არავითარ შემთხვევაში არ შეიძლება. ომის ხელოვნება იმართება ხუთი მუდმივი ფაქტორით: მორალური კანონი; ცა; მიწა; მხედართმთავარი; მეთოდი და დისციპლინა. მორალური კანონი აიძულებს ხალხს იყოს სრულ თანხმობაში თავის მმართველთან. ცა ნიშნავს ღამესა და დღეს, სიცივესა და სიცხეს. მიწა მოიცავს დისტანციებს, დიდსა და პატარას. მხედართმთავარი განასახიერებს სიბრძნის, გულწრფელობის, კეთილგანწყობის, გამბედაობისა და სიმკაცრის სათნოებებს. მეთოდითა და დისციპლინით უნდა გავიგოთ არმიის სწორი დაყოფა და მომარაგების გზები. ეს ხუთი თავი ნაცნობი უნდა იყოს ყოველი გენერლისთვის: ვინც მათ იცის, გამარჯვებული იქნება; ვინც არ იცის, დამარცხდება.",
+                text_ka: "ომის ხელოვნებას სასიცოცხლო მნიშვნელობა აქვს სახელმწიფოსთვის. ეს გახლავთ სიცოცხლისა და სიკვდილის საკითხი, გზა გადარჩენისკენ ან წარწყმედისკენ. ამიტომაც, იგი კვლევის ისეთი საგანია, რომლის უგულებელყოფა არავითარ შემთხვევაში არ შეიძლება. ომის ხელოვნება იმართება ხუთი მუდმივი საწყისით, რომლებიც საგულდაგულოდ უნდა შეფასდეს ბრძოლის ველზე არსებული ვითარების განსაზღვრისას. ესენია: ზნეობრივი კანონი, ცა, მიწა, მხედართმთავარი, წესი და დისციპლინა. ზნეობრივი კანონი ხალხს მმართველთან სრულ ერთსულოვნებას შთააგონებს, რათა ისინი მას სიცოცხლის დაუზოგავად გაჰყვნენ და ყოველგვარ საფრთხეს გაბედულად შეეგებონ. ცა განასახიერებს დღესა და ღამეს, სიცივესა და სიცხეს, დროთა ცვალებადობასა და წელიწადის დროებს. მიწა მოიცავს მანძილებს — შორსა და ახლოს; საფრთხესა და სიმშვიდეს; გაშლილ ველებსა და ვიწრო ხეობებს; სიცოცხლისა და სიკვდილის შესაძლებლობებს. მხედართმთავარი თავის თავში აერთიანებს სიბრძნის, ერთგულების, კეთილგანწყობის, სიმამაცისა და სიმკაცრის სათნოებებს. წესსა და დისციპლინაში იგულისხმება ლაშქრის სათანადო დანაყოფებად განლაგება, ოფიცერთა ჩინების თანმიმდევრობა, მომარაგების გზების მოწესრიგება და სამხედრო ხარჯების მართვა. ეს ხუთი ძირითადი საწყისი ყოველი სარდლისთვის ზედმიწევნით ცნობილი უნდა იყოს: ვინც მათ ფლობს, გაიმარჯვებს, ხოლო ვინც ვერ ჩასწვდომია — დამარცხდება. ამგვარად, სამხედრო მდგომარეობის შეფასებისას, სწორედ ეს საწყისები დაუდეთ საფუძვლად ურთიერთშედარებას. ორი მმართველიდან რომელია ზნეობრივი კანონით აღსავსე? რომელი მხედართმთავარი გამოირჩევა უპირატესი ნიჭითა და ოსტატობით? ვის მხარესაა ცისა და მიწისგან ბოძებული უპირატესობანი? რომელ ბანაკში აღსრულდება დისციპლინა ყველაზე მკაცრად? რომელი ლაშქარია უფრო ძლიერი? სად არიან ოფიცრები და მეომრები უკეთ გაწვრთნილნი? რომელ არმიაშია უდიდესი სამართლიანობა და თანმიმდევრულობა როგორც ჯილდოს, ისე სასჯელის მიგებისას? სწორედ ამ შვიდი განსჯის საფუძველზე შემიძლია წინასწარ განვჭვრიტო გამარჯვება ან მარცხი.",
                 word_count: 260,
                 estimated_duration_sec: 95
             },
@@ -1487,7 +1507,7 @@ const DISCOVER_CLASSICS = [
                 id: 2,
                 title: 'Chapter 2: Waging War',
                 text: "Sun Tzu said: In the operations of war, where there are in the field a thousand swift chariots, as many heavy chariots, and a hundred thousand mail-clad soldiers, with provisions enough to carry them a thousand li, the expenditure at home and at the front, including entertainment of guests, small items such as glue and paint, and sums spent on chariots and armor, will reach the total of a thousand ounces of silver per day. Such is the cost of raising an army of 100,000 men. When you engage in actual fighting, if victory is long in coming, then men's weapons will grow dull and their ardor will be damped. If you lay siege to a town, you will exhaust your strength. Again, if the campaign is protracted, the resources of the State will not be equal to the strain. Now, when your weapons are dulled, your ardor damped, your strength exhausted and your treasure spent, other chieftains will spring up to take advantage of your extremity. Then no man, however wise, will be able to avert the consequences that must ensue. Thus, though we have heard of stupid haste in war, cleverness has never been seen associated with long delays. In war, then, let your great object be victory, not lengthy campaigns.",
-                text_ka: "სუნ ძიმ თქვა: საომარ ოპერაციებში, როდესაც ბრძოლის ველზე არის ათასი სწრაფი ეტლი და ასი ათასი ჯარისკაცი, ხარჯები მიაღწევს ათას უნცია ვერცხლს დღეში. ასეთია არმიის შეკრების ფასი. როდესაც რეალურ ბრძოლაში ერთვებით, თუ გამარჯვება აგვიანებს, იარაღი დაბლაგვდება და მხნეობა გაქრება. თუ ქალაქს ალყას შემოარტყამთ, ძალებს ამოწურავთ. თუ კამპანია გაჭიანურდა, სახელმწიფოს რესურსები ვერ გაუძლებს დაძაბულობას. ამიტომ ომში თქვენი მთავარი მიზანი უნდა იყოს სწრაფი გამარჯვება და არა ხანგრძლივი კამპანიები.",
+                text_ka: "სუნ ძიმ ბრძანა: საომარ მოქმედებებში, როდესაც ბრძოლის ველზე ათასი სწრაფი საომარი ეტლი, ათასი მძიმე ეტლი და ასი ათასი ჯავშნოსანი მეომარი გყავს, ათასი ლის მანძილზე საკმარისი საგზლით, ხარჯები ზურგსა და ფრონტზე — სტუმართა მიღების, ისეთი წვრილმანების, როგორიცაა წებო და საღებავი, ასევე ეტლებისა და აბჯრის შესაკეთებლად — დღეში ათას უნცია ვერცხლს მიაღწევს. ასეთია ასიათასიანი ლაშქრის გამოყვანის ფასი. როდესაც რეალურ ბრძოლაში ებმებით, თუ გამარჯვება აგვიანებს, მეომართა იარაღი დაბლაგვდება და მათი შემართება დაცხრება. თუ ციხე-ქალაქს შემოადგებით ალყით, ძალ-ღონეს ამოწურავთ. ხოლო თუ ლაშქრობა გაჭიანურდა, სახელმწიფოს რესურსები ვეღარ გაუძლებს ამ სიმძიმეს. როდესაც თქვენი იარაღი დაბლაგვდება, შემართება განელდება, ძალები ამოიწურება და ხაზინა დაცარიელდება, მეზობელი მმართველები წამოდგებიან, რათა თქვენი გაჭირვებით ისარგებლონ. მაშინ ვერავინ, რაოდენ ბრძენიც არ უნდა იყოს, ვეღარ აიცილებს გარდაუვალ შედეგებს. ამიტომ, მართალია გვსმენია ომში უგუნური სისწრაფის შესახებ, მაგრამ სიბრძნე გაჭიანურებულ ომებთან დაკავშირებული არასოდეს გვინახავს. მაშასადამე, ომში თქვენი უპირველესი მიზანი იყოს გამარჯვება და არა ხანგრძლივი ლაშქრობა.",
                 word_count: 240,
                 estimated_duration_sec: 85
             },
@@ -1495,7 +1515,7 @@ const DISCOVER_CLASSICS = [
                 id: 3,
                 title: 'Chapter 3: Attack by Stratagem',
                 text: "In the practical art of war, the best thing of all is to take the enemy's country whole and intact; to shatter and destroy it is not so good. So, too, it is better to recapture an army entire than to destroy it. Hence to fight and conquer in all your battles is not supreme excellence; supreme excellence consists in breaking the enemy's resistance without fighting. Thus the highest form of generalship is to balk the enemy's plans; the next best is to prevent the junction of the enemy's forces; the next in order is to attack the enemy's army in the field; and the worst policy of all is to besiege walled cities. If you know the enemy and know yourself, you need not fear the result of a hundred battles. If you know yourself but not the enemy, for every victory gained you will also suffer a defeat. If you know neither the enemy nor yourself, you will succumb in every battle.",
-                text_ka: "ომის პრაქტიკულ ხელოვნებაში ყველაზე კარგია მტრის ქვეყნის ხელუხლებლად აღება; მისი განადგურება არც ისე კარგია. უმაღლესი სრულყოფილება მდგომარეობს მტრის წინააღმდეგობის გატეხვაში უბრძოლველად. ამიტომ მხედართმთავრობის უმაღლესი ფორმაა მტრის გეგმების ჩაშლა. თუ იცნობ მტერს და იცნობ საკუთარ თავს, ასი ბრძოლის შედეგისაც არ შეგეშინდება. თუ იცნობ საკუთარ თავს, მაგრამ არა მტერს, ყოველი გამარჯვებისთვის მარცხსაც განიცდი. თუ არც მტერს იცნობ და არც საკუთარ თავს, ყველა ბრძოლაში დამარცხდები.",
+                text_ka: "ომის პრაქტიკულ ხელოვნებაში უპირველესი და საუკეთესოა მტრის ქვეყნის მთლიანად და ხელუხლებლად დამორჩილება; მისი დანგრევა და განადგურება ნაკლებად სასურველია. ასევე, უმჯობესია მტრის ლაშქრის მთლიანად ჩაგდება ხელში, ვიდრე მისი მოსპობა. ამდენად, ყველა ბრძოლაში შებმა და გამარჯვება არ გახლავთ უმაღლესი ოსტატობა; უმაღლესი სრულყოფილება იმაში მდგომარეობს, რომ მტრის წინააღმდეგობა უბრძოლველად გატეხო. ამიტომ, სარდლობის უმაღლესი მწვერვალია მტრის გეგმების ჩაშლა; მომდევნო საუკეთესო გზაა მტრის ძალთა გაერთიანების აღკვეთა; შემდეგ მოდის მტრის არმიაზე იერიშის მიტანა გაშლილ ველზე; ხოლო ყველაზე უარესი გზა გალავნიანი ქალაქების ალყაში მოქცევაა. თუ იცნობ მტერს და იცნობ საკუთარ თავს, ასი ბრძოლის შედეგის წინაშეც კი შიში არ გაგეკარება. თუ საკუთარ თავს იცნობ, ხოლო მტერს არა, ყოველი მოპოვებული გამარჯვებისთვის მარცხსაც იწვნევ. ხოლო თუ არც მტერს იცნობ და არც საკუთარ თავს, ყოველ ბრძოლაში გარდაუვალი მარცხი გელის.",
                 word_count: 175,
                 estimated_duration_sec: 65
             },
@@ -1503,7 +1523,7 @@ const DISCOVER_CLASSICS = [
                 id: 4,
                 title: 'Chapter 4: Tactical Dispositions',
                 text: "Sun Tzu said: The good fighters of old first put themselves beyond the possibility of defeat, and then waited for an opportunity of defeating the enemy. To secure ourselves against defeat lies in our own hands, but the opportunity of defeating the enemy is provided by the enemy himself. Thus the good fighter is able to secure himself against defeat, but cannot make certain of defeating the enemy. Hence the saying: One may know how to conquer without being able to do it. Security against defeat implies defensive tactics; ability to defeat the enemy means taking the offensive. Standing on the defensive indicates insufficient strength; attacking, a superabundance of strength.",
-                text_ka: "სუნ ძიმ თქვა: ძველი დროის გამოცდილი მებრძოლები ჯერ თავად იცავდნენ თავს დამარცხებისგან, შემდეგ კი ელოდნენ მტრის დამარცხების ხელსაყრელ მომენტს. თავის დაცვა ჩვენს ხელშია, ხოლო მტრის დამარცხების შესაძლებლობას თავად მტერი გვაძლევს. თავდაცვითი ტაქტიკა მიუთითებს ძალების ნაკლებობაზე; თავდასხმა - ძალების სიჭარბეზე.",
+                text_ka: "სუნ ძიმ ბრძანა: ძველი დროის გამოცდილი მეომრები ჯერ საკუთარ თავს აქცევდნენ დაუმარცხებელ მდგომარეობაში, შემდეგ კი მოთმინებით ელოდნენ მტრის დამარცხების ხელსაყრელ ჟამს. საკუთარი თავის დაცვა მარცხისგან ჩვენს ხელთაა, ხოლო მტრის დამარცხების შესაძლებლობას თავად მოწინააღმდეგე გვაძლევს. ამგვარად, უებრო მეომარს ძალუძს დაიცვას თავი მარცხისგან, თუმცა ვერ ექნება სრული თავდაჯერებულობა, რომ მტერს დაამარცხებს. აქედან მომდინარეობს გამონათქვამი: შეიძლება იცოდე, როგორ გაიმარჯვო, მაგრამ ვერ შეძლო ამის აღსრულება. მარცხისგან დაზღვევა თავდაცვით ტაქტიკას გულისხმობს, ხოლო მტრის დამარცხების შესაძლებლობა — შეტევაზე გადასვლას. თავდაცვაზე დგომა ძალთა სიმცირეზე მიანიშნებს, ხოლო შეტევა — ძალების სიჭარბეზე.",
                 word_count: 120,
                 estimated_duration_sec: 45
             },
@@ -1511,7 +1531,7 @@ const DISCOVER_CLASSICS = [
                 id: 5,
                 title: 'Chapter 5: Energy and Direct Force',
                 text: "The control of a large force is the same principle as the control of a few men: it is merely a question of dividing up their numbers. Fighting with a large army under your command is nowise different from fighting with a small one: it is merely a question of instituting signs and signals. In all fighting, the direct method may be used for joining battle, but indirect methods will be needed in order to secure victory. In battle there are not more than two methods of attack: the direct and the indirect; yet these two in combination give rise to an endless series of maneuvers.",
-                text_ka: "დიდი ძალის მართვა იგივე პრინციპია, რაც რამდენიმე ადამიანის მართვა: ეს მხოლოდ მათი რიცხვის სწორი განაწილების საკითხია. ბრძოლაში არსებობს შეტევის მხოლოდ ორი მეთოდი: პირდაპირი და ირიბი; თუმცა ეს ორი ერთად ქმნის მანევრების უსასრულო სერიას.",
+                text_ka: "დიდი ძალის მართვა იმავე პრინციპს ემყარება, რასაც მცირერიცხოვანი რაზმის გაძღოლა: ეს მხოლოდ მათი რიცხოვნობის სწორი დანაწილების საკითხია. დიდი არმიით ბრძოლა არაფრით განსხვავდება მცირე რაზმით შებმისგან: ეს მხოლოდ ნიშნებისა და სიგნალების დაწესების საქმეა. ყოველგვარ ბრძოლაში პირდაპირი მეთოდი გამოიყენება შესაბმელად, ხოლო გამარჯვების მოსაპოვებლად ირიბი ხერხებია საჭირო. ბრძოლისას იერიშის მხოლოდ ორი მეთოდი არსებობს: პირდაპირი და ირიბი; თუმცა მათი შერწყმა მანევრების უსასრულო მრავალფეროვნებას ბადებს.",
                 word_count: 110,
                 estimated_duration_sec: 40
             }
@@ -1530,7 +1550,7 @@ const DISCOVER_CLASSICS = [
                 id: 1,
                 title: 'Book 1: Debts and Lessons',
                 text: "From my grandfather Verus I learned good morals and the government of my temper. From the reputation and remembrance of my father, modesty and a manly character. From my mother, piety and beneficence, and abstinence, not only from evil deeds, but even from evil thoughts; and further, simplicity in my way of living, far removed from the habits of the rich. When you wake up in the morning, tell yourself: The people I deal with today will be meddling, ungrateful, arrogant, dishonest, jealous, and surly. They are like this because they cannot distinguish good from evil. But I have seen the beauty of good, and the ugliness of evil, and have recognized that the wrongdoer has a nature related to my own.",
-                text_ka: "ჩემი ბაბუა ვერუსისგან ვისწავლე კარგი ზნეობა და ხასიათის სიმშვიდე. მამაჩემის ხსოვნისგან - მოკრძალება და ვაჟკაცური ხასიათი. დედაჩემისგან - ღვთისმოსაობა, სიკეთე და თავშეკავება არა მხოლოდ ბოროტი საქმეებისგან, არამედ ბოროტი აზრებისგანაც. როდესაც დილით იღვიძებ, უთხარი საკუთარ თავს: ადამიანები, ვისთანაც დღეს მექნება საქმე, იქნებიან უმადურები და ქედმაღლები. ისინი ასეთები არიან იმიტომ, რომ არ შეუძლიათ სიკეთის გარჩევა ბოროტებისგან. მაგრამ მე დავინახე სიკეთის სილამაზე.",
+                text_ka: "ჩემი პაპა ვერუსისგან შევიმეცნე კეთილი ზნეობა და საკუთარი გულისწყრომის დაოკება. მამაჩემის ხსოვნისა და კეთილი სახელისგან — თავმდაბლობა და ვაჟკაცური ხასიათი. დედაჩემისგან — ღვთისმოსაობა, გულმოწყალება და თავშეკავება არა მხოლოდ ავი საქმეებისგან, არამედ ბოროტი ზრახვებისგანაც; და კიდევ, ცხოვრების უბრალო წესი, შორს მდგარი მდიდრულ ჩვევათაგან. როდესაც დილით გაიღვიძებ, უთხარი საკუთარ თავს: ადამიანები, ვისთანაც დღეს შეხვედრა მომიწევს, იქნებიან აბეზრები, უმადურები, ქედმაღლები, მზაკვარნი, შურიანები და უჟმურნი. ისინი ასეთები იმიტომ არიან, რომ ვერ ასხვავებენ სიკეთეს ბოროტებისგან. მაგრამ მე შევიცანი სიკეთის მშვენიერება და ბოროტების სიმახინჯე, და გავაცნობიერე, რომ შემცოდეს ჩემთან მონათესავე ბუნება აქვს.",
                 word_count: 155,
                 estimated_duration_sec: 55
             },
@@ -1538,7 +1558,7 @@ const DISCOVER_CLASSICS = [
                 id: 2,
                 title: 'Book 2: The Inner Citadel',
                 text: "Remember how long you have been putting this off, how many times the gods have granted you a period of grace of which you have made no use. It is high time now that you understood the universe of which you are a part, and the Ruler of that universe by whose emanation you subsist; that there is a limit set to your time, which will shortly pass away, and you with it, and will not return. Every hour focus your mind attentively on the performance of the task in hand, with dignity, human sympathy, benevolence and freedom, and rid yourself of all other thoughts.",
-                text_ka: "გახსოვდეთ, რამდენ ხანს დებდით ამას, რამდენჯერ მოგცეს ღმერთებმა მადლის პერიოდი, რომელიც არ გამოგიყენებიათ. დროა გააცნობიეროთ სამყარო, რომლის ნაწილიც ხართ. ყოველ საათში ყურადღება გაამახვილეთ მიმდინარე დავალების შესრულებაზე ღირსებით, ადამიანური თანაგრძნობით, კეთილგანწყობითა და თავისუფლებით.",
+                text_ka: "გახსოვდეს, რამდენ ხანს დებდი ამას სამომავლოდ, რამდენჯერ მოგმადლეს ღმერთებმა წყალობის ჟამი, რომელიც არ გამოგიყენებია. უკვე დროა შეიცნო სამყარო, რომლის ნაწილიც ხარ, და ამ სამყაროს განმგებელი, რომლის გამოსხივებითაც ცოცხლობ; რომ შენს დროს საზღვარი აქვს დადებული, რომელიც მალე გაივლის, შენც თან გაგიყოლებს და აღარასოდეს დაბრუნდება. ყოველ საათს მთელი გულისყური მიაპყარი ხელთ არსებული საქმის პირნათლად შესრულებას — ღირსებით, ადამიანური თანაგრძნობით, კეთილშობილებითა და თავისუფლებით, და გაითავისუფლე გონება ყველა სხვა ზედმეტი ფიქრისგან.",
                 word_count: 105,
                 estimated_duration_sec: 42
             },
@@ -1546,7 +1566,7 @@ const DISCOVER_CLASSICS = [
                 id: 3,
                 title: 'Book 3: Harmony and Reason',
                 text: "We ought to observe also that even the things which follow after the things which are produced according to nature contain something pleasing and attractive. For instance, when bread is baked some parts are split open, and these crevices, though in a manner contrary to the art of the baker, look well and in a peculiar way excite the desire for eating. Do not waste the remainder of your life in thoughts about others, when you do not refer your thoughts to some object of common utility.",
-                text_ka: "ჩვენ ასევე უნდა დავაკვირდეთ, რომ ბუნების მიერ წარმოებულ მოვლენებშიც კი არის რაღაც სასიამოვნო და მიმზიდველი. ნუ დაკარგავთ თქვენი ცხოვრების დარჩენილ ნაწილს სხვებზე ფიქრში, როდესაც თქვენი აზრები არ ემსახურება საზოგადო სიკეთეს.",
+                text_ka: "ჩვენ ასევე უნდა დავაკვირდეთ, რომ ბუნების თანახმად წარმოქმნილ საგანთა თანმდევი მოვლენებიც კი შეიცავს რაღაც სასიამოვნოსა და მიმზიდველს. მაგალითად, როდესაც პური ცხვება, მისი ზოგიერთი ნაწილი იბზარება; და ეს ნაპრალები, თუმცა კი თითქოს ეწინააღმდეგება მცხობელის ხელოვნებას, მაინც მშვენივრად გამოიყურება და თავისებურად აღძრავს ჭამის მადას. ნუ გაფლანგავთ თქვენი ცხოვრების დარჩენილ ნაწილს სხვებზე ფიქრში, თუკი თქვენი ზრახვები საერთო საზოგადო სიკეთისკენ არ არის მიმართული.",
                 word_count: 90,
                 estimated_duration_sec: 35
             }
@@ -1988,7 +2008,14 @@ async function seedDefaultBooks() {
     const existing = await getAllBooks();
     for (const b of DISCOVER_CLASSICS) {
         const found = existing.find(e => String(e.id) === String(b.id));
-        if (!found || (found.chapters && found.chapters.length < b.chapters.length)) {
+        const needsUpgrade = !found ||
+            !found.chapters ||
+            found.chapters.length < b.chapters.length ||
+            b.chapters.some((bc, idx) => {
+                const fc = found.chapters[idx];
+                return bc.text_ka && (!fc || !fc.text_ka || fc.text_ka.length < bc.text_ka.length * 0.75);
+            });
+        if (needsUpgrade) {
             await saveBookToDB(b);
         }
     }
@@ -3967,11 +3994,13 @@ function openCurrentBookInReader() {
         return;
     }
     const chapId = currentPlayingChapterId || (currentBook.chapters[0] ? currentBook.chapters[0].id : 1);
-    const targetLang = (currentBook.lang === 'ka' || currentBook.isTranslatedEdition) ? 'ka' : currentLang;
+    // If audio is currently playing, ALWAYS open the reader in the audio's active language!
+    const targetLang = isPlaying ? currentLang : ((currentBook.lang === 'ka' || currentBook.isTranslatedEdition) ? 'ka' : currentLang);
     openReader(currentBook.id, chapId, targetLang);
 }
 
 async function openReader(bookId, chapterId, lang = 'en') {
+    isUserManuallyNavigating = false;
     const books = await getAllBooks();
     readerBook = books.find(b => String(b.id) === String(bookId));
     if (!readerBook) {
@@ -4009,6 +4038,11 @@ async function openReader(bookId, chapterId, lang = 'en') {
         }
     }
 
+    // If audio is currently playing this book and chapter, ensure language matches audio 100%
+    if (isPlaying && String(currentPlayingChapterId) === String(readerChapterId)) {
+        readerLang = currentLang;
+    }
+
     readerActive = true;
     DOM.readerView.className = `reader-theme-${readerTheme} active`;
     document.body.style.overflow = 'hidden';
@@ -4018,6 +4052,11 @@ async function openReader(bookId, chapterId, lang = 'en') {
     // Measured pagination needs the reader box to have a real size first.
     requestAnimationFrame(() => {
         paginateChapter();
+        if (isPlaying && String(currentPlayingChapterId) === String(readerChapterId)) {
+            if (readerSentenceToPageMap[currentSentenceIndex] !== undefined) {
+                readerCurrentPage = readerSentenceToPageMap[currentSentenceIndex] + 1;
+            }
+        }
         renderCurrentPage();
         initReaderGestures();
     });
@@ -4031,7 +4070,7 @@ function closeReader() {
 
 function onReaderChapterChange(targetChapId) {
     if (!readerBook) return;
-    isUserManuallyNavigating = true;
+    isUserManuallyNavigating = false;
     const matched = readerBook.chapters.find(c => String(c.id) === String(targetChapId));
     if (!matched) return;
 
@@ -4042,7 +4081,7 @@ function onReaderChapterChange(targetChapId) {
     renderCurrentPage();
 
     if (isPlaying) {
-        playChapterAudio(readerChapterId);
+        playChapterAudio(readerChapterId, 0, true);
     }
 }
 
@@ -4059,24 +4098,35 @@ function updateReaderLangUI() {
 
 function toggleReaderLanguage() {
     if (!readerBook) return;
-    if (readerLang === 'en') {
-        if (!bookHasGeorgian(readerBook)) {
-            notifyNeedsTranslation();
-            return;
-        }
-        readerLang = 'ka';
-        currentLang = 'ka';
-    } else {
-        readerLang = 'en';
-        currentLang = 'en';
+    const oldLang = readerLang;
+    const newLang = oldLang === 'en' ? 'ka' : 'en';
+
+    if (newLang === 'ka' && !bookHasGeorgian(readerBook)) {
+        notifyNeedsTranslation();
+        return;
     }
+
+    readerLang = newLang;
+    currentLang = newLang;
     updateReaderLangUI();
-    paginateChapter();
-    renderCurrentPage();
     updateLangToggleUI();
 
+    // Map sentence progress proportionally across languages
+    const currentProg = sentenceQueue.length > 0 ? (currentSentenceIndex / sentenceQueue.length) : 0;
+
+    paginateChapter();
+
+    const newTotalSentences = Object.keys(readerSentenceToPageMap).length || 1;
+    const targetSentenceIdx = Math.min(newTotalSentences - 1, Math.max(0, Math.round(currentProg * (newTotalSentences - 1))));
+
+    if (readerSentenceToPageMap[targetSentenceIdx] !== undefined) {
+        readerCurrentPage = readerSentenceToPageMap[targetSentenceIdx] + 1;
+    }
+    renderCurrentPage();
+
     if (isPlaying) {
-        playChapterAudio(readerChapterId);
+        stopSpeech();
+        playChapterAudio(readerChapterId, targetSentenceIdx, true);
     }
 }
 
@@ -4526,7 +4576,7 @@ window.addEventListener('resize', () => {
 // ── Page Steppers ──────────────────────────────────────────────────────────
 function readerNextPage() {
     if (!readerBook) return;
-    isUserManuallyNavigating = true;
+    flagUserManualNav();
     const totalPages = readerPages.length;
 
     if (readerMode === 'scroll') {
@@ -4569,7 +4619,7 @@ function readerNextPage() {
 
 function readerPrevPage() {
     if (!readerBook) return;
-    isUserManuallyNavigating = true;
+    flagUserManualNav();
 
     if (readerMode === 'scroll') {
         if (DOM.readerScrollContainer) {
@@ -4607,10 +4657,25 @@ function readerPrevPage() {
     }
 }
 
+let userNavTimer = null;
+function flagUserManualNav() {
+    isUserManuallyNavigating = true;
+    clearTimeout(userNavTimer);
+    if (isPlaying) {
+        userNavTimer = setTimeout(() => {
+            isUserManuallyNavigating = false;
+            if (isPlaying && String(currentPlayingChapterId) === String(readerChapterId)) {
+                highlightReaderSentence(currentSentenceIndex);
+            }
+        }, 4000);
+    }
+}
+
 function syncAudioToCurrentPage() {
     if (!isPlaying) return;
     const pageSentences = readerPages[readerCurrentPage - 1];
     if (pageSentences && pageSentences.length > 0) {
+        isUserManuallyNavigating = false;
         currentSentenceIndex = pageSentences[0].globalIndex;
         speakCurrentSentence();
     }
@@ -4634,7 +4699,7 @@ function showReaderToast(msg) {
 }
 
 function readerPrevChapter() {
-    isUserManuallyNavigating = true;
+    isUserManuallyNavigating = false;
     if (!readerBook) {
         if (currentBook) readerBook = currentBook;
         else return;
@@ -4653,7 +4718,7 @@ function readerPrevChapter() {
         }
         renderCurrentPage();
         if (isPlaying) {
-            playChapterAudio(readerChapterId);
+            playChapterAudio(readerChapterId, 0, true);
         }
         showReaderToast(`📖 ${prevChap.title}`);
     } else {
@@ -4662,7 +4727,7 @@ function readerPrevChapter() {
 }
 
 function readerNextChapter() {
-    isUserManuallyNavigating = true;
+    isUserManuallyNavigating = false;
     if (!readerBook) {
         if (currentBook) readerBook = currentBook;
         else return;
@@ -4675,7 +4740,7 @@ function readerNextChapter() {
         paginateChapter();
         renderCurrentPage();
         if (isPlaying) {
-            playChapterAudio(readerChapterId);
+            playChapterAudio(readerChapterId, 0, true);
         }
         showReaderToast(`📖 ${nextChap.title}`);
     } else {
@@ -4688,7 +4753,7 @@ function onReaderSentenceClick(sentenceIdx) {
     isUserManuallyNavigating = false;
     if (String(currentBook?.id) !== String(readerBook.id) || String(currentPlayingChapterId) !== String(readerChapterId)) {
         selectBook(readerBook.id, false);
-        playChapterAudio(readerChapterId, sentenceIdx);
+        playChapterAudio(readerChapterId, sentenceIdx, true);
         return;
     }
     currentSentenceIndex = sentenceIdx;
@@ -4700,7 +4765,16 @@ function highlightReaderSentence(sentenceIdx, forceSync = false) {
         isUserManuallyNavigating = false;
     }
 
-    if (!isUserManuallyNavigating && readerActive && readerMode !== 'scroll' && readerSentenceToPageMap[sentenceIdx] !== undefined) {
+    if (!readerActive) return;
+
+    // Safety guard: ensure reader language matches current audio language
+    if (isPlaying && currentLang && readerLang !== currentLang && bookHasGeorgian(readerBook)) {
+        readerLang = currentLang;
+        updateReaderLangUI();
+        paginateChapter();
+    }
+
+    if (!isUserManuallyNavigating && readerMode !== 'scroll' && readerSentenceToPageMap[sentenceIdx] !== undefined) {
         const targetPage = readerSentenceToPageMap[sentenceIdx] + 1;
         const isDual = readerMode === 'dual' && window.innerWidth >= 900;
 
@@ -7312,13 +7386,13 @@ function stopCurrentSpeechAudio(keepBuffers = false) {
 }
 
 // ── Playback Controls ───────────────────────────────────────────────────────
-function playChapterAudio(chapId, startSentenceIdx = 0) {
+function playChapterAudio(chapId, startSentenceIdx = 0, forceReload = false) {
     if (!currentBook) return;
     const chap = currentBook.chapters.find(c => String(c.id) === String(chapId));
     if (!chap) return;
 
-    if (String(currentPlayingChapterId) === String(chapId) && isPlaying) {
-        if (startSentenceIdx > 0 && currentSentenceIndex !== startSentenceIdx) {
+    if (!forceReload && String(currentPlayingChapterId) === String(chapId) && isPlaying) {
+        if (startSentenceIdx !== undefined && startSentenceIdx !== null && currentSentenceIndex !== startSentenceIdx) {
             currentSentenceIndex = startSentenceIdx;
             speakCurrentSentence();
         } else {
@@ -7338,11 +7412,12 @@ function playChapterAudio(chapId, startSentenceIdx = 0) {
     let textToRead = (currentLang === 'ka' && chap.text_ka) ? chap.text_ka : chap.text;
     if (!textToRead && chap.text) textToRead = chap.text;
 
-    sentenceQueue = splitIntoNaturalSentences(textToRead);
+    sentenceQueue = splitIntoNaturalSentences(textToRead).map(x => x.trim()).filter(Boolean);
     currentSentenceIndex = Math.min(startSentenceIdx, Math.max(0, sentenceQueue.length - 1));
     secondsElapsed = 0;
     isPlaying = true;
     isPaused = false;
+    isUserManuallyNavigating = false;
 
     // Reveal player dock
     DOM.playerDock.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
@@ -7360,12 +7435,28 @@ function playChapterAudio(chapId, startSentenceIdx = 0) {
 
     if (readerActive) {
         readerChapterId = chap.id;
+        readerLang = currentLang;
+        updateReaderLangUI();
         paginateChapter();
+        if (readerSentenceToPageMap[currentSentenceIndex] !== undefined) {
+            readerCurrentPage = readerSentenceToPageMap[currentSentenceIndex] + 1;
+        }
         renderCurrentPage();
     }
 }
 
 function togglePlayPause() {
+    if (readerActive && readerBook) {
+        // If reader is open and audio is stopped or on a different chapter, start reading from current page
+        if (!isPlaying || String(currentPlayingChapterId) !== String(readerChapterId)) {
+            const startIdx = (readerPages[readerCurrentPage - 1]?.[0]?.globalIndex) || 0;
+            currentLang = readerLang;
+            updateLangToggleUI();
+            playChapterAudio(readerChapterId, startIdx, true);
+            return;
+        }
+    }
+
     if (!currentPlayingChapterId) {
         if (currentBook && currentBook.chapters.length > 0) {
             playChapterAudio(currentBook.chapters[0].id);
@@ -7548,21 +7639,38 @@ function nudgeSpeed(delta) {
 
 function togglePlaybackLanguage() {
     if (!currentBook) return;
-    if (currentLang === 'en') {
-        if (!bookHasGeorgian(currentBook)) {
-            notifyNeedsTranslation();
-            return;
-        }
-        currentLang = 'ka';
-    } else {
-        currentLang = 'en';
+    const newLang = currentLang === 'en' ? 'ka' : 'en';
+    if (newLang === 'ka' && !bookHasGeorgian(currentBook)) {
+        notifyNeedsTranslation();
+        return;
     }
 
+    currentLang = newLang;
     updateLangToggleUI();
 
+    const currentProg = sentenceQueue.length > 0 ? (currentSentenceIndex / sentenceQueue.length) : 0;
+
+    if (readerActive) {
+        readerLang = currentLang;
+        updateReaderLangUI();
+        paginateChapter();
+        const newTotalSentences = Object.keys(readerSentenceToPageMap).length || 1;
+        const targetSentenceIdx = Math.min(newTotalSentences - 1, Math.max(0, Math.round(currentProg * (newTotalSentences - 1))));
+        if (readerSentenceToPageMap[targetSentenceIdx] !== undefined) {
+            readerCurrentPage = readerSentenceToPageMap[targetSentenceIdx] + 1;
+        }
+        renderCurrentPage();
+    }
+
     if (currentPlayingChapterId) {
-        stopSpeech();
-        playChapterAudio(currentPlayingChapterId);
+        const chap = currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId));
+        if (chap) {
+            const rawText = (currentLang === 'ka' && chap.text_ka) ? chap.text_ka : (chap.text || '');
+            const newSentences = splitIntoNaturalSentences(rawText).map(x => x.trim()).filter(Boolean);
+            const targetIdx = Math.min(newSentences.length - 1, Math.max(0, Math.round(currentProg * Math.max(0, newSentences.length - 1))));
+            stopSpeech();
+            playChapterAudio(currentPlayingChapterId, targetIdx, true);
+        }
     }
 }
 
