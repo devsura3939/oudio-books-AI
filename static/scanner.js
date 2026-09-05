@@ -1708,9 +1708,11 @@ ${text.slice(0, 10000)}`;
       .filter((p) => p.text && p.text.trim())
       .map((p, i) => ({ index: i + 1, text: p.text.trim() }));
     try {
+      const allText = pages.map((p) => p.text).join(" ");
+      const isKa = state.lang === "kat" || state.lang === "ka" || detectLang(allText) === "kat";
       state.structure =
         typeof window.detectBookStructure === "function" && pages.length
-          ? window.detectBookStructure(pages, { isKa: false })
+          ? window.detectBookStructure(pages, { isKa })
           : null;
     } catch (err) {
       console.warn("[scanner] structure detection failed:", err);
@@ -1773,8 +1775,9 @@ ${text.slice(0, 10000)}`;
       btn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> Saving…';
     }
     try {
-      const detected = state.lang === "auto" ? detectLang(pages.map((p) => p.text).join(" ")) : state.lang;
-      const isKa = detected === "kat";
+      const allText = pages.map((p) => p.text).join(" ");
+      const detected = state.lang === "auto" ? detectLang(allText) : state.lang;
+      const isKa = detected === "kat" || detected === "ka" || detectLang(allText) === "kat";
       // Georgian pages go through the same in-house rule engine (v1.45.0
       // auto-fixes + QA rules) that the translation engine uses, so scanned
       // Georgian is cleaned up the same way translated Georgian is.
@@ -1825,8 +1828,10 @@ ${text.slice(0, 10000)}`;
   }
 
   function detectLang(text) {
-    const ka = (text.match(/[\u10A0-\u10FF]/g) || []).length;
-    return ka > text.length * 0.15 ? "kat" : "eng";
+    if (!text) return "eng";
+    const ka = (text.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+    const en = (text.match(/[A-Za-z]/g) || []).length;
+    return (ka > 25 && (ka >= en * 0.25 || ka > 100)) || ka > text.length * 0.15 ? "kat" : "eng";
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

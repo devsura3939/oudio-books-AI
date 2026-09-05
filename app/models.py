@@ -1,4 +1,4 @@
-﻿from typing import List, Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 class Chapter(BaseModel):
@@ -15,12 +15,14 @@ class Chapter(BaseModel):
     audio_url: Optional[str] = None
     audio_size_bytes: Optional[int] = None
     error: Optional[str] = None
+    text_ka: Optional[str] = None
 
 class BookData(BaseModel):
     id: str
     filename: str
     title: str
     author: Optional[str] = "Unknown Author"
+    language: Optional[str] = "en"
     total_pages: int = 0
     total_words: int = 0
     estimated_total_duration_sec: float = 0.0

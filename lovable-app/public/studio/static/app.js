@@ -4081,8 +4081,9 @@ function openCurrentBookInReader() {
         return;
     }
     const chapId = currentPlayingChapterId || (currentBook.chapters[0] ? currentBook.chapters[0].id : 1);
+    const isKa = currentBook.lang === 'ka' || currentBook.isTranslatedEdition || bookHasGeorgian(currentBook);
     // If audio is currently playing, ALWAYS open the reader in the audio's active language!
-    const targetLang = isPlaying ? currentLang : ((currentBook.lang === 'ka' || currentBook.isTranslatedEdition) ? 'ka' : currentLang);
+    const targetLang = isPlaying ? currentLang : (isKa ? 'ka' : currentLang);
     openReader(currentBook.id, chapId, targetLang);
 }
 
@@ -4105,7 +4106,10 @@ async function openReader(bookId, chapterId, lang = 'en') {
 
     // Check if the book is an explicit Georgian edition or already has Georgian text
     const isGeorgianEdition = readerBook.lang === 'ka' || readerBook.isTranslatedEdition || bookHasGeorgian(readerBook);
-    if (isGeorgianEdition && lang !== 'en') {
+    if (readerBook.lang === 'ka' || (isGeorgianEdition && (lang === 'ka' || !isPlaying))) {
+        readerLang = 'ka';
+        currentLang = 'ka';
+    } else if (isGeorgianEdition && lang !== 'en') {
         readerLang = 'ka';
         currentLang = 'ka';
     } else if (readerLang === 'ka' && !isGeorgianEdition) {
@@ -6475,6 +6479,15 @@ async function startWholeBookTranslation(resume = false) {
         alert('Please select an audiobook to translate.');
         return;
     }
+    // If the book is originally in Georgian, it already has full Georgian text and audio
+    if ((currentBook.lang === 'ka' || currentBook.isGeorgianBook) && !currentBook.originalBookId && !currentBook.isTranslatedEdition) {
+        if (typeof showToast === 'function') {
+            showToast('ეს წიგნი უკვე ქართულ ენაზეა! პირდაპირ შეგიძლიათ მოუსმინოთ და წაიკითხოთ.', 'info');
+        } else {
+            alert('This book is already in Georgian! You can listen to it and read it directly without translating.');
+        }
+        return;
+    }
     if (isTranslatingWholeBook) { openModal('wholeBookTranslateModal'); return; }
 
     const existing = resume ? loadTranslationJob(currentBook.id) : null;
@@ -7545,7 +7558,7 @@ function playChapterAudio(chapId, startSentenceIdx = 0, forceReload = false) {
 
     currentPlayingChapterId = chap.id;
 
-    if (currentBook.lang === 'ka' || currentBook.isTranslatedEdition) {
+    if (currentBook.lang === 'ka' || currentBook.isTranslatedEdition || bookHasGeorgian(currentBook)) {
         currentLang = 'ka';
     }
 
@@ -7669,9 +7682,13 @@ function stopTimer() {
 // `text_ka` on its chapters even if `translatedLangs` was lost, so ask the data.
 function bookHasGeorgian(book) {
     if (!book) return false;
+    if (book.lang === 'ka' || book.originalLang === 'ka' || book.isTranslatedEdition) return true;
     if (book.translatedLangs && book.translatedLangs.includes('ka')) return true;
     const has = Array.isArray(book.chapters) &&
-        book.chapters.some(c => c && typeof c.text_ka === 'string' && c.text_ka.trim().length > 0);
+        book.chapters.some(c => c && (
+            (typeof c.text_ka === 'string' && c.text_ka.trim().length > 0) ||
+            (typeof c.text === 'string' && /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(c.text))
+        ));
     if (has) {
         if (!book.translatedLangs) book.translatedLangs = [];
         if (!book.translatedLangs.includes('ka')) book.translatedLangs.push('ka');
@@ -8154,12 +8171,19 @@ async function handleFileUpload(file) {
             const t = (v || '').trim();
             return t.length > 1 && !/^\(?(anonymous|unknown|untitled|none|n\/a|microsoft word.*)\)?$/i.test(t) ? t : null;
         };
-        const structure = detectBookStructure(pageTexts, { isKa: false });
+        // Auto-detect language from extracted PDF page text
+        const sampleText = pageTexts.slice(0, 30).map(p => p.text).join(' ');
+        const kaCount = (sampleText.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+        const enCount = (sampleText.match(/[A-Za-z]/g) || []).length;
+        const isGeorgianBook = kaCount > 25 && (kaCount >= enCount * 0.25 || kaCount > 100);
+        const detectedLang = isGeorgianBook ? 'ka' : 'en';
+
+        const structure = detectBookStructure(pageTexts, { isKa: isGeorgianBook });
         const fileTitle = cleanBookTitle(file.name);
         const title = usableMeta(info.Title)
             || structure.title
             || (fileTitle.charAt(0).toUpperCase() + fileTitle.slice(1));
-        const author = usableMeta(info.Author) || structure.author || 'PDF Audiobook';
+        const author = usableMeta(info.Author) || structure.author || (isGeorgianBook ? 'ქართული აუდიოწიგნი' : 'PDF Audiobook');
 
         // Cover: official art if the title is a known book, otherwise the PDF's
         // own detected cover page rendered to an image.
@@ -8168,13 +8192,21 @@ async function handleFileUpload(file) {
         if (!coverUrl) coverUrl = await renderPdfPageAsCover(pdf, structure.coverIndex || 1);
         if (!coverUrl) coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
 
-        DOM.uploadStatusText.textContent = "Structuring chapters...";
+        DOM.uploadStatusText.textContent = isGeorgianBook ? "თავების სტრუქტურირება..." : "Structuring chapters...";
         DOM.uploadProgressBar.style.width = '90%';
         DOM.uploadProgressPct.textContent = '90%';
 
-        const chapters = structure.chapters.length
+        let chapters = structure.chapters.length
             ? structure.chapters
-            : splitIntoChapters(pageTexts.map(p => p.text).join('\n\n'));
+            : splitIntoChapters(pageTexts.map(p => p.text).join('\n\n'), isGeorgianBook);
+
+        if (isGeorgianBook) {
+            chapters.forEach(ch => {
+                if (!ch.text_ka && ch.text) {
+                    ch.text_ka = ch.text;
+                }
+            });
+        }
 
         const newBook = {
             id: 'book_' + Date.now(),
@@ -8182,7 +8214,9 @@ async function handleFileUpload(file) {
             author,
             coverUrl: coverUrl,
             chapters: chapters,
-            translatedLangs: [],
+            lang: detectedLang,
+            originalLang: detectedLang,
+            translatedLangs: isGeorgianBook ? ['ka'] : [],
             dateAdded: new Date().toISOString(),
             lastPlayedChapterId: chapters.length > 0 ? chapters[0].id : null,
             progressPct: 0,
@@ -8192,20 +8226,24 @@ async function handleFileUpload(file) {
                 cover_page: structure.coverIndex || null,
                 detected_title: structure.title || null,
                 detected_author: structure.author || null,
-                detected_sections: chapters.length
+                detected_sections: chapters.length,
+                detected_lang: detectedLang
             }
         };
 
         await saveBookToDB(newBook);
         DOM.uploadProgressBar.style.width = '100%';
         DOM.uploadProgressPct.textContent = '100%';
-        DOM.uploadStatusText.textContent = "Import complete!";
+        DOM.uploadStatusText.textContent = isGeorgianBook ? "ქართული წიგნი წარმატებით ჩაიტვირთა!" : "Import complete!";
 
         setTimeout(() => {
             closeModal('uploadModal');
             DOM.uploadProgressContainer.classList.add('hidden');
             renderDigitalShelf();
             selectBook(newBook.id, true);
+            if (isGeorgianBook && typeof showToast === 'function') {
+                showToast(`🇬🇪 „${title}“ — ამოცნობილია ქართულ ენაზე!`, 'success');
+            }
         }, 800);
 
 
@@ -8267,12 +8305,18 @@ async function createBookFromScannedPages(pages, meta) {
     const list = (pages || []).filter(p => p && p.text && p.text.trim());
     if (!list.length) throw new Error('No recognised page text');
 
-    const isKa = (meta && meta.lang) === 'ka';
+    const sampleKa = (list.slice(0, 15).map(p => p.text).join(' ').match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+    const isKa = (meta && meta.lang) === 'ka' || sampleKa > 25;
     const structure = detectBookStructure(list, { isKa });
     const chapters = structure.chapters;
+    if (isKa) {
+        chapters.forEach(ch => {
+            if (!ch.text_ka && ch.text) ch.text_ka = ch.text;
+        });
+    }
 
     const title = ((meta && meta.title) || structure.title || 'Scanned book').trim();
-    const author = ((meta && meta.author) || structure.author || '').trim();
+    const author = ((meta && meta.author) || structure.author || (isKa ? 'ქართული წიგნი' : '')).trim();
 
     // Cover: the photographed cover page itself wins (it *is* the real cover of
     // this book), then official art, then the generated studio cover.
@@ -8288,9 +8332,11 @@ async function createBookFromScannedPages(pages, meta) {
     const newBook = {
         id: 'book_' + Date.now(),
         title,
-        author: author || 'Scanned book',
+        author: author || (isKa ? 'ქართული წიგნი' : 'Scanned book'),
         coverUrl,
         chapters,
+        lang: isKa ? 'ka' : 'en',
+        originalLang: isKa ? 'ka' : 'en',
         translatedLangs: isKa ? ['ka'] : [],
         dateAdded: new Date().toISOString(),
         lastPlayedChapterId: chapters.length ? chapters[0].id : null,
@@ -8440,9 +8486,16 @@ function detectTitleAndAuthor(text) {
  * `pages` is [{ index, text }] — pages from a scan, or per-page PDF text.
  */
 function detectBookStructure(pages, opts) {
-    const isKa = !!(opts && opts.isKa);
     const list = (pages || []).filter(p => p && typeof p.text === 'string');
     if (!list.length) return { coverIndex: null, title: null, author: null, chapters: [] };
+
+    let isKa = opts && typeof opts.isKa === 'boolean' ? opts.isKa : undefined;
+    if (isKa === undefined) {
+        const sample = list.slice(0, 20).map(p => p.text).join(' ');
+        const ka = (sample.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+        const en = (sample.match(/[A-Za-z]/g) || []).length;
+        isKa = ka > 25 && (ka >= en * 0.25 || ka > 100);
+    }
 
     // 1. Cover: only the first two pages can be one.
     let coverIndex = null;
@@ -8469,7 +8522,7 @@ function detectBookStructure(pages, opts) {
                 current = { title: heading, text: '', firstPage: page.index, lastPage: page.index };
                 return;
             }
-            if (!current) current = { title: 'Opening', text: '', firstPage: page.index, lastPage: page.index };
+            if (!current) current = { title: isKa ? 'შესავალი ნაწილი' : 'Opening', text: '', firstPage: page.index, lastPage: page.index };
             current.text += (current.text ? '\n' : '') + line;
             current.lastPage = page.index;
         });
@@ -8477,7 +8530,7 @@ function detectBookStructure(pages, opts) {
     push();
 
     let sections = found.filter(c => c.text.split(/\s+/).filter(Boolean).length > 25);
-    if (sections.length < 2) sections = bucketPages(body);
+    if (sections.length < 2) sections = bucketPages(body, isKa);
 
     // 3. Very long chapters are parted so narration and translation stay snappy.
     const MAX_WORDS = 1800;
@@ -8491,7 +8544,7 @@ function detectBookStructure(pages, opts) {
             const text = slice.join(' ');
             chapters.push({
                 id: chapters.length + 1,
-                title: partCount > 1 ? `${section.title} (part ${p + 1})` : section.title,
+                title: partCount > 1 ? (isKa ? `${section.title} (ნაწილი ${p + 1})` : `${section.title} (part ${p + 1})`) : section.title,
                 text,
                 text_ka: isKa ? text : null,
                 word_count: slice.length,
@@ -8504,7 +8557,7 @@ function detectBookStructure(pages, opts) {
 }
 
 /** Fallback when a book has no detectable headings: read it page by page. */
-function bucketPages(pages) {
+function bucketPages(pages, isKa = false) {
     const MAX_WORDS = 600;
     const out = [];
     let bucket = [];
@@ -8518,7 +8571,9 @@ function bucketPages(pages) {
             const text = bucket.join('\n\n').trim();
             if (text) {
                 out.push({
-                    title: first === page.index ? `Page ${first}` : `Pages ${first}–${page.index}`,
+                    title: first === page.index
+                        ? (isKa ? `გვერდი ${first}` : `Page ${first}`)
+                        : (isKa ? `გვერდები ${first}–${page.index}` : `Pages ${first}–${page.index}`),
                     text,
                     firstPage: first,
                     lastPage: page.index
@@ -8537,10 +8592,14 @@ window.detectBookStructure = detectBookStructure;
 
 
 
-function splitIntoChapters(text) {
+function splitIntoChapters(text, isKa = false) {
     const chapters = [];
     const MAX_WORDS = 600;
     const words = text.split(/\s+/).filter(w => w.trim().length > 0);
+
+    const sample = text.slice(0, 4000);
+    const ka = (sample.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+    const isGeorgian = isKa || (ka > 25);
 
     let currentChunk = [];
     let chapIndex = 1;
@@ -8548,11 +8607,12 @@ function splitIntoChapters(text) {
     for (let i = 0; i < words.length; i++) {
         currentChunk.push(words[i]);
         if (currentChunk.length >= MAX_WORDS) {
+            const chunkText = currentChunk.join(' ');
             chapters.push({
                 id: chapIndex,
-                title: `Chapter ${chapIndex}`,
-                text: currentChunk.join(' '),
-                text_ka: null,
+                title: isGeorgian ? `თავი ${chapIndex}` : `Chapter ${chapIndex}`,
+                text: chunkText,
+                text_ka: isGeorgian ? chunkText : null,
                 word_count: currentChunk.length,
                 estimated_duration_sec: Math.round((currentChunk.length / 140) * 60)
             });
@@ -8562,22 +8622,24 @@ function splitIntoChapters(text) {
     }
 
     if (currentChunk.length > 0) {
+        const chunkText = currentChunk.join(' ');
         chapters.push({
             id: chapIndex,
-            title: `Chapter ${chapIndex}`,
-            text: currentChunk.join(' '),
-            text_ka: null,
+            title: isGeorgian ? `თავი ${chapIndex}` : `Chapter ${chapIndex}`,
+            text: chunkText,
+            text_ka: isGeorgian ? chunkText : null,
             word_count: currentChunk.length,
             estimated_duration_sec: Math.round((currentChunk.length / 140) * 60)
         });
     }
 
     if (chapters.length === 0) {
+        const sampleT = text.substring(0, 4000);
         chapters.push({
             id: 1,
-            title: 'Full Reading',
-            text: text.substring(0, 4000),
-            text_ka: null,
+            title: isGeorgian ? 'სრული ტექსტი' : 'Full Reading',
+            text: sampleT,
+            text_ka: isGeorgian ? sampleT : null,
             word_count: 500,
             estimated_duration_sec: 180
         });
@@ -8797,8 +8859,29 @@ async function selectBook(bookId, autoPlayFirst = false) {
     if (!currentBook) return;
 
     if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
-    if (currentBook.lang === 'ka' || currentBook.isTranslatedEdition) {
+    const hasGeorgianText = (currentBook.chapters || []).some(c =>
+        (c && typeof c.text_ka === 'string' && /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(c.text_ka)) ||
+        (c && typeof c.text === 'string' && /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(c.text))
+    );
+    const isGeorgian = currentBook.lang === 'ka' || currentBook.originalLang === 'ka' || currentBook.isTranslatedEdition || hasGeorgianText;
+
+    if (isGeorgian) {
+        currentBook.lang = 'ka';
         currentLang = 'ka';
+        if (!currentBook.translatedLangs.includes('ka')) currentBook.translatedLangs.push('ka');
+        // Heal chapters missing text_ka
+        let healed = false;
+        (currentBook.chapters || []).forEach(c => {
+            if ((!c.text_ka || !c.text_ka.trim()) && c.text && /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(c.text)) {
+                c.text_ka = c.text;
+                healed = true;
+            }
+        });
+        if (healed) {
+            try { await saveBookToDB(currentBook); } catch (e) { /* background heal */ }
+        }
+    } else {
+        currentLang = 'en';
     }
     updateLangToggleUI();
 
@@ -8810,12 +8893,24 @@ async function selectBook(bookId, autoPlayFirst = false) {
 
     const hasKa = bookHasGeorgian(currentBook);
     if (DOM.heroGeorgianBadge) {
-        if (hasKa) DOM.heroGeorgianBadge.classList.remove('hidden');
-        else DOM.heroGeorgianBadge.classList.add('hidden');
+        if (hasKa) {
+            DOM.heroGeorgianBadge.classList.remove('hidden');
+            if (currentBook.lang === 'ka' && !currentBook.isTranslatedEdition) {
+                DOM.heroGeorgianBadge.textContent = '🇬🇪 ქართული გამოცემა (Georgian Edition)';
+            } else {
+                DOM.heroGeorgianBadge.textContent = '🇬🇪 Georgian Translated';
+            }
+        } else {
+            DOM.heroGeorgianBadge.classList.add('hidden');
+        }
     }
 
     if (DOM.btnTranslateWholeBookText) {
-        DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Book (Georgian)";
+        if (currentBook.lang === 'ka' && !currentBook.isTranslatedEdition) {
+            DOM.btnTranslateWholeBookText.textContent = "🇬🇪 ქართული ორიგინალი (მზადაა)";
+        } else {
+            DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Book (Georgian)";
+        }
     }
 
     const lastChap = currentBook.chapters.find(c => String(c.id) === String(currentBook.lastPlayedChapterId)) || currentBook.chapters[0];

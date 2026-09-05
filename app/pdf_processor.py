@@ -1,4 +1,4 @@
-﻿import re
+import re
 import uuid
 from typing import List, Dict, Tuple, Optional, Any
 from pathlib import Path
@@ -12,6 +12,10 @@ CHAPTER_PATTERNS = [
     re.compile(r'^\s*(book\s+(?:[0-9]+|[ivxlcdm]+))\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
     re.compile(r'^\s*(act\s+(?:[0-9]+|[ivxlcdm]+))\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
     re.compile(r'^\s*(prologue|epilogue|introduction|preface|foreword|conclusion|afterword)\b\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
+    re.compile(r'^\s*(თავი\s+(?:[0-9]+|[ა-ჰ]+))\s*[:.\-–—]?\s*(.*)$'),
+    re.compile(r'^\s*(ნაწილი\s+(?:[0-9]+|[ა-ჰ]+))\s*[:.\-–—]?\s*(.*)$'),
+    re.compile(r'^\s*(წიგნი\s+(?:[0-9]+|[ა-ჰ]+))\s*[:.\-–—]?\s*(.*)$'),
+    re.compile(r'^\s*(შესავალი|წინასიტყვაობა|ბოლოსიტყვაობა|დასკვნა|დანართი|პროლოგი|ეპილოგი)\b\s*[:.\-–—]?\s*(.*)$'),
 ]
 
 PAGE_NUMBER_PATTERN = re.compile(r'^\s*(?:page\s+)?(?:\d+|[ivxlcdm]+)(?:\s+of\s+\d+)?\s*$', re.IGNORECASE)
@@ -79,6 +83,15 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
         except Exception:
             page_texts.append("")
             
+    # Auto-detect language from extracted PDF text
+    sample_text = " ".join(page_texts[:25])
+    ka_chars = len(re.findall(r'[\u10A0-\u10FF\u1C90-\u1CBF]', sample_text))
+    en_chars = len(re.findall(r'[A-Za-z]', sample_text))
+    is_ka = ka_chars > 25 and (ka_chars >= en_chars * 0.25 or ka_chars > 100)
+    book_lang = "ka" if is_ka else "en"
+    if is_ka and (not author or author == "Unknown Author"):
+        author = "ქართული გამოცემა"
+
     chapters: List[Chapter] = []
     
     # 1. Try Document Bookmarks / Outline
@@ -114,6 +127,7 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
                     start_page=start_page,
                     end_page=end_page,
                     text=full_chap_text,
+                    text_ka=full_chap_text if is_ka else None,
                     word_count=words,
                     estimated_duration_sec=round(est_duration, 1),
                     status="idle"
@@ -159,6 +173,7 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
                     start_page=start_page,
                     end_page=end_page,
                     text=full_chap_text,
+                    text_ka=full_chap_text if is_ka else None,
                     word_count=words,
                     estimated_duration_sec=round(est_duration, 1),
                     status="idle"
@@ -179,13 +194,14 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
             words = len(full_chap_text.split())
             est_duration = (words / 150.0) * 60.0
             
-            title_label = f"Section {chap_id} (Pages {start_p}-{end_p})" if start_p != end_p else f"Section {chap_id} (Page {start_p})"
+            title_label = f"თავი {chap_id} (გვერდები {start_p}-{end_p})" if is_ka else (f"Section {chap_id} (Pages {start_p}-{end_p})" if start_p != end_p else f"Section {chap_id} (Page {start_p})")
             chapters.append(Chapter(
                 id=chap_id,
                 title=title_label,
                 start_page=start_p,
                 end_page=end_p,
                 text=full_chap_text,
+                text_ka=full_chap_text if is_ka else None,
                 word_count=words,
                 estimated_duration_sec=round(est_duration, 1),
                 status="idle"
@@ -204,12 +220,14 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
                     w_chunk = words[w_idx:w_idx + chunk_len]
                     chunk_text = " ".join(w_chunk)
                     dur = (len(w_chunk) / 150.0) * 60.0
+                    part_title = f"{c.title} - ნაწილი {part_no}" if is_ka else f"{c.title} - Part {part_no}"
                     refined.append(Chapter(
                         id=new_id,
-                        title=f"{c.title} - Part {part_no}",
+                        title=part_title,
                         start_page=c.start_page,
                         end_page=c.end_page,
                         text=chunk_text,
+                        text_ka=chunk_text if is_ka else None,
                         word_count=len(w_chunk),
                         estimated_duration_sec=round(dur, 1),
                         status="idle"
@@ -231,6 +249,7 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
         filename=pdf_path.name,
         title=str(title),
         author=str(author),
+        language=book_lang,
         total_pages=total_pages,
         total_words=total_words,
         estimated_total_duration_sec=round(est_total_duration, 1),
