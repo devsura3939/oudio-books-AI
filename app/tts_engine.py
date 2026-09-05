@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import re
 import os
 import hashlib
@@ -14,17 +14,21 @@ PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
 
 # Curated high-priority voices in exact order of quality/popularity
 PRIORITY_ORDER = [
+    "ka-GE-GiorgiNeural",
+    "ka-GE-EkaNeural",
     "en-US-ChristopherNeural",
     "en-US-AriaNeural",
     "en-US-GuyNeural",
     "en-US-JennyNeural",
     "en-US-EricNeural",
+    "en-US-AvaNeural",
     "en-US-RogerNeural",
     "en-US-MichelleNeural",
     "en-US-SteffanNeural",
     "en-GB-SoniaNeural",
     "en-GB-RyanNeural",
     "en-GB-LibbyNeural",
+    "en-GB-ThomasNeural",
     "en-AU-NatashaNeural",
     "en-AU-WilliamNeural",
     "en-CA-LiamNeural",
@@ -52,17 +56,21 @@ PRIORITY_ORDER = [
 ]
 
 FEATURED_VOICE_TAGS = {
+    "ka-GE-GiorgiNeural": "🌟 Best Georgian Narrator (Natural & Expressive Male)",
+    "ka-GE-EkaNeural": "🌟 Best Georgian Narrator (Warm & Lyrical Female)",
     "en-US-ChristopherNeural": "🌟 Best Male Narrator (Authoritative & Deep)",
     "en-US-AriaNeural": "🌟 Best Female Narrator (Expressive & Engaging)",
     "en-US-GuyNeural": "🌟 Friendly & Natural (Conversational Male)",
     "en-US-JennyNeural": "🌟 Clear & Professional (Female)",
     "en-US-EricNeural": "Dynamic & Energetic (Male)",
+    "en-US-AvaNeural": "Expressive Novel Reader (Female)",
     "en-US-RogerNeural": "Deep & Mature (Male)",
     "en-US-MichelleNeural": "Warm & Gentle (Female)",
     "en-US-SteffanNeural": "Articulate & Formal (Male)",
     "en-GB-SoniaNeural": "Classic British Accent (Female)",
     "en-GB-RyanNeural": "Classic British Accent (Male)",
     "en-GB-LibbyNeural": "Warm British Storyteller (Female)",
+    "en-GB-ThomasNeural": "Classical British Reader (Male)",
     "en-AU-NatashaNeural": "Australian Accent (Female)",
     "en-AU-WilliamNeural": "Australian Accent (Male)",
     "en-CA-LiamNeural": "Canadian Accent (Male)",

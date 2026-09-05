@@ -36,6 +36,24 @@ export const VOICE_PRESETS: VoicePreset[] = [
     instructions:
       "Speak with a clear British RP accent. Elegant, calm audiobook narration.",
   },
+  {
+    id: "en-gb-libby",
+    label: "British · Gentle Storyteller (Charlotte)",
+    group: "English — British",
+    provider: "openai",
+    voice: "shimmer",
+    instructions:
+      "Speak with a gentle, melodic British RP accent. Poetic and soothing audiobook narration.",
+  },
+  {
+    id: "en-gb-thomas",
+    label: "British · Classical Theater (Arthur)",
+    group: "English — British",
+    provider: "openai",
+    voice: "echo",
+    instructions:
+      "Speak with a classical, theatrical British RP accent. Dignified, articulate, and resonant.",
+  },
   // English — American
   {
     id: "en-us-male",
@@ -62,6 +80,33 @@ export const VOICE_PRESETS: VoicePreset[] = [
     instructions: "Expressive storyteller delivery with dramatic pacing.",
   },
   {
+    id: "en-us-aria",
+    label: "American · Bright Storyteller (Aria)",
+    group: "English — American",
+    provider: "openai",
+    voice: "nova",
+    instructions:
+      "Speak with an expressive, warm, and highly engaging American storytelling delivery.",
+  },
+  {
+    id: "en-us-eric",
+    label: "American · Deep Resonance (Marcus)",
+    group: "English — American",
+    provider: "openai",
+    voice: "onyx",
+    instructions:
+      "Speak with a deep, resonant American narrator delivery, commanding and atmospheric.",
+  },
+  {
+    id: "en-us-ava",
+    label: "American · Emotive Novel Reader (Ava)",
+    group: "English — American",
+    provider: "openai",
+    voice: "alloy",
+    instructions:
+      "Speak with a natural, emotive American novel reading cadence.",
+  },
+  {
     id: "en-neutral",
     label: "Neutral · Alloy",
     group: "English — American",
@@ -76,6 +121,17 @@ export const VOICE_PRESETS: VoicePreset[] = [
     group: "Georgian — ქართული",
     provider: "gemini",
     voice: "Charon",
+    instructions:
+      "Read the Georgian text with natural, articulate cadence, warm baritone storytelling tone, and proper grammatical pauses.",
+  },
+  {
+    id: "ka-actor",
+    label: "ქართული · დრამატული არტისტი (დავითი)",
+    group: "Georgian — ქართული",
+    provider: "gemini",
+    voice: "Fenrir",
+    instructions:
+      "Read the Georgian text with theatrical expression, dynamic dialogue characterization, and vivid cadence.",
   },
   {
     id: "ka-female",
@@ -83,6 +139,8 @@ export const VOICE_PRESETS: VoicePreset[] = [
     group: "Georgian — ქართული",
     provider: "gemini",
     voice: "Kore",
+    instructions:
+      "Read the Georgian text with clear, expressive, and warm female storytelling delivery.",
   },
   {
     id: "ka-soft",
@@ -90,6 +148,8 @@ export const VOICE_PRESETS: VoicePreset[] = [
     group: "Georgian — ქართული",
     provider: "gemini",
     voice: "Aoede",
+    instructions:
+      "Read the Georgian text with gentle, poetic, and soothing lyrical pacing.",
   },
   // Multilingual / other languages
   {

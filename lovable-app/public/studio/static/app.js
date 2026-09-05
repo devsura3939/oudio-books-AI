@@ -1246,9 +1246,10 @@ function verbalizeGeorgianTextForTTS(text) {
     // Strip line-initial dialogue dashes so spoken lines do not begin with an acoustic comma click
     out = out.replace(/(^|[\r\n]+)\s*[—–-]\s*/g, '$1');
 
-    // Keep compound words like "ნელ-ნელა" fluid ("ნელ ნელა") without awkward mid-word comma pause
+    // Convert quotation marks into conversational breath pauses
     out = out
-        .replace(/[""„“«»]/g, '')
+        .replace(/(:\s*)?[„"“]/g, ', ')
+        .replace(/[”"»]/g, ', ')
         .replace(/\s+[—–-](\s|$)/g, ', $1')
         .replace(/\s*[—–]\s*/g, ', ')
         .replace(/([ა-ჰ]+)-([ა-ჰ]+)/g, '$1 $2')
@@ -1273,50 +1274,212 @@ function verbalizeGeorgianTextForTTS(text) {
     return out;
 }
 
-// ── Sentence-type detection for expressive TTS ──────────────────────────────
-// Classifies a sentence so the narration engine can apply the right prosody:
-// questions rise, exclamations carry energy, dialogue gets a distinct voice
-// colour, quotes breathe. Detection runs on the ORIGINAL text (before
-// punctuation normalization strips the signals).
-function detectSentenceType(text) {
+// ── English Number & Verbalization Helpers ──────────────────────────────────
+function englishSmallNumber(n) {
+    const units = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+                   'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen',
+                   'seventeen', 'eighteen', 'nineteen'];
+    const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+    if (n < 20) return units[n] || '';
+    const t = tens[Math.floor(n / 10)] || '';
+    const u = units[n % 10] || '';
+    return u ? `${t}-${u}` : t;
+}
+
+function englishOrdinal(n) {
+    const ords = {
+        1: 'first', 2: 'second', 3: 'third', 4: 'fourth', 5: 'fifth',
+        6: 'sixth', 7: 'seventh', 8: 'eighth', 9: 'ninth', 10: 'tenth',
+        11: 'eleventh', 12: 'twelfth', 13: 'thirteenth', 14: 'fourteenth',
+        15: 'fifteenth', 16: 'sixteenth', 17: 'seventeenth', 18: 'eighteenth',
+        19: 'nineteenth', 20: 'twentieth', 30: 'thirtieth', 40: 'fortieth',
+        50: 'fiftieth', 60: 'sixtieth', 70: 'seventieth', 80: 'eightieth', 90: 'ninetieth'
+    };
+    if (ords[n]) return ords[n];
+    if (n < 100) {
+        const t = Math.floor(n / 10) * 10;
+        const u = n % 10;
+        return `${englishSmallNumber(t)}-${ords[u] || ''}`;
+    }
+    return `${n}th`;
+}
+
+// ── English Text Verbalization for Natural Storytelling TTS ─────────────────
+function verbalizeEnglishTextForTTS(text) {
+    if (!text) return '';
+    let out = String(text);
+
+    // 1. Strip markdown artifacts & footnote brackets that cause robotic stumbles
+    out = out
+        .replace(/\[\d+\]/g, '')
+        .replace(/https?:\/\/\S+/gi, '')
+        .replace(/[*_#`~>]+/g, ' ')
+        .replace(/[\r\n\t]+/g, ' ');
+
+    // 2. English Honorifics & Titles
+    const titles = [
+        [/\bMr\.(?=\s+[A-Z])/g, 'Mister'],
+        [/\bMrs\.(?=\s+[A-Z])/g, 'Missus'],
+        [/\bMs\.(?=\s+[A-Z])/g, 'Mizz'],
+        [/\bDr\.(?=\s+[A-Z])/g, 'Doctor'],
+        [/\bProf\.(?=\s+[A-Z])/g, 'Professor'],
+        [/\bSt\.(?=\s+[A-Z])/g, 'Saint'],
+        [/\bCapt\.(?=\s+[A-Z])/g, 'Captain'],
+        [/\bCol\.(?=\s+[A-Z])/g, 'Colonel'],
+        [/\bGen\.(?=\s+[A-Z])/g, 'General'],
+        [/\bLt\.(?=\s+[A-Z])/g, 'Lieutenant'],
+        [/\bSgt\.(?=\s+[A-Z])/g, 'Sergeant'],
+    ];
+    titles.forEach(([re, repl]) => { out = out.replace(re, repl); });
+
+    // 3. Common Abbreviations
+    const abbrevs = [
+        [/\be\.g\.,?\s*/gi, 'for example, '],
+        [/\bi\.e\.,?\s*/gi, 'that is, '],
+        [/\betc\.(?!\w)/gi, 'etcetera'],
+        [/\bvs\.(?!\w)/gi, 'versus'],
+        [/\bv\.(?=\s+[A-Z])/g, 'versus'],
+        [/\bapprox\.(?!\w)/gi, 'approximately'],
+        [/\bno\.\s*(?=\d+)/gi, 'number '],
+        [/\bvol\.\s*(?=\d+)/gi, 'volume '],
+        [/\bch\.\s*(?=\d+)/gi, 'chapter '],
+    ];
+    abbrevs.forEach(([re, repl]) => { out = out.replace(re, repl); });
+
+    // 4. Roman Numerals in Chapter / Part / Book Headings & Monarchs
+    const romanMap = {
+        'I': 'one', 'II': 'two', 'III': 'three', 'IV': 'four', 'V': 'five',
+        'VI': 'six', 'VII': 'seven', 'VIII': 'eight', 'IX': 'nine', 'X': 'ten',
+        'XI': 'eleven', 'XII': 'twelve', 'XIII': 'thirteen', 'XIV': 'fourteen', 'XV': 'fifteen'
+    };
+    out = out.replace(/\b(Chapter|Part|Book|Act|Section|Volume)\s+([IVXLCDM]+)\b/gi, (m, prefix, roman) => {
+        const r = roman.toUpperCase();
+        return `${prefix} ${romanMap[r] || roman}`;
+    });
+
+    const romanOrd = {
+        'I': 'the first', 'II': 'the second', 'III': 'the third', 'IV': 'the fourth',
+        'V': 'the fifth', 'VI': 'the sixth', 'VII': 'the seventh', 'VIII': 'the eighth'
+    };
+    out = out.replace(/\b([A-Z][a-z]+)\s+([IVXLCDM]+)\b/g, (m, name, roman) => {
+        const r = roman.toUpperCase();
+        return romanOrd[r] ? `${name} ${romanOrd[r]}` : m;
+    });
+
+    // 5. 4-Digit Years (e.g. 1984 -> nineteen eighty-four, 2024 -> twenty twenty-four)
+    out = out.replace(/\b(1[5-9]\d{2}|20\d{2})\b/g, (match) => {
+        const y = parseInt(match, 10);
+        if (y >= 2000 && y <= 2009) {
+            return y === 2000 ? 'two thousand' : `two thousand and ${englishSmallNumber(y - 2000)}`;
+        }
+        const c = Math.floor(y / 100);
+        const rem = y % 100;
+        const cText = englishSmallNumber(c);
+        if (rem === 0) return `${cText} hundred`;
+        const remText = rem < 10 ? `oh ${englishSmallNumber(rem)}` : englishSmallNumber(rem);
+        return `${cText} ${remText}`;
+    });
+
+    // 6. Ordinal numbers (1st, 2nd, 3rd, 4th, 21st...)
+    out = out.replace(/\b(\d+)(?:st|nd|rd|th)\b/gi, (m, num) => {
+        return englishOrdinal(parseInt(num, 10)) || m;
+    });
+
+    // 7. Currencies, Percentages & Units
+    out = out.replace(/\$(\d+[\d,]*)(?:\.(\d{2}))?\b/g, (m, dol, cent) => {
+        const d = dol.replace(/,/g, '');
+        let res = `${d} dollars`;
+        if (cent && parseInt(cent, 10) > 0) res += ` and ${parseInt(cent, 10)} cents`;
+        return res;
+    });
+    out = out.replace(/£(\d+[\d,]*)\b/g, '$1 pounds');
+    out = out.replace(/€(\d+[\d,]*)\b/g, '$1 euros');
+    out = out.replace(/(\b\d+)\s*%/g, '$1 percent');
+
+    // 8. Natural dialogue quotes & punctuation cadence
+    out = out
+        .replace(/(:\s*)?[“"«]/g, ', ')
+        .replace(/[”"»]/g, ', ')
+        .replace(/\s*[—–]\s*/g, ', ')
+        .replace(/\s*(\.{3}|…)\s*/g, '... ')
+        .replace(/^[,\s]+/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    return out;
+}
+
+// ── Unified Sentence-Type & Emotion Detection ──────────────────────────────
+function detectSentenceType(text, lang = 'en') {
     const t = String(text || '').trim();
     if (!t) return 'statement';
 
-    if (/[?]\s*$/.test(t) || /^(ვინ|რა|სად|როდის|როგორ|რატომ|რამდენი|რომელ|ხომ|განა|ნუთუ)(?![\u10A0-\u10FF])/i.test(t)) return 'question';
+    // Question: rising acoustic inflection
+    if (/[?]\s*$/.test(t)) return 'question';
+    if (lang === 'ka') {
+        if (/^(ვინ|რა|სად|როდის|როგორ|რატომ|რამდენი|რომელ|ხომ|განა|ნუთუ)(?![\u10A0-\u10FF])/i.test(t)) return 'question';
+    } else {
+        if (/^(who|what|where|when|why|how|which|whose|whom|did|do|does|can|could|would|should|is|are|was|were|will|shall|have|has|had|am|aren't|isn't|wasn't|weren't|don't|doesn't|didn't|can't|couldn't|won't)\b/i.test(t)) {
+            return 'question';
+        }
+    }
+
+    // Exclamation: emphatic energy
     if (/[!]\s*$/.test(t)) return 'exclamation';
-    if (/^["“„«][^"”“»]{2,}["””»]/.test(t) || /^[—–-]\s*\S/.test(t)) return 'dialogue';
-    if (/^(დიახ|არა|კი|ჰო)(?![\u10A0-\u10FF])[.,!]?$/i.test(t)) return 'short';
-    if (t.split(/\s+/).length <= 3) return 'short';
+
+    // Suspense / reflective storytelling: deliberate tempo & contemplative breath
+    if (/(\.{3}|…|[—–])/.test(t) && t.split(/\s+/).length >= 4) return 'suspense';
+
+    // Dialogue: direct spoken character line
+    if (/^["“„«][^"”“»]{2,}["””»]/.test(t) || /^[—–-]\s*\S/.test(t) || /["“„«]/.test(t)) return 'dialogue';
+
+    // Short punchy phrase
+    if (t.split(/\s+/).filter(Boolean).length <= 3) return 'short';
+
     return 'statement';
 }
 
-// Apply sentence-type-specific prosody to the verbalized Georgian text.
-// edge-tts (ka-GE-Giorgi/Eka Neural) responds to punctuation cadence, so we
-// shape pauses and emphasis with punctuation — never with SSML (the HF
-// mirrors pass plain text).
+// Apply sentence-type-specific prosody to Georgian verbalized text
 function applyGeorgianProsody(text, sentenceType) {
     let out = text;
     switch (sentenceType) {
         case 'question':
-            // Ensure proper terminal question inflection with micro-breath
-            if (!/[?]$/.test(out.trim())) {
-                out = out.replace(/[.!]?$/, '?');
-            }
+            if (!/[?]$/.test(out.trim())) out = out.replace(/[.!]?$/, '?');
             break;
         case 'exclamation':
-            // Emphatic terminal — keep energy, crisp punctuation
-            if (!/[!]$/.test(out.trim())) {
-                out = out.replace(/[.?]?$/, '!');
-            }
+            if (!/[!]$/.test(out.trim())) out = out.replace(/[.?]?$/, '!');
             break;
         case 'dialogue':
-            // Spoken dialogue: ensure leading breath pause for natural actor cadence
-            if (!/^[,\s]/.test(out)) {
-                out = ', ' + out;
-            }
+            if (!/^[,\s]/.test(out)) out = ', ' + out;
+            break;
+        case 'suspense':
+            if (!/(\.{3}|…)\s*$/.test(out.trim())) out = out.replace(/[.]?$/, '...');
             break;
         case 'short':
-            // Punchy delivery: crisp ending
+            break;
+        default:
+            break;
+    }
+    return out;
+}
+
+// Apply sentence-type-specific prosody to English verbalized text
+function applyEnglishProsody(text, sentenceType) {
+    let out = text;
+    switch (sentenceType) {
+        case 'question':
+            if (!/[?]$/.test(out.trim())) out = out.replace(/[.!]?$/, '?');
+            break;
+        case 'exclamation':
+            if (!/[!]$/.test(out.trim())) out = out.replace(/[.?]?$/, '!');
+            break;
+        case 'dialogue':
+            if (!/^[,\s]/.test(out)) out = ', ' + out;
+            break;
+        case 'suspense':
+            if (!/(\.{3}|…)\s*$/.test(out.trim())) out = out.replace(/[.]?$/, '...');
+            break;
+        case 'short':
             break;
         default:
             break;
@@ -3820,17 +3983,30 @@ function saveElevenLabsSettings() {
 // browser exposes any — on Android inside an iframe that list is usually empty,
 // which is why the old browser-only picker looked completely blank.
 const ENGBOT_VOICES = [
-    { id: 'en-gb-male',        label: 'Oliver — British male',            group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-RyanNeural - en-GB (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'en-GB' },
-    { id: 'en-gb-female',      label: 'Amelia — British female',          group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-SoniaNeural - en-GB (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'en-GB' },
-    { id: 'en-us-male',        label: 'Ethan — American male',            group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-GuyNeural - en-US (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'en-US' },
-    { id: 'en-us-female',      label: 'Nova — American female',           group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-JennyNeural - en-US (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'en-US' },
-    { id: 'en-us-storyteller', label: 'Fable — American storyteller',     group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-ChristopherNeural - en-US (Male)', rate: -3, pitch: -2, gender: 'male', locale: 'en-US' },
-    { id: 'en-neutral',        label: 'Alloy — neutral narrator',         group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-AriaNeural - en-US (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'en-US' },
-    { id: 'ka-male',           label: 'გიორგი — ქართული მამრობითი',       group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'ka-GE' },
-    { id: 'ka-female',         label: 'ეკა — ქართული მდედრობითი',         group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'ka-GE' },
-    { id: 'ka-soft',           label: 'ნინო — რბილი ქართული ტონი',        group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -4, pitch: -2, gender: 'female', locale: 'ka-GE' },
-    { id: 'multi-puck',        label: 'Puck — multilingual',              group: '🌍 Multilingual',        lang: 'multi', edgeVoice: 'en-US-GuyNeural - en-US (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'en-US' },
-    { id: 'multi-fenrir',      label: 'Fenrir — multilingual',            group: '🌍 Multilingual',        lang: 'multi', edgeVoice: 'en-US-ChristopherNeural - en-US (Male)', rate: -2, pitch: -2, gender: 'male', locale: 'en-US' },
+    // 🇬🇧 English · British Narrators
+    { id: 'en-gb-male',        label: 'Oliver — British classic narrator (warm & deep)',     group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-RyanNeural - en-GB (Male)', rate: -3, pitch: -1, gender: 'male', locale: 'en-GB' },
+    { id: 'en-gb-female',      label: 'Amelia — British dramatic narrator (poetic & clear)',  group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-SoniaNeural - en-GB (Female)', rate: -2, pitch: 0, gender: 'female', locale: 'en-GB' },
+    { id: 'en-gb-libby',       label: 'Charlotte — British gentle storyteller',               group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-LibbyNeural - en-GB (Female)', rate: -3, pitch: -1, gender: 'female', locale: 'en-GB' },
+    { id: 'en-gb-thomas',      label: 'Arthur — British classical theater reader',            group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-ThomasNeural - en-GB (Male)', rate: -3, pitch: -2, gender: 'male', locale: 'en-GB' },
+
+    // 🇺🇸 English · American Narrators
+    { id: 'en-us-storyteller', label: 'Fable — American master storyteller (expressive)',     group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-ChristopherNeural - en-US (Male)', rate: -4, pitch: -2, gender: 'male', locale: 'en-US' },
+    { id: 'en-us-aria',        label: 'Aria — American bright & engaging storyteller',        group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-AriaNeural - en-US (Female)', rate: -2, pitch: 1, gender: 'female', locale: 'en-US' },
+    { id: 'en-us-male',        label: 'Ethan — American casual & lively narrator',            group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-GuyNeural - en-US (Male)', rate: -2, pitch: 0, gender: 'male', locale: 'en-US' },
+    { id: 'en-us-female',      label: 'Nova — American warm & natural narrator',              group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-JennyNeural - en-US (Female)', rate: -2, pitch: 0, gender: 'female', locale: 'en-US' },
+    { id: 'en-us-eric',        label: 'Marcus — American deep resonance audiobook voice',    group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-EricNeural - en-US (Male)', rate: -3, pitch: -3, gender: 'male', locale: 'en-US' },
+    { id: 'en-us-ava',         label: 'Ava — American expressive novel reader',               group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-AvaNeural - en-US (Female)', rate: -2, pitch: 0, gender: 'female', locale: 'en-US' },
+    { id: 'en-neutral',        label: 'Alloy — balanced studio narrator',                     group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-AriaNeural - en-US (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'en-US' },
+
+    // 🇬🇪 ქართული (Georgian) Narrators
+    { id: 'ka-male',           label: 'გიორგი — ქართველი მთხრობელი (ღრმა და ბუნებრივი)',   group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: -3, pitch: -1, gender: 'male', locale: 'ka-GE' },
+    { id: 'ka-actor',          label: 'დავითი — დრამატული არტისტი (დინამიკური)',             group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'ka-GE' },
+    { id: 'ka-female',         label: 'ეკა — ქართველი მთხრობელი ქალი (მკაფიო და ცოცხალი)',    group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -2, pitch: 0, gender: 'female', locale: 'ka-GE' },
+    { id: 'ka-soft',           label: 'ნინო — ლირიკული & რბილი კითხვა',                      group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -5, pitch: -2, gender: 'female', locale: 'ka-GE' },
+
+    // 🌍 Multilingual
+    { id: 'multi-puck',        label: 'Puck — multilingual lively',                          group: '🌍 Multilingual',        lang: 'multi', edgeVoice: 'en-US-GuyNeural - en-US (Male)', rate: -2, pitch: 0, gender: 'male', locale: 'en-US' },
+    { id: 'multi-fenrir',      label: 'Fenrir — multilingual deep narrator',                  group: '🌍 Multilingual',        lang: 'multi', edgeVoice: 'en-US-ChristopherNeural - en-US (Male)', rate: -3, pitch: -2, gender: 'male', locale: 'en-US' },
 ];
 
 function engbotVoice(id) {
@@ -7131,8 +7307,8 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null) {
     if (!gatewayTTSAvailable) return null;
     const preset = overridePreset || gatewayPresetForLang(lang);
     const spoken = lang === 'ka'
-        ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), detectSentenceType(text))
-        : text;
+        ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), detectSentenceType(text, 'ka'))
+        : applyEnglishProsody(verbalizeEnglishTextForTTS(text), detectSentenceType(text, 'en'));
     if (!spoken || !spoken.trim()) return null;
 
     const key = preset + '|' + spoken;
@@ -7198,6 +7374,10 @@ function primeGatewayPrefetchWindow(fromIndex, lang) {
 }
 window.primeGatewayPrefetchWindow = primeGatewayPrefetchWindow;
 
+/**
+ * Plays a sentence using the Lovable AI Gateway (/api/tts). Falls back to the
+ * free Hugging Face edge-tts mirror if the gateway is unconfigured or errors.
+ */
 async function speakGatewayNeural(text, lang) {
     stopCurrentSpeechAudio(true); // keep the prefetch window warm
     const myToken = currentSpeechToken;
@@ -7223,8 +7403,19 @@ async function speakGatewayNeural(text, lang) {
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            currentSentenceIndex++;
-            speakCurrentSentence();
+            // Organic human breathing pause between sentences
+            let breathDelay = 220; // baseline human breath
+            const trimmed = String(text || '').trim();
+            if (/[?!]$/.test(trimmed)) {
+                breathDelay = 320; // reflective hesitation after question/exclamation
+            } else if (/(\.{3}|…)$/.test(trimmed)) {
+                breathDelay = 420; // contemplative storytelling pause
+            }
+            setTimeout(() => {
+                if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+                currentSentenceIndex++;
+                speakCurrentSentence();
+            }, breathDelay);
         };
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
@@ -7268,17 +7459,20 @@ async function fetchNeuralSpeechAudioUrl(text, voiceId, ratePct = 0, pitchHz = 0
     let effectiveRate = ratePct;
     let effectivePitch = pitchHz;
 
+    const sentenceType = detectSentenceType(text, lang);
+
     if (lang === 'ka') {
-        const sentenceType = detectSentenceType(text);
-        const typeRate = { question: 0, exclamation: 4, dialogue: -2, short: 3, statement: 0 }[sentenceType] ?? 0;
-        const typePitch = { question: 3, exclamation: 4, dialogue: -3, short: 1, statement: 0 }[sentenceType] ?? 0;
+        const typeRate = { question: 0, exclamation: 3, dialogue: -2, suspense: -4, short: 2, statement: 0 }[sentenceType] ?? 0;
+        const typePitch = { question: 3, exclamation: 3, dialogue: -2, suspense: -2, short: 1, statement: 0 }[sentenceType] ?? 0;
         effectiveRate = Math.max(-50, Math.min(50, ratePct + typeRate));
         effectivePitch = Math.max(-20, Math.min(20, pitchHz + typePitch));
         spoken = applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), sentenceType);
     } else {
-        spoken = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
-        effectiveRate = Math.max(-50, Math.min(50, ratePct));
-        effectivePitch = Math.max(-20, Math.min(20, pitchHz));
+        const typeRate = { question: 0, exclamation: 3, dialogue: -2, suspense: -5, short: 2, statement: 0 }[sentenceType] ?? 0;
+        const typePitch = { question: 3, exclamation: 3, dialogue: -2, suspense: -2, short: 0, statement: 0 }[sentenceType] ?? 0;
+        effectiveRate = Math.max(-50, Math.min(50, ratePct + typeRate));
+        effectivePitch = Math.max(-20, Math.min(20, pitchHz + typePitch));
+        spoken = applyEnglishProsody(verbalizeEnglishTextForTTS(text), sentenceType);
     }
 
     if (!spoken || !spoken.trim()) return null;
@@ -7389,8 +7583,19 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            currentSentenceIndex++;
-            speakCurrentSentence();
+            // Organic human breathing pause between sentences
+            let breathDelay = 220; // baseline human breath
+            const trimmed = String(text || '').trim();
+            if (/[?!]$/.test(trimmed)) {
+                breathDelay = 320; // reflective hesitation after question/exclamation
+            } else if (/(\.{3}|…)$/.test(trimmed)) {
+                breathDelay = 420; // contemplative storytelling pause
+            }
+            setTimeout(() => {
+                if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+                currentSentenceIndex++;
+                speakCurrentSentence();
+            }, breathDelay);
         };
 
         currentElevenAudio.onerror = () => {
