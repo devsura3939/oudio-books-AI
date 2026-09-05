@@ -512,7 +512,7 @@
     input.click();
   }
 
-  const collator = window.Intl ? new Intl.Collator(undefined, { numeric: true, sensitivity: "base" }) : null;
+  const collator = typeof Intl !== "undefined" ? new Intl.Collator(undefined, { numeric: true, sensitivity: "base" }) : null;
 
   function compareFiles(a, b) {
     const byName = collator ? collator.compare(a.name || "", b.name || "") : String(a.name).localeCompare(b.name);
@@ -1359,6 +1359,79 @@ ${text.slice(0, 10000)}`;
     return text;
   }
 
+  // ── Offline Linguistic Deduction & Morphological Reconstruction ───────────
+  // Runs 100% locally with zero network connection to repair printed Georgian OCR errors,
+  // reconstruct words torn apart by print spacing, fix printed font letter confusions,
+  // and harmonize cases and grammar using the offline rule engine.
+  function offlineLinguisticPass(text, lang) {
+    if (!text || typeof text !== "string") return text || "";
+    const isKa = lang === "kat" || lang === "ka" || (text.match(/[\u10A0-\u10FF]/g) || []).length > 8;
+    if (!isKa) return text;
+
+    let t = text;
+
+    // 1. Spaced-out word reconstruction (common printed OCR spaced headings and wide-spaced words)
+    // Matches letters of known frequent roots and words separated by spaces: e.g. "დ ა" -> "და", "პ ა ტ ა რ ა" -> "პატარა"
+    const spacedWords = [
+      "თავისუფლება", "ვარსკვლავი", "უფლისწული", "სიყვარული", "ჭეშმარიტი", "სიცოცხლე",
+      "ადამიანი", "მეგობარი", "სინათლე", "პატარა", "ძალიან", "ყველა", "მთვარე",
+      "ბავშვი", "სიტყვა", "თვალი", "წიგნი", "თავის", "როცა", "ხოლო", "მერე",
+      "თქვა", "კაცი", "ქალი", "გული", "ღამე", "დრო", "გზა", "დღე", "მზე",
+      "რომ", "შენ", "მის", "მას", "იყო", "და", "არ", "კი", "რა", "ეს", "ის", "თუ", "მე"
+    ];
+    for (const w of spacedWords) {
+      const spaced = w.split("").join("\\s+");
+      t = t.replace(new RegExp(`(?<![\\u10A0-\\u10FF])${spaced}(?![ა-ჰ])`, "g"), w);
+    }
+
+    // 2. Printed font OCR letter confusions (ლ/ღ, ვ/პ/კ, შ/წ/ჭ, თ/ძ/ხ, ც/ტ/ე, დ/ო/ლ, პ/მ, რ/ყ)
+    const deepKaOcrFixes = [
+      [/(?<![\u10A0-\u10FF])უფლისწუღ([ა-ჰ]*)/g, 'უფლისწულ$1'],
+      [/(?<![\u10A0-\u10FF])სინათღ([ა-ჰ]*)/g, 'სინათლ$1'],
+      [/(?<![\u10A0-\u10FF])სიყვარუღ([ა-ჰ]*)/g, 'სიყვარულ$1'],
+      [/(?<![\u10A0-\u10FF])მახრჩობეღ([ა-ჰ]*)/g, 'მახრჩობელ$1'],
+      [/(?<![\u10A0-\u10FF])რომეღ([ა-ჰ]*)/g, 'რომელ$1'],
+      [/(?<![\u10A0-\u10FF])ყვეღაფ([ა-ჰ]*)/g, 'ყველაფ$1'],
+      [/(?<![\u10A0-\u10FF])ყვეღ([ა-ჰ]+)/g, 'ყველ$1'],
+      [/(?<![\u10A0-\u10FF])ძაღიან(?![ა-ჰ])/g, 'ძალიან'],
+      [/(?<![\u10A0-\u10FF])თალიან(?![ა-ჰ])/g, 'ძალიან'],
+      [/(?<![\u10A0-\u10FF])შეუძღ([ა-ჰ]*)/g, 'შეუძლ$1'],
+      [/(?<![\u10A0-\u10FF])თავისუფღ([ა-ჰ]*)/g, 'თავისუფლ$1'],
+      [/(?<![\u10A0-\u10FF])მშვენიეღ([ა-ჰ]*)/g, 'მშვენიერ$1'],
+      [/(?<![\u10A0-\u10FF])სამყაყო(?![ა-ჰ])/g, 'სამყარო'],
+      [/(?<![\u10A0-\u10FF])წეშმარიტ([ა-ჰ]*)/g, 'ჭეშმარიტ$1'],
+      [/(?<![\u10A0-\u10FF])შეშმარიტ([ა-ჰ]*)/g, 'ჭეშმარიტ$1'],
+      [/(?<![\u10A0-\u10FF])ადამიანპ([ა-ჰ]*)/g, 'ადამიანმ$1'],
+      [/(?<![\u10A0-\u10FF])კატარ([ა-ჰ]*)/g, 'პატარ$1'],
+      [/(?<![\u10A0-\u10FF])ვატარ([ა-ჰ]*)/g, 'პატარ$1'],
+      [/(?<![\u10A0-\u10FF])გამარჯოპ([ა-ჰ]*)/g, 'გამარჯობ$1'],
+      [/(?<![\u10A0-\u10FF])ხემი(?=\s+[ა-ჰ]+)/g, 'ჩემი'],
+      [/(?<![\u10A0-\u10FF])თალთი(?![ა-ჰ])/g, 'ხალხი'],
+      [/(?<![\u10A0-\u10FF])ნაღდი(?![ა-ჰ])/g, 'ნამდვილი'],
+    ];
+    for (const [re, repl] of deepKaOcrFixes) {
+      t = t.replace(re, repl);
+    }
+
+    // 3. Dialogue dashes and authentic quotes
+    t = t.replace(/(^|[\r\n]+)\s*[-–]\s+([\u10A0-\u10FF])/g, "$1— $2");
+    t = t.replace(/(^|[\s(\[])["“]([^\s"”])/g, "$1„$2");
+    t = t.replace(/([^\s"„])["”]([\s)\].,!?;:]|$)/g, "$1“$2");
+
+    // 4. Hook into Georgian linguistic engine if available globally
+    if (typeof window !== "undefined") {
+      if (typeof window.applyKaRuleEngine === "function") {
+        t = window.applyKaRuleEngine(t);
+      }
+      if (typeof window.refineGeorgianGrammar === "function") {
+        t = window.refineGeorgianGrammar(t);
+      }
+    }
+
+    t = t.replace(/[ \t]{2,}/g, " ").trim();
+    return t;
+  }
+
   async function scanOnePage(page) {
     page.status = "working";
     try {
@@ -1405,6 +1478,7 @@ ${text.slice(0, 10000)}`;
 
       // Pass 3: Contextual Deduction & Linguistic Self-Correction ("Intelligent Guessing")
       // If quality is not near-perfect (< 0.96) or has minor OCR artifacts, run contextual proofreading
+      let contextualApplied = false;
       if (repaired && best.score < 0.96 && (localStorage.getItem("geminiApiKey") || state.tier0 !== false)) {
         try {
           const guessed = await contextualLinguisticPass(repaired, lang);
@@ -1412,9 +1486,18 @@ ${text.slice(0, 10000)}`;
             repaired = guessed.trim();
             best.score = Math.max(best.score, scoreText(repaired, lang));
             best.engine += "+contextual-deduction";
+            contextualApplied = true;
           }
         } catch (e) {
           console.warn("[scanner] contextual deduction pass skipped:", e);
+        }
+      }
+
+      // Pass 4: Offline Linguistic Deduction & Morphological Pass
+      if (repaired && (lang === "kat" || lang === "ka" || (repaired.match(/[\u10A0-\u10FF]/g) || []).length > 8)) {
+        repaired = offlineLinguisticPass(repaired, lang);
+        if (!contextualApplied && best.engine.indexOf("offline") !== -1) {
+          best.engine += "+offline-deduction";
         }
       }
 
@@ -1870,6 +1953,7 @@ ${text.slice(0, 10000)}`;
     reorderByPageNumbers,
     _autoOrder: autoOrderPages,
     _repairText: repairText,
+    _offlineLinguisticPass: offlineLinguisticPass,
     _cleanPageText: cleanPageText,
     _state: state,
     open,

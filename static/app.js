@@ -5853,7 +5853,8 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
    - Reflexives: Use reflexive თავისი (subject's own) vs 3rd person მისი (another person's) strictly.
    - Postpositions: Suffix postpositions directly to nominal roots without spaces (-ში, -ზე, -თან, -თვის, -გან, -დან, -კენ, -მდე).
    - Proper Noun Transliteration: Foreign names ending in consonants require nominative -ი suffix. Phonetically adapt digraphs (kn- -> ნ, ps- -> ფს, th -> თ, ph -> ფ, ch -> ჩ, sh -> შ, -tion -> შენ/ცია). Classical/historical names must use standard Georgian literary forms (Marcus Aurelius -> მარკუს ავრელიუსი, Socrates -> სოკრატე, Shakespeare -> შექსპირი).
-   - Impersonal verbs & numerals: Weather/states are impersonal (წვიმს, ცივა); numerals are vigesimal, and nouns after numerals 2+ remain strictly SINGULAR (ოცი კაცი, ხუთი წიგნი).` : ''}
+   - Impersonal verbs & numerals: Weather/states are impersonal (წვიმს, ცივა); numerals are vigesimal, and nouns after numerals 2+ remain strictly SINGULAR (ოცი კაცი, ხუთი წიგნი).
+   - Georgian Pro Literary Standards: Ban bureaucratic Soviet calques (კანცელარიზმები: NEVER write „განხორციელება“, „ადგილი ჰქონდა“, „წარმოადგენს“, „მოცემულ მომენტში“). Use synthetic verbal strength (გადაწყვიტა, not *მიიღო გადაწყვეტილება; გაიღიმა, not *გააკეთა ღიმილი; ყურადღება მიაქცია, not *ყურადღება გადაიხადა; ისაუბრა, not *ჰქონდა საუბარი).` : ''}
 5. Maintain all paragraph breaks (separate paragraphs with blank lines \\n\\n) matching the source structure.
 6. Before answering, silently verify every sentence against the grammar rules (case alignment, verb screeves, agreement).
 
@@ -5891,7 +5892,7 @@ Check, in order of severity:
 1. Accuracy: omissions, additions, reversed meaning, lost negation, changed names/numbers/units.
 2. Grammar & morphology: ${langName} case endings, verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment: Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Negation: არ (declarative), ვერ (failed ability), ნუ (prohibitive — never არ for commands), one negator per clause. Experiencer verbs (სჭირდება, უყვარს, ეშინია, ახსოვს, სტკივა, შია, ცივა, უნდა) MUST have Dative experiencer, never Nominative (*ის საჭიროებს / *ის არის მშიერი / *ის გრძნობს ტკივილს).' : ''}
 3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart). Foreign names: missing nominative -ი on consonant-ending names (e.g. *პიტერ instead of პიტერი) or unadapted Latin clusters.' : ''}
-4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb), robotic stacked "რომელიც" clauses (convert to pre-nominal participles), English passive calques (convert to active aorist).' : ''}
+4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: bureaucratic Soviet calques (განხორციელება, ადგილი ჰქონდა, წარმოადგენს, მოცემულ მომენტში), hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb), robotic stacked "რომელიც" clauses (convert to pre-nominal participles), English passive calques (convert to active aorist).' : ''}
 5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before . , ; : punctuation, no foreign sentence marks (।, ฯ, ۔), exactly one terminal mark per sentence, no doubled punctuation.' : ''}
 
 Be demanding: an accurate but stilted translation still gets flagged under style. If the translation is genuinely publication-ready, return an empty error list. Never invent problems.
@@ -6800,6 +6801,19 @@ async function translateChunkLocal(clean, targetLang) {
             recordEngineUse('raw');
             return trans;
         }
+    // Deterministic Offline Engine Fallback (Zero LLM, 100% Offline)
+    if (targetLang === 'ka' && (typeof translateOfflineEnToKa === 'function' || typeof window !== 'undefined' && typeof window.translateOfflineEnToKa === 'function')) {
+        try {
+            const fn = typeof translateOfflineEnToKa === 'function' ? translateOfflineEnToKa : window.translateOfflineEnToKa;
+            const offlineTrans = applyKaRuleEngine(fn(clean));
+            const assess = assessTranslation(clean, offlineTrans, targetLang);
+            if (assess.ok) {
+                recordEngineUse('rules');
+                return offlineTrans;
+            }
+        } catch (e) {
+            console.warn('Deterministic offline translation failed:', e);
+        }
     }
 
     recordEngineUse('failed');
@@ -6840,7 +6854,22 @@ async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', 
     }
 
     // Fallback: rule engine
-    return await translateChunkLocal(clean, targetLang);
+    const local = await translateChunkLocal(clean, targetLang);
+    if (local) return local;
+
+    // Direct offline rule engine fallback if translateChunkLocal failed
+    if (targetLang === 'ka' && (typeof translateOfflineEnToKa === 'function' || typeof window !== 'undefined' && typeof window.translateOfflineEnToKa === 'function')) {
+        try {
+            const fn = typeof translateOfflineEnToKa === 'function' ? translateOfflineEnToKa : window.translateOfflineEnToKa;
+            const off = applyKaRuleEngine(fn(clean));
+            const assess = assessTranslation(clean, off, targetLang);
+            if (assess.ok) {
+                recordEngineUse('rules');
+                return off;
+            }
+        } catch (e) { /* non-fatal */ }
+    }
+    return null;
 }
 
 async function translateChunkContextually(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
@@ -6899,6 +6928,16 @@ async function translateSingleSentence(text, targetLang = 'ka') {
         }
     } catch (e) {
         console.warn('Google GTX fallback failed:', e);
+    }
+
+    // Offline in-house fallback: if network is down or endpoints fail, use translateOfflineEnToKa
+    if (targetLang === 'ka' && (typeof translateOfflineEnToKa === 'function' || typeof window !== 'undefined' && typeof window.translateOfflineEnToKa === 'function')) {
+        try {
+            const fn = typeof translateOfflineEnToKa === 'function' ? translateOfflineEnToKa : window.translateOfflineEnToKa;
+            const off = applyKaRuleEngine(fn(clean));
+            const check = assessTranslation(clean, off, targetLang);
+            if (check.ok) return off;
+        } catch (e) { /* ignore */ }
     }
 
     // NEVER return raw source text as translation! Return null on failure.

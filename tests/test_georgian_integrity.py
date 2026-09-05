@@ -376,6 +376,43 @@ for path_name, path in [("static/scanner.js", STATIC_SCANNER), ("studio/static/s
 
 print("  [PASS] Contrastive grammar, proper noun transliteration, and scanner vision OCR fixes verified in all mirrors")
 
+# ----------------------------------------------------------------------------
+# 20. Offline Literary Translation Engine, Real-Data Corpus Grounding & Scanner Deduction
+# ----------------------------------------------------------------------------
+for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), ("studio/static/georgian-linguistics.js", STUDIO_LING)]:
+    with open(path, "r", encoding="utf-8") as f:
+        ling_text = f.read()
+    assert "KA_REAL_DATA_CORPUS_EXEMPLARS" in ling_text, f"FAIL: KA_REAL_DATA_CORPUS_EXEMPLARS missing from {path_name}"
+    assert "KA-120" in ling_text, f"FAIL: KA-120 tag missing from {path_name}"
+    assert "KA_GEORGIAN_PRO_STYLE_GUIDE" in ling_text, f"FAIL: KA_GEORGIAN_PRO_STYLE_GUIDE missing from {path_name}"
+    assert "KA-121" in ling_text, f"FAIL: KA-121 tag missing from {path_name}"
+    assert "translateOfflineEnToKa" in ling_text, f"FAIL: translateOfflineEnToKa missing from {path_name}"
+    assert "1.48.0" in ling_text, f"FAIL: Georgian knowledge version 1.48.0 missing from {path_name}"
+
+for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
+    with open(path, "r", encoding="utf-8") as f:
+        app_text = f.read()
+    assert "translateOfflineEnToKa" in app_text, f"FAIL: translateOfflineEnToKa missing from {path_name}"
+    assert "Georgian Pro Literary Standards" in app_text, f"FAIL: Georgian Pro style rules missing from draft translation prompt in {path_name}"
+    assert "bureaucratic Soviet calques" in app_text, f"FAIL: Soviet calque ban missing from critique prompt in {path_name}"
+
+for path_name, path in [("static/scanner.js", STATIC_SCANNER), ("studio/static/scanner.js", STUDIO_SCANNER)]:
+    with open(path, "r", encoding="utf-8") as f:
+        scanner_text = f.read()
+    assert "offlineLinguisticPass" in scanner_text, f"FAIL: offlineLinguisticPass function missing from {path_name}"
+    assert "_offlineLinguisticPass" in scanner_text, f"FAIL: _offlineLinguisticPass export missing from {path_name}"
+    assert "+offline-deduction" in scanner_text, f"FAIL: +offline-deduction engine annotation missing from {path_name}"
+
+# Backend translation engine offline fallback verification
+TRANSLATION_ENGINE = os.path.join(REPO_DIR, "app", "translation_engine.py")
+with open(TRANSLATION_ENGINE, "r", encoding="utf-8") as f:
+    te_text = f.read()
+assert "translate_offline_en_to_ka" in te_text, "FAIL: translate_offline_en_to_ka missing from translation_engine.py"
+assert "offline_rule_engine" in te_text, "FAIL: offline_rule_engine engine identifier missing from translation_engine.py"
+assert "გადაწყვიტა" in te_text, "FAIL: anti-calque replacement missing from translation_engine.py"
+
+print("  [PASS] Offline literary translation engine, real-data corpus grounding, and scanner deduction verified")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
 
 
