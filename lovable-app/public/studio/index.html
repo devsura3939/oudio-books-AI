@@ -288,13 +288,27 @@
             font-family: 'Cinzel', 'EB Garamond', serif;
         }
 
-        /* Page Flip Animation */
+        /* Kindle-Grade Page Flip & Slide Animations */
         @keyframes pageFadeSlide {
-            0% { opacity: 0.3; transform: scale(0.99) translateY(4px); }
-            100% { opacity: 1; transform: scale(1) translateY(0); }
+            0% { opacity: 0.4; transform: translate3d(14px, 0, 0); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0); }
         }
-        .page-flip-anim {
-            animation: pageFadeSlide 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        @keyframes kindleSlideNext {
+            0% { opacity: 0.35; transform: translate3d(18px, 0, 0); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        @keyframes kindleSlidePrev {
+            0% { opacity: 0.35; transform: translate3d(-18px, 0, 0); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        .page-flip-anim,
+        .page-turn-next {
+            animation: kindleSlideNext 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: transform, opacity;
+        }
+        .page-turn-prev {
+            animation: kindleSlidePrev 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: transform, opacity;
         }
 
         /* ════════ 6 Authentic Moon+ Reader Color Themes ════════ */
@@ -530,6 +544,14 @@
             hyphens: auto;
             word-break: break-word;
             text-wrap: pretty;
+        }
+
+        .book-page-text-flow {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
         }
 
         /* Scrollbar */

@@ -4397,6 +4397,57 @@ function toggleReaderLanguage() {
     }
 }
 
+let currentTurnDir = 'next';
+
+// ── Reader Typography & Sentence Preparation ──────────────────────────────
+function cleanReaderTypography(text) {
+    if (!text) return '';
+    let out = String(text);
+    // 1. Strip bracketed footnote reference numbers: [4], [5], [12], etc.
+    out = out.replace(/\[\d+\]/g, '');
+    // 2. Fix spaces before standard punctuation: "მიიღო ." -> "მიიღო."
+    out = out.replace(/\s+([.,;:!?])/g, '$1');
+    // 3. Fix dialogue colon dash: " : - " -> ": — "
+    out = out.replace(/:\s*-\s*/g, ': — ');
+    // 4. Normalize em-dashes and surrounding spacing
+    out = out.replace(/\s*[—–]\s*/g, ' — ');
+    // 5. Normalize multiple spaces / tabs within lines
+    out = out.replace(/[ \t\f]+/g, ' ');
+    // 6. Rejoin detached drop-cap / initial letter from OCR artifacts: "ჰ ეკატომბა" -> "ჰეკატომბა"
+    out = out.replace(/^([ა-ჰa-zA-Z])\s+([ა-ჰa-zA-Z]{2,})/g, '$1$2');
+    return out.trim();
+}
+
+function prepareChapterSentences(rawText) {
+    const cleaned = cleanReaderTypography(rawText);
+    const rawParas = cleaned.split(/\n\s*\n+/).map(p => p.trim()).filter(Boolean);
+    const allSentences = [];
+
+    if (rawParas.length <= 1) {
+        // Flat text without clear paragraph breaks
+        const rawSents = splitIntoNaturalSentences(cleaned).map(x => x.trim()).filter(Boolean);
+        rawSents.forEach((sText, idx) => {
+            // Group sentences every ~5 sentences into natural paragraphs if completely unformatted
+            const isParaBreak = (idx > 0 && idx % 5 === 0) || (idx === rawSents.length - 1);
+            allSentences.push({ text: sText, globalIndex: idx, isParaBreak });
+        });
+    } else {
+        let gIdx = 0;
+        rawParas.forEach(para => {
+            const pSents = splitIntoNaturalSentences(para).map(x => x.trim()).filter(Boolean);
+            pSents.forEach((sText, sIdx) => {
+                const isParaBreak = (sIdx === pSents.length - 1);
+                allSentences.push({ text: sText, globalIndex: gIdx++, isParaBreak });
+            });
+        });
+    }
+
+    if (allSentences.length === 0 && cleaned.length > 0) {
+        allSentences.push({ text: cleaned, globalIndex: 0, isParaBreak: true });
+    }
+    return allSentences;
+}
+
 // ── Dynamic Book Pagination Engine ─────────────────────────────────────────
 function paginateChapter() {
     if (!readerBook) return;
@@ -4414,32 +4465,30 @@ function paginateChapter() {
         rawText = "No chapter text available.";
     }
 
-    const sentences = splitIntoNaturalSentences(rawText).map(x => x.trim()).filter(Boolean);
+    const sentences = prepareChapterSentences(rawText);
     readerPages = [];
     readerSentenceToPageMap = {};
 
-    // Measured pagination: we lay the sentences out in an invisible clone of the
-    // real page box and cut a page exactly where the text stops fitting. The old
-    // words-per-page estimate is what made text overflow the card (or leave half
-    // the page empty) on different screens and font sizes.
+    // Measured pagination: we lay sentences out in a clean offscreen clone
+    // matching the real page spread dimensions and font geometry.
     const measured = measurePages(sentences);
     if (measured) {
         readerPages = measured;
     } else {
         const vw = window.innerWidth;
         let baseWords;
-        if (vw < 480)       baseWords = 55;
-        else if (vw < 640)  baseWords = 75;
-        else if (vw < 900)  baseWords = 110;
-        else if (vw < 1300) baseWords = 135;
-        else                baseWords = 150;
+        if (vw < 480)       baseWords = 140;
+        else if (vw < 640)  baseWords = 180;
+        else if (vw < 900)  baseWords = 220;
+        else if (vw < 1300) baseWords = 280;
+        else                baseWords = 340;
         const fontRatio = 18 / readerFontSize;
-        const WORDS_PER_PAGE = Math.max(25, Math.floor(baseWords * fontRatio * fontRatio));
+        const WORDS_PER_PAGE = Math.max(70, Math.floor(baseWords * fontRatio * fontRatio));
         let cur = [];
         let curWords = 0;
-        sentences.forEach((clean, globalIdx) => {
-            cur.push({ text: clean, globalIndex: globalIdx });
-            curWords += clean.split(/\s+/).length;
+        sentences.forEach((item) => {
+            cur.push(item);
+            curWords += item.text.split(/\s+/).length;
             if (curWords >= WORDS_PER_PAGE) {
                 readerPages.push(cur);
                 cur = [];
@@ -4454,7 +4503,7 @@ function paginateChapter() {
     });
 
     if (readerPages.length === 0) {
-        readerPages.push([{ text: rawText, globalIndex: 0 }]);
+        readerPages.push([{ text: rawText, globalIndex: 0, isParaBreak: true }]);
         readerSentenceToPageMap[0] = 0;
     }
 
@@ -4476,79 +4525,82 @@ function measurePages(sentences) {
 
         const isDual = readerMode === 'dual' && window.innerWidth >= 900;
         const style = getComputedStyle(container);
-        const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-        const padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+        const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
         let boxW = (container.clientWidth - padX);
         if (isDual) boxW = (boxW - 20) / 2;
         boxW = Math.min(boxW, isDual ? 860 : 1720);
-        // Page-card padding matching .book-page-card CSS breakpoints.
+
         const vw = window.innerWidth;
         const cardPadX = vw <= 400 ? 20 : vw <= 640 ? 28 : vw <= 900 ? 40 : vw <= 1200 ? 56 : 72;
         const cardPadY = vw <= 400 ? 24 : vw <= 640 ? 28 : vw <= 900 ? 36 : vw <= 1200 ? 44 : 52;
         const innerW = Math.max(160, boxW - cardPadX);
-        const clientH = container.clientHeight || (window.innerHeight - 124);
-        const innerH = Math.max(180, clientH - padY - cardPadY - 42 /* page footer */ - 12 /* safety */);
-        // Page 1 also carries the chapter header, so it fits less text.
-        const headerReserve = vw <= 640 ? 92 : 116;
+
+        const spreadH = spread.clientHeight || (window.innerHeight - (vw <= 640 ? 110 : vw <= 900 ? 116 : 124));
+        const footerReserve = 34;
+        const headerReserve = vw <= 640 ? 66 : 74;
+        const safety = 8;
+
+        const page1MaxH = Math.max(220, spreadH - cardPadY - footerReserve - headerReserve - safety);
+        const pageOtherMaxH = Math.max(260, spreadH - cardPadY - footerReserve - safety);
 
         const probe = document.createElement('div');
-        probe.className = readerFontFamily;
-        probe.style.cssText = `position:absolute;left:-99999px;top:0;visibility:hidden;width:${innerW}px;font-size:${readerFontSize}px;line-height:1.85;`;
+        probe.className = `${readerFontFamily} space-y-3.5`;
+        probe.style.cssText = `position:absolute;left:-99999px;top:0;visibility:hidden;width:${innerW}px;font-size:${readerFontSize}px;line-height:1.85;box-sizing:border-box;`;
         document.body.appendChild(probe);
 
-        // Reserve the chapter-header space while filling the first page.
-        const spacer = document.createElement('div');
-        spacer.style.height = headerReserve + 'px';
-        probe.appendChild(spacer);
-
         const pages = [];
-        let current = [];
-        let buffer = [];
-        const flushParagraph = () => {
-            if (!buffer.length) return;
-            const p = document.createElement('p');
-            p.className = 'book-prose indent-6';
-            p.textContent = buffer.join(' ');
-            probe.appendChild(p);
-            buffer = [];
-        };
+        let curPageSentences = [];
+        let curP = null;
 
         for (let i = 0; i < sentences.length; i++) {
-            const text = sentences[i];
-            buffer.push(text);
-            current.push({ text, globalIndex: i });
-            if (buffer.length >= 3) flushParagraph();
-            // Measure with the pending buffer included.
-            const pending = buffer.length ? buffer.join(' ') : '';
-            let extra = null;
-            if (pending) {
-                extra = document.createElement('p');
-                extra.className = 'book-prose indent-6';
-                extra.textContent = pending;
-                probe.appendChild(extra);
-            }
-            const overflows = probe.scrollHeight > innerH;
-            if (extra) probe.removeChild(extra);
+            const item = sentences[i];
+            const isFirstPage = (pages.length === 0);
+            const targetMaxH = isFirstPage ? page1MaxH : pageOtherMaxH;
 
-            if (overflows && current.length > 1) {
-                const last = current.pop();
-                pages.push(current);
-                current = [last];
-                buffer = [last.text];
-                probe.innerHTML = ''; // header space only applies to page 1
-                // Re-prime the probe with carryover sentence so next page accounts for its height!
-                const p = document.createElement('p');
-                p.className = 'book-prose indent-6';
-                p.textContent = last.text;
-                probe.appendChild(p);
-            } else if (overflows) {
-                pages.push(current);
-                current = [];
-                buffer = [];
+            // Ensure paragraph container exists
+            if (!curP) {
+                curP = document.createElement('p');
+                const isVeryFirstPara = isFirstPage && curPageSentences.length === 0;
+                curP.className = `book-prose indent-6 ${isVeryFirstPara ? 'book-drop-cap' : ''}`;
+                probe.appendChild(curP);
+            }
+
+            const testSpan = document.createElement('span');
+            testSpan.textContent = (curP.childNodes.length > 0 ? ' ' : '') + item.text;
+            curP.appendChild(testSpan);
+
+            const overflows = probe.scrollHeight > targetMaxH;
+
+            if (overflows && curPageSentences.length > 0) {
+                // Pop the sentence that caused the overflow
+                curP.removeChild(testSpan);
+
+                // Commit current page
+                pages.push(curPageSentences);
+                curPageSentences = [];
                 probe.innerHTML = '';
+                curP = null;
+
+                // Start new page with this sentence
+                curP = document.createElement('p');
+                curP.className = 'book-prose indent-6';
+                curP.textContent = item.text;
+                probe.appendChild(curP);
+                curPageSentences.push(item);
+            } else {
+                curPageSentences.push(item);
+            }
+
+            // If this sentence marks the end of a paragraph, next sentence starts in a fresh <p>
+            if (item.isParaBreak) {
+                curP = null;
             }
         }
-        if (current.length) pages.push(current);
+
+        if (curPageSentences.length > 0) {
+            pages.push(curPageSentences);
+        }
+
         probe.remove();
         return pages.length ? pages : null;
     } catch (e) {
@@ -4660,9 +4712,9 @@ function renderCurrentPage() {
     DOM.readerChapterTitle.textContent = chap.title;
     const totalPages = readerPages.length;
 
-    DOM.readerPageSpread.classList.remove('page-flip-anim');
+    DOM.readerPageSpread.classList.remove('page-flip-anim', 'page-turn-next', 'page-turn-prev');
     void DOM.readerPageSpread.offsetWidth;
-    DOM.readerPageSpread.classList.add('page-flip-anim');
+    DOM.readerPageSpread.classList.add(currentTurnDir === 'prev' ? 'page-turn-prev' : 'page-turn-next');
 
     if (DOM.readerScrollContainer) {
         DOM.readerScrollContainer.scrollTop = 0;
@@ -4696,9 +4748,9 @@ function renderCurrentPage() {
         readerPages.forEach(p => {
             p.forEach(item => {
                 pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${item.text}</span> `);
-                if (pBuffer.length >= 3) {
+                if (item.isParaBreak) {
                     const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
-                    html += `<p class="text-justify indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
+                    html += `<p class="book-prose indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
                     pBuffer = [];
                     isFirstParagraph = false;
                 }
@@ -4706,7 +4758,7 @@ function renderCurrentPage() {
         });
 
         if (pBuffer.length > 0) {
-            html += `<p class="text-justify indent-6">${pBuffer.join('')}</p>`;
+            html += `<p class="book-prose indent-6">${pBuffer.join('')}</p>`;
         }
 
         html += `
@@ -4778,12 +4830,12 @@ function renderCurrentPage() {
 function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPage, spineClass) {
     let cardHtml = `
         <div class="book-page-card ${spineClass}">
-            <div class="flex-grow">
+            <div class="book-page-text-flow">
     `;
 
     if (isFirstPage) {
         cardHtml += `
-            <header class="mb-5 text-center border-b border-black/10 dark:border-white/10 pb-3 select-none">
+            <header class="mb-4 text-center border-b border-black/10 dark:border-white/10 pb-2.5 select-none">
                 <span class="text-[10px] sm:text-[11px] font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${readerBook.title} ✦</span>
                 <h2 class="text-lg sm:text-2xl font-extrabold mt-1 mb-1 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${escapeHtml(chap.title)}</h2>
                 <div class="mt-1 text-xs opacity-60">── ❖ ──</div>
@@ -4791,7 +4843,7 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
         `;
     }
 
-    cardHtml += `<div class="space-y-4 ${readerFontFamily}" style="font-size: ${readerFontSize}px; line-height: 1.85;">`;
+    cardHtml += `<div class="space-y-3.5 ${readerFontFamily}" style="font-size: ${readerFontSize}px; line-height: 1.85;">`;
 
     let pBuffer = [];
     let isFirstParagraph = isFirstPage;
@@ -4799,7 +4851,7 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
     sentences.forEach((item, idx) => {
         pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${item.text}</span> `);
 
-        if (pBuffer.length >= 3 || idx === sentences.length - 1) {
+        if (item.isParaBreak || idx === sentences.length - 1) {
             const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
             cardHtml += `<p class="book-prose indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
             pBuffer = [];
@@ -4807,10 +4859,14 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
         }
     });
 
+    if (pBuffer.length > 0) {
+        cardHtml += `<p class="book-prose indent-6">${pBuffer.join('')}</p>`;
+    }
+
     cardHtml += `</div></div>`;
 
     cardHtml += `
-        <div class="mt-6 pt-3 border-t border-black/10 dark:border-white/10 flex justify-between items-center text-[10px] sm:text-[11px] opacity-70 select-none font-mono">
+        <div class="mt-4 pt-2.5 border-t border-black/10 dark:border-white/10 flex justify-between items-center text-[10px] sm:text-[11px] opacity-70 select-none font-mono">
             <span>Page ${pageNumber} of ${totalPages}</span>
             <span class="truncate max-w-[140px]">${escapeHtml(chap.title)}</span>
         </div>
@@ -4843,6 +4899,7 @@ window.addEventListener('resize', () => {
 // ── Page Steppers ──────────────────────────────────────────────────────────
 function readerNextPage() {
     if (!readerBook) return;
+    currentTurnDir = 'next';
     flagUserManualNav();
     const totalPages = readerPages.length;
 
@@ -4886,6 +4943,7 @@ function readerNextPage() {
 
 function readerPrevPage() {
     if (!readerBook) return;
+    currentTurnDir = 'prev';
     flagUserManualNav();
 
     if (readerMode === 'scroll') {
@@ -4967,6 +5025,7 @@ function showReaderToast(msg) {
 
 function readerPrevChapter() {
     isUserManuallyNavigating = false;
+    currentTurnDir = 'prev';
     if (!readerBook) {
         if (currentBook) readerBook = currentBook;
         else return;
@@ -4995,6 +5054,7 @@ function readerPrevChapter() {
 
 function readerNextChapter() {
     isUserManuallyNavigating = false;
+    currentTurnDir = 'next';
     if (!readerBook) {
         if (currentBook) readerBook = currentBook;
         else return;
@@ -5049,11 +5109,13 @@ function highlightReaderSentence(sentenceIdx, forceSync = false) {
             const leftPage = readerCurrentPage % 2 === 0 ? readerCurrentPage - 1 : readerCurrentPage;
             const rightPage = leftPage + 1;
             if (targetPage !== leftPage && targetPage !== rightPage) {
+                currentTurnDir = targetPage > readerCurrentPage ? 'next' : 'prev';
                 readerCurrentPage = targetPage;
                 renderCurrentPage();
             }
         } else {
             if (targetPage !== readerCurrentPage) {
+                currentTurnDir = targetPage > readerCurrentPage ? 'next' : 'prev';
                 readerCurrentPage = targetPage;
                 renderCurrentPage();
             }
@@ -5176,11 +5238,13 @@ function setupKeyboardAndTouchControls() {
                 break;
             case 'Home':
                 e.preventDefault();
+                currentTurnDir = 'prev';
                 readerCurrentPage = 1;
                 renderCurrentPage();
                 break;
             case 'End':
                 e.preventDefault();
+                currentTurnDir = 'next';
                 readerCurrentPage = readerPages.length;
                 renderCurrentPage();
                 break;
@@ -7770,7 +7834,8 @@ function playChapterAudio(chapId, startSentenceIdx = 0, forceReload = false) {
     let textToRead = (currentLang === 'ka' && chap.text_ka) ? chap.text_ka : chap.text;
     if (!textToRead && chap.text) textToRead = chap.text;
 
-    sentenceQueue = splitIntoNaturalSentences(textToRead).map(x => x.trim()).filter(Boolean);
+    const preparedAudioSentences = prepareChapterSentences(textToRead);
+    sentenceQueue = preparedAudioSentences.map(x => x.text);
     currentSentenceIndex = Math.min(startSentenceIdx, Math.max(0, sentenceQueue.length - 1));
     secondsElapsed = 0;
     isPlaying = true;
@@ -8028,7 +8093,7 @@ function togglePlaybackLanguage() {
         const chap = currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId));
         if (chap) {
             const rawText = (currentLang === 'ka' && chap.text_ka) ? chap.text_ka : (chap.text || '');
-            const newSentences = splitIntoNaturalSentences(rawText).map(x => x.trim()).filter(Boolean);
+            const newSentences = prepareChapterSentences(rawText);
             const targetIdx = Math.min(newSentences.length - 1, Math.max(0, Math.round(currentProg * Math.max(0, newSentences.length - 1))));
             stopSpeech();
             playChapterAudio(currentPlayingChapterId, targetIdx, true);
