@@ -481,3 +481,52 @@ select:focus-visible,
     }
 }
 
+/* ── Universal Select Dropdown Styling (Dark Theme & High Contrast) ── */
+select {
+    color-scheme: dark !important;
+}
+
+select option,
+select optgroup {
+    background-color: #121620 !important;
+    color: #f8fafc !important;
+    font-size: 13.5px !important;
+    padding: 8px 12px !important;
+}
+
+select optgroup {
+    font-weight: 700 !important;
+    color: #38bdf8 !important;
+    background-color: #090d15 !important;
+    letter-spacing: 0.025em;
+}
+
+#voiceModalSelect,
+#elevenLabsVoiceSelect,
+.glass-select {
+    color-scheme: dark !important;
+    background-color: #121620 !important;
+    color: #ffffff !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 12px !important;
+}
+
+#voiceModalSelect:focus,
+#elevenLabsVoiceSelect:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
+}
+
+#voiceModalSelect option,
+#elevenLabsVoiceSelect option {
+    background-color: #121620 !important;
+    color: #ffffff !important;
+}
+
+#voiceModalSelect optgroup,
+#elevenLabsVoiceSelect optgroup {
+    background-color: #090d15 !important;
+    color: #38bdf8 !important;
+}
+
+

@@ -2426,6 +2426,9 @@ function openModal(modalId) {
             if (typeof setAuthError === 'function') setAuthError('');
             if (typeof setAuthSuccess === 'function') setAuthSuccess('');
         }
+        if (modalId === 'voiceModal') {
+            populateVoiceList();
+        }
         if (modalId === 'aiSettingsModal') {
             syncSettingsToDOMInputs();
             renderAiKeyStatusPanel();
@@ -3817,17 +3820,17 @@ function saveElevenLabsSettings() {
 // browser exposes any — on Android inside an iframe that list is usually empty,
 // which is why the old browser-only picker looked completely blank.
 const ENGBOT_VOICES = [
-    { id: 'en-gb-male',        label: 'Oliver — British male',            group: '🇬🇧 English · British',  lang: 'en' },
-    { id: 'en-gb-female',      label: 'Amelia — British female',          group: '🇬🇧 English · British',  lang: 'en' },
-    { id: 'en-us-male',        label: 'Ethan — American male',            group: '🇺🇸 English · American', lang: 'en' },
-    { id: 'en-us-female',      label: 'Nova — American female',           group: '🇺🇸 English · American', lang: 'en' },
-    { id: 'en-us-storyteller', label: 'Fable — American storyteller',     group: '🇺🇸 English · American', lang: 'en' },
-    { id: 'en-neutral',        label: 'Alloy — neutral narrator',         group: '🇺🇸 English · American', lang: 'en' },
-    { id: 'ka-male',           label: 'გიორგი — ქართული მამრობითი',       group: '🇬🇪 ქართული (Georgian)', lang: 'ka' },
-    { id: 'ka-female',         label: 'ეკა — ქართული მდედრობითი',         group: '🇬🇪 ქართული (Georgian)', lang: 'ka' },
-    { id: 'ka-soft',           label: 'ნინო — რბილი ქართული ტონი',        group: '🇬🇪 ქართული (Georgian)', lang: 'ka' },
-    { id: 'multi-puck',        label: 'Puck — multilingual',              group: '🌍 Multilingual',        lang: 'multi' },
-    { id: 'multi-fenrir',      label: 'Fenrir — multilingual',            group: '🌍 Multilingual',        lang: 'multi' },
+    { id: 'en-gb-male',        label: 'Oliver — British male',            group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-RyanNeural - en-GB (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'en-GB' },
+    { id: 'en-gb-female',      label: 'Amelia — British female',          group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-SoniaNeural - en-GB (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'en-GB' },
+    { id: 'en-us-male',        label: 'Ethan — American male',            group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-GuyNeural - en-US (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'en-US' },
+    { id: 'en-us-female',      label: 'Nova — American female',           group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-JennyNeural - en-US (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'en-US' },
+    { id: 'en-us-storyteller', label: 'Fable — American storyteller',     group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-ChristopherNeural - en-US (Male)', rate: -3, pitch: -2, gender: 'male', locale: 'en-US' },
+    { id: 'en-neutral',        label: 'Alloy — neutral narrator',         group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-AriaNeural - en-US (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'en-US' },
+    { id: 'ka-male',           label: 'გიორგი — ქართული მამრობითი',       group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'ka-GE' },
+    { id: 'ka-female',         label: 'ეკა — ქართული მდედრობითი',         group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'ka-GE' },
+    { id: 'ka-soft',           label: 'ნინო — რბილი ქართული ტონი',        group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -4, pitch: -2, gender: 'female', locale: 'ka-GE' },
+    { id: 'multi-puck',        label: 'Puck — multilingual',              group: '🌍 Multilingual',        lang: 'multi', edgeVoice: 'en-US-GuyNeural - en-US (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'en-US' },
+    { id: 'multi-fenrir',      label: 'Fenrir — multilingual',            group: '🌍 Multilingual',        lang: 'multi', edgeVoice: 'en-US-ChristopherNeural - en-US (Male)', rate: -2, pitch: -2, gender: 'male', locale: 'en-US' },
 ];
 
 function engbotVoice(id) {
@@ -3836,7 +3839,7 @@ function engbotVoice(id) {
 
 /** Currently selected EngBot preset for a language ('en' | 'ka'). */
 function selectedEngbotPreset(lang) {
-    const savedEn = localStorage.getItem('lumina_voice_preset_en') || 'en-us-female';
+    const savedEn = localStorage.getItem('lumina_voice_preset_en') || 'en-gb-male';
     const savedKa = localStorage.getItem('lumina_voice_preset_ka') || 'ka-male';
     return lang === 'ka' ? savedKa : savedEn;
 }
@@ -3863,10 +3866,15 @@ function populateVoiceList() {
     groups.forEach((options, label) => {
         const og = document.createElement('optgroup');
         og.label = label;
+        og.style.backgroundColor = '#090d15';
+        og.style.color = '#38bdf8';
+        og.style.fontWeight = 'bold';
         options.forEach(o => {
             const opt = document.createElement('option');
             opt.value = o.value;
             opt.textContent = o.text;
+            opt.style.backgroundColor = '#121620';
+            opt.style.color = '#f8fafc';
             og.appendChild(opt);
         });
         select.appendChild(og);
@@ -3876,6 +3884,13 @@ function populateVoiceList() {
     // being read, so the picker always shows what you will actually hear.
     const stored = localStorage.getItem('lumina_voice_choice');
     let value = stored;
+    if (value && value.startsWith('preset:')) {
+        const pId = value.slice(7);
+        const pObj = engbotVoice(pId);
+        if (pObj && pObj.lang !== 'multi' && pObj.lang !== (currentLang === 'ka' ? 'ka' : 'en')) {
+            value = 'preset:' + selectedEngbotPreset(currentLang === 'ka' ? 'ka' : 'en');
+        }
+    }
     if (!value || !select.querySelector(`option[value="${CSS.escape(value)}"]`)) {
         value = 'preset:' + selectedEngbotPreset(currentLang === 'ka' ? 'ka' : 'en');
     }
@@ -3915,10 +3930,19 @@ function applyVoiceChoice(value, opts = {}) {
             ? 'High-fidelity EngBot narration — works on mobile, English and Georgian.'
             : 'Device voice — availability depends on your phone/browser.';
     }
-    // Clear buffered audio so the new narrator is heard from the next sentence
-    // (no chapter restart, no repeated sentence).
+    // Clear buffered audio so the new narrator is heard immediately
     clearNarrationBuffers();
     updateTopVoiceBadge();
+
+    // LIVE VOICE SWITCHING: If audio is currently playing and user changed voice in UI,
+    // immediately re-speak the current sentence with the newly selected voice!
+    if (!opts.silent && isPlaying && !isPaused) {
+        stopCurrentSpeechAudio(false);
+        if (window.speechSynthesis) {
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+        }
+        speakCurrentSentence();
+    }
 }
 
 function updateTopVoiceBadge() {
@@ -3940,36 +3964,98 @@ function updateTopVoiceBadge() {
     DOM.topVoiceBadge.textContent = preset ? `🎙️ ${preset.label.split(' — ')[0]}` : '🎙️ Studio Narrator';
 }
 
-/** Preview whatever is selected in the picker, in its own language. */
+/** Preview whatever is selected in the picker, in its own language and neural voice. */
 function previewSelectedNarrator() {
     const value = (DOM.voiceModalSelect && DOM.voiceModalSelect.value) || '';
-    const isKa = value.startsWith('preset:') && (engbotVoice(value.slice(7)) || {}).lang === 'ka';
-    if (isKa) testGeorgianVoicePreview();
-    else testVoicePreview();
+    if (value.startsWith('device:')) {
+        const text = currentLang === 'ka'
+            ? "გამარჯობა! მე ვარ თქვენი მოწყობილობის ხმა."
+            : "Hello! This is your device voice speaking.";
+        speakStandardSentence(text, currentLang);
+        return;
+    }
+
+    const presetId = value.startsWith('preset:') ? value.slice(7) : selectedEngbotPreset(currentLang === 'ka' ? 'ka' : 'en');
+    const v = engbotVoice(presetId);
+    const lang = (v && v.lang === 'ka') ? 'ka' : 'en';
+
+    if (lang === 'ka') {
+        testGeorgianVoicePreview(presetId);
+    } else {
+        testVoicePreview(presetId);
+    }
 }
 
-function testVoicePreview() {
-    const text = "Hello! This is your EngBot narrator. Enjoy your high-fidelity reading and listening experience.";
-    if (gatewayTTSAvailable) { void previewGatewayVoice(text, 'en'); return; }
+async function testVoicePreview(presetId) {
+    const pId = presetId || selectedEngbotPreset('en');
+    const v = engbotVoice(pId);
+    const voiceId = v ? v.edgeVoice : 'en-GB-RyanNeural - en-GB (Male)';
+    const rateDelta = v ? (v.rate || 0) : 0;
+    const pitchDelta = v ? (v.pitch || 0) : 0;
+    const label = v ? v.label.split(' — ')[0] : 'Oliver';
+    const text = `Hello! This is ${label} narrating. Enjoy your high-fidelity reading and listening experience.`;
+
+    if (gatewayTTSAvailable) {
+        const handled = await previewGatewayVoice(text, 'en', pId);
+        if (handled) return;
+    }
+
+    try {
+        if (window._voicePreviewAudio) {
+            try { window._voicePreviewAudio.pause(); } catch (e) {}
+        }
+        const url = await fetchNeuralSpeechAudioUrl(text, voiceId, rateDelta, pitchDelta, 'en');
+        if (url) {
+            const audio = new Audio(url);
+            audio.playbackRate = currentGlobalSpeed;
+            window._voicePreviewAudio = audio;
+            await audio.play();
+            return;
+        }
+    } catch (e) {
+        console.warn('Neural preview failed:', e);
+    }
     speakStandardSentence(text, 'en');
 }
 
-function testGeorgianVoicePreview() {
-    const text = "გამარჯობა! მე ვარ თქვენი ქართული მთხრობელი. სასიამოვნო მოსმენა გისურვებთ.";
-    if (gatewayTTSAvailable) { void previewGatewayVoice(text, 'ka'); return; }
-    const isCloudKaVoice = selectedVoiceURI === 'ka-GE-EkaNeural - ka-GE (Female)' || selectedVoiceURI === 'ka-GE-GiorgiNeural - ka-GE (Male)';
-    const voiceId = isCloudKaVoice ? selectedVoiceURI : 'ka-GE-GiorgiNeural - ka-GE (Male)';
+async function testGeorgianVoicePreview(presetId) {
+    const pId = presetId || selectedEngbotPreset('ka');
+    const v = engbotVoice(pId);
+    const voiceId = v ? v.edgeVoice : 'ka-GE-GiorgiNeural - ka-GE (Male)';
+    const rateDelta = v ? (v.rate || 0) : 0;
+    const pitchDelta = v ? (v.pitch || 0) : 0;
+    const label = v ? v.label.split(' — ')[0] : 'გიორგი';
+    const text = `გამარჯობა! მე ვარ თქვენი ქართული მთხრობელი ${label}. სასიამოვნო მოსმენას გისურვებთ.`;
+
+    if (gatewayTTSAvailable) {
+        const handled = await previewGatewayVoice(text, 'ka', pId);
+        if (handled) return;
+    }
+
+    try {
+        if (window._voicePreviewAudio) {
+            try { window._voicePreviewAudio.pause(); } catch (e) {}
+        }
+        const url = await fetchNeuralSpeechAudioUrl(text, voiceId, rateDelta, pitchDelta, 'ka');
+        if (url) {
+            const audio = new Audio(url);
+            audio.playbackRate = currentGlobalSpeed;
+            window._voicePreviewAudio = audio;
+            await audio.play();
+            return;
+        }
+    } catch (e) {
+        console.warn('Georgian neural preview failed:', e);
+    }
     speakFreeGeorgianNeural(text, voiceId);
 }
 
 /** One-off neural preview that never touches the reading player state. */
-async function previewGatewayVoice(text, lang) {
+async function previewGatewayVoice(text, lang, overridePreset = null) {
     try {
-        const url = await fetchGatewaySpeechUrl(text, lang);
+        const url = await fetchGatewaySpeechUrl(text, lang, overridePreset);
         if (!url) {
-            if (lang === 'ka') speakFreeGeorgianNeural(text);
-            else speakStandardSentence(text, lang);
-            return;
+            return false;
         }
         if (window._voicePreviewAudio) {
             try { window._voicePreviewAudio.pause(); } catch (e) {}
@@ -3978,8 +4064,9 @@ async function previewGatewayVoice(text, lang) {
         audio.playbackRate = currentGlobalSpeed;
         window._voicePreviewAudio = audio;
         await audio.play();
+        return true;
     } catch (e) {
-        if (typeof showToast === 'function') showToast('Voice preview failed — try again.', 'error');
+        return false;
     }
 }
 
@@ -6808,9 +6895,8 @@ async function speakCurrentSentence() {
         highlightReaderSentence(currentSentenceIndex);
     }
 
-    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-    const hasNativeKaVoice = voices.some(v => v.lang.startsWith('ka'));
-    const isCloudKaVoice = selectedVoiceURI === 'ka-GE-EkaNeural - ka-GE (Female)' || selectedVoiceURI === 'ka-GE-GiorgiNeural - ka-GE (Male)';
+    const choice = localStorage.getItem('lumina_voice_choice') || '';
+    const isDeviceVoice = choice.startsWith('device:');
 
     if (elevenLabsEnabled && elevenLabsApiKey) {
         speakElevenLabsSentence(cleanSentence);
@@ -6818,9 +6904,14 @@ async function speakCurrentSentence() {
         // Real audio file from the app's own TTS endpoint — the only engine
         // that reliably produces sound on mobile, in Georgian included.
         void speakGatewayNeural(cleanSentence, currentLang);
-    } else if (currentLang === 'ka' && (!hasNativeKaVoice || isCloudKaVoice)) {
-        const voiceId = isCloudKaVoice ? selectedVoiceURI : 'ka-GE-GiorgiNeural - ka-GE (Male)';
-        speakFreeGeorgianNeural(cleanSentence, voiceId);
+    } else if (!isDeviceVoice) {
+        // Universal Neural Edge-TTS Engine (English British/American & Georgian)
+        const presetId = selectedEngbotPreset(currentLang === 'ka' ? 'ka' : 'en');
+        const v = engbotVoice(presetId);
+        const voiceId = v ? v.edgeVoice : (currentLang === 'ka' ? 'ka-GE-GiorgiNeural - ka-GE (Male)' : 'en-GB-RyanNeural - en-GB (Male)');
+        const rateDelta = v ? (v.rate || 0) : 0;
+        const pitchDelta = v ? (v.pitch || 0) : 0;
+        speakFreeNeural(cleanSentence, currentLang, voiceId, rateDelta, pitchDelta);
     } else {
         speakStandardSentence(cleanSentence, currentLang);
     }
@@ -6884,7 +6975,35 @@ function speakStandardSentence(text, lang) {
             utter.voice = matched;
             utter.lang = matched.lang || 'en-US';
         } else {
-            utter.lang = 'en-US';
+            // Intelligent browser voice matching for presets when selectedVoiceURI is empty
+            const presetId = selectedEngbotPreset(lang === 'ka' ? 'ka' : 'en');
+            const p = engbotVoice(presetId);
+            const targetLocale = (p && p.locale) ? p.locale.toLowerCase() : 'en-gb';
+            const targetGender = (p && p.gender) ? p.gender : 'male';
+
+            let bestVoice = voices.find(v => {
+                const vLang = (v.lang || '').toLowerCase().replace(/_/g, '-');
+                const vName = (v.name || '').toLowerCase();
+                const matchesLang = vLang.startsWith(targetLocale.slice(0, 5)) || vLang.startsWith(targetLocale.slice(0, 2));
+                const matchesGender = targetGender === 'female'
+                    ? (vName.includes('female') || vName.includes('zira') || vName.includes('susan') || vName.includes('hazel') || vName.includes('catherine') || vName.includes('jenny'))
+                    : (vName.includes('male') || vName.includes('david') || vName.includes('george') || vName.includes('mark') || vName.includes('james') || vName.includes('ryan') || vName.includes('guy'));
+                return matchesLang && matchesGender;
+            });
+
+            if (!bestVoice) {
+                bestVoice = voices.find(v => (v.lang || '').toLowerCase().replace(/_/g, '-').startsWith(targetLocale.slice(0, 5)));
+            }
+            if (!bestVoice) {
+                bestVoice = voices.find(v => (v.lang || '').toLowerCase().startsWith(lang));
+            }
+
+            if (bestVoice) {
+                utter.voice = bestVoice;
+                utter.lang = bestVoice.lang;
+            } else {
+                utter.lang = targetLocale.startsWith('en-gb') ? 'en-GB' : 'en-US';
+            }
         }
     }
 
@@ -6995,9 +7114,9 @@ function clearNarrationBuffers() {
 window.clearNarrationBuffers = clearNarrationBuffers;
 
 
-async function fetchGatewaySpeechUrl(text, lang) {
+async function fetchGatewaySpeechUrl(text, lang, overridePreset = null) {
     if (!gatewayTTSAvailable) return null;
-    const preset = gatewayPresetForLang(lang);
+    const preset = overridePreset || gatewayPresetForLang(lang);
     const spoken = lang === 'ka'
         ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), detectSentenceType(text))
         : text;
@@ -7089,7 +7208,6 @@ async function speakGatewayNeural(text, lang) {
 
         primeGatewayPrefetchWindow(currentSentenceIndex, lang);
 
-
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             currentSentenceIndex++;
@@ -7105,13 +7223,12 @@ async function speakGatewayNeural(text, lang) {
         isSpeakingLock = false;
     } catch (e) {
         if (myToken !== currentSpeechToken) return;
-        console.warn('Gateway TTS failed — falling back:', e && e.message);
-        if (lang === 'ka') speakFreeGeorgianNeural(text);
-        else speakStandardSentence(text, lang);
+        console.warn('Gateway TTS failed — falling back to Free Neural:', e && e.message);
+        speakFreeNeural(text, lang);
     }
 }
 
-function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
+function prefetchNextNeuralSentence(index, voiceId, ratePct, pitchHz, lang = 'en') {
     if (index >= sentenceQueue.length || index < 0) return;
     if (georgianAudioPrefetchCache.has(index)) return;
 
@@ -7119,9 +7236,7 @@ function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
     if (!nextText || !nextText.trim()) return;
 
     const myGen = narrationGeneration;
-    fetchGeorgianSpeechAudioUrl(nextText, voiceId, ratePct, pitchHz).then(url => {
-        // A prefetch resolving after a stop/seek must not enter the cache:
-        // the entry would replay stale audio for a future sentence.
+    fetchNeuralSpeechAudioUrl(nextText, voiceId, ratePct, pitchHz, lang).then(url => {
         if (myGen !== narrationGeneration) return;
         if (url) {
             const audio = new Audio(url);
@@ -7131,18 +7246,29 @@ function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
     }).catch(() => {});
 }
 
-async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
-    const sentenceType = detectSentenceType(text);
-    // Expressive modulation: questions lift slightly, exclamations carry a
-    // touch more energy, dialogue gets a subtle intimate drop. Small deltas —
-    // the base rate/pitch from the player controls still dominate.
-    const typeRate = { question: 0, exclamation: 4, dialogue: -2, short: 3, statement: 0 }[sentenceType] ?? 0;
-    const typePitch = { question: 3, exclamation: 4, dialogue: -3, short: 1, statement: 0 }[sentenceType] ?? 0;
-    const rate = Math.max(-50, Math.min(50, ratePct + typeRate));
-    const pitch = Math.max(-20, Math.min(20, pitchHz + typePitch));
+function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
+    prefetchNextNeuralSentence(index, voiceId, ratePct, pitchHz, 'ka');
+}
 
-    const verbalized = applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), sentenceType);
-    if (!verbalized || !verbalized.trim()) return null;
+async function fetchNeuralSpeechAudioUrl(text, voiceId, ratePct = 0, pitchHz = 0, lang = 'en') {
+    let spoken = text;
+    let effectiveRate = ratePct;
+    let effectivePitch = pitchHz;
+
+    if (lang === 'ka') {
+        const sentenceType = detectSentenceType(text);
+        const typeRate = { question: 0, exclamation: 4, dialogue: -2, short: 3, statement: 0 }[sentenceType] ?? 0;
+        const typePitch = { question: 3, exclamation: 4, dialogue: -3, short: 1, statement: 0 }[sentenceType] ?? 0;
+        effectiveRate = Math.max(-50, Math.min(50, ratePct + typeRate));
+        effectivePitch = Math.max(-20, Math.min(20, pitchHz + typePitch));
+        spoken = applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), sentenceType);
+    } else {
+        spoken = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+        effectiveRate = Math.max(-50, Math.min(50, ratePct));
+        effectivePitch = Math.max(-20, Math.min(20, pitchHz));
+    }
+
+    if (!spoken || !spoken.trim()) return null;
 
     const mirrors = [
         "https://innoai-edge-tts-text-to-speech.hf.space/gradio_api",
@@ -7155,7 +7281,7 @@ async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    data: [verbalized, voiceId, rate, pitch]
+                    data: [spoken, voiceId, effectiveRate, effectivePitch]
                 })
             });
 
@@ -7201,23 +7327,33 @@ async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
     return null;
 }
 
-async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)') {
+async function fetchGeorgianSpeechAudioUrl(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)', ratePct = 0, pitchHz = 0) {
+    return fetchNeuralSpeechAudioUrl(text, voiceId, ratePct, pitchHz, 'ka');
+}
+
+async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, pitchDelta = 0) {
     stopCurrentSpeechAudio(true); // keep the prefetch window warm
     const myToken = currentSpeechToken;
     updatePlayerUIState(true);
 
-    const ratePct = Math.max(-50, Math.min(50, Math.round((currentGlobalSpeed - 1.0) * 100)));
-    const pitchHz = Math.max(-20, Math.min(20, Math.round((currentPitch - 1.0) * 40)));
+    const presetId = selectedEngbotPreset(lang === 'ka' ? 'ka' : 'en');
+    const v = engbotVoice(presetId);
+    const voiceId = targetVoiceId || (v ? v.edgeVoice : (lang === 'ka' ? 'ka-GE-GiorgiNeural - ka-GE (Male)' : 'en-GB-RyanNeural - en-GB (Male)'));
+    const finalRateDelta = rateDelta || (v ? (v.rate || 0) : 0);
+    const finalPitchDelta = pitchDelta || (v ? (v.pitch || 0) : 0);
+
+    const ratePct = Math.max(-50, Math.min(50, Math.round((currentGlobalSpeed - 1.0) * 100) + finalRateDelta));
+    const pitchHz = Math.max(-20, Math.min(20, Math.round((currentPitch - 1.0) * 40) + finalPitchDelta));
 
     try {
         let audioToPlay = null;
 
-        // Check lookahead buffer (token re-checked after any await below)
+        // Check lookahead buffer
         const cachedAudio = prefetchCacheTake(currentSentenceIndex);
         if (cachedAudio) {
             audioToPlay = cachedAudio;
         } else {
-            const audioUrl = await fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz);
+            const audioUrl = await fetchNeuralSpeechAudioUrl(text, voiceId, ratePct, pitchHz, lang);
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             if (audioUrl) {
                 audioToPlay = new Audio(audioUrl);
@@ -7227,16 +7363,15 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
         if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
 
         if (!audioToPlay) {
-            throw new Error("Could not obtain Georgian Neural audio stream");
+            throw new Error(`Could not obtain Neural audio stream for ${voiceId}`);
         }
 
         currentElevenAudio = audioToPlay;
         currentElevenAudio.playbackRate = currentGlobalSpeed;
 
-        // Trigger prefetch for next sentence in background
-        // Rolling window (not just +1) so the next clips are already synthesized.
+        // Trigger prefetch for next sentences in background
         for (let i = 1; i <= GATEWAY_PREFETCH_AHEAD; i++) {
-            prefetchNextGeorgianSentence(currentSentenceIndex + i, voiceId, ratePct, pitchHz);
+            prefetchNextNeuralSentence(currentSentenceIndex + i, voiceId, ratePct, pitchHz, lang);
         }
 
         currentElevenAudio.onended = () => {
@@ -7247,7 +7382,7 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
 
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
-            console.error("Georgian Neural Audio Error");
+            console.error("Neural Audio Error, falling back to standard");
             currentSentenceIndex++;
             speakCurrentSentence();
         };
@@ -7257,9 +7392,14 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
 
     } catch (e) {
         if (myToken !== currentSpeechToken) return;
-        console.error("Free Georgian TTS Failed:", e);
-        speakStandardSentence(text, 'ka');
+        console.error("Free Neural TTS Failed, falling back to Web Speech:", e);
+        speakStandardSentence(text, lang);
     }
+}
+
+async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)') {
+    const v = ENGBOT_VOICES.find(x => x.edgeVoice === voiceId) || engbotVoice('ka-male');
+    return speakFreeNeural(text, 'ka', voiceId, v ? v.rate : 0, v ? v.pitch : 0);
 }
 
 // ElevenLabs: per-sentence expressive delivery. v3 (eleven_v3) understands
@@ -7681,6 +7821,7 @@ function updateLangToggleUI() {
     if (DOM.dockLangBadgeMobile) {
         DOM.dockLangBadgeMobile.textContent = currentLang === 'ka' ? '🇬🇪 KA' : '🇺🇸 EN';
     }
+    updateTopVoiceBadge();
 }
 
 // ══════════════════════════════════════════════════════════════════════════
