@@ -4715,6 +4715,119 @@ good night→ღამე მშვიდობისა · see you later→მ�
 okay→კარგი · of course→რა თქმა უნდა · Mr./Sir→ბატონო ·
 Madam→ქალბატონო · formal/informal variant choice→AI-pass`;
 
+// KA-117 v1.47.0 — Contrastive English ↔ Georgian Syntactic Patterns.
+// Deep contrastive linguistic rules governing natural transformation between
+// analytic English and synthetic/agglutinative Georgian.
+const KA_CONTRASTIVE_PATTERNS = `
+CONTRASTIVE SYNTAX & STRUCTURAL PATTERNS (EN ↔ KA):
+• TYPOLOGICAL SHIFT (SVO → SOV): English is strict SVO with post-verbal objects. Georgian literary prose is SOV (Subject-Object-Verb) with a pre-verbal focus slot.
+  - EN: "The old gardener carefully opened the wooden gate."
+  - KA: მოხუცმა მებაღემ ხის ჭიშკარი ფრთხილად შეაღო. (Subject-ERG, Object-NOM, Adverb, Verb-AORIST).
+  - CALQUE DEFECT: *მოხუცმა მებაღემ შეაღო ხის ჭიშკარი ფრთხილად (unnatural SVO rhythm).
+• PASSIVE DE-NOMINALIZATION: English heavily overuses passive voice ("The city was destroyed by the enemy", "It was decided that..."). Georgian avoids passive nominalizations:
+  - Synthetic Active with Ergative: მტერმა ქალაქი გაანადგურა (Active Aorist with ERG).
+  - Synthetic Inverted Passive: ქალაქი განადგურდა (Middle/Passive in -d-).
+  - Impersonal Decided: გადაწყვიტეს, რომ... (They decided) or გადაწყდა, რომ... (It was resolved). Never *იყო გადაწყვეტილი.
+• RELATIVE CLAUSE COMPRESSION (Participles over რომელიც):
+  - In English, relative clauses ("which was built", "who arrived yesterday") dangle after the noun.
+  - In literary Georgian, replace stacked 'რომელიც' clauses with concise pre-nominal participles:
+    * "The letter that was received yesterday" → გუშინ მიღებული წერილი (NOT *წერილი, რომელიც გუშინ მიიღეს).
+    * "The man standing at the doorway" → კართან მდგომი კაცი (NOT *კაცი, რომელიც დგას კართან).
+    * "The task that must be done" → გასაკეთებელი საქმე (NOT *საქმე, რომელიც უნდა გაკეთდეს).
+    * "Unforgettable memories" → დაუვიწყარი მოგონებები (Negative participle in და-უ-...-ელი).
+• STRICT PRO-DROP (Pronoun Pruning):
+  - Georgian verbs are polypersonal (marking 1st, 2nd, and 3rd person subjects and objects). Redundant overt pronouns (მე, შენ, ის, ჩვენ, ისინი) clutter the sentence and read as bad translationese.
+  - Drop pronouns unless required for contrastive focus or narrative shift:
+    * EN: "He woke up, he looked at his watch, and he realized that he was late."
+    * KA: გაიღვიძა, საათს დახედა და მიხვდა, რომ აგვიანდებოდა. (Zero pronouns — clean, natural prose!).
+• REFLEXIVE თავისი VS POSSESSIVE მისი (Critical Semantic Distinction):
+  - If the possessor is the SUBJECT of the same clause, use თავისი (one's own):
+    * "The hunter took his gun" → მონადირემ თავისი თოფი აიღო (his own gun).
+    * WARNING: If you write მონადირემ მისი თოფი აიღო, it means the hunter took SOMEONE ELSE'S gun!
+• POSTPOSITIONAL CASE SUFFIXING (No English Prepositions):
+  - English prepositions become integrated Georgian postpositional case suffixes:
+    * DATIVE + -ში (in/into): ქალაქში, ოთახში, გულში.
+    * DATIVE + -ზე (on/onto/about): მაგიდაზე, გზაზე, თემაზე.
+    * DATIVE + -თან (at/near/with): მეგობართან, სახლთან.
+    * GENITIVE + -თვის (for): ბავშვებისთვის, სამშობლოსთვის.
+    * GENITIVE + -გან (from/by): მისგან, ტყიდან (syncope: ტყე-დან).
+    * GENITIVE + -გამო (because of): შიშის გამო, წვიმის გამო.
+    * GENITIVE + -გარეშე (without): იმედის გარეშე, ეჭვის გარეშე.
+    * ADVERBIAL + -მდე (until/up to): საღამომდე, ბოლომდე.
+  - Never leave a space before a postposition: *სახლ ში is an error; write სახლში.`;
+
+// KA-118 v1.47.0 — Comprehensive Experiencer Dative Predicate Paradigm.
+// Complete inventory of Georgian inverted stative, affective, and cognitive verbs.
+const KA_EXPERIENCER_FRAMES_COMPREHENSIVE = `
+EXPERIENCER DATIVE INVERSION PARADIGM:
+In Georgian, physical sensations, inner emotions, mental states, and volitional needs DO NOT use the nominative subject + copula structure of English. The experiencer is in the DATIVE case, the stimulus/theme is in the NOMINATIVE, and the verb agrees polypersonally.
+• SENSATION & PHYSICAL STATE (Experiencer-DAT + Verb):
+  - "I am hungry" → მშია (NOT *მე ვარ მშიერი). Past: მშიოდა. Future: მომშივდება.
+  - "I am thirsty" → მწყურია (NOT *მე ვარ მწყურვალი). Past: მწყუროდა.
+  - "I am cold / freezing" → მცივა (NOT *მე ვარ ცივი). Past: მციოდა.
+  - "I am hot" → მცხელა. Past: მცხელოდა.
+  - "I am sleepy" → მეძინება. Past: მეძინებოდა.
+  - "My head hurts / I have a headache" → თავი მტკივა (NOT *მე მაქვს თავის ტკივილი).
+• EMOTION & AFFECTIVE EVALUATION:
+  - "I love you" → მიყვარხარ (Polypersonal: მ-1sg-obj + i-ყვარ + ხარ-2sg-be-form).
+  - "He loves her" → მას ის უყვარს (Experiencer-DAT + Stimulus-NOM).
+  - "I like this book" → ეს წიგნი მომწონს (NOT *მე მომწონს ეს წიგნი as SVO).
+  - "I hate lies" → ტყუილი მძულს.
+  - "He is afraid of darkness" → მას სიბნელის ეშინია (Stimulus in Genitive).
+  - "She is ashamed" → მას რცხვენია.
+  - "We are glad / rejoice" → გვიხარია.
+  - "I miss my homeland" → სამშობლო მენატრება.
+• COGNITION, MEMORY & PERCEPTION:
+  - "I remember" → მახსოვს (NOT *მე მახსოვს as subject). Past: მახსოვდა.
+  - "I forgot" → დამავიწყდა (Aorist inverted).
+  - "I hear / I understand" → მესმის.
+  - "I think / It seems to me" → მგონია / მეჩვენება.
+  - "He believes in God" → მას ღმერთის სწამს / სჯერა.
+• VOLITION, NEED & POSSESSION:
+  - "I want water" → წყალი მინდა (NOT *მე მინდა წყალი). Past: მინდოდა.
+  - "I need help" → დახმარება მჭირდება (NOT *მე საჭიროებ დახმარებას).
+  - "I have a book" → წიგნი მაქვს (Inanimate possession: მაქვს).
+  - "I have a brother / friend" → ძმა / მეგობარი მყავს (Animate possession: მყავს).
+  - "I ought to / must" → მმართებს / მევალება.`;
+
+// KA-119 v1.47.0 — Proper Noun Transcription & Transliteration Rulebook.
+// Scientific and literary principles for transliterating English, Latin, Greek,
+// and European personal names, classical titles, and place names into Georgian Mkhedruli.
+const KA_PROPER_NOUN_TRANSLITERATION = `
+PROPER NOUN & CLASSICAL NAME TRANSLITERATION (EN/LATIN/GREEK → KA):
+• PHONOLOGICAL DIGRAPH & CLUSTER MAPPINGS:
+  - th (Greek θ) → თ: Athens → ათენი, Prometheus → პრომეთე, Theodore → თეოდორე, Arthur → ართური, Catherine → ეკატერინე / კატერინა.
+  - ph (Greek φ) → ფ: Philosophy → ფილოსოფია, Philip → ფილიპე, Delphi → დელფო, Joseph → იოსები / ჯოზეფი.
+  - Classical c / k → კ: Caesar → კეისარი, Socrates → სოკრატე, Marcus → მარკუსი, Plato → პლატონი, Carthage → კართაგენი, Cicero → ციცერონი.
+  - Modern English soft c → ს before e/i/y: Francis → ფრენსისი, Cecil → სესილი.
+  - Modern English soft g / j → ჯ: James → ჯეიმსი, John → ჯონი, George → ჯორჯი (classical/biblical George → გიორგი).
+  - English ch → ჩ: Charles → ჩარლზი, Churchill → ჩერჩილი, Chapman → ჩეპმენი.
+  - English sh → შ: Shakespeare → შექსპირი, Shelley → შელი, Shaw → შოუ.
+  - English silent cluster kn- → ნ: Knight → ნაიტი.
+  - English silent cluster wr- → რ: Wright → რაიტი.
+  - English silent cluster ps- → ფს: Psychology → ფსიქოლოგია.
+  - English -tion → -ცია in borrowed Latinate nouns: Constitution → კონსტიტუცია, Revolution → რევოლუცია, Nation → ნაცია.
+  - English vowel digraph au / aw → ო or აუ: Paul → პოლი (or პავლე), Austin → ოსტინი, Shaw → შოუ.
+• LITERARY & CLASSICAL AUTHORS & TITLES GLOSSARY:
+  - Homer → ჰომეროსი, Iliad → ილიადა, Odyssey → ოდისეა.
+  - Marcus Aurelius → მარკუს ავრელიუსი.
+  - Epictetus → ეპიქტეტე, Seneca → სენეკა.
+  - Aristotle → არისტოტელე, Plato → პლატონი, Socrates → სოკრატე.
+  - Alexander the Great → ალექსანდრე მაკედონელი.
+  - Sun Tzu → სუნ ძი (Art of War → ომის ხელოვნება).
+  - Shakespeare → უილიამ შექსპირი.
+  - Dante Alighieri → დანტე ალიგიერი (Divine Comedy → ღვთაებრივი კომედია).
+  - Cervantes → მიგელ დე სერვანტესი (Don Quixote → დონ კიხოტი).
+  - Goethe → იოჰან ვოლფგანგ ფონ გოეთე (Faust → ფაუსტი).
+  - Dostoevsky → თეოდორე დოსტოევსკი, Tolstoy → ლევ ტოლსტოი.
+  - Kafka → ფრანც კაფკა, Nietzsche → ფრიდრიხ ნიცშე.
+• CASE ENDING ON FOREIGN CONSONANT STEMS:
+  - In Georgian, any foreign proper name ending in a consonant MUST take the nominative case vowel -ი in subject or citation form:
+    * Hamlet → ჰამლეტი (NOM: ჰამლეტ-ი, ERG: ჰამლეტ-მა, DAT: ჰამლეტ-ს, GEN: ჰამლეტ-ის).
+    * Sherlock Holmes → შერლოკ ჰოლმსი (ჰოლმს-ი, ჰოლმს-მა, ჰოლმს-ს).
+    * Kant → კანტი, Darwin → დარვინი, Newton → ნიუტონი, Einstein → აინშტაინი.
+  - Names ending in a vowel (-ა, -ე, -ო, -უ) do not take -ი: Dante → დანტე, Seneca → სენეკა, Goethe → გოეთე.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -4722,6 +4835,9 @@ function getKaKnowledgeBase() {
         KA_MORPHOLOGY,
         KA_VERBS,
         KA_SYNTAX,
+        KA_CONTRASTIVE_PATTERNS,
+        KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
+        KA_PROPER_NOUN_TRANSLITERATION,
         KA_CASE_SYSTEM,
         KA_NEGATION,
         KA_CONJUNCTIONS,
@@ -4851,7 +4967,7 @@ function getKaKnowledgeBase() {
 
 // Compact rule set for refinement stages (targeted, smaller).
 function getKaCompactRules() {
-    return [KA_SYNTAX, KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
+    return [KA_SYNTAX, KA_CONTRASTIVE_PATTERNS, KA_EXPERIENCER_FRAMES_COMPREHENSIVE, KA_PROPER_NOUN_TRANSLITERATION, KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
 }
 
 
@@ -8553,12 +8669,12 @@ function correctGeorgianMorphology(text) {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.46.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.47.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 129,
+    promptBlocks: 132,
     qaRules: 128,
     autoFixes: 113,
-    researchSources: 382
+    researchSources: 388
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -8566,6 +8682,9 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         KA_CHARS,
         kaWord,
+        KA_CONTRASTIVE_PATTERNS,
+        KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
+        KA_PROPER_NOUN_TRANSLITERATION,
         getKaKnowledgeBase,
         getKaCompactRules,
         getKaRepairRules,

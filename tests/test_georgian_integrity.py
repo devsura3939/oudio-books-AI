@@ -339,6 +339,43 @@ assert "fetchAccountSettings" in store_code, "FAIL: fetchAccountSettings missing
 
 print("  [PASS] 0 top-level lexical collisions across all scripts, early controller & v1.47.4 AI key resilience verified")
 
+# ----------------------------------------------------------------------------
+# 19. Contrastive Grammar, Proper Noun Transliteration, & Scanner Vision OCR
+# ----------------------------------------------------------------------------
+for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), ("studio/static/georgian-linguistics.js", STUDIO_LING)]:
+    with open(path, "r", encoding="utf-8") as f:
+        ling_text = f.read()
+    assert "KA_CONTRASTIVE_PATTERNS" in ling_text, f"FAIL: KA_CONTRASTIVE_PATTERNS missing from {path_name}"
+    assert "KA-117" in ling_text, f"FAIL: KA-117 tag missing from {path_name}"
+    assert "KA_EXPERIENCER_FRAMES_COMPREHENSIVE" in ling_text, f"FAIL: KA_EXPERIENCER_FRAMES_COMPREHENSIVE missing from {path_name}"
+    assert "KA-118" in ling_text, f"FAIL: KA-118 tag missing from {path_name}"
+    assert "KA_PROPER_NOUN_TRANSLITERATION" in ling_text, f"FAIL: KA_PROPER_NOUN_TRANSLITERATION missing from {path_name}"
+    assert "KA-119" in ling_text, f"FAIL: KA-119 tag missing from {path_name}"
+    assert "1.47.0" in ling_text, f"FAIL: Georgian knowledge version 1.47.0 missing from {path_name}"
+
+for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
+    with open(path, "r", encoding="utf-8") as f:
+        app_text = f.read()
+    # Transliteration lexicon
+    assert "სოკრატე" in app_text, f"FAIL: Socrates transliteration missing from {path_name}"
+    assert "მარკუს" in app_text and "ავრელიუსი" in app_text, f"FAIL: Marcus Aurelius transliteration missing from {path_name}"
+    assert "შექსპირი" in app_text, f"FAIL: Shakespeare transliteration missing from {path_name}"
+    # Contrastive prompt upgrades
+    assert "De-nominalization" in app_text, f"FAIL: De-nominalization instruction missing from {path_name}"
+    assert "Participial Reduction" in app_text, f"FAIL: Participial Reduction instruction missing from {path_name}"
+    assert "Polypersonal Pro-drop" in app_text, f"FAIL: Polypersonal Pro-drop instruction missing from {path_name}"
+    assert "Experiencer Dative Inversion" in app_text, f"FAIL: Experiencer Dative Inversion instruction missing from {path_name}"
+
+for path_name, path in [("static/scanner.js", STATIC_SCANNER), ("studio/static/scanner.js", STUDIO_SCANNER)]:
+    with open(path, "r", encoding="utf-8") as f:
+        scanner_text = f.read()
+    assert "პატარა, not *კატარა or *ვატარა" in scanner_text, f"FAIL: Character discrimination exemplar missing from {path_name}"
+    assert "Grammatical Harmony & Root Verification" in scanner_text, f"FAIL: Root verification directive missing from {path_name}"
+    assert "უფლისწუღმა" in scanner_text, f"FAIL: Prince ergative OCR repair missing from {path_name}"
+    assert "ჭეშმარიტი" in scanner_text, f"FAIL: Truth OCR repair missing from {path_name}"
+
+print("  [PASS] Contrastive grammar, proper noun transliteration, and scanner vision OCR fixes verified in all mirrors")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
 
 

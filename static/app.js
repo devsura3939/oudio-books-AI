@@ -1040,10 +1040,30 @@ function transliterateLatinWordToGeorgian(word) {
     if (!word || typeof word !== 'string') return '';
     const lower = word.toLowerCase();
     
-    // Known literary names, titles, and locations
+    // Known literary names, classical authors, philosophers, titles, and locations
     const commonNames = {
         'mr': 'მისტერ', 'mrs': 'მისის', 'ms': 'მის', 'dr': 'დოქტორ', 'prof': 'პროფესორ',
-        'sir': 'სერ', 'lord': 'ლორდ', 'lady': 'ლედი',
+        'sir': 'სერ', 'lord': 'ლორდ', 'lady': 'ლედი', 'prince': 'უფლისწული', 'king': 'მეფე',
+        'queen': 'დედოფალი', 'emperor': 'იმპერატორი', 'captain': 'კაპიტანი',
+        // Classical Antiquity & Philosophers
+        'marcus': 'მარკუს', 'aurelius': 'ავრელიუსი', 'socrates': 'სოკრატე', 'plato': 'პლატონი',
+        'aristotle': 'არისტოტელე', 'homer': 'ჰომეროსი', 'achilles': 'აქილევსი', 'odysseus': 'ოდისევსი',
+        'odyssey': 'ოდისეა', 'iliad': 'ილიადა', 'caesar': 'კეისარი', 'cicero': 'ციცერონი',
+        'alexander': 'ალექსანდრე', 'seneca': 'სენეკა', 'epictetus': 'ეპიქტეტე', 'herodotus': 'ჰეროდოტე',
+        'thucydides': 'თუკიდიდე', 'pythagoras': 'პითაგორა', 'archimedes': 'არქიმედე',
+        'virgil': 'ვირგილიუსი', 'ovid': 'ოვიდიუსი', 'horace': 'ჰორაციუსი',
+        // Classical Mythology & Geography
+        'rome': 'რომი', 'athens': 'ათენი', 'sparta': 'სპარტა', 'troy': 'ტროა', 'carthage': 'კართაგენი',
+        'olympus': 'ოლიმპო', 'zeus': 'ზევსი', 'apollo': 'აპოლონი', 'athena': 'ათენა', 'ares': 'არესი',
+        'poseidon': 'პოსეიდონი', 'hades': 'ჰადესი', 'hermes': 'ჰერმესი', 'hercules': 'ჰერკულესი',
+        // Literary Giants & World Figures
+        'shakespeare': 'შექსპირი', 'dante': 'დანტე', 'cervantes': 'სერვანტესი', 'goethe': 'გოეთე',
+        'dostoevsky': 'დოსტოევსკი', 'tolstoy': 'ტოლსტოი', 'kafka': 'კაფკა', 'nietzsche': 'ნიცშე',
+        'kant': 'კანტი', 'hegel': 'ჰეგელი', 'schopenhauer': 'შოპენჰაუერი', 'freud': 'ფროიდი',
+        'jung': 'იუნგი', 'darwin': 'დარვინი', 'newton': 'ნიუტონი', 'einstein': 'აინშტაინი',
+        'hemingway': 'ჰემინგუეი', 'orwell': 'ორუელი', 'dickens': 'დიკენსი', 'austen': 'ოსტინი',
+        'chekhov': 'ჩეხოვი', 'sun': 'სუნ', 'tzu': 'ძი',
+        // Common English & Literary Names
         'john': 'ჯონ', 'james': 'ჯეიმს', 'george': 'ჯორჯ', 'william': 'უილიამ', 'charles': 'ჩარლზ',
         'david': 'დავით', 'robert': 'რობერტ', 'edward': 'ედუარდ', 'henry': 'ჰენრი', 'thomas': 'თომას',
         'mary': 'მერი', 'elizabeth': 'ელიზაბეთ', 'sarah': 'სარა', 'jane': 'ჯეინ', 'emma': 'ემა',
@@ -1054,6 +1074,20 @@ function transliterateLatinWordToGeorgian(word) {
     if (commonNames[lower]) return commonNames[lower];
 
     let s = lower;
+
+    // Silent clusters and special English onsets
+    s = s.replace(/^kn/g, 'ნ')
+         .replace(/^wr/g, 'რ')
+         .replace(/^ps/g, 'ფს')
+         .replace(/^wh/g, 'ვ');
+
+    // Suffixes and Latinate endings
+    s = s.replace(/tion\b/g, 'შენ')
+         .replace(/sion\b/g, 'ჟენ')
+         .replace(/igh/g, 'აი')
+         .replace(/ew\b/g, 'იუ');
+
+    // Digraphs & Multigraphs
     s = s.replace(/sch/g, 'შ')
          .replace(/tch/g, 'ჩ')
          .replace(/ch/g, 'ჩ')
@@ -1071,8 +1105,10 @@ function transliterateLatinWordToGeorgian(word) {
          .replace(/ea/g, 'ი')
          .replace(/oo/g, 'უ')
          .replace(/ou/g, 'აუ')
+         .replace(/au|aw/g, 'ო')
          .replace(/ai|ay|ei|ey/g, 'ეი');
 
+    // Soft/Hard c and g
     s = s.replace(/c([eiy])/g, 'ს$1')
          .replace(/c/g, 'კ')
          .replace(/g([eiy])/g, 'ჯ$1')
@@ -5808,7 +5844,16 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
 1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
 2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
 3. Replace idioms with their natural ${targetLangName} equivalents; never translate them literally.
-4. Write flowing native prose — no translationese.${targetLang === 'ka' ? '\n   Georgian word order is verb-FINAL: subject/object first, verb last (კაცმა წიგნი წაიკითხა). Weather/feelings are impersonal (წვიმს, ცივა, მშია, მოსწონს) — never invent a dummy subject. Numerals are vigesimal (ორმოცი=40, ოთხმოცდაშვიდი=87); after numerals 2+ the noun stays SINGULAR (ოცი კაცი).' : ''}
+4. Write flowing native prose — no translationese.${targetLang === 'ka' ? `
+   - Word Order & Focus: Georgian is SOV with pre-verbal focus slot (Subject Object FOCUS-Verb). Never calque English SVO word order.
+   - De-nominalization: Convert passive English nominalizations ("the decision was made") into dynamic active Georgian aorists ("კომიტეტმა გადაწყვეტილება მიიღო").
+   - Participial Reduction: Replace repetitive, stacked "რომელიც" relative clauses with elegant pre-nominal participles (e.g. "გუშინ მიღებული წერილი" instead of "წერილი, რომელიც გუშინ მიიღეს").
+   - Experiencer Dative Inversion: Physical/emotional/cognitive/need states (hunger, cold, pain, love, hate, fear, need, memory) MUST use inverted Dative experiencer + Nominative stimulus: მშია, მცივა, მტკივა, მიყვარს, მძულს, მეშინია, მჭირდება, მახსოვს, მინდა. NEVER produce nominative copula calques (*მე ვარ მშიერი, *ის საჭიროებს, *ის გრძნობს ტკივილს).
+   - Polypersonal Pro-drop: Verb inflection marks both subject and object; prune redundant personal pronouns (მე, შენ, ის, მან, მას) unless contrastive emphasis is explicitly intended.
+   - Reflexives: Use reflexive თავისი (subject's own) vs 3rd person მისი (another person's) strictly.
+   - Postpositions: Suffix postpositions directly to nominal roots without spaces (-ში, -ზე, -თან, -თვის, -გან, -დან, -კენ, -მდე).
+   - Proper Noun Transliteration: Foreign names ending in consonants require nominative -ი suffix. Phonetically adapt digraphs (kn- -> ნ, ps- -> ფს, th -> თ, ph -> ფ, ch -> ჩ, sh -> შ, -tion -> შენ/ცია). Classical/historical names must use standard Georgian literary forms (Marcus Aurelius -> მარკუს ავრელიუსი, Socrates -> სოკრატე, Shakespeare -> შექსპირი).
+   - Impersonal verbs & numerals: Weather/states are impersonal (წვიმს, ცივა); numerals are vigesimal, and nouns after numerals 2+ remain strictly SINGULAR (ოცი კაცი, ხუთი წიგნი).` : ''}
 5. Maintain all paragraph breaks (separate paragraphs with blank lines \\n\\n) matching the source structure.
 6. Before answering, silently verify every sentence against the grammar rules (case alignment, verb screeves, agreement).
 
@@ -5844,9 +5889,9 @@ async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
 
 Check, in order of severity:
 1. Accuracy: omissions, additions, reversed meaning, lost negation, changed names/numbers/units.
-2. Grammar & morphology: ${langName} case endings, verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment: Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Negation: არ (declarative), ვერ (failed ability), ნუ (prohibitive — never არ for commands), one negator per clause.' : ''}
-3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart).' : ''}
-4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb).' : ''}
+2. Grammar & morphology: ${langName} case endings, verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment: Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Negation: არ (declarative), ვერ (failed ability), ნუ (prohibitive — never არ for commands), one negator per clause. Experiencer verbs (სჭირდება, უყვარს, ეშინია, ახსოვს, სტკივა, შია, ცივა, უნდა) MUST have Dative experiencer, never Nominative (*ის საჭიროებს / *ის არის მშიერი / *ის გრძნობს ტკივილს).' : ''}
+3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart). Foreign names: missing nominative -ი on consonant-ending names (e.g. *პიტერ instead of პიტერი) or unadapted Latin clusters.' : ''}
+4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb), robotic stacked "რომელიც" clauses (convert to pre-nominal participles), English passive calques (convert to active aorist).' : ''}
 5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before . , ; : punctuation, no foreign sentence marks (।, ฯ, ۔), exactly one terminal mark per sentence, no doubled punctuation.' : ''}
 
 Be demanding: an accurate but stilted translation still gets flagged under style. If the translation is genuinely publication-ready, return an empty error list. Never invent problems.

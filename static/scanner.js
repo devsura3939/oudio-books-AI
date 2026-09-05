@@ -980,16 +980,17 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
 - Use ONLY standard Georgian Mkhedruli alphabet letters (ა-ჰ). Never substitute Latin or Cyrillic characters.
 - Georgian has NO capital letters.
 - Strict Character Discrimination (differentiate visually similar characters using grammatical and root-word context):
-  - ვ (v) vs პ (p) vs კ (k)
-  - შ (sh) vs წ (ts) vs ჭ (ch')
-  - რ (r) vs უ (u) vs ყ (q')
-  - ქ (k') vs ფ (p')
-  - თ (t) vs ძ (dz) vs ხ (kh)
-  - ჩ (ch) vs ხ (kh)
-  - ლ (l) vs დ (d) vs ო (o)
+  - ვ (v) vs პ (p) vs კ (k) (e.g. პატარა, not *კატარა or *ვატარა)
+  - შ (sh) vs წ (ts) vs ჭ (ch') (e.g. ჭეშმარიტი, წყალი, შვიდი)
+  - რ (r) vs უ (u) vs ყ (q') (e.g. სიყვარული, not *სიყვარუღი or *სამყაყო)
+  - ქ (k') vs ფ (p') (e.g. ფიქრი, ქალაქი)
+  - თ (t) vs ძ (dz) vs ხ (kh) (e.g. თავისუფლება, ძმა, ხალხი)
+  - ჩ (ch) vs ხ (kh) (e.g. ჩემი, ხელი)
+  - ლ (l) vs დ (d) vs ო (o) (e.g. ლამაზი, დიდი, ოთახი)
   - ზ (z) vs გ (g)
   - ს (s) vs ხ (kh)
-- Grammatical Harmony: Every Georgian word must obey standard Georgian nominal and verbal morphology (proper case markers: -მა, -ს, -ით, -ად; postpositions: -ში, -ზე, -თან, -დან, -კენ).
+  - ც (ts) vs ტ (t') vs ე (e)
+- Grammatical Harmony & Root Verification: Every Georgian word must obey standard Georgian nominal and verbal morphology (proper case markers: -მა, -ს, -ით, -ად; postpositions: -ში, -ზე, -თან, -დან, -კენ). If an optical glyph is ambiguous, choose the letter that produces a valid Georgian root and valid inflection.
 - Preserve authentic Georgian quotation marks („...“ or «...») and em dashes (—).
 - Preserve historical/archaic letters (ჱ, ჲ, ჳ, ჴ, ჵ, ჶ, ჷ, ჸ) if present in classical texts.`;
 
@@ -1237,7 +1238,7 @@ Your task is to review, detect glitches, restore missing symbols and words, and 
 1. Detect Glitches & Noise: Identify and eliminate scanner noise, line breaks, stray symbols (=, +, _, |, #, IIII, ~~~), and OCR artifacts.
 2. Missing Symbols & Punctuation: Actively detect and restore missing punctuation (${isKa ? 'authentic Georgian quotes „…“, em-dashes —' : 'quotes "...", em-dashes —'}, commas, colons, semicolons, exclamation and question marks).
 3. Missing Words Deduction: Deduce ambiguous, clipped, or faint words at page margins using sentence grammar, story flow, and vocabulary so that every sentence is complete.
-4. Character Discrimination: ${isKa ? 'Strictly maintain Georgian Mkhedruli script (ა-ჰ). Fix letter confusion (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ, ჩ/ხ, ლ/დ/ო, ზ/გ, ს/ხ) and enforce proper Georgian case markers (-მა, -ს, -ით, -ად).' : 'Strictly fix character confusion (rn/m, cl/d, 1/l, 0/O) and fix broken contractions.'}
+4. Character Discrimination: ${isKa ? 'Strictly maintain Georgian Mkhedruli script (ა-ჰ). Fix letter confusion (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ, ჩ/ხ, ლ/დ/ო, ზ/გ, ს/ხ, ც/ტ/ე) and enforce proper Georgian root morphology and case markers (-მა, -ს, -ით, -ად, -ში, -ზე).' : 'Strictly fix character confusion (rn/m, cl/d, 1/l, 0/O) and fix broken contractions.'}
 5. Merge words split by spaces (e.g. "დ ა" -> "და", "მ ე" -> "მე", "თ ქ ვ ა" -> "თქვა").
 6. Integrity: Do NOT summarize, do NOT omit lines, do NOT add commentary. Return ONLY the clean, perfected verbatim text without markdown code fences.
 
@@ -1555,6 +1556,7 @@ ${text.slice(0, 10000)}`;
         [/(?<![\u10A0-\u10FF])კატარა(?![ა-ჰ])/g, 'პატარა'],
         [/(?<![\u10A0-\u10FF])ვატარა(?![ა-ჰ])/g, 'პატარა'],
         [/(?<![\u10A0-\u10FF])უფლისწუღი(?![ა-ჰ])/g, 'უფლისწული'],
+        [/(?<![\u10A0-\u10FF])უფლისწუღმა(?![ა-ჰ])/g, 'უფლისწულმა'],
         [/(?<![\u10A0-\u10FF])თვითმფრინავო(?![ა-ჰ])/g, 'თვითმფრინავი'],
         [/(?<![\u10A0-\u10FF])მახრჩობეღა(?![ა-ჰ])/g, 'მახრჩობელა'],
         [/(?<![\u10A0-\u10FF])მეგობარო(?=\s+ჩემი|\s+თქვა)/g, 'მეგობარი'],
@@ -1562,7 +1564,17 @@ ${text.slice(0, 10000)}`;
         [/(?<![\u10A0-\u10FF])სიყვარუღი(?![ა-ჰ])/g, 'სიყვარული'],
         [/(?<![\u10A0-\u10FF])სინათღე(?![ა-ჰ])/g, 'სინათლე'],
         [/(?<![\u10A0-\u10FF])მშვენიეღი(?![ა-ჰ])/g, 'მშვენიერი'],
-        [/(?<![\u10A0-\u10FF])სამყაყო(?![ა-ჰ])/g, 'სამყარო']
+        [/(?<![\u10A0-\u10FF])სამყაყო(?![ა-ჰ])/g, 'სამყარო'],
+        [/(?<![\u10A0-\u10FF])წეშმარიტი(?![ა-ჰ])/g, 'ჭეშმარიტი'],
+        [/(?<![\u10A0-\u10FF])შეშმარიტი(?![ა-ჰ])/g, 'ჭეშმარიტი'],
+        [/(?<![\u10A0-\u10FF])ადამიანპა(?![ა-ჰ])/g, 'ადამიანმა'],
+        [/(?<![\u10A0-\u10FF])რომეღიც(?![ა-ჰ])/g, 'რომელიც'],
+        [/(?<![\u10A0-\u10FF])რომეღმაც(?![ა-ჰ])/g, 'რომელმაც'],
+        [/(?<![\u10A0-\u10FF])ყვეღაფერი(?![ა-ჰ])/g, 'ყველაფერი'],
+        [/(?<![\u10A0-\u10FF])ყვეღა(?![ა-ჰ])/g, 'ყველა'],
+        [/(?<![\u10A0-\u10FF])ძაღიან(?![ა-ჰ])/g, 'ძალიან'],
+        [/(?<![\u10A0-\u10FF])შეუძღია(?![ა-ჰ])/g, 'შეუძლია'],
+        [/(?<![\u10A0-\u10FF])შეუძღება(?![ა-ჰ])/g, 'შეუძლია']
       ];
       for (const [re, repl] of ocrFixes) {
         t = t.replace(re, repl);
