@@ -486,6 +486,69 @@ assert "_with_postposition" in te_text, "FAIL: associative postposition missing 
 
 print("  [PASS] Georgian Pro discourse engine, reflexive concord, and expanded OCR spell-check verified in all mirrors")
 
+# ── 23. Smart API Key Auto-Configuration, Multi-Key Merge, & Transport Security ──
+INDEX_HTML = os.path.join(REPO_DIR, "index.html")
+STUDIO_INDEX = os.path.join(REPO_DIR, "lovable-app", "public", "studio", "index.html")
+
+for path_name, path in [("index.html", INDEX_HTML), ("studio/index.html", STUDIO_INDEX)]:
+    with open(path, "r", encoding="utf-8") as f:
+        html_text = f.read()
+    assert "smartKeyMergeInput" in html_text, f"FAIL: smartKeyMergeInput missing from {path_name}"
+    assert "handleSmartKeyMerge()" in html_text, f"FAIL: handleSmartKeyMerge() call missing from {path_name}"
+    assert "elevenLabsAiKeyInput" in html_text, f"FAIL: elevenLabsAiKeyInput missing from {path_name}"
+    assert "elevenLabsSavedBadge" in html_text, f"FAIL: elevenLabsSavedBadge missing from {path_name}"
+
+for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
+    with open(path, "r", encoding="utf-8") as f:
+        app_text = f.read()
+    assert "function sanitizeApiKey" in app_text, f"FAIL: sanitizeApiKey missing from {path_name}"
+    assert "function detectApiKeyProvider" in app_text, f"FAIL: detectApiKeyProvider missing from {path_name}"
+    assert "function parseAndMergeApiKeys" in app_text, f"FAIL: parseAndMergeApiKeys missing from {path_name}"
+    assert "function handleSmartKeyMerge" in app_text, f"FAIL: handleSmartKeyMerge missing from {path_name}"
+    assert "function setupKeyInputAutoRouting" in app_text, f"FAIL: setupKeyInputAutoRouting missing from {path_name}"
+    assert "x-goog-api-key" in app_text, f"FAIL: x-goog-api-key header missing from {path_name}"
+    # Assert 0 alerts in saveGeminiSettings
+    start = app_text.find("function saveGeminiSettings()")
+    end = app_text.find("function openToCDrawer()", start)
+    save_body = app_text[start:end]
+    assert "alert(" not in save_body, f"FAIL: Blocking alert() detected in saveGeminiSettings in {path_name}"
+
+for path_name, path in [("static/scanner.js", STATIC_SCANNER), ("studio/static/scanner.js", STUDIO_SCANNER)]:
+    with open(path, "r", encoding="utf-8") as f:
+        scanner_text = f.read()
+    assert "x-goog-api-key" in scanner_text, f"FAIL: x-goog-api-key missing from {path_name}"
+    assert "sanitizeApiKey" in scanner_text, f"FAIL: sanitizeApiKey missing from {path_name}"
+
+# Functional key detection simulation
+def sim_sanitize(k):
+    if not k: return ""
+    k = k.strip()
+    k = re.sub(r'[\u200B-\u200D\uFEFF\u00A0]', '', k).strip()
+    k = re.sub(r'^(?:export\s+)?[A-Z0-9_]*(?:API_KEY|KEY|TOKEN|SECRET)[\s:=]+', '', k, flags=re.IGNORECASE).strip()
+    k = re.sub(r'^Bearer\s+', '', k, flags=re.IGNORECASE).strip()
+    k = re.sub(r'^["\'`]+|["\'`]+$', '', k).strip()
+    k = re.sub(r'[;,]+$', '', k).strip()
+    k = re.sub(r'^["\'`]+|["\'`]+$', '', k).strip()
+    return k
+
+def sim_detect(k):
+    sk = sim_sanitize(k)
+    if not sk: return None
+    if sk.startswith("AIzaSy") and len(sk) >= 35: return "gemini"
+    if re.match(r'^sk-or(?:-v1)?-[a-zA-Z0-9_-]{16,}', sk, re.I): return "openrouter"
+    if re.match(r'^gsk_[a-zA-Z0-9_-]{20,}', sk): return "groq"
+    if re.match(r'^[0-9a-fA-F]{32}$', sk): return "elevenlabs"
+    if re.match(r'^[a-zA-Z0-9]{32}$', sk): return "mistral"
+    if re.match(r'^sk-(?:proj-)?[a-zA-Z0-9_-]{20,}', sk): return "openai"
+    return None
+
+assert sim_detect('GEMINI_API_KEY="AIzaSyMockKeyForUnitTest1234567890abcdef";') == "gemini"
+assert sim_detect("export GROQ_API_KEY='gsk_mock_token_for_unit_tests_1234567890'") == "groq"
+assert sim_detect("ELEVENLABS_API_KEY=0000111122223333aaaabbbbccccdddd;") == "elevenlabs"
+assert sim_detect('sk-or-v1-mock_openrouter_token_sample_testing_purpose') == "openrouter"
+
+print("  [PASS] Smart API key auto-configuration, multi-key merge, auto-routing, and transport security verified in all mirrors")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
 
 

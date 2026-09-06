@@ -198,19 +198,408 @@ function getCachedAccountSettings(email) {
     return null;
 }
 
-// ── Universal AI Keys Resilience & Auto-Healing Layer (v1.47.4) ────────────
+// ── Universal AI Keys Resilience, Sanitization & Auto-Classifier (v1.51.0) ───
+function sanitizeApiKey(rawKey) {
+    if (!rawKey || typeof rawKey !== 'string') return '';
+    let k = rawKey.trim();
+    // Remove zero-width spaces, BOM, non-breaking spaces
+    k = k.replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim();
+    // Strip bash export prefix or variable assignment: export KEY=... or KEY=... or KEY: ...
+    k = k.replace(/^(?:export\s+)?[A-Za-z0-9_]*(?:API_KEY|KEY|TOKEN|SECRET)[\s:=]+/i, '').trim();
+    // Strip Bearer prefix
+    k = k.replace(/^Bearer\s+/i, '').trim();
+    // Strip wrapping quotes (single, double, backtick)
+    k = k.replace(/^["'`]+|["'`]+$/g, '').trim();
+    // Strip trailing semicolons or commas
+    k = k.replace(/[;,]+$/, '').trim();
+    // Strip wrapping quotes again if nested inside assignment
+    k = k.replace(/^["'`]+|["'`]+$/g, '').trim();
+    return k;
+}
+window.sanitizeApiKey = sanitizeApiKey;
+
+function detectApiKeyProvider(rawKey) {
+    const k = sanitizeApiKey(rawKey);
+    if (!k) return null;
+    // 1. Google Gemini: Starts with AIzaSy (typically 39 characters)
+    if (k.startsWith('AIzaSy') && k.length >= 35) {
+        return 'gemini';
+    }
+    // 2. OpenRouter: Starts with sk-or- or sk-or-v1-
+    if (/^sk-or(?:-v1)?-[a-zA-Z0-9_-]{16,}/i.test(k)) {
+        return 'openrouter';
+    }
+    // 3. Groq: Starts with gsk_
+    if (/^gsk_[a-zA-Z0-9_-]{20,}/.test(k)) {
+        return 'groq';
+    }
+    // 4. Anthropic: Starts with sk-ant-
+    if (/^sk-ant-[a-zA-Z0-9_-]{16,}/.test(k)) {
+        return 'anthropic';
+    }
+    // 5. ElevenLabs: 32-character hexadecimal string
+    if (/^[0-9a-fA-F]{32}$/.test(k)) {
+        return 'elevenlabs';
+    }
+    // 6. OpenAI / Compatible: Starts with sk-proj- or sk- (excluding sk-or- and sk-ant-)
+    if (/^sk-(?:proj-)?[a-zA-Z0-9_-]{20,}/.test(k)) {
+        return 'openai';
+    }
+    // 7. Mistral: 32-character alphanumeric not purely hex
+    if (/^[a-zA-Z0-9]{32}$/.test(k) && !/^[0-9a-fA-F]{32}$/.test(k)) {
+        return 'mistral';
+    }
+    return null;
+}
+window.detectApiKeyProvider = detectApiKeyProvider;
+
+function parseAndMergeApiKeys(rawText) {
+    if (!rawText || typeof rawText !== 'string') {
+        return { detected: {}, count: 0 };
+    }
+    const detected = {};
+
+    // 1. Try parsing JSON
+    const trimmed = rawText.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                for (const [k, v] of Object.entries(parsed)) {
+                    if (typeof v !== 'string') continue;
+                    const cleanV = sanitizeApiKey(v);
+                    const kLow = k.toLowerCase();
+                    if (kLow.includes('gemini')) detected.gemini = cleanV;
+                    else if (kLow.includes('openrouter') || kLow.includes('open_router')) detected.openrouter = cleanV;
+                    else if (kLow.includes('groq')) detected.groq = cleanV;
+                    else if (kLow.includes('eleven') || kLow.includes('xi-api')) detected.elevenlabs = cleanV;
+                    else if (kLow.includes('mistral')) detected.mistral = cleanV;
+                    else if (kLow.includes('openai') || kLow.includes('custom')) detected.custom = cleanV;
+                    else {
+                        const prov = detectApiKeyProvider(cleanV);
+                        if (prov) detected[prov] = cleanV;
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    // 2. Line by line parsing (.env variables or tokens)
+    const lines = rawText.split(/[\r\n]+/);
+    for (const line of lines) {
+        const lineS = line.trim();
+        if (!lineS || lineS.startsWith('#')) continue;
+
+        if (lineS.includes('=') || lineS.includes(':')) {
+            const parts = lineS.split(/[:=]/);
+            if (parts.length >= 2) {
+                const propName = parts[0].trim().toLowerCase();
+                const val = parts.slice(1).join('=').trim();
+                const cleanV = sanitizeApiKey(val);
+                if (cleanV) {
+                    if (propName.includes('gemini')) { detected.gemini = cleanV; continue; }
+                    if (propName.includes('openrouter') || propName.includes('open_router')) { detected.openrouter = cleanV; continue; }
+                    if (propName.includes('groq')) { detected.groq = cleanV; continue; }
+                    if (propName.includes('eleven') || propName.includes('xi-api')) { detected.elevenlabs = cleanV; continue; }
+                    if (propName.includes('mistral')) { detected.mistral = cleanV; continue; }
+                    if (propName.includes('openai') || propName.includes('custom')) { detected.custom = cleanV; continue; }
+                    const prov = detectApiKeyProvider(cleanV);
+                    if (prov) { detected[prov] = cleanV; continue; }
+                }
+            }
+        }
+
+        // Split line by whitespace / comma / semicolon tokens
+        const tokens = lineS.split(/[\s,;]+/);
+        for (const tok of tokens) {
+            const cleanTok = sanitizeApiKey(tok);
+            if (!cleanTok) continue;
+            const prov = detectApiKeyProvider(cleanTok);
+            if (prov && !detected[prov]) {
+                detected[prov] = cleanTok;
+            }
+        }
+    }
+
+    // Apply detected keys into live state and localStorage
+    if (detected.gemini) {
+        geminiApiKey = detected.gemini;
+        localStorage.setItem('geminiApiKey', detected.gemini);
+        localStorage.setItem('lumina_saved_gemini_key', detected.gemini);
+        if (!geminiModel || geminiModel.includes('2.5') || geminiModel.includes('exp')) {
+            geminiModel = 'gemini-2.0-flash';
+            localStorage.setItem('geminiModel', geminiModel);
+        }
+    }
+    if (detected.openrouter) {
+        openRouterApiKey = detected.openrouter;
+        localStorage.setItem('openRouterApiKey', detected.openrouter);
+        localStorage.setItem('lumina_saved_openrouter_key', detected.openrouter);
+    }
+    if (detected.groq) {
+        groqApiKey = detected.groq;
+        if (typeof setGroqApiKey === 'function') setGroqApiKey(detected.groq);
+        localStorage.setItem('groqApiKey', detected.groq);
+        localStorage.setItem('lumina_saved_groq_key', detected.groq);
+    }
+    if (detected.mistral) {
+        mistralApiKey = detected.mistral;
+        if (typeof setMistralApiKey === 'function') setMistralApiKey(detected.mistral);
+        localStorage.setItem('mistralApiKey', detected.mistral);
+        localStorage.setItem('lumina_saved_mistral_key', detected.mistral);
+    }
+    if (detected.elevenlabs) {
+        elevenLabsApiKey = detected.elevenlabs;
+        elevenLabsEnabled = true;
+        localStorage.setItem('lumina_el_key', detected.elevenlabs);
+        localStorage.setItem('lumina_saved_el_key', detected.elevenlabs);
+        localStorage.setItem('lumina_el_enabled', 'true');
+        if (DOM && DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = true;
+        if (DOM && DOM.elevenLabsKeySection) DOM.elevenLabsKeySection.classList.remove('hidden');
+        if (typeof updateTopVoiceBadge === 'function') updateTopVoiceBadge();
+    }
+    if (detected.custom) {
+        customProviderKey = detected.custom;
+        if (!customProviderUrl) customProviderUrl = 'https://api.openai.com/v1/chat/completions';
+        if (!customProviderModel) customProviderModel = 'gpt-4o-mini';
+        localStorage.setItem('customProviderKey', detected.custom);
+        localStorage.setItem('lumina_saved_custom_key', detected.custom);
+        localStorage.setItem('customProviderUrl', customProviderUrl);
+        localStorage.setItem('customProviderModel', customProviderModel);
+    }
+
+    // Persist into user account settings
+    const email = getActiveUserEmail();
+    const accountSettings = getCurrentAccountSettings();
+    if (detected.gemini) accountSettings.geminiApiKey = detected.gemini;
+    if (detected.openrouter) accountSettings.openRouterApiKey = detected.openrouter;
+    if (detected.groq) accountSettings.groqApiKey = detected.groq;
+    if (detected.mistral) accountSettings.mistralApiKey = detected.mistral;
+    if (detected.elevenlabs) {
+        accountSettings.elevenLabsApiKey = detected.elevenlabs;
+        accountSettings.elevenLabsEnabled = true;
+    }
+    if (detected.custom) {
+        accountSettings.customProviderKey = detected.custom;
+        accountSettings.customProviderUrl = customProviderUrl;
+        accountSettings.customProviderModel = customProviderModel;
+    }
+    accountSettings.updatedAt = new Date().toISOString();
+    const storageKey = getAccountSettingsStorageKey(email);
+    localStorage.setItem(storageKey, JSON.stringify(accountSettings));
+    try { localStorage.setItem('lumina_account_settings_local', JSON.stringify(accountSettings)); } catch (e) {}
+
+    return {
+        detected,
+        count: Object.keys(detected).length
+    };
+}
+window.parseAndMergeApiKeys = parseAndMergeApiKeys;
+
+function flashInputGlow(el) {
+    if (!el) return;
+    el.classList.add('ring-2', 'ring-primary-fixed', 'bg-primary-fixed/10');
+    setTimeout(() => {
+        el.classList.remove('ring-2', 'ring-primary-fixed', 'bg-primary-fixed/10');
+    }, 2000);
+}
+window.flashInputGlow = flashInputGlow;
+
+function handleSmartKeyMerge() {
+    const input = document.getElementById('smartKeyMergeInput');
+    const feedback = document.getElementById('smartKeyMergeFeedback');
+    if (!input) return;
+    const raw = input.value.trim();
+    if (!raw) {
+        if (feedback) feedback.innerHTML = '<span class="text-amber-400">Please paste at least one API key or .env snippet.</span>';
+        showToast('Please paste an API key to auto-detect and connect');
+        return;
+    }
+
+    const res = parseAndMergeApiKeys(raw);
+    if (res.count === 0) {
+        if (feedback) feedback.innerHTML = '<span class="text-error">Could not recognize any API key signatures. Check formatting or paste directly into specific fields below.</span>';
+        showToast('Could not recognize any valid API key signature');
+        return;
+    }
+
+    const labels = [];
+    if (res.detected.gemini) labels.push('Gemini (Frontier AI)');
+    if (res.detected.openrouter) labels.push('OpenRouter (Free Models)');
+    if (res.detected.groq) labels.push('Groq (Ultra-Fast)');
+    if (res.detected.elevenlabs) labels.push('ElevenLabs (Neural Voice)');
+    if (res.detected.mistral) labels.push('Mistral (Fallback #2)');
+    if (res.detected.custom) labels.push('Custom / OpenAI Provider');
+
+    const msg = `⚡ Configured & connected ${res.count} provider${res.count > 1 ? 's' : ''}: ${labels.join(', ')}`;
+    if (feedback) {
+        feedback.innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> ${escapeHtml(msg)}</span>`;
+    }
+    showToast(msg);
+    input.value = '';
+
+    syncSettingsToDOMInputs();
+    renderAiKeyStatusPanel();
+    setTimeout(probeAiKeyStatus, 50);
+}
+window.handleSmartKeyMerge = handleSmartKeyMerge;
+
+function parseAndMergeApiKeysPreview(rawText) {
+    if (!rawText || typeof rawText !== 'string') return [];
+    const providers = new Set();
+    const lines = rawText.split(/[\r\n]+/);
+    for (const line of lines) {
+        const s = line.trim();
+        if (!s || s.startsWith('#')) continue;
+        if (s.includes('=') || s.includes(':')) {
+            const prop = s.split(/[:=]/)[0].toLowerCase();
+            if (prop.includes('gemini')) providers.add('Gemini');
+            else if (prop.includes('openrouter')) providers.add('OpenRouter');
+            else if (prop.includes('groq')) providers.add('Groq');
+            else if (prop.includes('eleven')) providers.add('ElevenLabs');
+            else if (prop.includes('mistral')) providers.add('Mistral');
+        }
+        const tokens = s.split(/[\s,;]+/);
+        for (const tok of tokens) {
+            const det = detectApiKeyProvider(tok);
+            if (det === 'gemini') providers.add('Gemini');
+            else if (det === 'openrouter') providers.add('OpenRouter');
+            else if (det === 'groq') providers.add('Groq');
+            else if (det === 'elevenlabs') providers.add('ElevenLabs');
+            else if (det === 'mistral') providers.add('Mistral');
+            else if (det === 'openai') providers.add('OpenAI');
+        }
+    }
+    return Array.from(providers);
+}
+window.parseAndMergeApiKeysPreview = parseAndMergeApiKeysPreview;
+
+function setupKeyInputAutoRouting() {
+    const routingMap = [
+        { id: 'geminiApiKeyInput', provider: 'gemini' },
+        { id: 'openRouterApiKeyInput', provider: 'openrouter' },
+        { id: 'groqApiKeyInput', provider: 'groq' },
+        { id: 'mistralApiKeyInput', provider: 'mistral' },
+        { id: 'elevenLabsAiKeyInput', provider: 'elevenlabs' },
+        { id: 'elevenLabsApiKey', provider: 'elevenlabs' },
+        { id: 'customProviderKeyInput', provider: 'custom' },
+    ];
+
+    routingMap.forEach(item => {
+        const el = document.getElementById(item.id);
+        if (!el || el.dataset.autoRoutingAttached) return;
+        el.dataset.autoRoutingAttached = 'true';
+
+        const checkAndRoute = () => {
+            const raw = el.value;
+            if (!raw || raw.length < 16) return;
+            const detected = detectApiKeyProvider(raw);
+            if (detected && detected !== item.provider) {
+                const cleanKey = sanitizeApiKey(raw);
+                if (detected === 'openrouter') {
+                    const target = document.getElementById('openRouterApiKeyInput');
+                    if (target) {
+                        target.value = cleanKey;
+                        openRouterApiKey = cleanKey;
+                        localStorage.setItem('openRouterApiKey', cleanKey);
+                        localStorage.setItem('lumina_saved_openrouter_key', cleanKey);
+                        flashInputGlow(target);
+                    }
+                    showToast('⚡ Auto-detected OpenRouter key — routed to OpenRouter field!');
+                } else if (detected === 'gemini') {
+                    const target = document.getElementById('geminiApiKeyInput');
+                    if (target) {
+                        target.value = cleanKey;
+                        geminiApiKey = cleanKey;
+                        localStorage.setItem('geminiApiKey', cleanKey);
+                        localStorage.setItem('lumina_saved_gemini_key', cleanKey);
+                        flashInputGlow(target);
+                    }
+                    showToast('⚡ Auto-detected Google Gemini key — routed to Gemini field!');
+                } else if (detected === 'groq') {
+                    const target = document.getElementById('groqApiKeyInput');
+                    if (target) {
+                        target.value = cleanKey;
+                        groqApiKey = cleanKey;
+                        localStorage.setItem('groqApiKey', cleanKey);
+                        localStorage.setItem('lumina_saved_groq_key', cleanKey);
+                        flashInputGlow(target);
+                    }
+                    showToast('⚡ Auto-detected Groq key — routed to Groq field!');
+                } else if (detected === 'elevenlabs') {
+                    const target1 = document.getElementById('elevenLabsAiKeyInput');
+                    const target2 = document.getElementById('elevenLabsApiKey');
+                    if (target1) target1.value = cleanKey;
+                    if (target2) target2.value = cleanKey;
+                    elevenLabsApiKey = cleanKey;
+                    elevenLabsEnabled = true;
+                    localStorage.setItem('lumina_el_key', cleanKey);
+                    localStorage.setItem('lumina_saved_el_key', cleanKey);
+                    localStorage.setItem('lumina_el_enabled', 'true');
+                    if (DOM && DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = true;
+                    if (DOM && DOM.elevenLabsKeySection) DOM.elevenLabsKeySection.classList.remove('hidden');
+                    if (typeof updateTopVoiceBadge === 'function') updateTopVoiceBadge();
+                    if (target1) flashInputGlow(target1);
+                    showToast('⚡ Auto-detected ElevenLabs key — activated voice engine!');
+                } else if (detected === 'mistral') {
+                    const target = document.getElementById('mistralApiKeyInput');
+                    if (target) {
+                        target.value = cleanKey;
+                        mistralApiKey = cleanKey;
+                        localStorage.setItem('mistralApiKey', cleanKey);
+                        localStorage.setItem('lumina_saved_mistral_key', cleanKey);
+                        flashInputGlow(target);
+                    }
+                    showToast('⚡ Auto-detected Mistral key — routed to Mistral field!');
+                }
+                el.value = '';
+                syncSettingsToDOMInputs();
+            }
+        };
+
+        el.addEventListener('paste', () => setTimeout(checkAndRoute, 50));
+        el.addEventListener('change', checkAndRoute);
+        el.addEventListener('blur', () => {
+            if (el.value) el.value = sanitizeApiKey(el.value);
+        });
+    });
+
+    const mergeInput = document.getElementById('smartKeyMergeInput');
+    const mergeFeedback = document.getElementById('smartKeyMergeFeedback');
+    if (mergeInput && !mergeInput.dataset.liveAttached) {
+        mergeInput.dataset.liveAttached = 'true';
+        mergeInput.addEventListener('input', () => {
+            const val = mergeInput.value.trim();
+            if (!val || val.length < 10) {
+                if (mergeFeedback) mergeFeedback.innerHTML = '';
+                return;
+            }
+            const preview = parseAndMergeApiKeysPreview(val);
+            if (preview && preview.length && mergeFeedback) {
+                mergeFeedback.innerHTML = preview.map(p => `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-fixed/20 text-primary-fixed text-[10px] font-semibold">● ${p}</span>`).join(' ');
+            }
+        });
+    }
+}
+window.setupKeyInputAutoRouting = setupKeyInputAutoRouting;
+
+// ── Universal AI Keys Resilience & Auto-Healing Layer (v1.51.0) ────────────
 // Guarantee: User API keys NEVER get lost across reloads, builds, logouts,
 // or account switches. Scans memory, dedicated storage, backup slots, and all
 // account objects to find and heal active keys across all storage layers.
 function resolveAndPreserveAllAiKeys() {
     function findBestStringKey(curVal, keysToSearch, accountProp) {
-        if (curVal && typeof curVal === 'string' && curVal.trim().length > 0) {
-            return curVal.trim();
+        if (curVal && typeof curVal === 'string') {
+            const sanitizedVal = sanitizeApiKey(curVal);
+            if (sanitizedVal.length > 0) return sanitizedVal;
         }
         for (const k of keysToSearch) {
             try {
                 const val = localStorage.getItem(k);
-                if (val && typeof val === 'string' && val.trim().length > 0) return val.trim();
+                if (val && typeof val === 'string') {
+                    const sanitizedVal = sanitizeApiKey(val);
+                    if (sanitizedVal.length > 0) return sanitizedVal;
+                }
             } catch (e) {}
         }
         // Search current user account
@@ -218,14 +607,16 @@ function resolveAndPreserveAllAiKeys() {
             const email = getActiveUserEmail();
             const curAcc = getCachedAccountSettings(email);
             if (curAcc && curAcc[accountProp] && String(curAcc[accountProp]).trim().length > 0) {
-                return String(curAcc[accountProp]).trim();
+                const sanitizedVal = sanitizeApiKey(String(curAcc[accountProp]));
+                if (sanitizedVal.length > 0) return sanitizedVal;
             }
         } catch (e) {}
         // Search local account
         try {
             const locAcc = getCachedAccountSettings('');
             if (locAcc && locAcc[accountProp] && String(locAcc[accountProp]).trim().length > 0) {
-                return String(locAcc[accountProp]).trim();
+                const sanitizedVal = sanitizeApiKey(String(locAcc[accountProp]));
+                if (sanitizedVal.length > 0) return sanitizedVal;
             }
         } catch (e) {}
         // Deep scan across ANY lumina_account_settings_* in localStorage
@@ -236,7 +627,8 @@ function resolveAndPreserveAllAiKeys() {
                     try {
                         const parsed = JSON.parse(localStorage.getItem(lk));
                         if (parsed && parsed[accountProp] && String(parsed[accountProp]).trim().length > 0) {
-                            return String(parsed[accountProp]).trim();
+                            const sanitizedVal = sanitizeApiKey(String(parsed[accountProp]));
+                            if (sanitizedVal.length > 0) return sanitizedVal;
                         }
                     } catch (e) {}
                 }
@@ -347,7 +739,7 @@ let geminiPasses = (_initialAcc && _initialAcc.geminiPasses !== undefined)
 if (![1, 2, 3].includes(geminiPasses)) geminiPasses = 3;
 
 // Gemini fallback chain: real production Google AI Studio models
-const GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash-lite'];
+const GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite', 'gemini-2.5-pro'];
 const geminiModelCooldown = {}; // model -> earliest ms it may be retried
 const GEMINI_MODEL_COOLDOWN_MS = 60_000;
 
@@ -2429,14 +2821,21 @@ function syncSettingsToDOMInputs() {
     const cpBadge = document.getElementById('customSavedBadge');
     if (cpBadge) cpBadge.classList.toggle('hidden', !effCpKey && !(customProviderUrl || localStorage.getItem('customProviderUrl')));
 
+    const elAiInput = document.getElementById('elevenLabsAiKeyInput');
+    const effEL = elevenLabsApiKey || localStorage.getItem('lumina_el_key') || localStorage.getItem('lumina_saved_el_key') || '';
+    if (elAiInput) elAiInput.value = effEL;
+    const elBadge = document.getElementById('elevenLabsSavedBadge');
+    if (elBadge) elBadge.classList.toggle('hidden', !effEL);
+
     if (DOM && DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = Boolean(elevenLabsEnabled);
-    if (DOM && DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = elevenLabsApiKey || localStorage.getItem('lumina_el_key') || localStorage.getItem('lumina_saved_el_key') || '';
+    if (DOM && DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = effEL;
     if (DOM && DOM.elevenLabsVoiceSelect && elevenLabsVoiceId) DOM.elevenLabsVoiceSelect.value = elevenLabsVoiceId;
     if (DOM && DOM.elevenLabsKeySection) {
         if (elevenLabsEnabled) DOM.elevenLabsKeySection.classList.remove('hidden');
         else DOM.elevenLabsKeySection.classList.add('hidden');
     }
     if (typeof updateTopVoiceBadge === 'function') updateTopVoiceBadge();
+    if (typeof setupKeyInputAutoRouting === 'function') setupKeyInputAutoRouting();
 }
 
 function applyAccountSettings(settings, saveToLegacyStorage = true) {
@@ -2674,9 +3073,9 @@ function saveGeminiSettings() {
     if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
 
     const keyInput = document.getElementById('geminiApiKeyInput');
-    const inKey = keyInput ? keyInput.value.trim() : '';
+    const inKey = keyInput ? sanitizeApiKey(keyInput.value) : '';
     // Safe preservation: An empty input NEVER erases an existing saved key!
-    const key = inKey || geminiApiKey || localStorage.getItem('geminiApiKey') || localStorage.getItem('lumina_saved_gemini_key') || '';
+    const key = inKey || sanitizeApiKey(geminiApiKey) || sanitizeApiKey(localStorage.getItem('geminiApiKey')) || sanitizeApiKey(localStorage.getItem('lumina_saved_gemini_key')) || '';
 
     const modelSelect = document.getElementById('geminiModelSelect');
     const model = modelSelect ? modelSelect.value : (geminiModel || 'gemini-2.0-flash');
@@ -2685,29 +3084,33 @@ function saveGeminiSettings() {
     const passes = passesSelect ? parseInt(passesSelect.value, 10) : (geminiPasses || 3);
 
     const orKeyInput = document.getElementById('openRouterApiKeyInput');
-    const inOrKey = orKeyInput ? orKeyInput.value.trim() : '';
-    const orKey = inOrKey || openRouterApiKey || localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || '';
+    const inOrKey = orKeyInput ? sanitizeApiKey(orKeyInput.value) : '';
+    const orKey = inOrKey || sanitizeApiKey(openRouterApiKey) || sanitizeApiKey(localStorage.getItem('openRouterApiKey')) || sanitizeApiKey(localStorage.getItem('lumina_saved_openrouter_key')) || '';
 
     const orModelSelect = document.getElementById('openRouterModelSelect');
     const orModel = orModelSelect ? orModelSelect.value : (openRouterModel || '');
 
     const groqKeyInput = document.getElementById('groqApiKeyInput');
-    const inGroqKey = groqKeyInput ? groqKeyInput.value.trim() : '';
-    const groqKey = inGroqKey || groqApiKey || localStorage.getItem('groqApiKey') || localStorage.getItem('lumina_saved_groq_key') || '';
+    const inGroqKey = groqKeyInput ? sanitizeApiKey(groqKeyInput.value) : '';
+    const groqKey = inGroqKey || sanitizeApiKey(groqApiKey) || sanitizeApiKey(localStorage.getItem('groqApiKey')) || sanitizeApiKey(localStorage.getItem('lumina_saved_groq_key')) || '';
 
     const groqModelSelectEl = document.getElementById('groqModelSelect');
     const groqSelectedModelVal = groqModelSelectEl ? groqModelSelectEl.value : (groqSelectedModel || '');
 
     const mistralKeyInput = document.getElementById('mistralApiKeyInput');
-    const inMistralKey = mistralKeyInput ? mistralKeyInput.value.trim() : '';
-    const mistralKey = inMistralKey || mistralApiKey || localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || '';
+    const inMistralKey = mistralKeyInput ? sanitizeApiKey(mistralKeyInput.value) : '';
+    const mistralKey = inMistralKey || sanitizeApiKey(mistralApiKey) || sanitizeApiKey(localStorage.getItem('mistralApiKey')) || sanitizeApiKey(localStorage.getItem('lumina_saved_mistral_key')) || '';
+
+    const elAiKeyInput = document.getElementById('elevenLabsAiKeyInput');
+    const inELKey = elAiKeyInput ? sanitizeApiKey(elAiKeyInput.value) : '';
+    const elKey = inELKey || sanitizeApiKey(elevenLabsApiKey) || sanitizeApiKey(localStorage.getItem('lumina_el_key')) || sanitizeApiKey(localStorage.getItem('lumina_saved_el_key')) || '';
 
     const cpUrlInput = document.getElementById('customProviderUrlInput');
     const cpUrl = (cpUrlInput ? cpUrlInput.value.trim() : '') || customProviderUrl || localStorage.getItem('customProviderUrl') || '';
     const cpModelInput = document.getElementById('customProviderModelInput');
     const cpModel = (cpModelInput ? cpModelInput.value.trim() : '') || customProviderModel || localStorage.getItem('customProviderModel') || '';
     const cpKeyInput = document.getElementById('customProviderKeyInput');
-    const cpKey = (cpKeyInput ? cpKeyInput.value.trim() : '') || customProviderKey || localStorage.getItem('customProviderKey') || '';
+    const cpKey = (cpKeyInput ? sanitizeApiKey(cpKeyInput.value) : '') || sanitizeApiKey(customProviderKey) || sanitizeApiKey(localStorage.getItem('customProviderKey')) || '';
 
     if (orKey && orKey !== OPENROUTER_DEFAULT_KEY) {
         localStorage.setItem('openRouterApiKey', orKey);
@@ -2731,6 +3134,18 @@ function saveGeminiSettings() {
     if (mistralKey) {
         setMistralApiKey(mistralKey);
         localStorage.setItem('lumina_saved_mistral_key', mistralKey);
+    }
+
+    if (elKey) {
+        elevenLabsApiKey = elKey;
+        elevenLabsEnabled = true;
+        localStorage.setItem('lumina_el_key', elKey);
+        localStorage.setItem('lumina_saved_el_key', elKey);
+        localStorage.setItem('lumina_el_enabled', 'true');
+        if (DOM && DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = true;
+        if (DOM && DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = elKey;
+        if (DOM && DOM.elevenLabsKeySection) DOM.elevenLabsKeySection.classList.remove('hidden');
+        if (typeof updateTopVoiceBadge === 'function') updateTopVoiceBadge();
     }
 
     setCustomProvider(cpUrl, cpModel, cpKey);
@@ -2761,6 +3176,8 @@ function saveGeminiSettings() {
     accountSettings.groqApiKey = groqKey;
     accountSettings.groqSelectedModel = groqSelectedModel;
     accountSettings.mistralApiKey = mistralKey;
+    accountSettings.elevenLabsApiKey = elKey;
+    accountSettings.elevenLabsEnabled = Boolean(elevenLabsEnabled);
     accountSettings.customProviderUrl = cpUrl;
     accountSettings.customProviderModel = cpModel;
     accountSettings.customProviderKey = cpKey;
@@ -2780,110 +3197,24 @@ function saveGeminiSettings() {
         });
     }
 
-    showToast(email ? `AI settings saved to account ${email} (Cloud Synced)` : 'AI settings saved successfully');
     syncSettingsToDOMInputs();
 
-    if (groqKey) {
-        probeOpenAICompatibleKey(GROQ_API_URL, groqKey, GROQ_MODELS).then(res => {
-            if (res.ok) alert('Groq API key verified — free-tier fallback engine is active.');
-            else if (res.status === 401 || res.status === 403) alert('Groq key saved, but it was rejected (status ' + res.status + ').\nCheck the key at console.groq.com/keys.');
-            else if (res.status === 429) alert('Groq key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
-            else if (res.status === 0) alert('Groq key saved, but could not reach api.groq.com (network error).');
-            else alert('Groq key saved, but the probe returned status ' + res.status + '.');
-        });
-    }
-    if (mistralKey) {
-        probeOpenAICompatibleKey(MISTRAL_API_URL, mistralKey, MISTRAL_MODELS).then(res => {
-            if (res.ok) alert('Mistral API key verified — free-tier fallback engine is active.');
-            else if (res.status === 401 || res.status === 403) alert('Mistral key saved, but it was rejected (status ' + res.status + ').\nCheck the key at console.mistral.ai.');
-            else if (res.status === 429) alert('Mistral key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
-            else if (res.status === 0) alert('Mistral key saved, but the browser could not reach api.mistral.ai.\nThis is usually a CORS restriction — Mistral will be skipped automatically and the chain continues with the other providers.');
-            else alert('Mistral key saved, but the probe returned status ' + res.status + '.');
-        });
-    }
+    const activeEngines = [];
+    if (key) activeEngines.push('Google Gemini (Frontier)');
+    if (orKey) activeEngines.push('OpenRouter (Free)');
+    if (groqKey) activeEngines.push('Groq (Fast)');
+    if (mistralKey) activeEngines.push('Mistral');
+    if (elKey) activeEngines.push('ElevenLabs Voice');
+    if (cpUrl) activeEngines.push('Custom Provider');
 
-    if (cpUrl) {
-        const normUrl = normalizeCustomProviderUrl(cpUrl);
-        const headers = { 'Content-Type': 'application/json' };
-        if (cpKey && cpKey.trim()) headers['Authorization'] = `Bearer ${cpKey.trim()}`;
-        fetch(normUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                model: cpModel || 'default',
-                messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
-                max_tokens: 8
-            })
-        }).then(r => {
-            if (r.ok) alert('Custom Provider connected and verified successfully!');
-            else alert('Custom Provider saved, but returned HTTP ' + r.status + ' from ' + normUrl + '.\nCheck endpoint URL and model name.');
-        }).catch(() => {
-            alert('Custom Provider saved, but network connection failed.\nCheck that your endpoint is running and CORS is allowed.');
-        });
-    }
+    const summaryMsg = activeEngines.length
+        ? `⚡ AI settings saved! Active: ${activeEngines.join(', ')}`
+        : 'AI settings saved. Free offline & machine engines active.';
+    showToast(summaryMsg);
 
-    if (key) {
-        const probeModel = GEMINI_FALLBACK_MODELS.includes(geminiModel) ? geminiModel : 'gemini-2.0-flash';
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/${probeModel}:generateContent?key=${key.trim()}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: 'Reply with exactly: OK' }] }],
-                generationConfig: { maxOutputTokens: 8 }
-            })
-        }).then(r => {
-            if (r.ok) {
-                alert('Gemini API key verified — all translation stages are active!');
-            } else if (r.status === 400 || r.status === 403) {
-                alert('Key saved, but Gemini rejected it (status ' + r.status + ').\nCheck that the key is a valid Google AI Studio API key.');
-            } else if (r.status === 404) {
-                alert('Key saved, but model ' + probeModel + ' returned status 404.\nSwitching to gemini-2.0-flash is recommended.');
-            } else if (r.status === 429) {
-                alert('Key saved, but quota is exhausted (429).\nTranslation will fall back to other engines until quota resets.');
-            } else {
-                alert('Key saved, but Gemini returned status ' + r.status + '.');
-            }
-        }).catch(() => {
-            alert('Key saved, but could not reach Gemini (network error).\nTranslation will use fallback engines until connection is restored.');
-        });
-    } else {
-        alert("Gemini AI Engine disabled (no key). Model preference saved.");
-    }
-    if (orKey) {
-        fetch(OPENROUTER_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${orKey}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': location.origin,
-                'X-Title': 'Lumina Audio',
-            },
-            body: JSON.stringify({
-                model: orModel || OPENROUTER_FREE_MODELS[0],
-                messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
-                max_tokens: 8,
-            }),
-        }).then(r => {
-            if (r.ok) {
-                alert('OpenRouter API key verified — free-model engine is active.');
-            } else if (r.status === 401 || r.status === 403) {
-                alert('OpenRouter key saved, but it was rejected (status ' + r.status + ').\nCheck the key at openrouter.ai/keys.');
-            } else if (r.status === 429) {
-                alert('OpenRouter key saved and valid, but the free model is rate-limited right now (429).\nThe engine will retry other free models automatically.');
-            } else {
-                alert('OpenRouter key saved, but the probe returned status ' + r.status + '.');
-            }
-        }).catch(() => {
-            alert('OpenRouter key saved, but could not reach openrouter.ai (network error).');
-        });
-    }
-    if (cpUrl && cpModel) {
-        callCustomProviderText('Reply with exactly: OK', { maxTokens: 8 }).then(r => {
-            if (r) alert('Custom provider verified — engine is active.');
-            else alert('Custom provider saved, but the probe got no response.\nDouble-check your Base URL, model name, and API key.');
-        });
-    }
-    setTimeout(probeAiKeyStatus, 0);
+    // Run non-blocking live probe in background
+    renderAiKeyStatusPanel();
+    setTimeout(probeAiKeyStatus, 100);
     closeModal('aiSettingsModal');
 }
 
@@ -5632,7 +5963,8 @@ async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, ret
 }
 
 async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null } = {}) {
-    if (!geminiApiKey) return null;
+    const cleanKey = sanitizeApiKey(geminiApiKey);
+    if (!cleanKey) return null;
 
     // Select candidate model without mutating user's saved preference
     const preferredModel = GEMINI_FALLBACK_MODELS.includes(geminiModel) ? geminiModel : 'gemini-2.0-flash';
@@ -5660,9 +5992,12 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
                 if (systemPrompt) {
                     requestPayload.systemInstruction = { parts: [{ text: systemPrompt }] };
                 }
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey.trim()}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': cleanKey
+                    },
                     body: JSON.stringify(requestPayload),
                     signal: ctrl.signal,
                 });
@@ -6231,7 +6566,7 @@ function renderAiKeyStatusPanel() {
 
     if (aiKeyStatusProbeBusy) return; // keep previous content while probing
 
-    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey) {
+    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey && !elevenLabsApiKey && !customProviderUrl) {
         list.innerHTML = '<p class="text-on-surface-variant">No AI keys configured — translation uses free machine engines (Google / MyMemory).</p>';
         return;
     }
@@ -6256,6 +6591,10 @@ function renderAiKeyStatusPanel() {
         ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(geminiApiKey))}</span><br><span class="text-on-surface-variant">Tier 1 (Frontier) · Model: ${escapeHtml(geminiModel)} · ${geminiPasses}-stage literary pipeline</span></div></div>`
         : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Gemini</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
 
+    rows.push(elevenLabsApiKey
+        ? `<div class="flex items-start gap-2"><span class="${elevenLabsEnabled ? 'text-green-400' : 'text-amber-400'}">●</span><div><span class="font-semibold text-white">ElevenLabs (Neural Voice)</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(elevenLabsApiKey))}</span><br><span class="text-on-surface-variant">${elevenLabsEnabled ? 'Voice Studio Active · High-Fidelity Neural TTS' : 'Key saved · Voice toggle is OFF'}</span></div></div>`
+        : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">ElevenLabs (Neural Voice)</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
+
     rows.push(customProviderUrl
         ? `<div class="flex items-start gap-2"><span class="text-blue-400">●</span><div><span class="font-semibold text-white">Custom Provider</span><br><span class="text-on-surface-variant">Tier 3 · ${escapeHtml(customProviderModel || 'default')} · ${escapeHtml(customProviderUrl.slice(0, 45))}</span></div></div>`
         : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Custom Provider</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
@@ -6270,24 +6609,28 @@ async function probeAiKeyStatus() {
     if (!list || aiKeyStatusProbeBusy) return;
     aiKeyStatusProbeBusy = true;
     try {
-        const results = { gemini: null, groq: null, custom: null, mistral: null, openrouter: null };
+        const results = { gemini: null, groq: null, custom: null, mistral: null, openrouter: null, elevenlabs: null };
 
         const tasks = [];
         if (geminiApiKey) {
+            const cleanKey = sanitizeApiKey(geminiApiKey);
             const probeModel = GEMINI_FALLBACK_MODELS.includes(geminiModel) ? geminiModel : 'gemini-2.0-flash';
-            tasks.push(fetch(`https://generativelanguage.googleapis.com/v1beta/models/${probeModel}:generateContent?key=${geminiApiKey.trim()}`, {
+            tasks.push(fetch(`https://generativelanguage.googleapis.com/v1beta/models/${probeModel}:generateContent?key=${encodeURIComponent(cleanKey)}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': cleanKey
+                },
                 body: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with exactly: OK' }] }], generationConfig: { maxOutputTokens: 8 } })
             }).then(r => { results.gemini = r.ok; }).catch(() => { results.gemini = false; }));
         }
         if (groqApiKey) {
-            tasks.push(probeOpenAICompatibleKey(GROQ_API_URL, groqApiKey.trim(), GROQ_MODELS).then(res => { results.groq = res.ok; }));
+            tasks.push(probeOpenAICompatibleKey(GROQ_API_URL, sanitizeApiKey(groqApiKey), GROQ_MODELS).then(res => { results.groq = res.ok; }));
         }
         if (customProviderUrl) {
             const endpoint = normalizeCustomProviderUrl(customProviderUrl);
             const headers = { 'Content-Type': 'application/json' };
-            if (customProviderKey && customProviderKey.trim()) headers['Authorization'] = `Bearer ${customProviderKey.trim()}`;
+            if (customProviderKey && customProviderKey.trim()) headers['Authorization'] = `Bearer ${sanitizeApiKey(customProviderKey)}`;
             tasks.push(fetch(endpoint, {
                 method: 'POST',
                 headers,
@@ -6299,13 +6642,13 @@ async function probeAiKeyStatus() {
             }).then(r => { results.custom = r.ok; }).catch(() => { results.custom = false; }));
         }
         if (mistralApiKey) {
-            tasks.push(probeOpenAICompatibleKey(MISTRAL_API_URL, mistralApiKey.trim(), MISTRAL_MODELS).then(res => { results.mistral = res.ok; }));
+            tasks.push(probeOpenAICompatibleKey(MISTRAL_API_URL, sanitizeApiKey(mistralApiKey), MISTRAL_MODELS).then(res => { results.mistral = res.ok; }));
         }
         if (openRouterApiKey) {
             tasks.push(fetch(OPENROUTER_API_URL, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${openRouterApiKey.trim()}`,
+                    'Authorization': `Bearer ${sanitizeApiKey(openRouterApiKey)}`,
                     'Content-Type': 'application/json',
                     'HTTP-Referer': location.origin,
                     'X-Title': 'Lumina Audio',
@@ -6316,6 +6659,12 @@ async function probeAiKeyStatus() {
                     max_tokens: 8,
                 }),
             }).then(r => { results.openrouter = r.ok; }).catch(() => { results.openrouter = false; }));
+        }
+        if (elevenLabsApiKey) {
+            tasks.push(fetch('https://api.elevenlabs.io/v1/user', {
+                method: 'GET',
+                headers: { 'xi-api-key': sanitizeApiKey(elevenLabsApiKey) }
+            }).then(r => { results.elevenlabs = r.ok; }).catch(() => { results.elevenlabs = false; }));
         }
 
         await Promise.all(tasks);
@@ -6329,6 +6678,7 @@ async function probeAiKeyStatus() {
         const rows = [];
         rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${geminiApiKey ? escapeHtml(maskKey(geminiApiKey)) + ' · Tier 1 (Frontier) · ' + escapeHtml(geminiModel) : ''}</span> ${geminiApiKey ? badge(results.gemini) : badge(null)}</div>`);
         rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Groq</span> <span class="text-on-surface-variant">${groqApiKey ? escapeHtml(maskKey(groqApiKey)) + ' · Tier 2 (Ultra-Fast) · ' + GROQ_MODELS.slice(0, 2).join(', ') : ''}</span> ${groqApiKey ? badge(results.groq) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">ElevenLabs</span> <span class="text-on-surface-variant">${elevenLabsApiKey ? escapeHtml(maskKey(elevenLabsApiKey)) + ' · Neural Speech' : ''}</span> ${elevenLabsApiKey ? badge(results.elevenlabs) : badge(null)}</div>`);
         rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Custom Provider</span> <span class="text-on-surface-variant">${customProviderUrl ? escapeHtml(customProviderModel || 'default') + ' · ' + escapeHtml(customProviderUrl.slice(0, 35)) : ''}</span> ${customProviderUrl ? badge(results.custom) : badge(null)}</div>`);
         rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">OpenRouter</span> <span class="text-on-surface-variant">${openRouterApiKey ? escapeHtml(maskKey(openRouterApiKey)) + ' · ' + OPENROUTER_FREE_MODELS.length + ' free models' : ''}</span> ${openRouterApiKey ? badge(results.openrouter) : badge(null)}</div>`);
         rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Mistral</span> <span class="text-on-surface-variant">${mistralApiKey ? escapeHtml(maskKey(mistralApiKey)) : ''}</span> ${mistralApiKey ? badge(results.mistral) : badge(null)}</div>`);

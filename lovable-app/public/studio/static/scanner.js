@@ -109,13 +109,24 @@
   }
 
   function promptVisionKey() {
-    const current = localStorage.getItem("geminiApiKey") || "";
-    const key = prompt("Enter Google Gemini API Key (1,500 free requests/day for 99%+ book recognition):\nGet one free in 10 seconds at: aistudio.google.com/app/apikey", current);
-    if (key === null) return;
-    if (key.trim()) {
-      localStorage.setItem("geminiApiKey", key.trim());
-      state.tier0 = true;
-      alert("Gemini Neural Vision key saved! Book scanning will now use high-precision Gemini 2.0 Flash.");
+    const current = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("geminiApiKey") || "") : (localStorage.getItem("geminiApiKey") || "").trim());
+    const input = prompt("Enter Google Gemini API Key (1,500 free requests/day for 99%+ book recognition):\nGet one free in 10 seconds at: aistudio.google.com/app/apikey", current);
+    if (input === null) return;
+    const clean = typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(input) : input.trim();
+    if (clean) {
+      const provider = typeof window.detectApiKeyProvider === 'function' ? window.detectApiKeyProvider(clean) : null;
+      if (provider === 'openrouter') {
+        localStorage.setItem("openRouterApiKey", clean);
+        alert("Detected OpenRouter API key! Saved to OpenRouter vision and main engine.");
+      } else if (provider === 'groq') {
+        localStorage.setItem("groqApiKey", clean);
+        alert("Detected Groq API key! Saved to Groq engine.");
+      } else {
+        localStorage.setItem("geminiApiKey", clean);
+        localStorage.setItem("lumina_saved_gemini_key", clean);
+        state.tier0 = true;
+        alert("Gemini Neural Vision key saved & sanitized! Book scanning will now use high-precision Gemini 2.0 Flash.");
+      }
     } else {
       localStorage.removeItem("geminiApiKey");
       alert("Custom Gemini key removed.");
@@ -1005,8 +1016,8 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
   }
 
   async function ocrGateway(dataUrl, lang, hint) {
-    const geminiKey = (localStorage.getItem("geminiApiKey") || "").trim();
-    const openRouterKey = (localStorage.getItem("openRouterApiKey") || "").trim();
+    const geminiKey = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("geminiApiKey") || "") : (localStorage.getItem("geminiApiKey") || "").trim());
+    const openRouterKey = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("openRouterApiKey") || "") : (localStorage.getItem("openRouterApiKey") || "").trim());
 
     // 1. Try server-side endpoint first (/api/ocr)
     try {
@@ -1043,10 +1054,13 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
           const promptRules = getVisionPrompt(lang, hint);
 
           const gRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": geminiKey
+              },
               body: JSON.stringify({
                 contents: [
                   {
@@ -1212,7 +1226,7 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
   async function contextualLinguisticPass(text, lang) {
     if (!text || text.trim().length < 15) return text;
     const isKa = lang === "kat" || lang === "ka" || (text.match(/[\u10A0-\u10FF]/g) || []).length > 20;
-    const geminiKey = (localStorage.getItem("geminiApiKey") || "").trim();
+    const geminiKey = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("geminiApiKey") || "") : (localStorage.getItem("geminiApiKey") || "").trim());
 
     function validateRewrite(orig, rewrite) {
       if (!rewrite || typeof rewrite !== "string" || rewrite.trim().length < 15) return null;
@@ -1252,9 +1266,12 @@ ${text.slice(0, 10000)}`;
 
       for (const model of modelsToTry) {
         try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`, {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": geminiKey
+            },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
               generationConfig: { temperature: 0, maxOutputTokens: 8192 }
@@ -1294,7 +1311,7 @@ ${text.slice(0, 10000)}`;
     }
 
     // Groq fallback for contextual deduction
-    const groqKey = (localStorage.getItem("groqApiKey") || "").trim();
+    const groqKey = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("groqApiKey") || "") : (localStorage.getItem("groqApiKey") || "").trim());
     if (groqKey) {
       try {
         const groqApiUrl = "https://api.groq.com/openai/v1/chat/completions";
@@ -1325,7 +1342,7 @@ ${text.slice(0, 10000)}`;
     // Custom provider fallback
     const cpUrl = (localStorage.getItem("customProviderUrl") || "").trim();
     const cpModel = (localStorage.getItem("customProviderModel") || "default").trim();
-    const cpKey = (localStorage.getItem("customProviderKey") || "").trim();
+    const cpKey = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("customProviderKey") || "") : (localStorage.getItem("customProviderKey") || "").trim());
     if (cpUrl) {
       try {
         let endpoint = cpUrl.replace(/\/+$/, '');

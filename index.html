@@ -1880,6 +1880,40 @@
                 </button>
             </div>
             
+            <!-- Smart Auto-Connect & Key Merge System -->
+            <div class="rounded-2xl border border-primary-container/30 bg-gradient-to-br from-primary-container/10 via-white/5 to-secondary-container/10 p-4 sm:p-5 space-y-3 shadow-lg">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">⚡</span>
+                        <div>
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                Smart Auto-Connect &amp; Key Merge
+                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary-fixed/20 text-primary-fixed font-semibold">Auto-Configures All Models</span>
+                            </h3>
+                            <p class="text-[11px] text-on-surface-variant mt-0.5">
+                                Paste any API key (Gemini, Groq, OpenRouter, ElevenLabs) or paste multiple keys, <code class="text-primary-fixed">.env</code> lines, or JSON. The engine auto-identifies each provider, sanitizes quotes/whitespace, and connects everything automatically.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <textarea id="smartKeyMergeInput" rows="2" class="w-full glass-input rounded-xl px-4 py-2.5 text-xs font-mono focus:outline-none placeholder:text-on-surface-variant/60 resize-y" placeholder="Paste single key (e.g. AIzaSy..., gsk_..., sk-or-..., ElevenLabs) or multi-line .env / JSON bundle..."></textarea>
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="handleSmartKeyMerge()" class="px-4 py-2 rounded-xl text-xs font-bold bg-primary-fixed text-on-primary-container hover:bg-primary-container transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,240,255,0.25)] cursor-pointer">
+                                <span class="material-symbols-outlined text-sm">auto_fix_high</span>
+                                Auto-Detect &amp; Connect
+                            </button>
+                            <button type="button" onclick="document.getElementById('smartKeyMergeInput').value=''; document.getElementById('smartKeyMergeFeedback').innerHTML='';" class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-on-surface-variant transition cursor-pointer">
+                                Clear
+                            </button>
+                        </div>
+                        <div id="smartKeyMergeFeedback" class="text-[11px] text-primary-fixed flex items-center gap-1.5 flex-wrap"></div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
@@ -1958,6 +1992,17 @@
                     <input type="password" id="mistralApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="...">
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Second fallback (~1B free tokens/month). If CORS blocks browser calls it's skipped automatically. Key: console.mistral.ai.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>ElevenLabs API Key (Neural Voice Studio)</span>
+                        <span id="elevenLabsSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
+                    </label>
+                    <input type="password" id="elevenLabsAiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="32-character hex key (e.g. 1a2b3c...)">
+                    <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
+                        High-fidelity emotional speech in Georgian &amp; English. Auto-syncs with Voice modal and activates ElevenLabs mode. Key: elevenlabs.io.
                     </p>
                 </div>
 
