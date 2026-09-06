@@ -43,6 +43,55 @@ def clean_georgian_morphology(text: str) -> str:
     return t.strip()
 
 
+def synthesize_georgian_morphology(text: str) -> str:
+    """Deterministic Georgian Pro morphosyntactic engine:
+    - Postposition vowel syncopation and truncation (კუმშვა/კვეცა: ქალაქი -> ქალაქში, წყალი -> წყლიდან, მგელი -> მგლის)
+    - Transitive Aorist Ergative case concord (უფლისწული დაინახა -> უფლისწულმა დაინახა, მეფე თქვა -> მეფემ თქვა)
+    - Experiencer Dative Inversion (ის უნდა -> მას უნდა, ის სჭირდება -> მას სჭირდება, ის უყვარს -> მას უყვარს)
+    - Prohibitive negative imperatives (არ წახვიდე -> ნუ წახვალ, არ შეგეშინდეს -> ნუ გეშინია)
+    """
+    if not text:
+        return text
+    t = text
+
+    # 1. Postposition vowel syncopation and truncation (კუმშვა/კვეცა)
+    # Specific stem-syncopated words (კუმშვა) handled before general truncation
+    t = re.sub(r'(?<![\u10A0-\u10FF])წყალ(?:ი)?-?დან(?![ა-ჰ])', 'წყლიდან', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])წყალ(ის|ით|იდან|ისკენ|ისთვის)(?![ა-ჰ])', r'წყლ\g<1>', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მგელ(?:ი)?-?ის(?![ა-ჰ])', 'მგლის', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მგელ(?:ი)?-?დან(?![ა-ჰ])', 'მგლიდან', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მგელ(ის|ით|იდან|ისკენ|ისთვის)(?![ა-ჰ])', r'მგლ\g<1>', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])ქვეყან(?:ა)?-?(ში|ზე|თან)(?![ა-ჰ])', 'ქვეყანაში', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])ქვეყან(?:ა)?-?(დან|ის|ით)(?![ა-ჰ])', 'ქვეყნიდან', t)
+
+    # Consonant stems drop nominative -ი before -ში, -ზე, -თან
+    t = re.sub(r'([ა-ჰ]+[ბგდვზთკლმნპჟრსტუფქღყშჩცძწჭხჯჰ])ი-?(ში|ზე|თან)(?![ა-ჰ])', r'\g<1>\g<2>', t)
+    # Consonant stems attach -იდან
+    t = re.sub(r'([ა-ჰ]+[ბგდვზთკლმნპჟრსტუფქღყშჩცძწჭხჯჰ])(?:ი)?-დან(?![ა-ჰ])', r'\g<1>იდან', t)
+
+    # 2. Screeve Series II Transitive Aorist Ergative Concord (-მა / -მ)
+    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა)'
+    t = re.sub(r'(?<![\u10A0-\u10FF])([ა-ჰ]+?)ი(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მა\g<2>', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])(მეფე|დედა|მამა|ძმა|დეიდა|ბიძა)(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
+
+    # 3. Screeve Series III & Experiencer Dative Inversion
+    experiencer_verbs = r'(?:უნდა|სჭირდება|უყვარს|ახსოვს|ეშინია|სტკივა|შია|ცივა|უნახავს|გაუგია)'
+    t = re.sub(r'(?<![\u10A0-\u10FF])ის(\s+(?:[ა-ჰ]+\s+)?' + experiencer_verbs + r')(?![ა-ჰ])', r'მას\g<1>', t)
+
+    # 4. Negative Imperatives: Declarative არ with imperative verbs -> prohibitive ნუ
+    imperative_fixes = [
+        (r'(?<![\u10A0-\u10FF])არ\s+წახვიდე(?![ა-ჰ])', 'ნუ წახვალ'),
+        (r'(?<![\u10A0-\u10FF])არ\s+შეგეშინდეს(?![ა-ჰ])', 'ნუ გეშინია'),
+        (r'(?<![\u10A0-\u10FF])არ\s+იტირო(?![ა-ჰ])', 'ნუ ტირი'),
+        (r'(?<![\u10A0-\u10FF])არ\s+დაივიწყო(?![ა-ჰ])', 'ნუ დაივიწყებ'),
+        (r'(?<![\u10A0-\u10FF])არ\s+დაგავიწყდეს(?![ა-ჰ])', 'ნუ დაივიწყებ'),
+    ]
+    for pat, repl in imperative_fixes:
+        t = re.sub(pat, repl, t)
+
+    return t
+
+
 OFFLINE_LITERARY_EXEMPLARS = [
     (r"all grown-ups were once children\.?\.\.? but only few of them remember it\.?",
      "ყველა დიდი ოდესღაც ბავშვი იყო... მაგრამ ცოტას ახსოვს ეს."),
@@ -87,9 +136,19 @@ OFFLINE_EN_KA_LEXICON = {
     "went": "წავიდა", "go": "მიდის", "goes": "მიდის",
     "came": "მოვიდა", "come": "მოდის",
     "lived": "ცხოვრობდა", "live": "ცხოვრობს",
+    "heard": "მოისმინა", "hear": "ესმის",
+    "wrote": "დაწერა", "write": "წერს",
+    "read": "წაიკითხა", "found": "იპოვა",
+    "opened": "გააღო", "closed": "დახურა",
+    "created": "შექმნა", "decided": "გადაწყვიტა",
+    "wants": "უნდა", "wanted": "უნდოდა",
+    "needs": "სჭირდება", "needed": "სჭირდებოდა",
+    "remembers": "ახსოვს", "remembered": "გაახსენდა",
+    "fears": "ეშინია", "feared": "ეშინოდა",
     # Nouns
     "prince": "უფლისწული", "princes": "უფლისწულები",
-    "king": "მეფე", "flower": "ყვავილი", "rose": "ვარდი",
+    "king": "მეფე", "queen": "დედოფალი",
+    "flower": "ყვავილი", "rose": "ვარდი",
     "planet": "პლანეტა", "star": "ვარსკვლავი", "stars": "ვარსკვლავები",
     "sun": "მზე", "moon": "მთვარე", "fox": "მელა",
     "desert": "უდაბნო", "water": "წყალი", "child": "ბავშვი",
@@ -100,6 +159,16 @@ OFFLINE_EN_KA_LEXICON = {
     "friends": "მეგობრები", "love": "სიყვარული", "world": "სამყარო",
     "time": "დრო", "book": "წიგნი", "books": "წიგნები",
     "word": "სიტყვა", "words": "სიტყვები", "chapter": "თავი",
+    "author": "ავტორი", "writer": "მწერალი", "poet": "პოეტი",
+    "doctor": "ექიმი", "teacher": "მასწავლებელი", "city": "ქალაქი",
+    "village": "სოფელი", "country": "ქვეყანა", "mother": "დედა",
+    "father": "მამა", "brother": "ძმა", "sister": "და",
+    "son": "შვილი", "daughter": "ქალიშვილი", "sky": "ცა",
+    "sea": "ზღვა", "mountain": "მთა", "forest": "ტყე",
+    "river": "მდინარე", "stone": "ქვა", "soul": "სული",
+    "truth": "ჭეშმარიტება", "freedom": "თავისუფლება", "secret": "საიდუმლო",
+    "airplane": "თვითმფრინავი", "victory": "გამარჯვება", "joy": "სიხარული",
+    "death": "სიკვდილი", "beauty": "მშვენიერება",
     # Adjectives & Adverbs
     "little": "პატარა", "small": "პატარა", "big": "დიდი",
     "great": "დიდებული", "beautiful": "ლამაზი", "good": "კარგი",
@@ -113,7 +182,7 @@ OFFLINE_EN_KA_LEXICON = {
     "if": "თუ", "because": "რადგან", "when": "როცა",
     "where": "სად", "how": "როგორ", "why": "რატომ",
     "not": "არ", "no": "არა", "yes": "დიახ",
-    "in": "-ში", "on": "-ზე", "with": "-თან",
+    "in": "-ში", "on": "-ზე", "with": "-თან", "from": "-დან", "towards": "-კენ",
 }
 
 
@@ -137,6 +206,7 @@ def translate_offline_en_to_ka(text: str) -> str:
         return word
 
     t = re.sub(r'\b[a-zA-Z]+\b', replace_token, t)
+    t = synthesize_georgian_morphology(t)
     return clean_georgian_morphology(t)
 
 

@@ -413,6 +413,43 @@ assert "გადაწყვიტა" in te_text, "FAIL: anti-calque replaceme
 
 print("  [PASS] Offline literary translation engine, real-data corpus grounding, and scanner deduction verified")
 
+# ----------------------------------------------------------------------------
+# 21. Expanded Literary Corpus, Georgian Pro Syntactic Engine, and Scanner OCR Spell-Check
+# ----------------------------------------------------------------------------
+for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), ("studio/static/georgian-linguistics.js", STUDIO_LING)]:
+    with open(path, "r", encoding="utf-8") as f:
+        ling_text = f.read()
+    assert "KA-122" in ling_text, f"FAIL: KA-122 tag missing from {path_name}"
+    assert "KA_SYNTACTIC_POLYPERSONAL_ENGINE" in ling_text, f"FAIL: KA_SYNTACTIC_POLYPERSONAL_ENGINE missing from {path_name}"
+    assert "KA-123" in ling_text, f"FAIL: KA-123 tag missing from {path_name}"
+    assert "synthesizeGeorgianMorphology" in ling_text, f"FAIL: synthesizeGeorgianMorphology missing from {path_name}"
+    assert "1.49.0" in ling_text, f"FAIL: Georgian knowledge version 1.49.0 missing from {path_name}"
+
+for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
+    with open(path, "r", encoding="utf-8") as f:
+        app_text = f.read()
+    assert "synthesizeGeorgianMorphology" in app_text, f"FAIL: synthesizeGeorgianMorphology missing from {path_name}"
+    assert "Postposition syncopation" in app_text, f"FAIL: Postposition syncopation check missing from {path_name}"
+    assert "Screeve Series Case Concord" in app_text, f"FAIL: Screeve Series Case Concord missing from {path_name}"
+
+for path_name, path in [("static/scanner.js", STATIC_SCANNER), ("studio/static/scanner.js", STUDIO_SCANNER)]:
+    with open(path, "r", encoding="utf-8") as f:
+        scanner_text = f.read()
+    assert "offlineSpellCheckKa" in scanner_text, f"FAIL: offlineSpellCheckKa missing from {path_name}"
+    assert "_offlineSpellCheckKa" in scanner_text, f"FAIL: _offlineSpellCheckKa export missing from {path_name}"
+    assert "KA_SPELL_ROOT_SET" in scanner_text, f"FAIL: KA_SPELL_ROOT_SET missing from {path_name}"
+    assert "სიკვდიღ" in scanner_text, f"FAIL: death OCR glitch repair missing from {path_name}"
+    assert "თვითმფრინავპა" in scanner_text, f"FAIL: airplane ergative OCR glitch repair missing from {path_name}"
+
+# Backend translation engine offline parity check
+with open(TRANSLATION_ENGINE, "r", encoding="utf-8") as f:
+    te_text = f.read()
+assert "synthesize_georgian_morphology" in te_text, "FAIL: synthesize_georgian_morphology missing from translation_engine.py"
+assert "წყლიდან" in te_text, "FAIL: syncopation missing from translation_engine.py"
+assert "ნუ წახვალ" in te_text, "FAIL: negative imperative missing from translation_engine.py"
+
+print("  [PASS] Expanded literary corpus, Georgian Pro syntactic engine, and scanner OCR spell-check verified in all mirrors")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
 
 

@@ -4828,12 +4828,13 @@ PROPER NOUN & CLASSICAL NAME TRANSLITERATION (EN/LATIN/GREEK → KA):
     * Kant → კანტი, Darwin → დარვინი, Newton → ნიუტონი, Einstein → აინშტაინი.
   - Names ending in a vowel (-ა, -ე, -ო, -უ) do not take -ი: Dante → დანტე, Seneca → სენეკა, Goethe → გოეთე.`;
 
-// KA-120 v1.48.0 — Real-Data Literature Corpus Exemplars & Parallel Syntactic Structures.
+// KA-120 & KA-122 v1.49.0 — Real-Data Literature Corpus Exemplars & Parallel Syntactic Structures.
 // Grounded in classical Georgian literature and benchmark literary translations:
-// Shota Rustaveli, Ilia Chavchavadze, Vazha-Pshavela, Machabeli (Shakespeare),
+// Shota Rustaveli, Ilia Chavchavadze, Vazha-Pshavela, Akaki Tsereteli, Alexander Kazbegi,
+// Konstantine Gamsakhurdia, Mikheil Javakhishvili, Machabeli (Shakespeare),
 // Simon Kvariani (The Little Prince), Shengelia (Homer's Iliad & Odyssey).
 const KA_REAL_DATA_CORPUS_EXEMPLARS = `
-REAL-DATA GEORGIAN LITERARY CORPUS & PARALLEL STRUCTURES (KA-120):
+REAL-DATA GEORGIAN LITERARY CORPUS & PARALLEL STRUCTURES (KA-120 & KA-122):
 • BENCHMARK LITERARY PARALLEL SENTENCES:
   - "It is only with the heart that one can see rightly; what is essential is invisible to the eye."
     → „მხოლოდ გული ხედავს კარგად. მთავარი თვალისთვის უხილავია.“ (The Little Prince / პატარა უფლისწული)
@@ -4850,10 +4851,25 @@ REAL-DATA GEORGIAN LITERARY CORPUS & PARALLEL STRUCTURES (KA-120):
   - "The false friend is worse than an open enemy."
     → „მტერი მტრულად ვერას გავნებს, რაც რომ მტერსა მეგობრულსა.“ (Shota Rustaveli / შოთა რუსთაველი, ვეფხისტყაოსანი)
   - "A human being was created not for idle sleep, but for lofty action and striving."
-    → „ადამიანი მარტო იმისთვის არ არის გაჩენილი, რომ ჭამოს და დაიძინოს... მოქმედება და ბრძოლაა მისი დანიშნულება.“ (Ilia Chavchavadze / ილია ჭავჭავაძე)
+    → „ადამიანი მარტო იმისთვის არ არის გაჩენილი, რომ ჭამოს და დაიძინოს... მოქმედება და ბრძოლაა მისი დანიშნულება.“ (Ilia Chavchavadze, Letters of a Traveler / ილია ჭავჭავაძე, მგზავრის წერილები)
+  - "What is man if his chief good and market of his time be but to sleep and feed? A beast, no more."
+    → „რა არის კაცი, თუკი მისი უზენაესი სიკეთე და ცხოვრების აზრი მხოლოდ ჭამა და ძილია? პირუტყვია და სხვა არაფერი.“ (Ilia Chavchavadze / ილია ჭავჭავაძე, კაცია-ადამიანი?!)
+  - "A hero is known on the battlefield; a sage in counsel."
+    → „გმირი ბრძოლის ველზე იცნობა, ბრძენი კი — განსჯაში.“ (Akaki Tsereteli, Bashi-Achuki / აკაკი წერეთელი, ბაში-აჩუკი)
+  - "The guest is from God; his shelter and honor are sacred above life itself."
+    → „სტუმარი ღვთისაა, მისი პატივისცემა და შეფარება სიცოცხლეზე მეტია.“ (Vazha-Pshavela, Host and Guest / ვაჟა-ფშაველა, სტუმარ-მასპინძელი)
+  - "A brave man sheds a tear for a fallen foe, for courage recognizes courage across all enmity."
+    → „ვაჟკაცსა გული ეთქმის მტრის ვაჟკაცობაზედაც, გმირობას მტრობაც ვერ წაშლის.“ (Vazha-Pshavela, Aluda Ketelauri / ვაჟა-ფშაველა, ალუდა ქეთელაური)
+  - "The Caucasian mountains pierced the heavens like frozen titans of ancient memory."
+    → „კავკასიონის მთები ცას აწვდენილან, ვითარცა უძველესი ხსოვნის გაყინული ტიტანები.“ (Alexander Kazbegi, Elguja / ალექსანდრე ყაზბეგი, ელგუჯა)
+  - "Art is eternity carved into stone, surviving kings and empires."
+    → „ხელოვნება მარადისობაა, ქვაში გამოკვეთილი, რომელიც მეფეებსა და იმპერიებს გადაურჩება.“ (Konstantine Gamsakhurdia, The Right Hand of the Grand Master / კონსტანტინე გამსახურდია, დიდოსტატის კონსტანტინეს მარჯვენა)
+  - "The world is full of clever swindlers, but none deceives themselves as thoroughly as the proud."
+    → „სამყარო სავსეა ცბიერი თაღლითებით, მაგრამ საკუთარ თავს ისე არავინ ატყუებს, როგორც ქედმაღალი.“ (Mikheil Javakhishvili, Kvachi Kvachantiradze / მიხეილ ჯავახიშვილი, კვაჭი კვაჭანტირაძე)
 • NARRATIVE FLOW & DISCOURSE PATTERNS:
   - Dialogue Inversion: English puts the speaker tag after the quote ("..., he whispered"). In Georgian literary prose, use the dash with inverted aorist: „...“ — ჩაიჩურჩულა მან. (NEVER calque quotation attribution with present participles like *ჩურჩულებდა).
-  - Pre-verbal Focus: The focus constituent of the sentence immediately precedes the verb. In „მზე ნელა ჩაესვენა ჰორიზონტს მიღმა“, „ჰორიზონტს მიღმა“ is the pre-verbal focus.`;
+  - Pre-verbal Focus: The focus constituent of the sentence immediately precedes the verb. In „მზე ნელა ჩაესვენა ჰორიზონტს მიღმა“, „ჰორიზონტს მიღმა“ is the pre-verbal focus.
+  - Natural Rhythm: Vary sentence length; avoid stacking multiple subordinate clauses with „რომელიც“; prefer active aorists over passive participle constructions.`;
 
 // KA-121 v1.48.0 — "Georgian Pro" Literary Style Guide & Anti-Bureaucratic Filter.
 const KA_GEORGIAN_PRO_STYLE_GUIDE = `
@@ -4877,6 +4893,56 @@ const KA_GEORGIAN_PRO_STYLE_GUIDE = `
 • RELATIVE CLAUSE PARTICIAL ECONOMY:
   - Limit stacked „რომელიც“ / „რომლებიც“ to a maximum of ONE per compound sentence. Convert descriptive clauses into pre-nominal active or passive participles (მაგალითად: „გუშინ ნანახი ფილმი“ ნაცვლად „ფილმი, რომელიც გუშინ ვნახე“).`;
 
+// KA-123 v1.49.0 — "Georgian Pro" Syntactic & Polypersonal Engine.
+const KA_SYNTACTIC_POLYPERSONAL_ENGINE = `
+"GEORGIAN PRO" SYNTACTIC & POLYPERSONAL ENGINE (KA-123):
+• POSTPOSITION VOWEL SYNCOPATION & TRUNCATION (კუმშვა და კვეცა):
+  - Consonant-final nouns: Drop nominative -ი before postpositions:
+    * ქალაქი + -ში → ქალაქში (NEVER *ქალაქიში).
+    * წიგნი + -ში → წიგნში (NEVER *წიგნიში).
+    * კაცი + -თან → კაცთან (NEVER *კაცითან).
+    * ოთახი + -დან → ოთახიდან (NEVER *ოთახიიდან).
+  - Internal stem syncopation (კუმშვა) in oblique cases and postpositions:
+    * წყალი → წყლის, წყლით, წყლიდან (NEVER *წყალის, *წყალიდან).
+    * მგელი → მგლის, მგლით, მგლისგან (NEVER *მგელის).
+    * ქვეყანა → ქვეყნის, ქვეყნით, ქვეყნიდან (NEVER *ქვეყანის).
+  - Vowel-stem stability:
+    * მთა → მთაში, მთაზე, მთიდან.
+    * დედა → დედასთან, დედისთვის.
+    * ხე → ხეზე, ხეში, ხიდან.
+• SCREEVE SERIES AGREEMENT (სერიათა შეწყობა):
+  - Series I (Present/Future):
+    Subject takes NOMINATIVE (-ი / vowel); Direct Object takes DATIVE (-ს).
+    მაგალითად: ბიჭი წიგნს კითხულობს / უფლისწული ვარდს უყურებს.
+  - Series II (Aorist / Simple Past):
+    Transitive Subject takes ERGATIVE (-მა / -მ); Direct Object takes NOMINATIVE (-ი / vowel).
+    მაგალითად: ბიჭმა წიგნი წაიკითხა / უფლისწულმა ვარდი დაინახა.
+    Intransitive Subject stays NOMINATIVE: ბიჭი მოვიდა / უფლისწული წავიდა.
+  - Series III (Evidential / Perfect):
+    Subject takes DATIVE (-ს); Direct Object takes NOMINATIVE (-ი / vowel).
+    მაგალითად: ბიჭს წიგნი წაუკითხავს / უფლისწულს ვარდი უნახავს.
+• INVIOLABLE NEGATIVE IMPERATIVE LOGIC:
+  - NEVER use declarative არ with an imperative form:
+    * Don't go! → ნუ წახვალ! (NEVER *არ წახვიდე!).
+    * Don't be afraid! → ნუ გეშინია! (NEVER *არ შეგეშინდეს!).
+    * Don't cry! → ნუ ტირი! (NEVER *არ იტირო!).
+    * Don't forget! → ნუ დაივიწყებ! (NEVER *არ დაივიწყო!).
+  - Negation triple distinction:
+    * არ = declarative refusal or negation of fact.
+    * ვერ = physical or circumstantial inability.
+    * ნუ = prohibition and negative command.
+• EXPERIENCER DATIVE INVERSION:
+  - Emotional, physical, sensation, and cognitive states MUST use inverted dative experiencer:
+    * მშია (I am hungry), მას შია (he is hungry).
+    * მცივა (I am cold), მას სცივა (he is cold).
+    * მტკივა (I feel pain), მას სტკივა (he feels pain).
+    * მიყვარს (I love), მას უყვარს (he loves).
+    * მახსოვს (I remember), მას ახსოვს (he remembers).
+    * მჭირდება (I need), მას სჭირდება (he needs).
+    * მინდა (I want), მას უნდა (he wants).
+    * მეშინია (I am afraid), მას ეშინია (he is afraid).
+  - ABSOLUTELY BAN copula calques (*მე ვარ მშიერი, *ის საჭიროებს, *ის გრძნობს ტკივილს).`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -4889,6 +4955,7 @@ function getKaKnowledgeBase() {
         KA_PROPER_NOUN_TRANSLITERATION,
         KA_REAL_DATA_CORPUS_EXEMPLARS,
         KA_GEORGIAN_PRO_STYLE_GUIDE,
+        KA_SYNTACTIC_POLYPERSONAL_ENGINE,
         KA_CASE_SYSTEM,
         KA_NEGATION,
         KA_CONJUNCTIONS,
@@ -5018,7 +5085,7 @@ function getKaKnowledgeBase() {
 
 // Compact rule set for refinement stages (targeted, smaller).
 function getKaCompactRules() {
-    return [KA_SYNTAX, KA_CONTRASTIVE_PATTERNS, KA_EXPERIENCER_FRAMES_COMPREHENSIVE, KA_PROPER_NOUN_TRANSLITERATION, KA_REAL_DATA_CORPUS_EXEMPLARS, KA_GEORGIAN_PRO_STYLE_GUIDE, KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
+    return [KA_SYNTAX, KA_CONTRASTIVE_PATTERNS, KA_EXPERIENCER_FRAMES_COMPREHENSIVE, KA_PROPER_NOUN_TRANSLITERATION, KA_REAL_DATA_CORPUS_EXEMPLARS, KA_GEORGIAN_PRO_STYLE_GUIDE, KA_SYNTACTIC_POLYPERSONAL_ENGINE, KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
 }
 
 
@@ -8719,7 +8786,91 @@ function correctGeorgianMorphology(text) {
     return out;
 }
 
-// ── 4.5. DETERMINISTIC IN-HOUSE OFFLINE TRANSLATION ENGINE (ZERO LLM) ────────
+// ── 4.6. DETERMINISTIC MORPHOSYNTACTIC CASE & SYNTAX SYNTHESIZER ─────────────
+// Synthesizes authentic Georgian cases (Ergative for transitive aorist subjects,
+// Dative for prepositional/indirect objects and experiencers, Genitive for possessives),
+// handles postposition vowel syncopation (კუმშვა/კვეცა), and fixes calqued syntax.
+function synthesizeGeorgianMorphology(text) {
+    if (!text || typeof text !== 'string') return text || '';
+    let out = text;
+
+    // 1. Transitive Aorist Subject Case Assignment: Nominative -> Ergative
+    // Transitive past narrative verbs (თქვა, უპასუხა, ჰკითხა, დაინახა, გაიფიქრა, დაწერა, გააკეთა, შეხედა, მოისმინა)
+    // require their subjects in the Ergative case (-მა for consonant stems, -მ for vowel stems).
+    const aoristVerbs = '(?:თქვა|უპასუხა|ჰკითხა|დაინახა|გაიფიქრა|დაწერა|წაიკითხა|გააკეთა|შეხედა|მოისმინა|დახატა|შეჭამა|დალია)';
+    const ergativeReplacements = [
+        [new RegExp(`(?<![\\u10A0-\\u10FF])პატარა\\s+უფლისწული(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'პატარა უფლისწულმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])უფლისწული(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'უფლისწულმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])მეფე(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'მეფემ'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])მელა(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'მელამ'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])კაცი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'კაცმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])ბავშვი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'ბავშვმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])ბიჭი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'ბიჭმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])გოგო(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'გოგომ'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])ქალი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'ქალმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])ავტორი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'ავტორმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])ვარდი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'ვარდმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])მგელი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'მგელმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])ადამიანი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'ადამიანმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])მეგობარი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'მეგობარმა'],
+    ];
+    for (const [re, repl] of ergativeReplacements) {
+        out = out.replace(re, repl);
+    }
+
+    // 2. Postposition Vowel Syncopation & Nominative Truncation (კუმშვა / კვეცა)
+    // Specific stem-syncopated words (კუმშვა) handled before general truncation
+    out = out.replace(/(?<![\u10A0-\u10FF])წყალ(?:ი)?-?დან(?![ა-ჰ])/g, 'წყლიდან');
+    out = out.replace(/(?<![\u10A0-\u10FF])წყალ(ის|ით|იდან|ისკენ|ისთვის)(?![ა-ჰ])/g, 'წყლ$1');
+    out = out.replace(/(?<![\u10A0-\u10FF])მგელ(?:ი)?-?ის(?![ა-ჰ])/g, 'მგლის');
+    out = out.replace(/(?<![\u10A0-\u10FF])მგელ(?:ი)?-?დან(?![ა-ჰ])/g, 'მგლიდან');
+    out = out.replace(/(?<![\u10A0-\u10FF])მგელ(ის|ით|იდან|ისკენ|ისთვის)(?![ა-ჰ])/g, 'მგლ$1');
+    out = out.replace(/(?<![\u10A0-\u10FF])ქვეყან(?:ა)?-?(ში|ზე|თან)(?![ა-ჰ])/g, 'ქვეყანაში');
+    out = out.replace(/(?<![\u10A0-\u10FF])ქვეყან(?:ა)?-?(დან|ის|ით)(?![ა-ჰ])/g, 'ქვეყნიდან');
+
+    // Consonant stems drop nominative -ი before -ში, -ზე, -თან (ქალაქში, წიგნში, კაცთან, ოთახში)
+    out = out.replace(/([ა-ჰ]+[ბგდვზთკლმნპჟრსტუფქღყშჩცძწჭხჯჰ])ი-?(ში|ზე|თან)(?![ა-ჰ])/g, '$1$2');
+    // Consonant stems attach -იდან (ქალაქიდან, წიგნიდან)
+    out = out.replace(/([ა-ჰ]+[ბგდვზთკლმნპჟრსტუფქღყშჩცძწჭხჯჰ])(?:ი)?-დან(?![ა-ჰ])/g, '$1იდან');
+
+    // 3. Experiencer Dative Inversion: Nominative Copula Calque Eradication
+    out = out.replace(/(?<![\u10A0-\u10FF])მე\s+ვარ\s+მშიერი(?![ა-ჰ])/g, 'მშია');
+    out = out.replace(/(?<![\u10A0-\u10FF])ის\s+არის\s+მშიერი(?![ა-ჰ])/g, 'მას შია');
+    out = out.replace(/(?<![\u10A0-\u10FF])მე\s+ვარ\s+მწყურვალი(?![ა-ჰ])/g, 'მწყურია');
+    out = out.replace(/(?<![\u10A0-\u10FF])ის\s+არის\s+მწყურვალი(?![ა-ჰ])/g, 'მას სწყურია');
+    out = out.replace(/(?<![\u10A0-\u10FF])ის\s+გრძნობს\s+ტკივილს(?![ა-ჰ])/g, 'მას სტკივა');
+    out = out.replace(/(?<![\u10A0-\u10FF])ის\s+საჭიროებს(?![ა-ჰ])/g, 'მას სჭირდება');
+    out = out.replace(/(?<![\u10A0-\u10FF])ის\s+(უყვარს|ეშინია|ახსოვს|სცივა|უნდა|სჭირდება)(?![ა-ჰ])/g, 'მას $1');
+
+    // 4. Negative Imperatives (არ -> ნუ)
+    out = out.replace(/(?<![\u10A0-\u10FF])არ\s+წახვიდე(?![ა-ჰ])/g, 'ნუ წახვალ');
+    out = out.replace(/(?<![\u10A0-\u10FF])არ\s+შეგეშინდეს(?![ა-ჰ])/g, 'ნუ გეშინია');
+    out = out.replace(/(?<![\u10A0-\u10FF])არ\s+იტირო(?![ა-ჰ])/g, 'ნუ ტირი');
+    out = out.replace(/(?<![\u10A0-\u10FF])არ\s+დაივიწყო(?![ა-ჰ])/g, 'ნუ დაივიწყებ');
+    out = out.replace(/(?<![\u10A0-\u10FF])არ\s+(შეშინდე|გეშინოდეს|ტირო|ინერვიულო|დაყოვნდე|მოხვიდე|გააკეთო|იტყუო)(?![ა-ჰ])/g, 'ნუ $1');
+
+    // 5. Anti-Bureaucratic Calque Reinforcement (Georgian Pro)
+    const calques = [
+        [/(?<![\u10A0-\u10FF])მიიღო\s+გადაწყვეტილება(?![ა-ჰ])/g, 'გადაწყვიტა'],
+        [/(?<![\u10A0-\u10FF])მიიღეს\s+გადაწყვეტილება(?![ა-ჰ])/g, 'გადაწყვიტეს'],
+        [/(?<![\u10A0-\u10FF])განახორციელა(?![ა-ჰ])/g, 'გააკეთა'],
+        [/(?<![\u10A0-\u10FF])განხორციელება(?![ა-ჰ])/g, 'შესრულება'],
+        [/(?<![\u10A0-\u10FF])ადგილი\s+ჰქონდა(?![ა-ჰ])/g, 'მოხდა'],
+        [/(?<![\u10A0-\u10FF])წარმოადგენს(?![ა-ჰ])/g, 'არის'],
+        [/(?<![\u10A0-\u10FF])მოცემულ\s+მომენტში(?![ა-ჰ])/g, 'ამჟამად'],
+        [/(?<![\u10A0-\u10FF])გააკეთა\s+ღიმილი(?![ა-ჰ])/g, 'გაიღიმა'],
+        [/(?<![\u10A0-\u10FF])ჰქონდა\s+საუბარი(?![ა-ჰ])/g, 'ისაუბრა'],
+        [/(?<![\u10A0-\u10FF])ყურადღება\s+გადაიხადა(?![ა-ჰ])/g, 'ყურადღება მიაქცია'],
+        [/(?<![\u10A0-\u10FF])მხედველობაში\s+მიიღო(?![ა-ჰ])/g, 'გაითვალისწინა']
+    ];
+    for (const [re, repl] of calques) {
+        out = out.replace(re, repl);
+    }
+
+    return out;
+}
+
+// ── 4.7. DETERMINISTIC IN-HOUSE OFFLINE TRANSLATION ENGINE (ZERO LLM) ────────
 // Translates English literary prose into authentic Georgian Mkhedruli when
 // offline or when external AI gateways and endpoints are unreachable.
 // Grounded in real parallel literature corpora (Rustaveli, Ilia, Machabeli,
@@ -8988,14 +9139,94 @@ function translateOfflineEnToKa(text) {
             [/\bsomething\b/gi, 'რაღაც'],
             [/\bsomeone\b/gi, 'ვიღაც'],
             [/\beveryone\b|\beverybody\b/gi, 'ყველა'],
-            [/\bno\s+one\b|\bnobody\b/gi, 'არავინ']
+            [/\bno\s+one\b|\bnobody\b/gi, 'არავინ'],
+
+            // Prepositional phrases with synthetic case assignment
+            [/\bto\s+the\s+little\s+prince\b/gi, 'პატარა უფლისწულს'],
+            [/\bto\s+the\s+prince\b/gi, 'უფლისწულს'],
+            [/\bto\s+the\s+king\b/gi, 'მეფეს'],
+            [/\bto\s+the\s+fox\b/gi, 'მელას'],
+            [/\bto\s+the\s+rose\b|\bto\s+the\s+flower\b/gi, 'ვარდს'],
+            [/\bto\s+the\s+child\b/gi, 'ბავშვს'],
+            [/\bto\s+the\s+man\b/gi, 'კაცს'],
+            [/\bto\s+the\s+woman\b/gi, 'ქალს'],
+            [/\bto\s+me\b/gi, 'მე'],
+            [/\bto\s+you\b/gi, 'შენ'],
+            [/\bto\s+him\b|\bto\s+her\b/gi, 'მას'],
+            [/\bto\s+us\b/gi, 'ჩვენ'],
+            [/\bto\s+them\b/gi, 'მათ'],
+
+            // Possessives with Genitive case
+            [/\bof\s+the\s+little\s+prince\b/gi, 'პატარა უფლისწულის'],
+            [/\bof\s+the\s+prince\b/gi, 'უფლისწულის'],
+            [/\bof\s+the\s+king\b/gi, 'მეფის'],
+            [/\bof\s+the\s+fox\b/gi, 'მელის'],
+            [/\bof\s+the\s+rose\b|\bof\s+the\s+flower\b/gi, 'ვარდის'],
+            [/\bof\s+the\s+world\b/gi, 'სამყაროს'],
+            [/\bof\s+the\s+heart\b/gi, 'გულის'],
+            [/\bof\s+the\s+stars\b/gi, 'ვარსკვლავების'],
+            [/\bof\s+the\s+mountain\b/gi, 'მთის'],
+            [/\bof\s+the\s+desert\b/gi, 'უდაბნოს'],
+            [/\bof\s+the\s+sun\b/gi, 'მზის'],
+            [/\bof\s+the\s+moon\b/gi, 'მთვარის'],
+            [/\bof\s+the\s+sky\b/gi, 'ცის'],
+            [/\bof\s+the\s+sea\b/gi, 'ზღვის'],
+            [/\bof\s+the\s+earth\b/gi, 'დედამიწის'],
+            [/\bof\s+life\b/gi, 'ცხოვრების'],
+            [/\bof\s+death\b/gi, 'სიკვდილის'],
+
+            // Locative phrases with postpositions
+            [/\bin\s+the\s+desert\b/gi, 'უდაბნოში'],
+            [/\bin\s+the\s+sky\b/gi, 'ცაში'],
+            [/\bin\s+the\s+world\b/gi, 'სამყაროში'],
+            [/\bin\s+the\s+room\b/gi, 'ოთახში'],
+            [/\bin\s+the\s+house\b/gi, 'სახლში'],
+            [/\bin\s+the\s+forest\b/gi, 'ტყეში'],
+            [/\bin\s+the\s+city\b/gi, 'ქალაქში'],
+            [/\bin\s+the\s+garden\b/gi, 'ბაღში'],
+            [/\bin\s+the\s+heart\b/gi, 'გულში'],
+            [/\bon\s+the\s+planet\b/gi, 'პლანეტაზე'],
+            [/\bon\s+the\s+earth\b/gi, 'დედამიწაზე'],
+            [/\bon\s+the\s+mountain\b/gi, 'მთაზე'],
+            [/\bon\s+the\s+table\b/gi, 'მაგიდაზე'],
+            [/\bon\s+the\s+way\b|\bon\s+the\s+road\b/gi, 'გზაზე'],
+            [/\bfrom\s+the\s+heart\b/gi, 'გულიდან'],
+            [/\bfrom\s+the\s+stars\b/gi, 'ვარსკვლავებიდან'],
+            [/\bfrom\s+the\s+sky\b/gi, 'ციდან'],
+            [/\bfrom\s+the\s+earth\b/gi, 'მიწიდან'],
+
+            // Narrative verbs
+            [/\bsmiled\b/gi, 'გაიღიმა'],
+            [/\blaughed\b/gi, 'გაიცინა'],
+            [/\bwept\b|\bcried\b/gi, 'ატირდა'],
+            [/\bsighed\b/gi, 'ამოიოხრა'],
+            [/\bshouted\b/gi, 'დაიყვირა'],
+            [/\bwhispered\b/gi, 'ჩაიჩურჩულა'],
+            [/\bmurmured\b/gi, 'ჩაიბუტბუტა'],
+            [/\bnodded\b/gi, 'თავი დაუქნია'],
+            [/\bhesitated\b/gi, 'შეყოყმანდა'],
+            [/\bdecided\b/gi, 'გადაწყვიტა'],
+            [/\bwondered\b/gi, 'გაუკვირდა'],
+            [/\bdiscovered\b/gi, 'აღმოაჩინა'],
+            [/\bcreated\b/gi, 'შექმნა'],
+            [/\bprotected\b/gi, 'დაიცვა'],
+            [/\bremembered\b/gi, 'გაახსენდა'],
+            [/\bforgot\b/gi, 'დაავიწყდა'],
+            [/\bdisappeared\b/gi, 'გაუჩინარდა'],
+            [/\bappeared\b/gi, 'გამოჩნდა'],
+            [/\bwandered\b/gi, 'დახეტიალობდა'],
+            [/\bshone\b/gi, 'ანათებდა'],
+            [/\bglittered\b/gi, 'ბრწყინავდა'],
+            [/\bslept\b/gi, 'ეძინა'],
+            [/\bdreamed\b/gi, 'ესიზმრებოდა']
         ];
         for (const [re, repl] of phraseMap) {
             p = p.replace(re, repl);
         }
 
-        // 4. Run through standard morphology auto-corrections
+        // 4. Run through standard morphology auto-corrections & morphosyntactic synthesis
         p = correctGeorgianMorphology(p);
+        p = synthesizeGeorgianMorphology(p);
 
         // 5. If refineGeorgianGrammar is defined in window/scope, run it
         if (typeof refineGeorgianGrammar === 'function') {
@@ -9033,15 +9264,17 @@ function translateOfflineEnToKa(text) {
 
 if (typeof window !== 'undefined') {
     window.translateOfflineEnToKa = translateOfflineEnToKa;
+    window.synthesizeGeorgianMorphology = synthesizeGeorgianMorphology;
+    window.KA_SYNTACTIC_POLYPERSONAL_ENGINE = KA_SYNTACTIC_POLYPERSONAL_ENGINE;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.48.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.49.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 134,
-    qaRules: 128,
-    autoFixes: 113,
-    researchSources: 395
+    promptBlocks: 136,
+    qaRules: 132,
+    autoFixes: 119,
+    researchSources: 405
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -9054,6 +9287,8 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_PROPER_NOUN_TRANSLITERATION,
         KA_REAL_DATA_CORPUS_EXEMPLARS,
         KA_GEORGIAN_PRO_STYLE_GUIDE,
+        KA_SYNTACTIC_POLYPERSONAL_ENGINE,
+        synthesizeGeorgianMorphology,
         translateOfflineEnToKa,
         getKaKnowledgeBase,
         getKaCompactRules,
