@@ -128,6 +128,38 @@ class TestGeorgianPhonetics(unittest.TestCase):
         self.assertFalse(res2.startswith("—"))
         self.assertIn("გამარჯობა", res2)
 
+    def test_verbalize_compound_fractions(self):
+        res1 = verbalize_georgian_for_tts("დარჩა 1.5 საათი")
+        self.assertTrue("ერთ-ნახევარი საათი" in res1 or "ერთ ნახევარი საათი" in res1)
+
+        res2 = verbalize_georgian_for_tts("მან იყიდა 2.5 კგ")
+        self.assertTrue("ორ-ნახევარი კილოგრამი" in res2 or "ორ ნახევარი კილოგრამი" in res2)
+
+        res3 = verbalize_georgian_for_tts("დალია 0.5")
+        self.assertIn("ნახევარი", res3)
+
+    def test_verbalize_vigesimal_stem_elision(self):
+        res1 = verbalize_georgian_for_tts("ეს ეხება 20 კაცს")
+        self.assertIn("ოც კაცს", res1)
+
+        res2 = verbalize_georgian_for_tts("იმუშავა 40 დღეს")
+        self.assertIn("ორმოც დღეს", res2)
+
+        res3 = verbalize_georgian_for_tts("გაყიდა 60 ლარად")
+        self.assertIn("სამოც ლარად", res3)
+
+        res4 = verbalize_georgian_for_tts("იცოცხლა 100 წლამდე")
+        self.assertIn("ას წლამდე", res4)
+
+    def test_transliterate_classical_authors(self):
+        res1 = verbalize_georgian_for_tts("ავტორი Shota Rustaveli წერდა")
+        self.assertIn("შოთა", res1)
+        self.assertIn("რუსთაველი", res1)
+
+        res2 = verbalize_georgian_for_tts("ფილოსოფოსი Descartes და Spinoza")
+        self.assertIn("დეკარტი", res2)
+        self.assertIn("სპინოზა", res2)
+
     def test_preview_generation_georgian(self):
         async def _run():
             url = await generate_voice_preview(voice="ka-GE-GiorgiNeural")

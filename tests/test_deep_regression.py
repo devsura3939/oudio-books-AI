@@ -118,6 +118,29 @@ class TestBackendEndpointsAndEngines(unittest.TestCase):
         data = res_audio.json()
         self.assertIn("engine", data)
 
+    def test_03b_ocr_endpoint(self):
+        """Test POST /api/ocr endpoint validation and image processing"""
+        from PIL import Image
+        # Empty image should return 400 Bad Request
+        res_empty = self.client.post("/api/ocr", json={"image": ""})
+        self.assertEqual(res_empty.status_code, 400)
+
+        # Valid synthetic image payload
+        img = Image.new("RGB", (64, 64), color=(255, 255, 255))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        b64_img = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode("utf-8")
+
+        res_ocr = self.client.post("/api/ocr", json={
+            "image": b64_img,
+            "lang": "kat"
+        })
+        # If API key is not in environment, it should handle gracefully with 400 and structured response
+        self.assertIn(res_ocr.status_code, (200, 400))
+        data = res_ocr.json()
+        self.assertIn("language", data)
+        self.assertIn("engine", data)
+
     def test_04_image_processor(self):
         """Test image sharpness scoring and burst fusion logic"""
         from PIL import Image, ImageDraw

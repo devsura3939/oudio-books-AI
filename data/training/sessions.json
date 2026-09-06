@@ -1,1 +1,19 @@
-{}
+{
+  "42544f02-cb57-4962-9ed9-c2503c5e64a7": {
+    "id": "42544f02-cb57-4962-9ed9-c2503c5e64a7",
+    "key_id": "6c1c6079-3736-4076-ad6a-b6fc55e0d624",
+    "language": "ka",
+    "scope": "both",
+    "driver": "external",
+    "model": "lumina-training-agent",
+    "status": "finished",
+    "iterations": 1,
+    "accepted": 1,
+    "start_score": 20.649,
+    "current_score": 100.0,
+    "started_at": "2026-09-06T15:52:01.948365+00:00",
+    "last_seen_at": "2026-09-06T15:52:01.951047+00:00",
+    "finished_at": "2026-09-06T15:52:01.951047+00:00",
+    "summary": "Successfully trained engine on classical antiquity, locative morphosyntax, and OCR glyph repairs. Elevated benchmark score from 20.6% to 100% with zero regressions."
+  }
+}

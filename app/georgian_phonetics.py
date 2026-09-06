@@ -154,6 +154,9 @@ LITERARY_NAMES_MAP = {
     "olympus": "ოლიმპო", "zeus": "ზევსი", "apollo": "აპოლონი", "athena": "ათენა", "ares": "არესი",
     "poseidon": "პოსეიდონი", "hades": "ჰადესი", "hermes": "ჰერმესი", "hercules": "ჰერკულესი",
     "shakespeare": "შექსპირი", "dante": "დანტე", "cervantes": "სერვანტესი", "goethe": "გოეთე",
+    "rustaveli": "რუსთაველი", "shota": "შოთა", "descartes": "დეკარტი", "spinoza": "სპინოზა",
+    "leibniz": "ლაიბნიცი", "montaigne": "მონტენი", "pascal": "პასკალი", "voltaire": "ვოლტერი",
+    "rousseau": "რუსო",
     "dostoevsky": "დოსტოევსკი", "tolstoy": "ტოლსტოი", "kafka": "კაფკა", "nietzsche": "ნიცშე",
     "kant": "კანტი", "hegel": "ჰეგელი", "schopenhauer": "შოპენჰაუერი", "freud": "ფროიდი",
     "jung": "იუნგი", "darwin": "დარვინი", "newton": "ნიუტონი", "einstein": "აინშტაინი",
@@ -298,23 +301,33 @@ def verbalize_georgian_for_tts(text: str) -> str:
     out = re.sub(r"(მე-)?(\d+)-(ლი|ე|ში|მა|ად)\b", _replace_ordinal, out)
     out = re.sub(r"\bმე-(\d+)\b", lambda m: georgian_ordinal_to_words(int(m.group(1))), out)
 
-    # 3. Percentages & Decimals
+    # 3. Percentages & Fractions
     out = re.sub(
         r"(\b\d{1,9})\s*%",
         lambda m: georgian_number_to_words(int(m.group(1))) + " პროცენტი",
         out
     )
+
+    # 4. Common & Compound Fractions
+    out = re.sub(r"(?<!\d)0\.5(?!\d)", "ნახევარი", out)
+    out = re.sub(r"(?<!\d)1\.5(?!\d)", "ერთ-ნახევარი", out)
+    out = re.sub(r"(?<!\d)2\.5(?!\d)", "ორ-ნახევარი", out)
+    out = re.sub(r"(?<!\d)3\.5(?!\d)", "სამ-ნახევარი", out)
+    out = re.sub(r"(?<!\d)4\.5(?!\d)", "ოთხ-ნახევარი", out)
+    out = re.sub(r"(?<!\d)5\.5(?!\d)", "ხუთ-ნახევარი", out)
+    out = re.sub(r"(?<!\d)1/2(?!\d)", "ნახევარი", out)
+    out = re.sub(r"(?<!\d)1/3(?!\d)", "მესამედი", out)
+    out = re.sub(r"(?<!\d)1/4(?!\d)", "მეოთხედი", out)
+    out = re.sub(r"(?<!\d)3/4(?!\d)", "სამი მეოთხედი", out)
+    out = re.sub(r"(?<!\d)1\s+1/2(?!\d)", "ერთ-ნახევარი", out)
+    out = re.sub(r"(?<!\d)2\s+1/2(?!\d)", "ორ-ნახევარი", out)
+
+    # Decimals
     out = re.sub(
         r"(\b\d{1,9})\.(\d{1,4})\b",
         lambda m: f"{georgian_number_to_words(int(m.group(1)))} მთელი {georgian_number_to_words(int(m.group(2)))}",
         out
     )
-
-    # 4. Common Fractions
-    out = re.sub(r"(?<!\d)1/2(?!\d)", "ნახევარი", out)
-    out = re.sub(r"(?<!\d)1/3(?!\d)", "მესამედი", out)
-    out = re.sub(r"(?<!\d)1/4(?!\d)", "მეოთხედი", out)
-    out = re.sub(r"(?<!\d)3/4(?!\d)", "სამი მეოთხედი", out)
 
     # 5. Metric Measurements
     out = re.sub(
@@ -337,6 +350,9 @@ def verbalize_georgian_for_tts(text: str) -> str:
         lambda m: f"{georgian_number_to_words(int(m.group(1)))} სანტიმეტრი",
         out
     )
+    out = re.sub(rf"(?<=[{KA_CHARS}\d])\s*კგ{KA_SUFFIX}", " კილოგრამი", out)
+    out = re.sub(rf"(?<=[{KA_CHARS}\d])\s*კმ{KA_SUFFIX}", " კილომეტრი", out)
+    out = re.sub(rf"(?<=[{KA_CHARS}\d])\s*სმ{KA_SUFFIX}", " სანტიმეტრი", out)
     out = re.sub(
         r"(\b\d{1,9})\s*°C\b",
         lambda m: f"{georgian_number_to_words(int(m.group(1)))} გრადუსი ცელსიუსით",
@@ -419,6 +435,18 @@ def verbalize_georgian_for_tts(text: str) -> str:
     out = re.sub(
         r"\b(\d{1,9})\b",
         lambda m: georgian_number_to_words(int(m.group(1))),
+        out
+    )
+
+    # 10b. Vigesimal & Centenary Numeral Stem Elision Before Oblique Nouns & Measures
+    # In Georgian morphosyntax, cardinal numbers drop the final -ი when modifying an oblique noun:
+    # e.g., "ოცი კაცს" -> "ოც კაცს", "ორმოცი დღეს" -> "ორმოც დღეს", "ასი წლამდე" -> "ას წლამდე".
+    vigesimal_stems = r'(?:ოც|ორმოც|სამოც|ოთხმოც|ას|ორას|სამას|ოთხას|ხუთას|ექვსას|შვიდას|რვაას|ცხრაას|ათას)'
+    verbs_ending_in_s = r'(?:არის|ჩანს|გადის|შედის|იცის|აქვს|ჰყავს|უნდა|იტყვის|ხედავს|წერს|ამბობს|მოდის|მიდის|ხდება|უყვარს|ახსოვს|სჭირდება|ესმის|დგას|ზის|წევს|ჰქვია|ჰგავს)'
+    oblique_noun_pattern = rf'(?!{verbs_ending_in_s}(?![{KA_CHARS}]))(?:[{KA_CHARS}]+(?:ს|ით|ად|დან|თან|კენ|ზე|ში|ისთვის|მდე))'
+    out = re.sub(
+        rf"{KA_PREFIX}({vigesimal_stems})ი\s+({oblique_noun_pattern}){KA_SUFFIX}",
+        r"\g<1> \g<2>",
         out
     )
 

@@ -32,7 +32,7 @@ from app.image_processor import (
     enhance_page_image, image_to_jpeg_bytes
 )
 from app.translation_engine import translate_text
-from app.transcription_engine import transcribe_audio_bytes, transcribe_audio_file
+from app.transcription_engine import transcribe_audio_bytes, transcribe_audio_file, transcribe_image_bytes
 from app.supabase_bridge import check_supabase_health, get_admin_session, fetch_supabase_books
 from app.training_engine import (
     verify_key, open_training_session, get_training_context,
@@ -177,6 +177,52 @@ async def transcribe_endpoint(
             prompt=prompt,
             api_key=api_key
         )
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/ocr")
+async def ocr_endpoint(req: Request):
+    """
+    Direct neural OCR endpoint for printed book photos and camera frames.
+    Integrates Gemini 2.5 Flash Vision with Georgian Mkhedruli morphology restoration
+    and active rule pack repairs.
+    """
+    try:
+        body = await req.json()
+        image_str = body.get("image") or body.get("image_base64")
+        if not image_str:
+            raise HTTPException(status_code=400, detail="Missing image data")
+
+        mime_type = "image/jpeg"
+        if image_str.startswith("data:"):
+            header, b64_data = image_str.split(",", 1)
+            if ";" in header and ":" in header:
+                mime_type = header.split(";")[0].split(":")[1]
+            image_bytes = base64.b64decode(b64_data)
+        else:
+            image_bytes = base64.b64decode(image_str)
+
+        lang = body.get("lang") or body.get("language") or "kat"
+        hint = body.get("hint")
+        api_key = (
+            req.headers.get("x-gemini-key")
+            or req.headers.get("x-goog-api-key")
+            or body.get("api_key")
+        )
+
+        result = transcribe_image_bytes(
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+            language=lang,
+            hint=hint,
+            api_key=api_key
+        )
+        if not result.get("success", False) and not result.get("text"):
+            return JSONResponse(result, status_code=400)
         return JSONResponse(result)
     except HTTPException:
         raise

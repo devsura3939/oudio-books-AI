@@ -1491,7 +1491,9 @@ ${text.slice(0, 10000)}`;
         ['ძ', 'ხ'], ['ხ', 'ძ'],
         ['ყ', 'ფ'], ['ფ', 'ყ'],
         ['შ', 'წ'], ['წ', 'შ'],
-        ['ჩ', 'ძ'], ['ძ', 'ჩ']
+        ['ჩ', 'ძ'], ['ძ', 'ჩ'],
+        ['ბ', 'ზ'], ['ზ', 'ბ'],
+        ['ც', 'ხ'], ['ხ', 'ც']
       ];
       for (const [fromChar, toChar] of confPairs) {
         if (tok.includes(fromChar)) {
@@ -1566,6 +1568,18 @@ ${text.slice(0, 10000)}`;
       [/(?<![\u10A0-\u10FF])ხემი(?=\s+[ა-ჰ]+)/g, 'ჩემი'],
       [/(?<![\u10A0-\u10FF])თალთი(?![ა-ჰ])/g, 'ხალხი'],
       [/(?<![\u10A0-\u10FF])ნაღდი(?![ა-ჰ])/g, 'ნამდვილი'],
+      [/(?<![\u10A0-\u10FF])3ატარ([ა-ჰ]*)/g, 'პატარ$1'],
+      [/(?<![\u10A0-\u10FF])3(?=ატარ|ერსონ|ოლიტიკ|ასუხ)/g, 'პ'],
+      [/(?<![\u10A0-\u10FF])კერსონაჟ([ა-ჰ]*)/g, 'პერსონაჟ$1'],
+      [/(?<![\u10A0-\u10FF])წესახებ(?![ა-ჰ])/g, 'შესახებ'],
+      [/(?<![\u10A0-\u10FF])ხხოვრ([ა-ჰ]*)/g, 'ცხოვრ$1'],
+      [/(?<![\u10A0-\u10FF])ცცოვრ([ა-ჰ]*)/g, 'ცხოვრ$1'],
+      [/(?<![\u10A0-\u10FF])ზუნებრივ([ა-ჰ]*)/g, 'ბუნებრივ$1'],
+      [/(?<![\u10A0-\u10FF])მხოღოდ(?![ა-ჰ])/g, 'მხოლოდ'],
+      [/(?<![\u10A0-\u10FF])ხვენ(?![ა-ჰ])/g, 'ჩვენ'],
+      [/(?<![\u10A0-\u10FF])ხვენი(?![ა-ჰ])/g, 'ჩვენი'],
+      [/(?<![\u10A0-\u10FF])ძვენ(?![ა-ჰ])/g, 'ჩვენ'],
+      [/(?<![\u10A0-\u10FF])ხალიან(?![ა-ჰ])/g, 'ძალიან'],
     ];
     for (const [re, repl] of deepKaOcrFixes) {
       t = t.replace(re, repl);
@@ -1585,6 +1599,25 @@ ${text.slice(0, 10000)}`;
         t = window.refineGeorgianGrammar(t);
       }
     }
+
+    // 5. Hook into active trained rule pack if available in storage or window
+    try {
+      const storedPack = (typeof localStorage !== "undefined" && (localStorage.getItem("active_pack_ka") || localStorage.getItem("active_training_pack_ka")));
+      if (storedPack) {
+        const packObj = JSON.parse(storedPack);
+        const packItems = Array.isArray(packObj.items) ? packObj.items : (Array.isArray(packObj) ? packObj : []);
+        for (const it of packItems) {
+          if ((it.type === "ocr_fix" || it.type === "autofix") && it.pattern && it.replacement) {
+            try {
+              const pat = it.pattern;
+              const rep = it.replacement;
+              const rx = new RegExp(pat.startsWith("(?") ? pat : `(?<![\\u10A0-\\u10FF])${pat.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}(?![ა-ჰ])`, "g");
+              t = t.replace(rx, rep);
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (_) {}
 
     t = t.replace(/[ \t]{2,}/g, " ").trim();
     return t;

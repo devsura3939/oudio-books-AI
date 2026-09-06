@@ -17,6 +17,12 @@ except ImportError:
     LibreTranslator = None
     MyMemoryTranslator = None
 
+try:
+    from app.training_engine import load_active_pack, apply_pack
+except ImportError:
+    load_active_pack = None
+    apply_pack = None
+
 
 def clean_georgian_morphology(text: str) -> str:
     if not text:
@@ -39,12 +45,15 @@ def clean_georgian_morphology(text: str) -> str:
     # Anti-calque & synthetic verb reinforcement (Georgian Pro standards)
     calques = [
         (r'(?<![\u10A0-\u10FF])მიიღო\s+გადაწყვეტილება(?![ა-ჰ])', 'გადაწყვიტა'),
+        (r'(?<![\u10A0-\u10FF])მიიღეს\s+გადაწყვეტილება(?![ა-ჰ])', 'გადაწყვიტეს'),
         (r'(?<![\u10A0-\u10FF])განახორციელა(?![ა-ჰ])', 'გააკეთა'),
         (r'(?<![\u10A0-\u10FF])განხორციელება(?![ა-ჰ])', 'შესრულება'),
         (r'(?<![\u10A0-\u10FF])ადგილი\s+ჰქონდა(?![ა-ჰ])', 'მოხდა'),
+        (r'(?<![\u10A0-\u10FF])ადგილი\s+აქვს(?![ა-ჰ])', 'ხდება'),
         (r'(?<![\u10A0-\u10FF])წარმოადგენს(?![ა-ჰ])', 'არის'),
         (r'(?<![\u10A0-\u10FF])მოცემულ\s+მომენტში(?![ა-ჰ])', 'ამჟამად'),
         (r'(?<![\u10A0-\u10FF])გააკეთა\s+ღიმილი(?![ა-ჰ])', 'გაიღიმა'),
+        (r'(?<![\u10A0-\u10FF])დიდი\s+მნიშვნელობა\s+აქვს(?![ა-ჰ])', 'სასიცოცხლო მნიშვნელობისაა'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -79,10 +88,10 @@ def synthesize_georgian_morphology(text: str) -> str:
     t = re.sub(r'([ა-ჰ]+[ბგდვზთკლმნპჟრსტუფქღყშჩცძწჭხჯჰ])(?:ი)?-დან(?![ა-ჰ])', r'\g<1>იდან', t)
 
     # 2. Screeve Series II Transitive Aorist Ergative Concord (-მა / -მ)
-    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა)'
-    subjects_i = r'(?:პატარა\s+უფლისწულ|უფლისწულ|კაც|ბავშვ|ბიჭ|ქალ|ავტორ|ვარდ|მგელ|ადამიან|მეგობარ|მწერალ|პოეტ|ექიმ)'
+    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა|გამოაცხადა)'
+    subjects_i = r'(?:პატარა\s+უფლისწულ|უფლისწულ|მარკუს\s+ავრელიუს|არისტოტელ|პლატონ|ჰომეროს|შექსპირ|კაც|ბავშვ|ბიჭ|ქალ|ავტორ|ვარდ|მგელ|ადამიან|მეგობარ|მწერალ|პოეტ|ექიმ)'
     t = re.sub(r'(?<![\u10A0-\u10FF])(' + subjects_i + r')ი(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მა\g<2>', t)
-    t = re.sub(r'(?<![\u10A0-\u10FF])(მეფე|მელა|გოგო|დედა|მამა|ძმა|დეიდა|ბიძა)(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])(მეფე|მელა|გოგო|დედა|მამა|ძმა|დეიდა|ბიძა|სახელმწიფო|სოკრატე)(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
 
     # 3. Screeve Series III & Experiencer Dative Inversion
     experiencer_verbs = r'(?:უნდა|სჭირდება|უყვარს|ახსოვს|ეშინია|სტკივა|შია|ცივა|უნახავს|გაუგია)'
@@ -100,8 +109,8 @@ def synthesize_georgian_morphology(text: str) -> str:
         t = re.sub(pat, repl, t)
 
     # 5. Reflexive Pronoun Auto-Repair: Inviolability of თავისი when coreferent with clause subject
-    t = re.sub(r'(?<![\u10A0-\u10FF])(მან|ავტორმა|კაცმა|ქალმა|ბავშვმა|ბიჭმა|გოგომ|უფლისწულმა|მეფემ)\s+მისი(?![ა-ჰ])', r'\g<1> თავისი', t)
-    t = re.sub(r'(?<![\u10A0-\u10FF])(მან|ავტორმა|კაცმა|ქალმა|ბავშვმა|ბიჭმა|გოგომ|უფლისწულმა|მეფემ)\s+მის(?![ა-ჰ])', r'\g<1> თავის', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])(მან|ავტორმა|მარკუს\s+ავრელიუსმა|კაცმა|ქალმა|ბავშვმა|ბიჭმა|გოგომ|უფლისწულმა|მეფემ)\s+მისი(?![ა-ჰ])', r'\g<1> თავისი', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])(მან|ავტორმა|მარკუს\s+ავრელიუსმა|კაცმა|ქალმა|ბავშვმა|ბიჭმა|გოგომ|უფლისწულმა|მეფემ)\s+მის(?![ა-ჰ])', r'\g<1> თავის', t)
     t = re.sub(r'(?<![\u10A0-\u10FF])მათ\s+მათი(?![ა-ჰ])', 'მათ თავიანთი', t)
     t = re.sub(r'(?<![\u10A0-\u10FF])მათ\s+მათ(?=\s+[ა-ჰ]+)(?![ა-ჰ])', 'მათ თავიანთ', t)
 
@@ -356,6 +365,21 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
         if tgt == "ka":
             p_trans = synthesize_georgian_morphology(p_trans)
             p_trans = clean_georgian_morphology(p_trans)
+            if load_active_pack is not None and apply_pack is not None:
+                try:
+                    active_pack = load_active_pack("ka")
+                    if active_pack.get("enabled", True):
+                        p_trans = apply_pack(p_trans, active_pack.get("items", []), kind="translate")
+                except Exception as e:
+                    print(f"[translation_engine] active pack translate post-edit warning: {e}")
+        elif tgt == "en":
+            if load_active_pack is not None and apply_pack is not None:
+                try:
+                    active_pack = load_active_pack("en")
+                    if active_pack.get("enabled", True):
+                        p_trans = apply_pack(p_trans, active_pack.get("items", []), kind="translate")
+                except Exception:
+                    pass
 
         translated_paras.append(p_trans)
 

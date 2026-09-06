@@ -122,7 +122,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
     provider: "gemini",
     voice: "Charon",
     instructions:
-      "Narrate in standard literary Georgian with crystal-clear articulation, distinct ejective vs aspirated consonants, natural syllable cadence, a warm storytelling baritone, and organic breathing pauses at punctuation.",
+      "Narrate in pristine literary Georgian (Kartlian standard) with crystal-clear articulation, authentic ejective and aspirated consonant contrasts, natural vigesimal phrasing, a warm resonant baritone, and organic breathing pauses at commas and punctuation.",
   },
   {
     id: "ka-actor",
@@ -131,7 +131,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
     provider: "gemini",
     voice: "Fenrir",
     instructions:
-      "Narrate in expressive Georgian dramatic stage delivery with vivid dialogue characterization, rich emotional nuance, articulate diction, and dynamic pacing.",
+      "Narrate in expressive Georgian dramatic theater delivery with vivid character voices, heroic classical cadence, rich emotional depth, crisp Kartvelian phonology, and cinematic storytelling pauses.",
   },
   {
     id: "ka-female",
@@ -140,7 +140,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
     provider: "gemini",
     voice: "Kore",
     instructions:
-      "Narrate in clear, elegant standard Georgian with lyrical warmth, flawless native phonology, crisp consonant articulation, and thoughtful narrative breathing.",
+      "Narrate in clear, elegant standard Georgian with lyrical warmth, flawless native phonology, crisp consonant articulation, melodic sentence intonation, and thoughtful narrative breathing.",
   },
   {
     id: "ka-soft",
@@ -149,7 +149,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
     provider: "gemini",
     voice: "Aoede",
     instructions:
-      "Narrate in gentle, poetic Georgian with soothing cadence, delicate melodic contours, clear literary pronunciation, and tranquil pacing.",
+      "Narrate in gentle, poetic Georgian with a soothing intimate cadence, delicate melodic contours, pristine literary pronunciation, tranquil pacing, and soft breath releases.",
   },
   // Multilingual / other languages
   {
