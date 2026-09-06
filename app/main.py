@@ -32,6 +32,7 @@ from app.image_processor import (
     enhance_page_image, image_to_jpeg_bytes
 )
 from app.translation_engine import translate_text
+from app.transcription_engine import transcribe_audio_bytes, transcribe_audio_file
 from app.supabase_bridge import check_supabase_health, get_admin_session, fetch_supabase_books
 import base64
 from io import BytesIO
@@ -106,16 +107,75 @@ async def server_translate(req: Request):
     """
     Lightweight, high-speed server-side translation.
     Zero external dependencies on client mobile devices.
+    Supports Frontier AI (Gemini 2.5 Flash), Google Neural Translate, and deep-translator.
     """
     try:
         body = await req.json()
         text = body.get("text", "")
         source_lang = body.get("source_lang", "auto")
         target_lang = body.get("target_lang", "ka")
-        result = translate_text(text, source_lang=source_lang, target_lang=target_lang)
+        api_key = body.get("api_key") or req.headers.get("x-goog-api-key")
+        result = translate_text(text, source_lang=source_lang, target_lang=target_lang, api_key=api_key)
         return JSONResponse(result)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/transcribe")
+async def transcribe_endpoint(
+    req: Request,
+    file: Optional[UploadFile] = File(None)
+):
+    """
+    High-fidelity human-like transcription for Georgian and English audio.
+    Supports multipart file upload or JSON payload with base64 audio.
+    """
+    try:
+        audio_bytes = None
+        mime_type = "audio/mp3"
+        language = "auto"
+        prompt = None
+        api_key = req.headers.get("x-goog-api-key")
+
+        if file is not None:
+            audio_bytes = await file.read()
+            mime_type = file.content_type or "audio/mp3"
+            language = req.query_params.get("language", "auto")
+            prompt = req.query_params.get("prompt")
+            if not api_key:
+                api_key = req.query_params.get("api_key")
+        else:
+            body = await req.json()
+            if "audio_base64" in body:
+                b64 = body["audio_base64"]
+                if "," in b64:
+                    header, b64 = b64.split(",", 1)
+                    if "audio/" in header:
+                        mime_type = header.split(";")[0].split(":")[1]
+                audio_bytes = base64.b64decode(b64)
+            language = body.get("language", "auto")
+            prompt = body.get("prompt")
+            if not api_key:
+                api_key = body.get("api_key")
+
+        if not audio_bytes:
+            raise HTTPException(status_code=400, detail="No audio data provided")
+
+        result = transcribe_audio_bytes(
+            audio_bytes=audio_bytes,
+            mime_type=mime_type,
+            language=language,
+            prompt=prompt,
+            api_key=api_key
+        )
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/server-burst-fuse")
 async def server_burst_fuse(req: Request):

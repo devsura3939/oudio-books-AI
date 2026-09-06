@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
+import os
 import re
 from typing import Optional
+
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    genai = None
+    types = None
+
 try:
     from deep_translator import GoogleTranslator, LibreTranslator, MyMemoryTranslator
 except ImportError:
@@ -238,12 +247,13 @@ def translate_offline_en_to_ka(text: str) -> str:
     return clean_georgian_morphology(t)
 
 
-def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka") -> dict:
+def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka", api_key: Optional[str] = None) -> dict:
     if not text or not text.strip():
         return {"translated": "", "engine": "none", "success": True}
 
     src = "en" if source_lang in ("en", "eng") else ("ka" if source_lang in ("ka", "kat") else "auto")
     tgt = "ka" if target_lang in ("ka", "kat") else "en"
+    effective_key = api_key or os.environ.get("GEMINI_API_KEY")
 
     # Split into paragraphs to maintain narrative structure
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
@@ -256,21 +266,57 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
     for p in paragraphs:
         p_trans = None
 
-        # Tier 0: Direct Google Translation API (ultra-stable, zero rate-limit)
-        try:
-            import httpx
-            from urllib.parse import quote
-            url = f"https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl={src}&tl={tgt}&dt=t&q={quote(p)}"
-            resp = httpx.get(url, timeout=12.0)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data and data[0] and isinstance(data[0], list):
-                    p_trans = "".join([item[0] for item in data[0] if item and item[0]])
-                    engine_used = "server_neural_google"
-        except Exception as e:
-            print(f"[translation_engine] Tier 0 direct translation failed: {e}")
+        # Tier 0: Frontier AI Literary Translation (Gemini 2.5 Flash)
+        if genai is not None and effective_key:
+            try:
+                client = genai.Client(api_key=effective_key)
+                if tgt == "ka":
+                    sys_instruction = (
+                        "You are an acclaimed Georgian literary translator. Translate this text faithfully into authentic, elegant Georgian. "
+                        "Rules: "
+                        "1. Use authentic Mkhedruli script with proper punctuation and quotation marks („...“). "
+                        "2. Observe Georgian morphosyntax: Ergative case (-მა/-მ) for transitive verbs in Series II Aorist; "
+                        "Dative case (-ს) for inverted experiencer verbs (მას უნდა, მას უყვარს, მას ახსოვს, მას სჭირდება); "
+                        "stem vowel syncopation and truncation (კუმშვა/კვეცა: წყლიდან, მგლის, ქვეყანაში). "
+                        "3. Natural pro-drop: do NOT mechanically repeat overt pronouns (მან, ის, მას) in every sentence. "
+                        "4. Coreference: use თავისი/თავის for reflexive subject reference, and მისი/მის only for external referents. "
+                        "5. Anti-calque: replace bureaucratic passive phrases with active synthetic Georgian verbs (გადაწყვიტა instead of მიიღო გადაწყვეტილება, მოხდა instead of ადგილი ჰქონდა, გაიღიმა instead of გააკეთა ღიმილი). "
+                        "6. Prohibitive negation: use ნუ with imperative verbs (ნუ გეშინია, ნუ ტირი). "
+                        "Output ONLY the translated Georgian text without commentary."
+                    )
+                else:
+                    sys_instruction = (
+                        "You are an acclaimed literary translator. Translate this text faithfully into natural, fluent, and expressive English. "
+                        "Preserve literary voice, idioms, and emotional nuance. "
+                        "Output ONLY the translated English text without commentary."
+                    )
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=p,
+                    config=dict(system_instruction=sys_instruction, temperature=0.2)
+                )
+                if response and response.text:
+                    p_trans = response.text.strip()
+                    engine_used = "gemini-2.5-flash"
+            except Exception as e:
+                print(f"[translation_engine] Tier 0 Gemini translation failed: {e}")
 
-        # Tier 1: deep-translator GoogleTranslator fallback
+        # Tier 1: Direct Google Translation API (ultra-stable, zero rate-limit)
+        if not p_trans:
+            try:
+                import httpx
+                from urllib.parse import quote
+                url = f"https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl={src}&tl={tgt}&dt=t&q={quote(p)}"
+                resp = httpx.get(url, timeout=12.0)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data and data[0] and isinstance(data[0], list):
+                        p_trans = "".join([item[0] for item in data[0] if item and item[0]])
+                        engine_used = "server_neural_google"
+            except Exception as e:
+                print(f"[translation_engine] Tier 1 direct translation failed: {e}")
+
+        # Tier 2: deep-translator GoogleTranslator fallback
         if not p_trans and GoogleTranslator is not None:
             try:
                 tr = GoogleTranslator(source=src, target=tgt)
@@ -291,9 +337,9 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
                     p_trans = " ".join([tr.translate(sc) for sc in sub_chunks if sc])
                 engine_used = "deep_translator_google"
             except Exception as e:
-                print(f"[translation_engine] GoogleTranslator failed: {e}")
+                print(f"[translation_engine] Tier 2 GoogleTranslator failed: {e}")
 
-        # Tier 2: Offline literary translation engine fallback
+        # Tier 3: Offline literary translation engine fallback
         if not p_trans:
             if tgt == "ka":
                 offline_res = translate_offline_en_to_ka(p)
@@ -308,6 +354,7 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
                 engine_used = "fallback_original"
 
         if tgt == "ka":
+            p_trans = synthesize_georgian_morphology(p_trans)
             p_trans = clean_georgian_morphology(p_trans)
 
         translated_paras.append(p_trans)
@@ -317,3 +364,4 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
         "engine": engine_used,
         "success": True
     }
+

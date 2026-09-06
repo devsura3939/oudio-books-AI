@@ -642,6 +642,49 @@ assert open(STATIC_SUPABASE, "rb").read() == open(STUDIO_SUPABASE, "rb").read(),
 
 print("  [PASS] Book deletion permanence, tombstone immunity, fast library loading, upload reliability & primary GitHub links verified in all mirrors")
 
+# ==============================================================================
+# SECTION 25: HUMAN-LIKE TRANSLATION & TRANSCRIPTION ENGINE VERIFICATION
+# ==============================================================================
+TRANSCRIPTION_ENGINE = os.path.join(REPO_DIR, "app", "transcription_engine.py")
+TRANSLATION_ENGINE = os.path.join(REPO_DIR, "app", "translation_engine.py")
+MAIN_PY = os.path.join(REPO_DIR, "app", "main.py")
+REQ_TXT = os.path.join(REPO_DIR, "requirements.txt")
+
+# 1. Verify app/transcription_engine.py
+assert os.path.exists(TRANSCRIPTION_ENGINE), "FAIL: app/transcription_engine.py does not exist"
+with open(TRANSCRIPTION_ENGINE, "r", encoding="utf-8") as f:
+    te_code = f.read()
+assert "def transcribe_audio_bytes(" in te_code, "FAIL: transcribe_audio_bytes missing"
+assert "def transcribe_audio_file(" in te_code, "FAIL: transcribe_audio_file missing"
+assert "clean_georgian_morphology" in te_code, "FAIL: clean_georgian_morphology missing from transcription engine"
+assert "gemini-2.5-flash" in te_code, "FAIL: gemini-2.5-flash missing from transcription engine"
+
+# 2. Verify app/translation_engine.py Tier 0 and morphosyntax
+with open(TRANSLATION_ENGINE, "r", encoding="utf-8") as f:
+    trans_code = f.read()
+assert "from google import genai" in trans_code, "FAIL: google.genai missing from translation_engine"
+assert "def translate_text(text: str, source_lang: str = \"auto\", target_lang: str = \"ka\", api_key: Optional[str] = None)" in trans_code, \
+    "FAIL: api_key parameter missing from translate_text signature"
+assert "synthesize_georgian_morphology(p_trans)" in trans_code, "FAIL: synthesize_georgian_morphology missing in translate_text"
+assert "clean_georgian_morphology(p_trans)" in trans_code, "FAIL: clean_georgian_morphology missing in translate_text"
+
+# 3. Verify app/main.py endpoints
+with open(MAIN_PY, "r", encoding="utf-8") as f:
+    main_code = f.read()
+assert '@app.post("/api/transcribe")' in main_code, "FAIL: /api/transcribe endpoint missing from main.py"
+assert '@app.post("/api/server-translate")' in main_code, "FAIL: /api/server-translate endpoint missing from main.py"
+assert "transcribe_audio_bytes" in main_code, "FAIL: transcribe_audio_bytes missing from main.py"
+
+# 4. Verify requirements.txt has modern translation & transcription dependencies
+with open(REQ_TXT, "r", encoding="utf-8") as f:
+    req_code = f.read()
+assert "google-genai" in req_code, "FAIL: google-genai missing from requirements.txt"
+assert "SpeechRecognition" in req_code, "FAIL: SpeechRecognition missing from requirements.txt"
+assert "deep-translator" in req_code, "FAIL: deep-translator missing from requirements.txt"
+assert "pydub" in req_code, "FAIL: pydub missing from requirements.txt"
+
+print("  [PASS] Human-like translation & multimodal transcription engines verified across backend, routes & dependencies")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
 
 
