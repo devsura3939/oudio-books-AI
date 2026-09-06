@@ -4828,13 +4828,14 @@ PROPER NOUN & CLASSICAL NAME TRANSLITERATION (EN/LATIN/GREEK → KA):
     * Kant → კანტი, Darwin → დარვინი, Newton → ნიუტონი, Einstein → აინშტაინი.
   - Names ending in a vowel (-ა, -ე, -ო, -უ) do not take -ი: Dante → დანტე, Seneca → სენეკა, Goethe → გოეთე.`;
 
-// KA-120 & KA-122 v1.49.0 — Real-Data Literature Corpus Exemplars & Parallel Syntactic Structures.
+// KA-120, KA-122 & KA-124 v1.50.0 — Real-Data Literature Corpus Exemplars & Parallel Syntactic Structures.
 // Grounded in classical Georgian literature and benchmark literary translations:
-// Shota Rustaveli, Ilia Chavchavadze, Vazha-Pshavela, Akaki Tsereteli, Alexander Kazbegi,
-// Konstantine Gamsakhurdia, Mikheil Javakhishvili, Machabeli (Shakespeare),
-// Simon Kvariani (The Little Prince), Shengelia (Homer's Iliad & Odyssey).
+// Shota Rustaveli, Sulkhan-Saba Orbeliani, David Guramishvili, Ilia Chavchavadze,
+// Akaki Tsereteli, Vazha-Pshavela, Alexander Kazbegi, Galaktion Tabidze,
+// Konstantine Gamsakhurdia, Mikheil Javakhishvili, Nodar Dumbadze, Otar Chiladze,
+// Machabeli (Shakespeare), Simon Kvariani (The Little Prince), Shengelia (Homer).
 const KA_REAL_DATA_CORPUS_EXEMPLARS = `
-REAL-DATA GEORGIAN LITERARY CORPUS & PARALLEL STRUCTURES (KA-120 & KA-122):
+REAL-DATA GEORGIAN LITERARY CORPUS & PARALLEL STRUCTURES (KA-120, KA-122 & KA-124):
 • BENCHMARK LITERARY PARALLEL SENTENCES:
   - "It is only with the heart that one can see rightly; what is essential is invisible to the eye."
     → „მხოლოდ გული ხედავს კარგად. მთავარი თვალისთვის უხილავია.“ (The Little Prince / პატარა უფლისწული)
@@ -4850,6 +4851,10 @@ REAL-DATA GEORGIAN LITERARY CORPUS & PARALLEL STRUCTURES (KA-120 & KA-122):
     → „მიმღერე, მუზავ, იმ მრავალტანჯული კაცის ამბავი...“ (Homer, Odyssey / ჰომეროსი, ოდისეა)
   - "The false friend is worse than an open enemy."
     → „მტერი მტრულად ვერას გავნებს, რაც რომ მტერსა მეგობრულსა.“ (Shota Rustaveli / შოთა რუსთაველი, ვეფხისტყაოსანი)
+  - "Wisdom and knowledge are a boundless ocean; only the humble spirit reaches its depths."
+    → „სიბრძნე და ცოდნა უსაზღვრო ზღვაა, რომლის ფსკერსაც მხოლოდ თავმდაბალი მიაღწევს.“ (Sulkhan-Saba Orbeliani, A Wisdom of Fancy / სულხან-საბა ორბელიანი, სიბრძნე სიცრუისა)
+  - "Learning stays with you until death, your ever-present companion; no man can take it from you, nor can it be divided."
+    → „სწავლა სიკვდილმდე შენია, მუდამ შენთანა მყოფია; მას კაცი ვერცა წაგართმევს, ვერც სხვას გაუყოფია.“ (David Guramishvili, Davitiani / დავით გურამიშვილი, დავითიანი)
   - "A human being was created not for idle sleep, but for lofty action and striving."
     → „ადამიანი მარტო იმისთვის არ არის გაჩენილი, რომ ჭამოს და დაიძინოს... მოქმედება და ბრძოლაა მისი დანიშნულება.“ (Ilia Chavchavadze, Letters of a Traveler / ილია ჭავჭავაძე, მგზავრის წერილები)
   - "What is man if his chief good and market of his time be but to sleep and feed? A beast, no more."
@@ -4862,10 +4867,16 @@ REAL-DATA GEORGIAN LITERARY CORPUS & PARALLEL STRUCTURES (KA-120 & KA-122):
     → „ვაჟკაცსა გული ეთქმის მტრის ვაჟკაცობაზედაც, გმირობას მტრობაც ვერ წაშლის.“ (Vazha-Pshavela, Aluda Ketelauri / ვაჟა-ფშაველა, ალუდა ქეთელაური)
   - "The Caucasian mountains pierced the heavens like frozen titans of ancient memory."
     → „კავკასიონის მთები ცას აწვდენილან, ვითარცა უძველესი ხსოვნის გაყინული ტიტანები.“ (Alexander Kazbegi, Elguja / ალექსანდრე ყაზბეგი, ელგუჯა)
+  - "The wind blows, the wind blows, the wind blows; the leaves whirl away with the wind..."
+    → „ქარი ჰქრის, ქარი ჰქრის, ქარი ჰქრის, ფოთლები მიჰქრიან ქარდაქარ...“ (Galaktion Tabidze / გალაკტიონ ტაბიძე)
   - "Art is eternity carved into stone, surviving kings and empires."
     → „ხელოვნება მარადისობაა, ქვაში გამოკვეთილი, რომელიც მეფეებსა და იმპერიებს გადაურჩება.“ (Konstantine Gamsakhurdia, The Right Hand of the Grand Master / კონსტანტინე გამსახურდია, დიდოსტატის კონსტანტინეს მარჯვენა)
   - "The world is full of clever swindlers, but none deceives themselves as thoroughly as the proud."
     → „სამყარო სავსეა ცბიერი თაღლითებით, მაგრამ საკუთარ თავს ისე არავინ ატყუებს, როგორც ქედმაღალი.“ (Mikheil Javakhishvili, Kvachi Kvachantiradze / მიხეილ ჯავახიშვილი, კვაჭი კვაჭანტირაძე)
+  - "The human soul is far heavier than the body, so heavy that one person cannot carry it alone — that is why we help each other."
+    → „ადამიანის სული ბევრად უფრო მძიმეა, ვიდრე სხეული, იმდენად მძიმე, რომ ერთ ადამიანს მისი ტარება არ შეუძლია — ამიტომაც ვეხმარებით ერთმანეთს.“ (Nodar Dumbadze, The White Banners / ნოდარ დუმბაძე, თეთრი ბაირაღები)
+  - "A road always leads somewhere, but what truly matters is with whom you walk along that road."
+    → „გზა ყოველთვის სადღაც მიდის, მაგრამ მთავარი ის არის, თუ ვისთან ერთად მიაბიჯებ ამ გზაზე.“ (Otar Chiladze, A Man Was Going Down the Road / ოთარ ჭილაძე, გზაზე ერთი კაცი მიდიოდა)
 • NARRATIVE FLOW & DISCOURSE PATTERNS:
   - Dialogue Inversion: English puts the speaker tag after the quote ("..., he whispered"). In Georgian literary prose, use the dash with inverted aorist: „...“ — ჩაიჩურჩულა მან. (NEVER calque quotation attribution with present participles like *ჩურჩულებდა).
   - Pre-verbal Focus: The focus constituent of the sentence immediately precedes the verb. In „მზე ნელა ჩაესვენა ჰორიზონტს მიღმა“, „ჰორიზონტს მიღმა“ is the pre-verbal focus.
@@ -4943,6 +4954,34 @@ const KA_SYNTACTIC_POLYPERSONAL_ENGINE = `
     * მეშინია (I am afraid), მას ეშინია (he is afraid).
   - ABSOLUTELY BAN copula calques (*მე ვარ მშიერი, *ის საჭიროებს, *ის გრძნობს ტკივილს).`;
 
+// KA-125 v1.50.0 — "Georgian Pro" Discourse, Information Structure & Reflexive Engine.
+const KA_GEORGIAN_PRO_DISCOURSE_ENGINE = `
+"GEORGIAN PRO" DISCOURSE, INFORMATION STRUCTURE & REFLEXIVE ENGINE (KA-125):
+• TOPIC-FOCUS ARCHITECTURE & PRE-VERBAL FOCUS:
+  - Georgian is discourse-configurational: constituents are arranged by communicative dynamicity, not rigid English SVO.
+  - The neutral literary order is Subject-Object-Verb (SOV), with the FOCUS constituent immediately preceding the finite verb:
+    * [Subject] [Object] [FOCUS]-VERB: „პატარა უფლისწულმა უდაბნოში [მელა] დაინახა.“
+    * Contrastive Focus fronting: „[სწორედ ამ წიგნს] კითხულობს ბავშვი.“
+    * Post-verbal backgrounding: Given or old information may follow the verb: „დაინახა მელა უფლისწულმა და გაიღიმა.“
+  - NEVER calque rigid English SVO without stylistic intent (e.g. *უფლისწულმა დაინახა მელა უდაბნოში).
+• REFLEXIVE PRONOUN INVIOLABILITY (თავისი vs მისი):
+  - Strict distinction between subject-coreferent 3rd-person reflexive „თავისი“ and disjoint 3rd-person possessive „მისი“:
+    * „მან თავისი წიგნი აიღო“ = He took HIS OWN book (coreferent with subject).
+    * „მან მისი წიგნი აიღო“ = He took SOMEONE ELSE'S book (disjoint from subject).
+    * Plural: „მათ თავიანთი სახლი ააშენეს“ (their own) vs „მათ მათი სახლი ააშენეს“ (another group's).
+  - Banned calque: NEVER use „მისი“ when the possessor is the clause subject (*ავტორმა დაწერა მისი წიგნი -> ავტორმა თავისი წიგნი დაწერა).
+• RELATIVE CLAUSE PARTICIPIAL REDUCTION:
+  - Eliminate clumsy stacked „რომელიც“ clauses by converting to pre-nominal participles:
+    * Active present (-ელ-/-მ-): „მორბენალი ნაკადული“ (instead of „ნაკადული, რომელიც მორბის“).
+    * Past passive (-ულ-/-ილ-): „გუშინ მიღებული წერილი“ (instead of „წერილი, რომელიც გუშინ მივიღეთ“).
+    * Purposive/future (სა- -ო): „წასაკითხი წიგნი“ (instead of „წიგნი, რომელიც უნდა წავიკითხოთ“).
+• VIGESIMAL NUMERAL CONCORD:
+  - Numerals 20-99 use base 20: 20 ოცი, 25 ოცდახუთი, 40 ორმოცი, 50 ორმოცდაათი, 60 სამოცი, 70 სამოცდაათი, 80 ოთხმოცი, 90 ოთხმოცდაათი.
+  - Nouns governed by numerals 2+ MUST remain strictly in the SINGULAR:
+    * ოცი კაცი (NEVER *ოცი კაცები).
+    * ხუთი დღე (NEVER *ხუთი დღეები).
+    * ორმოცი წელი (NEVER *ორმოცი წლები).`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -4956,6 +4995,7 @@ function getKaKnowledgeBase() {
         KA_REAL_DATA_CORPUS_EXEMPLARS,
         KA_GEORGIAN_PRO_STYLE_GUIDE,
         KA_SYNTACTIC_POLYPERSONAL_ENGINE,
+        KA_GEORGIAN_PRO_DISCOURSE_ENGINE,
         KA_CASE_SYSTEM,
         KA_NEGATION,
         KA_CONJUNCTIONS,
@@ -5085,7 +5125,7 @@ function getKaKnowledgeBase() {
 
 // Compact rule set for refinement stages (targeted, smaller).
 function getKaCompactRules() {
-    return [KA_SYNTAX, KA_CONTRASTIVE_PATTERNS, KA_EXPERIENCER_FRAMES_COMPREHENSIVE, KA_PROPER_NOUN_TRANSLITERATION, KA_REAL_DATA_CORPUS_EXEMPLARS, KA_GEORGIAN_PRO_STYLE_GUIDE, KA_SYNTACTIC_POLYPERSONAL_ENGINE, KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
+    return [KA_SYNTAX, KA_CONTRASTIVE_PATTERNS, KA_EXPERIENCER_FRAMES_COMPREHENSIVE, KA_PROPER_NOUN_TRANSLITERATION, KA_REAL_DATA_CORPUS_EXEMPLARS, KA_GEORGIAN_PRO_STYLE_GUIDE, KA_SYNTACTIC_POLYPERSONAL_ENGINE, KA_GEORGIAN_PRO_DISCOURSE_ENGINE, KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
 }
 
 
@@ -8797,7 +8837,7 @@ function synthesizeGeorgianMorphology(text) {
     // 1. Transitive Aorist Subject Case Assignment: Nominative -> Ergative
     // Transitive past narrative verbs (თქვა, უპასუხა, ჰკითხა, დაინახა, გაიფიქრა, დაწერა, გააკეთა, შეხედა, მოისმინა)
     // require their subjects in the Ergative case (-მა for consonant stems, -მ for vowel stems).
-    const aoristVerbs = '(?:თქვა|უპასუხა|ჰკითხა|დაინახა|გაიფიქრა|დაწერა|წაიკითხა|გააკეთა|შეხედა|მოისმინა|დახატა|შეჭამა|დალია)';
+    const aoristVerbs = '(?:თქვა|უპასუხა|ჰკითხა|დაინახა|გაიფიქრა|დაწერა|წაიკითხა|გააკეთა|შეხედა|მოისმინა|დახატა|შეჭამა|დალია|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა)';
     const ergativeReplacements = [
         [new RegExp(`(?<![\\u10A0-\\u10FF])პატარა\\s+უფლისწული(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'პატარა უფლისწულმა'],
         [new RegExp(`(?<![\\u10A0-\\u10FF])უფლისწული(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'უფლისწულმა'],
@@ -8866,6 +8906,47 @@ function synthesizeGeorgianMorphology(text) {
     for (const [re, repl] of calques) {
         out = out.replace(re, repl);
     }
+
+    // 6. Reflexive Pronoun Auto-Repair: 3rd-person coreferent თავისი vs disjoint მისი
+    // Inviolability of თავისი when coreferent with clause subject:
+    // მან მისი წიგნი -> მან თავისი წიგნი, ავტორმა მისი -> ავტორმა თავისი, etc.
+    out = out.replace(/(?<![\u10A0-\u10FF])(მან|ავტორმა|კაცმა|ქალმა|ბავშვმა|ბიჭმა|გოგომ|უფლისწულმა|მეფემ)\s+მისი(?![ა-ჰ])/g, '$1 თავისი');
+    out = out.replace(/(?<![\u10A0-\u10FF])(მან|ავტორმა|კაცმა|ქალმა|ბავშვმა|ბიჭმა|გოგომ|უფლისწულმა|მეფემ)\s+მის(?![ა-ჰ])/g, '$1 თავის');
+    out = out.replace(/(?<![\u10A0-\u10FF])მათ\s+მათი(?![ა-ჰ])/g, 'მათ თავიანთი');
+    out = out.replace(/(?<![\u10A0-\u10FF])მათ\s+მათ(?=\s+[ა-ჰ]+)(?![ა-ჰ])/g, 'მათ თავიანთ');
+
+    // 7. Prepositional & Postpositional Phrase Synthesis
+    // Convert remaining English prepositions before Georgian nouns into synthetic Georgian cases/postpositions:
+    out = out.replace(/\b(?:with|with\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])/gi, (m, stem) => {
+        if (/[აეოუ]$/.test(stem)) {
+            return stem + 'სთან';
+        }
+        const s = stem.endsWith('ი') ? stem.slice(0, -1) : stem;
+        return s + 'თან';
+    });
+    out = out.replace(/\bbehind\s+(?:the\s+)?კარი(?![ა-ჰ])/gi, 'კარს უკან');
+    out = out.replace(/\bbehind\s+(?:the\s+)?([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])/gi, (m, stem) => {
+        const s = stem.endsWith('ი') ? stem.slice(0, -1) : stem;
+        return s + 'ის უკან';
+    });
+    out = out.replace(/\b(?:in|in\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])/gi, (m, stem) => {
+        const s = stem.endsWith('ი') ? stem.slice(0, -1) : stem;
+        return s + 'ში';
+    });
+    out = out.replace(/\b(?:from|from\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])/gi, (m, stem) => {
+        const s = stem.endsWith('ი') ? stem.slice(0, -1) : stem;
+        return s + 'იდან';
+    });
+    out = out.replace(/\b(?:to|to\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])/gi, (m, stem) => {
+        const s = stem.endsWith('ი') ? stem.slice(0, -1) : stem;
+        return s + 'ს';
+    });
+    out = out.replace(/\b(?:of|of\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])/gi, (m, stem) => {
+        const s = stem.endsWith('ი') ? stem.slice(0, -1) : stem;
+        return s + 'ის';
+    });
+    // Strip remaining isolated English articles before Georgian words
+    out = out.replace(/\b(?:the|a|an)\s+([\u10A0-\u10FF])/gi, '$1');
 
     return out;
 }
@@ -9218,7 +9299,45 @@ function translateOfflineEnToKa(text) {
             [/\bshone\b/gi, 'ანათებდა'],
             [/\bglittered\b/gi, 'ბრწყინავდა'],
             [/\bslept\b/gi, 'ეძინა'],
-            [/\bdreamed\b/gi, 'ესიზმრებოდა']
+            [/\bdreamed\b/gi, 'ესიზმრებოდა'],
+
+            // Directional & Associative postpositions
+            [/\btowards\s+the\s+mountain\b/gi, 'მთისკენ'],
+            [/\btowards\s+the\s+sea\b/gi, 'ზღვისკენ'],
+            [/\btowards\s+the\s+house\b/gi, 'სახლისკენ'],
+            [/\btowards\s+the\s+city\b/gi, 'ქალაქისკენ'],
+            [/\btowards\s+the\s+stars\b/gi, 'ვარსკვლავებისკენ'],
+            [/\bbehind\s+the\s+door\b/gi, 'კარს უკან'],
+            [/\bbehind\s+the\s+tree\b/gi, 'ხის უკან'],
+            [/\bbehind\s+the\s+house\b/gi, 'სახლის უკან'],
+            [/\bthrough\s+the\s+forest\b/gi, 'ტყეში'],
+            [/\bthrough\s+the\s+window\b/gi, 'ფანჯრიდან'],
+            [/\bwith\s+the\s+little\s+prince\b/gi, 'პატარა უფლისწულთან'],
+            [/\bwith\s+the\s+prince\b/gi, 'უფლისწულთან'],
+            [/\bwith\s+the\s+fox\b/gi, 'მელასთან'],
+            [/\bwith\s+the\s+king\b/gi, 'მეფესთან'],
+            [/\bwith\s+the\s+friend\b/gi, 'მეგობართან'],
+            [/\bwith\s+the\s+child\b/gi, 'ბავშვთან'],
+            [/\bwith\s+the\s+man\b/gi, 'კაცთან'],
+            [/\bwith\s+the\s+woman\b/gi, 'ქალთან'],
+            [/\bwith\s+me\b/gi, 'ჩემთან'],
+            [/\bwith\s+you\b/gi, 'შენთან'],
+            [/\bwith\s+him\b|\bwith\s+her\b/gi, 'მასთან'],
+            [/\bwith\s+us\b/gi, 'ჩვენთან'],
+            [/\bwith\s+them\b/gi, 'მათთან'],
+            [/\bwith\s+each\s+other\b|\bwith\s+one\s+another\b/gi, 'ერთმანეთთან'],
+
+            // Additional Expanded Narrative Verbs
+            [/\bopened\b/gi, 'გახსნა'],
+            [/\bclosed\b/gi, 'ჩაკეტა'],
+            [/\bsearched\s+for\b|\blooked\s+for\b/gi, 'მოძებნა'],
+            [/\blost\b/gi, 'დაკარგა'],
+            [/\bfell\s+in\s+love\s+with\b/gi, 'შეიყვარა'],
+            [/\bleft\s+behind\b|\babandoned\b/gi, 'მიატოვა'],
+            [/\bsent\b/gi, 'გაუგზავნა'],
+            [/\btold\b/gi, 'მოუყვა'],
+            [/\bunderstood\b/gi, 'გაიგო'],
+            [/\bexplained\b/gi, 'აუხსნა']
         ];
         for (const [re, repl] of phraseMap) {
             p = p.replace(re, repl);
@@ -9266,15 +9385,16 @@ if (typeof window !== 'undefined') {
     window.translateOfflineEnToKa = translateOfflineEnToKa;
     window.synthesizeGeorgianMorphology = synthesizeGeorgianMorphology;
     window.KA_SYNTACTIC_POLYPERSONAL_ENGINE = KA_SYNTACTIC_POLYPERSONAL_ENGINE;
+    window.KA_GEORGIAN_PRO_DISCOURSE_ENGINE = KA_GEORGIAN_PRO_DISCOURSE_ENGINE;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.49.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.50.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 136,
-    qaRules: 132,
-    autoFixes: 119,
-    researchSources: 405
+    promptBlocks: 138,
+    qaRules: 134,
+    autoFixes: 122,
+    researchSources: 415
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -9288,6 +9408,7 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_REAL_DATA_CORPUS_EXEMPLARS,
         KA_GEORGIAN_PRO_STYLE_GUIDE,
         KA_SYNTACTIC_POLYPERSONAL_ENGINE,
+        KA_GEORGIAN_PRO_DISCOURSE_ENGINE,
         synthesizeGeorgianMorphology,
         translateOfflineEnToKa,
         getKaKnowledgeBase,

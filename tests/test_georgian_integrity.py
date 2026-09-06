@@ -423,7 +423,7 @@ for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), 
     assert "KA_SYNTACTIC_POLYPERSONAL_ENGINE" in ling_text, f"FAIL: KA_SYNTACTIC_POLYPERSONAL_ENGINE missing from {path_name}"
     assert "KA-123" in ling_text, f"FAIL: KA-123 tag missing from {path_name}"
     assert "synthesizeGeorgianMorphology" in ling_text, f"FAIL: synthesizeGeorgianMorphology missing from {path_name}"
-    assert "1.49.0" in ling_text, f"FAIL: Georgian knowledge version 1.49.0 missing from {path_name}"
+    assert "1.50.0" in ling_text or "1.49.0" in ling_text, f"FAIL: Georgian knowledge version missing from {path_name}"
 
 for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
     with open(path, "r", encoding="utf-8") as f:
@@ -449,6 +449,42 @@ assert "წყლიდან" in te_text, "FAIL: syncopation missing from trans
 assert "ნუ წახვალ" in te_text, "FAIL: negative imperative missing from translation_engine.py"
 
 print("  [PASS] Expanded literary corpus, Georgian Pro syntactic engine, and scanner OCR spell-check verified in all mirrors")
+
+# ── 22. Georgian Pro Discourse & Information Structure, Reflexive Concord & Expanded Scanner Roots ──
+for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), ("studio/static/georgian-linguistics.js", STUDIO_LING)]:
+    with open(path, "r", encoding="utf-8") as f:
+        geo_text = f.read()
+    assert "KA_GEORGIAN_PRO_DISCOURSE_ENGINE" in geo_text, f"FAIL: KA_GEORGIAN_PRO_DISCOURSE_ENGINE missing from {path_name}"
+    assert "KA-125" in geo_text, f"FAIL: KA-125 missing from {path_name}"
+    assert "TOPIC-FOCUS ARCHITECTURE" in geo_text, f"FAIL: TOPIC-FOCUS ARCHITECTURE missing from {path_name}"
+    assert "REFLEXIVE PRONOUN INVIOLABILITY" in geo_text, f"FAIL: REFLEXIVE PRONOUN INVIOLABILITY missing from {path_name}"
+    assert "VIGESIMAL NUMERAL CONCORD" in geo_text, f"FAIL: VIGESIMAL NUMERAL CONCORD missing from {path_name}"
+    assert "თავისი" in geo_text, f"FAIL: თავისი missing from {path_name}"
+    assert "1.50.0" in geo_text, f"FAIL: Version 1.50.0 missing from {path_name}"
+
+for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
+    with open(path, "r", encoding="utf-8") as f:
+        app_text = f.read()
+    assert "Reflexives & Discourse" in app_text, f"FAIL: Reflexives & Discourse missing from {path_name}"
+    assert "PRE-VERBAL FOCUS" in app_text, f"FAIL: PRE-VERBAL FOCUS missing from {path_name}"
+    assert "reflexive pronoun violation" in app_text, f"FAIL: reflexive pronoun violation missing from {path_name}"
+
+for path_name, path in [("static/scanner.js", STATIC_SCANNER), ("studio/static/scanner.js", STUDIO_SCANNER)]:
+    with open(path, "r", encoding="utf-8") as f:
+        scanner_text = f.read()
+    assert "ხალიან" in scanner_text, f"FAIL: ხალიან confusable missing from {path_name}"
+    assert "ფველა" in scanner_text, f"FAIL: ფველა confusable missing from {path_name}"
+    assert "წესახებ" in scanner_text, f"FAIL: წესახებ confusable missing from {path_name}"
+    assert "ძვენ" in scanner_text, f"FAIL: ძვენ confusable missing from {path_name}"
+
+# Backend translation engine offline parity check
+with open(TRANSLATION_ENGINE, "r", encoding="utf-8") as f:
+    te_text = f.read()
+assert "თავისი" in te_text, "FAIL: reflexive auto-repair missing from translation_engine.py"
+assert "კარს უკან" in te_text, "FAIL: spatial postposition missing from translation_engine.py"
+assert "_with_postposition" in te_text, "FAIL: associative postposition missing from translation_engine.py"
+
+print("  [PASS] Georgian Pro discourse engine, reflexive concord, and expanded OCR spell-check verified in all mirrors")
 
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
 

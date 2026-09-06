@@ -70,9 +70,10 @@ def synthesize_georgian_morphology(text: str) -> str:
     t = re.sub(r'([ა-ჰ]+[ბგდვზთკლმნპჟრსტუფქღყშჩცძწჭხჯჰ])(?:ი)?-დან(?![ა-ჰ])', r'\g<1>იდან', t)
 
     # 2. Screeve Series II Transitive Aorist Ergative Concord (-მა / -მ)
-    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა)'
-    t = re.sub(r'(?<![\u10A0-\u10FF])([ა-ჰ]+?)ი(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მა\g<2>', t)
-    t = re.sub(r'(?<![\u10A0-\u10FF])(მეფე|დედა|მამა|ძმა|დეიდა|ბიძა)(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
+    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა)'
+    subjects_i = r'(?:პატარა\s+უფლისწულ|უფლისწულ|კაც|ბავშვ|ბიჭ|ქალ|ავტორ|ვარდ|მგელ|ადამიან|მეგობარ|მწერალ|პოეტ|ექიმ)'
+    t = re.sub(r'(?<![\u10A0-\u10FF])(' + subjects_i + r')ი(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მა\g<2>', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])(მეფე|მელა|გოგო|დედა|მამა|ძმა|დეიდა|ბიძა)(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
 
     # 3. Screeve Series III & Experiencer Dative Inversion
     experiencer_verbs = r'(?:უნდა|სჭირდება|უყვარს|ახსოვს|ეშინია|სტკივა|შია|ცივა|უნახავს|გაუგია)'
@@ -88,6 +89,29 @@ def synthesize_georgian_morphology(text: str) -> str:
     ]
     for pat, repl in imperative_fixes:
         t = re.sub(pat, repl, t)
+
+    # 5. Reflexive Pronoun Auto-Repair: Inviolability of თავისი when coreferent with clause subject
+    t = re.sub(r'(?<![\u10A0-\u10FF])(მან|ავტორმა|კაცმა|ქალმა|ბავშვმა|ბიჭმა|გოგომ|უფლისწულმა|მეფემ)\s+მისი(?![ა-ჰ])', r'\g<1> თავისი', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])(მან|ავტორმა|კაცმა|ქალმა|ბავშვმა|ბიჭმა|გოგომ|უფლისწულმა|მეფემ)\s+მის(?![ა-ჰ])', r'\g<1> თავის', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მათ\s+მათი(?![ა-ჰ])', 'მათ თავიანთი', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მათ\s+მათ(?=\s+[ა-ჰ]+)(?![ა-ჰ])', 'მათ თავიანთ', t)
+
+    # 6. Prepositional & Postpositional Phrase Synthesis
+    def _with_postposition(match):
+        stem = match.group(1)
+        if stem and stem[-1] in 'აეოუ':
+            return stem + 'სთან'
+        s = stem[:-1] if stem.endswith('ი') else stem
+        return s + 'თან'
+
+    t = re.sub(r'\b(?:with|with\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])', _with_postposition, t, flags=re.IGNORECASE)
+    t = re.sub(r'\bbehind\s+(?:the\s+)?კარი(?![ა-ჰ])', 'კარს უკან', t, flags=re.IGNORECASE)
+    t = re.sub(r'\bbehind\s+(?:the\s+)?([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])', lambda m: (m.group(1)[:-1] if m.group(1).endswith('ი') else m.group(1)) + 'ის უკან', t, flags=re.IGNORECASE)
+    t = re.sub(r'\b(?:in|in\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])', lambda m: (m.group(1)[:-1] if m.group(1).endswith('ი') else m.group(1)) + 'ში', t, flags=re.IGNORECASE)
+    t = re.sub(r'\b(?:from|from\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])', lambda m: (m.group(1)[:-1] if m.group(1).endswith('ი') else m.group(1)) + 'იდან', t, flags=re.IGNORECASE)
+    t = re.sub(r'\b(?:to|to\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])', lambda m: (m.group(1)[:-1] if m.group(1).endswith('ი') else m.group(1)) + 'ს', t, flags=re.IGNORECASE)
+    t = re.sub(r'\b(?:of|of\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])', lambda m: (m.group(1)[:-1] if m.group(1).endswith('ი') else m.group(1)) + 'ის', t, flags=re.IGNORECASE)
+    t = re.sub(r'\b(?:the|a|an)\s+([\u10A0-\u10FF])', r'\g<1>', t, flags=re.IGNORECASE)
 
     return t
 
@@ -139,7 +163,11 @@ OFFLINE_EN_KA_LEXICON = {
     "heard": "მოისმინა", "hear": "ესმის",
     "wrote": "დაწერა", "write": "წერს",
     "read": "წაიკითხა", "found": "იპოვა",
-    "opened": "გააღო", "closed": "დახურა",
+    "opened": "გახსნა", "closed": "ჩაკეტა",
+    "searched": "მოძებნა", "lost": "დაკარგა",
+    "abandoned": "მიატოვა", "sent": "გაუგზავნა",
+    "told": "მოუყვა", "understood": "გაიგო",
+    "explained": "აუხსნა",
     "created": "შექმნა", "decided": "გადაწყვიტა",
     "wants": "უნდა", "wanted": "უნდოდა",
     "needs": "სჭირდება", "needed": "სჭირდებოდა",
