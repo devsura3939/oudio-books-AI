@@ -373,8 +373,8 @@ def apply_pack(text: str, items: List[Dict[str, Any]], kind: str = "translate") 
         return text
 
     out = text
-    # 1. Literals (glossary for translate, ocr_fix for transcribe)
-    target_type = "ocr_fix" if kind == "transcribe" else "glossary"
+    # 1. Literals (glossary for translate, ocr_fix for transcribe/clean_scan)
+    target_type = "ocr_fix" if kind in ("transcribe", "clean_scan") else "glossary"
     for item in items:
         if item.get("type") == target_type:
             pat = item.get("pattern", "")

@@ -768,5 +768,185 @@
     "weight": 1.0,
     "origin": "expansion-iter5",
     "note": "Continental guillemet typography restoration to Georgian quotation marks"
+  },
+  {
+    "id": "case-lit-gamsakhurdia-art-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Art is itself immortality. Death cannot overtake the master.",
+    "expected": "ხელოვნებაა თვით უკვდავება. მხოლოდ ოსტატს ვერ ეწევა სიკვდილი.",
+    "weight": 1.5,
+    "origin": "literature_classical",
+    "note": "Konstantine Gamsakhurdia, The Hand of the Great Master"
+  },
+  {
+    "id": "case-lit-gamsakhurdia-svetitskhoveli-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Svetitskhoveli in my eyes is an inscrutable creation of great art.",
+    "expected": "სვეტიცხოველი ჩემს თვალში დიდი ხელოვნების იგავმიუწვდენელი ქმნილებაა.",
+    "weight": 1.5,
+    "origin": "literature_classical",
+    "note": "Konstantine Gamsakhurdia, The Hand of the Great Master, Svetitskhoveli"
+  },
+  {
+    "id": "case-lit-gamsakhurdia-symphony-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Svetitskhoveli is a symphony of boulders soaring into the sky.",
+    "expected": "სვეტიცხოველი არის ცაში ატყორცნილი სიმფონია ლოდებისა.",
+    "weight": 1.4,
+    "origin": "literature_classical",
+    "note": "Gamsakhurdia architectural metaphor"
+  },
+  {
+    "id": "case-lit-javakhishvili-time-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Time never comes, it passes, and whoever does not follow it will perish.",
+    "expected": "დრო არასოდეს არ მოდის, იგი მიდის და ვინც მას არ გაჰყვება, დაიღუპება.",
+    "weight": 1.5,
+    "origin": "literature_realism",
+    "note": "Mikheil Javakhishvili, Jaqo's Dispossessed"
+  },
+  {
+    "id": "case-lit-javakhishvili-justice-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Justice still exists in this world; it pursues evil on an ox-cart, but in the end it surely overtakes it.",
+    "expected": "ამ ქვეყნად მაინც არსებობს სამართალი; ის ურმით დასდევს ბოროტებას, მაგრამ ბოლოს უეჭველად წამოეწევა.",
+    "weight": 1.5,
+    "origin": "literature_realism",
+    "note": "Mikheil Javakhishvili, Jaqo's Dispossessed, justice metaphor"
+  },
+  {
+    "id": "case-lit-javakhishvili-kvachi-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He was an unmatched master of wit and cunning adventure.",
+    "expected": "იგი იყო მახვილგონიერებისა და ეშმაკური თავგადასავლების შეუდარებელი ოსტატი.",
+    "weight": 1.3,
+    "origin": "literature_realism",
+    "note": "Mikheil Javakhishvili, Kvachi Kvachantiradze characterization"
+  },
+  {
+    "id": "case-lit-guramishvili-learning-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "A youth must study to understand oneself: who one is, whence one came, where one is, whither one shall go.",
+    "expected": "ყმაწვილი უნდა სწავლობდეს საცნობლად თავისადა: ვინ არის, სიდამ მოსულა, სად არის, წავა სადა.",
+    "weight": 1.5,
+    "origin": "literature_enlightenment",
+    "note": "Davit Guramishvili, Davitiani, The Learning of Pupils"
+  },
+  {
+    "id": "case-lit-guramishvili-wisdom-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Knowledge is the inexhaustible wealth of man.",
+    "expected": "ცოდნა ადამიანის ულევი სიმდიდრეა.",
+    "weight": 1.4,
+    "origin": "literature_enlightenment",
+    "note": "Davit Guramishvili didactic doctrine"
+  },
+  {
+    "id": "case-lit-hagiography-shushanik-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "And now I shall truly tell you the martyrdom of the holy and blessed Shushanik.",
+    "expected": "და აწ დამტკიცებულად გითხრა თქვენ აღსასრული წმიდისა და სანატრელისა შუშანიკისი.",
+    "weight": 1.6,
+    "origin": "literature_hagiography",
+    "note": "Iakob Tsurtaveli, The Martyrdom of Shushanik (5th century AD)"
+  },
+  {
+    "id": "case-lit-hagiography-abo-reeds-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "They are shaken like reeds before strong winds.",
+    "expected": "ირყევიან, ვითარცა ლერწამნი ქართაგან ძლიერთა.",
+    "weight": 1.5,
+    "origin": "literature_hagiography",
+    "note": "Ioane Sabanisdze, The Martyrdom of Abo of Tbilisi (8th century AD)"
+  },
+  {
+    "id": "case-lit-hagiography-kartli-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He became an intercessor for all this land of Kartli.",
+    "expected": "იგი შეიქნა მეოხი ყოვლისა ამის ქვეყნისა ქართლისათვის.",
+    "weight": 1.4,
+    "origin": "literature_hagiography",
+    "note": "Ioane Sabanisdze hagiographical intercession formula"
+  },
+  {
+    "id": "case-morph-causative-write-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The professor had the student write a comprehensive thesis.",
+    "expected": "პროფესორმა სტუდენტს ვრცელი ნაშრომი დააწერინა.",
+    "weight": 1.4,
+    "origin": "grammar_causative",
+    "note": "Georgian double-dative causative synthetic verb (დააწერინა)"
+  },
+  {
+    "id": "case-morph-causative-build-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The king had the master builder construct a grand cathedral.",
+    "expected": "მეფემ დიდოსტატს დიდებული ტაძარი ააშენებინა.",
+    "weight": 1.4,
+    "origin": "grammar_causative",
+    "note": "Georgian transitive causative with master builder (ააშენებინა)"
+  },
+  {
+    "id": "case-syntax-archaic-enclitic-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "They spoke only of honor and eternal memory.",
+    "expected": "ისინი მხოლოდოდენ ღირსებასა და მარადიულ ხსოვნაზე საუბრობდნენ.",
+    "weight": 1.3,
+    "origin": "grammar_enclitic",
+    "note": "Archaic restrictive emphatic enclitic (მხოლოდოდენ)"
+  },
+  {
+    "id": "case-ocr-split-shushanik-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "შ|უშანიკის წამება ქართული მწერლობის უძველესი ძეგლია.",
+    "expected": "შუშანიკის წამება ქართული მწერლობის უძველესი ძეგლია.",
+    "weight": 1.2,
+    "origin": "ocr_repair",
+    "note": "Camera OCR broken letter 'შ|უ' in ancient literature title"
+  },
+  {
+    "id": "case-ocr-split-didostati-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "კონსტანტინე არსაკიძე იყო დ|იდოსტატი და ხუროთმოძღვარი.",
+    "expected": "კონსტანტინე არსაკიძე იყო დიდოსტატი და ხუროთმოძღვარი.",
+    "weight": 1.2,
+    "origin": "ocr_repair",
+    "note": "Camera OCR vertical stroke artifact in 'დ|იდოსტატ'"
+  },
+  {
+    "id": "case-ocr-split-guramishvili-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "დ|ავით გ|ურამიშვილის დავითიანი უკვდავი ქმნილებაა.",
+    "expected": "დავით გურამიშვილის დავითიანი უკვდავი ქმნილებაა.",
+    "weight": 1.2,
+    "origin": "ocr_repair",
+    "note": "Multiple vertical bar artifacts in classical author name"
+  },
+  {
+    "id": "case-ocr-torn-archaic-hyphen-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ქართ-\nლისა და მცხეთის უძველესი ისტორია.",
+    "expected": "ქართლისა და მცხეთის უძველესი ისტორია.",
+    "weight": 1.2,
+    "origin": "ocr_repair",
+    "note": "Line-split archaic genitive noun with newline and hyphen repair"
   }
 ]

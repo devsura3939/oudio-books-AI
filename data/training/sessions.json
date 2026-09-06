@@ -100,5 +100,22 @@
     "last_seen_at": "2026-09-06T16:20:53.525807+00:00",
     "finished_at": "2026-09-06T16:20:53.527949+00:00",
     "summary": "Phase 5 training completed across 77 benchmark cases: Vazha-Pshavela mountaineer epics (Host and Guest, Aluda Ketelauri), Shota Rustaveli golden maxims, Nikoloz Baratashvili Merani, Galaktion Tabidze lyrics, Ioane Petritsi Neoplatonic metaphysics, involuntary experiencer dative syntax, subjective/objective versional morphology, and degraded camera OCR repairs. Elevated benchmark score from 80.0% to 100.0% with 77/77 exact matches and zero regressions, promoting active pack from v14 to v18."
+  },
+  "4d4137d8-a08a-41a0-911a-02a53c97c72f": {
+    "id": "4d4137d8-a08a-41a0-911a-02a53c97c72f",
+    "key_id": "6c1c6079-3736-4076-ad6a-b6fc55e0d624",
+    "language": "ka",
+    "scope": "both",
+    "driver": "external",
+    "model": "lumina-georgian-trainer-v7",
+    "status": "finished",
+    "iterations": 4,
+    "accepted": 4,
+    "start_score": 85.497,
+    "current_score": 100.0,
+    "started_at": "2026-09-06T16:27:32.779573+00:00",
+    "last_seen_at": "2026-09-06T16:27:33.058766+00:00",
+    "finished_at": "2026-09-06T16:27:33.060195+00:00",
+    "summary": "Phase 6 training completed across 95 benchmark cases: Konstantine Gamsakhurdia historical architecture (The Hand of the Great Master, Svetitskhoveli), Mikheil Javakhishvili social realism (Jaqo's Dispossessed, Kvachi Kvachantiradze), Davit Guramishvili Enlightenment didacticism (Davitiani / The Learning of Pupils), Classical Old Georgian hagiography (Iakob Tsurtaveli Shushanik 5th c., Ioane Sabanisdze Abo Tbileli 8th c.), double-dative causative morphosyntax (დააწერინა, ააშენებინა), archaic emphatic enclitics (მხოლოდოდენ), and antique print camera OCR broken ligature repairs. Elevated benchmark score from 85.5% to 100.0% with 95/95 exact matches and zero regressions, promoting active pack from v18 to v22."
   }
 }

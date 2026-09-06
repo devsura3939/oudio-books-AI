@@ -178,8 +178,13 @@ LITERARY_NAMES_MAP = {
     "alighieri": "ალიგიერი", "tsereteli": "წერეთელი", "hesiod": "ჰესიოდე", "sappho": "საფო",
     "pindar": "პინდარე", "euripides": "ევრიპიდე", "sophocles": "სოფოკლე", "aeschylus": "ესქილე",
     "aristophanes": "არისტოფანე",
+    "gamsakhurdia": "გამსახურდია", "javakhishvili": "ჯავახიშვილი", "arsakidze": "არსაკიძე",
+    "konstantine": "კონსტანტინე", "guramishvili": "გურამიშვილი", "shushanik": "შუშანიკი",
+    "tsurtaveli": "ცურტაველი", "sabanisdze": "საბანისძე", "varsken": "ვარსქენი",
+    "abo": "აბო", "tbileli": "თბილელი", "svetitskhoveli": "სვეტიცხოველი",
+    "khevistavi": "ხევისთავი", "jaqo": "ჯაყო", "kvachi": "კვაჭი", "arshusha": "არშუშა",
     "john": "ჯონ", "james": "ჯეიმს", "george": "ჯორჯ", "william": "უილიამ", "charles": "ჩარლზ",
-    "david": "დავით", "robert": "რობერტ", "edward": "ედუარდ", "henry": "ჰენრი", "thomas": "თომას",
+    "david": "დავით", "davit": "დავით", "robert": "რობერტ", "edward": "ედუარდ", "henry": "ჰენრი", "thomas": "თომას",
     "mary": "მერი", "elizabeth": "ელიზაბეთ", "sarah": "სარა", "jane": "ჯეინ", "emma": "ემა",
     "harry": "ჰარი", "potter": "პოტერი", "sherlock": "შერლოკ", "holmes": "ჰოლმსი", "watson": "ვატსონი",
     "london": "ლონდონი", "england": "ინგლისი", "paris": "პარიზი", "france": "საფრანგეთი",
@@ -523,7 +528,7 @@ def verbalize_georgian_for_tts(text: str) -> str:
     conjunctions = (
         "მაგრამ|თუმცა|თუმცაღა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|რაკიღა|რამდენადაც|"
         "როდესაც|როგორც კი|რომელიც|რომელსაც|რომელშიც|რომელზეც|რომლის|რომლითაც|რომელთა|რომელთაც|რომელთათვის|რომ|სანამ|ვიდრე|"
-        "თუნდ|თუნდაც|ვინძლო"
+        "თუნდ|თუნდაც|ვინძლო|ვითარცა|მხოლოდოდენ"
     )
     out = re.sub(
         rf"([^,.;:!?])\s+({conjunctions}){KA_SUFFIX}",

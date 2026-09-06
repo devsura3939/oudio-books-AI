@@ -256,6 +256,36 @@ class TestGeorgianPhonetics(unittest.TestCase):
         res5 = verbalize_georgian_for_tts("მეგობარია თუნდაც შორს იყოს")
         self.assertIn(", თუნდაც", res5)
 
+        res6 = verbalize_georgian_for_tts("ირყევიან ვითარცა ლერწამნი")
+        self.assertIn(", ვითარცა", res6)
+
+        res7 = verbalize_georgian_for_tts("ისაუბრეს მხოლოდოდენ სიმართლეზე")
+        self.assertIn(", მხოლოდოდენ", res7)
+
+    def test_phase6_historical_and_hagiographical_names(self):
+        res1 = verbalize_georgian_for_tts("რომანისტი Gamsakhurdia და Javakhishvili")
+        self.assertIn("გამსახურდია", res1)
+        self.assertIn("ჯავახიშვილი", res1)
+
+        res2 = verbalize_georgian_for_tts("ხუროთმოძღვარი Konstantine Arsakidze და ტაძარი Svetitskhoveli")
+        self.assertIn("კონსტანტინე", res2)
+        self.assertIn("არსაკიძე", res2)
+        self.assertIn("სვეტიცხოველი", res2)
+
+        res3 = verbalize_georgian_for_tts("პოეტი Davit Guramishvili")
+        self.assertIn("დავით", res3)
+        self.assertIn("გურამიშვილი", res3)
+
+        res4 = verbalize_georgian_for_tts("ჰაგიოგრაფი Iakob Tsurtaveli და წამება Shushanik")
+        self.assertIn("ცურტაველი", res4)
+        self.assertIn("შუშანიკი", res4)
+
+        res5 = verbalize_georgian_for_tts("ავტორი Ioane Sabanisdze და მოწამე Abo Tbileli")
+        self.assertIn("იოანე", res5)
+        self.assertIn("საბანისძე", res5)
+        self.assertIn("აბო", res5)
+        self.assertIn("თბილელი", res5)
+
     def test_preview_generation_georgian(self):
         async def _run():
             url = await generate_voice_preview(voice="ka-GE-GiorgiNeural")

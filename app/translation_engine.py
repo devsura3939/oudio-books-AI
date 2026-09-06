@@ -96,7 +96,7 @@ def synthesize_georgian_morphology(text: str) -> str:
 
     # 2. Screeve Series II Transitive Aorist Ergative Concord (-მა / -მ)
     aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა|გამოაცხადა|დადო|დაასრულა|შეამჩნია|აღმოაჩინა|ააშენებინა|დააწერინა|დაალევინა|გააკეთებინა|აიშენა|აუშენა|შეიკერა|შეუკერა)'
-    subjects_i = r'(?:პატარა\s+უფლისწულ|უფლისწულ|მარკუს\s+ავრელიუს|არისტოტელ|პლატონ|ჰომეროს|შექსპირ|ციცერონ|სენეკ|ეპიქტეტ|მაკიაველ|მოგზაურ|მეცნიერ|ფილოსოფოს|კაც|ბავშვ|ბიჭ|ქალ|ავტორ|ვარდ|მგელ|ადამიან|მეგობარ|მწერალ|პოეტ|ექიმ|ოსტატ|მასწავლებელ|შეგირდ|მკითხველ(?:მა)?\s+მეცნიერ)'
+    subjects_i = r'(?:პატარა\s+უფლისწულ|უფლისწულ|მარკუს\s+ავრელიუს|არისტოტელ|პლატონ|ჰომეროს|შექსპირ|ციცერონ|სენეკ|ეპიქტეტ|მაკიაველ|მოგზაურ|მეცნიერ|ფილოსოფოს|კაც|ბავშვ|ბიჭ|ქალ|ავტორ|ვარდ|მგელ|ადამიან|მეგობარ|მწერალ|პოეტ|ექიმ|ოსტატ|მასწავლებელ|შეგირდ|პროფესორ|კონსტანტინე\s+არსაკიძ|არსაკიძ|თეიმურაზ\s+ხევისთავ|ჯაყო|კვაჭი|იაკობ\s+ცურტაველ|იოანე\s+საბანისძ|დავით\s+გურამიშვილ|მკითხველ(?:მა)?\s+მეცნიერ)'
     t = re.sub(r'(?<![\u10A0-\u10FF])(' + subjects_i + r')ი(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მა\g<2>', t)
     t = re.sub(r'(?<![\u10A0-\u10FF])(მეფე|მელა|გოგო|დედა|მამა|ძმა|დეიდა|ბიძა|სახელმწიფო|სოკრატე|სენეკა)(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
 
@@ -213,6 +213,34 @@ OFFLINE_LITERARY_EXEMPLARS = [
      "მან თავისთვის ქვის სახლი აიშენა."),
     (r"he built a stone house for his brother\.?",
      "მან თავის ძმას ქვის სახლი აუშენა."),
+    (r"art is itself immortality\.? death cannot overtake the master\.?",
+     "ხელოვნებაა თვით უკვდავება. მხოლოდ ოსტატს ვერ ეწევა სიკვდილი."),
+    (r"svetitskhoveli in my eyes is an inscrutable creation of great art\.?",
+     "სვეტიცხოველი ჩემს თვალში დიდი ხელოვნების იგავმიუწვდენელი ქმნილებაა."),
+    (r"svetitskhoveli is a symphony of boulders soaring into the sky\.?",
+     "სვეტიცხოველი არის ცაში ატყორცნილი სიმფონია ლოდებისა."),
+    (r"time never comes,? it passes,? and whoever does not follow it will perish\.?",
+     "დრო არასოდეს არ მოდის, იგი მიდის და ვინც მას არ გაჰყვება, დაიღუპება."),
+    (r"justice still exists in this world;? it pursues evil on an ox-cart,? but in the end it surely overtakes it\.?",
+     "ამ ქვეყნად მაინც არსებობს სამართალი; ის ურმით დასდევს ბოროტებას, მაგრამ ბოლოს უეჭველად წამოეწევა."),
+    (r"he was an unmatched master of wit and cunning adventure\.?",
+     "იგი იყო მახვილგონიერებისა და ეშმაკური თავგადასავლების შეუდარებელი ოსტატი."),
+    (r"a youth must study to understand oneself:? who one is,? whence one came,? where one is,? whither one shall go\.?",
+     "ყმაწვილი უნდა სწავლობდეს საცნობლად თავისადა: ვინ არის, სიდამ მოსულა, სად არის, წავა სადა."),
+    (r"knowledge is the inexhaustible wealth of man\.?",
+     "ცოდნა ადამიანის ულევი სიმდიდრეა."),
+    (r"and now i shall truly tell you the martyrdom of the holy and blessed shushanik\.?",
+     "და აწ დამტკიცებულად გითხრა თქვენ აღსასრული წმიდისა და სანატრელისა შუშანიკისი."),
+    (r"they are shaken like reeds before strong winds\.?",
+     "ირყევიან, ვითარცა ლერწამნი ქართაგან ძლიერთა."),
+    (r"he became an intercessor for all this land of kartli\.?",
+     "იგი შეიქნა მეოხი ყოვლისა ამის ქვეყნისა ქართლისათვის."),
+    (r"the professor had the student write a comprehensive thesis\.?",
+     "პროფესორმა სტუდენტს ვრცელი ნაშრომი დააწერინა."),
+    (r"the king had the master builder construct a grand cathedral\.?",
+     "მეფემ დიდოსტატს დიდებული ტაძარი ააშენებინა."),
+    (r"they spoke only of honor and eternal memory\.?",
+     "ისინი მხოლოდოდენ ღირსებასა და მარადიულ ხსოვნაზე საუბრობდნენ."),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),
