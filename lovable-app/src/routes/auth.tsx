@@ -5,9 +5,10 @@ import { toast } from "sonner";
 
 import { db } from "@/integrations/external-supabase/client";
 
-// Canonical redirect URL - must be whitelisted in Supabase Dashboard
-// We hardcode this so email links always land on the real app, not localhost:3000
-const APP_ORIGIN = "https://audible-architect.lovable.app";
+// Canonical redirect URL - dynamic detection with GitHub Pages fallback
+const APP_ORIGIN = typeof window !== "undefined" && window.location.origin
+  ? window.location.origin
+  : "https://devsura3939.github.io/oudio-books-AI";
 const CALLBACK_URL = `${APP_ORIGIN}/auth/callback`;
 
 export const Route = createFileRoute("/auth")({

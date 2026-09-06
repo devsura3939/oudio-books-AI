@@ -642,28 +642,113 @@
     return true;
   }
 
-  /** Delete by studio id (slug or id) — chapters cascade. */
+  /**
+   * Delete by studio id (slug or id) — chapters cascade, storage files purged.
+   * True deletion removes DB records and cleans up storage buckets (book-pdfs, book-audio, book-files).
+   */
   async function deleteBook(studioId) {
     if (!isReady()) return false;
     var sid = String(studioId);
+    var rowId = null;
+    var pdfPath = null;
+
     try {
-      var del = await client
+      var findRes = await client
         .from("books")
-        .delete()
+        .select("id, slug, pdf_path")
         .eq("user_id", userId)
-        .eq("slug", sid);
-      if (del.error) throw del.error;
-    } catch (e) {
-      console.warn("[supabase-store] delete by slug warning:", e);
+        .or("slug.eq." + sid + ",id.eq." + sid)
+        .maybeSingle();
+      if (findRes && findRes.data) {
+        rowId = findRes.data.id;
+        pdfPath = findRes.data.pdf_path;
+      }
+    } catch (eFind) {
+      console.warn("[supabase-store] find before delete warning:", eFind);
     }
+
+    // 1. Delete DB row (chapters cascade via foreign key in Supabase)
     try {
-      await client
-        .from("books")
-        .delete()
-        .eq("user_id", userId)
-        .eq("id", sid);
-    } catch (e2) {}
+      if (rowId) {
+        await client.from("books").delete().eq("user_id", userId).eq("id", rowId);
+      }
+      await client.from("books").delete().eq("user_id", userId).eq("slug", sid);
+      await client.from("books").delete().eq("user_id", userId).eq("id", sid);
+    } catch (eDel) {
+      console.warn("[supabase-store] delete book row warning:", eDel);
+    }
+
+    // 2. Real storage purge: remove PDFs, scans, and synthesized audio files
+    var targetIds = [sid];
+    if (rowId && String(rowId) !== sid) targetIds.push(String(rowId));
+
+    for (var i = 0; i < targetIds.length; i++) {
+      var tid = targetIds[i];
+
+      // A. book-pdfs (direct source PDF & scanned pages)
+      try {
+        var pdfFiles = [userId + "/" + tid + ".pdf"];
+        if (pdfPath && pdfFiles.indexOf(pdfPath) === -1) pdfFiles.push(pdfPath);
+        await client.storage.from("book-pdfs").remove(pdfFiles);
+
+        var scanList = await client.storage.from("book-pdfs").list(userId + "/scans/" + tid);
+        if (scanList && scanList.data && scanList.data.length > 0) {
+          var scanPaths = scanList.data.map(function (f) { return userId + "/scans/" + tid + "/" + f.name; });
+          await client.storage.from("book-pdfs").remove(scanPaths);
+        }
+      } catch (ePdf) {}
+
+      // B. book-audio (all synthesized chapter audio MP3s)
+      try {
+        var audioList = await client.storage.from("book-audio").list(userId + "/audio/" + tid);
+        if (audioList && audioList.data && audioList.data.length > 0) {
+          var audioPaths = audioList.data.map(function (f) { return userId + "/audio/" + tid + "/" + f.name; });
+          await client.storage.from("book-audio").remove(audioPaths);
+        }
+      } catch (eAudio) {}
+
+      // C. book-files (custom book file attachments if any)
+      try {
+        var bookList = await client.storage.from("book-files").list(userId + "/books/" + tid);
+        if (bookList && bookList.data && bookList.data.length > 0) {
+          var filePaths = bookList.data.map(function (f) { return userId + "/books/" + tid + "/" + f.name; });
+          await client.storage.from("book-files").remove(filePaths);
+        }
+      } catch (eFiles) {}
+    }
+
     return true;
+  }
+
+  /**
+   * Lightweight progress updater: updates only book metadata without touching chapters.
+   * Prevents database lockups, high latency, and chapter thrashing during playback.
+   */
+  async function updateProgress(studioId, progressPct, lastPlayedChapterId) {
+    if (!isReady()) return false;
+    var sid = String(studioId);
+    try {
+      var bookRes = await client
+        .from("books")
+        .select("id, metadata")
+        .eq("user_id", userId)
+        .or("slug.eq." + sid + ",id.eq." + sid)
+        .maybeSingle();
+      if (!bookRes.error && bookRes.data) {
+        var meta = Object.assign({}, bookRes.data.metadata || {});
+        if (progressPct !== undefined && progressPct !== null) meta.progressPct = Number(progressPct);
+        if (lastPlayedChapterId !== undefined && lastPlayedChapterId !== null) meta.lastPlayedChapterId = lastPlayedChapterId;
+        await client
+          .from("books")
+          .update({ metadata: meta })
+          .eq("id", bookRes.data.id)
+          .eq("user_id", userId);
+        return true;
+      }
+    } catch (e) {
+      console.warn("[LuminaStore] updateProgress error:", e);
+    }
+    return false;
   }
 
   /**
@@ -794,6 +879,7 @@
     getAllBooks: getAllBooks,
     saveBook: saveBook,
     deleteBook: deleteBook,
+    updateProgress: updateProgress,
     uploadScanImage: uploadScanImage,
     uploadChapterAudio: uploadChapterAudio,
     createJob: createJob,

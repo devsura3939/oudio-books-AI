@@ -2371,14 +2371,41 @@ function initLocalDB() {
     });
 }
 
-// ════════════════ Book Deletion Tombstone Store (v1.47.5) ════════════════
+// ════════════════ User Identification & Shelf Isolation (v1.47.6) ════════════════
+function getCurrentUserId() {
+    if (window.LuminaStore && typeof window.LuminaStore.getUserId === 'function') {
+        const sid = window.LuminaStore.getUserId();
+        if (sid) return String(sid);
+    }
+    try {
+        const saved = sessionStorage.getItem('lumina_auth_user') ||
+            (localStorage.getItem('lumina_remember_me') === 'true' ? localStorage.getItem('lumina_auth_user') : null);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && (parsed.id || parsed.email)) return String(parsed.id || parsed.email);
+        }
+    } catch (e) {}
+    if (typeof currentUser !== 'undefined' && currentUser && (currentUser.id || currentUser.email)) {
+        return String(currentUser.id || currentUser.email);
+    }
+    return 'guest';
+}
+
+// ════════════════ Book Deletion Tombstone Store (User-Scoped) ════════════════
 // Prevents deleted audiobooks from ever resurrecting via seedDefaultBooks,
-// legacy indexedDB recovery, or asynchronous Supabase sync.
-const DELETED_BOOKS_STORAGE_KEY = 'lumina_deleted_book_ids';
+// legacy indexedDB recovery, or asynchronous Supabase sync, completely isolated per account.
+function getDeletedBooksStorageKey() {
+    const uid = getCurrentUserId();
+    return 'lumina_deleted_book_ids_' + (uid ? encodeURIComponent(uid) : 'guest');
+}
 
 function getDeletedBookIds() {
     try {
-        const raw = localStorage.getItem(DELETED_BOOKS_STORAGE_KEY);
+        const key = getDeletedBooksStorageKey();
+        let raw = localStorage.getItem(key);
+        if (!raw && getCurrentUserId() === 'guest') {
+            raw = localStorage.getItem('lumina_deleted_book_ids');
+        }
         if (!raw) return new Set();
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) return new Set(parsed.map(x => String(x).toLowerCase().trim()));
@@ -2400,7 +2427,7 @@ function markBookAsDeleted(bookId, title, slug) {
             const cleanSlug = String(slug).toLowerCase().trim();
             set.add('slug:' + cleanSlug);
         }
-        localStorage.setItem(DELETED_BOOKS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+        localStorage.setItem(getDeletedBooksStorageKey(), JSON.stringify(Array.from(set)));
     } catch (e) {
         console.warn('[store] Could not write deletion tombstone:', e);
     }
@@ -2420,7 +2447,7 @@ function clearBookTombstone(bookId, title, slug) {
             changed = set.delete('slug:' + String(slug).toLowerCase().trim()) || changed;
         }
         if (changed) {
-            localStorage.setItem(DELETED_BOOKS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+            localStorage.setItem(getDeletedBooksStorageKey(), JSON.stringify(Array.from(set)));
         }
     } catch (e) {}
 }
@@ -2516,6 +2543,10 @@ async function deleteBookFromAllLocalDBs(id, title) {
 
 async function saveBookToDB(book) {
     if (!book) return;
+    const uid = getCurrentUserId();
+    if (!book.user_id && uid !== 'guest') {
+        book.user_id = uid;
+    }
     try { clearBookTombstone(book.id, book.title, book.slug); } catch (e) {}
     // Dual persistence: always store in local IndexedDB for instant offline access
     try {
@@ -2530,6 +2561,57 @@ async function saveBookToDB(book) {
             await window.LuminaStore.saveBook(book);
         } catch (err) {
             console.error('[store] Supabase save failed, keeping local copy:', err);
+        }
+    }
+}
+
+// ════════════════ Lightweight Playback Progress Saver (v1.47.6) ════════════════
+let _progressDebounceTimer = null;
+let _lastSavedProgressPct = -1;
+let _lastSavedChapterId = null;
+
+function saveBookProgress(book, progressPct, lastPlayedChapterId) {
+    if (!book) return;
+    book.progressPct = progressPct;
+    if (lastPlayedChapterId !== undefined && lastPlayedChapterId !== null) {
+        book.lastPlayedChapterId = lastPlayedChapterId;
+    }
+    // 1. Immediately update local IndexedDB (zero network latency)
+    try {
+        saveBookToLocalDB(book).catch(() => {});
+    } catch (e) {}
+
+    // 2. Debounce cloud update to Supabase metadata without touching chapters
+    if (usingCloud && window.LuminaStore && typeof window.LuminaStore.updateProgress === 'function') {
+        const sid = book.id || book.slug;
+        if (!sid) return;
+
+        const chapterChanged = lastPlayedChapterId !== _lastSavedChapterId;
+        const pctDiff = Math.abs(progressPct - _lastSavedProgressPct);
+
+        if (chapterChanged || pctDiff >= 5) {
+            clearTimeout(_progressDebounceTimer);
+            _progressDebounceTimer = setTimeout(() => {
+                _lastSavedProgressPct = progressPct;
+                _lastSavedChapterId = lastPlayedChapterId;
+                window.LuminaStore.updateProgress(sid, progressPct, lastPlayedChapterId).catch(() => {});
+            }, 6000);
+        }
+    }
+}
+
+function flushBookProgressImmediate(book) {
+    if (!book) return;
+    clearTimeout(_progressDebounceTimer);
+    try {
+        saveBookToLocalDB(book).catch(() => {});
+    } catch (e) {}
+    if (usingCloud && window.LuminaStore && typeof window.LuminaStore.updateProgress === 'function') {
+        const sid = book.id || book.slug;
+        if (sid) {
+            _lastSavedProgressPct = book.progressPct || 0;
+            _lastSavedChapterId = book.lastPlayedChapterId || null;
+            window.LuminaStore.updateProgress(sid, book.progressPct, book.lastPlayedChapterId).catch(() => {});
         }
     }
 }
@@ -2624,12 +2706,20 @@ async function recoverAllLocalBooks() {
     }
 
     // Re-save recovered books into active local store LuminaAudioStudioDB_v12 and Supabase (asynchronously)
+    const currentUid = getCurrentUserId();
     for (const book of recoveredBooks) {
         if (isBookDeleted(book)) continue;
+        // Strict isolation: Never cross-sync books belonging to another account!
+        if (book.user_id && currentUid !== 'guest' && book.user_id !== currentUid) {
+            continue;
+        }
+        if (currentUid !== 'guest' && !book.user_id) {
+            book.user_id = currentUid;
+        }
         try {
             await saveBookToLocalDB(book);
         } catch (e) {}
-        if (usingCloud && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
+        if (usingCloud && currentUid !== 'guest' && book.user_id === currentUid && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
             window.LuminaStore.saveBook(book).catch(e => console.warn('[recovery] Cloud sync error:', e));
         }
     }
@@ -2697,7 +2787,11 @@ async function getAllBooks() {
                 if (!cb.coverUrl && existing.coverUrl) cb.coverUrl = existing.coverUrl;
                 bookMap.set(key, cb);
                 if (usingCloud && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
-                    window.LuminaStore.saveBook(cb).catch(e => console.warn('[store] Background sync failed:', e));
+                    const uid = getCurrentUserId();
+                    if (cb.user_id === uid || (!cb.user_id && uid !== 'guest')) {
+                        cb.user_id = uid;
+                        window.LuminaStore.saveBook(cb).catch(e => console.warn('[store] Background sync failed:', e));
+                    }
                 }
             }
         }
@@ -2758,6 +2852,11 @@ async function deleteBookFromDB(id, title, slug) {
 }
 
 function saveBookToLocalDB(book) {
+    if (!book) return Promise.resolve();
+    const uid = getCurrentUserId();
+    if (!book.user_id && uid !== 'guest') {
+        book.user_id = uid;
+    }
     return new Promise((resolve, reject) => {
         const tx = db.transaction('books', 'readwrite');
         tx.objectStore('books').put(book);
@@ -2770,7 +2869,29 @@ function getAllLocalBooks() {
     return new Promise((resolve, reject) => {
         const tx = db.transaction('books', 'readonly');
         const req = tx.objectStore('books').getAll();
-        req.onsuccess = () => resolve((req.result || []).filter(b => !isBookDeleted(b)));
+        req.onsuccess = () => {
+            const uid = getCurrentUserId();
+            const all = req.result || [];
+            // Strict account shelf isolation:
+            // 1. Classic books (starting with classic_) are public defaults available to all.
+            // 2. If authenticated user (uid !== 'guest'), only show:
+            //    - books explicitly tagged with book.user_id === uid
+            //    - freshly created local books without a user_id
+            //    - NEVER show books tagged with a different user's user_id!
+            // 3. If guest (uid === 'guest'), do NOT show books tagged with an authenticated user_id!
+            const filtered = all.filter(b => {
+                if (!b || isBookDeleted(b)) return false;
+                if (b.id && String(b.id).startsWith('classic_')) return true;
+                if (uid === 'guest') {
+                    return !b.user_id || b.user_id === 'guest';
+                }
+                if (b.user_id) {
+                    return b.user_id === uid;
+                }
+                return true;
+            });
+            resolve(filtered);
+        };
         req.onerror = (e) => reject(e);
     });
 }
@@ -4316,7 +4437,9 @@ async function login(email, password, rememberParam) {
         updateAuthUI();
         closeAuthGate();
         updateAuthGateVisibility();
-        closeModal('authModal');
+        // Reset active book state to guarantee clean shelf load for authenticated user
+        currentBook = null;
+        currentPlayingChapterId = null;
 
         // Fast local-first library load
         try {
@@ -4387,6 +4510,16 @@ async function register(email, password, rememberParam) {
 }
 
 async function logout() {
+    // Stop playback and close reader to prevent audio or text from leaking into next user session
+    try { stopSpeech(); } catch (e) {}
+    try {
+        if (typeof closeReader === 'function') closeReader();
+    } catch (e) {}
+    currentBook = null;
+    currentPlayingChapterId = null;
+    if (DOM.chaptersContainer) DOM.chaptersContainer.classList.add('hidden');
+    if (DOM.playerDock) DOM.playerDock.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+
     currentUser = null;
     try {
         sessionStorage.removeItem('lumina_auth_user');
@@ -5028,8 +5161,19 @@ function openCurrentBookInReader() {
 
 async function openReader(bookId, chapterId, lang = 'en') {
     isUserManuallyNavigating = false;
-    const books = await getAllBooks();
-    readerBook = books.find(b => String(b.id) === String(bookId));
+    let books = null;
+    if (currentBook && String(currentBook.id) === String(bookId)) {
+        readerBook = currentBook;
+    } else {
+        try {
+            const localBooks = await getAllLocalBooks();
+            readerBook = localBooks.find(b => String(b.id) === String(bookId));
+        } catch (e) {}
+        if (!readerBook) {
+            books = await getAllBooks();
+            readerBook = books.find(b => String(b.id) === String(bookId));
+        }
+    }
     if (!readerBook) {
         if (currentBook && String(currentBook.id) === String(bookId)) {
             readerBook = currentBook;
@@ -5053,6 +5197,7 @@ async function openReader(bookId, chapterId, lang = 'en') {
         currentLang = 'ka';
     } else if (readerLang === 'ka' && !isGeorgianEdition) {
         // If Georgian was requested for an untranslated English book, check if a separate translated sibling exists
+        if (!books) books = await getAllBooks();
         const translatedSibling = books.find(b => String(b.id) === `${readerBook.id}_ka` || (b.originalBookId && String(b.originalBookId) === String(readerBook.id)));
         if (translatedSibling) {
             readerBook = translatedSibling;
@@ -8169,7 +8314,7 @@ async function speakCurrentSentence() {
     if (currentBook) {
         currentBook.progressPct = pct;
         currentBook.lastPlayedChapterId = currentPlayingChapterId;
-        saveBookToDB(currentBook);
+        saveBookProgress(currentBook, pct, currentPlayingChapterId);
         if (DOM.heroProgressText) DOM.heroProgressText.textContent = `${pct}% Completed`;
         if (DOM.heroProgressBarInner) DOM.heroProgressBarInner.style.width = `${pct}%`;
         if (DOM.heroProgressCircle) {
@@ -8980,6 +9125,9 @@ function togglePlayPause() {
 
     if (isPlaying && !isPaused) {
         isPaused = true;
+        if (typeof flushBookProgressImmediate === 'function' && currentBook) {
+            flushBookProgressImmediate(currentBook);
+        }
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
         if (currentElevenAudio) currentElevenAudio.pause();
         if (window.speechSynthesis) window.speechSynthesis.pause();
@@ -9020,6 +9168,9 @@ function updatePlayerUIState(speaking) {
 }
 
 function stopSpeech() {
+    if (typeof flushBookProgressImmediate === 'function' && currentBook) {
+        flushBookProgressImmediate(currentBook);
+    }
     isPlaying = false;
     isPaused = false;
     sentenceQueue = [];

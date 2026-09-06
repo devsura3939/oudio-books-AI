@@ -11,7 +11,7 @@
   - Built-in tab switching between **Sign In**, **Create Account**, and **Forgot Password** recovery.
   - Prominent banner alerts for error messages and success notifications.
   - Owner shortcut: **👑 Quick-fill Admin credentials** automatically populates `ananiadevsurashvili@gmail.com` and `Devsura1995@` to prevent mobile typing mistakes.
-  - Dynamic password reset callback redirect detecting `github.io` vs `lovable.app` domain origins.
+  - Dynamic password reset callback redirect detecting dynamic origin and `github.io` domain origins.
 
 ### Fixed — Missing Uploaded & Scanned Books Recovery
 - **Multi-Store Legacy Scanner (`recoverAllLocalBooks()`)**:
@@ -32,7 +32,7 @@
 
 ### Enhanced — Dual-Domain Uniform App Experience
 - **Unified App Delivery Across Both Domains**:
-  - `https://audible-architect.lovable.app/` and `https://devsura3939.github.io/oudio-books-AI/` now deliver the identical, seamless EngBot Audiobook Studio experience.
+  - `https://github.com/devsura3939/oudio-books-AI` and `https://devsura3939.github.io/oudio-books-AI/` deliver the seamless EngBot Audiobook Studio experience.
   - Lovable root route (`/`) seamlessly renders the full-screen Studio app, eliminating login barriers for visitors.
   - Unauthenticated guest access enabled for `/studio` and `/scan`, with zero double-sidebars and zero nested chrome.
 - **Host Bridge Message Protocol**:

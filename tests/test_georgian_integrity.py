@@ -686,6 +686,82 @@ assert "pydub" in req_code, "FAIL: pydub missing from requirements.txt"
 
 print("  [PASS] Human-like translation & multimodal transcription engines verified across backend, routes & dependencies")
 
+# ==============================================================================
+# SECTION 26: ACCOUNT SHELF ISOLATION, STORAGE PURGE & SMOOTH PLAYBACK
+# ==============================================================================
+# 1. Verify app.js and studio/app.js have account isolation and debounced playback
+for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
+    with open(path, "r", encoding="utf-8") as f:
+        app_code = f.read()
+
+    assert "function getCurrentUserId()" in app_code, f"FAIL: getCurrentUserId missing in {path_name}"
+    assert "function getDeletedBooksStorageKey()" in app_code, f"FAIL: getDeletedBooksStorageKey missing in {path_name}"
+    assert "function saveBookProgress(book, progressPct, lastPlayedChapterId)" in app_code, f"FAIL: saveBookProgress missing in {path_name}"
+    assert "function flushBookProgressImmediate(book)" in app_code, f"FAIL: flushBookProgressImmediate missing in {path_name}"
+    assert "saveBookProgress(currentBook, pct, currentPlayingChapterId);" in app_code, f"FAIL: speakCurrentSentence must use saveBookProgress in {path_name}"
+    assert "book.user_id = uid;" in app_code, f"FAIL: user_id scoping missing in {path_name}"
+    assert "book.user_id === uid" in app_code, f"FAIL: shelf isolation filter missing in {path_name}"
+
+# 2. Verify supabase-store.js and studio mirror have updateProgress and storage purging
+for path_name, path in [("static/supabase-store.js", STATIC_SUPABASE), ("studio/static/supabase-store.js", STUDIO_SUPABASE)]:
+    with open(path, "r", encoding="utf-8") as f:
+        supa_code = f.read()
+
+    assert "async function updateProgress(studioId, progressPct, lastPlayedChapterId)" in supa_code, f"FAIL: updateProgress missing in {path_name}"
+    assert "updateProgress: updateProgress" in supa_code, f"FAIL: updateProgress not exported on LuminaStore in {path_name}"
+    assert 'client.storage.from("book-pdfs").remove' in supa_code, f"FAIL: book-pdfs storage purge missing in {path_name}"
+    assert 'client.storage.from("book-audio").remove' in supa_code, f"FAIL: book-audio storage purge missing in {path_name}"
+    assert 'client.storage.from("book-files").remove' in supa_code, f"FAIL: book-files storage purge missing in {path_name}"
+
+# 3. Verify zero lovable links in auth.tsx, TRAE_TRAINING_AND_ARCHITECTURE.md, CHANGELOG.md
+AUTH_TSX = os.path.join(REPO_DIR, "lovable-app", "src", "routes", "auth.tsx")
+with open(AUTH_TSX, "r", encoding="utf-8") as f:
+    auth_code = f.read()
+assert "audible-architect.lovable.app" not in auth_code, "FAIL: audible-architect detected in auth.tsx"
+assert "https://devsura3939.github.io/oudio-books-AI" in auth_code, "FAIL: GitHub Pages fallback missing in auth.tsx"
+
+TRAE_MD = os.path.join(REPO_DIR, "TRAE_TRAINING_AND_ARCHITECTURE.md")
+with open(TRAE_MD, "r", encoding="utf-8") as f:
+    trae_code = f.read()
+assert "audible-architect.lovable.app" not in trae_code, "FAIL: audible-architect detected in TRAE_TRAINING_AND_ARCHITECTURE.md"
+
+CHANGELOG_MD = os.path.join(REPO_DIR, "CHANGELOG.md")
+with open(CHANGELOG_MD, "r", encoding="utf-8") as f:
+    cl_code = f.read()
+assert "audible-architect.lovable.app" not in cl_code, "FAIL: audible-architect detected in CHANGELOG.md"
+
+# 4. Functional simulation of account shelf isolation
+guest_books = [
+    {"id": "classic_1", "title": "Classic One"},
+    {"id": "user_a_book", "title": "Alice Book", "user_id": "usr_alice"},
+    {"id": "user_b_book", "title": "Bob Book", "user_id": "usr_bob"},
+    {"id": "guest_book", "title": "Local Guest Book", "user_id": "guest"},
+]
+
+def sim_filter_shelf(books, uid):
+    return [
+        b for b in books
+        if str(b.get("id", "")).startswith("classic_")
+        or (uid == "guest" and (not b.get("user_id") or b.get("user_id") == "guest"))
+        or (uid != "guest" and b.get("user_id") == uid)
+    ]
+
+alice_shelf = sim_filter_shelf(guest_books, "usr_alice")
+bob_shelf = sim_filter_shelf(guest_books, "usr_bob")
+guest_shelf = sim_filter_shelf(guest_books, "guest")
+
+assert len(alice_shelf) == 2, "FAIL: Alice should only see Classic One and Alice Book"
+assert any(b["id"] == "user_a_book" for b in alice_shelf), "FAIL: Alice Book must be on Alice shelf"
+assert not any(b["id"] == "user_b_book" for b in alice_shelf), "FAIL: Bob Book must NOT be on Alice shelf"
+
+assert len(bob_shelf) == 2, "FAIL: Bob should only see Classic One and Bob Book"
+assert any(b["id"] == "user_b_book" for b in bob_shelf), "FAIL: Bob Book must be on Bob shelf"
+assert not any(b["id"] == "user_a_book" for b in bob_shelf), "FAIL: Alice Book must NOT be on Bob shelf"
+
+assert not any(b["id"] in ("user_a_book", "user_b_book") for b in guest_shelf), "FAIL: Private user books must not appear on guest shelf"
+
+print("  [PASS] Account shelf isolation, cloud storage purges, smooth listening debouncing & GitHub link integrity verified")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
 
 

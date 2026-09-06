@@ -1,9 +1,8 @@
 # EngBot / Lumina Audio Studio — Complete Codebase Architecture & Trae Training Context
 
-**Repository**: `devsura3939/oudio-books-AI`  
-**Live Production URL (Lovable)**: [audible-architect.lovable.app](https://audible-architect.lovable.app/)  
-**Live Static Demo (GitHub Pages)**: [devsura3939.github.io/oudio-books-AI/](https://devsura3939.github.io/oudio-books-AI/)  
-**Document Purpose**: Deep architectural analysis of the codebase, functionality, data flow, migration path, and the complete historical context and methodology of the **Trae Solo training harness** and the new **Lovable Training Lab**.
+**Repository**: [github.com/devsura3939/oudio-books-AI](https://github.com/devsura3939/oudio-books-AI)  
+**Live Production URL (GitHub Pages)**: [devsura3939.github.io/oudio-books-AI/](https://devsura3939.github.io/oudio-books-AI/)  
+**Document Purpose**: Deep architectural analysis of the codebase, functionality, data flow, migration path, and the complete historical context and methodology of the **Trae Solo training harness** and the new **Training Lab**.
 
 ---
 
