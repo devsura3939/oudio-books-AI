@@ -1,6 +1,6 @@
 {
   "name": "engbot",
-  "version": "1.47.4",
+  "version": "1.47.5",
   "private": true,
   "sideEffects": false,
   "type": "module",

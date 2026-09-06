@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.47.4';
-const ENGINE_VERSION = 'v1.47.4 (Lumina-PermanentDelete+FastLib+PrimaryGitHub+AutoHeal)';
+const APP_VERSION = 'v1.47.5';
+const ENGINE_VERSION = 'v1.47.5 (Lumina-PermanentDelete+FastLib+PrimaryGitHub+AutoHeal)';
 
 let db = null;
 let currentBook = null;
@@ -2368,7 +2368,7 @@ function initLocalDB() {
     });
 }
 
-// ════════════════ Book Deletion Tombstone Store (v1.47.4) ════════════════
+// ════════════════ Book Deletion Tombstone Store (v1.47.5) ════════════════
 // Prevents deleted audiobooks from ever resurrecting via seedDefaultBooks,
 // legacy indexedDB recovery, or asynchronous Supabase sync.
 const DELETED_BOOKS_STORAGE_KEY = 'lumina_deleted_book_ids';

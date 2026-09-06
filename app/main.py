@@ -40,7 +40,7 @@ from io import BytesIO
 app = FastAPI(
     title="PDF to High-Quality Audiobook Studio",
     description="Convert any PDF eBook to a studio-grade audiobook with natural neural voices.",
-    version="1.46.7"
+    version="1.47.5"
 )
 
 # Enable CORS for local dev
