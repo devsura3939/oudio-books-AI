@@ -170,10 +170,12 @@ LITERARY_NAMES_MAP = {
     "berkeley": "ბერკლი", "spenser": "სპენსერი", "milton": "მილტონი", "byron": "ბაირონი",
     "shelley": "შელი", "keats": "ქითსი", "wordsworth": "უორდსუორთი", "chaucer": "ჩოსერი",
     "baratashvili": "ბარათაშვილი", "chavchavadze": "ჭავჭავაძე", "vazha": "ვაჟა",
-    "galaktion": "გალაკტიონი", "akaki": "აკაკი", "machabeli": "მაჩაბელი", "peleus": "პელევსი",
-    "hamlet": "ჰამლეტი", "macbeth": "მაკბეთი", "othello": "ოტელო", "orbeliani": "ორბელიანი",
-    "sulkhan": "სულხან", "saba": "საბა", "tabidze": "ტაბიძე", "alighieri": "ალიგიერი",
-    "tsereteli": "წერეთელი", "hesiod": "ჰესიოდე", "sappho": "საფო",
+    "pshavela": "ფშაველა", "merani": "მერანი", "petritsi": "პეტრიწი", "ioane": "იოანე",
+    "proclus": "პროკლე", "aluda": "ალუდა", "ketelauri": "ქეთელაური", "zviadauri": "ზვიადაური",
+    "jokhola": "ჯოყოლა", "galaktion": "გალაკტიონი", "akaki": "აკაკი", "machabeli": "მაჩაბელი",
+    "peleus": "პელევსი", "hamlet": "ჰამლეტი", "macbeth": "მაკბეთი", "othello": "ოტელო",
+    "orbeliani": "ორბელიანი", "sulkhan": "სულხან", "saba": "საბა", "tabidze": "ტაბიძე",
+    "alighieri": "ალიგიერი", "tsereteli": "წერეთელი", "hesiod": "ჰესიოდე", "sappho": "საფო",
     "pindar": "პინდარე", "euripides": "ევრიპიდე", "sophocles": "სოფოკლე", "aeschylus": "ესქილე",
     "aristophanes": "არისტოფანე",
     "john": "ჯონ", "james": "ჯეიმს", "george": "ჯორჯ", "william": "უილიამ", "charles": "ჩარლზ",
@@ -295,7 +297,7 @@ def verbalize_georgian_for_tts(text: str) -> str:
         return f"{name} {ROMAN_TO_ORDINAL_KA.get(rom, rom)}"
 
     out = re.sub(
-        rf"([{KA_CHARS}]+)\s+([IVXLCDM]+){KA_SUFFIX}",
+        rf"([{KA_CHARS}]+)\s+([IVXLCDM]+)(?![a-zA-Z{KA_CHARS}])",
         _replace_roman_monarch,
         out
     )
@@ -520,7 +522,8 @@ def verbalize_georgian_for_tts(text: str) -> str:
     # 13. Natural breath pause before Georgian conjunctions and relative clauses
     conjunctions = (
         "მაგრამ|თუმცა|თუმცაღა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|რაკიღა|რამდენადაც|"
-        "როდესაც|როგორც კი|რომელიც|რომელსაც|რომელშიც|რომელზეც|რომლის|რომლითაც|რომელთა|რომელთაც|რომელთათვის|რომ|სანამ|ვიდრე"
+        "როდესაც|როგორც კი|რომელიც|რომელსაც|რომელშიც|რომელზეც|რომლის|რომლითაც|რომელთა|რომელთაც|რომელთათვის|რომ|სანამ|ვიდრე|"
+        "თუნდ|თუნდაც|ვინძლო"
     )
     out = re.sub(
         rf"([^,.;:!?])\s+({conjunctions}){KA_SUFFIX}",

@@ -1592,6 +1592,9 @@ ${text.slice(0, 10000)}`;
       [/(?<![\u10A0-\u10FF])ჭე\|შმარიტ([ა-ჰ]*)/g, 'ჭეშმარიტ$1'],
       [/(?<![\u10A0-\u10FF])გა-\s+ნათლებ([ა-ჰ]*)/g, 'განათლებ$1'],
       [/(?<![\u10A0-\u10FF])მნიშვნე-\s+ლოვან([ა-ჰ]*)/g, 'მნიშვნელოვან$1'],
+      [/(?<![\u10A0-\u10FF])წ\|გნ([ა-ჰ]*)/g, 'წიგნ$1'],
+      [/(?<![\u10A0-\u10FF])ხ\|დ([ა-ჰ]*)/g, 'ხიდ$1'],
+      [/(?<![\u10A0-\u10FF])სამ-\s+მშობლ([ა-ჰ]*)/g, 'სამშობლ$1'],
     ];
     for (const [re, repl] of deepKaOcrFixes) {
       t = t.replace(re, repl);
@@ -1599,8 +1602,8 @@ ${text.slice(0, 10000)}`;
 
     // 3. Dialogue dashes and authentic quotes
     t = t.replace(/(^|[\r\n]+)\s*[-–]\s+([\u10A0-\u10FF])/g, "$1— $2");
-    t = t.replace(/(^|[\s(\[])["“]([^\s"”])/g, "$1„$2");
-    t = t.replace(/([^\s"„])["”]([\s)\].,!?;:]|$)/g, "$1“$2");
+    t = t.replace(/(^|[\s(\[])["“«]([^\s"”»])/g, "$1„$2");
+    t = t.replace(/([^\s"„«])["”»]([\s)\].,!?;:]|$)/g, "$1“$2");
 
     // 4. Hook into Georgian linguistic engine if available globally
     if (typeof window !== "undefined") {

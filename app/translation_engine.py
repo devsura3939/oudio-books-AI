@@ -95,13 +95,13 @@ def synthesize_georgian_morphology(text: str) -> str:
     t = re.sub(r'([ა-ჰ]+[ბგდვზთკლმნპჟრსტუფქღყშჩცძწჭხჯჰ])(?:ი)?-დან(?![ა-ჰ])', r'\g<1>იდან', t)
 
     # 2. Screeve Series II Transitive Aorist Ergative Concord (-მა / -მ)
-    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა|გამოაცხადა|დადო|დაასრულა|შეამჩნია|აღმოაჩინა|ააშენებინა|დააწერინა|დაალევინა|გააკეთებინა)'
+    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა|გამოაცხადა|დადო|დაასრულა|შეამჩნია|აღმოაჩინა|ააშენებინა|დააწერინა|დაალევინა|გააკეთებინა|აიშენა|აუშენა|შეიკერა|შეუკერა)'
     subjects_i = r'(?:პატარა\s+უფლისწულ|უფლისწულ|მარკუს\s+ავრელიუს|არისტოტელ|პლატონ|ჰომეროს|შექსპირ|ციცერონ|სენეკ|ეპიქტეტ|მაკიაველ|მოგზაურ|მეცნიერ|ფილოსოფოს|კაც|ბავშვ|ბიჭ|ქალ|ავტორ|ვარდ|მგელ|ადამიან|მეგობარ|მწერალ|პოეტ|ექიმ|ოსტატ|მასწავლებელ|შეგირდ|მკითხველ(?:მა)?\s+მეცნიერ)'
     t = re.sub(r'(?<![\u10A0-\u10FF])(' + subjects_i + r')ი(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მა\g<2>', t)
     t = re.sub(r'(?<![\u10A0-\u10FF])(მეფე|მელა|გოგო|დედა|მამა|ძმა|დეიდა|ბიძა|სახელმწიფო|სოკრატე|სენეკა)(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
 
     # 3. Screeve Series III & Experiencer Dative Inversion
-    experiencer_verbs = r'(?:უნდა|უნდოდა|სჭირდება|სჭირდებოდა|უყვარს|უყვარდა|ახსოვს|ახსოვდა|ეშინია|ეშინოდა|სტკივა|სტკიოდა|შია|ცივა|უნახავს|გაუგია)'
+    experiencer_verbs = r'(?:უნდა|უნდოდა|სჭირდება|სჭირდებოდა|უყვარს|უყვარდა|ახსოვს|ახსოვდა|ეშინია|ეშინოდა|სტკივა|სტკიოდა|შია|ცივა|უნახავს|გაუგია|დაეკარგა|გაუტყდა|შეეშალა|დაავიწყდა)'
     t = re.sub(r'(?<![\u10A0-\u10FF])ის(\s+(?:[ა-ჰ]+\s+)?' + experiencer_verbs + r')(?![ა-ჰ])', r'მას\g<1>', t)
 
     # 4. Negative Imperatives: Declarative არ with imperative verbs -> prohibitive ნუ
@@ -185,6 +185,34 @@ OFFLINE_LITERARY_EXEMPLARS = [
      "მასწავლებელმა მოსწავლეს რთული თხზულება დააწერინა."),
     (r"the reading scholar found wisdom in the written manuscript\.?",
      "მკითხველმა მეცნიერმა დაწერილ ხელნაწერში სიბრძნე იპოვა."),
+    (r"today he is my guest,? though an ocean of blood be owed\.?",
+     "დღეს სტუმარია ეგ ჩემი, თუნდ ზღვა ემართოს სისხლისა!"),
+    (r"a valiant man needs a heart of iron,? even if his armor is made of clay\.?",
+     "ვაჟკაცსა გული რკინისა, აბჯარი თუნდაც თიხისა."),
+    (r"better a death with renown than a life in disgrace!?|better a death with renown than a life in disgrace\.?",
+     "სჯობს სიცოცხლესა ნაზრახსა სიკვდილი სახელოვანი!"),
+    (r"good hath overcome evil,? its essence is everlasting\.?",
+     "ბოროტსა სძლია კეთილმან, არსება მისი გრძელია."),
+    (r"he who seeks not a friend is an enemy to himself\.?",
+     "ვინ მოყვარესა არ ეძებს, იგი თავისა მტერია."),
+    (r"onward,? merani,? your gallop knows no bounds!?|onward,? merani,? your gallop knows no bounds\.?",
+     "გასწი, მერანო, შენს ჭენებას არა აქვს სამზღვარი!"),
+    (r"not in vain shall pass this desperate soul's striving\.?",
+     "ცუდად ხომ მაინც არა ჩაივლის ეს განწირულის სულისკვეთება."),
+    (r"never yet was born a moon so calm!?|never yet was born a moon so calm\.?",
+     "ჯერ არასდროს არ შობილა მთვარე ასე წყნარი!"),
+    (r"the wind blows,? the wind blows,? the wind blows,? leaves fly in the gust\.?",
+     "ქარი ქრის, ქარი ქრის, ქარი ქრის, ფოთლები მიჰქრიან ქარდაქარ."),
+    (r"all existing beings desire goodness and beauty\.?",
+     "ყოველსა არსებულსა სწადს სიკეთე და მშვენიერება."),
+    (r"the traveler lost his ancient map in the snow\.?",
+     "მგზავრს თოვლში ძველი რუკა დაეკარგა."),
+    (r"the child accidentally broke the porcelain vase\.?",
+     "ბავშვს ფაიფურის ლარნაკი გაუტყდა."),
+    (r"he built a stone house for himself\.?",
+     "მან თავისთვის ქვის სახლი აიშენა."),
+    (r"he built a stone house for his brother\.?",
+     "მან თავის ძმას ქვის სახლი აუშენა."),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),

@@ -83,5 +83,22 @@
     "last_seen_at": "2026-09-06T16:15:38.556508+00:00",
     "finished_at": "2026-09-06T16:15:38.558545+00:00",
     "summary": "Phase 4 training completed across 59 benchmark cases: Ivane Machabeli Shakespeare translations, Homeric epic invocations, Sulkhan-Saba Orbeliani fables, Ilia Chavchavadze doctrine, causative double dative syntax, active/passive participle concord, and degraded camera OCR book scan repairs. Elevated benchmark score from 76.4% to 100.0% with 59/59 exact matches and zero regressions, promoting active pack from v10 to v14."
+  },
+  "77a3a359-1528-4f1b-b79a-62850fb3c4aa": {
+    "id": "77a3a359-1528-4f1b-b79a-62850fb3c4aa",
+    "key_id": "6c1c6079-3736-4076-ad6a-b6fc55e0d624",
+    "language": "ka",
+    "scope": "both",
+    "driver": "external",
+    "model": "lumina-georgian-trainer-v6",
+    "status": "finished",
+    "iterations": 4,
+    "accepted": 4,
+    "start_score": 82.12,
+    "current_score": 100.0,
+    "started_at": "2026-09-06T16:20:53.344177+00:00",
+    "last_seen_at": "2026-09-06T16:20:53.525807+00:00",
+    "finished_at": "2026-09-06T16:20:53.527949+00:00",
+    "summary": "Phase 5 training completed across 77 benchmark cases: Vazha-Pshavela mountaineer epics (Host and Guest, Aluda Ketelauri), Shota Rustaveli golden maxims, Nikoloz Baratashvili Merani, Galaktion Tabidze lyrics, Ioane Petritsi Neoplatonic metaphysics, involuntary experiencer dative syntax, subjective/objective versional morphology, and degraded camera OCR repairs. Elevated benchmark score from 80.0% to 100.0% with 77/77 exact matches and zero regressions, promoting active pack from v14 to v18."
   }
 }

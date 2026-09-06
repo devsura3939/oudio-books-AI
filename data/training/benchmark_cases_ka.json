@@ -588,5 +588,185 @@
     "weight": 1.0,
     "origin": "expansion-iter4",
     "note": "Restoration of authentic Georgian low-high quotation marks"
+  },
+  {
+    "id": "case-vazha-host-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Today he is my guest, though an ocean of blood be owed.",
+    "expected": "დღეს სტუმარია ეგ ჩემი, თუნდ ზღვა ემართოს სისხლისა!",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Vazha-Pshavela Host and Guest hospitality law"
+  },
+  {
+    "id": "case-vazha-aluda-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "A valiant man needs a heart of iron, even if his armor is made of clay.",
+    "expected": "ვაჟკაცსა გული რკინისა, აბჯარი თუნდაც თიხისა.",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Vazha-Pshavela Aluda Ketelauri chivalric virtue"
+  },
+  {
+    "id": "case-rustaveli-honor-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Better a death with renown than a life in disgrace!",
+    "expected": "სჯობს სიცოცხლესა ნაზრახსა სიკვდილი სახელოვანი!",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Rustaveli The Knight in the Panther's Skin famous maxim on honor"
+  },
+  {
+    "id": "case-rustaveli-victory-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Good hath overcome evil, its essence is everlasting.",
+    "expected": "ბოროტსა სძლია კეთილმან, არსება მისი გრძელია.",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Rustaveli triumph of good over evil"
+  },
+  {
+    "id": "case-rustaveli-friendship-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He who seeks not a friend is an enemy to himself.",
+    "expected": "ვინ მოყვარესა არ ეძებს, იგი თავისა მტერია.",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Rustaveli aphorism on friendship"
+  },
+  {
+    "id": "case-baratashvili-merani-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Onward, Merani, your gallop knows no bounds!",
+    "expected": "გასწი, მერანო, შენს ჭენებას არა აქვს სამზღვარი!",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Nikoloz Baratashvili Merani romantic quest"
+  },
+  {
+    "id": "case-baratashvili-merani-02",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Not in vain shall pass this desperate soul's striving.",
+    "expected": "ცუდად ხომ მაინც არა ჩაივლის ეს განწირულის სულისკვეთება.",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Nikoloz Baratashvili existential perseverance"
+  },
+  {
+    "id": "case-galaktion-moon-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Never yet was born a moon so calm!",
+    "expected": "ჯერ არასდროს არ შობილა მთვარე ასე წყნარი!",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Galaktion Tabidze Mtatsminda Moon poetic opening"
+  },
+  {
+    "id": "case-galaktion-wind-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The wind blows, the wind blows, the wind blows, leaves fly in the gust.",
+    "expected": "ქარი ქრის, ქარი ქრის, ქარი ქრის, ფოთლები მიჰქრიან ქარდაქარ.",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Galaktion Tabidze musical cadence"
+  },
+  {
+    "id": "case-petritsi-philosophy-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "All existing beings desire goodness and beauty.",
+    "expected": "ყოველსა არსებულსა სწადს სიკეთე და მშვენიერება.",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Ioane Petritsi medieval Neoplatonic metaphysics"
+  },
+  {
+    "id": "case-involuntary-experiencer-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The traveler lost his ancient map in the snow.",
+    "expected": "მგზავრს თოვლში ძველი რუკა დაეკარგა.",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Involuntary experiencer dative inversion with involuntary middle voice verb"
+  },
+  {
+    "id": "case-involuntary-experiencer-02",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The child accidentally broke the porcelain vase.",
+    "expected": "ბავშვს ფაიფურის ლარნაკი გაუტყდა.",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Involuntary accidental breakage in dative experiencer syntax"
+  },
+  {
+    "id": "case-versional-subjective-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He built a stone house for himself.",
+    "expected": "მან თავისთვის ქვის სახლი აიშენა.",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Subjective version marker -ი- denoting self-benefaction"
+  },
+  {
+    "id": "case-versional-objective-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He built a stone house for his brother.",
+    "expected": "მან თავის ძმას ქვის სახლი აუშენა.",
+    "weight": 1.5,
+    "origin": "expansion-iter5",
+    "note": "Objective version marker -უ- denoting third-person benefaction"
+  },
+  {
+    "id": "case-ocr-split-tsigni-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ძველი წ|გნი და ხელნაწერი",
+    "expected": "ძველი წიგნი და ხელნაწერი",
+    "weight": 1.0,
+    "origin": "expansion-iter5",
+    "note": "Camera OCR vertical bar break inside noun წიგნი"
+  },
+  {
+    "id": "case-ocr-split-khidi-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "დიდებული ხ|დი მდინარეზე",
+    "expected": "დიდებული ხიდი მდინარეზე",
+    "weight": 1.0,
+    "origin": "expansion-iter5",
+    "note": "Camera OCR vertical bar break inside noun ხიდი"
+  },
+  {
+    "id": "case-ocr-torn-samshoblo-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ჩემი საყვარელი სამ- მშობლო",
+    "expected": "ჩემი საყვარელი სამშობლო",
+    "weight": 1.0,
+    "origin": "expansion-iter5",
+    "note": "Degraded paper scan hyphen break with whitespace"
+  },
+  {
+    "id": "case-ocr-guillemets-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "«სჯობს სიცოცხლესა ნაზრახსა სიკვდილი სახელოვანი»",
+    "expected": "„სჯობს სიცოცხლესა ნაზრახსა სიკვდილი სახელოვანი“",
+    "weight": 1.0,
+    "origin": "expansion-iter5",
+    "note": "Continental guillemet typography restoration to Georgian quotation marks"
   }
 ]

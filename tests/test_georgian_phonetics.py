@@ -229,6 +229,17 @@ class TestGeorgianPhonetics(unittest.TestCase):
         self.assertIn("საბა", res5)
         self.assertIn("ორბელიანი", res5)
 
+        res6 = verbalize_georgian_for_tts("პოეტი Vazha Pshavela და პერსონაჟი Aluda Ketelauri")
+        self.assertIn("ვაჟა", res6)
+        self.assertIn("ფშაველა", res6)
+        self.assertIn("ალუდა", res6)
+        self.assertIn("ქეთელაური", res6)
+
+        res7 = verbalize_georgian_for_tts("ფილოსოფოსი Ioane Petritsi და პოემა Merani")
+        self.assertIn("იოანე", res7)
+        self.assertIn("პეტრიწი", res7)
+        self.assertIn("მერანი", res7)
+
     def test_expanded_relative_clause_breath_pauses(self):
         res1 = verbalize_georgian_for_tts("საქმე რადგანაც მნიშვნელოვანი იყო")
         self.assertIn(", რადგანაც", res1)
@@ -238,6 +249,12 @@ class TestGeorgianPhonetics(unittest.TestCase):
 
         res3 = verbalize_georgian_for_tts("ხელნაწერი რომლის ავტორიც ცნობილია")
         self.assertIn(", რომლის", res3)
+
+        res4 = verbalize_georgian_for_tts("სტუმარია თუნდ ზღვა ემართოს")
+        self.assertIn(", თუნდ", res4)
+
+        res5 = verbalize_georgian_for_tts("მეგობარია თუნდაც შორს იყოს")
+        self.assertIn(", თუნდაც", res5)
 
     def test_preview_generation_georgian(self):
         async def _run():
