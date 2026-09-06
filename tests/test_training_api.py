@@ -34,6 +34,23 @@ client = TestClient(app)
 
 class TestTrainingAPI(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        from app.training_engine import ACTIVE_PACK_KA_FILE, SESSIONS_FILE, KEYS_FILE
+        cls._pack_bak = ACTIVE_PACK_KA_FILE.read_text(encoding="utf-8") if ACTIVE_PACK_KA_FILE.exists() else None
+        cls._sess_bak = SESSIONS_FILE.read_text(encoding="utf-8") if SESSIONS_FILE.exists() else None
+        cls._keys_bak = KEYS_FILE.read_text(encoding="utf-8") if KEYS_FILE.exists() else None
+
+    @classmethod
+    def tearDownClass(cls):
+        from app.training_engine import ACTIVE_PACK_KA_FILE, SESSIONS_FILE, KEYS_FILE
+        if cls._pack_bak is not None:
+            ACTIVE_PACK_KA_FILE.write_text(cls._pack_bak, encoding="utf-8")
+        if cls._sess_bak is not None:
+            SESSIONS_FILE.write_text(cls._sess_bak, encoding="utf-8")
+        if cls._keys_bak is not None:
+            KEYS_FILE.write_text(cls._keys_bak, encoding="utf-8")
+
     def test_verify_training_key(self):
         valid_info = verify_key(DEFAULT_DEV_KEY)
         self.assertIsNotNone(valid_info)
@@ -196,6 +213,48 @@ class TestTrainingAPI(unittest.TestCase):
         self.assertEqual(fin_resp.status_code, 200)
         fin_json = fin_resp.json()
         self.assertEqual(fin_json["status"], "finished")
+
+    def test_training_guide_endpoint(self):
+        # 1. Markdown guide
+        resp_md = client.get("/api/public/train/guide")
+        self.assertEqual(resp_md.status_code, 200)
+        self.assertIn("text/markdown", resp_md.headers.get("content-type", ""))
+        content = resp_md.text
+        self.assertIn("What the Engine is Trained On", content)
+        self.assertIn("Sun Tzu", content)
+        self.assertIn("Marcus Aurelius", content)
+        self.assertIn("Homer", content)
+        self.assertIn("Plato", content)
+        self.assertIn("Shakespeare", content)
+        self.assertIn("Vigesimal Number Verbalization", content)
+        self.assertIn("3-Tier Hybrid Architecture", content)
+        self.assertIn("NEVER USE ASCII", content)
+
+        # 2. JSON guide
+        resp_json = client.get("/api/public/train/guide?format=json")
+        self.assertEqual(resp_json.status_code, 200)
+        guide_obj = resp_json.json()
+        self.assertIn("corpora", guide_obj)
+        self.assertIn("architecture_tiers", guide_obj)
+        self.assertIn("endpoints", guide_obj)
+
+        # 3. Health includes guide link
+        h_resp = client.get("/api/public/train/health")
+        self.assertEqual(h_resp.status_code, 200)
+        h_data = h_resp.json()
+        self.assertEqual(h_data.get("guide_url"), "/api/public/train/guide")
+        self.assertIn("Sun Tzu", h_data.get("guide_summary", ""))
+
+        # 4. Session response includes embedded guide
+        s_resp = client.post(
+            "/api/public/train/session",
+            json={"model": "guide-test"},
+            headers={"X-Training-Key": DEFAULT_DEV_KEY}
+        )
+        self.assertEqual(s_resp.status_code, 200)
+        s_data = s_resp.json()
+        self.assertEqual(s_data.get("guide_url"), "/api/public/train/guide")
+        self.assertIn("Classical Antiquity", s_data.get("guide_markdown", ""))
 
 
 if __name__ == "__main__":

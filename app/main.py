@@ -5,7 +5,7 @@ import shutil
 from typing import Dict, List, Optional
 from pathlib import Path
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Request
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,7 +37,9 @@ from app.supabase_bridge import check_supabase_health, get_admin_session, fetch_
 from app.training_engine import (
     verify_key, open_training_session, get_training_context,
     propose_training_rules, finish_training_session, load_active_pack,
-    load_benchmark_cases, evaluate_pack, DEFAULT_DEV_KEY
+    load_benchmark_cases, evaluate_pack, DEFAULT_DEV_KEY,
+    ENGINE_ARCHITECTURE_AND_TRAINING_GUIDE_MD,
+    get_training_guide_json, get_training_guide_markdown
 )
 import base64
 from io import BytesIO
@@ -505,6 +507,21 @@ def _extract_training_key(req: Request, body: dict) -> str:
         ""
     )
 
+@app.get("/api/public/train/guide")
+@app.get("/api/train/guide")
+async def training_guide(format: str = "markdown"):
+    """
+    Returns full architectural documentation and instructions for external LLMs
+    to train the EngBot Georgian & English engine effectively.
+    Supports ?format=markdown (default) or ?format=json.
+    """
+    if format.lower() == "json":
+        return get_training_guide_json()
+    return Response(
+        content=ENGINE_ARCHITECTURE_AND_TRAINING_GUIDE_MD,
+        media_type="text/markdown; charset=utf-8"
+    )
+
 @app.get("/api/public/train/health")
 @app.get("/api/train/health")
 async def training_health():
@@ -525,7 +542,13 @@ async def training_health():
             "exact_matches": eval_res["passed"]
         },
         "supported_item_types": ["glossary", "autofix", "qa_rule", "prompt_block", "ocr_fix"],
-        "default_dev_key": DEFAULT_DEV_KEY
+        "default_dev_key": DEFAULT_DEV_KEY,
+        "guide_url": "/api/public/train/guide",
+        "guide_summary": (
+            "Access GET /api/public/train/guide for full architectural documentation, "
+            "corpora information (Sun Tzu, Marcus Aurelius, Homer, Plato, Shakespeare, Georgian Pro), "
+            "and instructions for external LLMs to train the engine safely and effectively."
+        )
     }
 
 @app.post("/api/public/train/session")

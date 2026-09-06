@@ -4,10 +4,67 @@ This guide explains how to connect external Large Language Models (ChatGPT, Clau
 
 ---
 
-## 1. Core Architecture & Safety Principles
+## 1. What the Engine is Trained On
+
+The EngBot linguistic and acoustic models are trained on extensive ground-truth corpora:
+1. **Classical Antiquity & Philosophical Corpus**:
+   - **Sun Tzu (*The Art of War*)**: Military strategy, dialectics, and statecraft vocabulary.
+   - **Marcus Aurelius (*Meditations*)**: Stoic philosophical terminology, moral reflection, and rhythmic cadence.
+   - **Homer (*Iliad* & *Odyssey*)**: Epic register, patronymics, dactylic prose rhythms.
+   - **Plato (*Dialogues*)**: Philosophical debate, rhetoric, interrogative nuances.
+   - **William Shakespeare**: Sonnets, tragedies, blank verse, figurative imagery.
+   - **Shota Rustaveli**: Epic phrasing from *The Knight in the Panther's Skin* (*ვეფხისტყაოსანი*).
+2. **Georgian Pro Morphosyntax & Phonetics Suite (Trae Solo v1.16–v1.45)**:
+   - Complete vigesimal base-20 numbering system (0 to 999,999,999,999; e.g. 73 $\rightarrow$ *სამოცდაცამეტი*).
+   - 7 grammatical case inflections (*სახელობითი, მოთხრობითი, მიცემითი, ნათესაობითი, მოქმედებითი, ვითარებითი, წოდებითი*).
+   - Georgian ISO dates and day-month agreements (*14 იანვარს* vs *თოთხმეტი იანვარი*).
+   - Currency inflections (*ლარი, თეთრი, დოლარი, ევრო, ფუნტი*).
+   - Roman numerals I–XXI converted to Georgian ordinals (*XXI საუკუნე* $\rightarrow$ *ოცდამეერთე საუკუნე*).
+   - Abbreviation verbalization (*ე.ი.* $\rightarrow$ *ესე იგი*, *ე.წ.* $\rightarrow$ *ეგრეთ წოდებული*, *ა.შ.* $\rightarrow$ *ასე შემდეგ*).
+   - Latin idioms (*de facto*, *ad hoc*, *status quo*, *per se*).
+3. **Computer Vision & OCR Correction Corpus**:
+   - Degraded scan ground-truth pairs, ligature repairs, and Georgian glyph confusion matrices (3/პ, ვ/უ, ც/ხ, ბ/ზ).
+
+---
+
+## 2. 3-Tier Hybrid Architecture
+
+```
+[ Input Text / Audio / Scanned PDF ]
+               │
+               ▼
+┌─────────────────────────────────────────────────────────┐
+│ Tier A: Frontier LLM / Neural Translation Core          │
+│ • Gemini 2.5 Pro / Flash & Claude / GPT-4o               │
+│ • Systemic Prompt Blocks for Literary Register & Tone   │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────┐
+│ Tier B: Deterministic Linguistic & Phonetic Engine      │
+│ • 8,400+ lines of production Python (app/georgian_pro)  │
+│ • Vigesimal number expansions & currency declensions    │
+│ • TTS prosody, pauses, and breath-group pacing          │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────┐
+│ Tier C: Versioned Autonomous Rule Pack (Trainable Layer)│
+│ • Data-only post-editing & validation rules             │
+│ • Hot-swappable active_pack_ka.json / active_pack_en.json│
+│ • Rollback capability with cryptographic version audits │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+                           ▼
+[ Studio-Grade Audiobook Audio / Translated Publication ]
+```
+
+---
+
+## 3. Core Safety Principles
 
 1. **Immutable Built-In Baseline**:
-   - The built-in core linguistics (`georgian-linguistics.js` and `app/translation_engine.py`) is never directly edited by LLMs.
+   - The built-in core linguistics (`georgian-linguistics.js` and `app/georgian_pro_engine.py`) is never directly edited by LLMs.
    - Training generates versioned **Rule Packs** layered on top of the built-in engine at runtime.
 2. **Strict Data-Only Rules (Zero Executable Code)**:
    External LLMs can only propose 5 structured, data-only rule types:
@@ -16,7 +73,9 @@ This guide explains how to connect external Large Language Models (ChatGPT, Clau
    - `qa_rule`: Regular expression matching quality errors $\rightarrow$ warning message.
    - `prompt_block`: Guidance appended to system prompts.
    - `ocr_fix`: Common OCR glyph distortion $\rightarrow$ corrected word.
-3. **Deterministic Safety & Benchmark Gate**:
+3. **CRITICAL: Never Use ASCII `\b` with Georgian Characters**:
+   - `\b` only matches ASCII `[a-zA-Z0-9_]`. Always use `(?<![\w\u10A0-\u10FF])` and `(?![\w\u10A0-\u10FF])`.
+4. **Deterministic Safety & Benchmark Gate**:
    - ReDoS validator automatically rejects polynomial/exponential backtracking patterns (nested unbounded quantifiers, lookbehinds, large repetitions).
    - Server immediately replays candidate packs against test benchmark cases.
    - **Auto-Promotion Rule**: A candidate is approved **only** if the benchmark score increases, zero previously passing cases regress, and zero false positives are introduced.
