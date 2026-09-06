@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import json
 import os
 import zipfile
@@ -26,7 +26,7 @@ def book_lock(book_id: str) -> asyncio.Lock:
         _BOOK_LOCKS[book_id] = lock
     return lock
 
-def save_book_session(book: BookData):
+def save_book_session(book: BookData) -> bool:
     """Save book session in memory and to disk (atomic tmp+rename)."""
     _BOOKS_CACHE[book.id] = book
     book_file = UPLOAD_DIR / f"{book.id}_meta.json"
@@ -35,6 +35,8 @@ def save_book_session(book: BookData):
         f.write(book.model_dump_json(indent=2))
     # Atomic on POSIX and Windows: a crash mid-write cannot corrupt the meta.
     os.replace(tmp_file, book_file)
+    return True
+
 
 def recover_stale_chapters(book: BookData) -> bool:
     """Reset chapters stuck in 'processing' (e.g. after a process restart) to

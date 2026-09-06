@@ -5,7 +5,9 @@ import numpy as np
 from PIL import Image, ImageFilter, ImageOps, ImageEnhance
 
 
-def score_image_sharpness(img: Image.Image) -> float:
+def score_image_sharpness(img) -> float:
+    if isinstance(img, (bytes, bytearray)):
+        img = Image.open(io.BytesIO(img))
     gray = img.convert("L")
     arr = np.asarray(gray, dtype=np.float32)
     h, w = arr.shape

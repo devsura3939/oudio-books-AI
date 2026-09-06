@@ -10381,6 +10381,9 @@ async function deleteBook(e, bookId) {
         currentPlayingChapterId = null;
         if (DOM.chaptersContainer) DOM.chaptersContainer.classList.add('hidden');
         if (DOM.playerDock) DOM.playerDock.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+        if (typeof closeReader === 'function') {
+            closeReader();
+        }
         const readerModal = document.getElementById('kindleReaderModal');
         if (readerModal && !readerModal.classList.contains('hidden')) {
             readerModal.classList.add('hidden');
