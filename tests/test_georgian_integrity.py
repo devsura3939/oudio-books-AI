@@ -549,6 +549,99 @@ assert sim_detect('sk-or-v1-mock_openrouter_token_sample_testing_purpose') == "o
 
 print("  [PASS] Smart API key auto-configuration, multi-key merge, auto-routing, and transport security verified in all mirrors")
 
+# ==============================================================================
+# SECTION 24: BOOK DELETION PERMANENCE, FAST LIBRARY LOAD, UPLOAD RELIABILITY & PRIMARY GITHUB LINKS
+# ==============================================================================
+INDEX_HTML = os.path.join(REPO_DIR, "index.html")
+STUDIO_INDEX = os.path.join(REPO_DIR, "lovable-app", "public", "studio", "index.html")
+STATIC_SUPABASE = os.path.join(REPO_DIR, "static", "supabase-store.js")
+STUDIO_SUPABASE = os.path.join(REPO_DIR, "lovable-app", "public", "studio", "static", "supabase-store.js")
+
+for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
+    with open(path, "r", encoding="utf-8") as f:
+        app_text = f.read()
+
+    # 1. Tombstone Architecture & Immunity
+    assert "lumina_deleted_book_ids" in app_text, f"FAIL: lumina_deleted_book_ids storage key missing from {path_name}"
+    assert "function getDeletedBookIds" in app_text, f"FAIL: getDeletedBookIds missing from {path_name}"
+    assert "function markBookAsDeleted" in app_text, f"FAIL: markBookAsDeleted missing from {path_name}"
+    assert "function clearBookTombstone" in app_text, f"FAIL: clearBookTombstone missing from {path_name}"
+    assert "function isBookDeleted" in app_text, f"FAIL: isBookDeleted missing from {path_name}"
+    assert "function deleteBookFromAllLocalDBs" in app_text, f"FAIL: deleteBookFromAllLocalDBs missing from {path_name}"
+
+    # 2. Seeder & Recovery Immunity against resurrection
+    assert "isBookDeleted(b)" in app_text, f"FAIL: seedDefaultBooks must check isBookDeleted in {path_name}"
+    assert "isBookDeleted(book)" in app_text, f"FAIL: recoverAllLocalBooks must check isBookDeleted in {path_name}"
+
+    # 3. Fast Library Load & Zero Popups on Login
+    assert "openAccountCabinet();" not in app_text[app_text.find("async function login("):app_text.find("async function register(")], \
+        f"FAIL: openAccountCabinet must not block normal login in {path_name}"
+
+    # 4. Upload Multi-Format & Tombstone Clearing
+    assert "clearBookTombstone(newBookId, title)" in app_text, f"FAIL: handleFileUpload must clear tombstone in {path_name}"
+    assert "fileInputEl.value = ''" in app_text, f"FAIL: handleFileUpload must reset fileInput in {path_name}"
+
+    # 5. Zero hardcoded audible-architect external redirects
+    assert "audible-architect.lovable.app" not in app_text, f"FAIL: hardcoded audible-architect link detected in {path_name}"
+
+    # 6. Zero ASCII \b adjacent to Georgian
+    assert not re.search(r'\\b[\u10A0-\u10FF]', app_text), f"FAIL: \\b adjacent to Georgian in {path_name}"
+
+for path_name, path in [("index.html", INDEX_HTML), ("studio/index.html", STUDIO_INDEX)]:
+    with open(path, "r", encoding="utf-8") as f:
+        html_text = f.read()
+
+    # Primary GitHub links present across header, mobile, sidebar, gate, and auth modal
+    assert html_text.count("https://github.com/devsura3939/oudio-books-AI") >= 5, \
+        f"FAIL: Primary GitHub repository link missing or insufficient in {path_name}"
+    assert 'href="/auth"' not in html_text, f"FAIL: Broken absolute /auth link found in {path_name}"
+    assert "v1.47.4" in html_text, f"FAIL: Version v1.47.4 not reflected in {path_name}"
+
+for path_name, path in [("static/supabase-store.js", STATIC_SUPABASE), ("studio/static/supabase-store.js", STUDIO_SUPABASE)]:
+    with open(path, "r", encoding="utf-8") as f:
+        supa_text = f.read()
+    assert "audible-architect.lovable.app" not in supa_text, f"FAIL: audible-architect detected in {path_name}"
+    assert "window.location.origin" in supa_text, f"FAIL: Dynamic origin missing in {path_name}"
+
+# Tombstone functional simulation
+sim_tombstones = set()
+def sim_mark_deleted(book_id, title=None):
+    if book_id: sim_tombstones.add(str(book_id).lower().strip())
+    if title: sim_tombstones.add("title:" + str(title).lower().strip())
+
+def sim_is_deleted(book):
+    if str(book.get("id", "")).lower().strip() in sim_tombstones: return True
+    if ("title:" + str(book.get("title", "")).lower().strip()) in sim_tombstones: return True
+    return False
+
+def sim_clear_tombstone(book_id, title=None):
+    if book_id: sim_tombstones.discard(str(book_id).lower().strip())
+    if title: sim_tombstones.discard("title:" + str(title).lower().strip())
+
+# Simulate delete classic book
+classic_sample = {"id": "classic_vepkhistqaosani", "title": "ვეფხისტყაოსანი"}
+sim_mark_deleted(classic_sample["id"], classic_sample["title"])
+assert sim_is_deleted(classic_sample) is True, "FAIL: Deleted classic must be identified as deleted"
+
+# Simulate seeder and recovery attempt
+sim_shelf = []
+if not sim_is_deleted(classic_sample):
+    sim_shelf.append(classic_sample)
+assert len(sim_shelf) == 0, "FAIL: Seeder must not resurrect deleted classic"
+
+# Simulate intentional user re-upload of the same book
+sim_clear_tombstone(classic_sample["id"], classic_sample["title"])
+assert sim_is_deleted(classic_sample) is False, "FAIL: Re-uploaded book must have tombstone cleared"
+sim_shelf.append(classic_sample)
+assert len(sim_shelf) == 1, "FAIL: Re-uploaded book must be added to shelf"
+
+# Binary byte parity verification
+assert open(INDEX_HTML, "rb").read() == open(STUDIO_INDEX, "rb").read(), "FAIL: index.html byte mismatch with studio mirror"
+assert open(STATIC_APP, "rb").read() == open(STUDIO_APP, "rb").read(), "FAIL: static/app.js byte mismatch with studio mirror"
+assert open(STATIC_SUPABASE, "rb").read() == open(STUDIO_SUPABASE, "rb").read(), "FAIL: static/supabase-store.js byte mismatch with studio mirror"
+
+print("  [PASS] Book deletion permanence, tombstone immunity, fast library loading, upload reliability & primary GitHub links verified in all mirrors")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
 
 

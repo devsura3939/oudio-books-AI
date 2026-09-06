@@ -9,7 +9,7 @@
 
 // ── Application State ──────────────────────────────────────────────────────
 const APP_VERSION = 'v1.47.4';
-const ENGINE_VERSION = 'v1.47.4 (Lumina-PermanentAIKeys+SafePreserve+AutoHeal)';
+const ENGINE_VERSION = 'v1.47.4 (Lumina-PermanentDelete+FastLib+PrimaryGitHub+AutoHeal)';
 
 let db = null;
 let currentBook = null;
@@ -2368,8 +2368,152 @@ function initLocalDB() {
     });
 }
 
+// ════════════════ Book Deletion Tombstone Store (v1.47.4) ════════════════
+// Prevents deleted audiobooks from ever resurrecting via seedDefaultBooks,
+// legacy indexedDB recovery, or asynchronous Supabase sync.
+const DELETED_BOOKS_STORAGE_KEY = 'lumina_deleted_book_ids';
+
+function getDeletedBookIds() {
+    try {
+        const raw = localStorage.getItem(DELETED_BOOKS_STORAGE_KEY);
+        if (!raw) return new Set();
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return new Set(parsed.map(x => String(x).toLowerCase().trim()));
+    } catch (e) {}
+    return new Set();
+}
+
+function markBookAsDeleted(bookId, title, slug) {
+    try {
+        const set = getDeletedBookIds();
+        if (bookId) {
+            set.add(String(bookId).toLowerCase().trim());
+        }
+        if (title) {
+            const cleanTitle = String(title).toLowerCase().trim();
+            set.add('title:' + cleanTitle);
+        }
+        if (slug) {
+            const cleanSlug = String(slug).toLowerCase().trim();
+            set.add('slug:' + cleanSlug);
+        }
+        localStorage.setItem(DELETED_BOOKS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+    } catch (e) {
+        console.warn('[store] Could not write deletion tombstone:', e);
+    }
+}
+
+function clearBookTombstone(bookId, title, slug) {
+    try {
+        const set = getDeletedBookIds();
+        let changed = false;
+        if (bookId) {
+            changed = set.delete(String(bookId).toLowerCase().trim()) || changed;
+        }
+        if (title) {
+            changed = set.delete('title:' + String(title).toLowerCase().trim()) || changed;
+        }
+        if (slug) {
+            changed = set.delete('slug:' + String(slug).toLowerCase().trim()) || changed;
+        }
+        if (changed) {
+            localStorage.setItem(DELETED_BOOKS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+        }
+    } catch (e) {}
+}
+
+function isBookDeleted(bookOrId) {
+    if (!bookOrId) return false;
+    const set = getDeletedBookIds();
+    if (set.size === 0) return false;
+
+    if (typeof bookOrId === 'string' || typeof bookOrId === 'number') {
+        const idStr = String(bookOrId).toLowerCase().trim();
+        return set.has(idStr);
+    }
+
+    const b = bookOrId;
+    if (b.id && set.has(String(b.id).toLowerCase().trim())) return true;
+    if (b.slug && (set.has(String(b.slug).toLowerCase().trim()) || set.has('slug:' + String(b.slug).toLowerCase().trim()))) return true;
+    if (b.title) {
+        const t = String(b.title).toLowerCase().trim();
+        if (set.has('title:' + t)) return true;
+    }
+    return false;
+}
+
+async function deleteBookFromAllLocalDBs(id, title) {
+    const candidateDBs = [
+        'LuminaAudioStudioDB_v12',
+        'LuminaAudioStudioDB_v11',
+        'LuminaAudioStudioDB_v10',
+        'LuminaAudioStudioDB',
+        'AudioReadStudioDB',
+        'AudiobookStudioDB'
+    ];
+    if (typeof indexedDB !== 'undefined' && typeof indexedDB.databases === 'function') {
+        try {
+            const list = await indexedDB.databases();
+            if (Array.isArray(list)) {
+                for (const dbInfo of list) {
+                    if (dbInfo && dbInfo.name && !candidateDBs.includes(dbInfo.name)) {
+                        candidateDBs.push(dbInfo.name);
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    const normTitle = (title || '').trim().toLowerCase();
+    const idStr = String(id);
+    const idNum = Number(id);
+
+    for (const dbName of candidateDBs) {
+        try {
+            await new Promise((resolve) => {
+                const req = indexedDB.open(dbName);
+                req.onsuccess = (e) => {
+                    const idb = e.target.result;
+                    if (!idb.objectStoreNames.contains('books')) {
+                        idb.close();
+                        return resolve();
+                    }
+                    try {
+                        const tx = idb.transaction('books', 'readwrite');
+                        const store = tx.objectStore('books');
+                        try { store.delete(idStr); } catch (e) {}
+                        if (!isNaN(idNum)) {
+                            try { store.delete(idNum); } catch (e) {}
+                        }
+                        if (normTitle) {
+                            const cursorReq = store.openCursor();
+                            cursorReq.onsuccess = (ev) => {
+                                const cursor = ev.target.result;
+                                if (cursor) {
+                                    const val = cursor.value;
+                                    if (val && ((val.title && val.title.trim().toLowerCase() === normTitle) || String(val.id) === idStr)) {
+                                        cursor.delete();
+                                    }
+                                    cursor.continue();
+                                }
+                            };
+                        }
+                        tx.oncomplete = () => { idb.close(); resolve(); };
+                        tx.onerror = () => { idb.close(); resolve(); };
+                    } catch (err) {
+                        idb.close();
+                        resolve();
+                    }
+                };
+                req.onerror = () => resolve();
+            });
+        } catch (e) {}
+    }
+}
+
 async function saveBookToDB(book) {
     if (!book) return;
+    try { clearBookTombstone(book.id, book.title, book.slug); } catch (e) {}
     // Dual persistence: always store in local IndexedDB for instant offline access
     try {
         await saveBookToLocalDB(book);
@@ -2455,6 +2599,9 @@ async function recoverAllLocalBooks() {
             const books = await readBooksFromIndexedDB(dbName);
             for (const book of books) {
                 if (!book || !book.title) continue;
+                // STRICT: If user deleted this book, NEVER resurrect it!
+                if (isBookDeleted(book)) continue;
+
                 const isUserBook = book.isUserUploaded ||
                     (book.extra && (book.extra.source === 'scan' || book.extra.scanned_pages)) ||
                     (book.chapters && book.chapters.length > 0 && !DISCOVER_CLASSICS.some(c => c.id === book.id && c.chapters.length === book.chapters.length));
@@ -2473,15 +2620,14 @@ async function recoverAllLocalBooks() {
         } catch (e) {}
     }
 
-    // Re-save recovered books into active local store LuminaAudioStudioDB_v12 and Supabase
+    // Re-save recovered books into active local store LuminaAudioStudioDB_v12 and Supabase (asynchronously)
     for (const book of recoveredBooks) {
+        if (isBookDeleted(book)) continue;
         try {
             await saveBookToLocalDB(book);
         } catch (e) {}
         if (usingCloud && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
-            try {
-                await window.LuminaStore.saveBook(book);
-            } catch (e) {}
+            window.LuminaStore.saveBook(book).catch(e => console.warn('[recovery] Cloud sync error:', e));
         }
     }
 
@@ -2515,14 +2661,22 @@ async function getAllBooks() {
         return normTitle || String(b.slug || b.id || b.row_id || '');
     };
 
-    // First populate from local DB
+    // First populate from local DB (strictly filtering out any deleted books)
     for (const lb of localBooks) {
+        if (isBookDeleted(lb)) continue;
         const key = getBookKey(lb);
         if (key) bookMap.set(key, lb);
     }
 
-    // Merge cloud books (which represent authoritative user account products)
+    // Merge cloud books (strictly filtering out deleted books)
     for (const cb of cloudBooks) {
+        if (isBookDeleted(cb)) {
+            // Reconcile cloud: ensure deleted from Supabase in background
+            if (usingCloud && window.LuminaStore && typeof window.LuminaStore.deleteBook === 'function') {
+                window.LuminaStore.deleteBook(cb.id).catch(() => {});
+            }
+            continue;
+        }
         const key = getBookKey(cb);
         if (!key) continue;
         if (!bookMap.has(key)) {
@@ -2546,37 +2700,58 @@ async function getAllBooks() {
         }
     }
 
-    const merged = Array.from(bookMap.values());
-    return merged.length > 0 ? merged : localBooks;
+    const merged = Array.from(bookMap.values()).filter(b => !isBookDeleted(b));
+    return merged.length > 0 ? merged : localBooks.filter(b => !isBookDeleted(b));
 }
 
 async function loadBooks() {
-    try {
-        await recoverAllLocalBooks();
-    } catch (e) {
-        console.warn('[store] Recovery warning in loadBooks:', e);
-    }
+    // 1. FAST LOCAL-FIRST RENDER: Immediately render the shelf from local DB (<25ms)!
     await renderDigitalShelf();
     renderDiscoverClassics();
     try {
         if (typeof renderScanShelf === 'function') await renderScanShelf();
     } catch (e) {}
 
-    const books = await getAllBooks();
-    if (books.length > 0 && (!currentBook || !books.find(b => String(b.id) === String(currentBook.id)))) {
-        selectBook(books[0].id, false);
-    }
+    // Auto-select first book if nothing currently selected
+    try {
+        const localList = (await getAllLocalBooks()).filter(b => !isBookDeleted(b));
+        if (localList.length > 0 && (!currentBook || !localList.find(b => String(b.id) === String(currentBook.id)))) {
+            selectBook(localList[0].id, false);
+        }
+    } catch (e) {}
+
+    // 2. ASYNC BACKGROUND RECONCILIATION:
+    // Run legacy DB recovery & Supabase cloud sync in background without blocking shelf UI
+    (async () => {
+        try {
+            await recoverAllLocalBooks();
+        } catch (e) {
+            console.warn('[store] Recovery warning in loadBooks:', e);
+        }
+        if (usingCloud) {
+            try {
+                await renderDigitalShelf();
+            } catch (e) {}
+        }
+    })();
 }
 
-async function deleteBookFromDB(id) {
-    if (usingCloud) {
+async function deleteBookFromDB(id, title, slug) {
+    // 1. Record permanent deletion tombstone
+    markBookAsDeleted(id, title, slug);
+
+    // 2. Delete from Supabase Cloud
+    if (usingCloud && window.LuminaStore && typeof window.LuminaStore.deleteBook === 'function') {
         try {
             await window.LuminaStore.deleteBook(id);
         } catch (err) {
             console.error('[store] Supabase delete failed:', err);
         }
     }
-    return deleteBookFromLocalDB(id);
+
+    // 3. Purge across all local and legacy IndexedDB databases
+    await deleteBookFromAllLocalDBs(id, title);
+    return true;
 }
 
 function saveBookToLocalDB(book) {
@@ -2592,7 +2767,7 @@ function getAllLocalBooks() {
     return new Promise((resolve, reject) => {
         const tx = db.transaction('books', 'readonly');
         const req = tx.objectStore('books').getAll();
-        req.onsuccess = () => resolve(req.result || []);
+        req.onsuccess = () => resolve((req.result || []).filter(b => !isBookDeleted(b)));
         req.onerror = (e) => reject(e);
     });
 }
@@ -2606,11 +2781,13 @@ function deleteBookFromLocalDB(id) {
     });
 }
 
-
 async function seedDefaultBooks() {
     const existing = await getAllBooks();
     for (const b of DISCOVER_CLASSICS) {
-        const found = existing.find(e => String(e.id) === String(b.id));
+        // STRICT: If user deleted this classic, NEVER re-seed it!
+        if (isBookDeleted(b)) continue;
+
+        const found = existing.find(e => String(e.id) === String(b.id) || (e.title && b.title && e.title.trim().toLowerCase() === b.title.trim().toLowerCase()));
         const needsUpgrade = !found ||
             !found.chapters ||
             found.chapters.length < b.chapters.length ||
@@ -3334,9 +3511,10 @@ function updateAuthUI() {
             pill.title = 'Click to open AI Training Lab';
             pill.onclick = function () {
                 var target = window.location.hostname.includes('github.io')
-                    ? 'https://audible-architect.lovable.app/training'
+                    ? 'https://github.com/devsura3939/oudio-books-AI'
                     : '/training';
-                window.location.href = target;
+                if (target.startsWith('http')) window.open(target, '_blank');
+                else window.location.href = target;
             };
         } else {
             pill.classList.add('hidden');
@@ -3356,9 +3534,10 @@ function updateAuthUI() {
             mobilePill.title = 'Click to open AI Training Lab';
             mobilePill.onclick = function () {
                 var target = window.location.hostname.includes('github.io')
-                    ? 'https://audible-architect.lovable.app/training'
+                    ? 'https://github.com/devsura3939/oudio-books-AI'
                     : '/training';
-                window.location.href = target;
+                if (target.startsWith('http')) window.open(target, '_blank');
+                else window.location.href = target;
             };
         } else {
             mobilePill.classList.add('hidden');
@@ -3378,9 +3557,10 @@ function updateAuthUI() {
             mobileAdminCard.title = 'Click to open AI Training Lab';
             mobileAdminCard.onclick = function () {
                 var target = window.location.hostname.includes('github.io')
-                    ? 'https://audible-architect.lovable.app/training'
+                    ? 'https://github.com/devsura3939/oudio-books-AI'
                     : '/training';
-                window.location.href = target;
+                if (target.startsWith('http')) window.open(target, '_blank');
+                else window.location.href = target;
             };
         } else {
             mobileAdminCard.classList.add('hidden');
@@ -3563,9 +3743,10 @@ function updateCabinetUI() {
 function openTrainingLab() {
     closeAccountCabinet();
     const target = window.location.hostname.includes('github.io')
-        ? 'https://audible-architect.lovable.app/training'
+        ? 'https://github.com/devsura3939/oudio-books-AI'
         : '/training';
-    window.location.href = target;
+    if (target.startsWith('http')) window.open(target, '_blank');
+    else window.location.href = target;
 }
 
 function updateAuthGateVisibility() {
@@ -4133,9 +4314,8 @@ async function login(email, password, rememberParam) {
         closeAuthGate();
         updateAuthGateVisibility();
         closeModal('authModal');
-        openAccountCabinet();
 
-        // Reload books immediately from Supabase Cloud + Local merge
+        // Fast local-first library load
         try {
             await loadBooks();
         } catch (e) {
@@ -4143,8 +4323,8 @@ async function login(email, password, rememberParam) {
         }
 
         showToast(isAdmin
-            ? `👑 Welcome Admin • Supabase Cloud Active (${APP_VERSION})`
-            : `Logged in as ${email} (Cloud Synced)`);
+            ? `👑 Welcome Admin • Studio Ready (${APP_VERSION})`
+            : `Logged in as ${email} • Studio Ready`);
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -9319,74 +9499,100 @@ function generateDynamicStudioCover(title) {
 }
 
 async function handleFileUpload(file) {
-    if (!file || file.type !== 'application/pdf') {
-        alert('Please select a valid PDF file.');
+    if (!file) return;
+
+    const fileName = (file.name || '').toLowerCase();
+    const isPdf = file.type === 'application/pdf' || fileName.endsWith('.pdf');
+    const isText = (file.type && file.type.startsWith('text/')) || fileName.endsWith('.txt') || fileName.endsWith('.md');
+
+    if (!isPdf && !isText) {
+        alert('Please select a valid PDF or text document (.pdf, .txt, .md).');
         return;
     }
 
     DOM.uploadProgressContainer.classList.remove('hidden');
-    DOM.uploadStatusText.textContent = "Extracting text from PDF...";
+    DOM.uploadStatusText.classList.remove('text-error');
+    DOM.uploadStatusText.textContent = isPdf ? "Extracting text from PDF..." : "Reading document text...";
     DOM.uploadProgressBar.style.width = '15%';
     DOM.uploadProgressPct.textContent = '15%';
 
     try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-        const pageTexts = [];
-        const totalPages = pdf.numPages;
-
-        for (let i = 1; i <= totalPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            pageTexts.push({ index: i, text: pdfPageLines(content) });
-
-            const pct = 15 + Math.round((i / totalPages) * 45);
-            DOM.uploadProgressBar.style.width = `${pct}%`;
-            DOM.uploadProgressPct.textContent = `${pct}%`;
-        }
-
-        DOM.uploadStatusText.textContent = "Detecting cover, title and chapters...";
-        DOM.uploadProgressBar.style.width = '70%';
-        DOM.uploadProgressPct.textContent = '70%';
-
-        // Embedded PDF metadata is the most reliable title/author when present.
-        let info = {};
-        try { info = (await pdf.getMetadata()).info || {}; } catch (e) { /* optional */ }
-
-        // Producer tools stamp junk metadata ("(anonymous)", "untitled"); ignore it.
-        const usableMeta = (v) => {
-            const t = (v || '').trim();
-            return t.length > 1 && !/^\(?(anonymous|unknown|untitled|none|n\/a|microsoft word.*)\)?$/i.test(t) ? t : null;
-        };
-        // Auto-detect language from extracted PDF page text
-        const sampleText = pageTexts.slice(0, 30).map(p => p.text).join(' ');
-        const kaCount = (sampleText.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
-        const enCount = (sampleText.match(/[A-Za-z]/g) || []).length;
-        const isGeorgianBook = kaCount > 25 && (kaCount >= enCount * 0.25 || kaCount > 100);
-        const detectedLang = isGeorgianBook ? 'ka' : 'en';
-
-        const structure = detectBookStructure(pageTexts, { isKa: isGeorgianBook });
-        const fileTitle = cleanBookTitle(file.name);
-        const title = usableMeta(info.Title)
-            || structure.title
-            || (fileTitle.charAt(0).toUpperCase() + fileTitle.slice(1));
-        const author = usableMeta(info.Author) || structure.author || (isGeorgianBook ? 'ქართული აუდიოწიგნი' : 'PDF Audiobook');
-
-        // Cover: official art if the title is a known book, otherwise the PDF's
-        // own detected cover page rendered to an image.
+        let totalPages = 1;
+        let fileTitle = cleanBookTitle(file.name);
+        let title = fileTitle.charAt(0).toUpperCase() + fileTitle.slice(1);
+        let author = isPdf ? 'PDF Audiobook' : 'Text Document';
+        let detectedLang = 'en';
+        let isGeorgianBook = false;
         let coverUrl = null;
-        try { coverUrl = await fetchBookCoverArt(title, { fallback: false }); } catch (e) { /* optional */ }
-        if (!coverUrl) coverUrl = await renderPdfPageAsCover(pdf, structure.coverIndex || 1);
-        if (!coverUrl) coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
+        let chapters = [];
+
+        if (isPdf) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            totalPages = pdf.numPages;
+            const pageTexts = [];
+
+            for (let i = 1; i <= totalPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                pageTexts.push({ index: i, text: pdfPageLines(content) });
+
+                const pct = 15 + Math.round((i / totalPages) * 45);
+                DOM.uploadProgressBar.style.width = `${pct}%`;
+                DOM.uploadProgressPct.textContent = `${pct}%`;
+            }
+
+            DOM.uploadStatusText.textContent = "Detecting cover, title and chapters...";
+            DOM.uploadProgressBar.style.width = '70%';
+            DOM.uploadProgressPct.textContent = '70%';
+
+            let info = {};
+            try { info = (await pdf.getMetadata()).info || {}; } catch (e) {}
+
+            const usableMeta = (v) => {
+                const t = (v || '').trim();
+                return t.length > 1 && !/^\(?(anonymous|unknown|untitled|none|n\/a|microsoft word.*)\)?$/i.test(t) ? t : null;
+            };
+
+            const sampleText = pageTexts.slice(0, 30).map(p => p.text).join(' ');
+            const kaCount = (sampleText.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+            const enCount = (sampleText.match(/[A-Za-z]/g) || []).length;
+            isGeorgianBook = kaCount > 25 && (kaCount >= enCount * 0.25 || kaCount > 100);
+            detectedLang = isGeorgianBook ? 'ka' : 'en';
+
+            const structure = detectBookStructure(pageTexts, { isKa: isGeorgianBook });
+            title = usableMeta(info.Title)
+                || structure.title
+                || title;
+            author = usableMeta(info.Author) || structure.author || (isGeorgianBook ? 'ქართული აუდიოწიგნი' : 'PDF Audiobook');
+
+            try { coverUrl = await fetchBookCoverArt(title, { fallback: false }); } catch (e) {}
+            if (!coverUrl) coverUrl = await renderPdfPageAsCover(pdf, structure.coverIndex || 1);
+            if (!coverUrl) coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
+
+            chapters = structure.chapters.length
+                ? structure.chapters
+                : splitIntoChapters(pageTexts.map(p => p.text).join('\n\n'), isGeorgianBook);
+        } else {
+            // Text or Markdown document
+            const fullText = await file.text();
+            DOM.uploadProgressBar.style.width = '50%';
+            DOM.uploadProgressPct.textContent = '50%';
+            DOM.uploadStatusText.textContent = "Formatting document chapters...";
+
+            const kaCount = (fullText.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+            const enCount = (fullText.match(/[A-Za-z]/g) || []).length;
+            isGeorgianBook = kaCount > 25 && (kaCount >= enCount * 0.25 || kaCount > 100);
+            detectedLang = isGeorgianBook ? 'ka' : 'en';
+            author = isGeorgianBook ? 'ქართული ტექსტი' : 'Text Document';
+
+            chapters = splitIntoChapters(fullText, isGeorgianBook);
+            coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
+        }
 
         DOM.uploadStatusText.textContent = isGeorgianBook ? "თავების სტრუქტურირება..." : "Structuring chapters...";
         DOM.uploadProgressBar.style.width = '90%';
         DOM.uploadProgressPct.textContent = '90%';
-
-        let chapters = structure.chapters.length
-            ? structure.chapters
-            : splitIntoChapters(pageTexts.map(p => p.text).join('\n\n'), isGeorgianBook);
 
         if (isGeorgianBook) {
             chapters.forEach(ch => {
@@ -9396,8 +9602,12 @@ async function handleFileUpload(file) {
             });
         }
 
+        const newBookId = 'book_' + Date.now();
+        // Clear any deletion tombstone so user can re-upload or add this book fresh
+        clearBookTombstone(newBookId, title);
+
         const newBook = {
-            id: 'book_' + Date.now(),
+            id: newBookId,
             title,
             author,
             coverUrl: coverUrl,
@@ -9408,12 +9618,12 @@ async function handleFileUpload(file) {
             dateAdded: new Date().toISOString(),
             lastPlayedChapterId: chapters.length > 0 ? chapters[0].id : null,
             progressPct: 0,
+            isUserUploaded: true,
             extra: {
-                source: 'pdf',
+                source: isPdf ? 'pdf' : 'text',
                 page_count: totalPages,
-                cover_page: structure.coverIndex || null,
-                detected_title: structure.title || null,
-                detected_author: structure.author || null,
+                detected_title: title,
+                detected_author: author,
                 detected_sections: chapters.length,
                 detected_lang: detectedLang
             }
@@ -9424,21 +9634,29 @@ async function handleFileUpload(file) {
         DOM.uploadProgressPct.textContent = '100%';
         DOM.uploadStatusText.textContent = isGeorgianBook ? "ქართული წიგნი წარმატებით ჩაიტვირთა!" : "Import complete!";
 
-        setTimeout(() => {
+        // Reset file input value so uploading the same file again triggers change event
+        const fileInputEl = document.getElementById('fileInput');
+        if (fileInputEl) fileInputEl.value = '';
+
+        setTimeout(async () => {
             closeModal('uploadModal');
             DOM.uploadProgressContainer.classList.add('hidden');
-            renderDigitalShelf();
+            if (typeof navigate === 'function') navigate('library');
+            await renderDigitalShelf();
             selectBook(newBook.id, true);
-            if (isGeorgianBook && typeof showToast === 'function') {
-                showToast(`🇬🇪 „${title}“ — ამოცნობილია ქართულ ენაზე!`, 'success');
+            if (typeof showToast === 'function') {
+                showToast(isGeorgianBook
+                    ? `🇬🇪 „${title}“ — წარმატებით დაემატა ბიბლიოთეკას!`
+                    : `📖 "${title}" added to your library!`, 'success');
             }
-        }, 800);
-
+        }, 600);
 
     } catch (err) {
-        console.error('PDF Parse Error:', err);
-        DOM.uploadStatusText.textContent = "Error parsing PDF document.";
+        console.error('File Upload Error:', err);
+        DOM.uploadStatusText.textContent = "Error parsing document: " + (err.message || 'Unknown error');
         DOM.uploadStatusText.classList.add('text-error');
+        const fileInputEl = document.getElementById('fileInput');
+        if (fileInputEl) fileInputEl.value = '';
     }
 }
 
@@ -10126,16 +10344,57 @@ async function selectBook(bookId, autoPlayFirst = false) {
 }
 
 async function deleteBook(e, bookId) {
-    e.stopPropagation();
-    if (confirm('Are you sure you want to delete this audiobook from your shelf?')) {
-        await deleteBookFromDB(bookId);
-        if (currentBook && String(currentBook.id) === String(bookId)) {
-            stopSpeech();
-            currentBook = null;
-            DOM.chaptersContainer.classList.add('hidden');
-            DOM.playerDock.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    let bookTitle = '';
+    let bookSlug = '';
+    try {
+        const all = await getAllLocalBooks();
+        const found = all.find(b => String(b.id) === String(bookId));
+        if (found) {
+            bookTitle = found.title;
+            bookSlug = found.slug || '';
+        } else if (currentBook && String(currentBook.id) === String(bookId)) {
+            bookTitle = currentBook.title;
+            bookSlug = currentBook.slug || '';
         }
-        await renderDigitalShelf();
+    } catch (err) {}
+
+    const confirmTitle = bookTitle ? `„${bookTitle}“` : 'this audiobook';
+    if (!confirm(`Are you sure you want to permanently delete ${confirmTitle} from your shelf?`)) {
+        return;
+    }
+
+    // 1. Immediately record deletion tombstone
+    markBookAsDeleted(bookId, bookTitle, bookSlug);
+
+    // 2. Stop playback and clear reader if this was active book
+    if (currentBook && (String(currentBook.id) === String(bookId) || (bookTitle && currentBook.title === bookTitle))) {
+        try { stopSpeech(); } catch (err) {}
+        try {
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.src = '';
+            }
+        } catch (err) {}
+        currentBook = null;
+        currentPlayingChapterId = null;
+        if (DOM.chaptersContainer) DOM.chaptersContainer.classList.add('hidden');
+        if (DOM.playerDock) DOM.playerDock.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+        const readerModal = document.getElementById('kindleReaderModal');
+        if (readerModal && !readerModal.classList.contains('hidden')) {
+            readerModal.classList.add('hidden');
+        }
+    }
+
+    // 3. Purge across all databases and Supabase
+    await deleteBookFromDB(bookId, bookTitle, bookSlug);
+
+    // 4. Update digital shelf immediately
+    await renderDigitalShelf();
+
+    if (typeof showToast === 'function') {
+        showToast(`Permanently deleted ${confirmTitle}`, 'info');
     }
 }
 

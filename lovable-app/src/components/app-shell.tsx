@@ -66,8 +66,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <p className="mt-1 truncate text-[10px] text-on-surface-variant">{userEmail || "ananiadevsurashvili@gmail.com"}</p>
             <div className="mt-2 border-t border-white/10 pt-1.5 space-y-0.5 text-[10px]">
-              <p><span className="text-on-surface-variant">App:</span> <span className="text-white font-bold">v1.46.8</span></p>
-              <p><span className="text-on-surface-variant">Engine:</span> <span className="text-white font-bold">v1.46.8 (Lumina-MultiBurst+ServerAI+SupabaseJobs+Storage)</span></p>
+              <p><span className="text-on-surface-variant">App:</span> <span className="text-white font-bold">v1.47.4</span></p>
+              <p><span className="text-on-surface-variant">Engine:</span> <span className="text-white font-bold">v1.47.4 (Lumina-PermanentDelete+FastLib+PrimaryGitHub)</span></p>
             </div>
           </div>
         )}
@@ -98,10 +98,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
 
         <div className="space-y-2 border-t border-white/10 pt-4">
+          <a
+            href="https://github.com/devsura3939/oudio-books-AI"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-on-surface-variant transition-all hover:bg-white/10 hover:text-primary-fixed-dim text-sm"
+          >
+            <span className="material-symbols-outlined">code</span>
+            <span>GitHub Repo</span>
+          </a>
           <button
             type="button"
             onClick={signOut}
-            className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-on-surface-variant transition-all hover:bg-white/10 hover:text-primary-fixed-dim"
+            className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-on-surface-variant transition-all hover:bg-white/10 hover:text-primary-fixed-dim text-sm"
           >
             <span className="material-symbols-outlined">logout</span>
             <span>Sign Out</span>
@@ -117,9 +126,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="hidden sm:flex items-center gap-2 rounded-full border border-primary-container/40 bg-primary-container/15 px-3 py-1 text-[11px] font-mono font-bold text-primary-fixed shadow-[0_0_15px_rgba(0,240,255,0.2)]">
               <span>👑 Admin</span>
               <span className="opacity-40">•</span>
-              <span>App v1.46.8</span>
+              <span>App v1.47.4</span>
               <span className="opacity-40">•</span>
-              <span>Engine v1.46.8</span>
+              <span>Engine v1.47.4</span>
             </div>
           )}
         </div>
@@ -127,7 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {isAdmin && (
             <div className="sm:hidden flex items-center gap-1.5 rounded-full border border-primary-container/40 bg-primary-container/15 px-2 py-0.5 text-[10px] font-mono font-bold text-primary-fixed">
               <span>👑</span>
-              <span>v1.46.8</span>
+              <span>v1.47.4</span>
             </div>
           )}
           <Link
@@ -137,6 +146,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <span className="material-symbols-outlined">upload_file</span>
           </Link>
+          <a
+            href="https://github.com/devsura3939/oudio-books-AI"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-on-surface-variant hover:text-white transition-colors"
+            title="View Source on GitHub"
+          >
+            <span>GitHub</span>
+          </a>
           <Link
             to="/profile"
             className="rounded-full p-2 text-on-surface-variant transition-colors hover:text-primary-container"

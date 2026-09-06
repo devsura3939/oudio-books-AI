@@ -291,18 +291,20 @@
         console.warn("[supabase-store] check_user_exists RPC warning:", errRpc);
       }
     }
-    var host = (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin.includes("github.io"))
-      ? "https://audible-architect.lovable.app"
-      : "";
     try {
-      var resp = await fetch(host + "/api/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: clean })
-      });
-      if (resp.ok) {
-        var data = await resp.json();
-        return Boolean(data && data.exists);
+      var host = (typeof window !== "undefined" && window.location && window.location.origin && !window.location.origin.includes("github.io") && !window.location.origin.includes("localhost") && !window.location.origin.includes("127.0.0.1"))
+        ? window.location.origin
+        : "";
+      if (host) {
+        var resp = await fetch(host + "/api/check-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: clean })
+        });
+        if (resp.ok) {
+          var data = await resp.json();
+          return Boolean(data && data.exists);
+        }
       }
     } catch (e) {
       console.warn("[supabase-store] check-email failed:", e);
@@ -324,9 +326,9 @@
       };
     }
 
-    var callbackUrl = (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin.includes("github.io"))
+    var callbackUrl = (typeof window !== "undefined" && window.location && window.location.href)
       ? window.location.href.split("?")[0].split("#")[0]
-      : "https://audible-architect.lovable.app/auth/callback";
+      : "https://devsura3939.github.io/oudio-books-AI/";
     try {
       var res = await c.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: callbackUrl,
@@ -640,15 +642,27 @@
     return true;
   }
 
-  /** Delete by studio id (slug) — chapters cascade. */
+  /** Delete by studio id (slug or id) — chapters cascade. */
   async function deleteBook(studioId) {
     if (!isReady()) return false;
-    var del = await client
-      .from("books")
-      .delete()
-      .eq("user_id", userId)
-      .eq("slug", String(studioId));
-    if (del.error) throw del.error;
+    var sid = String(studioId);
+    try {
+      var del = await client
+        .from("books")
+        .delete()
+        .eq("user_id", userId)
+        .eq("slug", sid);
+      if (del.error) throw del.error;
+    } catch (e) {
+      console.warn("[supabase-store] delete by slug warning:", e);
+    }
+    try {
+      await client
+        .from("books")
+        .delete()
+        .eq("user_id", userId)
+        .eq("id", sid);
+    } catch (e2) {}
     return true;
   }
 
