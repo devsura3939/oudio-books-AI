@@ -286,6 +286,24 @@ class TestGeorgianPhonetics(unittest.TestCase):
         self.assertIn("აბო", res5)
         self.assertIn("თბილელი", res5)
 
+    def test_phase7_modern_classics_and_mountaineer_law(self):
+        res1 = verbalize_georgian_for_tts("მწერალი Chabua Amirejibi და გმირი Data Tutashkhia")
+        self.assertIn("ამირეჯიბი", res1)
+        self.assertIn("თუთაშხია", res1)
+
+        res2 = verbalize_georgian_for_tts("ოფიცერი Mushni Zarandia და მწერალი Nodar Dumbadze")
+        self.assertIn("მუშნი", res2)
+        self.assertIn("ზარანდია", res2)
+        self.assertIn("დუმბაძე", res2)
+
+        res3 = verbalize_georgian_for_tts("ავტორი Alexander Kazbegi და პერსონაჟი Khevisberi Gocha")
+        self.assertIn("ყაზბეგი", res3)
+        self.assertIn("ხევისბერი", res3)
+        self.assertIn("გოჩა", res3)
+
+        res4 = verbalize_georgian_for_tts("მიზეზი რამეთუ სიმართლე გაირკვა")
+        self.assertIn(", რამეთუ", res4)
+
     def test_preview_generation_georgian(self):
         async def _run():
             url = await generate_voice_preview(voice="ka-GE-GiorgiNeural")

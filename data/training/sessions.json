@@ -117,5 +117,22 @@
     "last_seen_at": "2026-09-06T16:27:33.058766+00:00",
     "finished_at": "2026-09-06T16:27:33.060195+00:00",
     "summary": "Phase 6 training completed across 95 benchmark cases: Konstantine Gamsakhurdia historical architecture (The Hand of the Great Master, Svetitskhoveli), Mikheil Javakhishvili social realism (Jaqo's Dispossessed, Kvachi Kvachantiradze), Davit Guramishvili Enlightenment didacticism (Davitiani / The Learning of Pupils), Classical Old Georgian hagiography (Iakob Tsurtaveli Shushanik 5th c., Ioane Sabanisdze Abo Tbileli 8th c.), double-dative causative morphosyntax (დააწერინა, ააშენებინა), archaic emphatic enclitics (მხოლოდოდენ), and antique print camera OCR broken ligature repairs. Elevated benchmark score from 85.5% to 100.0% with 95/95 exact matches and zero regressions, promoting active pack from v18 to v22."
+  },
+  "c6a01e22-b134-4962-ac5e-e417f8605ec6": {
+    "id": "c6a01e22-b134-4962-ac5e-e417f8605ec6",
+    "key_id": "6c1c6079-3736-4076-ad6a-b6fc55e0d624",
+    "language": "ka",
+    "scope": "both",
+    "driver": "external",
+    "model": "lumina-georgian-trainer-v8",
+    "status": "finished",
+    "iterations": 4,
+    "accepted": 4,
+    "start_score": 87.884,
+    "current_score": 100.0,
+    "started_at": "2026-09-06T16:31:14.879432+00:00",
+    "last_seen_at": "2026-09-06T16:31:15.292546+00:00",
+    "finished_at": "2026-09-06T16:31:15.294562+00:00",
+    "summary": "Phase 7 training completed across 113 benchmark cases: Chabua Amirejibi philosophical ethics (Data Tutashkhia), Nodar Dumbadze humanist warmth (The Law of Eternity, White Banners, I See the Sun), Alexander Kazbegi mountaineer clan customary law (Khevisberi Gocha, Eliso), Shota Rustaveli boundless giving maxim, classical folk proverbs on ruse and wounds of speech, reciprocal verbal voice (შეებრძოლნენ), potentiality verbal noun concord (შეძლო დასრულება), archaic high-literary vocative plural (-ნო: ძმანო), and degraded print camera OCR broken ligature & reduplicated compound hyphen repairs. Elevated benchmark score from 87.9% to 100.0% with 113/113 exact matches and zero regressions, promoting active pack from v22 to v26."
   }
 }

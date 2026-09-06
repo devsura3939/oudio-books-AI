@@ -948,5 +948,185 @@
     "weight": 1.2,
     "origin": "ocr_repair",
     "note": "Line-split archaic genitive noun with newline and hyphen repair"
+  },
+  {
+    "id": "case-lit-amirejibi-goodness-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Doing good also requires wisdom.",
+    "expected": "სიკეთის კეთებასაც სიბრძნე სჭირდება!",
+    "weight": 1.5,
+    "origin": "literature_philosophical",
+    "note": "Chabua Amirejibi, Data Tutashkhia, ethics of goodness"
+  },
+  {
+    "id": "case-lit-amirejibi-silent-good-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Silent goodness governs the universe.",
+    "expected": "სამყაროს ჩუმი სიკეთე მართავს.",
+    "weight": 1.5,
+    "origin": "literature_philosophical",
+    "note": "Chabua Amirejibi, Data Tutashkhia, philosophical maxim"
+  },
+  {
+    "id": "case-lit-amirejibi-duty-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "To share your bread with the needy is a man's plain duty.",
+    "expected": "გაჭირვებულს შენი ლუკმა რომ გაუტეხო, კაცის მოვალეობაა ეგ.",
+    "weight": 1.4,
+    "origin": "literature_philosophical",
+    "note": "Chabua Amirejibi, Data Tutashkhia, honor and duty"
+  },
+  {
+    "id": "case-lit-dumbadze-soul-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The human soul is far heavier than the body, so heavy that one person cannot bear it alone.",
+    "expected": "ადამიანის სული გაცილებით უფრო მძიმეა, ვიდრე სხეული, იმდენად მძიმე, რომ ერთ ადამიანს მისი ტარება არ შეუძლია.",
+    "weight": 1.6,
+    "origin": "literature_humanism",
+    "note": "Nodar Dumbadze, The Law of Eternity, existential humanist doctrine"
+  },
+  {
+    "id": "case-lit-dumbadze-fear-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "While you are alive you will not die, and if you die, you will fear nothing.",
+    "expected": "სანამ ცოცხალი ხარ არ მოკვდები, და თუ მოკვდი, მერე აღარაფრის შეგეშინდება.",
+    "weight": 1.4,
+    "origin": "literature_humanism",
+    "note": "Nodar Dumbadze, White Banners, folk humor & resilience"
+  },
+  {
+    "id": "case-lit-dumbadze-sun-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "I see the sun, and the sun shines upon every honest heart.",
+    "expected": "მე ვხედავ მზეს, და მზე ანათებს ყოველ პატიოსან გულს.",
+    "weight": 1.3,
+    "origin": "literature_humanism",
+    "note": "Nodar Dumbadze, I See the Sun"
+  },
+  {
+    "id": "case-lit-kazbegi-homeland-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Betrayal of the homeland is forgiven neither to son nor to father.",
+    "expected": "სამშობლოს ღალატი არ ეპატიება არც შვილს და არც მამას.",
+    "weight": 1.5,
+    "origin": "literature_realism",
+    "note": "Alexander Kazbegi, Khevisberi Gocha, customary law of the clan"
+  },
+  {
+    "id": "case-lit-kazbegi-khevisberi-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The word of the Khevisberi is supreme law for the clan.",
+    "expected": "ხევისბერის სიტყვა თემისთვის უზენაესი კანონია.",
+    "weight": 1.4,
+    "origin": "literature_realism",
+    "note": "Alexander Kazbegi, Khevisberi Gocha, patriarchal judicial authority"
+  },
+  {
+    "id": "case-lit-proverb-ruse-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Skill surpasses brute strength, if a man devises it.",
+    "expected": "ხერხი სჯობია ღონესა, თუ კაცი მოიგონებსა.",
+    "weight": 1.5,
+    "origin": "proverbs_folklore",
+    "note": "Classical Georgian folk proverb on intellect over brute force"
+  },
+  {
+    "id": "case-lit-rustaveli-charity-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "What you give away is yours, what you do not is lost!",
+    "expected": "რასაცა გასცემ შენია, რაც არა, დაკარგულია!",
+    "weight": 1.5,
+    "origin": "literature_epic",
+    "note": "Shota Rustaveli, The Knight in the Panther's Skin, maxim on boundless giving"
+  },
+  {
+    "id": "case-lit-proverb-sword-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "A wound from a sword heals, but a wound from a word does not.",
+    "expected": "ხმლისაგან დაჭრილი გამრთელდა, ენით დაჭრილი კი არა.",
+    "weight": 1.4,
+    "origin": "proverbs_folklore",
+    "note": "Classical Georgian ethical proverb on speech and honor"
+  },
+  {
+    "id": "case-morph-reciprocal-battle-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The warriors fought fiercely against each other on the battlefield.",
+    "expected": "მეომრები ბრძოლის ველზე სასტიკად შეებრძოლნენ ერთმანეთს.",
+    "weight": 1.4,
+    "origin": "grammar_reciprocal",
+    "note": "Georgian reciprocal synthetic verb (შეებრძოლნენ)"
+  },
+  {
+    "id": "case-morph-potential-finish-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He was able to finish the manuscript before sunset.",
+    "expected": "მან მზის ჩასვლამდე შეძლო ხელნაწერის დასრულება.",
+    "weight": 1.4,
+    "origin": "grammar_potentiality",
+    "note": "Potentiality auxiliary concord with verbal noun (ხელნაწერის დასრულება)"
+  },
+  {
+    "id": "case-syntax-archaic-vocative-plural-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Brothers, let us preserve the ancient covenant of our ancestors!",
+    "expected": "ძმანო, დავიცვათ ჩვენი წინაპრების უძველესი აღთქმა!",
+    "weight": 1.4,
+    "origin": "grammar_vocative",
+    "note": "Archaic high-literary plural vocative -ნო (ძმანო)"
+  },
+  {
+    "id": "case-ocr-split-tutashkhia-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "დათა თ|უთაშხია ქართული პროზის მწვერვალია.",
+    "expected": "დათა თუთაშხია ქართული პროზის მწვერვალია.",
+    "weight": 1.2,
+    "origin": "ocr_repair",
+    "note": "Broken vertical stroke glyph in famous title 'თ|უთაშხია'"
+  },
+  {
+    "id": "case-ocr-split-dumbadze-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ნოდარ დ|უმბაძის თეთრი ბაირაღები.",
+    "expected": "ნოდარ დუმბაძის თეთრი ბაირაღები.",
+    "weight": 1.2,
+    "origin": "ocr_repair",
+    "note": "Broken vertical bar artifact in author surname 'დ|უმბაძის'"
+  },
+  {
+    "id": "case-ocr-split-kazbegi-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ალექსანდრე ყ|აზბეგის ხევისბერი გოჩა.",
+    "expected": "ალექსანდრე ყაზბეგის ხევისბერი გოჩა.",
+    "weight": 1.2,
+    "origin": "ocr_repair",
+    "note": "Broken vertical stroke artifact in author surname 'ყ|აზბეგის'"
+  },
+  {
+    "id": "case-ocr-torn-compound-hyphen-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ყველამ თავ- თავისი წილი იტვირთა.",
+    "expected": "ყველამ თავ-თავისი წილი იტვირთა.",
+    "weight": 1.2,
+    "origin": "ocr_repair",
+    "note": "Reduplicated compound pronoun torn by OCR whitespace ('თავ- თავისი' -> 'თავ-თავისი')"
   }
 ]
