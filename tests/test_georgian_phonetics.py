@@ -160,6 +160,33 @@ class TestGeorgianPhonetics(unittest.TestCase):
         self.assertIn("დეკარტი", res2)
         self.assertIn("სპინოზა", res2)
 
+        res3 = verbalize_georgian_for_tts("მოაზროვნეები Cicero, Seneca, Epictetus, Machiavelli, Kierkegaard")
+        self.assertIn("ციცერონი", res3)
+        self.assertIn("სენეკა", res3)
+        self.assertIn("ეპიქტეტე", res3)
+        self.assertIn("მაკიაველი", res3)
+        self.assertIn("კირკეგორი", res3)
+
+    def test_cardinal_and_oblique_stem_concord(self):
+        res1 = verbalize_georgian_for_tts("მოვიდა 15 წუთში")
+        self.assertIn("თხუთმეტ წუთში", res1)
+
+        res2 = verbalize_georgian_for_tts("შეხვდა 10 კაცს")
+        self.assertIn("ათ კაცს", res2)
+
+        res3 = verbalize_georgian_for_tts("გავიდა 25 წელს")
+        self.assertIn("ოცდახუთ წელს", res3)
+
+        res4 = verbalize_georgian_for_tts("იყიდა 50 ლარად")
+        self.assertIn("ორმოცდაათ ლარად", res4)
+
+    def test_relative_clause_breath_pause(self):
+        res1 = verbalize_georgian_for_tts("სახლი რომელშიც ის ცხოვრობდა")
+        self.assertIn(", რომელშიც", res1)
+
+        res2 = verbalize_georgian_for_tts("წიგნი რომელსაც ვკითხულობდით")
+        self.assertIn(", რომელსაც", res2)
+
     def test_preview_generation_georgian(self):
         async def _run():
             url = await generate_voice_preview(voice="ka-GE-GiorgiNeural")

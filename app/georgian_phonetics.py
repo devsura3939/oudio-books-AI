@@ -162,6 +162,13 @@ LITERARY_NAMES_MAP = {
     "jung": "იუნგი", "darwin": "დარვინი", "newton": "ნიუტონი", "einstein": "აინშტაინი",
     "hemingway": "ჰემინგუეი", "orwell": "ორუელი", "dickens": "დიკენსი", "austen": "ოსტინი",
     "chekhov": "ჩეხოვი", "sun": "სუნ", "tzu": "ძი",
+    "machiavelli": "მაკიაველი", "kierkegaard": "კირკეგორი", "heidegger": "ჰაიდეგერი",
+    "sartre": "სარტრი", "camus": "კამიუ", "plutarch": "პლუტარქე", "tacitus": "ტაციტუსი",
+    "heraclitus": "ჰერაკლიტე", "parmenides": "პარმენიდე", "democritus": "დემოკრიტე",
+    "epicurus": "ეპიკურე", "zeno": "ზენონი", "marx": "მარქსი", "weber": "ვებერი",
+    "durkheim": "დიურკჰაიმი", "locke": "ლოკი", "hobbes": "ჰობსი", "hume": "ჰიუმი",
+    "berkeley": "ბერკლი", "spenser": "სპენსერი", "milton": "მილტონი", "byron": "ბაირონი",
+    "shelley": "შელი", "keats": "ქითსი", "wordsworth": "უორდსუორთი", "chaucer": "ჩოსერი",
     "john": "ჯონ", "james": "ჯეიმს", "george": "ჯორჯ", "william": "უილიამ", "charles": "ჩარლზ",
     "david": "დავით", "robert": "რობერტ", "edward": "ედუარდ", "henry": "ჰენრი", "thomas": "თომას",
     "mary": "მერი", "elizabeth": "ელიზაბეთ", "sarah": "სარა", "jane": "ჯეინ", "emma": "ემა",
@@ -438,14 +445,20 @@ def verbalize_georgian_for_tts(text: str) -> str:
         out
     )
 
-    # 10b. Vigesimal & Centenary Numeral Stem Elision Before Oblique Nouns & Measures
+    # 10b. Cardinal & Vigesimal Numeral Stem Elision Before Oblique Nouns & Measures
     # In Georgian morphosyntax, cardinal numbers drop the final -ი when modifying an oblique noun:
-    # e.g., "ოცი კაცს" -> "ოც კაცს", "ორმოცი დღეს" -> "ორმოც დღეს", "ასი წლამდე" -> "ას წლამდე".
-    vigesimal_stems = r'(?:ოც|ორმოც|სამოც|ოთხმოც|ას|ორას|სამას|ოთხას|ხუთას|ექვსას|შვიდას|რვაას|ცხრაას|ათას)'
-    verbs_ending_in_s = r'(?:არის|ჩანს|გადის|შედის|იცის|აქვს|ჰყავს|უნდა|იტყვის|ხედავს|წერს|ამბობს|მოდის|მიდის|ხდება|უყვარს|ახსოვს|სჭირდება|ესმის|დგას|ზის|წევს|ჰქვია|ჰგავს)'
+    # e.g., "ოცი კაცს" -> "ოც კაცს", "თხუთმეტი წუთში" -> "თხუთმეტ წუთში", "ათი დღეს" -> "ათ დღეს", "ასი წლამდე" -> "ას წლამდე".
+    cardinal_stems = (
+        r'(?:'
+        r'(?:[ა-ჰ]*და)?(?:ერთ|ორ|სამ|ოთხ|ხუთ|ექვს|შვიდ|ათ|თერთმეტ|თორმეტ|ცამეტ|თოთხმეტ|თხუთმეტ|თექვსმეტ|ჩვიდმეტ|თვრამეტ|ცხრამეტ)|'
+        r'(?:[ა-ჰ]*და)?(?:ოც|ორმოც|სამოც|ოთხმოც)|'
+        r'(?:[ა-ჰ]+\s+)?(?:ას|ორას|სამას|ოთხას|ხუთას|ექვსას|შვიდას|რვაას|ცხრაას|ათას|მილიონ|მილიარდ)'
+        r')'
+    )
+    verbs_ending_in_s = r'(?:არის|ჩანს|გადის|შედის|იცის|აქვს|ჰყავს|უნდა|იტყვის|ხედავს|წერს|ამბობს|მოდის|მიდის|ხდება|უყვარს|ახსოვს|სჭირდება|ესმის|დგას|ზის|წევს|ჰქვია|ჰგავს|მუშაობს|ფიქრობს|ცხოვრობს|დადის|ყიდის|იღებს|იწყებს|გრძნობს|ლაპარაკობს)'
     oblique_noun_pattern = rf'(?!{verbs_ending_in_s}(?![{KA_CHARS}]))(?:[{KA_CHARS}]+(?:ს|ით|ად|დან|თან|კენ|ზე|ში|ისთვის|მდე))'
     out = re.sub(
-        rf"{KA_PREFIX}({vigesimal_stems})ი\s+({oblique_noun_pattern}){KA_SUFFIX}",
+        rf"{KA_PREFIX}({cardinal_stems})ი\s+({oblique_noun_pattern}){KA_SUFFIX}",
         r"\g<1> \g<2>",
         out
     )
@@ -468,9 +481,10 @@ def verbalize_georgian_for_tts(text: str) -> str:
     out = re.sub(r"^[,\s]+", "", out)
     out = re.sub(r"\s+", " ", out).strip()
 
-    # 13. Natural breath pause before Georgian conjunctions
+    # 13. Natural breath pause before Georgian conjunctions and relative clauses
     conjunctions = (
-        "მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|როდესაც|რომელიც|რომ|სანამ|ვიდრე"
+        "მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|რაკიღა|რამდენადაც|"
+        "როდესაც|რომელიც|რომელსაც|რომელშიც|რომელზეც|რომელთა|რომელთაც|რომ|სანამ|ვიდრე"
     )
     out = re.sub(
         rf"([^,.;:!?])\s+({conjunctions}){KA_SUFFIX}",

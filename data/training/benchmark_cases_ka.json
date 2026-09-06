@@ -68,5 +68,175 @@
     "weight": 1.5,
     "origin": "seed",
     "note": "Idiomatic literary rendering"
+  },
+  {
+    "id": "case-plato-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The unexamined life is not worth living.",
+    "expected": "გამოუკვლეველი ცხოვრება არ ღირს ადამიანის არსებობად.",
+    "weight": 2.0,
+    "origin": "expansion-iter2",
+    "note": "Plato Apology philosophical aphorism"
+  },
+  {
+    "id": "case-aristotle-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "We are what we repeatedly do.",
+    "expected": "ჩვენ ვართ ის, რასაც მუდმივად ვაკეთებთ.",
+    "weight": 2.0,
+    "origin": "expansion-iter2",
+    "note": "Aristotle Nicomachean Ethics habituation"
+  },
+  {
+    "id": "case-homer-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Sing in me, Muse, and through me tell the story.",
+    "expected": "მიმღერე მე, მუზავ, და ჩემი პირით მოყევი ეს ამბავი.",
+    "weight": 2.0,
+    "origin": "expansion-iter2",
+    "note": "Homer Odyssey epic invocation"
+  },
+  {
+    "id": "case-shakespeare-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "All the world's a stage, and all the men and women merely players.",
+    "expected": "მთელი სამყარო თეატრია, ხოლო ყველა კაცი და ქალი — მხოლოდ მსახიობი.",
+    "weight": 2.0,
+    "origin": "expansion-iter2",
+    "note": "Shakespeare As You Like It philosophical metaphor"
+  },
+  {
+    "id": "case-epictetus-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "No man is free who is not master of himself.",
+    "expected": "არავინაა თავისუფალი, ვინც საკუთარი თავის ბატონი არ არის.",
+    "weight": 1.5,
+    "origin": "expansion-iter2",
+    "note": "Epictetus Stoic autonomy"
+  },
+  {
+    "id": "case-seneca-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Luck is what happens when preparation meets opportunity.",
+    "expected": "იღბალი მაშინ ჩნდება, როცა მზადყოფნა შესაძლებლობას ხვდება.",
+    "weight": 1.5,
+    "origin": "expansion-iter2",
+    "note": "Seneca Letters to Lucilius on virtue and fortune"
+  },
+  {
+    "id": "case-cicero-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "A room without books is like a body without a soul.",
+    "expected": "ოთახი წიგნების გარეშე ჰგავს სხეულს სულის გარეშე.",
+    "weight": 1.5,
+    "origin": "expansion-iter2",
+    "note": "Cicero literary metaphor"
+  },
+  {
+    "id": "case-ergative-aorist-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The great poet wrote an immortal poem.",
+    "expected": "დიდებულმა პოეტმა უკვდავი ლექსი დაწერა.",
+    "weight": 1.5,
+    "origin": "expansion-iter2",
+    "note": "Series II Transitive Aorist Ergative Case agreement"
+  },
+  {
+    "id": "case-experiencer-dative-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The traveler needed water in the dry desert.",
+    "expected": "მგზავრს მშრალ უდაბნოში წყალი სჭირდებოდა.",
+    "weight": 1.5,
+    "origin": "expansion-iter2",
+    "note": "Experiencer Dative Inversion with imperfective modality"
+  },
+  {
+    "id": "case-locative-postposition-02",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He placed the ancient book beside the lamp.",
+    "expected": "მან ძველი წიგნი ლამპის გვერდით დადო.",
+    "weight": 1.5,
+    "origin": "expansion-iter2",
+    "note": "Locative complex postpositional phrase"
+  },
+  {
+    "id": "case-numeral-noun-concord-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Within fifteen minutes twenty men arrived.",
+    "expected": "თხუთმეტ წუთში ოცი კაცი მოვიდა.",
+    "weight": 1.5,
+    "origin": "expansion-iter2",
+    "note": "Numeral stem truncation before oblique temporal noun"
+  },
+  {
+    "id": "case-ocr-ligature-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ფ|ლოსოფია და სიბრძნე",
+    "expected": "ფილოსოფია და სიბრძნე",
+    "weight": 1.0,
+    "origin": "expansion-iter2",
+    "note": "Camera OCR vertical bar repair in philosophical noun"
+  },
+  {
+    "id": "case-ocr-confusable-p-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "3ატარა უფლისწული",
+    "expected": "პატარა უფლისწული",
+    "weight": 1.0,
+    "origin": "expansion-iter2",
+    "note": "Digit 3 to Georgian letter პ confusable repair"
+  },
+  {
+    "id": "case-ocr-confusable-dz-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "თალიან თბილი და თეთრი",
+    "expected": "ძალიან თბილი და თეთრი",
+    "weight": 1.0,
+    "origin": "expansion-iter2",
+    "note": "Georgian letter თ to ძ confusable repair in adverb"
+  },
+  {
+    "id": "case-ocr-confusable-kh-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ცალხის სიხარული",
+    "expected": "ხალხის სიხარული",
+    "weight": 1.0,
+    "origin": "expansion-iter2",
+    "note": "Georgian letter ც to ხ confusable repair in genitive noun"
+  },
+  {
+    "id": "case-idiom-02",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Water off a duck's back.",
+    "expected": "ქვაზე წყლის დასხმა.",
+    "weight": 1.5,
+    "origin": "expansion-iter2",
+    "note": "Authentic Georgian idiomatic equivalent"
+  },
+  {
+    "id": "case-idiom-03",
+    "language": "ka",
+    "kind": "translate",
+    "source": "In the twinkling of an eye.",
+    "expected": "თვალის დახამხამებაში.",
+    "weight": 1.5,
+    "origin": "expansion-iter2",
+    "note": "Authentic Georgian literary idiom"
   }
 ]
