@@ -26,6 +26,7 @@ from app.training_engine import (
     validate_item,
     regex_is_risky,
     evaluate_pack,
+    generate_new_training_key,
     DEFAULT_DEV_KEY
 )
 
@@ -255,6 +256,36 @@ class TestTrainingAPI(unittest.TestCase):
         s_data = s_resp.json()
         self.assertEqual(s_data.get("guide_url"), "/api/public/train/guide")
         self.assertIn("Classical Antiquity", s_data.get("guide_markdown", ""))
+
+    def test_generate_training_key_endpoint(self):
+        # 1. Generate new key via REST API
+        resp = client.post(
+            "/api/public/train/key/generate",
+            json={"label": "LLM Test Generator", "language": "ka", "scope": "both"}
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data.get("status"), "success")
+        gen_key = data.get("key")
+        self.assertTrue(gen_key.startswith("engbot_tk_"))
+        self.assertEqual(data.get("label"), "LLM Test Generator")
+        self.assertEqual(data.get("language"), "ka")
+
+        # 2. Verify key can authenticate in verify_key
+        record = verify_key(gen_key)
+        self.assertIsNotNone(record)
+        self.assertEqual(record.get("label"), "LLM Test Generator")
+
+        # 3. Verify key can open training session
+        sess_resp = client.post(
+            "/api/public/train/session",
+            json={"model": "claude-3-7-sonnet"},
+            headers={"X-Training-Key": gen_key}
+        )
+        self.assertEqual(sess_resp.status_code, 200)
+        sess_data = sess_resp.json()
+        self.assertIn("session_id", sess_data)
+        self.assertEqual(sess_data.get("language"), "ka")
 
 
 if __name__ == "__main__":

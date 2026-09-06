@@ -39,7 +39,8 @@ from app.training_engine import (
     propose_training_rules, finish_training_session, load_active_pack,
     load_benchmark_cases, evaluate_pack, DEFAULT_DEV_KEY,
     ENGINE_ARCHITECTURE_AND_TRAINING_GUIDE_MD,
-    get_training_guide_json, get_training_guide_markdown
+    get_training_guide_json, get_training_guide_markdown,
+    generate_new_training_key
 )
 import base64
 from io import BytesIO
@@ -674,4 +675,27 @@ async def training_finish(req: Request):
     
     summary = body.get("summary")
     return finish_training_session(session_id, key_info, summary=summary)
+
+
+@app.post("/api/public/train/key/generate")
+@app.post("/api/train/key/generate")
+async def training_key_generate(req: Request):
+    """Generate a new autonomous training key for LLMs and register in server storage."""
+    try:
+        body = await req.json()
+    except Exception:
+        body = {}
+    label = body.get("label") or "Generated Autonomous Training Key"
+    lang = body.get("language") or "ka"
+    scope = body.get("scope") or "both"
+    key_data = generate_new_training_key(label=label, language=lang, scope=scope)
+    return {
+        "status": "success",
+        "key": key_data["key"],
+        "key_prefix": key_data["key_prefix"],
+        "label": key_data["label"],
+        "language": key_data["language"],
+        "created_at": key_data["created_at"],
+        "instructions_url": "/api/public/train/guide"
+    }
 

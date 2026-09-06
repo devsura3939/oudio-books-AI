@@ -678,6 +678,40 @@ def verify_key(raw_key: str) -> Optional[Dict[str, Any]]:
     return key_info
 
 
+def generate_new_training_key(label: str = "User Generated Key", language: str = "ka", scope: str = "both") -> Dict[str, Any]:
+    """Generate a new autonomous training key and store its hash in training_keys.json."""
+    import secrets
+    init_training_storage()
+    token = f"engbot_tk_{secrets.token_hex(16)}"
+    h = sha256_hex(token)
+    try:
+        keys_data = json.loads(KEYS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        keys_data = {}
+
+    key_record = {
+        "id": str(uuid.uuid4()),
+        "key_prefix": token[:18],
+        "label": label,
+        "language": language if language in ALLOWED_LANGUAGES else "ka",
+        "scope": scope,
+        "uses": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "revoked_at": None,
+        "last_used_at": None
+    }
+    keys_data[h] = key_record
+    KEYS_FILE.write_text(json.dumps(keys_data, indent=2, ensure_ascii=False), encoding="utf-8")
+    return {
+        "key": token,
+        "key_prefix": token[:18],
+        "label": label,
+        "language": key_record["language"],
+        "scope": scope,
+        "created_at": key_record["created_at"]
+    }
+
+
 def load_active_pack(language: str) -> Dict[str, Any]:
     """Load active rule pack for language."""
     init_training_storage()

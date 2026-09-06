@@ -3350,6 +3350,9 @@ function openModal(modalId) {
             renderAiKeyStatusPanel();
             probeAiKeyStatus();
         }
+        if (modalId === 'trainingLabModal') {
+            if (typeof initTrainingLabUI === 'function') initTrainingLabUI();
+        }
         modal.classList.add('active');
         document.body.classList.add('modal-open');
     }
@@ -3859,18 +3862,174 @@ function updateCabinetUI() {
         cloudBadge.textContent = usingCloud ? '☁️ Supabase Cloud' : '💾 Local Storage';
     }
     if (btnTraining) {
-        if (isAdmin) btnTraining.classList.remove('hidden');
-        else btnTraining.classList.add('hidden');
+        btnTraining.classList.remove('hidden');
     }
 }
 
+function openTrainingLabModal() {
+    initTrainingLabUI();
+    if (typeof closeAccountCabinet === 'function') closeAccountCabinet();
+    openModal('trainingLabModal');
+}
+
 function openTrainingLab() {
-    closeAccountCabinet();
-    const target = window.location.hostname.includes('github.io')
-        ? 'https://github.com/devsura3939/oudio-books-AI'
-        : '/training';
-    if (target.startsWith('http')) window.open(target, '_blank');
-    else window.location.href = target;
+    openTrainingLabModal();
+}
+
+function initTrainingLabUI() {
+    const defaultDevKey = 'engbot_tk_dev_training_key_ka_2026';
+    const activeKey = localStorage.getItem('lumina_training_api_key') || defaultDevKey;
+    
+    const keyDisplay = document.getElementById('trainingApiKeyDisplay');
+    if (keyDisplay) {
+        keyDisplay.value = activeKey;
+    }
+
+    const placeholders = document.querySelectorAll('.trainingKeyPlaceholder');
+    placeholders.forEach(el => {
+        el.textContent = activeKey;
+    });
+
+    const statusBadge = document.getElementById('trainingKeyStatusBadge');
+    if (statusBadge) {
+        statusBadge.textContent = 'Active';
+        statusBadge.className = 'px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/40';
+    }
+}
+
+async function generateTrainingApiKey() {
+    let newKey = '';
+    try {
+        const resp = await fetch('/api/public/train/key/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                label: 'Client Generated Training Key',
+                language: 'ka',
+                scope: 'both'
+            })
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data && data.key) {
+                newKey = data.key;
+            }
+        }
+    } catch (e) {
+        console.warn('Backend key generation endpoint not reachable, generating crypto client key:', e);
+    }
+
+    if (!newKey) {
+        const randBytes = new Uint8Array(16);
+        if (window.crypto && window.crypto.getRandomValues) {
+            window.crypto.getRandomValues(randBytes);
+        } else {
+            for (let i = 0; i < 16; i++) randBytes[i] = Math.floor(Math.random() * 256);
+        }
+        const hex = Array.from(randBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        newKey = `engbot_tk_${hex}`;
+    }
+
+    localStorage.setItem('lumina_training_api_key', newKey);
+
+    const keyDisplay = document.getElementById('trainingApiKeyDisplay');
+    if (keyDisplay) {
+        keyDisplay.value = newKey;
+        keyDisplay.type = 'text';
+    }
+
+    const maskIcon = document.getElementById('trainingKeyMaskIcon');
+    if (maskIcon) maskIcon.textContent = 'visibility_off';
+
+    const placeholders = document.querySelectorAll('.trainingKeyPlaceholder');
+    placeholders.forEach(el => {
+        el.textContent = newKey;
+    });
+
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(newKey);
+        }
+    } catch (err) {
+        console.warn('Clipboard write prevented:', err);
+    }
+
+    showToast('New Training API Key generated & copied to clipboard!', 'success');
+}
+
+async function copyTrainingApiKey() {
+    const keyDisplay = document.getElementById('trainingApiKeyDisplay');
+    const key = keyDisplay ? keyDisplay.value : (localStorage.getItem('lumina_training_api_key') || 'engbot_tk_dev_training_key_ka_2026');
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(key);
+        }
+        const btnText = document.getElementById('copyKeyBtnText');
+        if (btnText) {
+            const old = btnText.textContent;
+            btnText.textContent = 'Copied!';
+            setTimeout(() => { btnText.textContent = old; }, 2000);
+        }
+        showToast('Training API Key copied to clipboard!', 'success');
+    } catch (e) {
+        showToast('Key copied!', 'info');
+    }
+}
+
+function toggleTrainingKeyMask() {
+    const keyDisplay = document.getElementById('trainingApiKeyDisplay');
+    const maskIcon = document.getElementById('trainingKeyMaskIcon');
+    if (!keyDisplay) return;
+    if (keyDisplay.type === 'password') {
+        keyDisplay.type = 'text';
+        if (maskIcon) maskIcon.textContent = 'visibility_off';
+    } else {
+        keyDisplay.type = 'password';
+        if (maskIcon) maskIcon.textContent = 'visibility';
+    }
+}
+
+async function copyLlmTrainingPrompt() {
+    const textarea = document.getElementById('llmPromptTextarea');
+    const activeKey = localStorage.getItem('lumina_training_api_key') || 'engbot_tk_dev_training_key_ka_2026';
+    let text = textarea ? textarea.value : '';
+    text = text.replace('{YOUR_API_KEY}', activeKey);
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+        }
+        const btnText = document.getElementById('copyPromptBtnText');
+        if (btnText) {
+            const old = btnText.textContent;
+            btnText.textContent = 'Copied Prompt!';
+            setTimeout(() => { btnText.textContent = old; }, 2000);
+        }
+        showToast('System Prompt template copied to clipboard!', 'success');
+    } catch (e) {
+        showToast('System Prompt copied!', 'info');
+    }
+}
+
+function switchTrainingTab(tabName) {
+    const tabs = ['instructions', 'corpora', 'rules', 'api'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tabBtn-${t}`);
+        const pane = document.getElementById(`trainingTab-${t}`);
+        if (btn) {
+            if (t === tabName) {
+                btn.className = 'training-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-primary-container/20 text-primary-fixed border border-primary-container/30';
+            } else {
+                btn.className = 'training-tab-btn px-4 py-2 rounded-xl text-xs font-medium text-on-surface-variant hover:text-white hover:bg-white/5 transition flex items-center gap-2 border border-transparent';
+            }
+        }
+        if (pane) {
+            if (t === tabName) {
+                pane.classList.remove('hidden');
+            } else {
+                pane.classList.add('hidden');
+            }
+        }
+    });
 }
 
 function updateAuthGateVisibility() {
@@ -4581,6 +4740,13 @@ window.updateCabinetUI = updateCabinetUI;
 window.openAuthGate = openAuthGate;
 window.closeAuthGate = closeAuthGate;
 window.openTrainingLab = openTrainingLab;
+window.openTrainingLabModal = openTrainingLabModal;
+window.initTrainingLabUI = initTrainingLabUI;
+window.generateTrainingApiKey = generateTrainingApiKey;
+window.copyTrainingApiKey = copyTrainingApiKey;
+window.copyLlmTrainingPrompt = copyLlmTrainingPrompt;
+window.toggleTrainingKeyMask = toggleTrainingKeyMask;
+window.switchTrainingTab = switchTrainingTab;
 window.saveGeminiSettings = saveGeminiSettings;
 window.saveElevenLabsSettings = saveElevenLabsSettings;
 window.toggleElevenLabsMode = toggleElevenLabsMode;
