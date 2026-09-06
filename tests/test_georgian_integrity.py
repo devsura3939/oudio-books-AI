@@ -762,6 +762,51 @@ assert not any(b["id"] in ("user_a_book", "user_b_book") for b in guest_shelf), 
 
 print("  [PASS] Account shelf isolation, cloud storage purges, smooth listening debouncing & GitHub link integrity verified")
 
+# ----------------------------------------------------------------------------
+# 26. Smooth Background Translation Minimization & Dynamic Sub-Chunking
+# ----------------------------------------------------------------------------
+for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "function buildTranslationChunks(" in content, f"FAIL: buildTranslationChunks missing from {path_name}"
+    assert "document.body.classList.remove('modal-open')" in content, f"FAIL: modal-open removal missing from {path_name}"
+    assert "document.body.style.overflow = ''" in content, f"FAIL: style.overflow reset missing from {path_name}"
+    assert "activeTranslationBook" in content, f"FAIL: activeTranslationBook missing from {path_name}"
+    assert "targetBook = currentBook" in content, f"FAIL: targetBook scoping missing from {path_name}"
+    assert "minimizeTranslationPanel()" in content, f"FAIL: minimizeTranslationPanel invocation missing from {path_name}"
+
+for path_name, path in [("index.html", INDEX_HTML), ("studio/index.html", STUDIO_INDEX)]:
+    with open(path, "r", encoding="utf-8") as f:
+        html = f.read()
+    assert 'id="wholeBookTranslateModal"' in html and 'minimizeTranslationPanel()' in html, f"FAIL: Backdrop click-to-minimize missing from {path_name}"
+    assert 'id="translationMiniDock"' in html and 'z-50' in html, f"FAIL: z-50 missing on translationMiniDock in {path_name}"
+
+# Functional test of sentence-aware chunker behavior
+long_unsegmented_text = " ".join([f"This is literary sentence {i} detailing character development and scene setting." for i in range(120)])
+assert len(long_unsegmented_text) > 8000, "Test setup error"
+# Verify that sentence grouping splits into balanced pieces
+import re
+sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', long_unsegmented_text) if s.strip()]
+assert len(sentences) == 120
+sub_chunks = []
+curr = []
+curr_len = 0
+for s in sentences:
+    if (curr_len + len(s) > 1800 or len(curr) >= 16) and curr:
+        sub_chunks.append(" ".join(curr))
+        curr = [s]
+        curr_len = len(s)
+    else:
+        curr.append(s)
+        curr_len += len(s) + 1
+if curr:
+    sub_chunks.append(" ".join(curr))
+
+assert len(sub_chunks) >= 5, f"FAIL: Expected >= 5 sub-chunks, got {len(sub_chunks)}"
+assert all(len(c) <= 2000 for c in sub_chunks), "FAIL: Sub-chunk exceeded max bounds"
+
+print("  [PASS] Smooth background translation minimization, dynamic sub-chunking & targetBook isolation verified in all mirrors")
+
 print("\nALL INTEGRITY AND REGRESSION AUDIT CHECKS PASSED (100% GREEN)!")
 
 

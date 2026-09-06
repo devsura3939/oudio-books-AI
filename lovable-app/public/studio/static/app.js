@@ -6124,8 +6124,12 @@ function setupKeyboardAndTouchControls() {
                 return;
             }
             const openModalEl = document.querySelector('.modal-overlay.active');
-            if (openModalEl && !openModalEl.id.startsWith('wholeBook')) {
-                closeModal(openModalEl.id);
+            if (openModalEl) {
+                if (openModalEl.id === 'wholeBookTranslateModal') {
+                    minimizeTranslationPanel();
+                } else {
+                    closeModal(openModalEl.id);
+                }
                 e.preventDefault();
                 return;
             }
@@ -6468,9 +6472,10 @@ function detectTextLang(text) {
     return ka > latin ? 'ka' : 'en';
 }
 
-function getBookGlossaryBlock() {
-    if (!currentBook || !Array.isArray(currentBook.glossary) || currentBook.glossary.length === 0) return '';
-    const lines = currentBook.glossary.map(g => `- "${g.en}" -> "${g.ka}"`).join('\n');
+function getBookGlossaryBlock(book = null) {
+    const b = book || activeTranslationBook || currentBook;
+    if (!b || !Array.isArray(b.glossary) || b.glossary.length === 0) return '';
+    const lines = b.glossary.map(g => `- "${g.en}" -> "${g.ka}"`).join('\n');
     return `\n\n=== BOOK GLOSSARY (MANDATORY CHARACTER NAMES & TERMS) ===\nUse these exact translations consistently across all chapters:\n${lines}\n=== END BOOK GLOSSARY ===`;
 }
 
@@ -7041,6 +7046,7 @@ function setTranslationBudgetMode(mode) {
 let translationPanelMinimized = false;
 let translationStartTime = 0;
 let translationChunkTimestamps = [];
+let activeTranslationBook = null;
 // Live progress state shared between workers; updated at most every 250ms
 // to keep the UI smooth without causing layout thrash on every chunk.
 let wbProgressState = {
@@ -7080,24 +7086,36 @@ function flushWbProgress() {
 function minimizeTranslationPanel() {
     translationPanelMinimized = true;
     const panel = document.getElementById('wholeBookTranslateModal');
-    const dock = DOM.translationMiniDock;
+    const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
     if (panel) panel.classList.remove('active');
-    if (dock) dock.classList.remove('hidden');
+    if (dock) {
+        dock.classList.remove('hidden');
+        dock.style.display = 'block';
+    }
+    // CRITICAL: Unblock page scrolling and interaction for bookshelf, reader, and controls
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
     updateMiniDock();
 }
 
 function restoreTranslationPanel() {
     translationPanelMinimized = false;
     const panel = document.getElementById('wholeBookTranslateModal');
-    const dock = DOM.translationMiniDock;
-    if (panel) panel.classList.add('active');
-    if (dock) dock.classList.add('hidden');
+    const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
+    if (panel) {
+        panel.classList.add('active');
+        document.body.classList.add('modal-open');
+    }
+    if (dock) {
+        dock.classList.add('hidden');
+        dock.style.display = 'none';
+    }
 }
 
 function updateMiniDock() {
     if (!translationPanelMinimized) return;
-    const label = DOM.miniDockLabel;
-    const pct = DOM.miniDockPct;
+    const label = DOM.miniDockLabel || document.getElementById('miniDockLabel');
+    const pct = DOM.miniDockPct || document.getElementById('miniDockPct');
     if (label && DOM.wbChapterLabel) label.textContent = DOM.wbChapterLabel.textContent;
     if (pct && DOM.wbProgressPct) pct.textContent = DOM.wbProgressPct.textContent;
 }
@@ -7125,10 +7143,11 @@ function updateChunkRate() {
     DOM.wbChunkRate.textContent = `${translationChunkTimestamps.length} chunks/min`;
 }
 
-function buildChapterQueue() {
-    if (!DOM.wbChapterQueue || !currentBook) return;
+function buildChapterQueue(book = null) {
+    const b = book || activeTranslationBook || currentBook;
+    if (!DOM.wbChapterQueue || !b || !b.chapters) return;
     DOM.wbChapterQueue.innerHTML = '';
-    currentBook.chapters.forEach((chap, idx) => {
+    b.chapters.forEach((chap, idx) => {
         const row = document.createElement('div');
         row.dataset.chapterIdx = idx;
         const hasKa = !!chap.text_ka;
@@ -7699,6 +7718,108 @@ async function resumeTranslationJobIfAny() {
     }
 }
 
+/**
+ * Sentence-aware dynamic chunking for whole-book translation.
+ * Preserves authentic paragraph breaks (\n\n) when present, but decomposes
+ * oversized paragraphs (> targetCharLimit) or unsegmented text into natural
+ * sentences of ~1,400–1,800 characters (max 16 sentences) so that AI engines
+ * (Gemini, Groq, OpenRouter) process them with zero freeze, maximum literary quality,
+ * and high-frequency real-time progress updates.
+ */
+function buildTranslationChunks(chapterText, targetCharLimit = 1800, maxSentencesPerChunk = 16) {
+    if (!chapterText || !chapterText.trim()) return { chunks: [], chunkSentenceCounts: [] };
+
+    const rawParagraphs = chapterText
+        .split(/\n\s*\n/)
+        .map(p => p.trim())
+        .filter(Boolean);
+
+    let paragraphs = rawParagraphs.length > 0 ? rawParagraphs : [chapterText.trim()];
+    if (paragraphs.length <= 1 && chapterText.includes('\n')) {
+        const lineParagraphs = chapterText
+            .split(/\n+/)
+            .map(p => p.trim())
+            .filter(Boolean);
+        if (lineParagraphs.length > 1) {
+            paragraphs = lineParagraphs;
+        }
+    }
+
+    const chunks = [];
+    const chunkSentenceCounts = [];
+
+    function pushChunk(text, sCount) {
+        const trimmed = text.trim();
+        if (trimmed.length > 0) {
+            chunks.push(trimmed);
+            chunkSentenceCounts.push(Math.max(1, sCount));
+        }
+    }
+
+    let currentChunkParts = [];
+    let currentChunkLen = 0;
+    let currentChunkSCount = 0;
+
+    for (const para of paragraphs) {
+        if (para.length > targetCharLimit) {
+            if (currentChunkParts.length > 0) {
+                pushChunk(currentChunkParts.join('\n\n'), currentChunkSCount);
+                currentChunkParts = [];
+                currentChunkLen = 0;
+                currentChunkSCount = 0;
+            }
+
+            const pSentences = splitIntoNaturalSentences(para);
+            if (pSentences.length <= 1) {
+                const wordChunks = typeof chunkByWords === 'function' ? chunkByWords(para, 250) : [para];
+                for (const wc of wordChunks) {
+                    pushChunk(wc, 1);
+                }
+            } else {
+                let subParts = [];
+                let subLen = 0;
+                let subCount = 0;
+                for (const s of pSentences) {
+                    if ((subLen + s.length > targetCharLimit || subCount >= maxSentencesPerChunk) && subParts.length > 0) {
+                        pushChunk(subParts.join(' '), subCount);
+                        subParts = [s];
+                        subLen = s.length;
+                        subCount = 1;
+                    } else {
+                        subParts.push(s);
+                        subLen += (subLen > 0 ? 1 : 0) + s.length;
+                        subCount++;
+                    }
+                }
+                if (subParts.length > 0) {
+                    pushChunk(subParts.join(' '), subCount);
+                }
+            }
+            continue;
+        }
+
+        const pSentences = splitIntoNaturalSentences(para);
+        const pSCount = Math.max(1, pSentences.length);
+
+        if ((currentChunkLen + para.length > targetCharLimit || (currentChunkSCount + pSCount > maxSentencesPerChunk && currentChunkLen > 800)) && currentChunkParts.length > 0) {
+            pushChunk(currentChunkParts.join('\n\n'), currentChunkSCount);
+            currentChunkParts = [para];
+            currentChunkLen = para.length;
+            currentChunkSCount = pSCount;
+        } else {
+            currentChunkParts.push(para);
+            currentChunkLen += (currentChunkLen > 0 ? 2 : 0) + para.length;
+            currentChunkSCount += pSCount;
+        }
+    }
+
+    if (currentChunkParts.length > 0) {
+        pushChunk(currentChunkParts.join('\n\n'), currentChunkSCount);
+    }
+
+    return { chunks, chunkSentenceCounts };
+}
+
 async function startWholeBookTranslation(resume = false) {
     if (!currentBook) {
         alert('Please select an audiobook to translate.');
@@ -7713,19 +7834,30 @@ async function startWholeBookTranslation(resume = false) {
         }
         return;
     }
-    if (isTranslatingWholeBook) { openModal('wholeBookTranslateModal'); return; }
+    if (isTranslatingWholeBook) {
+        if (translationPanelMinimized) {
+            restoreTranslationPanel();
+        } else {
+            openModal('wholeBookTranslateModal');
+        }
+        return;
+    }
 
-    const existing = resume ? loadTranslationJob(currentBook.id) : null;
+    const targetBook = currentBook;
+    if (!targetBook || !targetBook.chapters || !targetBook.chapters.length) return;
+    activeTranslationBook = targetBook;
+
+    const existing = resume ? loadTranslationJob(targetBook.id) : null;
     const job = existing && existing.status === 'running' ? existing : {
-        bookId: currentBook.id,
-        title: currentBook.title,
+        bookId: targetBook.id,
+        title: targetBook.title,
         status: 'running',
         chapterIdx: 0,
         partial: [],
-        totalChapters: currentBook.chapters.length,
+        totalChapters: targetBook.chapters.length,
     };
     job.status = 'running';
-    job.totalChapters = currentBook.chapters.length;
+    job.totalChapters = targetBook.chapters.length;
     saveTranslationJob(job);
 
     isTranslatingWholeBook = true;
@@ -7743,14 +7875,14 @@ async function startWholeBookTranslation(resume = false) {
     // Reset and build the detailed progress UI
     if (DOM.wbChunkLog) DOM.wbChunkLog.innerHTML = '';
     if (DOM.wbChunkRate) DOM.wbChunkRate.textContent = '0 chunks/min';
-    buildChapterQueue();
+    buildChapterQueue(targetBook);
 
-    const totalChapters = currentBook.chapters.length;
+    const totalChapters = targetBook.chapters.length;
     let totalSentencesCount = 0;
     let completedSentencesCount = 0;
     let totalCharsTranslated = 0;
 
-    currentBook.chapters.forEach(chap => {
+    targetBook.chapters.forEach(chap => {
         const s = splitIntoNaturalSentences(chap.text);
         totalSentencesCount += s.length;
     });
@@ -7758,7 +7890,7 @@ async function startWholeBookTranslation(resume = false) {
     let cloudJob = null;
     if (window.LuminaStore && window.LuminaStore.createJob) {
         try {
-            cloudJob = await window.LuminaStore.createJob(currentBook.id, 'parse', totalChapters, `Translating "${currentBook.title}" (Georgian Edition)`);
+            cloudJob = await window.LuminaStore.createJob(targetBook.id, 'parse', totalChapters, `Translating "${targetBook.title}" (Georgian Edition)`);
         } catch (e) {
             console.warn('[translation] cloud job create warning:', e);
         }
@@ -7768,16 +7900,16 @@ async function startWholeBookTranslation(resume = false) {
         // ── Book-Level Glossary Pre-Pass ────────────────────────────────────
         // Automatically extract consistent terminology & character names from the book
         // prologue/first chapter if not already generated.
-        if (aiTranslationAvailable() && (!currentBook.glossary || !currentBook.glossary.length)) {
+        if (aiTranslationAvailable() && (!targetBook.glossary || !targetBook.glossary.length)) {
             try {
                 if (DOM.wbChapterLabel) {
-                    DOM.wbChapterLabel.textContent = `Extracting book glossary & character names for “${currentBook.title}”…`;
+                    DOM.wbChapterLabel.textContent = `Extracting book glossary & character names for “${targetBook.title}”…`;
                 }
-                const sampleText = currentBook.chapters.slice(0, 2).map(c => c.text || '').join('\n\n').slice(0, 3000).trim();
+                const sampleText = targetBook.chapters.slice(0, 2).map(c => c.text || '').join('\n\n').slice(0, 3000).trim();
                 if (sampleText.length > 80) {
                     const glossaryPrompt = `Extract key character names, titles, and unique terminology from this book opening. Provide authoritative literary Georgian (ქართული) translations or transliterations so they remain 100% consistent throughout the entire book.
 
-Book Title: "${currentBook.title}"
+Book Title: "${targetBook.title}"
 Sample Text:
 ${sampleText}
 
@@ -7787,9 +7919,9 @@ Max 15-20 key entries.`;
 
                     const gRes = await callGeminiJSON(glossaryPrompt, { temperature: 0.1, maxTokens: 2048 });
                     if (gRes && Array.isArray(gRes.glossary) && gRes.glossary.length > 0) {
-                        currentBook.glossary = gRes.glossary.filter(item => item && item.en && item.ka);
-                        await saveBookToDB(currentBook);
-                        console.log(`[translation] Book glossary created (${currentBook.glossary.length} entries):`, currentBook.glossary);
+                        targetBook.glossary = gRes.glossary.filter(item => item && item.en && item.ka);
+                        await saveBookToDB(targetBook);
+                        console.log(`[translation] Book glossary created (${targetBook.glossary.length} entries):`, targetBook.glossary);
                     }
                 }
             } catch (e) {
@@ -7800,7 +7932,7 @@ Max 15-20 key entries.`;
         for (let chIdx = 0; chIdx < totalChapters; chIdx++) {
             if (cancelTranslationFlag) break;
 
-            const chapter = currentBook.chapters[chIdx];
+            const chapter = targetBook.chapters[chIdx];
 
             // Already-translated chapters are never redone (resume or restart).
             if (chapter.text_ka && chapter.text_ka.trim().length > 0) {
@@ -7809,15 +7941,9 @@ Max 15-20 key entries.`;
                 continue;
             }
 
-            // Paragraph-aware chunking: preserve authentic paragraph breaks (\n\n)
-            const rawParagraphs = (chapter.text || '')
-                .split(/\n\s*\n/)
-                .map(p => p.trim())
-                .filter(Boolean);
-
-            const paragraphs = rawParagraphs.length > 0
-                ? rawParagraphs
-                : [(chapter.text || '').trim()].filter(Boolean);
+            // Sentence-aware dynamic chunking: preserves authentic paragraph breaks (\n\n)
+            // and splits oversized text or unsegmented PDFs into optimal ~1,500–1,800 char chunks
+            const { chunks, chunkSentenceCounts } = buildTranslationChunks(chapter.text, 1800, 16);
 
             // Resume inside a chapter: reuse the chunks we already checkpointed.
             const resumedPartial = (job.chapterIdx === chIdx && Array.isArray(job.partial)) ? job.partial : [];
@@ -7830,33 +7956,6 @@ Max 15-20 key entries.`;
             }
             updateChapterQueueStatus(chIdx, -1);
             updateMiniDock();
-
-            const chunks = [];
-            let currentChunkParas = [];
-            let currentChunkLen = 0;
-            let currentChunkSCount = 0;
-            let chunkSentenceCounts = [];
-
-            for (const para of paragraphs) {
-                const pSentences = splitIntoNaturalSentences(para);
-                const pSCount = Math.max(1, pSentences.length);
-                // Chunk boundary: ~1,800 - 2,200 chars sweet spot
-                if (currentChunkLen + para.length > 2000 && currentChunkParas.length > 0) {
-                    chunks.push(currentChunkParas.join('\n\n'));
-                    chunkSentenceCounts.push(currentChunkSCount);
-                    currentChunkParas = [para];
-                    currentChunkLen = para.length;
-                    currentChunkSCount = pSCount;
-                } else {
-                    currentChunkParas.push(para);
-                    currentChunkLen += (currentChunkLen > 0 ? 2 : 0) + para.length;
-                    currentChunkSCount += pSCount;
-                }
-            }
-            if (currentChunkParas.length > 0) {
-                chunks.push(currentChunkParas.join('\n\n'));
-                chunkSentenceCounts.push(currentChunkSCount);
-            }
 
             // ══ BATCH TRANSLATION ══
             // Sequential processing (1 worker at a time) ensures we stay well
@@ -7996,21 +8095,21 @@ Max 15-20 key entries.`;
 
             // Only mark book as having 'ka' if all chunks in the chapter succeeded
             if (allChunksSucceeded && chapter.text_ka && chapter.text_ka.trim().length > 0) {
-                if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
-                if (!currentBook.translatedLangs.includes('ka')) {
-                    currentBook.translatedLangs.push('ka');
+                if (!targetBook.translatedLangs) targetBook.translatedLangs = [];
+                if (!targetBook.translatedLangs.includes('ka')) {
+                    targetBook.translatedLangs.push('ka');
                 }
-                await saveBookToDB(currentBook);
+                await saveBookToDB(targetBook);
                 try {
-                    await saveTranslatedBookEdition(currentBook);
+                    await saveTranslatedBookEdition(targetBook);
                 } catch (e) {
                     console.warn('[translation] saveTranslatedBookEdition checkpoint error:', e);
                 }
             } else if (validChunks.length > 0) {
-                await saveBookToDB(currentBook);
+                await saveBookToDB(targetBook);
                 console.warn(`[translation] Chapter ${chIdx + 1} partially translated (${validChunks.length}/${chunks.length} chunks).`);
             } else {
-                console.error(`[translation] Chapter ${chIdx + 1} translation failed completely. text_ka not populated with corrupt or source data.`);
+                console.error(`[translation] Chapter ${chIdx + 1} translation failed completely.`);
             }
             // Chapter checkpoint: next resume starts at the following chapter.
             job.chapterIdx = chIdx + 1;
@@ -8021,15 +8120,20 @@ Max 15-20 key entries.`;
                     await cloudJob.update(chIdx + 1, totalChapters, 'running', `Translated chapter ${chIdx + 1} of ${totalChapters}`);
                 } catch (e) {}
             }
-            renderChaptersList();
+            if (currentBook && String(currentBook.id) === String(targetBook.id)) {
+                currentBook.chapters = targetBook.chapters;
+                currentBook.translatedLangs = targetBook.translatedLangs;
+                renderChaptersList();
+            }
+            renderDigitalShelf();
             updateMiniDock();
         }
 
         if (!cancelTranslationFlag) {
-            clearTranslationJob(currentBook.id);
+            clearTranslationJob(targetBook.id);
             if (cloudJob) {
                 try {
-                    await cloudJob.update(totalChapters, totalChapters, 'done', `Completed Georgian Edition for "${currentBook.title}"`);
+                    await cloudJob.update(totalChapters, totalChapters, 'done', `Completed Georgian Edition for "${targetBook.title}"`);
                 } catch (e) {}
             }
 
@@ -8039,21 +8143,34 @@ Max 15-20 key entries.`;
 
             setTimeout(async () => {
                 closeModal('wholeBookTranslateModal');
+                const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
+                if (dock) {
+                    dock.classList.add('hidden');
+                    dock.style.display = 'none';
+                }
+                translationPanelMinimized = false;
                 isTranslatingWholeBook = false;
                 try {
-                    await saveTranslatedBookEdition(currentBook);
+                    await saveTranslatedBookEdition(targetBook);
                 } catch (e) {
                     console.warn('[translation] saveTranslatedBookEdition complete error:', e);
                 }
-                renderChaptersList();
+                if (currentBook && String(currentBook.id) === String(targetBook.id)) {
+                    currentBook.chapters = targetBook.chapters;
+                    currentBook.translatedLangs = targetBook.translatedLangs;
+                    renderChaptersList();
+                    if (DOM.heroGeorgianBadge) DOM.heroGeorgianBadge.classList.remove('hidden');
+                    if (readerActive) {
+                        readerBook = currentBook;
+                        readerLang = 'ka';
+                        updateReaderLangUI();
+                        paginateChapter();
+                        renderCurrentPage();
+                    }
+                }
                 renderDigitalShelf();
-                if (DOM.heroGeorgianBadge) DOM.heroGeorgianBadge.classList.remove('hidden');
-                if (readerActive) {
-                    readerBook = currentBook;
-                    readerLang = 'ka';
-                    updateReaderLangUI();
-                    paginateChapter();
-                    renderCurrentPage();
+                if (typeof showToast === 'function') {
+                    showToast(`Georgian Edition for “${targetBook.title}” is ready! 🇬🇪`, 'success');
                 }
             }, 1200);
         }
@@ -8064,19 +8181,29 @@ Max 15-20 key entries.`;
         if (typeof showToast === 'function') {
             showToast('Translation paused — progress saved, it will resume automatically.', 'info');
         }
+        const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
+        if (dock && translationPanelMinimized) {
+            updateMiniDock();
+        }
     } finally {
+        activeTranslationBook = null;
         isTranslatingWholeBook = false;
     }
 }
 
 function cancelWholeBookTranslation() {
     cancelTranslationFlag = true;
-    if (currentBook) {
+    const b = activeTranslationBook || currentBook;
+    if (b) {
         // Stopping is explicit: drop the resume job but keep finished chapters.
-        clearTranslationJob(currentBook.id);
+        clearTranslationJob(b.id);
     }
     closeModal('wholeBookTranslateModal');
-    if (DOM.translationMiniDock) DOM.translationMiniDock.classList.add('hidden');
+    const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
+    if (dock) {
+        dock.classList.add('hidden');
+        dock.style.display = 'none';
+    }
     translationPanelMinimized = false;
     isTranslatingWholeBook = false;
     renderChaptersList();
