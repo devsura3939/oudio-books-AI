@@ -1459,9 +1459,12 @@ function transliterateLatinWordToGeorgian(word) {
         'john': 'ჯონ', 'james': 'ჯეიმს', 'george': 'ჯორჯ', 'william': 'უილიამ', 'charles': 'ჩარლზ',
         'david': 'დავით', 'robert': 'რობერტ', 'edward': 'ედუარდ', 'henry': 'ჰენრი', 'thomas': 'თომას',
         'mary': 'მერი', 'elizabeth': 'ელიზაბეთ', 'sarah': 'სარა', 'jane': 'ჯეინ', 'emma': 'ემა',
-        'harry': 'ჰარი', 'potter': 'პოტერი', 'sherlock': 'შერლოკ', 'holmes': 'ჰოლმსი', 'watson': 'ვატსონი',
         'london': 'ლონდონი', 'england': 'ინგლისი', 'paris': 'პარიზი', 'france': 'საფრანგეთი',
-        'america': 'ამერიკა', 'york': 'იორკი', 'street': 'სტრიტი'
+        'america': 'ამერიკა', 'york': 'იორკი', 'street': 'სტრიტი',
+        // Modern Acronyms & International Terms
+        'ai': 'ეი-აი', 'it': 'აი-ტი', 'usa': 'იუ-ეს-ეი', 'eu': 'ევროკავშირი',
+        'nato': 'ნატო', 'unesco': 'იუნესკო', 'ceo': 'სი-ი-ო', 'dna': 'დნმ',
+        'rna': 'რნმ', 'fbi': 'ეფ-ბი-აი', 'cia': 'სი-აი-ეი', 'nasa': 'ნასა'
     };
     if (commonNames[lower]) return commonNames[lower];
 

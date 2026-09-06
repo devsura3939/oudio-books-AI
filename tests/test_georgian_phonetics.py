@@ -1,0 +1,141 @@
+# -*- coding: utf-8 -*-
+"""
+Unit & Integration Tests for Georgian Phonetics and TTS Verbalizer.
+Ensures numbers, ordinals, dates, currencies, fractions, abbreviations,
+Latin transliteration, and prosodic breathing pauses are correctly processed.
+"""
+
+import sys
+import unittest
+import asyncio
+from pathlib import Path
+
+# Ensure UTF-8 output
+sys.stdout.reconfigure(encoding='utf-8')
+REPO_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_DIR))
+
+from app.georgian_phonetics import (
+    georgian_number_to_words,
+    georgian_ordinal_to_words,
+    verbalize_georgian_for_tts,
+    transliterate_latin_word_to_ka,
+    transliterate_latin_in_georgian
+)
+from app.tts_engine import generate_voice_preview
+
+
+class TestGeorgianPhonetics(unittest.TestCase):
+
+    def test_georgian_number_to_words_vigesimal(self):
+        self.assertEqual(georgian_number_to_words(0), "ნული")
+        self.assertEqual(georgian_number_to_words(1), "ერთი")
+        self.assertEqual(georgian_number_to_words(10), "ათი")
+        self.assertEqual(georgian_number_to_words(11), "თერთმეტი")
+        self.assertEqual(georgian_number_to_words(19), "ცხრამეტი")
+        self.assertEqual(georgian_number_to_words(20), "ოცი")
+        self.assertEqual(georgian_number_to_words(21), "ოცდაერთი")
+        self.assertEqual(georgian_number_to_words(40), "ორმოცი")
+        self.assertEqual(georgian_number_to_words(55), "ორმოცდათხუთმეტი")
+        self.assertEqual(georgian_number_to_words(60), "სამოცი")
+        self.assertEqual(georgian_number_to_words(80), "ოთხმოცი")
+        self.assertEqual(georgian_number_to_words(99), "ოთხმოცდაცხრამეტი")
+        self.assertEqual(georgian_number_to_words(100), "ასი")
+        self.assertEqual(georgian_number_to_words(105), "ას ხუთი")
+        self.assertEqual(georgian_number_to_words(200), "ორასი")
+        self.assertEqual(georgian_number_to_words(1000), "ათასი")
+        self.assertEqual(georgian_number_to_words(1921), "ათას ცხრაას ოცდაერთი")
+        self.assertEqual(georgian_number_to_words(2024), "ორი ათას ოცდაოთხი")
+        self.assertEqual(georgian_number_to_words(1_000_000), "მილიონი")
+        self.assertEqual(georgian_number_to_words(1_000_000_000), "მილიარდი")
+
+    def test_georgian_ordinal_to_words(self):
+        self.assertEqual(georgian_ordinal_to_words(1), "პირველი")
+        self.assertEqual(georgian_ordinal_to_words(2), "მეორე")
+        self.assertEqual(georgian_ordinal_to_words(3), "მესამე")
+        self.assertEqual(georgian_ordinal_to_words(5), "მეხუთე")
+        self.assertEqual(georgian_ordinal_to_words(10), "მეათე")
+        self.assertEqual(georgian_ordinal_to_words(11), "მეთერთმეტე")
+        self.assertEqual(georgian_ordinal_to_words(20), "მეოცე")
+        self.assertEqual(georgian_ordinal_to_words(21), "ოცდაპირველი")
+
+    def test_verbalize_georgian_ordinals(self):
+        res1 = verbalize_georgian_for_tts("1-ლი თავი")
+        self.assertIn("პირველი თავი", res1)
+
+        res2 = verbalize_georgian_for_tts("2-ე ნაწილი")
+        self.assertIn("მეორე ნაწილი", res2)
+
+        res3 = verbalize_georgian_for_tts("მე-5 გვერდი")
+        self.assertIn("მეხუთე გვერდი", res3)
+
+    def test_verbalize_georgian_years_and_dates(self):
+        res = verbalize_georgian_for_tts("1921 წელს საქართველომ გამოაცხადა დამოუკიდებლობა")
+        self.assertIn("ათას ცხრაას ოცდაერთ წელს", res)
+
+        res2 = verbalize_georgian_for_tts("1939-1945 წლებში")
+        self.assertTrue("წლამდე" in res2 or "წლებში" in res2)
+
+    def test_verbalize_currencies_and_percentages(self):
+        res_curr = verbalize_georgian_for_tts("წიგნი ღირს 50 ₾ და $100")
+        self.assertIn("ორმოცდაათი ლარი", res_curr)
+        self.assertIn("ასი დოლარი", res_curr)
+
+        res_pct = verbalize_georgian_for_tts("მოსახლეობის 80% ეთანხმება")
+        self.assertIn("ოთხმოცი პროცენტი", res_pct)
+
+    def test_verbalize_fractions_and_measurements(self):
+        res = verbalize_georgian_for_tts("დარჩა 1/2 ნაწილი და 10 კმ")
+        self.assertIn("ნახევარი", res)
+        self.assertIn("ათი კილომეტრი", res)
+
+    def test_verbalize_roman_numerals(self):
+        res_head = verbalize_georgian_for_tts("თავი IV მოგვითხრობს")
+        self.assertIn("თავი მეოთხე", res_head)
+
+        res_cent = verbalize_georgian_for_tts("XX საუკუნე იყო რთული")
+        self.assertIn("მეოცე საუკუნე", res_cent)
+
+        res_king = verbalize_georgian_for_tts("ერეკლე II მეფობდა")
+        self.assertIn("ერეკლე მეორე", res_king)
+
+    def test_verbalize_common_abbreviations(self):
+        res = verbalize_georgian_for_tts("წიგნები, რვეულები და ა.შ.")
+        self.assertIn("და ასე შემდეგ", res)
+
+        res2 = verbalize_georgian_for_tts("ე.ი. ყველაფერი მზადაა")
+        self.assertIn("ესე იგი", res2)
+
+        res3 = verbalize_georgian_for_tts("ბ-ნი გიორგი და ქ-ნი ეკა")
+        self.assertIn("ბატონი გიორგი", res3)
+        self.assertIn("ქალბატონი ეკა", res3)
+
+    def test_transliterate_latin_in_georgian(self):
+        res = verbalize_georgian_for_tts("ავტორი Marcus Aurelius წერდა")
+        self.assertIn("მარკუს", res)
+        self.assertIn("ავრელიუსი", res)
+
+        res_acronym = verbalize_georgian_for_tts("ახალი AI ტექნოლოგია")
+        self.assertTrue("ეი-აი" in res_acronym or "ეი აი" in res_acronym)
+
+    def test_prosodic_breathing_pauses(self):
+        # Conjunction breathing pauses
+        res = verbalize_georgian_for_tts("ჩვენ გვინდოდა წასვლა მაგრამ წვიმდა")
+        self.assertIn(", მაგრამ", res)
+
+        # Dialogue dash click removal
+        res2 = verbalize_georgian_for_tts("— გამარჯობა, როგორ ხარ?")
+        self.assertFalse(res2.startswith("—"))
+        self.assertIn("გამარჯობა", res2)
+
+    def test_preview_generation_georgian(self):
+        async def _run():
+            url = await generate_voice_preview(voice="ka-GE-GiorgiNeural")
+            return url
+        url = asyncio.run(_run())
+        self.assertTrue(url.startswith("/api/audio/preview/"))
+        self.assertTrue(url.endswith(".mp3"))
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

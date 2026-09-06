@@ -34,13 +34,18 @@ from app.image_processor import (
 from app.translation_engine import translate_text
 from app.transcription_engine import transcribe_audio_bytes, transcribe_audio_file
 from app.supabase_bridge import check_supabase_health, get_admin_session, fetch_supabase_books
+from app.training_engine import (
+    verify_key, open_training_session, get_training_context,
+    propose_training_rules, finish_training_session, load_active_pack,
+    load_benchmark_cases, evaluate_pack, DEFAULT_DEV_KEY
+)
 import base64
 from io import BytesIO
 
 app = FastAPI(
     title="PDF to High-Quality Audiobook Studio",
     description="Convert any PDF eBook to a studio-grade audiobook with natural neural voices.",
-    version="1.47.5"
+    version="1.48.0"
 )
 
 # Enable CORS for local dev
@@ -490,3 +495,114 @@ async def download_zip(book_id: str):
         media_type="application/zip",
         filename=f"{sanitize_filename(book.title)}_Audiobook.zip"
     )
+
+# ── Autonomous Training API for External LLMs ─────────────────────────────────
+def _extract_training_key(req: Request, body: dict) -> str:
+    return (
+        req.headers.get("X-Training-Key") or
+        req.headers.get("Authorization", "").replace("Bearer ", "").strip() or
+        body.get("key") or
+        ""
+    )
+
+@app.get("/api/public/train/health")
+@app.get("/api/train/health")
+async def training_health():
+    """Health check for the autonomous Training API."""
+    pack = load_active_pack("ka")
+    cases = load_benchmark_cases("ka")
+    eval_res = evaluate_pack(pack.get("items", []), cases)
+    return {
+        "status": "healthy",
+        "service": "EngBot Autonomous Training Engine",
+        "active_pack": {
+            "version": pack.get("version", 1),
+            "items_count": len(pack.get("items", [])),
+            "score": eval_res["score"]
+        },
+        "benchmark": {
+            "total_cases": len(cases),
+            "exact_matches": eval_res["passed"]
+        },
+        "supported_item_types": ["glossary", "autofix", "qa_rule", "prompt_block", "ocr_fix"],
+        "default_dev_key": DEFAULT_DEV_KEY
+    }
+
+@app.post("/api/public/train/session")
+@app.post("/api/train/session")
+async def training_session(req: Request):
+    """Open an authenticated training session for an external LLM."""
+    try:
+        body = await req.json()
+    except Exception:
+        body = {}
+    raw_key = _extract_training_key(req, body)
+    key_info = verify_key(raw_key)
+    if not key_info:
+        raise HTTPException(status_code=401, detail="Invalid, missing, or revoked training key.")
+    
+    model = body.get("model")
+    return open_training_session(key_info, model=model)
+
+@app.post("/api/public/train/context")
+@app.post("/api/train/context")
+async def training_context(req: Request):
+    """Inspect active rule pack and failing benchmark cases."""
+    try:
+        body = await req.json()
+    except Exception:
+        body = {}
+    raw_key = _extract_training_key(req, body)
+    key_info = verify_key(raw_key)
+    if not key_info:
+        raise HTTPException(status_code=401, detail="Invalid, missing, or revoked training key.")
+    
+    session_id = body.get("session_id")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+    
+    return get_training_context(session_id, key_info)
+
+@app.post("/api/public/train/propose")
+@app.post("/api/train/propose")
+async def training_propose(req: Request):
+    """Propose candidate rule items. Server runs benchmark immediately."""
+    try:
+        body = await req.json()
+    except Exception:
+        body = {}
+    raw_key = _extract_training_key(req, body)
+    key_info = verify_key(raw_key)
+    if not key_info:
+        raise HTTPException(status_code=401, detail="Invalid, missing, or revoked training key.")
+    
+    session_id = body.get("session_id")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+    
+    items = body.get("items", [])
+    model = body.get("model")
+    note = body.get("note")
+    
+    return propose_training_rules(session_id, key_info, items, model=model, note=note)
+
+@app.post("/api/public/train/finish")
+@app.post("/api/train/finish")
+async def training_finish(req: Request):
+    """Close the training session and record final aggregate metrics."""
+    try:
+        body = await req.json()
+    except Exception:
+        body = {}
+    raw_key = _extract_training_key(req, body)
+    key_info = verify_key(raw_key)
+    if not key_info:
+        raise HTTPException(status_code=401, detail="Invalid, missing, or revoked training key.")
+    
+    session_id = body.get("session_id")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+    
+    summary = body.get("summary")
+    return finish_training_session(session_id, key_info, summary=summary)
+

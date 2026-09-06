@@ -1,0 +1,72 @@
+[
+  {
+    "id": "case-sun-tzu-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The art of war is of vital importance to the State.",
+    "expected": "ომის ხელოვნება სასიცოცხლო მნიშვნელობისაა სახელმწიფოსთვის.",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Sun Tzu opening sentence"
+  },
+  {
+    "id": "case-locative-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He was standing in front of the house.",
+    "expected": "ის იდგა სახლის წინ.",
+    "weight": 1.5,
+    "origin": "seed",
+    "note": "Locative postposition resolution"
+  },
+  {
+    "id": "case-date-verbalizer-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "In 1921 the state declared independence.",
+    "expected": "1921 წელს სახელმწიფომ დამოუკიდებლობა გამოაცხადა.",
+    "weight": 1.5,
+    "origin": "seed",
+    "note": "Year and ergative subject case"
+  },
+  {
+    "id": "case-ocr-glyph-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "სახლ|ს წინ იდგა",
+    "expected": "სახლის წინ იდგა",
+    "weight": 1.0,
+    "origin": "seed",
+    "note": "OCR vertical bar artifact repair"
+  },
+  {
+    "id": "case-marcus-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Marcus Aurelius wrote his Meditations in silence.",
+    "expected": "მარკუს ავრელიუსმა თავისი ფიქრები სიჩუმეში დაწერა.",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Classical proper name and ergative marker"
+  },
+  {
+    "id": "case-ocr-broken-georgian-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "მეგობ-რობა და ერთგულება",
+    "expected": "მეგობრობა და ერთგულება",
+    "weight": 1.0,
+    "origin": "seed",
+    "note": "OCR hyphenation stitch"
+  },
+  {
+    "id": "case-idiom-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Actions speak louder than words.",
+    "expected": "საქმე სიტყვაზე მეტყველებს.",
+    "weight": 1.5,
+    "origin": "seed",
+    "note": "Idiomatic literary rendering"
+  }
+]

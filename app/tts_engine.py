@@ -8,6 +8,7 @@ import edge_tts
 
 from app.config import AUDIO_DIR, MAX_CHUNK_CHARS, DEFAULT_VOICE
 from app.models import TTSVoice
+from app.georgian_phonetics import verbalize_georgian_for_tts
 
 PREVIEW_DIR = AUDIO_DIR / "previews"
 PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
@@ -235,8 +236,13 @@ async def synthesize_text_to_file(
                     prog = round((idx / total_chunks) * 100, 1)
                     progress_callback(prog, f"Synthesizing chunk {idx + 1}/{total_chunks}...")
                 
+                is_ka = bool(re.search(r"[\u10A0-\u10FF]", chunk)) or voice.startswith("ka-")
+                spoken_text = verbalize_georgian_for_tts(chunk) if is_ka else chunk
+                if not spoken_text.strip():
+                    continue
+
                 communicate = edge_tts.Communicate(
-                    text=chunk,
+                    text=spoken_text,
                     voice=voice,
                     rate=rate,
                     pitch=pitch,
@@ -266,18 +272,27 @@ async def synthesize_text_to_file(
 
 async def generate_voice_preview(
     voice: str = DEFAULT_VOICE,
-    text: str = "Welcome to your high quality AI audiobook studio. Reading your favorite books with natural voice.",
+    text: Optional[str] = None,
     rate: str = "+0%",
     pitch: str = "+0Hz"
 ) -> str:
     """Generate or retrieve a cached audio preview for a specific voice."""
-    key = f"{voice}_{rate}_{pitch}_{text}"
+    is_ka = voice.startswith("ka-") or (text is not None and bool(re.search(r"[\u10A0-\u10FF]", text)))
+    if not text or text == "Welcome to your high quality AI audiobook studio. Reading your favorite books with natural voice.":
+        if is_ka:
+            text = "მოგესალმებით თქვენს მაღალი ხარისხის აუდიოწიგნების სტუდიაში. ჩვენ ვკითხულობთ თქვენს საყვარელ წიგნებს ბუნებრივი და ცოცხალი ხმით."
+        else:
+            text = "Welcome to your high quality AI audiobook studio. Reading your favorite books with natural voice."
+
+    spoken_text = verbalize_georgian_for_tts(text) if is_ka else text
+
+    key = f"{voice}_{rate}_{pitch}_{spoken_text}"
     hash_key = hashlib.md5(key.encode("utf-8")).hexdigest()[:12]
     filename = f"preview_{voice}_{hash_key}.mp3"
     filepath = PREVIEW_DIR / filename
     
     if not filepath.exists():
-        communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate, pitch=pitch)
+        communicate = edge_tts.Communicate(text=spoken_text, voice=voice, rate=rate, pitch=pitch)
         await communicate.save(str(filepath))
         
     return f"/api/audio/preview/{filename}"

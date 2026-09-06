@@ -36,7 +36,8 @@ export const Route = createFileRoute("/api/public/train/$")({
   server: {
     handlers: {
       POST: async ({ request, params }) => {
-        const step = String((params as { _splat?: string })._splat ?? "").replace(/^\/+|\/+$/g, "");
+        const urlPath = new URL(request.url).pathname.replace(/^.*\/api\/public\/train\/?/, "").replace(/^\/+|\/+$/g, "");
+        const step = String((params as { _splat?: string })._splat || urlPath || "").replace(/^\/+|\/+$/g, "");
         let body: Record<string, unknown> = {};
         try {
           body = (await request.json()) as Record<string, unknown>;

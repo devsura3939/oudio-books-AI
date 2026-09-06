@@ -1,0 +1,13 @@
+{
+  "bf32fb245cf217c5fd72f4529982701709b4ac4bffd7e087579dbb3afb8decec": {
+    "id": "6c1c6079-3736-4076-ad6a-b6fc55e0d624",
+    "key_prefix": "engbot_tk_dev_training",
+    "label": "Default Developer Training Key (Georgian Engine)",
+    "language": "ka",
+    "scope": "both",
+    "uses": 35,
+    "created_at": "2026-09-06T15:21:55.632352+00:00",
+    "revoked_at": null,
+    "last_used_at": "2026-09-06T15:24:07.418051+00:00"
+  }
+}

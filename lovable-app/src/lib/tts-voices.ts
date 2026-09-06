@@ -122,7 +122,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
     provider: "gemini",
     voice: "Charon",
     instructions:
-      "Read the Georgian text with natural, articulate cadence, warm baritone storytelling tone, and proper grammatical pauses.",
+      "Narrate in standard literary Georgian with crystal-clear articulation, distinct ejective vs aspirated consonants, natural syllable cadence, a warm storytelling baritone, and organic breathing pauses at punctuation.",
   },
   {
     id: "ka-actor",
@@ -131,7 +131,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
     provider: "gemini",
     voice: "Fenrir",
     instructions:
-      "Read the Georgian text with theatrical expression, dynamic dialogue characterization, and vivid cadence.",
+      "Narrate in expressive Georgian dramatic stage delivery with vivid dialogue characterization, rich emotional nuance, articulate diction, and dynamic pacing.",
   },
   {
     id: "ka-female",
@@ -140,7 +140,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
     provider: "gemini",
     voice: "Kore",
     instructions:
-      "Read the Georgian text with clear, expressive, and warm female storytelling delivery.",
+      "Narrate in clear, elegant standard Georgian with lyrical warmth, flawless native phonology, crisp consonant articulation, and thoughtful narrative breathing.",
   },
   {
     id: "ka-soft",
@@ -149,7 +149,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
     provider: "gemini",
     voice: "Aoede",
     instructions:
-      "Read the Georgian text with gentle, poetic, and soothing lyrical pacing.",
+      "Narrate in gentle, poetic Georgian with soothing cadence, delicate melodic contours, clear literary pronunciation, and tranquil pacing.",
   },
   // Multilingual / other languages
   {
