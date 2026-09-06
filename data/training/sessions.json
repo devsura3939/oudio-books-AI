@@ -32,5 +32,22 @@
     "last_seen_at": "2026-09-06T15:58:56.810148+00:00",
     "finished_at": "2026-09-06T15:58:56.811266+00:00",
     "summary": "Successfully conducted 4 training iterations: Classical Antiquity (Plato, Aristotle, Homer, Shakespeare, Epictetus, Seneca, Cicero), Deep Morphosyntax, Camera OCR Glyph Repairs, and Authentic Georgian Idioms. Elevated benchmark score from 42.4% to 100.0% with 24/24 exact matches and zero regressions."
+  },
+  "b9e9a627-2ee9-43aa-b682-fb0b4bb761aa": {
+    "id": "b9e9a627-2ee9-43aa-b682-fb0b4bb761aa",
+    "key_id": "6c1c6079-3736-4076-ad6a-b6fc55e0d624",
+    "language": "ka",
+    "scope": "both",
+    "driver": "external",
+    "model": "lumina-georgian-trainer-v4",
+    "status": "finished",
+    "iterations": 4,
+    "accepted": 4,
+    "start_score": 68.163,
+    "current_score": 100.0,
+    "started_at": "2026-09-06T16:05:24.699441+00:00",
+    "last_seen_at": "2026-09-06T16:05:24.748033+00:00",
+    "finished_at": "2026-09-06T16:05:24.749064+00:00",
+    "summary": "Successfully conducted 4 additional training iterations on 41-case corpus: Rustaveli, Dante, Milton, Goethe, Marcus Aurelius, Evidentials, Applicatives, Inalienable Possession, Multiplicatives, Camera OCR Distortions, and Georgian Proverbs. Elevated benchmark score from 68.2% to 100.0% with 41/41 exact matches and zero regressions."
   }
 }

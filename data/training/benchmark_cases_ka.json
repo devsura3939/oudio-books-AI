@@ -238,5 +238,175 @@
     "weight": 1.5,
     "origin": "expansion-iter2",
     "note": "Authentic Georgian literary idiom"
+  },
+  {
+    "id": "case-rustaveli-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "What thou givest is thine, what thou keepest is lost.",
+    "expected": "რასაცა გასცემ შენია, რაც არა, დაკარგულია!",
+    "weight": 2.0,
+    "origin": "expansion-iter3",
+    "note": "Rustaveli The Knight in the Panther's Skin aphorism"
+  },
+  {
+    "id": "case-rustaveli-02",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Falsehood is the source of all misfortune.",
+    "expected": "სიცრუე და ორპირობა ავნებს ხორცსა, მერმე სულსა.",
+    "weight": 2.0,
+    "origin": "expansion-iter3",
+    "note": "Rustaveli ethical maxim"
+  },
+  {
+    "id": "case-dante-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Abandon all hope, ye who enter here.",
+    "expected": "თქვენ, აქ შემსვლელნო, დაუტევეთ ყოველი იმედი!",
+    "weight": 2.0,
+    "origin": "expansion-iter3",
+    "note": "Dante Divine Comedy Inferno gate inscription"
+  },
+  {
+    "id": "case-milton-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The mind is its own place, and in itself can make a heaven of hell, a hell of heaven.",
+    "expected": "გონება თავისთავად სამყოფელია, და თავისით შეუძლია ჯოჯოხეთი სამოთხედ აქციოს, სამოთხე კი — ჯოჯოხეთად.",
+    "weight": 2.0,
+    "origin": "expansion-iter3",
+    "note": "Milton Paradise Lost Book I"
+  },
+  {
+    "id": "case-goethe-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Two souls, alas, dwell in my breast.",
+    "expected": "ორი სული, ვაგლახ, მკერდში მიბინადრობს.",
+    "weight": 1.5,
+    "origin": "expansion-iter3",
+    "note": "Goethe Faust Faustian duality"
+  },
+  {
+    "id": "case-marcus-02",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Dwell on the beauty of life. Watch the stars, and see yourself running with them.",
+    "expected": "დააკვირდი სიცოცხლის მშვენიერებას. შეხედე ვარსკვლავებს და დაინახე შენი თავი, მათთან ერთად მორბენალი.",
+    "weight": 2.0,
+    "origin": "expansion-iter3",
+    "note": "Marcus Aurelius Meditations Book VII cosmology"
+  },
+  {
+    "id": "case-evidential-perfect-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "It turns out the traveler had built a magnificent bridge.",
+    "expected": "მგზავრს თურმე დიდებული ხიდი აუშენებია.",
+    "weight": 1.5,
+    "origin": "expansion-iter3",
+    "note": "Series III Indirect Evidential Perfect with dative subject"
+  },
+  {
+    "id": "case-applicative-versional-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The mother baked bread for her beloved child.",
+    "expected": "დედამ თავის საყვარელ შვილს პური გამოუცხო.",
+    "weight": 1.5,
+    "origin": "expansion-iter3",
+    "note": "Objective versional prefix indicating beneficiary"
+  },
+  {
+    "id": "case-inalienable-possession-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He laid his hand on his heart.",
+    "expected": "მან გულზე ხელი დაიდო.",
+    "weight": 1.5,
+    "origin": "expansion-iter3",
+    "note": "Inalienable body part idiom and reflexive concord"
+  },
+  {
+    "id": "case-multiplicative-concord-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He paid three times more for the rare manuscript.",
+    "expected": "მან იშვიათ ხელნაწერში სამჯერ მეტი გადაიხადა.",
+    "weight": 1.5,
+    "origin": "expansion-iter3",
+    "note": "Multiplicative adverbial numeral concord"
+  },
+  {
+    "id": "case-ocr-confusable-r-q-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "სიყვაყული და ერთგულება",
+    "expected": "სიყვარული და ერთგულება",
+    "weight": 1.0,
+    "origin": "expansion-iter3",
+    "note": "Camera OCR confusable ყ misread for რ"
+  },
+  {
+    "id": "case-ocr-confusable-sh-ch-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ჭეშმარიტი სიბჭძნე",
+    "expected": "ჭეშმარიტი სიბრძნე",
+    "weight": 1.0,
+    "origin": "expansion-iter3",
+    "note": "Camera OCR confusable ჭ misread for რ"
+  },
+  {
+    "id": "case-ocr-confusable-l-d-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "დიდი სიხარუღი",
+    "expected": "დიდი სიხარული",
+    "weight": 1.0,
+    "origin": "expansion-iter3",
+    "note": "Camera OCR confusable ღ misread for ლ"
+  },
+  {
+    "id": "case-ocr-torn-mravlad-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "მ|რავლად იყო წიგნები",
+    "expected": "მრავლად იყო წიგნები",
+    "weight": 1.0,
+    "origin": "expansion-iter3",
+    "note": "Camera OCR vertical bar split in adverb"
+  },
+  {
+    "id": "case-ocr-torn-larad-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "100 ლ|რად გაიყიდა",
+    "expected": "100 ლარად გაიყიდა",
+    "weight": 1.0,
+    "origin": "expansion-iter3",
+    "note": "Camera OCR currency measure ligature break"
+  },
+  {
+    "id": "case-idiom-04",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Blood is thicker than water.",
+    "expected": "სისხლი წყალი არ არის.",
+    "weight": 1.5,
+    "origin": "expansion-iter3",
+    "note": "Authentic Georgian kinship proverb"
+  },
+  {
+    "id": "case-idiom-05",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Strike while the iron is hot.",
+    "expected": "რკინა სანამ ცხელია, მანამდე უნდა გაიჭედოს.",
+    "weight": 1.5,
+    "origin": "expansion-iter3",
+    "note": "Authentic Georgian diligence aphorism"
   }
 ]

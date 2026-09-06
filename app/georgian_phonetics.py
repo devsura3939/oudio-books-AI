@@ -169,6 +169,10 @@ LITERARY_NAMES_MAP = {
     "durkheim": "დიურკჰაიმი", "locke": "ლოკი", "hobbes": "ჰობსი", "hume": "ჰიუმი",
     "berkeley": "ბერკლი", "spenser": "სპენსერი", "milton": "მილტონი", "byron": "ბაირონი",
     "shelley": "შელი", "keats": "ქითსი", "wordsworth": "უორდსუორთი", "chaucer": "ჩოსერი",
+    "baratashvili": "ბარათაშვილი", "chavchavadze": "ჭავჭავაძე", "vazha": "ვაჟა",
+    "galaktion": "გალაკტიონი", "akaki": "აკაკი", "hesiod": "ჰესიოდე", "sappho": "საფო",
+    "pindar": "პინდარე", "euripides": "ევრიპიდე", "sophocles": "სოფოკლე", "aeschylus": "ესქილე",
+    "aristophanes": "არისტოფანე",
     "john": "ჯონ", "james": "ჯეიმს", "george": "ჯორჯ", "william": "უილიამ", "charles": "ჩარლზ",
     "david": "დავით", "robert": "რობერტ", "edward": "ედუარდ", "henry": "ჰენრი", "thomas": "თომას",
     "mary": "მერი", "elizabeth": "ელიზაბეთ", "sarah": "სარა", "jane": "ჯეინ", "emma": "ემა",
@@ -307,6 +311,35 @@ def verbalize_georgian_for_tts(text: str) -> str:
 
     out = re.sub(r"(მე-)?(\d+)-(ლი|ე|ში|მა|ად)\b", _replace_ordinal, out)
     out = re.sub(r"\bმე-(\d+)\b", lambda m: georgian_ordinal_to_words(int(m.group(1))), out)
+
+    # 2b. Multiplicative Adverbials (e.g. 1-ჯერ -> ერთხელ, 2-ჯერ -> ორჯერ, 3-ჯერ -> სამჯერ)
+    def _replace_multiplicative(m):
+        num = int(m.group(1))
+        if num == 1:
+            return "ერთხელ"
+        w = georgian_number_to_words(num)
+        stem = w[:-1] if w.endswith("ი") else w
+        return stem + "ჯერ"
+
+    out = re.sub(r"\b(\d+)-ჯერ\b", _replace_multiplicative, out)
+
+    # 2c. Clock Time (e.g. 14:30 -> თოთხმეტ საათსა და ნახევარზე, 15:00 -> თხუთმეტ საათზე)
+    def _replace_clock_time(m):
+        h = int(m.group(1))
+        mins = int(m.group(2))
+        if 0 <= h <= 24 and 0 <= mins < 60:
+            hw = georgian_number_to_words(h)
+            hstem = hw[:-1] if hw.endswith("ი") else hw
+            if mins == 0:
+                return f"{hstem} საათზე"
+            elif mins == 30:
+                return f"{hstem} საათსა და ნახევარზე"
+            else:
+                mw = georgian_number_to_words(mins)
+                return f"{hstem} საათსა და {mw} წუთზე"
+        return m.group(0)
+
+    out = re.sub(r"\b([01]?\d|2[0-3]):([0-5]\d)\b", _replace_clock_time, out)
 
     # 3. Percentages & Fractions
     out = re.sub(

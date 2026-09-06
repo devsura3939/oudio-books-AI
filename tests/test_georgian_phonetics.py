@@ -187,6 +187,34 @@ class TestGeorgianPhonetics(unittest.TestCase):
         res2 = verbalize_georgian_for_tts("წიგნი რომელსაც ვკითხულობდით")
         self.assertIn(", რომელსაც", res2)
 
+    def test_multiplicative_adverbs(self):
+        res1 = verbalize_georgian_for_tts("მან 1-ჯერ სცადა")
+        self.assertIn("ერთხელ", res1)
+
+        res2 = verbalize_georgian_for_tts("2-ჯერ გაიმეორა")
+        self.assertIn("ორჯერ", res2)
+
+        res3 = verbalize_georgian_for_tts("3-ჯერ მეტი გადაიხადა")
+        self.assertIn("სამჯერ მეტი", res3)
+
+        res4 = verbalize_georgian_for_tts("10-ჯერ გაზარდა")
+        self.assertIn("ათჯერ", res4)
+
+    def test_clock_time_verbalization(self):
+        res1 = verbalize_georgian_for_tts("შეხვედრა დაიწყება 14:30 საათზე")
+        self.assertIn("თოთხმეტ საათსა და ნახევარზე", res1)
+
+        res2 = verbalize_georgian_for_tts("მატარებელი გადის 15:00 საათზე")
+        self.assertIn("თხუთმეტ საათზე", res2)
+
+    def test_georgian_and_classical_poets(self):
+        res1 = verbalize_georgian_for_tts("პოეტი Baratashvili და Chavchavadze")
+        self.assertIn("ბარათაშვილი", res1)
+        self.assertIn("ჭავჭავაძე", res1)
+
+        res2 = verbalize_georgian_for_tts("ავტორი Dante Alighieri")
+        self.assertIn("დანტე", res2)
+
     def test_preview_generation_georgian(self):
         async def _run():
             url = await generate_voice_preview(voice="ka-GE-GiorgiNeural")
