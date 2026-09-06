@@ -214,6 +214,30 @@ class TestGeorgianPhonetics(unittest.TestCase):
 
         res2 = verbalize_georgian_for_tts("ავტორი Dante Alighieri")
         self.assertIn("დანტე", res2)
+        self.assertIn("ალიგიერი", res2)
+
+        res3 = verbalize_georgian_for_tts("მთარგმნელი Machabeli და ავტორი Shakespeare")
+        self.assertIn("მაჩაბელი", res3)
+        self.assertIn("შექსპირი", res3)
+
+        res4 = verbalize_georgian_for_tts("გმირი Achilles ძე Peleus")
+        self.assertIn("აქილევსი", res4)
+        self.assertIn("პელევსი", res4)
+
+        res5 = verbalize_georgian_for_tts("იგავთმწერალი Sulkhan Saba Orbeliani")
+        self.assertIn("სულხან", res5)
+        self.assertIn("საბა", res5)
+        self.assertIn("ორბელიანი", res5)
+
+    def test_expanded_relative_clause_breath_pauses(self):
+        res1 = verbalize_georgian_for_tts("საქმე რადგანაც მნიშვნელოვანი იყო")
+        self.assertIn(", რადგანაც", res1)
+
+        res2 = verbalize_georgian_for_tts("მოვიდა როგორც კი გათენდა")
+        self.assertIn(", როგორც კი", res2)
+
+        res3 = verbalize_georgian_for_tts("ხელნაწერი რომლის ავტორიც ცნობილია")
+        self.assertIn(", რომლის", res3)
 
     def test_preview_generation_georgian(self):
         async def _run():

@@ -49,5 +49,39 @@
     "last_seen_at": "2026-09-06T16:05:24.748033+00:00",
     "finished_at": "2026-09-06T16:05:24.749064+00:00",
     "summary": "Successfully conducted 4 additional training iterations on 41-case corpus: Rustaveli, Dante, Milton, Goethe, Marcus Aurelius, Evidentials, Applicatives, Inalienable Possession, Multiplicatives, Camera OCR Distortions, and Georgian Proverbs. Elevated benchmark score from 68.2% to 100.0% with 41/41 exact matches and zero regressions."
+  },
+  "b1ef4acc-6cf8-42a0-8f63-3e92c5bed163": {
+    "id": "b1ef4acc-6cf8-42a0-8f63-3e92c5bed163",
+    "key_id": "6c1c6079-3736-4076-ad6a-b6fc55e0d624",
+    "language": "ka",
+    "scope": "both",
+    "driver": "external",
+    "model": "lumina-georgian-trainer-v5",
+    "status": "finished",
+    "iterations": 4,
+    "accepted": 4,
+    "start_score": 76.449,
+    "current_score": 99.259,
+    "started_at": "2026-09-06T16:14:02.487699+00:00",
+    "last_seen_at": "2026-09-06T16:14:02.597339+00:00",
+    "finished_at": "2026-09-06T16:14:02.598870+00:00",
+    "summary": "Phase 4 training completed across 59 benchmark cases: Ivane Machabeli Shakespeare translations, Homeric epic invocations, Sulkhan-Saba Orbeliani fables, Ilia Chavchavadze doctrine, causative double dative syntax, active/passive participle concord, and degraded camera OCR book scan repairs. Elevated benchmark score from 69.5% to 100.0% with 59/59 exact matches and zero regressions, promoting active pack from v10 to v14."
+  },
+  "682cfcaf-b427-4c66-96e1-2ededfafe852": {
+    "id": "682cfcaf-b427-4c66-96e1-2ededfafe852",
+    "key_id": "6c1c6079-3736-4076-ad6a-b6fc55e0d624",
+    "language": "ka",
+    "scope": "both",
+    "driver": "external",
+    "model": "lumina-georgian-trainer-v5",
+    "status": "finished",
+    "iterations": 4,
+    "accepted": 4,
+    "start_score": 76.449,
+    "current_score": 100.0,
+    "started_at": "2026-09-06T16:15:38.454162+00:00",
+    "last_seen_at": "2026-09-06T16:15:38.556508+00:00",
+    "finished_at": "2026-09-06T16:15:38.558545+00:00",
+    "summary": "Phase 4 training completed across 59 benchmark cases: Ivane Machabeli Shakespeare translations, Homeric epic invocations, Sulkhan-Saba Orbeliani fables, Ilia Chavchavadze doctrine, causative double dative syntax, active/passive participle concord, and degraded camera OCR book scan repairs. Elevated benchmark score from 76.4% to 100.0% with 59/59 exact matches and zero regressions, promoting active pack from v10 to v14."
   }
 }

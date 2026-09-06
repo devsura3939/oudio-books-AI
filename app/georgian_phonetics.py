@@ -170,7 +170,10 @@ LITERARY_NAMES_MAP = {
     "berkeley": "ბერკლი", "spenser": "სპენსერი", "milton": "მილტონი", "byron": "ბაირონი",
     "shelley": "შელი", "keats": "ქითსი", "wordsworth": "უორდსუორთი", "chaucer": "ჩოსერი",
     "baratashvili": "ბარათაშვილი", "chavchavadze": "ჭავჭავაძე", "vazha": "ვაჟა",
-    "galaktion": "გალაკტიონი", "akaki": "აკაკი", "hesiod": "ჰესიოდე", "sappho": "საფო",
+    "galaktion": "გალაკტიონი", "akaki": "აკაკი", "machabeli": "მაჩაბელი", "peleus": "პელევსი",
+    "hamlet": "ჰამლეტი", "macbeth": "მაკბეთი", "othello": "ოტელო", "orbeliani": "ორბელიანი",
+    "sulkhan": "სულხან", "saba": "საბა", "tabidze": "ტაბიძე", "alighieri": "ალიგიერი",
+    "tsereteli": "წერეთელი", "hesiod": "ჰესიოდე", "sappho": "საფო",
     "pindar": "პინდარე", "euripides": "ევრიპიდე", "sophocles": "სოფოკლე", "aeschylus": "ესქილე",
     "aristophanes": "არისტოფანე",
     "john": "ჯონ", "james": "ჯეიმს", "george": "ჯორჯ", "william": "უილიამ", "charles": "ჩარლზ",
@@ -516,8 +519,8 @@ def verbalize_georgian_for_tts(text: str) -> str:
 
     # 13. Natural breath pause before Georgian conjunctions and relative clauses
     conjunctions = (
-        "მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|რაკიღა|რამდენადაც|"
-        "როდესაც|რომელიც|რომელსაც|რომელშიც|რომელზეც|რომელთა|რომელთაც|რომ|სანამ|ვიდრე"
+        "მაგრამ|თუმცა|თუმცაღა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|რაკიღა|რამდენადაც|"
+        "როდესაც|როგორც კი|რომელიც|რომელსაც|რომელშიც|რომელზეც|რომლის|რომლითაც|რომელთა|რომელთაც|რომელთათვის|რომ|სანამ|ვიდრე"
     )
     out = re.sub(
         rf"([^,.;:!?])\s+({conjunctions}){KA_SUFFIX}",

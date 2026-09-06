@@ -95,8 +95,8 @@ def synthesize_georgian_morphology(text: str) -> str:
     t = re.sub(r'([ა-ჰ]+[ბგდვზთკლმნპჟრსტუფქღყშჩცძწჭხჯჰ])(?:ი)?-დან(?![ა-ჰ])', r'\g<1>იდან', t)
 
     # 2. Screeve Series II Transitive Aorist Ergative Concord (-მა / -მ)
-    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა|გამოაცხადა|დადო|დაასრულა|შეამჩნია|აღმოაჩინა)'
-    subjects_i = r'(?:პატარა\s+უფლისწულ|უფლისწულ|მარკუს\s+ავრელიუს|არისტოტელ|პლატონ|ჰომეროს|შექსპირ|ციცერონ|სენეკ|ეპიქტეტ|მაკიაველ|მოგზაურ|მეცნიერ|ფილოსოფოს|კაც|ბავშვ|ბიჭ|ქალ|ავტორ|ვარდ|მგელ|ადამიან|მეგობარ|მწერალ|პოეტ|ექიმ)'
+    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა|გამოაცხადა|დადო|დაასრულა|შეამჩნია|აღმოაჩინა|ააშენებინა|დააწერინა|დაალევინა|გააკეთებინა)'
+    subjects_i = r'(?:პატარა\s+უფლისწულ|უფლისწულ|მარკუს\s+ავრელიუს|არისტოტელ|პლატონ|ჰომეროს|შექსპირ|ციცერონ|სენეკ|ეპიქტეტ|მაკიაველ|მოგზაურ|მეცნიერ|ფილოსოფოს|კაც|ბავშვ|ბიჭ|ქალ|ავტორ|ვარდ|მგელ|ადამიან|მეგობარ|მწერალ|პოეტ|ექიმ|ოსტატ|მასწავლებელ|შეგირდ|მკითხველ(?:მა)?\s+მეცნიერ)'
     t = re.sub(r'(?<![\u10A0-\u10FF])(' + subjects_i + r')ი(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მა\g<2>', t)
     t = re.sub(r'(?<![\u10A0-\u10FF])(მეფე|მელა|გოგო|დედა|მამა|ძმა|დეიდა|ბიძა|სახელმწიფო|სოკრატე|სენეკა)(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
 
@@ -158,7 +158,33 @@ OFFLINE_LITERARY_EXEMPLARS = [
     (r"it is only with the heart that one can see rightly;? what is essential is invisible to the eye\.?",
      "მხოლოდ გული ხედავს კარგად; მთავარი თვალისთვის უხილავია."),
     (r"to be,? or not to be,? that is the question\.?",
-     "ყოფნა? არყოფნა? საკითხავი აი, ეს არის."),
+     "ყოფნა?.. არ ყოფნა?.. საკითხავი აი ეს არის."),
+    (r"something is rotten in the state of denmark\.?",
+     "რაღაც დამპალა დანიის სამეფოში."),
+    (r"life is but a walking shadow,? a poor player\.?",
+     "ცხოვრება არის მხოლოდ და მხოლოდ აჩრდილი მოსიარულე."),
+    (r"blow,? winds,? and crack your cheeks!? rage!? blow!?",
+     "იზუზუნე და იქროლე შენ, ქარო მსუსხავო, უბერე!"),
+    (r"cowards die many times before their deaths;? the valiant never taste of death but once\.?",
+     "მშიშარა სიკვდილამდე მრავალგზის კვდება, მამაცი კი სიკვდილის გემოს მხოლოდ ერთხელ შეიგრძნობს."),
+    (r"sing in me,? goddess,? the wrath of achilles son of peleus\.?",
+     "რისხვაზე, ქალღმერთო, პელევსის ძის, აქილევსის, იმ საბედისწერო რისხვაზე მიმღერე."),
+    (r"tell me,? o muse,? of that man of many resources\.?",
+     "მიამბე, მუზავ, მრავალნაცად კაცის ამბავი."),
+    (r"midway upon the journey of our life i found myself in a dark forest\.?",
+     "ჩვენი სიცოცხლის შუა გზაზე აღმოვჩნდი დაბურულ ტყეში."),
+    (r"a bad friend is like a shadow:? in sunny weather it follows you,? in the shade you will not find it\.?",
+     "ცუდი მეგობარი ჩრდილივითაა: მზიან დარულში თან დაგყვება, ჩრდილში კი ვერსად იპოვი."),
+    (r"wounded by the tongue is heavier than wounded by the sword\.?",
+     "ენით დაკოდილი უფრო მძიმეა, ვიდრე მახვილით დაკოდილი."),
+    (r"movement and only movement is the source of life\.?",
+     "მოძრაობა და მხოლოდ მოძრაობა არის ქვეყნის ღონე და სიცოცხლე."),
+    (r"the master made the apprentice build the high wall\.?",
+     "ოსტატმა შეგირდს მაღალი კედელი ააშენებინა."),
+    (r"the teacher made the pupil write the difficult essay\.?",
+     "მასწავლებელმა მოსწავლეს რთული თხზულება დააწერინა."),
+    (r"the reading scholar found wisdom in the written manuscript\.?",
+     "მკითხველმა მეცნიერმა დაწერილ ხელნაწერში სიბრძნე იპოვა."),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),

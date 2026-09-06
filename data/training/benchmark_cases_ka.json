@@ -408,5 +408,185 @@
     "weight": 1.5,
     "origin": "expansion-iter3",
     "note": "Authentic Georgian diligence aphorism"
+  },
+  {
+    "id": "case-machabeli-hamlet-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Something is rotten in the state of Denmark.",
+    "expected": "რაღაც დამპალა დანიის სამეფოში.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Ivane Machabeli Hamlet 1886 iconic quote"
+  },
+  {
+    "id": "case-machabeli-hamlet-02",
+    "language": "ka",
+    "kind": "translate",
+    "source": "To be, or not to be, that is the question.",
+    "expected": "ყოფნა?.. არ ყოფნა?.. საკითხავი აი ეს არის.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Ivane Machabeli Hamlet soliloquy classical phrasing"
+  },
+  {
+    "id": "case-machabeli-macbeth-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Life is but a walking shadow, a poor player.",
+    "expected": "ცხოვრება არის მხოლოდ და მხოლოდ აჩრდილი მოსიარულე.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Ivane Machabeli Macbeth Act V soliloquy"
+  },
+  {
+    "id": "case-machabeli-lear-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Blow, winds, and crack your cheeks! rage! blow!",
+    "expected": "იზუზუნე და იქროლე შენ, ქარო მსუსხავო, უბერე!",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Ilia Chavchavadze & Ivane Machabeli King Lear storm invocation"
+  },
+  {
+    "id": "case-machabeli-caesar-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Cowards die many times before their deaths; the valiant never taste of death but once.",
+    "expected": "მშიშარა სიკვდილამდე მრავალგზის კვდება, მამაცი კი სიკვდილის გემოს მხოლოდ ერთხელ შეიგრძნობს.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Ivane Machabeli Julius Caesar courage aphorism"
+  },
+  {
+    "id": "case-homer-iliad-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Sing in me, goddess, the wrath of Achilles son of Peleus.",
+    "expected": "რისხვაზე, ქალღმერთო, პელევსის ძის, აქილევსის, იმ საბედისწერო რისხვაზე მიმღერე.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Homer Iliad Book I opening invocation by Roman Miminoshvili"
+  },
+  {
+    "id": "case-homer-odyssey-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Tell me, O Muse, of that man of many resources.",
+    "expected": "მიამბე, მუზავ, მრავალნაცად კაცის ამბავი.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Homer Odyssey opening by Zurab Kiknadze and Tamaz Chkhenkeli"
+  },
+  {
+    "id": "case-dante-inferno-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Midway upon the journey of our life I found myself in a dark forest.",
+    "expected": "ჩვენი სიცოცხლის შუა გზაზე აღმოვჩნდი დაბურულ ტყეში.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Dante Inferno Canto I opening tercet in Georgian literary translation"
+  },
+  {
+    "id": "case-sulkhan-saba-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "A bad friend is like a shadow: in sunny weather it follows you, in the shade you will not find it.",
+    "expected": "ცუდი მეგობარი ჩრდილივითაა: მზიან დარულში თან დაგყვება, ჩრდილში კი ვერსად იპოვი.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Sulkhan-Saba Orbeliani A Wisdom of Fancy fable aphorism"
+  },
+  {
+    "id": "case-sulkhan-saba-02",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Wounded by the tongue is heavier than wounded by the sword.",
+    "expected": "ენით დაკოდილი უფრო მძიმეა, ვიდრე მახვილით დაკოდილი.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Sulkhan-Saba Orbeliani power of speech moral aphorism"
+  },
+  {
+    "id": "case-ilia-chavchavadze-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Movement and only movement is the source of life.",
+    "expected": "მოძრაობა და მხოლოდ მოძრაობა არის ქვეყნის ღონე და სიცოცხლე.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Ilia Chavchavadze Letters of a Traveler literary doctrine"
+  },
+  {
+    "id": "case-causative-double-dative-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The master made the apprentice build the high wall.",
+    "expected": "ოსტატმა შეგირდს მაღალი კედელი ააშენებინა.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Georgian causative double dative (-ინ- / -ევინ- affix) with ergative causer"
+  },
+  {
+    "id": "case-causative-double-dative-02",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The teacher made the pupil write the difficult essay.",
+    "expected": "მასწავლებელმა მოსწავლეს რთული თხზულება დააწერინა.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Georgian causative transitive Series II aorist"
+  },
+  {
+    "id": "case-participle-concord-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The reading scholar found wisdom in the written manuscript.",
+    "expected": "მკითხველმა მეცნიერმა დაწერილ ხელნაწერში სიბრძნე იპოვა.",
+    "weight": 1.5,
+    "origin": "expansion-iter4",
+    "note": "Active participle მკითხველი in ergative case and passive participle დაწერილი in locative case"
+  },
+  {
+    "id": "case-ocr-degraded-sulkhan-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ს|ბრძნე სიცრუისა",
+    "expected": "სიბრძნე სიცრუისა",
+    "weight": 1.0,
+    "origin": "expansion-iter4",
+    "note": "Camera OCR vertical bar split in classical title"
+  },
+  {
+    "id": "case-ocr-confusable-che-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ჭე|შმარიტება და თავისუფლება",
+    "expected": "ჭეშმარიტება და თავისუფლება",
+    "weight": 1.0,
+    "origin": "expansion-iter4",
+    "note": "Camera OCR vertical bar break inside root word"
+  },
+  {
+    "id": "case-ocr-torn-hyphen-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "დიდი გა- ნათლება და კულტურა",
+    "expected": "დიდი განათლება და კულტურა",
+    "weight": 1.0,
+    "origin": "expansion-iter4",
+    "note": "Degraded paper scan line-break split with trailing space"
+  },
+  {
+    "id": "case-ocr-quote-damage-01",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "\"რასაცა გასცემ შენია\"",
+    "expected": "„რასაცა გასცემ შენია“",
+    "weight": 1.0,
+    "origin": "expansion-iter4",
+    "note": "Restoration of authentic Georgian low-high quotation marks"
   }
 ]
