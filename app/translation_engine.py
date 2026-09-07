@@ -2,6 +2,7 @@
 import os
 import re
 from typing import Optional
+from app.text_integrity import normalize_language, detect_language, split_bounded, translation_is_valid
 
 try:
     from google import genai
@@ -388,8 +389,14 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
     if not text or not text.strip():
         return {"translated": "", "engine": "none", "success": True}
 
-    src = "en" if source_lang in ("en", "eng") else ("ka" if source_lang in ("ka", "kat") else "auto")
-    tgt = "ka" if target_lang in ("ka", "kat") else "en"
+    src = normalize_language(source_lang)
+    tgt = normalize_language(target_lang)
+    if tgt not in ("ka", "en"):
+        return {"translated": "", "engine": "none", "success": False, "error": "Unsupported target language"}
+    if src == "auto":
+        src = detect_language(text)
+    if src == tgt:
+        return {"translated": text, "engine": "identity", "success": True}
     effective_key = api_key or os.environ.get("GEMINI_API_KEY")
 
     # Split into paragraphs to maintain narrative structure
@@ -400,13 +407,15 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
     translated_paras = []
     engine_used = "server_neural_translate"
 
-    for p in paragraphs:
+    chunk_groups = [split_bounded(paragraph, 4000) for paragraph in paragraphs]
+    chunks = [chunk for group in chunk_groups for chunk in group]
+    for chunk_index, p in enumerate(chunks):
         p_trans = None
 
         # Tier 0: Frontier AI Literary Translation (Gemini 2.5 Flash)
         if genai is not None and effective_key:
             try:
-                client = genai.Client(api_key=effective_key)
+                client = genai.Client(api_key=effective_key, http_options={"timeout": 20000})
                 if tgt == "ka":
                     sys_instruction = (
                         "You are an acclaimed Georgian literary translator. Translate this text faithfully into authentic, elegant Georgian. "
@@ -432,13 +441,17 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
                     contents=p,
                     config=dict(system_instruction=sys_instruction, temperature=0.2)
                 )
-                if response and response.text:
+                reason = getattr(response.candidates[0], "finish_reason", None) if response and response.candidates else None
+                if response and response.text and str(getattr(reason, "value", reason)).upper() == "STOP":
                     p_trans = response.text.strip()
                     engine_used = "gemini-2.5-flash"
             except Exception as e:
                 print(f"[translation_engine] Tier 0 Gemini translation failed: {e}")
 
-        # Tier 1: Direct Google Translation API (ultra-stable, zero rate-limit)
+        if p_trans and not translation_is_valid(p, p_trans, tgt):
+            p_trans = None
+
+        # Tier 1: Direct Google translation; availability is not guaranteed.
         if not p_trans:
             try:
                 import httpx
@@ -452,6 +465,9 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
                         engine_used = "server_neural_google"
             except Exception as e:
                 print(f"[translation_engine] Tier 1 direct translation failed: {e}")
+
+        if p_trans and not translation_is_valid(p, p_trans, tgt):
+            p_trans = None
 
         # Tier 2: deep-translator GoogleTranslator fallback
         if not p_trans and GoogleTranslator is not None:
@@ -476,19 +492,20 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
             except Exception as e:
                 print(f"[translation_engine] Tier 2 GoogleTranslator failed: {e}")
 
-        # Tier 3: Offline literary translation engine fallback
+        if p_trans and not translation_is_valid(p, p_trans, tgt):
+            p_trans = None
+
+        # Keep offline suggestions available, but never publish a word-substitution
+        # draft or the original source as a completed translation.
         if not p_trans:
-            if tgt == "ka":
-                offline_res = translate_offline_en_to_ka(p)
-                if re.search(r'[\u10A0-\u10FF]', offline_res):
-                    p_trans = offline_res
-                    engine_used = "offline_rule_engine"
-                else:
-                    p_trans = p
-                    engine_used = "fallback_original"
-            else:
-                p_trans = p
-                engine_used = "fallback_original"
+            suggestion = translate_offline_en_to_ka(p) if tgt == "ka" else ""
+            return {
+                "translated": "", "engine": "unavailable", "success": False,
+                "error": "No provider returned a complete translation in the requested language.",
+                "failed_chunk": chunk_index, "total_chunks": len(chunks),
+                "accepted_chunks": translated_paras,
+                "suggestion": suggestion if suggestion != p else "", "needs_review": True,
+            }
 
         if tgt == "ka":
             p_trans = synthesize_georgian_morphology(p_trans)
@@ -509,10 +526,19 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
                 except Exception:
                     pass
 
+        if not translation_is_valid(p, p_trans, tgt):
+            return {"translated": "", "engine": engine_used, "success": False,
+                    "error": "Post-edit validation failed", "failed_chunk": chunk_index,
+                    "accepted_chunks": translated_paras, "needs_review": True}
         translated_paras.append(p_trans)
 
+    translated_paragraphs = []
+    offset = 0
+    for group in chunk_groups:
+        translated_paragraphs.append(" ".join(translated_paras[offset:offset + len(group)]))
+        offset += len(group)
     return {
-        "translated": "\n\n".join(translated_paras),
+        "translated": "\n\n".join(translated_paragraphs),
         "engine": engine_used,
         "success": True
     }

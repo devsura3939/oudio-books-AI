@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.48.1';
-const ENGINE_VERSION = 'v1.48.1 (Bilingual translation and source integrity)';
+const APP_VERSION = 'v1.48.2';
+const ENGINE_VERSION = 'v1.48.2 (Bilingual translation and source integrity)';
 
 let db = null;
 let currentBook = null;
@@ -2935,8 +2935,9 @@ function getBookStats(book) {
     let totalWords = 0;
     let totalSeconds = 0;
     book.chapters.forEach(c => {
-        totalWords += c.word_count || (c.text ? c.text.split(/\s+/).length : 0);
-        totalSeconds += c.estimated_duration_sec || Math.round((totalWords / 140) * 60);
+        const stats = EngbotCore.chapterStats(c);
+        totalWords += stats.words;
+        totalSeconds += stats.seconds;
     });
     const mins = Math.max(1, Math.round(totalSeconds / 60));
     return {
@@ -3567,7 +3568,7 @@ function renderToCDrawerList() {
         btn.innerHTML = `
             <div class="overflow-hidden">
                 <p class="text-xs truncate">${idx + 1}. ${escapeHtml(chap.title)}</p>
-                <p class="text-[10px] text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(chap.estimated_duration_sec)}</p>
+                <p class="text-[10px] text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(EngbotCore.chapterStats(chap).seconds)}</p>
             </div>
             ${hasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-georgian-gold/20 text-georgian-gold font-bold">🇬🇪</span>' : ''}
         `;
@@ -3879,104 +3880,78 @@ function openTrainingLab() {
     openTrainingLabModal();
 }
 
+let trainingKeyBusy = false;
+let trainingIssuedKey = null;
+function trainingKeyRecord() {
+    const ownerId = getCurrentUserId();
+    if (trainingIssuedKey?.ownerId === ownerId) return trainingIssuedKey;
+    try {
+        const record = JSON.parse(localStorage.getItem('lumina_training_key_' + ownerId) || 'null');
+        if (record?.ownerId === ownerId && record?.issuedAt && record?.key) return record;
+        // Preserve access to an earlier saved key without claiming it was registered.
+        const previous = localStorage.getItem('lumina_training_api_key');
+        return previous ? { key: previous, legacy: true } : null;
+    } catch (e) { return null; }
+}
+
 function initTrainingLabUI() {
-    const defaultDevKey = 'engbot_tk_dev_training_key_ka_2026';
-    const activeKey = localStorage.getItem('lumina_training_api_key') || defaultDevKey;
-    
+    const record = trainingKeyRecord();
     const keyDisplay = document.getElementById('trainingApiKeyDisplay');
-    if (keyDisplay) {
-        keyDisplay.value = activeKey;
-    }
-
-    const placeholders = document.querySelectorAll('.trainingKeyPlaceholder');
-    placeholders.forEach(el => {
-        el.textContent = activeKey;
-    });
-
-    const statusBadge = document.getElementById('trainingKeyStatusBadge');
-    if (statusBadge) {
-        statusBadge.textContent = 'Active';
-        statusBadge.className = 'px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/40';
-    }
+    if (keyDisplay) { keyDisplay.value = record?.key || ''; keyDisplay.type = 'password'; }
+    const maskIcon = document.getElementById('trainingKeyMaskIcon');
+    if (maskIcon) maskIcon.textContent = 'visibility';
+    document.querySelectorAll('.trainingKeyPlaceholder').forEach(el => { el.textContent = '{YOUR_API_KEY}'; });
+    const status = document.getElementById('trainingKeyStatusBadge');
+    if (status) status.textContent = _isStaticHost ? 'Server required' : record?.legacy ? 'Previous key unverified' : record ? 'Created on server' : 'No registered key';
+    const message = document.getElementById('trainingKeyMessage');
+    if (message) message.textContent = _isStaticHost
+        ? 'Training requires the server-hosted app. Your books and translation tools remain available here.'
+        : record?.legacy ? 'Previous saved key retained. Its registration is unknown; the training server must validate it before use.'
+        : record ? `Saved ${record.language === 'en' ? 'English' : 'Georgian'} key. Its current permissions are checked by the training server when used.`
+        : 'Generate a key registered by the training server. Earlier locally generated keys have not been verified.';
 }
 
 async function generateTrainingApiKey() {
-    let newKey = '';
+    if (trainingKeyBusy) return;
+    trainingKeyBusy = true;
+    const button = document.getElementById('generateTrainingKeyButton');
+    if (button) button.disabled = true;
+    const ownerId = getCurrentUserId();
     try {
-        const resp = await fetch('/api/public/train/key/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                label: 'Client Generated Training Key',
-                language: 'ka',
-                scope: 'both'
-            })
+        const record = await window.EngbotTraining.createKey({
+            staticHost: _isStaticHost,
+            language: document.getElementById('trainingKeyLanguage')?.value || 'ka',
+            getAccessToken: async () => {
+                const client = window.LuminaStore?.getClient?.();
+                if (!client) return null;
+                const { data } = await client.auth.getSession();
+                return data.session?.access_token || null;
+            },
         });
-        if (resp.ok) {
-            const data = await resp.json();
-            if (data && data.key) {
-                newKey = data.key;
-            }
-        }
-    } catch (e) {
-        console.warn('Backend key generation endpoint not reachable, generating crypto client key:', e);
+        record.ownerId = ownerId;
+        trainingIssuedKey = record;
+        let persisted = true;
+        try { localStorage.setItem('lumina_training_key_' + ownerId, JSON.stringify(record)); }
+        catch (error) { persisted = false; }
+        if (getCurrentUserId() !== ownerId) throw new Error('Account changed. Sign back into the original account to access its key.');
+        initTrainingLabUI();
+        showToast(persisted ? 'Training key registered. Use Copy to copy it.' : 'Key registered, but browser storage is full. Copy it before closing this page.', persisted ? 'success' : 'info');
+    } catch (error) {
+        showToast(error.message || 'Training key creation failed. No local replacement was created.', 'error');
+    } finally {
+        trainingKeyBusy = false;
+        if (button) button.disabled = false;
     }
-
-    if (!newKey) {
-        const randBytes = new Uint8Array(16);
-        if (window.crypto && window.crypto.getRandomValues) {
-            window.crypto.getRandomValues(randBytes);
-        } else {
-            for (let i = 0; i < 16; i++) randBytes[i] = Math.floor(Math.random() * 256);
-        }
-        const hex = Array.from(randBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-        newKey = `engbot_tk_${hex}`;
-    }
-
-    localStorage.setItem('lumina_training_api_key', newKey);
-
-    const keyDisplay = document.getElementById('trainingApiKeyDisplay');
-    if (keyDisplay) {
-        keyDisplay.value = newKey;
-        keyDisplay.type = 'text';
-    }
-
-    const maskIcon = document.getElementById('trainingKeyMaskIcon');
-    if (maskIcon) maskIcon.textContent = 'visibility_off';
-
-    const placeholders = document.querySelectorAll('.trainingKeyPlaceholder');
-    placeholders.forEach(el => {
-        el.textContent = newKey;
-    });
-
-    try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(newKey);
-        }
-    } catch (err) {
-        console.warn('Clipboard write prevented:', err);
-    }
-
-    showToast('New Training API Key generated & copied to clipboard!', 'success');
 }
 
 async function copyTrainingApiKey() {
-    const keyDisplay = document.getElementById('trainingApiKeyDisplay');
-    const key = keyDisplay ? keyDisplay.value : (localStorage.getItem('lumina_training_api_key') || 'engbot_tk_dev_training_key_ka_2026');
+    const record = trainingKeyRecord();
+    if (!record) { showToast('Create a server-registered training key first.', 'error'); return; }
     try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(key);
-        }
-        const btnText = document.getElementById('copyKeyBtnText');
-        if (btnText) {
-            const old = btnText.textContent;
-            btnText.textContent = 'Copied!';
-            setTimeout(() => { btnText.textContent = old; }, 2000);
-        }
-        showToast('Training API Key copied to clipboard!', 'success');
-    } catch (e) {
-        showToast('Key copied!', 'info');
-    }
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+        await navigator.clipboard.writeText(record.key);
+        showToast(record.legacy ? 'Previous key copied. Server registration has not been verified.' : 'Training API key copied.', record.legacy ? 'info' : 'success');
+    } catch (e) { showToast('Could not copy. Reveal the key and copy it manually.', 'error'); }
 }
 
 function toggleTrainingKeyMask() {
@@ -3994,23 +3969,16 @@ function toggleTrainingKeyMask() {
 
 async function copyLlmTrainingPrompt() {
     const textarea = document.getElementById('llmPromptTextarea');
-    const activeKey = localStorage.getItem('lumina_training_api_key') || 'engbot_tk_dev_training_key_ka_2026';
-    let text = textarea ? textarea.value : '';
-    text = text.replace('{YOUR_API_KEY}', activeKey);
+    const record = trainingKeyRecord();
+    const base = _isStaticHost ? '{TRAINING_SERVER_URL}' : location.origin;
+    const text = (textarea?.value || '')
+        .replaceAll('{YOUR_API_KEY}', record && !record.legacy ? record.key : '{YOUR_API_KEY}')
+        .replaceAll('/api/public/train/', base + '/api/public/train/');
     try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(text);
-        }
-        const btnText = document.getElementById('copyPromptBtnText');
-        if (btnText) {
-            const old = btnText.textContent;
-            btnText.textContent = 'Copied Prompt!';
-            setTimeout(() => { btnText.textContent = old; }, 2000);
-        }
-        showToast('System Prompt template copied to clipboard!', 'success');
-    } catch (e) {
-        showToast('System Prompt copied!', 'info');
-    }
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+        await navigator.clipboard.writeText(text);
+        showToast(_isStaticHost ? 'Template copied. Set the training server URL and a registered key before use.' : 'Training prompt copied.', 'success');
+    } catch (e) { showToast('Could not copy. Select and copy the template manually.', 'error'); }
 }
 
 function switchTrainingTab(tabName) {
@@ -5812,7 +5780,7 @@ function renderCurrentPage() {
                     <div class="flex items-center justify-center gap-3 text-xs opacity-75">
                         <span>${chap.word_count} words</span>
                         <span>•</span>
-                        <span>~${formatTime(chap.estimated_duration_sec)}</span>
+                        <span>~${formatTime(EngbotCore.chapterStats(chap).seconds)}</span>
                     </div>
                     <div class="mt-3 text-xs opacity-60">── ❖ ──</div>
                 </header>
@@ -9068,7 +9036,7 @@ function playChapterAudio(chapId, startSentenceIdx = 0, forceReload = false) {
     DOM.dockCover.src = currentBook.coverUrl;
     DOM.dockTitle.textContent = chap.title;
     DOM.dockSubtitle.textContent = currentBook.title;
-    if (DOM.playerTotalTime) DOM.playerTotalTime.textContent = formatTime(chap.estimated_duration_sec);
+    if (DOM.playerTotalTime) DOM.playerTotalTime.textContent = formatTime(EngbotCore.chapterStats(chap).seconds);
 
     updateLangToggleUI();
     startTimer();
@@ -10568,7 +10536,7 @@ function renderChaptersList() {
                         ${chapHasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 font-bold">🇬🇪</span>' : ''}
                         ${isCurrentlyTranslating ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold animate-pulse">⏳ Translating</span>' : ''}
                     </h4>
-                    <p class="text-[10px] sm:text-xs text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(chap.estimated_duration_sec)}</p>
+                    <p class="text-[10px] sm:text-xs text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(EngbotCore.chapterStats(chap).seconds)}</p>
                 </div>
             </div>
 
@@ -10588,6 +10556,8 @@ function renderChaptersList() {
 }
 
 function formatTime(sec) {
+    sec = Number(sec);
+    if (!Number.isFinite(sec) || sec < 0) sec = 0;
     const m = Math.floor(sec / 60);
     const s = Math.floor(sec % 60);
     return `${m}:${s < 10 ? '0' : ''}${s}`;

@@ -11,6 +11,74 @@ function section(start, end) {
     return source.slice(a, b);
 }
 const silent = {log(){},warn(){},error(){}};
+const training = require('../static/training-client.js');
+const registeredKey = 'engbot_tk_en_fixture_registered_123456';
+test('Static hosting cannot invent a working training key', async () => {
+    let calls = 0;
+    await assert.rejects(training.createKey({staticHost:true, fetchImpl:async()=>{calls++;}}), /server-hosted/);
+    assert.equal(calls,0);
+});
+test('Lovable training key creation uses the authenticated admin route and selected language', async () => {
+    const record = await training.createKey({language:'en',getAccessToken:async()=> 'fixture-token',fetchImpl:async(url,options)=>{
+        assert.equal(url,'/api/admin/training');
+        assert.equal(options.headers.Authorization,'Bearer fixture-token');
+        assert.equal(JSON.parse(options.body).action,'create_key');
+        assert.equal(JSON.parse(options.body).language,'en');
+        return {ok:true,status:200,json:async()=>({key:registeredKey})};
+    }});
+    assert.equal(record.key,registeredKey);
+    assert.equal(record.language,'en');
+});
+test('Missing admin route uses the Python registered-key endpoint', async () => {
+    const urls=[];
+    const record=await training.createKey({getAccessToken:async()=> 'fixture-token',fetchImpl:async url=>{
+        urls.push(url);
+        return urls.length===1 ? {ok:false,status:404} : {ok:true,status:200,json:async()=>({key:registeredKey})};
+    }});
+    assert.deepEqual(urls,['/api/admin/training','/api/public/train/key/generate']);
+    assert.equal(record.key,registeredKey);
+});
+test('Training auth failure and timeout never trigger a second key-creation attempt',async()=>{
+    for(const failure of ['auth','timeout']) {
+        let calls=0;
+        await assert.rejects(training.createKey({getAccessToken:async()=> 'fixture-token',fetchImpl:async()=>{
+            calls++; if(failure==='timeout') throw new Error('timeout');
+            return {ok:false,status:403};
+        }}));
+        assert.equal(calls,1);
+    }
+});
+test('Successful HTTP response without a registered key is still a creation failure',async()=>{
+    await assert.rejects(training.createKey({fetchImpl:async()=>({ok:true,status:200,json:async()=>({status:'ok'})})}), /did not confirm/);
+});
+test('Failed key generation preserves the previous key without a success message or replacement',async()=>{
+    const storage=new Map([['lumina_training_api_key','previous-unverified-key']]);
+    const toasts=[];
+    const ctx=vm.createContext({
+        getCurrentUserId:()=> 'test-user', _isStaticHost:true,
+        window:{EngbotTraining:training},
+        localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},
+        document:{getElementById:()=>null,querySelectorAll:()=>[]},
+        showToast:(text,kind)=>toasts.push({text,kind}),
+    });
+    vm.runInContext(section('let trainingKeyBusy =', 'function toggleTrainingKeyMask('),ctx);
+    await ctx.generateTrainingApiKey();
+    assert.equal(storage.size,1);
+    assert.equal(ctx.trainingKeyRecord().legacy,true);
+    assert.equal(ctx.trainingKeyRecord().key,'previous-unverified-key');
+    assert.deepEqual(toasts.map(t=>t.kind),['error']);
+});
+test('Missing chapter durations use each chapter word count, never the cumulative book count',()=>{
+    const ctx=vm.createContext({EngbotCore:core});
+    vm.runInContext(section('function getBookStats(', '// ── Navigation & Modals'),ctx);
+    const stats=ctx.getBookStats({chapters:[{word_count:140},{word_count:140},{word_count:140}]});
+    assert.equal(stats.totalSeconds,180);
+    assert.equal(stats.totalWords,420);
+    assert.deepEqual(core.chapterStats({text:'ქართული ტექსტი',estimated_duration_sec:'invalid'}),{words:2,seconds:1});
+    assert.deepEqual(core.chapterStats({word_count:140,estimated_duration_sec:85}),{words:140,seconds:85});
+    vm.runInContext(section('function formatTime(', '// ── Event Listeners Binding'),ctx);
+    for(const value of [undefined,NaN,-1,Infinity]) assert.equal(ctx.formatTime(value),'0:00');
+});
 test('Cloud round trip retains legacy Georgian language, English translation and source history', () => {
     const storeSource = fs.readFileSync(path.join(__dirname, '../static/supabase-store.js'), 'utf8');
     const start = storeSource.indexOf('  function toStudioBook(');

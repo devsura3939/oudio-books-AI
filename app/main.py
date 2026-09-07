@@ -124,7 +124,7 @@ async def server_translate(req: Request):
         source_lang = body.get("source_lang", "auto")
         target_lang = body.get("target_lang", "ka")
         api_key = body.get("api_key") or req.headers.get("x-goog-api-key")
-        result = translate_text(text, source_lang=source_lang, target_lang=target_lang, api_key=api_key)
+        result = await run_in_threadpool(translate_text, text, source_lang=source_lang, target_lang=target_lang, api_key=api_key)
         return JSONResponse(result)
     except HTTPException:
         raise
