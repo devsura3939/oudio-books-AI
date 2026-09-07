@@ -159,56 +159,10 @@ async def get_available_voices() -> List[TTSVoice]:
         return fallback
 
 def split_text_into_chunks(text: str, max_chunk_len: int = MAX_CHUNK_CHARS) -> List[str]:
-    """Split text into manageable chunks at sentence boundaries for TTS synthesis."""
-    if not text or not text.strip():
-        return []
-    
-    text = text.strip()
-    if len(text) <= max_chunk_len:
-        return [text]
-    
-    paragraphs = text.split("\n\n")
-    chunks: List[str] = []
-    current_chunk: List[str] = []
-    current_len = 0
-    
-    for para in paragraphs:
-        para = para.strip()
-        if not para:
-            continue
-        
-        if len(para) > max_chunk_len:
-            sentences = re.split(r'([.!?]+(?:\s+|\n+))', para)
-            sentence_list = []
-            for j in range(0, len(sentences) - 1, 2):
-                sentence_list.append(sentences[j] + sentences[j + 1])
-            if len(sentences) % 2 == 1 and sentences[-1]:
-                sentence_list.append(sentences[-1])
-            
-            for sent in sentence_list:
-                sent = sent.strip()
-                if not sent:
-                    continue
-                if current_len + len(sent) + 1 > max_chunk_len:
-                    if current_chunk:
-                        chunks.append(" ".join(current_chunk))
-                        current_chunk = []
-                        current_len = 0
-                current_chunk.append(sent)
-                current_len += len(sent) + 1
-        else:
-            if current_len + len(para) + 2 > max_chunk_len:
-                if current_chunk:
-                    chunks.append(" ".join(current_chunk))
-                    current_chunk = []
-                    current_len = 0
-            current_chunk.append(para)
-            current_len += len(para) + 2
-    
-    if current_chunk:
-        chunks.append(" ".join(current_chunk))
-    
-    return chunks
+    """Split at whitespace when possible, with a hard provider size limit."""
+    from app.text_integrity import split_bounded
+    return split_bounded(text.strip(), max_chunk_len) if text and text.strip() else []
+
 
 async def synthesize_text_to_file(
     text: str,

@@ -16,30 +16,33 @@ def _load_env():
 
 _load_env()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://oakikavdnnvxzlcvsovq.supabase.co")
+SUPABASE_URL = os.getenv("EXTERNAL_SUPABASE_URL") or os.getenv("SUPABASE_URL", "https://oakikavdnnvxzlcvsovq.supabase.co")
 SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_oTAYwkdt1yebGkrlKOoijw_9fE4OUBd")
-SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "")
+SUPABASE_SECRET_KEY = os.getenv("EXTERNAL_SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SECRET_KEY", "")
 ADMIN_EMAIL = "ananiadevsurashvili@gmail.com"
 ADMIN_USER_ID = "2b4b9033-8527-4e51-b2c8-9a72f5a47412"
 
 def check_supabase_health() -> Dict[str, Any]:
+    if not SUPABASE_SECRET_KEY:
+        return {"status": "unconfigured"}
     try:
-        headers = {
-            "apikey": SUPABASE_SECRET_KEY,
-            "Authorization": f"Bearer {SUPABASE_SECRET_KEY}"
-        }
+        headers = _admin_headers()
         r = urllib.request.Request(f"{SUPABASE_URL}/rest/v1/books?select=id&limit=1", headers=headers)
         with urllib.request.urlopen(r, timeout=8) as resp:
             return {"status": "connected", "project": "oakikavdnnvxzlcvsovq", "http_code": resp.status}
     except Exception as e:
-        return {"status": "error", "detail": str(e)}
+        return {"status": "offline", "detail": str(e)}
+
+def _admin_headers():
+    headers = {"apikey": SUPABASE_SECRET_KEY, "Content-Type": "application/json"}
+    if SUPABASE_SECRET_KEY.count(".") == 2:
+        headers["Authorization"] = f"Bearer {SUPABASE_SECRET_KEY}"
+    return headers
 
 def get_admin_session() -> Dict[str, Any]:
-    headers = {
-        "apikey": SUPABASE_SECRET_KEY,
-        "Authorization": f"Bearer {SUPABASE_SECRET_KEY}",
-        "Content-Type": "application/json"
-    }
+    if not SUPABASE_SECRET_KEY:
+        raise RuntimeError("Supabase admin access is not configured")
+    headers = _admin_headers()
     body = json.dumps({"type": "magiclink", "email": ADMIN_EMAIL}).encode("utf-8")
     r1 = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/admin/generate_link", data=body, headers=headers, method="POST")
     with urllib.request.urlopen(r1, timeout=10) as resp1:
@@ -52,10 +55,7 @@ def get_admin_session() -> Dict[str, Any]:
         return json.loads(resp2.read().decode("utf-8"))
 
 def fetch_supabase_books() -> List[Dict[str, Any]]:
-    headers = {
-        "apikey": SUPABASE_SECRET_KEY,
-        "Authorization": f"Bearer {SUPABASE_SECRET_KEY}"
-    }
+    headers = _admin_headers()
     url = f"{SUPABASE_URL}/rest/v1/books?select=*,chapters(*)&user_id=eq.{ADMIN_USER_ID}&order=created_at.desc"
     r = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(r, timeout=10) as resp:

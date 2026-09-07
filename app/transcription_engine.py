@@ -17,7 +17,7 @@ except ImportError:
     sr = None
 
 from PIL import Image
-from app.translation_engine import clean_georgian_morphology
+from app.text_integrity import clean_verbatim, normalize_language, detect_language, vision_prompt
 from app.image_processor import enhance_page_image, image_to_jpeg_bytes, score_image_sharpness
 from app.training_engine import load_active_pack, apply_pack
 
@@ -38,7 +38,7 @@ def transcribe_audio_bytes(
         return {"text": "", "language": language, "engine": "none", "success": False, "error": "Empty audio"}
 
     # Normalize language code
-    lang = "ka" if language in ("ka", "kat", "geo", "georgian") else ("en" if language in ("en", "eng", "english") else "auto")
+    lang = normalize_language(language)
     effective_key = api_key or os.environ.get("GEMINI_API_KEY")
 
     # Tier 1: Gemini 2.5 Flash Multimodal Audio Transcription
@@ -48,10 +48,12 @@ def transcribe_audio_bytes(
             instruction = (
                 "You are an expert transcriber. Transcribe this audio recording verbatim in its original spoken language. "
                 "Preserve exact wording, sentence boundaries, punctuation, and capitalization. "
-                "If the audio is spoken in Georgian, transcribe in clean Georgian Mkhedruli script with literary quotes („...“) and standard dashes (—). "
+                "If the audio is Georgian, use Georgian script. Preserve the speaker's wording and repetitions. Mark inaudible spans [[UNCLEAR]]; do not guess from context. "
                 "If in English, transcribe with standard English punctuation. "
                 "Do not summarize, do not translate, and do not include meta-commentary. Output ONLY the transcription."
             )
+            if lang != "auto":
+                instruction += f" Expected spoken language: {lang}."
             if prompt:
                 instruction += f" Context hints / glossary: {prompt}"
 
@@ -67,13 +69,12 @@ def transcribe_audio_bytes(
                     instruction
                 ]
             )
-            if response and response.text:
+            if response and response.text and str(getattr(response.candidates[0], "finish_reason", "")).split(".")[-1] == "STOP":
                 result_text = response.text.strip()
-                if lang == "ka" or re.search(r'[\u10A0-\u10FF]', result_text):
-                    result_text = clean_georgian_morphology(result_text)
+                result_text = clean_verbatim(result_text)
                 return {
                     "text": result_text,
-                    "language": "ka" if re.search(r'[\u10A0-\u10FF]', result_text) else "en",
+                    "language": detect_language(result_text),
                     "engine": "gemini-2.5-flash",
                     "success": True
                 }
@@ -81,18 +82,17 @@ def transcribe_audio_bytes(
             print(f"[transcription_engine] Tier 1 Gemini audio transcription failed: {e}")
 
     # Tier 2: Neural SpeechRecognition Fallback
-    if sr is not None:
+    if sr is not None and lang != "auto":
         try:
             r = sr.Recognizer()
             # SpeechRecognition requires WAV or AIFF format for AudioFile
-            if audio_bytes[:4] == b'RIFF':
+            if audio_bytes[:4] in (b'RIFF', b'fLaC', b'FORM'):
                 with sr.AudioFile(io.BytesIO(audio_bytes)) as source:
                     audio_data = r.record(source)
                 target_speech_lang = "ka-GE" if lang == "ka" else "en-US"
                 text = r.recognize_google(audio_data, language=target_speech_lang)
                 if text:
-                    if lang == "ka":
-                        text = clean_georgian_morphology(text)
+                    text = clean_verbatim(text)
                     return {
                         "text": text,
                         "language": lang if lang != "auto" else ("ka" if re.search(r'[\u10A0-\u10FF]', text) else "en"),
@@ -107,7 +107,7 @@ def transcribe_audio_bytes(
         "language": language,
         "engine": "fallback_none",
         "success": False,
-        "error": "Transcription requires either GEMINI_API_KEY for multimodal audio or a valid WAV audio input."
+        "error": "Transcription requires GEMINI_API_KEY, or WAV/AIFF/FLAC audio with an explicit English or Georgian language for speech fallback."
     }
 
 
@@ -155,7 +155,7 @@ def transcribe_image_bytes(
     if not image_bytes or len(image_bytes) == 0:
         return {"text": "", "language": language, "engine": "none", "success": False, "error": "Empty image bytes"}
 
-    lang = "ka" if language in ("ka", "kat", "geo", "georgian") else ("en" if language in ("en", "eng", "english") else "auto")
+    lang = normalize_language(language)
     effective_key = api_key or os.environ.get("GEMINI_API_KEY")
 
     # 1. Preprocess & Enhance Image for Optimal OCR
@@ -173,48 +173,7 @@ def transcribe_image_bytes(
     except Exception as e:
         print(f"[transcription_engine] image preprocessing warning: {e}")
 
-    # 2. Build Vision OCR System Instructions
-    is_ka = lang == "ka" or lang == "auto"
-    instruction = (
-        "You are a world-class high-accuracy publication-grade OCR, vision transcription, and document restoration engine. "
-        "Your mission is to produce a 100% faithful, verbatim plain-text transcription of the printed book page.\n\n"
-        "CRITICAL RECONSTRUCTION DIRECTIVES:\n"
-        "1. Verbatim Accuracy: Transcribe every word and sentence exactly as written. Never translate, never paraphrase, never summarize, never add commentary or notes.\n"
-        "2. Contextual Deduction ('Intelligent Guessing'): "
-        "Book photos frequently suffer from spine curvature, gutter shadows, perspective skew, lens softness, or uneven lighting. "
-        "When glyphs are faint or distorted near margins, never drop words, never leave blanks, and never output fragmented single letters. "
-        "Deduce with certainty the intended words using grammatical syntax and literary context.\n"
-        "3. Missing Symbols & Authentic Punctuation: "
-        f"{'Strictly use authentic Georgian quotes: „ at the start and “ at the end (e.g. „გამარჯობა“, თქვა მან), or «...». ' if is_ka else 'Use authentic double quotes (\"...\"). '}"
-        "Use proper em-dashes (—) for dialogue turns and pauses. Restore missing commas, colons, and periods.\n"
-        "4. Hyphenation: Join words split across line breaks by a hyphen into a single word (e.g. 'მო-ხერხებულ' -> 'მოხერხებულ', 'trans-cription' -> 'transcription'). "
-        "Preserve genuine compound words (e.g. 'სამხრეთ-აღმოსავლეთი', 'well-known').\n"
-        "5. Structure: Merge line wraps within the same paragraph into clean continuous prose. Preserve real paragraph breaks with a single blank line. Skip running headers, footers, and page numbers.\n"
-        "If the image contains no readable body text, return exactly: [[NO_TEXT]]"
-    )
-
-    if is_ka:
-        instruction += (
-            "\n\nLANGUAGE: Georgian (ქართული, მხედრული).\n"
-            "- Use ONLY standard Georgian Mkhedruli alphabet letters (ა-ჰ). Never substitute Latin or Cyrillic characters.\n"
-            "- Georgian has NO capital letters.\n"
-            "- Strict Character Discrimination (differentiate visually close characters using grammatical and root context):\n"
-            "  - ვ (v) vs პ (p) vs კ (k)\n"
-            "  - შ (sh) vs წ (ts) vs ჭ (ch')\n"
-            "  - რ (r) vs უ (u) vs ყ (q')\n"
-            "  - ქ (k') vs ფ (p')\n"
-            "  - თ (t) vs ძ (dz) vs ხ (kh)\n"
-            "  - ჩ (ch) vs ხ (kh)\n"
-            "  - ლ (l) vs დ (d) vs ო (o)\n"
-            "  - ზ (z) vs გ (g)\n"
-            "  - ს (s) vs ხ (kh)\n"
-            "  - ც (ts) vs ტ (t') vs ე (e)\n"
-            "  - ბ (b) vs ზ (z)\n"
-            "- Every Georgian word must obey standard Georgian morphology and case markers (-მა, -ს, -ით, -ად, -ში, -ზე, -დან, -თან, -კენ)."
-        )
-
-    if hint:
-        instruction += f"\n\nContext from previous page: {hint}"
+    instruction = vision_prompt(lang, hint)
 
     # 3. Neural Execution via Gemini 2.5 Flash Vision
     result_text = ""
@@ -234,7 +193,7 @@ def transcribe_image_bytes(
                 ],
                 config=dict(temperature=0.0)
             )
-            if response and response.text:
+            if response and response.text and str(getattr(response.candidates[0], "finish_reason", "")).split(".")[-1] == "STOP":
                 result_text = response.text.strip()
         except Exception as e:
             print(f"[transcription_engine] Tier 1 Gemini vision failed: {e}")
@@ -262,7 +221,7 @@ def transcribe_image_bytes(
             if resp.status_code == 200:
                 data = resp.json()
                 cand = data.get("candidates", [])
-                if cand and cand[0].get("content", {}).get("parts", []):
+                if cand and cand[0].get("finishReason") == "STOP" and cand[0].get("content", {}).get("parts", []):
                     result_text = cand[0]["content"]["parts"][0].get("text", "").strip()
         except Exception as e:
             print(f"[transcription_engine] HTTP Gemini vision fallback failed: {e}")
@@ -282,19 +241,24 @@ def transcribe_image_bytes(
     result_text = re.sub(r"^```(?:[a-z]*\n)?", "", result_text, flags=re.IGNORECASE)
     result_text = re.sub(r"\n?```$", "", result_text).strip()
 
-    detected_ka = bool(re.search(r'[\u10A0-\u10FF]', result_text))
-    if lang == "ka" or detected_ka:
-        result_text = clean_georgian_morphology(result_text)
-        try:
-            active_pack = load_active_pack("ka")
-            if active_pack.get("enabled", True):
-                result_text = apply_pack(result_text, active_pack.get("items", []), kind="transcribe")
-        except Exception as e:
-            print(f"[transcription_engine] active pack ocr post-edit warning: {e}")
+    result_text = clean_verbatim(result_text)
+    detected_lang = detect_language(result_text)
+    # Trained editorial rules are suggestions, never destructive OCR post-processing.
+    repair_proposal = None
+    try:
+        active_pack = load_active_pack(detected_lang if detected_lang != "auto" else lang)
+        if active_pack.get("enabled", True):
+            candidate = apply_pack(result_text, active_pack.get("items", []), kind="transcribe")
+            if candidate != result_text:
+                repair_proposal = {"text": candidate, "source": result_text, "status": "needs_review"}
+    except Exception:
+        pass
 
     return {
         "text": result_text,
-        "language": "ka" if detected_ka else "en",
+        "language": detected_lang,
+        "repair_proposal": repair_proposal,
+        "needs_review": "[[UNCLEAR]]" in result_text or bool(repair_proposal),
         "engine": engine_name,
         "success": True
     }

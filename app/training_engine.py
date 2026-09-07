@@ -464,12 +464,14 @@ def evaluate_pack(items: List[Dict[str, Any]], cases: List[Dict[str, Any]]) -> D
             "total": 0,
             "failures": [],
             "qa_false_positives": 0,
+            "case_results": [],
         }
 
     weighted_score = 0.0
     total_weight = 0.0
     passed = 0
     failures = []
+    case_results = []
 
     for c in cases:
         source = c.get("source", "")
@@ -480,6 +482,7 @@ def evaluate_pack(items: List[Dict[str, Any]], cases: List[Dict[str, Any]]) -> D
         got = re.sub(r"\s+", " ", apply_pack(source, items, kind)).strip()
         sim = character_similarity(got, expected)
 
+        case_results.append({"id": c.get("id"), "score": sim, "passed": got == expected})
         weighted_score += sim * weight
         total_weight += weight
 
@@ -506,12 +509,24 @@ def evaluate_pack(items: List[Dict[str, Any]], cases: List[Dict[str, Any]]) -> D
         "passed": passed,
         "total": len(cases),
         "failures": failures[:25],
+        "case_results": case_results,
         "qa_false_positives": qa_false_positives
     }
 
 
 def is_improvement(before: Dict[str, Any], after: Dict[str, Any]) -> Tuple[bool, str]:
     """Safety gate: Only promote when score improves with zero regressions."""
+    previous, current = before.get("case_results"), after.get("case_results")
+    if not previous or not current or before["total"] != after["total"]:
+        return False, "rejected: full results from the same benchmark are required"
+    old = {c["id"]: c for c in previous}
+    new = {c["id"]: c for c in current}
+    if len(old) != before["total"] or len(new) != after["total"] or old.keys() != new.keys():
+        return False, "rejected: benchmark case IDs differ or are duplicated"
+    for case_id, prior in old.items():
+        result = new[case_id]
+        if (prior["passed"] and not result["passed"]) or result["score"] < prior["score"] - 0.0001:
+            return False, f"rejected: benchmark case {case_id} regressed"
     if after["qa_false_positives"] > before["qa_false_positives"]:
         return False, "rejected: QA rule triggers on known-good benchmark expected text (false positive)"
     if after["passed"] < before["passed"]:

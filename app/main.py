@@ -1,3 +1,4 @@
+from starlette.concurrency import run_in_threadpool
 import asyncio
 import json
 import os
@@ -89,7 +90,7 @@ def broadcast_progress(book_id: str, payload: dict):
 
 @app.get("/")
 async def serve_index():
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(STATIC_DIR.parent / "index.html")
 
 @app.get("/api/voices", response_model=List[TTSVoice])
 async def list_voices():
@@ -171,7 +172,7 @@ async def transcribe_endpoint(
         if not audio_bytes:
             raise HTTPException(status_code=400, detail="No audio data provided")
 
-        result = transcribe_audio_bytes(
+        result = await run_in_threadpool(transcribe_audio_bytes,
             audio_bytes=audio_bytes,
             mime_type=mime_type,
             language=language,
@@ -215,7 +216,7 @@ async def ocr_endpoint(req: Request):
             or body.get("api_key")
         )
 
-        result = transcribe_image_bytes(
+        result = await run_in_threadpool(transcribe_image_bytes,
             image_bytes=image_bytes,
             mime_type=mime_type,
             language=lang,

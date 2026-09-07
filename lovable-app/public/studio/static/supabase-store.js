@@ -492,6 +492,9 @@
       row_id: bookRow.id,
       title: bookRow.title,
       author: bookRow.author || "Unknown author",
+      language: bookRow.language,
+      lang: bookRow.language,
+      updated_at: bookRow.updated_at,
       coverUrl: bookRow.cover_url || meta.coverUrl || "",
       chapters: chapters,
       translatedLangs: meta.translatedLangs || [],
@@ -528,7 +531,7 @@
       slug: String(book.id),
       title: book.title || "Untitled",
       author: book.author || null,
-      language: book.language || "en",
+      language: book.lang || book.language || "en",
       cover_url: book.coverUrl || null,
       total_chapters: (book.chapters || []).length,
       status: "ready",
@@ -633,12 +636,14 @@
       bookRowId = ins.data.id;
     }
 
-    await client.from("chapters").delete().eq("book_id", bookRowId);
     var chapterRows = chapterRowsFrom(book, bookRowId);
     if (chapterRows.length) {
-      var cins = await client.from("chapters").insert(chapterRows);
+      var cins = await client.from("chapters").upsert(chapterRows, { onConflict: "book_id,chapter_index" });
       if (cins.error) throw cins.error;
     }
+    // Remove only obsolete trailing chapters after replacements have been saved.
+    var removed = await client.from("chapters").delete().eq("book_id", bookRowId).gte("chapter_index", chapterRows.length);
+    if (removed.error) throw removed.error;
     return true;
   }
 
@@ -820,7 +825,7 @@
             await client.from("jobs").update({
               progress: progress,
               total: totalCount || total,
-              status: status || "running",
+              status: status === "error" ? "failed" : (status || "running"),
               message: msg,
               updated_at: new Date().toISOString(),
               finished_at: (status === "done" || status === "failed") ? new Date().toISOString() : null,

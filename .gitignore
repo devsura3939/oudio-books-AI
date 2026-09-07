@@ -15,3 +15,10 @@ data/test/*
 *.tmp.mp3
 .DS_Store
 Thumbs.db
+node_modules/
+.output/
+.nitro/
+.tanstack/
+dist/
+.pytest_cache/
+.wrangler/

@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Engine verification — local fixtures</title>
+<link rel="stylesheet" href="../static/styles.css">
+<style>body{background:#0c111d;color:#eee;font:16px system-ui;padding:24px}button{padding:12px;margin:8px}textarea{display:block;width:90%;background:#141e30;color:#eee}.modal-overlay{display:none}.modal-overlay.active{display:flex}#repairReviewSections{max-width:1000px}#repairReviewSections>section{margin:20px}#repairReviewSections>section>div{display:flex;gap:20px}label{flex:1}</style>
+<h1>Engine verification — local fixtures</h1>
+<p>Uses the production IndexedDB store and correction review component. No Supabase or AI calls.</p>
+<button id="review">Review fixture</button><button id="checkpoint">Write checkpoint</button><button onclick="location.reload()">Reload checkpoint</button>
+<p id="storage" role="status"></p><p id="result" role="status"></p>
+<div id="repairReviewModal" class="modal-overlay"><div class="modal-content"><h2>Review text corrections</h2><button onclick="closeModal('repairReviewModal')">Close review</button><div id="repairReviewSections"></div></div></div>
+<script src="../static/engine-core.js"></script><script src="../static/job-store.js"></script>
+<script>
+let activeRetranscribeBook={id:'fixture',chapters:[{id:1,title:'English',text:'The book has a typoo. 5 + 3 = 8.',repair_proposal:{source:'The book has a typoo. 5 + 3 = 8.',text:'The book has a typo. 5 + 3 = 8.',status:'needs_review'}},{id:2,title:'Georgian',text:'ეს წარმოადგენს ჳ ჴ ჵ.',repair_proposal:{source:'ეს წარმოადგენს ჳ ჴ ჵ.',text:'ეს წარმოადგენს ჳ ჴ ჵ.',status:'needs_review'}}]};
+let currentBook=activeRetranscribeBook;
+const openModal=id=>document.getElementById(id)?.classList.add('active');
+const closeModal=id=>document.getElementById(id)?.classList.remove('active');
+const renderChaptersList=()=>{};
+const showToast=message=>document.getElementById('result').textContent=message;
+const saveBookToDB=async book=>{document.getElementById('result').textContent='Saved '+book.chapters[0].text+'; history: '+book.chapters[0].source_history?.length;};
+document.getElementById('review').onclick=()=>reviewRepairProposals(activeRetranscribeBook);
+document.getElementById('checkpoint').onclick=async()=>{await EngbotJobStore.put('local-verification',{outputs:['ქართული ტექსტი',null],status:'paused'});document.getElementById('storage').textContent='Checkpoint written; reload to verify persistence.';};
+EngbotJobStore.get('local-verification').then(job=>document.getElementById('storage').textContent=job?'Persisted checkpoint: '+JSON.stringify(job):'No fixture checkpoint yet.');
+</script><script src="../static/repair-review.js"></script></html>

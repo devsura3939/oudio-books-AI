@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.47.5';
-const ENGINE_VERSION = 'v1.47.5 (Lumina-PermanentDelete+FastLib+PrimaryGitHub+AutoHeal)';
+const APP_VERSION = 'v1.48.1';
+const ENGINE_VERSION = 'v1.48.1 (Bilingual translation and source integrity)';
 
 let db = null;
 let currentBook = null;
@@ -97,6 +97,7 @@ const SILENT_AUDIO_URI = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEA
 // Whole Book Translation State
 let isTranslatingWholeBook = false;
 let cancelTranslationFlag = false;
+let translationRequestController = null;
 
 // ── Global Toast Feedback System ──────────────────────────────────────────
 function showToast(message, type = 'info', duration = 3500) {
@@ -326,8 +327,8 @@ function parseAndMergeApiKeys(rawText) {
         geminiApiKey = detected.gemini;
         localStorage.setItem('geminiApiKey', detected.gemini);
         localStorage.setItem('lumina_saved_gemini_key', detected.gemini);
-        if (!geminiModel || geminiModel.includes('2.5') || geminiModel.includes('exp')) {
-            geminiModel = 'gemini-2.0-flash';
+        if (!geminiModel || /^gemini-(1\.5|2\.0)(-|$)/.test(geminiModel)) {
+            geminiModel = 'gemini-2.5-flash';
             localStorage.setItem('geminiModel', geminiModel);
         }
     }
@@ -725,9 +726,9 @@ let geminiApiKey = (_initialAcc && _initialAcc.geminiApiKey)
 
 let storedGeminiModel = (_initialAcc && _initialAcc.geminiModel)
     ? _initialAcc.geminiModel
-    : (localStorage.getItem('geminiModel') || 'gemini-2.0-flash');
-if (storedGeminiModel.includes('2.5') || storedGeminiModel.includes('2.0-pro-exp') || storedGeminiModel.includes('flash-exp') || !storedGeminiModel) {
-    storedGeminiModel = 'gemini-2.0-flash';
+    : (localStorage.getItem('geminiModel') || 'gemini-2.5-flash');
+if (!storedGeminiModel || /^gemini-(1\.5|2\.0)(-|$)/.test(storedGeminiModel)) {
+    storedGeminiModel = 'gemini-2.5-flash';
     try { localStorage.setItem('geminiModel', storedGeminiModel); } catch (e) {}
 }
 let geminiModel = storedGeminiModel;
@@ -739,7 +740,7 @@ let geminiPasses = (_initialAcc && _initialAcc.geminiPasses !== undefined)
 if (![1, 2, 3].includes(geminiPasses)) geminiPasses = 3;
 
 // Gemini fallback chain: real production Google AI Studio models
-const GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite', 'gemini-2.5-pro'];
+const GEMINI_FALLBACK_MODELS = EngbotCore.geminiModels(geminiModel);
 const geminiModelCooldown = {}; // model -> earliest ms it may be retried
 const GEMINI_MODEL_COOLDOWN_MS = 60_000;
 
@@ -821,6 +822,8 @@ const _isStaticHost = (() => {
 let luminaGatewayAvailable = !_isStaticHost;
 
 async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
     if (!luminaGatewayAvailable) return null;
     try {
         const controller = new AbortController();
@@ -831,7 +834,7 @@ async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 81
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
-            signal: controller.signal,
+            signal: jobSignal ? AbortSignal.any([controller.signal, jobSignal]) : controller.signal,
         });
         clearTimeout(tid);
         if (res.status === 404 || res.status === 401 || res.status === 403 || res.status === 402) {
@@ -848,8 +851,10 @@ async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 81
             return null;
         }
         const data = await res.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
         return data && data.text ? parseModelJSON(data.text) : null;
     } catch (e) {
+        jobSignal?.throwIfAborted();
         luminaGatewayAvailable = false;
         console.warn('[Lumina AI] gateway unreachable — falling back to key-based providers.', e && e.message);
 
@@ -888,6 +893,8 @@ function kaTrainedAddendum() {
 }
 
 async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
     if (!openRouterApiKey) return null;
     // All models cooling from a recent run? Skip the network entirely — the
     // 60s windows are short, so OpenRouter re-enters rotation on a later
@@ -896,6 +903,7 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192,
     const started = Date.now();
 
     for (let attempt = 0; attempt < OPENROUTER_CALL_MAX_ATTEMPTS; attempt++) {
+        jobSignal?.throwIfAborted();
         if (Date.now() - started > OPENROUTER_CALL_DEADLINE_MS) return null;
         const { model, idx } = openRouterNextModel();
         openRouterModelIndex = (idx + 1) % OPENROUTER_FREE_MODELS.length;
@@ -930,7 +938,7 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192,
                     temperature,
                     max_tokens: maxTokens,
                 }),
-                signal: ctrl.signal,
+                signal: jobSignal ? AbortSignal.any([ctrl.signal, jobSignal]) : ctrl.signal,
             });
             clearTimeout(tid);
 
@@ -955,6 +963,7 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192,
             }
 
             const data = await response.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
             const text = data?.choices?.[0]?.message?.content;
             if (!text) {
                 openRouterMarkModelFailed(preferred);
@@ -966,6 +975,7 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192,
             openRouterMarkModelFailed(preferred);
             continue;
         } catch (e) {
+        jobSignal?.throwIfAborted();
             console.warn('OpenRouter network error:', e && e.message);
             openRouterMarkModelFailed(preferred);
             if (Date.now() - started > OPENROUTER_CALL_DEADLINE_MS) return null;
@@ -1064,6 +1074,8 @@ function normalizeCustomProviderUrl(url) {
 //   3. Gemini REST:       candidates[0].content.parts[0].text
 //   4. Plain text wrappers: data.text, data.output, data.result, or raw response text
 async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8192, systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
     if (!customProviderUrl) return null;
     try {
         const ctrl = new AbortController();
@@ -1093,7 +1105,7 @@ async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8
             method: 'POST',
             headers,
             body,
-            signal: ctrl.signal,
+            signal: jobSignal ? AbortSignal.any([ctrl.signal, jobSignal]) : ctrl.signal,
         });
         clearTimeout(tid);
 
@@ -1126,6 +1138,7 @@ async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8
 
         return text.length > 5 ? text : null;
     } catch (e) {
+        jobSignal?.throwIfAborted();
         if (e && e.name === 'AbortError') {
             console.warn('[CustomProvider] request timed out after 30s');
         } else {
@@ -1155,11 +1168,14 @@ function setMistralApiKey(key) {
 // Generic OpenAI-compatible JSON-mode call with model rotation. Used by both
 // Groq and Mistral (identical request shape). Returns parsed JSON or null.
 async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs, apiKey, prompt, { temperature = 0.2, maxTokens = 8192, providerLabel = 'provider', systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
     const now = Date.now();
     const candidates = models.filter(m => (cooldownMap[m] || 0) <= now);
     if (!candidates.length) return null;
 
     for (const model of candidates) {
+        jobSignal?.throwIfAborted();
         try {
             const ctrl = new AbortController();
             const tid = setTimeout(() => ctrl.abort(), 20000); // 20s max
@@ -1185,7 +1201,7 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload),
-                signal: ctrl.signal,
+                signal: jobSignal ? AbortSignal.any([ctrl.signal, jobSignal]) : ctrl.signal,
             });
             clearTimeout(tid);
 
@@ -1206,6 +1222,7 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
             }
 
             const data = await response.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
             const text = data?.choices?.[0]?.message?.content;
             if (!text) {
                 cooldownMap[model] = Date.now() + cooldownMs;
@@ -1220,6 +1237,7 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
             console.warn(`[${providerLabel}] returned unparseable JSON from`, model);
             cooldownMap[model] = Date.now() + cooldownMs;
         } catch (e) {
+        jobSignal?.throwIfAborted();
             console.warn(`[${providerLabel}] network error:`, e?.message || e);
             cooldownMap[model] = Date.now() + cooldownMs;
             return null;
@@ -2547,20 +2565,22 @@ async function saveBookToDB(book) {
     if (!book.user_id && uid !== 'guest') {
         book.user_id = uid;
     }
+    book.updatedAt = new Date().toISOString();
     try { clearBookTombstone(book.id, book.title, book.slug); } catch (e) {}
     // Dual persistence: always store in local IndexedDB for instant offline access
     try {
         await saveBookToLocalDB(book);
     } catch (localErr) {
-        console.warn('[store] Local IndexedDB save warning:', localErr);
+        throw new Error('Local save failed: ' + localErr.message);
     }
 
     // And persist to Supabase Cloud if user is authenticated
     if (usingCloud && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
         try {
-            await window.LuminaStore.saveBook(book);
+            const saved = await window.LuminaStore.saveBook(book);
+            if (saved === false) throw new Error('Cloud session is unavailable');
         } catch (err) {
-            console.error('[store] Supabase save failed, keeping local copy:', err);
+            throw new Error('Cloud sync failed; local copy retained: ' + err.message);
         }
     }
 }
@@ -2747,12 +2767,7 @@ async function getAllBooks() {
 
     const bookMap = new Map();
 
-    const getBookKey = (b) => {
-        if (!b) return '';
-        if (b.id && String(b.id).startsWith('classic_')) return String(b.id);
-        const normTitle = (b.title || '').trim().toLowerCase();
-        return normTitle || String(b.slug || b.id || b.row_id || '');
-    };
+    const getBookKey = b => b ? String(b.id || b.row_id || b.slug || '') : '';
 
     // First populate from local DB (strictly filtering out any deleted books)
     for (const lb of localBooks) {
@@ -2776,24 +2791,12 @@ async function getAllBooks() {
             bookMap.set(key, cb);
         } else {
             const existing = bookMap.get(key);
-            const existingChapters = (existing.chapters || []).length;
-            const cloudChapters = (cb.chapters || []).length;
-            if (cloudChapters >= existingChapters) {
-                if (!cb.coverUrl && existing.coverUrl) cb.coverUrl = existing.coverUrl;
-                bookMap.set(key, cb);
-            } else {
-                // Local copy has more chapters: merge local chapters into cloud object
-                cb.chapters = existing.chapters;
-                if (!cb.coverUrl && existing.coverUrl) cb.coverUrl = existing.coverUrl;
-                bookMap.set(key, cb);
-                if (usingCloud && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
-                    const uid = getCurrentUserId();
-                    if (cb.user_id === uid || (!cb.user_id && uid !== 'guest')) {
-                        cb.user_id = uid;
-                        window.LuminaStore.saveBook(cb).catch(e => console.warn('[store] Background sync failed:', e));
-                    }
-                }
-            }
+            // Prefer a later explicit revision; never upload a guessed chapter-count merge.
+            const localTime = Math.max(Date.parse(existing.updated_at || '') || 0, Date.parse(existing.updatedAt || '') || 0);
+            const cloudTime = Math.max(Date.parse(cb.updated_at || '') || 0, Date.parse(cb.updatedAt || '') || 0);
+            const chosen = localTime > cloudTime ? existing : cb;
+            if (!chosen.coverUrl) chosen.coverUrl = existing.coverUrl || cb.coverUrl;
+            bookMap.set(key, chosen);
         }
     }
 
@@ -3007,7 +3010,7 @@ function getCurrentAccountSettings() {
 
     return {
         geminiApiKey: (typeof geminiApiKey !== 'undefined' && geminiApiKey) ? geminiApiKey : (local.geminiApiKey || localStorage.getItem('geminiApiKey') || localStorage.getItem('lumina_saved_gemini_key') || ''),
-        geminiModel: (typeof geminiModel !== 'undefined' && geminiModel) ? geminiModel : (local.geminiModel || localStorage.getItem('geminiModel') || 'gemini-2.0-flash'),
+        geminiModel: (typeof geminiModel !== 'undefined' && geminiModel) ? geminiModel : (local.geminiModel || localStorage.getItem('geminiModel') || 'gemini-2.5-flash'),
         geminiPasses: (typeof geminiPasses !== 'undefined' && [1, 2, 3].includes(geminiPasses)) ? geminiPasses : (local.geminiPasses || parseInt(localStorage.getItem('geminiPasses') || '3', 10) || 3),
         openRouterApiKey: (typeof openRouterApiKey !== 'undefined' && openRouterApiKey && openRouterApiKey !== OPENROUTER_DEFAULT_KEY) ? openRouterApiKey : (local.openRouterApiKey || localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || ''),
         openRouterModel: (typeof openRouterModel !== 'undefined' && openRouterModel) ? openRouterModel : (local.openRouterModel || localStorage.getItem('openRouterModel') || ''),
@@ -3382,7 +3385,7 @@ function saveGeminiSettings() {
     const key = inKey || sanitizeApiKey(geminiApiKey) || sanitizeApiKey(localStorage.getItem('geminiApiKey')) || sanitizeApiKey(localStorage.getItem('lumina_saved_gemini_key')) || '';
 
     const modelSelect = document.getElementById('geminiModelSelect');
-    const model = modelSelect ? modelSelect.value : (geminiModel || 'gemini-2.0-flash');
+    const model = modelSelect ? modelSelect.value : (geminiModel || 'gemini-2.5-flash');
 
     const passesSelect = document.getElementById('geminiPassesSelect');
     const passes = passesSelect ? parseInt(passesSelect.value, 10) : (geminiPasses || 3);
@@ -3553,7 +3556,7 @@ function renderToCDrawerList() {
 
     readerBook.chapters.forEach((chap, idx) => {
         const isCurrent = String(chap.id) === String(readerChapterId);
-        const hasKa = !!chap.text_ka;
+        const hasKa = false; // Checkpoints are validated against source and settings during resume.
         const btn = document.createElement('button');
         btn.className = `w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-3 ${isCurrent ? 'bg-primary-container/20 border-primary-container/50 text-white font-bold' : 'bg-white/5 border-white/10 hover:bg-white/10 text-on-surface'}`;
         btn.onclick = () => {
@@ -4898,7 +4901,7 @@ async function previewElevenLabsVoice(lang = 'en') {
             },
             body: JSON.stringify({
                 text: sampleText,
-                model_id: 'eleven_multilingual_v2',
+                model_id: lang === 'ka' ? 'eleven_v3' : 'eleven_multilingual_v2',
                 voice_settings: { stability: 0.35, similarity_boost: 0.85, style: 0.25, use_speaker_boost: true }
             })
         });
@@ -5532,7 +5535,7 @@ function paginateChapter() {
     if (readerLang === 'ka') {
         rawText = (chap.text_ka && chap.text_ka.trim().length > 0) ? chap.text_ka : (chap.text || '');
     } else {
-        rawText = chap.text || '';
+        rawText = chap.text_en || chap.text || '';
     }
 
     if (!rawText || rawText.trim().length === 0) {
@@ -6416,15 +6419,19 @@ function readerForwardSentence() {
 // so a whole-book batch keeps running on AI quality even when one or two
 // providers exhaust their free quota mid-run. Returns parsed JSON or null.
 async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
     // Tier 1: Gemini (user's direct Google AI Studio key: 2.0 Flash / 1.5 Pro / 1.5 Flash)
     if (geminiApiKey) {
         const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries, systemPrompt });
+        jobSignal?.throwIfAborted();
         if (res !== null) return res;
         console.warn('Gemini direct tier failed — trying Groq fallback.');
     }
     // Tier 2: Groq (free, ~500K tokens/day, ultra-fast)
     if (groqApiKey) {
         const res = await callGroqJSON(prompt, { temperature, maxTokens, systemPrompt });
+        jobSignal?.throwIfAborted();
         if (res !== null) return res;
         console.warn('Groq tier failed — trying Custom Provider.');
     }
@@ -6434,38 +6441,40 @@ async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, ret
         if (txt) {
             const parsed = parseModelJSON(txt);
             if (parsed) return parsed;
-            // If custom provider responded with translation text directly instead of JSON:
-            if (txt.trim().length > 5) {
-                return { translation: txt.trim() };
-            }
+
         }
         console.warn('Custom provider failed — trying OpenRouter.');
     }
     // Tier 4: OpenRouter free models
     if (openRouterApiKey) {
         const res = await callOpenRouterJSON(prompt, { temperature, maxTokens, systemPrompt });
+        jobSignal?.throwIfAborted();
         if (res !== null) return res;
         console.warn('OpenRouter tier failed — trying Mistral.');
     }
     // Tier 5: Mistral (free experiment plan)
     if (mistralApiKey) {
         const res = await callMistralJSON(prompt, { temperature, maxTokens, systemPrompt });
+        jobSignal?.throwIfAborted();
         if (res !== null) return res;
     }
     // Tier 6: Server gateway (only if available, e.g. local backend)
     if (luminaGatewayAvailable) {
         const res = await callLuminaGatewayJSON(prompt, { temperature, maxTokens, systemPrompt });
+        jobSignal?.throwIfAborted();
         if (res !== null) return res;
     }
     return null;
 }
 
 async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
     const cleanKey = sanitizeApiKey(geminiApiKey);
     if (!cleanKey) return null;
 
     // Select candidate model without mutating user's saved preference
-    const preferredModel = GEMINI_FALLBACK_MODELS.includes(geminiModel) ? geminiModel : 'gemini-2.0-flash';
+    const preferredModel = EngbotCore.geminiModels(geminiModel)[0];
 
     // Build the candidate model chain: preferred model first, then fallbacks
     // that aren't in cooldown, ordered by descending capability.
@@ -6475,7 +6484,9 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
     if (!candidates.length) return null;
 
     for (const model of candidates) {
+        jobSignal?.throwIfAborted();
         for (let attempt = 0; attempt <= retries; attempt++) {
+        jobSignal?.throwIfAborted();
             try {
                 const ctrl = new AbortController();
                 const tid = setTimeout(() => ctrl.abort(), 25000); // 25s max
@@ -6497,7 +6508,7 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
                         'x-goog-api-key': cleanKey
                     },
                     body: JSON.stringify(requestPayload),
-                    signal: ctrl.signal,
+                    signal: jobSignal ? AbortSignal.any([ctrl.signal, jobSignal]) : ctrl.signal,
                 });
                 clearTimeout(tid);
 
@@ -6527,15 +6538,17 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
                 }
 
                 const data = await response.json();
+                if (data?.candidates?.[0]?.finishReason !== 'STOP') continue;
                 const parts = data?.candidates?.[0]?.content?.parts;
                 const text = parts && Array.isArray(parts) ? parts.map(p => p.text || '').join('').trim() : '';
                 if (!text) break;
                 const parsed = parseModelJSON(text);
                 if (parsed) return parsed;
-                if (text.length > 5) return { translation: text };
+
                 console.warn('Gemini returned unparseable JSON');
                 break;
             } catch (e) {
+        jobSignal?.throwIfAborted();
                 if (attempt >= retries) {
                     console.warn('Gemini call failed:', e);
                     break;
@@ -6578,37 +6591,7 @@ function parseModelJSON(raw) {
     if (start >= 0 && end > start) {
         try { return JSON.parse(text.slice(start, end + 1)); } catch { /* continue */ }
     }
-    // 4. Truncated-JSON repair: close the open string, strip dangling
-    //    separators, then close every still-open bracket/brace in order.
-    if (start >= 0) {
-        const s = text.slice(start);
-        let inStr = false, esc = false;
-        const stack = [];
-        for (let i = 0; i < s.length; i++) {
-            const ch = s[i];
-            if (esc) { esc = false; continue; }
-            if (ch === '\\') { if (inStr) esc = true; continue; }
-            if (ch === '"') { inStr = !inStr; continue; }
-            if (inStr) continue;
-            if (ch === '{' || ch === '[') stack.push(ch);
-            else if (ch === '}' || ch === ']') stack.pop();
-        }
-        let candidate = s;
-        if (inStr) candidate += '"';
-        candidate = candidate.replace(/,\s*$/, '').replace(/:\s*$/, '');
-        const wasTruncated = inStr || stack.length > 0;
-        while (stack.length) {
-            const open = stack.pop();
-            candidate += open === '{' ? '}' : ']';
-        }
-        try {
-            const res = JSON.parse(candidate);
-            if (res && typeof res === 'object' && wasTruncated) {
-                res._truncated = true;
-            }
-            return res;
-        } catch { /* give up */ }
-    }
+    // Incomplete structured output is retried, never salvaged as a complete passage.
     return null;
 }
 
@@ -6632,16 +6615,13 @@ function extractTranslation(raw) {
 }
 
 function detectTextLang(text) {
-    if (!text || typeof text !== 'string') return 'en';
-    const ka = (text.match(/[\u10A0-\u10FF]/g) || []).length;
-    const latin = (text.match(/[A-Za-z]/g) || []).length;
-    return ka > latin ? 'ka' : 'en';
+    return EngbotCore.detectLanguage(text);
 }
 
 function getBookGlossaryBlock(book = null) {
     const b = book || activeTranslationBook || currentBook;
     if (!b || !Array.isArray(b.glossary) || b.glossary.length === 0) return '';
-    const lines = b.glossary.map(g => `- "${g.en}" -> "${g.ka}"`).join('\n');
+    const lines = b.glossary.map(g => `- English: "${g.en}" ↔ Georgian: "${g.ka}"`).join('\n');
     return `\n\n=== BOOK GLOSSARY (MANDATORY CHARACTER NAMES & TERMS) ===\nUse these exact translations consistently across all chapters:\n${lines}\n=== END BOOK GLOSSARY ===`;
 }
 
@@ -6671,7 +6651,7 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
 - Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
 === END ENGLISH RULES ===` : '';
 
-    const glossaryBlock = getBookGlossaryBlock();
+    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang) || '');
     const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Your translations read like the book was originally written in ${targetLangName} — the register of a respected literary publishing house, not a machine.${kaBlock}${enStyleGuide}${glossaryBlock}`;
 
     const prompt = `Process:
@@ -6791,42 +6771,37 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
 
     const draft = await geminiDraftTranslate(text, targetLang, contextBefore, contextAfter);
     if (!draft) return null;
-    if (geminiPasses < 2) return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+    if (geminiPasses < 2) return draft;
 
     const critique = await geminiCritiqueTranslation(text, draft, targetLang);
-    if (!critique) {
-        // Critique unavailable (rate limits) — the deterministic QA gate still
-        // catches high-confidence defects so a corrupted draft never ships.
-        if (targetLang === 'ka' && typeof applyGeorgianQaGate === 'function') {
-            return await applyGeorgianQaGate(refineGeorgianGrammar(draft));
-        }
-        return draft;
-    }
+    if (!critique) return null; // Review is required by the selected mode.
 
     const blocking = critique.errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major' || e.severity === 'blocking'));
-    if (critique.verdict === 'approved' || blocking.length === 0) {
-        return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+    if (critique.verdict === 'approved' && blocking.length === 0) {
+        return draft;
     }
 
     if (geminiPasses < 3) {
         const quick = await geminiRefineTranslation(text, draft, blocking, targetLang);
-        const result = quick || draft;
-        return targetLang === 'ka' ? refineGeorgianGrammar(result) : result;
+        if (!quick || !assessTranslation(text, quick, targetLang).ok) return null;
+        const result = quick;
+        return result;
     }
 
     const revised = await geminiRefineTranslation(text, draft, blocking, targetLang);
-    if (!revised) return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+    if (!revised || !assessTranslation(text, revised, targetLang).ok) return null;
 
     // Final QA: re-review the revision; keep it only if it is genuinely
     // better than the draft — a bad refinement can never make things worse.
     const revisedAudit = await geminiCritiqueTranslation(text, revised, targetLang);
+    if (!revisedAudit) return null;
     const revisedBlocking = revisedAudit
         ? revisedAudit.errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major' || e.severity === 'blocking')).length
         : blocking.length;
-    if (revisedBlocking < blocking.length || revisedAudit?.verdict === 'approved') {
-        return targetLang === 'ka' ? refineGeorgianGrammar(revised) : revised;
+    if (revisedBlocking === 0 && revisedAudit?.verdict === 'approved') {
+        return revised;
     }
-    return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+    return null; // Blocking defects remain unresolved.
 }
 
 // Budget pipeline for whole-book jobs. Whole books translate ~120k+ chars in
@@ -6857,7 +6832,7 @@ async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', 
 - Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
 === END ENGLISH RULES ===` : '';
 
-    const glossaryBlock = getBookGlossaryBlock();
+    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang) || '');
     const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Translate faithfully, preserving literary register and character voice.${kaBlock}${enStyleGuide}${glossaryBlock}`;
 
     const prompt = `Translate the passage below, then audit and correct your own translation BEFORE answering.
@@ -7113,7 +7088,7 @@ async function probeAiKeyStatus() {
         const tasks = [];
         if (geminiApiKey) {
             const cleanKey = sanitizeApiKey(geminiApiKey);
-            const probeModel = GEMINI_FALLBACK_MODELS.includes(geminiModel) ? geminiModel : 'gemini-2.0-flash';
+            const probeModel = EngbotCore.geminiModels(geminiModel)[0];
             tasks.push(fetch(`https://generativelanguage.googleapis.com/v1beta/models/${probeModel}:generateContent?key=${encodeURIComponent(cleanKey)}`, {
                 method: 'POST',
                 headers: {
@@ -7316,7 +7291,7 @@ function buildChapterQueue(book = null) {
     b.chapters.forEach((chap, idx) => {
         const row = document.createElement('div');
         row.dataset.chapterIdx = idx;
-        const hasKa = !!chap.text_ka;
+        const hasKa = false; // Checkpoints are validated against source and settings during resume.
         row.innerHTML = `<span class="ch-status-icon">${hasKa ? '✅' : '⏳'}</span><span class="ch-title">${escapeHtml(chap.title)}</span><span class="ch-pct">${hasKa ? '100%' : '—'}</span>`;
         DOM.wbChapterQueue.appendChild(row);
     });
@@ -7485,49 +7460,9 @@ window.applyKaRuleEngine = applyKaRuleEngine;
  * from ever reaching text_ka or being persisted to database.
  */
 function assessTranslation(src, out, targetLang = 'ka') {
-    if (!out || typeof out !== 'string' || !out.trim()) {
-        return { ok: false, reason: 'empty_output' };
-    }
-    const cleanOut = out.trim();
-    const cleanSrc = (src || '').trim();
-    if (!cleanSrc) return { ok: true };
-
-    // 1. Identical to source (case-insensitive) — primary source-leak defect
-    if (cleanOut.toLowerCase() === cleanSrc.toLowerCase()) {
-        return { ok: false, reason: 'identical_to_source' };
-    }
-
-    if (targetLang === 'ka') {
-        // 2. Georgian script ratio:
-        // Count Georgian letters (U+10A0 - U+10FF) vs total Latin/Cyrillic letters
-        const kaLetters = (cleanOut.match(/[\u10A0-\u10FF]/g) || []).length;
-        const latinLetters = (cleanOut.match(/[a-zA-Z]/g) || []).length;
-        const totalAlphabet = kaLetters + latinLetters;
-        
-        // If there are significant alphabetic characters, Georgian must dominate (at least 60%)
-        if (totalAlphabet >= 8 && (kaLetters / totalAlphabet) < 0.60) {
-            return { ok: false, reason: 'wrong_script_ratio', kaRatio: kaLetters / totalAlphabet };
-        }
-
-        // 3. Extreme length ratio check (for inputs of substantial length >= 30 chars)
-        if (cleanSrc.length >= 30) {
-            const ratio = cleanOut.length / cleanSrc.length;
-            if (ratio < 0.35 || ratio > 2.80) {
-                return { ok: false, reason: 'extreme_length_ratio', ratio };
-            }
-        }
-
-        // 4. Raw JSON or markdown artifact leaks
-        if (/```(?:json)?\s*[\{\[]/i.test(cleanOut) || /^\{\s*"(?:translated|text|chunk|output)"\s*:/i.test(cleanOut)) {
-            return { ok: false, reason: 'raw_json_leak' };
-        }
-        if (/<think>|<\/think>/i.test(cleanOut)) {
-            return { ok: false, reason: 'model_thinking_leak' };
-        }
-    }
-
-    return { ok: true };
+    return EngbotCore.assessTranslation(src, out, targetLang);
 }
+
 window.assessTranslation = assessTranslation;
 
 // Machine-translation draft + the full rule engine. `translateChunkLocal` keeps
@@ -7691,12 +7626,10 @@ async function translateChunkLocal(clean, targetLang) {
 
 // Tier A: AI pipeline with literary prompt and Georgian mastery rules.
 async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, deep = true) {
-    const pipeline = typeof translateWithGeminiAIBatch === 'function'
-        ? translateWithGeminiAIBatch
-        : translateWithGeminiAI;
+    const pipeline = translateWithGeminiAI;
     const aiRes = await pipeline(clean, targetLang, contextBefore, contextAfter);
     if (aiRes) {
-        const refined = targetLang === 'ka' ? applyKaRuleEngine(aiRes) : aiRes;
+        const refined = aiRes;
         const assess = assessTranslation(clean, refined, targetLang);
         if (assess.ok) {
             recordEngineUse('ai');
@@ -7818,49 +7751,43 @@ async function translateSingleSentence(text, targetLang = 'ka') {
 }
 
 // ══ Resumable translation jobs ══════════════════════════════════════════════
-// Every finished chunk is checkpointed to localStorage, so navigating away,
+// Every finished chunk is checkpointed to IndexedDB, so navigating away,
 // reloading, or closing the tab and coming back resumes exactly where it
 // stopped instead of starting over (and never re-translates a finished
 // chapter). Completed chapters are saved immediately, so you can start
 // listening to chapter 1 while chapter 7 is still being translated.
 const TJOB_PREFIX = 'lumina_tjob_';
-const tjobKey = id => TJOB_PREFIX + id;
-
-function loadTranslationJob(bookId) {
-    try { return JSON.parse(localStorage.getItem(tjobKey(bookId)) || 'null'); }
-    catch (e) { return null; }
+const tjobKey = (id, ownerId = getCurrentUserId()) => TJOB_PREFIX + ownerId + '_' + id;
+async function loadTranslationJob(bookId) {
+    return await window.EngbotJobStore.get(tjobKey(bookId));
 }
-function saveTranslationJob(job) {
+async function saveTranslationJob(job) {
     if (!job || !job.bookId) return;
     job.updatedAt = Date.now();
-    try {
-        const lightJob = {
-            bookId: job.bookId,
-            title: job.title || '',
-            status: job.status || 'running',
-            chapterIdx: job.chapterIdx || 0,
-            totalChapters: job.totalChapters || 0,
-            updatedAt: job.updatedAt
-        };
-        localStorage.setItem(tjobKey(job.bookId), JSON.stringify(lightJob));
-    } catch (e) {
-        if (typeof purgeStorageQuotaPressure === 'function') purgeStorageQuotaPressure();
-    }
+    // Await the transaction before claiming a checkpoint is saved.
+    await window.EngbotJobStore.put(tjobKey(job.bookId, job.ownerId), JSON.parse(JSON.stringify(job)));
+    localStorage.setItem(tjobKey(job.bookId, job.ownerId), JSON.stringify({
+        bookId: job.bookId, title: job.title, status: job.status,
+        chapterIdx: job.chapterIdx, totalChapters: job.totalChapters, updatedAt: job.updatedAt
+    }));
 }
-function clearTranslationJob(bookId) {
-    try { localStorage.removeItem(tjobKey(bookId)); } catch (e) { }
+async function clearTranslationJob(bookId) {
+    await window.EngbotJobStore.remove(tjobKey(bookId));
+    localStorage.removeItem(tjobKey(bookId));
 }
 function findResumableTranslationJob() {
+    const prefix = TJOB_PREFIX + getCurrentUserId() + '_';
     for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k || !k.startsWith(TJOB_PREFIX)) continue;
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith(prefix)) continue;
         try {
-            const job = JSON.parse(localStorage.getItem(k) || 'null');
+            const job = JSON.parse(localStorage.getItem(key));
             if (job && job.status === 'running') return job;
-        } catch (e) { }
+        } catch (e) { /* Ignore corrupt metadata; never infer a completed chapter. */ }
     }
     return null;
 }
+
 window.getTranslationJobProgress = () => {
     const job = findResumableTranslationJob();
     return job ? { bookId: job.bookId, title: job.title || '', chapterIdx: job.chapterIdx || 0, totalChapters: job.totalChapters || 0 } : null;
@@ -7873,10 +7800,10 @@ async function resumeTranslationJobIfAny() {
     try {
         const books = await getAllBooks();
         const book = books.find(b => String(b.id) === String(job.bookId));
-        if (!book) { clearTranslationJob(job.bookId); return; }
+        if (!book) { await clearTranslationJob(job.bookId); return; }
         if (currentBook?.id !== book.id) await selectBook(book.id, false);
         if (typeof showToast === 'function') {
-            showToast(`Resuming Georgian translation of “${book.title}” where it stopped…`, 'info');
+            showToast(`Resuming translation of “${book.title}” where it stopped…`, 'info');
         }
         startWholeBookTranslation(true);
     } catch (e) {
@@ -7987,394 +7914,160 @@ function buildTranslationChunks(chapterText, targetCharLimit = 1800, maxSentence
 }
 
 async function startWholeBookTranslation(resume = false) {
-    if (!currentBook) {
-        alert('Please select an audiobook to translate.');
-        return;
+    if (isTranslatingWholeBook) { restoreTranslationPanel(); return; }
+    if (typeof navigator !== 'undefined' && navigator.locks && currentBook) {
+        return navigator.locks.request(tjobKey(currentBook.id), {ifAvailable:true}, async lock => {
+            if (!lock) { showToast('This book is already being translated in another tab.', 'info'); return; }
+            return runWholeBookTranslation(resume);
+        });
     }
-    // If the book is originally in Georgian, it already has full Georgian text and audio
-    if ((currentBook.lang === 'ka' || currentBook.isGeorgianBook) && !currentBook.originalBookId && !currentBook.isTranslatedEdition) {
-        if (typeof showToast === 'function') {
-            showToast('ეს წიგნი უკვე ქართულ ენაზეა! პირდაპირ შეგიძლიათ მოუსმინოთ და წაიკითხოთ.', 'info');
-        } else {
-            alert('This book is already in Georgian! You can listen to it and read it directly without translating.');
-        }
-        return;
-    }
-    if (isTranslatingWholeBook) {
-        if (translationPanelMinimized) {
-            restoreTranslationPanel();
-        } else {
-            openModal('wholeBookTranslateModal');
-        }
-        return;
-    }
+    return runWholeBookTranslation(resume);
+}
 
+async function runWholeBookTranslation(resume = false) {
+    if (!currentBook?.chapters?.length) return;
+    if (isTranslatingWholeBook) { restoreTranslationPanel(); return; }
     const targetBook = currentBook;
-    if (!targetBook || !targetBook.chapters || !targetBook.chapters.length) return;
+    const ownerId = getCurrentUserId();
+    const checkOwner = () => { if (getCurrentUserId() !== ownerId) throw new Error('Account changed; sign in to the original account to resume'); };
+    const sourceLang = EngbotCore.normalizeLanguage(targetBook.lang || targetBook.language) === 'ka' ? 'ka' : detectTextLang(targetBook.chapters.map(c => c.text || '').join(' ').slice(0, 6000));
+    const targetLang = sourceLang === 'ka' ? 'en' : 'ka';
+    const field = 'text_' + targetLang;
+    const targetName = targetLang === 'ka' ? 'Georgian' : 'English';
+    let job, cloudJob;
     activeTranslationBook = targetBook;
-
-    const existing = resume ? loadTranslationJob(targetBook.id) : null;
-    const job = existing && existing.status === 'running' ? existing : {
-        bookId: targetBook.id,
-        title: targetBook.title,
-        status: 'running',
-        chapterIdx: 0,
-        partial: [],
-        totalChapters: targetBook.chapters.length,
-    };
-    job.status = 'running';
-    job.totalChapters = targetBook.chapters.length;
-    saveTranslationJob(job);
-
     isTranslatingWholeBook = true;
     cancelTranslationFlag = false;
-    openModal('wholeBookTranslateModal');
-
+    translationRequestController = new AbortController();
     translationPanelMinimized = false;
-    translationStartTime = Date.now();
-    translationChunkTimestamps = [];
-
-    // Reset engine stats for this run and wire the live indicator.
-    Object.keys(translationEngineStats).forEach(k => { translationEngineStats[k] = 0; });
-    setTranslationEngineStatusEl(document.getElementById('wbEngineStatus'));
-
-    // Reset and build the detailed progress UI
-    if (DOM.wbChunkLog) DOM.wbChunkLog.innerHTML = '';
-    if (DOM.wbChunkRate) DOM.wbChunkRate.textContent = '0 chunks/min';
-    buildChapterQueue(targetBook);
-
-    const totalChapters = targetBook.chapters.length;
-    let totalSentencesCount = 0;
-    let completedSentencesCount = 0;
-    let totalCharsTranslated = 0;
-
-    targetBook.chapters.forEach(chap => {
-        const s = splitIntoNaturalSentences(chap.text);
-        totalSentencesCount += s.length;
-    });
-
-    let cloudJob = null;
-    if (window.LuminaStore && window.LuminaStore.createJob) {
-        try {
-            cloudJob = await window.LuminaStore.createJob(targetBook.id, 'parse', totalChapters, `Translating "${targetBook.title}" (Georgian Edition)`);
-        } catch (e) {
-            console.warn('[translation] cloud job create warning:', e);
-        }
-    }
-
+    openModal('wholeBookTranslateModal');
     try {
-        // ── Book-Level Glossary Pre-Pass ────────────────────────────────────
-        // Automatically extract consistent terminology & character names from the book
-        // prologue/first chapter if not already generated.
-        if (aiTranslationAvailable() && (!targetBook.glossary || !targetBook.glossary.length)) {
-            try {
-                if (DOM.wbChapterLabel) {
-                    DOM.wbChapterLabel.textContent = `Extracting book glossary & character names for “${targetBook.title}”…`;
+        const saved = await loadTranslationJob(targetBook.id);
+        job = saved?.targetLang === targetLang ? saved : { bookId: targetBook.id, title: targetBook.title, targetLang, chapters: {} };
+        job.chapters ||= {};
+        job.ownerId = ownerId;
+        job.status = 'running';
+        job.totalChapters = targetBook.chapters.length;
+        await saveTranslationJob(job);
+        buildChapterQueue(targetBook);
+        if (typeof aiTranslationAvailable === 'function' && aiTranslationAvailable() && !job.glossaryChecked && !targetBook.glossary?.length) {
+            const sample = targetBook.chapters.slice(0, 2).map(c => c.text || '').join('\n\n').slice(0, 3000);
+            if (sample.length > 80) {
+                const data = await callGeminiJSON(`Extract up to 20 names and recurring terms from this book opening. Return English and Georgian equivalents as JSON: {"glossary":[{"en":"English term","ka":"ქართული შესატყვისი"}]}. Preserve names consistently; do not invent entries.\n${sample}`, {temperature:0.1,maxTokens:2048});
+                translationRequestController?.signal.throwIfAborted();
+                checkOwner();
+                if (Array.isArray(data?.glossary)) {
+                    targetBook.glossary = data.glossary.filter(g => typeof g?.en === 'string' && typeof g?.ka === 'string' && g.en.trim() && g.ka.trim()).slice(0,20);
+                    await saveBookToDB(targetBook);
                 }
-                const sampleText = targetBook.chapters.slice(0, 2).map(c => c.text || '').join('\n\n').slice(0, 3000).trim();
-                if (sampleText.length > 80) {
-                    const glossaryPrompt = `Extract key character names, titles, and unique terminology from this book opening. Provide authoritative literary Georgian (ქართული) translations or transliterations so they remain 100% consistent throughout the entire book.
-
-Book Title: "${targetBook.title}"
-Sample Text:
-${sampleText}
-
-Answer as JSON strictly:
-{"glossary": [{"en": "English Name/Term", "ka": "ქართული შესატყვისი"}]}
-Max 15-20 key entries.`;
-
-                    const gRes = await callGeminiJSON(glossaryPrompt, { temperature: 0.1, maxTokens: 2048 });
-                    if (gRes && Array.isArray(gRes.glossary) && gRes.glossary.length > 0) {
-                        targetBook.glossary = gRes.glossary.filter(item => item && item.en && item.ka);
-                        await saveBookToDB(targetBook);
-                        console.log(`[translation] Book glossary created (${targetBook.glossary.length} entries):`, targetBook.glossary);
-                    }
-                }
-            } catch (e) {
-                console.warn('[translation] Glossary extraction pass warning:', e);
             }
+            job.glossaryChecked = true;
+            await saveTranslationJob(job);
         }
-
-        for (let chIdx = 0; chIdx < totalChapters; chIdx++) {
+        if (window.LuminaStore?.createJob && usingCloud) {
+            cloudJob = await window.LuminaStore.createJob(targetBook.id, 'parse', job.totalChapters, `Translating to ${targetName}`);
+        }
+        const config = JSON.stringify({targetLang, geminiModel, geminiPasses, openRouterModel, customProviderModel,
+            glossary: targetBook.glossary || [], pack: window.EngbotPack?.version(targetLang) || 0});
+        let completed = 0;
+        for (let index = 0; index < targetBook.chapters.length; index++) {
+            checkOwner();
             if (cancelTranslationFlag) break;
-
-            const chapter = targetBook.chapters[chIdx];
-
-            // Already-translated chapters are never redone (resume or restart).
-            if (chapter.text_ka && chapter.text_ka.trim().length > 0) {
-                updateChapterQueueStatus(-1, chIdx);
-                if (chIdx >= (job.chapterIdx || 0)) { job.chapterIdx = chIdx + 1; job.partial = []; saveTranslationJob(job); }
-                continue;
+            const chapter = targetBook.chapters[index];
+            const source = chapter.text || '';
+            const chunks = EngbotCore.splitText(source, 1800).filter(t => t.trim());
+            const key = String(chapter.id ?? index);
+            let checkpoint = job.chapters[key];
+            if (!checkpoint || checkpoint.source !== source || checkpoint.config !== config) {
+                checkpoint = job.chapters[key] = { source, config, outputs: new Array(chunks.length).fill(null) };
             }
-
-            // Sentence-aware dynamic chunking: preserves authentic paragraph breaks (\n\n)
-            // and splits oversized text or unsegmented PDFs into optimal ~1,500–1,800 char chunks
-            const { chunks, chunkSentenceCounts } = buildTranslationChunks(chapter.text, 1800, 16);
-
-            // Resume inside a chapter: reuse the chunks we already checkpointed.
-            const resumedPartial = (job.chapterIdx === chIdx && Array.isArray(job.partial)) ? job.partial : [];
-            const translatedArr = resumedPartial.slice();
-            job.chapterIdx = chIdx;
-            saveTranslationJob(job);
-
-            if (DOM.wbChapterLabel) {
-                DOM.wbChapterLabel.textContent = `Translating Chapter ${chIdx + 1} of ${totalChapters}: ${chapter.title}`;
-            }
-            updateChapterQueueStatus(chIdx, -1);
-            updateMiniDock();
-
-            // ══ BATCH TRANSLATION ══
-            // Sequential processing (1 worker at a time) ensures we stay well
-            // within API rate limits (e.g. Gemini 15 RPM / Groq 30 RPM), prevents
-            // 429 quota traps, and gives continuous real-time UI updates on every chunk.
-            const CONCURRENT_AI_LIMIT = 1;
-            let aiRunning = 0;
-            let nextChunkIdx = 0;
-            let completedInChapter = 0;
-            const chunkResults = new Array(chunks.length).fill(null);
-            // Seed already-checkpointed chunks so a resumed run never redoes work.
+            job.chapterIdx = index;
+            await saveTranslationJob(job);
+            updateChapterQueueStatus(index, -1);
+            if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `${targetName}: chapter ${index + 1} / ${job.totalChapters}`;
             for (let i = 0; i < chunks.length; i++) {
-                if (typeof resumedPartial[i] === 'string' && resumedPartial[i]) {
-                    chunkResults[i] = resumedPartial[i];
-                    completedInChapter++;
+                if (cancelTranslationFlag) break;
+                if (checkpoint.outputs[i] && assessTranslation(chunks[i], checkpoint.outputs[i], targetLang).ok) continue;
+                if (DOM.wbLiveOriginal) DOM.wbLiveOriginal.textContent = chunks[i];
+                if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = `Translating segment ${i + 1} / ${chunks.length}…`;
+                // Do not silently replace reviewed LLM translation with dictionary drafts.
+                const output = await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true);
+                if (cancelTranslationFlag) break; // Late provider responses cannot commit after stop.
+                checkOwner();
+                if (!assessTranslation(chunks[i], output, targetLang).ok) {
+                    throw new Error(`Chapter ${index + 1}, segment ${i + 1} needs retry or review. Check your AI provider.`);
                 }
+                checkpoint.outputs[i] = output;
+                await saveTranslationJob(job);
+                if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = output;
+                const pct = Math.min(99, Math.round(((index + checkpoint.outputs.filter(Boolean).length / Math.max(1, chunks.length)) / job.totalChapters) * 100));
+                if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
+                if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
+                if (DOM.wbSentenceCounter) DOM.wbSentenceCounter.textContent = `Accepted segments: ${checkpoint.outputs.filter(Boolean).length} / ${chunks.length}`;
             }
-
-            // Reset shared progress state for this chapter
-            wbProgressState.completedInChapter = completedInChapter;
-            wbProgressState.totalChunks = chunks.length;
-            wbProgressState.totalSentences = totalSentencesCount;
-            wbProgressState.completedSentences = completedSentencesCount;
-            wbProgressState.totalChars = totalCharsTranslated;
-            flushWbProgress();
-
-            async function processChunk(idx) {
-                if (typeof chunkResults[idx] === 'string' && chunkResults[idx]) return; // resumed
-                const orig = chunks[idx].trim();
-                if (!orig) { chunkResults[idx] = ''; return; }
-
-                // Live preview: show current chunk text immediately so the UI is responsive
-                if (DOM.wbLiveOriginal) {
-                    DOM.wbLiveOriginal.textContent = orig.slice(0, 260) + (orig.length > 260 ? '…' : '');
-                }
-                if (DOM.wbLiveGeorgian) {
-                    const engineName = geminiApiKey ? `Gemini (${geminiModel})` : (groqApiKey ? 'Groq' : (customProviderUrl ? 'Custom Provider' : (openRouterApiKey ? 'OpenRouter' : 'Rule Engine')));
-                    DOM.wbLiveGeorgian.textContent = `Translating chunk ${idx + 1} of ${chunks.length} using ${engineName}…`;
-                }
-                if (translationEngineStatusEl) {
-                    const engineName = geminiApiKey ? `Gemini (${geminiModel})` : (groqApiKey ? 'Groq' : (customProviderUrl ? 'Custom' : (openRouterApiKey ? 'OpenRouter' : 'Rules')));
-                    translationEngineStatusEl.innerHTML = `<span class="text-primary font-semibold">Engine: ${engineName} (translating chunk ${idx + 1}/${chunks.length})</span>`;
-                }
-
-                const isComplex = scoreChunkComplexity(orig) > SMART_ROUTE_EASY_THRESHOLD;
-                let engineUsed = 'local';
-                let chunkRes = null;
-                try {
-                    const before = idx > 0 ? chunks[idx - 1].trim() : '';
-                    const after = idx < chunks.length - 1 ? chunks[idx + 1].trim() : '';
-                    chunkRes = await translateChunkSmart(orig, 'ka', before, after);
-                    if (isComplex && chunkRes) engineUsed = 'ai';
-                } catch (e) {
-                    console.warn(`Chunk ${idx} translation error:`, e);
-                }
-
-                if (!chunkRes) {
-                    try {
-                        chunkRes = await translateChunkLocal(orig, 'ka');
-                        engineUsed = 'local';
-                    } catch (e) {
-                        console.warn(`Chunk ${idx} local fallback error:`, e);
-                    }
-                }
-
-                if (chunkRes) {
-                    const assess = assessTranslation(orig, chunkRes, 'ka');
-                    if (assess.ok) {
-                        chunkResults[idx] = chunkRes;
-                    } else {
-                        console.warn(`[translation] Chunk ${idx} rejected by assessTranslation:`, assess.reason);
-                        chunkResults[idx] = null;
-                        engineUsed = 'fail';
-                    }
-                } else {
-                    chunkResults[idx] = null;
-                    engineUsed = 'fail';
-                }
-
-                if (DOM.wbLiveGeorgian && chunkResults[idx]) {
-                    DOM.wbLiveGeorgian.textContent = chunkResults[idx];
-                }
-                appendChunkLog(idx, engineUsed, orig.slice(0, 60));
-                updateChunkRate();
-            }
-
-            const workers = [];
-            for (let w = 0; w < CONCURRENT_AI_LIMIT; w++) {
-                workers.push((async () => {
-                    while (nextChunkIdx < chunks.length) {
-                        if (cancelTranslationFlag) return;
-                        const idx = nextChunkIdx++;
-                        const wasResumed = typeof chunkResults[idx] === 'string' && chunkResults[idx];
-                        await processChunk(idx);
-
-                        if (chunkResults[idx] && !wasResumed) {
-                            translatedArr[idx] = chunkResults[idx];
-                            totalCharsTranslated += chunkResults[idx].length;
-                            completedInChapter++;
-                            completedSentencesCount += chunkSentenceCounts[idx];
-                            // Checkpoint after EVERY chunk so nothing is lost.
-                            job.chapterIdx = chIdx;
-                            job.partial = chunkResults.map(v => (typeof v === 'string' ? v : null));
-                            saveTranslationJob(job);
-                        }
-
-                        // Update shared progress state, then refresh the UI
-                        wbProgressState.completedInChapter = completedInChapter;
-                        wbProgressState.completedSentences = completedSentencesCount;
-                        wbProgressState.totalChars = totalCharsTranslated;
-                        flushWbProgress();
-                    }
-                })());
-            }
-            await Promise.all(workers);
-
-            // Force a final UI flush for this chapter (bypasses throttle)
-            // and roll the book-level counters into the next chapter.
-            wbProgressState.completedInChapter = completedInChapter;
-            wbProgressState.completedSentences = completedSentencesCount;
-            wbProgressState.totalChars = totalCharsTranslated;
-            flushWbProgress();
-
-            // Chapter finished: mark queue status, refresh the chapter list
-            // so the just-completed chapter is immediately readable/listenable,
-            // and persist progress so the reader can pick it up mid-run.
-            updateChapterQueueStatus(-1, chIdx);
             if (cancelTranslationFlag) break;
-
-            const validChunks = translatedArr.filter(t => typeof t === 'string' && t.trim().length > 0);
-            const allChunksSucceeded = validChunks.length === chunks.length;
-
-            if (validChunks.length > 0) {
-                // Join chunks preserving paragraph rhythm
-                chapter.text_ka = translatedArr.filter(Boolean).join('\n\n');
-            }
-
-            // Only mark book as having 'ka' if all chunks in the chapter succeeded
-            if (allChunksSucceeded && chapter.text_ka && chapter.text_ka.trim().length > 0) {
-                if (!targetBook.translatedLangs) targetBook.translatedLangs = [];
-                if (!targetBook.translatedLangs.includes('ka')) {
-                    targetBook.translatedLangs.push('ka');
-                }
-                await saveBookToDB(targetBook);
-                try {
-                    await saveTranslatedBookEdition(targetBook);
-                } catch (e) {
-                    console.warn('[translation] saveTranslatedBookEdition checkpoint error:', e);
-                }
-            } else if (validChunks.length > 0) {
-                await saveBookToDB(targetBook);
-                console.warn(`[translation] Chapter ${chIdx + 1} partially translated (${validChunks.length}/${chunks.length} chunks).`);
-            } else {
-                console.error(`[translation] Chapter ${chIdx + 1} translation failed completely.`);
-            }
-            // Chapter checkpoint: next resume starts at the following chapter.
-            job.chapterIdx = chIdx + 1;
-            job.partial = [];
-            saveTranslationJob(job);
-            if (cloudJob) {
-                try {
-                    await cloudJob.update(chIdx + 1, totalChapters, 'running', `Translated chapter ${chIdx + 1} of ${totalChapters}`);
-                } catch (e) {}
-            }
-            if (currentBook && String(currentBook.id) === String(targetBook.id)) {
-                currentBook.chapters = targetBook.chapters;
-                currentBook.translatedLangs = targetBook.translatedLangs;
-                renderChaptersList();
-            }
-            renderDigitalShelf();
-            updateMiniDock();
+            if (checkpoint.outputs.length !== chunks.length || checkpoint.outputs.some(t => !t)) throw new Error('Incomplete chapter');
+            const translated = checkpoint.outputs.join('\n\n');
+            chapter.translation_history ||= [];
+            if (chapter[field] && chapter[field] !== translated) chapter.translation_history.push({language:targetLang, text:chapter[field], savedAt:new Date().toISOString()});
+            chapter[field] = translated;
+            chapter.translation_state ||= {};
+            chapter.translation_state[targetLang] = {status:'complete', source, config};
+            await saveBookToDB(targetBook);
+            checkpoint.status = 'complete';
+            completed++;
+            job.chapterIdx = index + 1;
+            await saveTranslationJob(job);
+            updateChapterQueueStatus(-1, index);
+            if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'running', `${completed} chapters saved`);
         }
-
-        if (!cancelTranslationFlag) {
-            clearTranslationJob(targetBook.id);
-            if (cloudJob) {
-                try {
-                    await cloudJob.update(totalChapters, totalChapters, 'done', `Completed Georgian Edition for "${targetBook.title}"`);
-                } catch (e) {}
-            }
-
-            if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = 'Translation Complete! 🇬🇪';
-            if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
-            if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '100%';
-
-            setTimeout(async () => {
-                closeModal('wholeBookTranslateModal');
-                const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
-                if (dock) {
-                    dock.classList.add('hidden');
-                    dock.style.display = 'none';
-                }
-                translationPanelMinimized = false;
-                isTranslatingWholeBook = false;
-                try {
-                    await saveTranslatedBookEdition(targetBook);
-                } catch (e) {
-                    console.warn('[translation] saveTranslatedBookEdition complete error:', e);
-                }
-                if (currentBook && String(currentBook.id) === String(targetBook.id)) {
-                    currentBook.chapters = targetBook.chapters;
-                    currentBook.translatedLangs = targetBook.translatedLangs;
-                    renderChaptersList();
-                    if (DOM.heroGeorgianBadge) DOM.heroGeorgianBadge.classList.remove('hidden');
-                    if (readerActive) {
-                        readerBook = currentBook;
-                        readerLang = 'ka';
-                        updateReaderLangUI();
-                        paginateChapter();
-                        renderCurrentPage();
-                    }
-                }
-                renderDigitalShelf();
-                if (typeof showToast === 'function') {
-                    showToast(`Georgian Edition for “${targetBook.title}” is ready! 🇬🇪`, 'success');
-                }
-            }, 1200);
+        if (cancelTranslationFlag) {
+            job.status = 'paused';
+            await saveTranslationJob(job);
+            if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'failed', 'Paused by user; resume retains accepted segments');
+            return;
         }
-
-    } catch (err) {
-        console.error('Whole-book translation error:', err);
-        // The job stays 'running' so the next load resumes from the checkpoint.
-        if (typeof showToast === 'function') {
-            showToast('Translation paused — progress saved, it will resume automatically.', 'info');
+        if (completed !== job.totalChapters) throw new Error('Translation is incomplete');
+        checkOwner();
+        targetBook.translatedLangs = [...new Set([...(targetBook.translatedLangs || []), targetLang])];
+        await saveBookToDB(targetBook);
+        await saveTranslatedBookEdition(targetBook, targetLang);
+        if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'done', `${targetName} edition complete`);
+        await clearTranslationJob(targetBook.id);
+        if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `${targetName} translation complete`;
+        if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '100%';
+        if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
+        showToast(`${targetName} edition saved.`, 'success');
+    } catch (error) {
+        if (job) {
+            job.status = cancelTranslationFlag ? 'paused' : 'failed';
+            job.error = cancelTranslationFlag ? 'Paused by user' : error.message;
+            try { await saveTranslationJob(job); } catch (storageError) { console.error('Checkpoint could not be saved:', storageError); }
         }
-        const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
-        if (dock && translationPanelMinimized) {
-            updateMiniDock();
-        }
+        if (cloudJob) { try { await cloudJob.update(job.chapterIdx || 0, job.totalChapters, 'failed', error.message); } catch (e) {} }
+        if (cancelTranslationFlag) return;
+        if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `Incomplete: ${error.message}`;
+        showToast(`Translation incomplete: ${error.message} Press Translate to retry.`, 'error');
     } finally {
         activeTranslationBook = null;
+        translationRequestController = null;
         isTranslatingWholeBook = false;
+        renderChaptersList();
+        renderDigitalShelf();
     }
 }
 
 function cancelWholeBookTranslation() {
     cancelTranslationFlag = true;
-    const b = activeTranslationBook || currentBook;
-    if (b) {
-        // Stopping is explicit: drop the resume job but keep finished chapters.
-        clearTranslationJob(b.id);
-    }
+    translationRequestController?.abort();
+    // Keep the running guard until the in-flight operation settles.
     closeModal('wholeBookTranslateModal');
     const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
-    if (dock) {
-        dock.classList.add('hidden');
-        dock.style.display = 'none';
-    }
+    if (dock) dock.classList.add('hidden');
     translationPanelMinimized = false;
-    isTranslatingWholeBook = false;
-    renderChaptersList();
-    renderDigitalShelf();
+    showToast('Pausing translation. Accepted segments are retained for retry.', 'info');
 }
+
 
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -9206,7 +8899,7 @@ function elevenLabsVoiceSettings(modelId, sentenceType) {
         // v3: lower stability = more expressive variance; dialogue gets the
         // most freedom, statements stay composed for long-form listening.
         const stability = { dialogue: 0.3, exclamation: 0.35, question: 0.4, short: 0.5, statement: 0.55 }[sentenceType] ?? 0.5;
-        return { stability, similarity_boost: 0.8 };
+        return { stability: stability < 0.4 ? 0 : 0.5, similarity_boost: 0.8 };
     }
     // multilingual v2: stability 0.35 keeps long narration natural without
     // drifting; slightly higher similarity preserves the chosen voice.
@@ -9222,7 +8915,7 @@ async function speakElevenLabsSentence(text, lang = null) {
         const actualLang = lang || currentLang || 'en';
         const isKa = (actualLang === 'ka');
         const voiceId = isKa ? (elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb') : (elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
-        const modelId = isKa ? 'eleven_multilingual_v2' : (elevenLabsModelId || 'eleven_multilingual_v2');
+        const modelId = isKa ? 'eleven_v3' : (elevenLabsModelId || 'eleven_multilingual_v2');
         const textToRead = isKa ? verbalizeGeorgianTextForTTS(text) : verbalizeEnglishTextForTTS(text);
         const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
 
@@ -9357,7 +9050,7 @@ function playChapterAudio(chapId, startSentenceIdx = 0, forceReload = false) {
         currentLang = 'ka';
     }
 
-    let textToRead = (currentLang === 'ka' && chap.text_ka) ? chap.text_ka : chap.text;
+    let textToRead = chap['text_' + currentLang] || chap.text;
     if (!textToRead && chap.text) textToRead = chap.text;
 
     const preparedAudioSentences = prepareChapterSentences(textToRead);
@@ -9525,9 +9218,11 @@ function notifyNeedsTranslation() {
 // When a book is translated, we create a dedicated sibling edition on the shelf
 // so the user can see and open it separately, with its own Georgian text,
 // instant Moon Reader loading, and Georgian voice listening.
-async function saveTranslatedBookEdition(originalBook) {
+async function saveTranslatedBookEdition(originalBook, targetLang = 'ka') {
     if (!originalBook) return null;
-    const translatedId = `${originalBook.id}_ka`;
+    const field = 'text_' + targetLang;
+    if (!(originalBook.chapters || []).every(c => c.translation_state?.[targetLang]?.status === 'complete' && c.translation_state[targetLang].source === c.text)) throw new Error('Edition has incomplete or stale chapters');
+    const translatedId = `${originalBook.id}_${targetLang}`;
 
     let all = [];
     try {
@@ -9538,16 +9233,16 @@ async function saveTranslatedBookEdition(originalBook) {
     const existing = all.find(b => String(b.id) === String(translatedId));
 
     const cleanBaseTitle = (originalBook.title || 'Untitled').replace(/\s*\(ქართულად\)\s*$/, '').trim();
-    const translatedTitle = `${cleanBaseTitle} (ქართულად)`;
+    const translatedTitle = `${cleanBaseTitle} (${targetLang === 'ka' ? 'ქართულად' : 'English'})`;
 
     const translatedChapters = (originalBook.chapters || []).map((chap, idx) => {
-        const textKa = (chap.text_ka && chap.text_ka.trim().length > 0) ? chap.text_ka.trim() : chap.text;
+        const textKa = chap[field] || '';
         const words = textKa ? textKa.split(/\s+/).filter(Boolean).length : 0;
         return {
             id: chap.id || (idx + 1),
             title: chap.title || `თავი ${idx + 1}`,
             text: textKa, // Primary text IS the Georgian translation
-            text_ka: textKa,
+            [field]: textKa,
             word_count: words,
             estimated_duration_sec: Math.max(10, Math.round(words / 2.3))
         };
@@ -9558,8 +9253,9 @@ async function saveTranslatedBookEdition(originalBook) {
         title: translatedTitle,
         author: originalBook.author || 'Unknown Author',
         coverUrl: originalBook.coverUrl,
-        lang: 'ka',
-        translatedLangs: ['ka'],
+        lang: targetLang,
+        language: targetLang,
+        translatedLangs: [targetLang],
         isTranslatedEdition: true,
         originalBookId: originalBook.id,
         dateAdded: existing?.dateAdded || new Date().toISOString(),
@@ -10760,7 +10456,7 @@ async function selectBook(bookId, autoPlayFirst = false) {
 
     if (DOM.btnTranslateWholeBookText) {
         if (currentBook.lang === 'ka' && !currentBook.isTranslatedEdition) {
-            DOM.btnTranslateWholeBookText.textContent = "🇬🇪 ქართული ორიგინალი (მზადაა)";
+            DOM.btnTranslateWholeBookText.textContent = "Translate Book (English)";
         } else {
             DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Book (Georgian)";
         }
@@ -11188,8 +10884,8 @@ async function engbotScanRetranscribe(bookId) {
     }
 
     const key = (localStorage.getItem('geminiApiKey') || geminiApiKey || '').trim();
-    let model = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.0-flash';
-    if (model.includes('2.5') || model.includes('2.0-pro-exp')) model = 'gemini-2.0-flash';
+    let model = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.5-flash';
+    model = EngbotCore.geminiModels(model)[0];
     const aiTitleEl = document.getElementById('retranscribeAiStatusTitle');
     const aiSubEl = document.getElementById('retranscribeAiStatusSub');
     if (aiTitleEl) {
@@ -11231,11 +10927,11 @@ async function executeRetranscribeRepair() {
     if (btnRepair) btnRepair.classList.add('pointer-events-none', 'opacity-50');
     if (btnRescan) btnRescan.classList.add('pointer-events-none', 'opacity-50');
 
+    let cloudJob = null;
     try {
         const total = (book.chapters || []).length;
-        const isKa = (book.lang === 'ka') || (book.translatedLangs && book.translatedLangs.includes('ka')) || bookHasGeorgian(book);
+        const isKa = detectTextLang((book.chapters || []).map(c => c.text || '').join(' ')) === 'ka';
 
-        let cloudJob = null;
         if (window.LuminaStore && window.LuminaStore.createJob) {
             try {
                 cloudJob = await window.LuminaStore.createJob(book.id, 'parse', total, `Retranscribing & repairing "${book.title}"`);
@@ -11245,16 +10941,14 @@ async function executeRetranscribeRepair() {
         for (let i = 0; i < total; i++) {
             const chap = book.chapters[i];
             if (statusText) statusText.textContent = `Repairing Section ${i + 1} of ${total}…`;
-            const pct = Math.round(((i + 1) / total) * 100);
+            const pct = Math.min(99, Math.round((i / total) * 100));
             if (pctText) pctText.textContent = `${pct}%`;
             if (bar) bar.style.width = `${pct}%`;
 
             let repaired = await repairTextLinguisticAI(chap.text, isKa ? 'ka' : 'en');
-            if (repaired && repaired.trim().length > 10) {
-                chap.text = repaired.trim();
-                if (isKa) chap.text_ka = repaired.trim();
-                chap.word_count = chap.text.split(/\s+/).filter(Boolean).length;
-                chap.estimated_duration_sec = Math.max(10, Math.round(chap.word_count / 2.3));
+            if (!repaired || !repaired.trim()) throw new Error(`Section ${i + 1}: no valid repair returned`);
+            if (repaired.trim() !== chap.text.trim()) {
+                chap.repair_proposal = { text: repaired.trim(), source: chap.text, status: 'needs_review', createdAt: new Date().toISOString() };
             }
 
             if (cloudJob) {
@@ -11269,13 +10963,13 @@ async function executeRetranscribeRepair() {
             retranscribe_engine: 'ai-linguistic-repair'
         });
 
+        await saveBookToDB(book);
         if (cloudJob) {
             try {
-                await cloudJob.update(total, total, 'done', `100% repaired and reconstructed "${book.title}"`);
+                await cloudJob.update(total, total, 'done', `Repair proposals saved for review: "${book.title}"`);
             } catch (e) {}
         }
 
-        await saveBookToDB(book);
         if (typeof renderDigitalShelf === 'function') await renderDigitalShelf();
         if (typeof renderScanShelf === 'function') await renderScanShelf();
         if (currentBook && String(currentBook.id) === String(book.id)) {
@@ -11283,11 +10977,13 @@ async function executeRetranscribeRepair() {
         }
 
         if (typeof showToast === 'function') {
-            showToast(`Successfully repaired and reconstructed “${book.title}”!`, 'success');
+            showToast(`Repair proposals saved for “${book.title}”. Original text retained.`, 'success');
         }
         if (prog) prog.classList.add('hidden');
         closeModal('retranscribeModal');
+        await window.reviewRepairProposals(book);
     } catch (err) {
+        if (cloudJob) await cloudJob.update(0, book.chapters.length, 'failed', err.message);
         console.error('Retranscribe repair failed:', err);
         if (typeof showToast === 'function') {
             showToast('Repair failed: ' + (err.message || 'unknown error'), 'error');
@@ -11302,65 +10998,43 @@ async function executeRetranscribeRepair() {
 window.executeRetranscribeRepair = executeRetranscribeRepair;
 
 async function repairTextLinguisticAI(text, lang) {
+    const outputs = [];
+    for (const chunk of EngbotCore.splitText(text, 6000)) {
+        if (!chunk.trim()) { outputs.push(chunk); continue; }
+        const repaired = await repairTextLinguisticAIChunk(chunk, lang);
+        if (!EngbotCore.repairIsAcceptable(chunk, repaired)) throw new Error('Repair needs review: source coverage changed. Original retained.');
+        outputs.push(repaired.trim() + (chunk.match(/\s+$/)?.[0] || ''));
+    }
+    return outputs.join('').trim();
+}
+
+async function repairTextLinguisticAIChunk(text, lang) {
     if (!text || !text.trim()) return text;
 
     // Step 1: In-house rule-based cleaning & syllable repair
-    let cleaned = cleanOcrGarbage(text, lang);
+    let cleaned = EngbotCore.cleanVerbatim(text);
 
     // Step 2: Try AI reconstruction if Gemini, OpenRouter, or /api/ai is available
     const geminiKey = (localStorage.getItem('geminiApiKey') || geminiApiKey || '').trim();
     const isKa = lang === 'ka' || lang === 'kat' || (text.match(/[\u10A0-\u10FF]/g) || []).length > 20;
 
-    const prompt = `You are a world-class literary restoration and document reconstruction AI engine, operating at frontier intelligence.
-The text below was photographed and OCR-scanned from a printed book, but suffers from optical distortion, page curvature, lens blur, gutter shadows, and OCR misrecognitions.
-
-RECONSTRUCTION OBJECTIVES:
-1. DETECT & RESTORE GLITCHES & NOISE:
-   - Identify scanner artifacts, page curvature warping, speckles, stray lines, or hyphenated line breaks.
-   - Purge non-text noise (=, +, _, |, #, IIII, %%%, ~~~, stray forward slashes) and repeated garbage characters.
-   - Reconstruct split syllables and merged lines into smooth, flowing literary prose.
-
-2. DETECT & RESTORE MISSING SYMBOLS & PUNCTUATION:
-   - Actively analyze the dialogue and narrative structure to detect and insert MISSING punctuation:
-     * Quotation marks: ${isKa ? 'Strictly use authentic Georgian quotes: „ at the start and “ at the end (e.g. „გამარჯობა“, თქვა მან), or «...».' : 'Use authentic double quotes ("...") for speech.'}
-     * Dialogue dashes: Use proper em-dashes (—) for dialogue turns and dramatic parentheticals.
-     * Clause punctuation: Insert missing commas (,), colons (:), semicolons (;), periods (.), question marks (?), and exclamation marks (!). Never leave trailing run-ons or unclosed dialogue.
-
-3. DETECT & DEDUCE MISSING OR CLIPPED WORDS:
-   - Identify words or syllables that were clipped at page edges, gutter margins, or smudged by faint print.
-   - Using surrounding sentence context, story flow, grammar, and literary vocabulary, deduce and restore the complete words with 100% natural continuity.
-
-4. ACCURATE CHARACTER DISCRIMINATION:
-   ${isKa ? `- Strictly use Georgian Mkhedruli script (ა-ჰ).
-   - Eliminate common OCR optical confusions:
-     * ვ (v) vs პ (p) vs კ (k)
-     * შ (sh) vs წ (ts) vs ჭ (ch')
-     * რ (r) vs უ (u) vs ყ (q')
-     * ქ (k') vs ფ (p')
-     * თ (t) vs ძ (dz) vs ხ (kh)
-     * ჩ (ch) vs ხ (kh)
-     * ლ (l) vs დ (d) vs ო (o)
-     * ზ (z) vs გ (g)
-   - Ensure perfect Georgian grammatical harmony (case endings: -მა, -ს, -ით, -ად; postpositions: -ში, -ზე, -თან, -დან; verb subject-object agreements).
-   - Preserve historical/archaic Georgian letters (ჱ, ჲ, ჳ, ჴ, ჵ) if occurring in classical or biblical passages.` : `- Eliminate character confusions (rn vs m, cl vs d, vv vs w, 1 vs l vs I, 0 vs O). Fix broken apostrophes and contractions (don't, wouldn't, it's).`}
-
-5. INTEGRITY & FORMATTING DIRECTIVES:
-   - Deliver the FULL verbatim restored chapter/passage.
-   - NEVER summarize, NEVER truncate, NEVER omit sentences, NEVER invent unrelated content.
-   - Output ONLY the clean restored literary text. Do NOT wrap in markdown code fences (no \`\`\`), do NOT include conversational remarks ("Here is...", "Sure!").
-
+    const prompt = `Proofread this ${isKa ? 'Georgian' : 'English'} OCR passage conservatively.
+Correct only clear recognition errors supported by the supplied text. Preserve wording, names, numbers, negations, operators, historical spelling and Georgian Mtavruli capitals.
+Do not reconstruct missing words from context, paraphrase, modernize, summarize, or omit text. Leave uncertain spans unchanged.
+Return the FULL corrected passage, plain text only. Your proposal will be reviewed against the original.
 Text to restore:
-${cleaned.slice(0, 12000)}`;
+${cleaned}`;
 
-    let prefModel = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.0-flash';
-    if (prefModel.includes('2.5') || prefModel.includes('2.0-pro-exp')) prefModel = 'gemini-2.0-flash';
-    const modelsToTry = [prefModel, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].filter((m, idx, arr) => arr.indexOf(m) === idx);
+    let prefModel = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.5-flash';
+    prefModel = EngbotCore.geminiModels(prefModel)[0];
+    const modelsToTry = EngbotCore.geminiModels(prefModel);
 
     if (geminiKey) {
         for (const model of modelsToTry) {
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`, {
                     method: 'POST',
+                    signal: AbortSignal.timeout(45000),
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: prompt }] }],
@@ -11372,6 +11046,7 @@ ${cleaned.slice(0, 12000)}`;
                 });
                 if (res.ok) {
                     const data = await res.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
                     const parts = data.candidates?.[0]?.content?.parts;
                     let out = (parts && Array.isArray(parts) ? parts.map(p => p.text || '').join('') : '').trim();
                     out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
@@ -11392,6 +11067,7 @@ ${cleaned.slice(0, 12000)}`;
             const orModel = localStorage.getItem('openRouterModel') || openRouterModel || 'openrouter/free';
             const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
+                    signal: AbortSignal.timeout(45000),
                 headers: {
                     'Authorization': `Bearer ${orKey}`,
                     'Content-Type': 'application/json',
@@ -11407,6 +11083,7 @@ ${cleaned.slice(0, 12000)}`;
             });
             if (res.ok) {
                 const data = await res.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
                 let out = (data.choices?.[0]?.message?.content || '').trim();
                 out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
                 if (out.length > 20) return out;
@@ -11422,6 +11099,7 @@ ${cleaned.slice(0, 12000)}`;
             const groqModel = localStorage.getItem('groqSelectedModel') || GROQ_MODELS[0];
             const res = await fetch(GROQ_API_URL, {
                 method: 'POST',
+                    signal: AbortSignal.timeout(45000),
                 headers: { 'Authorization': `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: groqModel,
@@ -11432,6 +11110,7 @@ ${cleaned.slice(0, 12000)}`;
             });
             if (res.ok) {
                 const data = await res.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
                 let out = (data.choices?.[0]?.message?.content || '').trim();
                 out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
                 if (out.length > 20) return out;
@@ -11452,11 +11131,13 @@ ${cleaned.slice(0, 12000)}`;
     try {
         const res = await fetch('/api/ai', {
             method: 'POST',
+                    signal: AbortSignal.timeout(45000),
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, temperature: 0.1, maxTokens: 8192 })
         });
         if (res.ok) {
             const data = await res.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
             let out = (data.text || data.choices?.[0]?.message?.content || '').trim();
             out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
             if (out.length > 20) return out;
@@ -11465,7 +11146,7 @@ ${cleaned.slice(0, 12000)}`;
         // Fallback to local cleaned text
     }
 
-    return cleaned;
+    return null;
 }
 
 function cleanOcrGarbage(text, lang) {

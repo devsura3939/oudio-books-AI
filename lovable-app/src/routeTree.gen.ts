@@ -13,16 +13,19 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedScanRouteImport } from './routes/_authenticated/scan'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
 import { Route as AuthenticatedTrainingRouteImport } from './routes/_authenticated/training'
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
 import { Route as ApiAiRouteImport } from './routes/api/ai'
+import { Route as ApiCheckEmailRouteImport } from './routes/api/check-email'
 import { Route as ApiEnginePackRouteImport } from './routes/api/engine-pack'
 import { Route as ApiOcrRouteImport } from './routes/api/ocr'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AuthenticatedBooksBookIdRouteImport } from './routes/_authenticated/books.$bookId'
 import { Route as ApiAdminTrainingRouteImport } from './routes/api/admin/training'
 import { Route as AuthenticatedBooksBookIdIndexRouteImport } from './routes/_authenticated/books.$bookId.index'
 import { Route as AuthenticatedBooksBookIdPlayRouteImport } from './routes/_authenticated/books.$bookId.play'
@@ -46,6 +49,11 @@ const AuthRoute = AuthRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
@@ -78,6 +86,11 @@ const ApiAiRoute = ApiAiRouteImport.update({
   path: '/api/ai',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCheckEmailRoute = ApiCheckEmailRouteImport.update({
+  id: '/api/check-email',
+  path: '/api/check-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEnginePackRoute = ApiEnginePackRouteImport.update({
   id: '/api/engine-pack',
   path: '/api/engine-pack',
@@ -98,6 +111,12 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/callback',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthenticatedBooksBookIdRoute =
+  AuthenticatedBooksBookIdRouteImport.update({
+    id: '/books/$bookId',
+    path: '/books/$bookId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiAdminTrainingRoute = ApiAdminTrainingRouteImport.update({
   id: '/api/admin/training',
   path: '/api/admin/training',
@@ -105,21 +124,21 @@ const ApiAdminTrainingRoute = ApiAdminTrainingRouteImport.update({
 } as any)
 const AuthenticatedBooksBookIdIndexRoute =
   AuthenticatedBooksBookIdIndexRouteImport.update({
-    id: '/books/$bookId/',
-    path: '/books/$bookId/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedBooksBookIdRoute,
   } as any)
 const AuthenticatedBooksBookIdPlayRoute =
   AuthenticatedBooksBookIdPlayRouteImport.update({
-    id: '/books/$bookId/play',
-    path: '/books/$bookId/play',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/play',
+    path: '/play',
+    getParentRoute: () => AuthenticatedBooksBookIdRoute,
   } as any)
 const AuthenticatedBooksBookIdSummaryRoute =
   AuthenticatedBooksBookIdSummaryRouteImport.update({
-    id: '/books/$bookId/summary',
-    path: '/books/$bookId/summary',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/summary',
+    path: '/summary',
+    getParentRoute: () => AuthenticatedBooksBookIdRoute,
   } as any)
 const ApiPublicTrainSplatRoute = ApiPublicTrainSplatRouteImport.update({
   id: '/api/public/train/$',
@@ -131,16 +150,19 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/library': typeof AuthenticatedLibraryRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/scan': typeof AuthenticatedScanRoute
   '/studio': typeof AuthenticatedStudioRoute
   '/training': typeof AuthenticatedTrainingRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/api/ai': typeof ApiAiRoute
+  '/api/check-email': typeof ApiCheckEmailRoute
   '/api/engine-pack': typeof ApiEnginePackRoute
   '/api/ocr': typeof ApiOcrRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/books/$bookId': typeof AuthenticatedBooksBookIdRouteWithChildren
   '/api/admin/training': typeof ApiAdminTrainingRoute
   '/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
   '/books/$bookId/summary': typeof AuthenticatedBooksBookIdSummaryRoute
@@ -151,12 +173,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/library': typeof AuthenticatedLibraryRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/scan': typeof AuthenticatedScanRoute
   '/studio': typeof AuthenticatedStudioRoute
   '/training': typeof AuthenticatedTrainingRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/api/ai': typeof ApiAiRoute
+  '/api/check-email': typeof ApiCheckEmailRoute
   '/api/engine-pack': typeof ApiEnginePackRoute
   '/api/ocr': typeof ApiOcrRoute
   '/api/tts': typeof ApiTtsRoute
@@ -173,16 +197,19 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/scan': typeof AuthenticatedScanRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/_authenticated/training': typeof AuthenticatedTrainingRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/api/ai': typeof ApiAiRoute
+  '/api/check-email': typeof ApiCheckEmailRoute
   '/api/engine-pack': typeof ApiEnginePackRoute
   '/api/ocr': typeof ApiOcrRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/_authenticated/books/$bookId': typeof AuthenticatedBooksBookIdRouteWithChildren
   '/api/admin/training': typeof ApiAdminTrainingRoute
   '/_authenticated/books/$bookId/play': typeof AuthenticatedBooksBookIdPlayRoute
   '/_authenticated/books/$bookId/summary': typeof AuthenticatedBooksBookIdSummaryRoute
@@ -195,16 +222,19 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/library'
     | '/profile'
     | '/scan'
     | '/studio'
     | '/training'
     | '/upload'
     | '/api/ai'
+    | '/api/check-email'
     | '/api/engine-pack'
     | '/api/ocr'
     | '/api/tts'
     | '/auth/callback'
+    | '/books/$bookId'
     | '/api/admin/training'
     | '/books/$bookId/play'
     | '/books/$bookId/summary'
@@ -215,12 +245,14 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/library'
     | '/profile'
     | '/scan'
     | '/studio'
     | '/training'
     | '/upload'
     | '/api/ai'
+    | '/api/check-email'
     | '/api/engine-pack'
     | '/api/ocr'
     | '/api/tts'
@@ -236,16 +268,19 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/dashboard'
+    | '/_authenticated/library'
     | '/_authenticated/profile'
     | '/_authenticated/scan'
     | '/_authenticated/studio'
     | '/_authenticated/training'
     | '/_authenticated/upload'
     | '/api/ai'
+    | '/api/check-email'
     | '/api/engine-pack'
     | '/api/ocr'
     | '/api/tts'
     | '/auth/callback'
+    | '/_authenticated/books/$bookId'
     | '/api/admin/training'
     | '/_authenticated/books/$bookId/play'
     | '/_authenticated/books/$bookId/summary'
@@ -258,6 +293,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   ApiAiRoute: typeof ApiAiRoute
+  ApiCheckEmailRoute: typeof ApiCheckEmailRoute
   ApiEnginePackRoute: typeof ApiEnginePackRoute
   ApiOcrRoute: typeof ApiOcrRoute
   ApiTtsRoute: typeof ApiTtsRoute
@@ -293,6 +329,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/library': {
+      id: '/_authenticated/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof AuthenticatedLibraryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/profile': {
@@ -337,6 +380,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/check-email': {
+      id: '/api/check-email'
+      path: '/api/check-email'
+      fullPath: '/api/check-email'
+      preLoaderRoute: typeof ApiCheckEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/engine-pack': {
       id: '/api/engine-pack'
       path: '/api/engine-pack'
@@ -365,6 +415,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_authenticated/books/$bookId': {
+      id: '/_authenticated/books/$bookId'
+      path: '/books/$bookId'
+      fullPath: '/books/$bookId'
+      preLoaderRoute: typeof AuthenticatedBooksBookIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/admin/training': {
       id: '/api/admin/training'
       path: '/api/admin/training'
@@ -374,24 +431,24 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/books/$bookId/': {
       id: '/_authenticated/books/$bookId/'
-      path: '/books/$bookId'
+      path: '/'
       fullPath: '/books/$bookId/'
       preLoaderRoute: typeof AuthenticatedBooksBookIdIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedBooksBookIdRoute
     }
     '/_authenticated/books/$bookId/play': {
       id: '/_authenticated/books/$bookId/play'
-      path: '/books/$bookId/play'
+      path: '/play'
       fullPath: '/books/$bookId/play'
       preLoaderRoute: typeof AuthenticatedBooksBookIdPlayRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedBooksBookIdRoute
     }
     '/_authenticated/books/$bookId/summary': {
       id: '/_authenticated/books/$bookId/summary'
-      path: '/books/$bookId/summary'
+      path: '/summary'
       fullPath: '/books/$bookId/summary'
       preLoaderRoute: typeof AuthenticatedBooksBookIdSummaryRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedBooksBookIdRoute
     }
     '/api/public/train/$': {
       id: '/api/public/train/$'
@@ -403,28 +460,44 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedRouteRouteChildren {
-  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
-  AuthenticatedScanRoute: typeof AuthenticatedScanRoute
-  AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
-  AuthenticatedTrainingRoute: typeof AuthenticatedTrainingRoute
-  AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
+interface AuthenticatedBooksBookIdRouteChildren {
   AuthenticatedBooksBookIdPlayRoute: typeof AuthenticatedBooksBookIdPlayRoute
   AuthenticatedBooksBookIdSummaryRoute: typeof AuthenticatedBooksBookIdSummaryRoute
   AuthenticatedBooksBookIdIndexRoute: typeof AuthenticatedBooksBookIdIndexRoute
 }
 
+const AuthenticatedBooksBookIdRouteChildren: AuthenticatedBooksBookIdRouteChildren =
+  {
+    AuthenticatedBooksBookIdPlayRoute: AuthenticatedBooksBookIdPlayRoute,
+    AuthenticatedBooksBookIdSummaryRoute: AuthenticatedBooksBookIdSummaryRoute,
+    AuthenticatedBooksBookIdIndexRoute: AuthenticatedBooksBookIdIndexRoute,
+  }
+
+const AuthenticatedBooksBookIdRouteWithChildren =
+  AuthenticatedBooksBookIdRoute._addFileChildren(
+    AuthenticatedBooksBookIdRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedScanRoute: typeof AuthenticatedScanRoute
+  AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
+  AuthenticatedTrainingRoute: typeof AuthenticatedTrainingRoute
+  AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
+  AuthenticatedBooksBookIdRoute: typeof AuthenticatedBooksBookIdRouteWithChildren
+}
+
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedScanRoute: AuthenticatedScanRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
   AuthenticatedTrainingRoute: AuthenticatedTrainingRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
-  AuthenticatedBooksBookIdPlayRoute: AuthenticatedBooksBookIdPlayRoute,
-  AuthenticatedBooksBookIdSummaryRoute: AuthenticatedBooksBookIdSummaryRoute,
-  AuthenticatedBooksBookIdIndexRoute: AuthenticatedBooksBookIdIndexRoute,
+  AuthenticatedBooksBookIdRoute: AuthenticatedBooksBookIdRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -445,6 +518,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   ApiAiRoute: ApiAiRoute,
+  ApiCheckEmailRoute: ApiCheckEmailRoute,
   ApiEnginePackRoute: ApiEnginePackRoute,
   ApiOcrRoute: ApiOcrRoute,
   ApiTtsRoute: ApiTtsRoute,

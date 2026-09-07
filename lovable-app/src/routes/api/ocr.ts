@@ -19,48 +19,12 @@ const schema = z.object({
   hint: z.string().max(2_000).optional(),
 });
 
-const BASE_RULES = `You are a high-accuracy publication-grade OCR and neural document reconstruction engine.
-Your mission is to produce a 100% faithful, verbatim plain-text transcription of the printed book page.
-
-CRITICAL DIRECTIVES:
-1. Verbatim Accuracy: Transcribe every word and sentence exactly as written. Never translate, never paraphrase, never summarize, never add commentary or notes.
-2. Contextual Deduction ("Intelligent Guessing"):
-   - Book pages frequently have spine curvature, perspective skew, faint ink, lens softness, or cast shadows.
-   - When character glyphs are faint, partially obscured, curved towards the gutter, or degraded: NEVER drop words, NEVER leave blanks, and NEVER output fragmented single letters (such as "ა ა ა", "ს ს ს", "_ ბავ ს").
-   - Instead, inspect the visible character stems and combine them with grammatical syntax, morphological case harmony, vocabulary, and literary sentence context to deduce with certainty the exact intended words.
-   - The reconstructed text must form syntactically perfect, natural literary prose matching the printed book.
-3. Hyphenation & Compounds:
-   - Join words split across line breaks by a hyphen into a single word (e.g., "მო-ხერხებულ" -> "მოხერხებულ", "trans-cription" -> "transcription").
-   - Preserve genuine hyphenated compound words (e.g., "სამხრეთ-აღმოსავლეთი", "well-known", "twenty-five").
-4. Structure & Cleanliness:
-   - Merge line wraps within the same paragraph into clean continuous prose.
-   - Preserve real paragraph breaks with a single blank line.
-   - Skip running page headers, running footers, page numbers, and library stamps.
-   - Strip all non-book OCR noise, math symbols, stray dashes, and gibberish loops (=, +, _, |, #, IIII).
-   - If the page contains no readable body text, return exactly: [[NO_TEXT]]
-Output: Return ONLY the clean verbatim transcription text. No markdown fences, no labels.`;
-
-const KA_RULES = `LANGUAGE: Georgian (ქართული, მხედრული).
-- Use ONLY standard Georgian Mkhedruli alphabet letters (ა-ჰ). Never substitute Latin or Cyrillic characters.
-- Georgian has NO capital letters.
-- Strict Character Discrimination (differentiate visually similar characters using grammatical and root-word context):
-  - ვ (v) vs პ (p) vs კ (k)
-  - შ (sh) vs წ (ts) vs ჭ (ch')
-  - რ (r) vs უ (u) vs ყ (q')
-  - ქ (k') vs ფ (p')
-  - თ (t) vs ძ (dz) vs ხ (kh)
-  - ჩ (ch) vs ხ (kh)
-  - ლ (l) vs დ (d) vs ო (o)
-- Grammatical Harmony: Every Georgian word must obey standard Georgian nominal and verbal morphology (proper case markers: -მა, -ს, -ით, -ად; postpositions: -ში, -ზე, -თან, -დან, -კენ).
-- Preserve authentic Georgian quotation marks („...“ or «...») and em dashes (—).
-- Preserve historical/archaic letters (ჱ, ჲ, ჳ, ჴ, ჵ, ჶ, ჷ, ჸ) if present in classical texts.`;
-
-const EN_RULES = `LANGUAGE: English.
-- Transcribe verbatim preserving original spelling (including British or archaic forms) and punctuation exactly.
-- Strict Character Discrimination:
-  - Distinguish rn vs m, cl vs d, vv vs w, fi vs fl, 1 vs l vs I, 0 vs O.
-  - Fix broken apostrophes and contractions (e.g. don't, it's, wouldn't).
-- Hyphenation across line breaks must be cleanly joined into complete words.`;
+const BASE_RULES = `Transcribe the visible page verbatim in its printed language. Do not assume the language when automatic detection is selected.
+Preserve exact wording, numbers, punctuation, mathematical operators and paragraph order.
+Do not translate, modernize, summarize, paraphrase or reconstruct missing words from context.
+Mark unreadable spans [[UNCLEAR]] for review. Return plain text only, or [[NO_TEXT]] if the page is empty.`;
+const KA_RULES = `Language: Georgian. Preserve Mkhedruli, Mtavruli capitals and historical letters as printed. Do not rewrite grammar or remove meaningful symbols.`;
+const EN_RULES = `Language: English. Preserve original spelling, punctuation, names and compound words.`;
 
 export const Route = createFileRoute("/api/ocr")({
   server: {
@@ -98,6 +62,7 @@ export const Route = createFileRoute("/api/ocr")({
           try {
             const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
               method: "POST",
+              signal: AbortSignal.any([request.signal, AbortSignal.timeout(45000)]),
               headers: {
                 Authorization: `Bearer ${lovableKey}`,
                 "Content-Type": "application/json",
@@ -120,8 +85,9 @@ export const Route = createFileRoute("/api/ocr")({
 
             if (upstream.ok) {
               const data = (await upstream.json()) as {
-                choices?: { message?: { content?: string } }[];
+                choices?: { message?: { content?: string }; finish_reason?: string }[];
               };
+              if (data.choices?.[0]?.finish_reason !== "stop") throw new Error("Incomplete OCR output");
               let text = (data.choices?.[0]?.message?.content ?? "").trim();
               if (text === "[[NO_TEXT]]") text = "";
               text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
@@ -147,6 +113,7 @@ export const Route = createFileRoute("/api/ocr")({
               `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
               {
                 method: "POST",
+              signal: AbortSignal.any([request.signal, AbortSignal.timeout(45000)]),
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   contents: [
@@ -167,8 +134,9 @@ export const Route = createFileRoute("/api/ocr")({
 
             if (gRes.ok) {
               const gData = (await gRes.json()) as {
-                candidates?: { content?: { parts?: { text?: string }[] } }[];
+                candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
               };
+              if (gData.candidates?.[0]?.finishReason !== "STOP") throw new Error("Incomplete OCR output");
               let text = (gData.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
               if (text === "[[NO_TEXT]]") text = "";
               text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
@@ -187,6 +155,7 @@ export const Route = createFileRoute("/api/ocr")({
           try {
             const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
               method: "POST",
+              signal: AbortSignal.any([request.signal, AbortSignal.timeout(45000)]),
               headers: {
                 Authorization: `Bearer ${openRouterKey}`,
                 "Content-Type": "application/json",
@@ -207,8 +176,9 @@ export const Route = createFileRoute("/api/ocr")({
 
             if (orRes.ok) {
               const orData = (await orRes.json()) as {
-                choices?: { message?: { content?: string } }[];
+                choices?: { message?: { content?: string }; finish_reason?: string }[];
               };
+              if (orData.choices?.[0]?.finish_reason !== "stop") throw new Error("Incomplete OCR output");
               let text = (orData.choices?.[0]?.message?.content ?? "").trim();
               if (text === "[[NO_TEXT]]") text = "";
               text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
