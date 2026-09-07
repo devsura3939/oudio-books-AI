@@ -36,18 +36,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/auth", replace: true });
   }
 
-  // When on Studio view, render the studio 100% full-screen without outer chrome
-  // to perfectly match GitHub Pages and avoid double headers / footers on mobile.
-  if (isStudio) {
-    return (
-      <div className="fixed inset-0 z-50 h-screen w-screen overflow-hidden bg-[#0c1017]">
-        <StudioHost />
-        <TranslationProgressPill />
-      </div>
-    );
-  }
-
   return (
+    <>
+      {/* Stable siblings keep the studio mounted when the surrounding navigation changes. */}
+      <StudioHost />
+      <TranslationProgressPill />
+      {!isStudio && (
     <div className="relative min-h-screen overflow-x-hidden bg-background text-on-surface">
       <div className="pointer-events-none fixed top-1/2 left-1/2 -z-10 h-[150vh] w-[150vw] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,rgba(0,240,255,0.08)_0%,rgba(119,1,208,0.05)_40%,rgba(16,19,26,0)_70%)]" />
 
@@ -167,10 +161,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="pt-20 pb-24 md:ml-64 md:pt-24">{children}</div>
 
-      {/* Studio frame stays mounted so translations keep running across pages */}
-      <StudioHost />
-      <TranslationProgressPill />
-
       {/* Mobile bottom bar */}
       <nav className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-white/15 bg-surface-container/80 py-2 backdrop-blur-[24px] md:hidden">
         {nav.map((item) => (
@@ -187,5 +177,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         ))}
       </nav>
     </div>
+      )}
+    </>
   );
 }

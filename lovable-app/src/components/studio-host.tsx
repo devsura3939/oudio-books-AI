@@ -115,6 +115,7 @@ export function StudioHost() {
   return (
     <div
       aria-hidden={!onStudio}
+      inert={!onStudio}
       className={
         onStudio
           ? "fixed inset-0 z-50 h-full w-full overflow-hidden bg-[#0c1017]"

@@ -11,6 +11,24 @@ function section(start, end) {
     return source.slice(a, b);
 }
 const silent = {log(){},warn(){},error(){}};
+test('Cloud round trip retains legacy Georgian language, English translation and source history', () => {
+    const storeSource = fs.readFileSync(path.join(__dirname, '../static/supabase-store.js'), 'utf8');
+    const start = storeSource.indexOf('  function toStudioBook(');
+    const end = storeSource.indexOf('  async function getAllBooks(', start);
+    assert.ok(start >= 0 && end > start);
+    const ctx = vm.createContext({userId:'fixture-user', wordCount:t=>t.split(/\s+/).length});
+    vm.runInContext(storeSource.slice(start, end), ctx);
+    const sourceBook = ctx.toStudioBook({id:'book-row', slug:'fixture', title:'წიგნი', language:'en', metadata:{extra:{lang:'ka'}}}, []);
+    assert.equal(sourceBook.lang, 'ka');
+    sourceBook.chapters = [{id:1, title:'პირველი', text:'ქართული ტექსტი', text_en:'Georgian text', source_history:[{text:'ძველი ტექსტი'}]}];
+    const row = ctx.bookRowFrom(sourceBook);
+    assert.equal(row.language, 'ka');
+    const restored = ctx.toStudioBook(row, ctx.chapterRowsFrom(sourceBook, 'book-row'));
+    assert.equal(restored.lang, 'ka');
+    assert.equal(restored.chapters[0].text, 'ქართული ტექსტი');
+    assert.equal(restored.chapters[0].text_en, 'Georgian text');
+    assert.equal(restored.chapters[0].source_history[0].text, 'ძველი ტექსტი');
+});
 function context() {
     const checkpoints = new Map();
     const metadata = new Map();

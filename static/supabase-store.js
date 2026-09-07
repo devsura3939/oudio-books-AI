@@ -492,8 +492,9 @@
       row_id: bookRow.id,
       title: bookRow.title,
       author: bookRow.author || "Unknown author",
-      language: bookRow.language,
-      lang: bookRow.language,
+      // Older saves left the column at its English default; retain explicit studio metadata.
+      language: flattenedExtra.lang || flattenedExtra.language || bookRow.language || "en",
+      lang: flattenedExtra.lang || flattenedExtra.language || bookRow.language || "en",
       updated_at: bookRow.updated_at,
       coverUrl: bookRow.cover_url || meta.coverUrl || "",
       chapters: chapters,

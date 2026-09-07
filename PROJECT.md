@@ -32,7 +32,89 @@ reserved (`audio_segments`, `book-audio`) for the server-side TTS pipeline.
 Credentials: the publishable key is inline in the client (safe, public by design).
 Server-side secrets are stored as environment variables and never committed:
 `EXTERNAL_SUPABASE_URL`, `EXTERNAL_SUPABASE_PUBLISHABLE_KEY`,
-`EXTERNAL_SUPABASE_SECRET_KEY`, `EXTERNAL_SUPABASE_JWKS_URL`.
+`EXTERNAL_SUPABASE_SECRET_KEY`, `EXTERNAL_SUPABASE_JWKS_URL`,
+`EXTERNAL_SUPABASE_DB_PASSWORD`.
+
+## Connecting to the database
+
+Everything needed to connect to the external project, in one place.
+
+### Public values (safe to commit, already in the codebase)
+
+| What | Value |
+| --- | --- |
+| Project ref | `oakikavdnnvxzlcvsovq` |
+| Project / API URL | `https://oakikavdnnvxzlcvsovq.supabase.co` |
+| Publishable (anon) key | `sb_publishable_oTAYwkdt1yebGkrlKOoijw_9fE4OUBd` |
+| JWKS URL | `https://oakikavdnnvxzlcvsovq.supabase.co/auth/v1/.well-known/jwks.json` |
+| REST base | `https://oakikavdnnvxzlcvsovq.supabase.co/rest/v1` |
+| Auth base | `https://oakikavdnnvxzlcvsovq.supabase.co/auth/v1` |
+| Storage base | `https://oakikavdnnvxzlcvsovq.supabase.co/storage/v1` |
+| Direct DB host / port / db / user | `db.oakikavdnnvxzlcvsovq.supabase.co` / `5432` / `postgres` / `postgres` |
+| Buckets | `book-pdfs`, `book-audio` (both private) |
+
+### Private values (never written to this repo)
+
+| Secret name | What it is | Read by |
+| --- | --- | --- |
+| `EXTERNAL_SUPABASE_SECRET_KEY` | `sb_secret_…` service key, bypasses RLS | `src/integrations/external-supabase/admin.server.ts` |
+| `EXTERNAL_SUPABASE_DB_PASSWORD` | Postgres password for the `postgres` role | migration/`psql` work only |
+| `EXTERNAL_SUPABASE_URL` | same URL as above, server-side copy | `admin.server.ts` |
+| `EXTERNAL_SUPABASE_PUBLISHABLE_KEY` | same publishable key, server-side copy | server code that needs anon reads |
+| `EXTERNAL_SUPABASE_JWKS_URL` | JWKS endpoint for token verification | token verification helpers |
+
+The secret store is one-way: it injects these into the running app but does not hand the
+values back, so they are deliberately absent from every tracked file. Keep the secret key
+and DB password in a password manager. If lost, both can be re-read or rotated from the
+project's API / Database settings, then re-saved under the same secret names.
+
+### Connection recipes
+
+Browser / app code (RLS applies, acts as the signed-in user):
+
+```ts
+import { db } from "@/integrations/external-supabase/client";
+const { data } = await db.from("books").select("*");
+```
+
+Server-side privileged code (RLS bypassed — only inside a server handler):
+
+```ts
+import { createExternalAdminClient } from "@/integrations/external-supabase/admin.server";
+const sb = createExternalAdminClient(); // uses EXTERNAL_SUPABASE_URL + EXTERNAL_SUPABASE_SECRET_KEY
+```
+
+Note: `sb_publishable_*` / `sb_secret_*` keys are opaque strings, not JWTs. Send them as the
+`apikey` header only — an `Authorization: Bearer <key>` header fails with
+`Expected 3 parts in JWT; got 1`. Both clients above already handle this.
+
+Raw HTTP:
+
+```bash
+curl "https://oakikavdnnvxzlcvsovq.supabase.co/rest/v1/books?select=*" \
+  -H "apikey: $EXTERNAL_SUPABASE_PUBLISHABLE_KEY" \
+  -H "Authorization: Bearer <signed-in user's access token>"
+```
+
+Direct SQL (password comes from `EXTERNAL_SUPABASE_DB_PASSWORD`):
+
+```bash
+PGPASSWORD="$EXTERNAL_SUPABASE_DB_PASSWORD" psql \
+  -h db.oakikavdnnvxzlcvsovq.supabase.co -p 5432 -U postgres -d postgres
+# connection string form:
+# postgresql://postgres:<EXTERNAL_SUPABASE_DB_PASSWORD>@db.oakikavdnnvxzlcvsovq.supabase.co:5432/postgres
+```
+
+### Schema / migrations
+
+SQL lives in `supabase/external/` and is applied **live** (SQL editor or the `psql` command
+above) — there is no automatic migration runner for this project:
+
+`001_init.sql` (core schema) → `002_studio_unify.sql` (studio tables) →
+`003_training.sql` (unique emails, admin role, engine/training tables) →
+`004_benchmark_seed.sql` (benchmark cases). All are idempotent/re-runnable. New changes get
+the next number and must be applied by hand.
+
 
 ## Database schema (`supabase/external/001_init.sql`)
 
@@ -86,7 +168,7 @@ kept intact rather than rewritten. It is a self-contained vanilla SPA served as 
 | --- | --- |
 | `public/studio/index.html` | glass/futuristic UI, Moon Reader mode, Voice & Studio TTS panel, Gemini AI engine panel, Discover Classics |
 | `public/studio/static/app.js` | paged reader + sentence highlighting + themes/fonts, edge-tts Georgian neural voices via HF mirrors, ElevenLabs option, browser-speech fallback, smart translation routing (Gemini / OpenRouter / Groq / Mistral), whole-book translation with progress & cancel, AI key status probe |
-| `public/studio/static/georgian-linguistics.js` | KA knowledge base v1.46.0 — 129 prompt blocks, 128 QA rules, 113 auto-fixes, bidirectional translation support, everyday verb paradigms, question auxiliary frames, and robust OCR repair |
+| `public/studio/static/georgian-linguistics.js` | KA knowledge base v1.45.0 — 128 prompt blocks, 127 QA rules, 112 auto-fixes, `validateGeorgianTranslation`, `correctGeorgianMorphology` |
 | `public/studio/static/supabase-store.js` | `window.LuminaStore` — the studio's book store, backed by the same Supabase tables the React pages use |
 
 Rules for agents:

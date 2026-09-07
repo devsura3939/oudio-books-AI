@@ -18,7 +18,9 @@ Translation jobs now retain accepted chunks until every chapter and the separate
 
 ## Verification (2026-09-07)
 
-- `node --experimental-strip-types --test tests/engine-reliability.test.cjs tests/training-gate.test.mjs`: 16 tests passed.
+Upstream integration preserves the full studio, account settings, voice presets, provider fallbacks, and training guide. It retains the newer database connection reference and compatible Supabase API-key handling. The studio iframe now occupies a stable React position when switching pages, preserving active jobs; hidden frames are inert to keyboard interaction. Legacy book language metadata takes precedence over the old default-English database column.
+
+- `node --experimental-strip-types --test tests/engine-reliability.test.cjs tests/training-gate.test.mjs`: 17 tests passed.
 - `.venv/Scripts/python -m pytest tests/test_engine_reliability.py tests/test_deep_regression.py tests/test_training_api.py tests/test_georgian_phonetics.py -q`: 53 tests passed, including Georgian Edge voice preview generation. Provider and framework deprecation warnings remain.
 - `python tests/test_georgian_integrity.py`: passed. Historical source-presence assertions were updated where they required the destructive behavior removed in this release. Behavioral fixtures provide the stronger regression checks.
 - Existing auth/recovery, book/PDF, and Moon Reader suites passed. Some legacy tests simulate behavior rather than executing the production functions; they do not replace the new regression suite.
