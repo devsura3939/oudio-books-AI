@@ -14,6 +14,7 @@ import math
 import struct
 import base64
 import unittest
+from unittest.mock import patch, Mock
 from pathlib import Path
 
 # Ensure UTF-8 output
@@ -62,8 +63,14 @@ class TestBackendEndpointsAndEngines(unittest.TestCase):
         self.assertIn("short_name", v0)
         self.assertIn("locale", v0)
 
-    def test_02_server_translate(self):
-        """Test POST /api/server-translate with real phrases"""
+    @patch('app.translation_engine.genai', None)
+    @patch('httpx.get')
+    def test_02_server_translate(self, provider_get):
+        """Exercise the route and actual translation post-editing with stable provider fixtures."""
+        provider_get.side_effect = [
+            Mock(status_code=200, json=lambda: [[["პატარა უფლისწულმა გადაწყვიტა დაეცვა თავისი ვარდი."]]]),
+            Mock(status_code=200, json=lambda: [[["Only with the heart can one see clearly."]]]),
+        ]
         # EN -> KA
         res_ka = self.client.post("/api/server-translate", json={
             "text": "The little prince decided to protect his rose.",

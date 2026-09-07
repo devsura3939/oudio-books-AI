@@ -19,6 +19,24 @@ def clean_verbatim(text):
     return text.replace("\r\n", "\n").replace("\r", "\n").replace("\x00", "").strip()
 
 
+def translation_is_valid(source, candidate, target):
+    """Reject obvious incomplete/wrong-script results, not a semantic quality score."""
+    if not isinstance(candidate, str) or not candidate.strip():
+        return False
+    if re.search(r"```|</?(?:think|tool_call)\b", candidate, re.I):
+        return False
+    source, candidate = source.strip(), candidate.strip()
+    names = [unicodedata.name(c, "") for c in candidate if c.isalpha()]
+    if not names:
+        return candidate == source and not any(c.isalpha() for c in source)
+    script = "GEORGIAN" if target == "ka" else "LATIN"
+    if sum(script in name for name in names) / len(names) < 0.6:
+        return False
+    if len(source) >= 30 and not 0.35 <= len(candidate) / len(source) <= 2.8:
+        return False
+    return candidate != source or detect_language(source) == target
+
+
 def split_bounded(text, limit):
     """Exact partitions with a hard cap, including unbroken OCR strings."""
     if not isinstance(limit, int) or limit < 1:

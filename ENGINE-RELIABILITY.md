@@ -1,4 +1,12 @@
-# Engine reliability — v1.48.1
+# Engine reliability — v1.48.2
+
+## Follow-up fixes (2026-09-08)
+
+Training key generation now requires a registered key returned by the server. It uses Lovable's authenticated admin endpoint, with a missing-route fallback to the Python endpoint. Static hosting, authentication failures, timeouts, and malformed responses cannot generate a local replacement or report success. Previous saved keys remain accessible but unverified; newly issued keys are scoped to the original account. Clipboard failures are reported honestly, and prompts copied from Pages retain an explicit training-server placeholder. English and Georgian are selectable.
+
+Chapter duration estimates use each chapter's word count independently, eliminating cumulative overcounting and `NaN` displays. The Python translation endpoint runs in the thread pool and rejects unchanged source, wrong-script text, truncated Gemini responses, and failed post-edits. Long inputs are bounded per provider call while retaining paragraph boundaries. If a middle chunk fails, accepted chunks are returned separately with `success: false` and no completed translation; offline word-substitution drafts remain suggestions for review.
+
+A real-provider outage exposed the original-source success bug. The legacy route test now uses stable provider fixtures while exercising the real endpoint and post-editing code; dedicated regressions simulate outages, truncation, partial failure and long input. The JavaScript suite contains 24 tests. Separate backend hosting remains required: Pages cannot run the training or Python APIs.
 
 Translation jobs now retain accepted chunks until every chapter and the separate translated edition have been saved. A failed middle chunk leaves the job resumable; it cannot turn a partial chapter into a completed book. Georgian source books produce English editions, and English source books produce Georgian editions.
 

@@ -295,8 +295,8 @@ for base_dir, label in [(os.path.join(REPO_DIR, "static"), "root static/"),
 # Version 1.47.4 across all entry points, cache busters, and early controller
 with open(os.path.join(REPO_DIR, "index.html"), "r", encoding="utf-8") as f:
     root_html = f.read()
-assert "v=1.48.1" in root_html, "FAIL: index.html missing current engine cache buster"
-assert "v1.48.1" in root_html, "FAIL: index.html missing version text"
+assert "v=1.48.2" in root_html, "FAIL: index.html missing current engine cache buster"
+assert "v1.48.2" in root_html, "FAIL: index.html missing version text"
 assert "Early Auth Gate Controller" in root_html, "FAIL: index.html missing Early Auth Gate Controller"
 assert "gateBtnForgot" in root_html, "FAIL: index.html missing gateBtnForgot ID"
 assert "gateBtnQuickFillAdmin" in root_html, "FAIL: index.html missing gateBtnQuickFillAdmin ID"
@@ -307,8 +307,8 @@ assert "llama-3.3-70b-versatile" in root_html, "FAIL: index.html missing llama-3
 
 with open(os.path.join(REPO_DIR, "lovable-app", "public", "studio", "index.html"), "r", encoding="utf-8") as f:
     studio_html = f.read()
-assert "v=1.48.1" in studio_html, "FAIL: studio/index.html missing version cache buster"
-assert "v1.48.1" in studio_html, "FAIL: studio/index.html missing version text"
+assert "v=1.48.2" in studio_html, "FAIL: studio/index.html missing version cache buster"
+assert "v1.48.2" in studio_html, "FAIL: studio/index.html missing version text"
 
 assert "Early Auth Gate Controller" in studio_html, "FAIL: studio/index.html missing Early Auth Gate Controller"
 assert "openai/gpt-oss-120b" not in studio_html, "FAIL: studio/index.html has invalid OpenRouter model ID in Groq select"
@@ -326,7 +326,7 @@ for path_name, content in [("static/app.js", current_app_content), ("studio/stat
     assert "restoreAccountSettingsForCurrentUser" in content, f"FAIL: restoreAccountSettingsForCurrentUser missing from {path_name}"
     assert "getCurrentAccountSettings" in content, f"FAIL: getCurrentAccountSettings missing from {path_name}"
     assert "resolveAndPreserveAllAiKeys" in content, f"FAIL: resolveAndPreserveAllAiKeys missing from {path_name}"
-    assert "v1.48.1" in content, f"FAIL: version missing from {path_name}"
+    assert "v1.48.2" in content, f"FAIL: version missing from {path_name}"
     # provider fixes
     assert "let groqSelectedModel" in content, f"FAIL: groqSelectedModel not declared as module-level variable in {path_name}"
     assert "llama3-70b-8192" in content, f"FAIL: llama3-70b-8192 missing from GROQ_MODELS in {path_name}"
@@ -409,7 +409,8 @@ TRANSLATION_ENGINE = os.path.join(REPO_DIR, "app", "translation_engine.py")
 with open(TRANSLATION_ENGINE, "r", encoding="utf-8") as f:
     te_text = f.read()
 assert "translate_offline_en_to_ka" in te_text, "FAIL: translate_offline_en_to_ka missing from translation_engine.py"
-assert "offline_rule_engine" in te_text, "FAIL: offline_rule_engine engine identifier missing from translation_engine.py"
+assert '"suggestion": suggestion' in te_text, "FAIL: offline suggestions must remain available for review"
+assert '"engine": "fallback_original"' not in te_text, "FAIL: original source must never be reported as translated output"
 assert "გადაწყვიტა" in te_text, "FAIL: anti-calque replacement missing from translation_engine.py"
 
 print("  [PASS] Offline literary translation engine, real-data corpus grounding, and scanner deduction verified")
@@ -596,7 +597,7 @@ for path_name, path in [("index.html", INDEX_HTML), ("studio/index.html", STUDIO
     assert html_text.count("https://github.com/devsura3939/oudio-books-AI") >= 5, \
         f"FAIL: Primary GitHub repository link missing or insufficient in {path_name}"
     assert 'href="/auth"' not in html_text, f"FAIL: Broken absolute /auth link found in {path_name}"
-    assert "v1.48.1" in html_text, f"FAIL: Version v1.48.1 not reflected in {path_name}"
+    assert "v1.48.2" in html_text, f"FAIL: Version v1.48.2 not reflected in {path_name}"
 
 for path_name, path in [("static/supabase-store.js", STATIC_SUPABASE), ("studio/static/supabase-store.js", STUDIO_SUPABASE)]:
     with open(path, "r", encoding="utf-8") as f:

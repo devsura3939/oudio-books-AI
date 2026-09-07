@@ -8,6 +8,7 @@ from app.text_integrity import clean_verbatim, detect_language, normalize_langua
 from app.training_engine import evaluate_pack, is_improvement
 from app.transcription_engine import transcribe_audio_bytes, transcribe_image_bytes
 from app.tts_engine import split_text_into_chunks
+from app.translation_engine import translate_text
 
 
 def test_exact_text_and_language():
@@ -28,6 +29,52 @@ def test_hard_tts_cap_and_coverage():
 
 def response(text, reason='STOP'):
     return NS(text=text, candidates=[NS(finish_reason=reason)])
+
+
+def test_translation_outage_never_returns_original_as_success():
+    source = 'მხოლოდ გულით შეიძლება სწორად დანახვა.'
+    with patch('app.translation_engine.genai', None), patch('app.translation_engine.GoogleTranslator', None), patch('httpx.get', side_effect=TimeoutError):
+        result = translate_text(source, 'ka-GE', 'en-US')
+    assert not result['success']
+    assert result['translated'] == ''
+    assert result['failed_chunk'] == 0
+
+
+def test_translation_rejects_truncated_gemini_and_wrong_script():
+    generate = NS(generate_content=lambda **kw: response('Partial output', 'MAX_TOKENS'))
+    with patch('app.translation_engine.genai', NS(Client=lambda **kw: NS(models=generate))), patch('app.translation_engine.GoogleTranslator', None), patch('httpx.get', return_value=NS(status_code=200, json=lambda: [[['ქართული ტექსტი']]])):
+        result = translate_text('ქართული ტექსტი', 'ka', 'en', api_key='fixture-only')
+    assert not result['success']
+    assert result['translated'] == ''
+
+
+def test_middle_chunk_failure_retains_partial_outputs_without_publishing_them():
+    responses = iter([NS(status_code=200, json=lambda: [[['This is a complete first paragraph.']]]), NS(status_code=503)])
+    with patch('app.translation_engine.genai', None), patch('app.translation_engine.GoogleTranslator', None), patch('app.translation_engine.load_active_pack', None), patch('httpx.get', side_effect=lambda *a, **kw: next(responses)):
+        result = translate_text('ეს არის სრული პირველი წინადადება.\n\nეს არის მეორე წინადადება.', 'ka', 'en')
+    assert not result['success']
+    assert result['translated'] == ''
+    assert result['failed_chunk'] == 1
+    assert result['accepted_chunks'] == ['This is a complete first paragraph.']
+
+
+def test_same_language_translation_preserves_original_verbatim():
+    text = 'ᲥᲐᲠᲗᲣᲚᲘ წარმოადგენს ჳ ჴ ჵ.'
+    assert translate_text(text, 'ka-GE', 'geo')['translated'] == text
+
+
+def test_translation_chunks_are_bounded_without_creating_extra_paragraphs():
+    from urllib.parse import urlparse, parse_qs
+    sizes = []
+    def translated(url, **kwargs):
+        chunk = parse_qs(urlparse(url).query)['q'][0]
+        sizes.append(len(chunk))
+        return NS(status_code=200, json=lambda: [[['English text. ' * max(1, len(chunk) // 14)]]])
+    with patch('app.translation_engine.genai', None), patch('app.translation_engine.GoogleTranslator', None), patch('app.translation_engine.load_active_pack', None), patch('httpx.get', side_effect=translated):
+        result = translate_text('ქართულიტექსტი' * 900 + '\n\n' + 'ქართულიტექსტი' * 500, 'ka', 'en')
+    assert result['success']
+    assert len(sizes) > 2 and max(sizes) <= 4000
+    assert result['translated'].count('\n\n') == 1
 
 
 def test_audio_verbatim_preserves_georgian_verb():

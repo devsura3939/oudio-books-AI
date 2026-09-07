@@ -92,5 +92,14 @@
         const reason = data?.candidates?.[0]?.finishReason || data?.choices?.[0]?.finish_reason || data?.finish_reason;
         return !data?.truncated && (!reason || ['stop', 'end_turn', 'eos'].includes(String(reason).toLowerCase()));
     }
-    return { normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, cleanVerbatim, repairIsAcceptable, geminiModels, providerOutputComplete };
+    function chapterStats(chapter = {}) {
+        const declaredWords = Number(chapter.word_count);
+        const words = Number.isFinite(declaredWords) && declaredWords > 0
+            ? Math.round(declaredWords) : (String(chapter.text || '').match(/\S+/gu) || []).length;
+        const declaredSeconds = Number(chapter.estimated_duration_sec);
+        const seconds = Number.isFinite(declaredSeconds) && declaredSeconds > 0
+            ? Math.round(declaredSeconds) : Math.round(words / 140 * 60);
+        return { words, seconds };
+    }
+    return { normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, cleanVerbatim, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats };
 });
