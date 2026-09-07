@@ -10,7 +10,6 @@ import {
   loadBenchmark,
   verifyTrainingKey,
 } from "@/lib/training.server";
-import { ENGINE_ARCHITECTURE_AND_TRAINING_GUIDE_MD } from "@/lib/training-guide";
 
 /**
  * External training API. An LLM (driven by any harness holding a training key) can:
@@ -37,8 +36,7 @@ export const Route = createFileRoute("/api/public/train/$")({
   server: {
     handlers: {
       POST: async ({ request, params }) => {
-        const urlPath = new URL(request.url).pathname.replace(/^.*\/api\/public\/train\/?/, "").replace(/^\/+|\/+$/g, "");
-        const step = String((params as { _splat?: string })._splat || urlPath || "").replace(/^\/+|\/+$/g, "");
+        const step = String((params as { _splat?: string })._splat ?? "").replace(/^\/+|\/+$/g, "");
         let body: Record<string, unknown> = {};
         try {
           body = (await request.json()) as Record<string, unknown>;
@@ -87,8 +85,6 @@ export const Route = createFileRoute("/api/public/train/$")({
               "Read /context, then POST /propose with up to 40 data-only rule items. Rules are post-editing " +
               "layers on top of the built-in engine (never replacements for it). Proposals are auto-benchmarked: " +
               "only strict improvements with zero regressions are published. Close with /finish.",
-            guide_url: "/api/public/train/guide",
-            guide_markdown: ENGINE_ARCHITECTURE_AND_TRAINING_GUIDE_MD,
           });
         }
 
@@ -186,63 +182,6 @@ export const Route = createFileRoute("/api/public/train/$")({
         }
 
         return jsonResponse({ error: `unknown training step "${step}"` }, 404);
-      },
-      GET: async ({ request, params }) => {
-        const url = new URL(request.url);
-        const urlPath = url.pathname.replace(/^.*\/api\/public\/train\/?/, "").replace(/^\/+|\/+$/g, "");
-        const step = String((params as { _splat?: string })._splat || urlPath || "").replace(/^\/+|\/+$/g, "");
-
-        if (step === "guide" || url.pathname.endsWith("/guide")) {
-          const format = url.searchParams.get("format") || "markdown";
-          if (format.toLowerCase() === "json") {
-            return jsonResponse({
-              title: "EngBot / Lumina Audio Studio — Autonomous Training Engine Guide",
-              markdown: ENGINE_ARCHITECTURE_AND_TRAINING_GUIDE_MD,
-              endpoints: {
-                guide: "GET /api/public/train/guide",
-                health: "GET /api/public/train/health",
-                session: "POST /api/public/train/session",
-                context: "POST /api/public/train/context",
-                propose: "POST /api/public/train/propose",
-                finish: "POST /api/public/train/finish",
-              },
-            });
-          }
-          return new Response(ENGINE_ARCHITECTURE_AND_TRAINING_GUIDE_MD, {
-            status: 200,
-            headers: {
-              "Content-Type": "text/markdown; charset=utf-8",
-              "Access-Control-Allow-Origin": "*",
-            },
-          });
-        }
-
-        if (step === "health" || url.pathname.endsWith("/health")) {
-          const pack = await loadActivePack("ka");
-          const cases = await loadBenchmark("ka");
-          const evaluated = evaluatePack(pack.items, cases);
-          return jsonResponse({
-            status: "healthy",
-            service: "EngBot Autonomous Training Engine",
-            active_pack: {
-              version: pack.version,
-              items_count: pack.items.length,
-              score: evaluated.score,
-            },
-            benchmark: {
-              total_cases: cases.length,
-              exact_matches: evaluated.passed,
-            },
-            supported_item_types: ["glossary", "autofix", "qa_rule", "prompt_block", "ocr_fix"],
-            guide_url: "/api/public/train/guide",
-            guide_summary:
-              "Access GET /api/public/train/guide for full architectural documentation, " +
-              "corpora information (Sun Tzu, Marcus Aurelius, Homer, Plato, Shakespeare, Georgian Pro), " +
-              "and instructions for external LLMs to train the engine safely and effectively.",
-          });
-        }
-
-        return jsonResponse({ error: `unsupported GET training route "${step}"` }, 404);
       },
     },
   },

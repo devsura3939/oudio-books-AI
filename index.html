@@ -9,10 +9,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
-    <!-- JSZip & jsPDF & html2pdf -->
+    <!-- JSZip & jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -169,112 +168,95 @@
         /* ════════════════ Moon+ Reader Fullscreen View ════════════════ */
         #readerView {
             position: fixed; inset: 0; z-index: 90;
-            /* dvh + safe areas for modern browsers and mobile */
+            /* dvh + safe areas: on mobile browsers 100vh sits under the URL bar,
+               which is what clipped the bottom playbar and page text. */
             height: 100dvh;
             padding-bottom: env(safe-area-inset-bottom);
             overscroll-behavior: contain;
             display: flex; flex-direction: column;
-            will-change: transform, opacity;
-            transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
-            transform: scale(0.975);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+            transform: translateY(100%);
             opacity: 0; pointer-events: none;
             user-select: text;
         }
         #readerView.active {
-            transform: scale(1);
+            transform: translateY(0);
             opacity: 1; pointer-events: auto;
         }
 
         /* Full Real-Estate Book Page Spread */
         .book-page-spread {
             width: 100%;
-            max-width: min(97vw, 1720px);
-            margin: auto;
-            height: calc(100dvh - 124px);
-            min-height: calc(100dvh - 124px);
-            max-height: calc(100dvh - 124px);
+            max-width: 1300px;
+            margin: 0 auto;
+            min-height: 60dvh;
             display: flex;
-            gap: 20px;
-            align-items: stretch;
-            transition: gap 0.25s ease;
+            gap: 24px;
+            transition: all 0.3s ease;
         }
 
         /* Individual Book Page Card */
         .book-page-card {
             flex: 1;
             min-width: 0;
-            height: 100%;
-            border-radius: 14px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.22);
+            border-radius: 12px;
+            box-shadow: 0 8px 35px rgba(0, 0, 0, 0.2), 0 0 2px rgba(0, 0, 0, 0.3);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             position: relative;
-            padding: 26px 36px;
-            overflow: hidden;
-            transition: padding 0.25s ease, box-shadow 0.25s ease;
+            padding: 32px 40px;
+            transition: all 0.25s ease;
         }
 
         /* Book Spine Shadows */
         .book-spine-left {
-            box-shadow: inset -15px 0 25px -10px rgba(0,0,0,0.12), 0 10px 40px rgba(0, 0, 0, 0.18);
+            box-shadow: inset -15px 0 25px -10px rgba(0,0,0,0.12), 0 8px 35px rgba(0, 0, 0, 0.2);
         }
         .book-spine-right {
-            box-shadow: inset 15px 0 25px -10px rgba(0,0,0,0.12), 0 10px 40px rgba(0, 0, 0, 0.18);
+            box-shadow: inset 15px 0 25px -10px rgba(0,0,0,0.12), 0 8px 35px rgba(0, 0, 0, 0.2);
         }
 
-        @media (max-width: 1200px) {
-            .book-page-spread {
-                max-width: 98vw;
-                gap: 14px;
-            }
-            .book-page-card {
-                padding: 22px 28px;
-            }
-        }
-
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
             .book-page-spread {
                 flex-direction: column;
-                max-width: min(96vw, 860px);
-                height: calc(100dvh - 116px);
-                min-height: calc(100dvh - 116px);
-                max-height: calc(100dvh - 116px);
+                max-width: 800px;
                 gap: 0;
             }
             .book-page-card {
-                padding: 18px 20px;
+                padding: 22px 20px;
                 border-radius: 10px;
             }
         }
 
         @media (max-width: 640px) {
             .book-page-spread {
-                height: calc(100dvh - 110px);
-                min-height: calc(100dvh - 110px);
-                max-height: calc(100dvh - 110px);
+                min-height: calc(100dvh - 168px);
+                gap: 0;
             }
             .book-page-card {
-                padding: 14px 14px;
+                padding: 16px 14px;
                 border-radius: 8px;
             }
             .book-drop-cap::first-letter {
-                font-size: 2.5em;
-                padding-right: 5px;
+                font-size: 2.6em;
+                padding-right: 6px;
             }
         }
 
         @media (max-width: 400px) {
+            .book-page-spread {
+                min-height: calc(100dvh - 150px);
+            }
             .book-page-card {
                 padding: 12px 10px;
                 border-radius: 6px;
             }
             .book-drop-cap::first-letter {
-                font-size: 2.1em;
+                font-size: 2.2em;
                 padding-right: 4px;
             }
         }
-
 
         /* Drop Cap for Book Typography */
         .book-drop-cap::first-letter {
@@ -288,27 +270,13 @@
             font-family: 'Cinzel', 'EB Garamond', serif;
         }
 
-        /* Kindle-Grade Page Flip & Slide Animations */
+        /* Page Flip Animation */
         @keyframes pageFadeSlide {
-            0% { opacity: 0.4; transform: translate3d(14px, 0, 0); }
-            100% { opacity: 1; transform: translate3d(0, 0, 0); }
+            0% { opacity: 0.3; transform: scale(0.99) translateY(4px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
         }
-        @keyframes kindleSlideNext {
-            0% { opacity: 0.35; transform: translate3d(18px, 0, 0); }
-            100% { opacity: 1; transform: translate3d(0, 0, 0); }
-        }
-        @keyframes kindleSlidePrev {
-            0% { opacity: 0.35; transform: translate3d(-18px, 0, 0); }
-            100% { opacity: 1; transform: translate3d(0, 0, 0); }
-        }
-        .page-flip-anim,
-        .page-turn-next {
-            animation: kindleSlideNext 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-            will-change: transform, opacity;
-        }
-        .page-turn-prev {
-            animation: kindleSlidePrev 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-            will-change: transform, opacity;
+        .page-flip-anim {
+            animation: pageFadeSlide 0.22s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         /* ════════ 6 Authentic Moon+ Reader Color Themes ════════ */
@@ -332,13 +300,12 @@
             background-color: rgba(180, 135, 80, 0.18);
         }
         .reader-theme-sepia .reader-sentence.active-sentence {
-            background-color: rgba(200, 145, 45, 0.26);
+            background-color: rgba(200, 145, 45, 0.38);
             color: #120b04;
             border-bottom: 2px solid #a67215;
-            box-shadow: 0 1px 6px rgba(200, 145, 45, 0.22);
-            border-radius: 3px;
+            box-shadow: 0 0 14px rgba(200, 145, 45, 0.35);
+            border-radius: 4px;
         }
-
         .reader-theme-sepia .reader-btn {
             color: #2c2013 !important;
             background: rgba(150, 115, 75, 0.16) !important;
@@ -528,30 +495,10 @@
         /* Interactive Sentence Element */
         .reader-sentence {
             cursor: pointer;
-            transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
-            padding: 1px 3px;
-            margin: 0 1px;
-            border-radius: 4px;
+            transition: all 0.18s ease;
+            padding: 2px 3px;
+            border-radius: 3px;
             display: inline;
-            box-decoration-break: clone;
-            -webkit-box-decoration-break: clone;
-        }
-
-        /* Fluid, River-Free Literary Typography */
-        .book-prose {
-            text-align: justify;
-            text-justify: inter-word;
-            hyphens: auto;
-            word-break: break-word;
-            text-wrap: pretty;
-        }
-
-        .book-page-text-flow {
-            flex: 1 1 auto;
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
         }
 
         /* Scrollbar */
@@ -599,447 +546,17 @@
         transform: none !important;
     }
 }
-
-        /* ── Universal Select Dropdown Styling (Dark Theme & High Contrast) ── */
-        select {
-            color-scheme: dark !important;
-        }
-
-        select option,
-        select optgroup {
-            background-color: #121620 !important;
-            color: #f8fafc !important;
-            font-size: 13.5px !important;
-            padding: 8px 12px !important;
-        }
-
-        select optgroup {
-            font-weight: 700 !important;
-            color: #38bdf8 !important;
-            background-color: #090d15 !important;
-            letter-spacing: 0.025em;
-        }
-
-        #voiceModalSelect,
-        #elevenLabsVoiceSelect,
-        #elevenLabsVoiceSelectKa,
-        .glass-select {
-            color-scheme: dark !important;
-            background-color: #121620 !important;
-            color: #ffffff !important;
-            border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
-            border-radius: 12px !important;
-        }
-
-        #voiceModalSelect:focus,
-        #elevenLabsVoiceSelect:focus,
-        #elevenLabsVoiceSelectKa:focus {
-            border-color: #38bdf8 !important;
-            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
-        }
-
-        #voiceModalSelect option,
-        #elevenLabsVoiceSelect option,
-        #elevenLabsVoiceSelectKa option {
-            background-color: #121620 !important;
-            color: #ffffff !important;
-        }
-
-        #voiceModalSelect optgroup,
-        #elevenLabsVoiceSelect optgroup,
-        #elevenLabsVoiceSelectKa optgroup {
-            background-color: #090d15 !important;
-            color: #38bdf8 !important;
-        }
     </style>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="static/styles.css?v=1.47.5">
+    <!-- The studio's own stylesheet was never linked, so the translation panel,
+         chunk log, mini dock and reader layout rendered unstyled (black
+         overlays, clipped controls, cramped "#0AI" rows). Loaded last so it
+         wins over the inline base styles, while the mobile overrides above
+         keep their !important precedence. -->
+    <link rel="stylesheet" href="static/styles.css">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
 
-    <!-- ════════════════ Early Auth Gate Controller (v1.47.5) ════════════════ -->
-    <script>
-    (function() {
-        // Proactively clear bloated translation jobs and stale caches to prevent QuotaExceededError
-        try {
-            var keysToPurge = [];
-            for (var i = 0; i < localStorage.length; i++) {
-                var k = localStorage.key(i);
-                if (k && (k.indexOf('lumina_tjob_') === 0 || k.indexOf('engbot_pack_') === 0 || k.indexOf('temp_') === 0 || k.indexOf('cached_') === 0)) {
-                    keysToPurge.push(k);
-                } else if (k && k.indexOf('sb-') !== 0 && k.indexOf('lumina_account_settings_') !== 0 && k.indexOf('lumina_saved_') !== 0 && k.indexOf('gemini') === -1 && k.indexOf('groq') === -1 && k.indexOf('openrouter') === -1 && k.indexOf('mistral') === -1 && k.indexOf('custom') === -1 && k.indexOf('lumina_el_') === -1) {
-                    try {
-                        var v = localStorage.getItem(k);
-                        if (v && v.length > 40000) keysToPurge.push(k);
-                    } catch (e) {}
-                }
-            }
-            for (var j = 0; j < keysToPurge.length; j++) {
-                localStorage.removeItem(keysToPurge[j]);
-            }
-        } catch (e) {}
-
-        window.setGateError = function(msg) {
-            var errEl = document.getElementById('gateErrorMsg');
-            var succEl = document.getElementById('gateSuccessMsg');
-            if (succEl) succEl.classList.add('hidden');
-            if (errEl) {
-                if (msg) {
-                    errEl.textContent = msg;
-                    errEl.classList.remove('hidden');
-                } else {
-                    errEl.textContent = '';
-                    errEl.classList.add('hidden');
-                }
-            }
-        };
-
-        window.setGateSuccess = function(msg) {
-            var errEl = document.getElementById('gateErrorMsg');
-            var succEl = document.getElementById('gateSuccessMsg');
-            if (errEl) errEl.classList.add('hidden');
-            if (succEl) {
-                if (msg) {
-                    succEl.textContent = msg;
-                    succEl.classList.remove('hidden');
-                } else {
-                    succEl.textContent = '';
-                    succEl.classList.add('hidden');
-                }
-            }
-        };
-
-        window.switchGateMode = function(mode) {
-            var signInForm = document.getElementById('gateSignInForm');
-            var registerForm = document.getElementById('gateRegisterForm');
-            var forgotForm = document.getElementById('gateForgotForm');
-            var resetForm = document.getElementById('gateResetForm');
-            var tabs = document.getElementById('gateTabs');
-            var tabSignIn = document.getElementById('gateTabSignIn');
-            var tabRegister = document.getElementById('gateTabRegister');
-            var subtitle = document.getElementById('gateSubtitle');
-
-            window.setGateError('');
-            window.setGateSuccess('');
-
-            if (mode === 'reset') {
-                if (signInForm) signInForm.classList.add('hidden');
-                if (registerForm) registerForm.classList.add('hidden');
-                if (forgotForm) forgotForm.classList.add('hidden');
-                if (resetForm) resetForm.classList.remove('hidden');
-                if (tabs) tabs.classList.add('hidden');
-                if (subtitle) subtitle.textContent = 'Create a secure new password for your account';
-                var newPwdInput = document.getElementById('gateNewPassword');
-                if (newPwdInput) newPwdInput.focus();
-            } else if (mode === 'register') {
-                if (signInForm) signInForm.classList.add('hidden');
-                if (forgotForm) forgotForm.classList.add('hidden');
-                if (resetForm) resetForm.classList.add('hidden');
-                if (registerForm) registerForm.classList.remove('hidden');
-                if (tabs) tabs.classList.remove('hidden');
-                if (tabSignIn) {
-                    tabSignIn.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95';
-                }
-                if (tabRegister) {
-                    tabRegister.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
-                }
-                if (subtitle) subtitle.textContent = 'Create your free Studio account to sync books across devices';
-                var regInput = document.getElementById('gateRegEmail');
-                if (regInput) regInput.focus();
-            } else if (mode === 'forgot') {
-                if (signInForm) signInForm.classList.add('hidden');
-                if (registerForm) registerForm.classList.add('hidden');
-                if (resetForm) resetForm.classList.add('hidden');
-                if (forgotForm) forgotForm.classList.remove('hidden');
-                if (tabs) tabs.classList.add('hidden');
-                if (subtitle) subtitle.textContent = 'Enter your email to receive a password reset recovery link';
-                var forgotInput = document.getElementById('gateForgotEmail');
-                var signinEmail = document.getElementById('gateEmail');
-                if (forgotInput && signinEmail && signinEmail.value) {
-                    forgotInput.value = signinEmail.value;
-                }
-                if (forgotInput) forgotInput.focus();
-            } else {
-                // signin
-                if (registerForm) registerForm.classList.add('hidden');
-                if (forgotForm) forgotForm.classList.add('hidden');
-                if (resetForm) resetForm.classList.add('hidden');
-                if (signInForm) signInForm.classList.remove('hidden');
-                if (tabs) tabs.classList.remove('hidden');
-                if (tabSignIn) {
-                    tabSignIn.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
-                }
-                if (tabRegister) {
-                    tabRegister.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95';
-                }
-                if (subtitle) subtitle.textContent = 'Sign in to access your personal audiobooks, scanned books, and studio workspace';
-            }
-        };
-
-        window.fillAdminCredentials = function() {
-            var emailInput = document.getElementById('gateEmail');
-            var pwdInput = document.getElementById('gatePassword');
-            if (emailInput) {
-                emailInput.value = 'ananiadevsurashvili@gmail.com';
-                emailInput.classList.add('ring-2', 'ring-primary-container');
-            }
-            if (pwdInput) {
-                pwdInput.value = 'anania39';
-                pwdInput.classList.add('ring-2', 'ring-primary-container');
-            }
-            setTimeout(function() {
-                if (emailInput) emailInput.classList.remove('ring-2', 'ring-primary-container');
-                if (pwdInput) pwdInput.classList.remove('ring-2', 'ring-primary-container');
-            }, 1500);
-        };
-
-        window.handleGateSignIn = function() {
-            if (window._realHandleGateSignIn) return window._realHandleGateSignIn();
-            var btn = document.getElementById('btnGateSignIn');
-            if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Signing In...</span>';
-            var poll = setInterval(function() {
-                if (window._realHandleGateSignIn) {
-                    clearInterval(poll);
-                    window._realHandleGateSignIn();
-                }
-            }, 80);
-            setTimeout(function() { clearInterval(poll); }, 8000);
-        };
-
-        window.handleGateRegister = function() {
-            if (window._realHandleGateRegister) return window._realHandleGateRegister();
-            var btn = document.getElementById('btnGateRegister');
-            if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Registering...</span>';
-            var poll = setInterval(function() {
-                if (window._realHandleGateRegister) {
-                    clearInterval(poll);
-                    window._realHandleGateRegister();
-                }
-            }, 80);
-            setTimeout(function() { clearInterval(poll); }, 8000);
-        };
-
-        window.handleGateForgot = function() {
-            if (window._realHandleGateForgot) return window._realHandleGateForgot();
-            var btn = document.getElementById('btnGateForgot');
-            if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Sending...</span>';
-            var poll = setInterval(function() {
-                if (window._realHandleGateForgot) {
-                    clearInterval(poll);
-                    window._realHandleGateForgot();
-                }
-            }, 80);
-            setTimeout(function() { clearInterval(poll); }, 8000);
-        };
-    })();
-    </script>
-
-    <!-- ════════════════ Auth Gate Screen (shown when not logged in) ════════════════ -->
-    <div id="authGateScreen" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#0c1017] p-4 sm:p-6 overflow-y-auto">
-        <!-- Glowing ambient backdrop -->
-        <div class="fixed inset-0 pointer-events-none overflow-hidden">
-            <div class="absolute -top-32 -left-32 w-96 h-96 bg-primary-container/20 rounded-full blur-[120px]"></div>
-            <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-secondary/15 rounded-full blur-[140px]"></div>
-        </div>
-
-        <div class="relative w-full max-w-md glass-panel p-6 sm:p-8 rounded-3xl border border-white/15 shadow-2xl space-y-6 my-auto">
-            <!-- Branding Header -->
-            <div class="text-center space-y-2">
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-secondary-container to-primary-container p-0.5 mx-auto shadow-[0_0_25px_rgba(0,240,255,0.3)]">
-                    <div class="w-full h-full bg-surface rounded-[14px] flex items-center justify-center">
-                        <span class="material-symbols-outlined text-primary-fixed text-3xl" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
-                    </div>
-                </div>
-                <div>
-                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center justify-center gap-2">
-                        <span>EngBot Studio</span>
-                        <span class="text-primary-container text-[11px] font-mono px-2 py-0.5 rounded-full bg-primary-container/15 border border-primary-container/30">v1.47.5</span>
-                    </h1>
-                    <p class="text-xs sm:text-sm text-on-surface-variant mt-1" id="gateSubtitle">
-                        Sign in to access your personal audiobooks, scanned books, and studio workspace
-                    </p>
-                </div>
-            </div>
-
-            <!-- Mode Selector Tabs (Sign In / Register) -->
-            <div class="flex p-1 rounded-2xl bg-white/5 border border-white/10 text-xs font-semibold" id="gateTabs">
-                <button type="button" onclick="switchGateMode('signin')" id="gateTabSignIn" class="flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95">Sign In</button>
-                <button type="button" onclick="switchGateMode('register')" id="gateTabRegister" class="flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95">Create Account</button>
-            </div>
-
-            <!-- Error and Success Banners -->
-            <div id="gateErrorMsg" class="hidden p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 font-medium leading-relaxed"></div>
-            <div id="gateSuccessMsg" class="hidden p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300 font-medium leading-relaxed"></div>
-
-            <!-- 1. Sign In Form -->
-            <form id="gateSignInForm" onsubmit="event.preventDefault(); handleGateSignIn();" class="space-y-4">
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-medium text-on-surface-variant" for="gateEmail">Email Address</label>
-                    <input type="email" id="gateEmail" placeholder="name@example.com" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required autocomplete="username">
-                </div>
-
-                <div class="space-y-1.5">
-                    <div class="flex justify-between items-center text-xs">
-                        <label class="font-medium text-on-surface-variant" for="gatePassword">Password</label>
-                        <button type="button" id="gateBtnForgot" onclick="switchGateMode('forgot')" class="text-primary-fixed-dim hover:text-primary-container transition cursor-pointer active:scale-95">
-                            Forgot password?
-                        </button>
-                    </div>
-                    <input type="password" id="gatePassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required autocomplete="current-password">
-                </div>
-
-                <!-- Remember Me Checkbox -->
-                <div class="flex items-center gap-2 py-0.5">
-                    <input type="checkbox" id="gateRememberMe" class="w-4 h-4 rounded bg-white/10 border border-white/20 text-primary-fixed accent-primary-container cursor-pointer">
-                    <label for="gateRememberMe" class="text-xs text-on-surface-variant select-none cursor-pointer hover:text-white transition">
-                        Remember me on this device (stays signed in)
-                    </label>
-                </div>
-
-                <button type="submit" id="btnGateSignIn" class="w-full py-3.5 bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 active:scale-[0.98] transition shadow-[0_0_25px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">login</span>
-                    <span>Log In to Studio</span>
-                </button>
-
-                <!-- Quick Admin Demo Fill Shortcut for the Owner -->
-                <div class="pt-1 text-center">
-                    <button type="button" id="gateBtnQuickFillAdmin" onclick="fillAdminCredentials()" class="text-[11px] text-on-surface-variant/70 hover:text-primary-container transition flex items-center justify-center gap-1 mx-auto cursor-pointer active:scale-95">
-                        <span>👑 Quick-fill Admin credentials</span>
-                    </button>
-                </div>
-            </form>
-
-            <!-- 2. Register Form -->
-            <form id="gateRegisterForm" onsubmit="event.preventDefault(); handleGateRegister();" class="hidden space-y-4">
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-medium text-on-surface-variant" for="gateRegEmail">Email Address</label>
-                    <input type="email" id="gateRegEmail" placeholder="name@example.com" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required autocomplete="email">
-                </div>
-
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-medium text-on-surface-variant" for="gateRegPassword">Create Password (min 6 chars)</label>
-                    <input type="password" id="gateRegPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required minlength="6" autocomplete="new-password">
-                </div>
-
-                <!-- Remember Me Checkbox -->
-                <div class="flex items-center gap-2 py-0.5">
-                    <input type="checkbox" id="gateRegRememberMe" class="w-4 h-4 rounded bg-white/10 border border-white/20 text-primary-fixed accent-primary-container cursor-pointer">
-                    <label for="gateRegRememberMe" class="text-xs text-on-surface-variant select-none cursor-pointer hover:text-white transition">
-                        Remember me on this device (stays signed in)
-                    </label>
-                </div>
-
-                <button type="submit" id="btnGateRegister" class="w-full py-3.5 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 active:scale-[0.98] transition shadow-[0_0_25px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">person_add</span>
-                    <span>Create Free Account</span>
-                </button>
-
-                <p class="text-[11px] text-center text-on-surface-variant">
-                    Already registered? <button type="button" id="gateBtnToSignInFromReg" onclick="switchGateMode('signin')" class="text-primary-container underline hover:brightness-125 cursor-pointer active:scale-95">Log In</button>
-                </p>
-            </form>
-
-            <!-- 3. Forgot Password Form -->
-            <form id="gateForgotForm" onsubmit="event.preventDefault(); handleGateForgot();" class="hidden space-y-4">
-                <p class="text-xs text-on-surface-variant leading-relaxed">
-                    Enter your account email below. We'll send you a password reset recovery link.
-                </p>
-
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-medium text-on-surface-variant" for="gateForgotEmail">Account Email</label>
-                    <input type="email" id="gateForgotEmail" placeholder="name@example.com" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required autocomplete="email">
-                </div>
-
-                <button type="submit" id="btnGateForgot" class="w-full py-3.5 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 active:scale-[0.98] transition shadow-[0_0_25px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">mail</span>
-                    <span>Send Recovery Link</span>
-                </button>
-
-                <button type="button" id="gateBtnToSignInFromForgot" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition border border-white/10 text-center cursor-pointer active:scale-95">
-                    ← Back to Sign In
-                </button>
-            </form>
-
-            <!-- 4. Set New Password Form (opened when clicking recovery link) -->
-            <form id="gateResetForm" onsubmit="event.preventDefault(); handleGateSetNewPassword();" class="hidden space-y-4">
-                <div class="p-3 rounded-2xl bg-primary-container/15 border border-primary-container/30 text-xs text-primary-fixed flex items-center gap-2">
-                    <span class="material-symbols-outlined text-base">lock_reset</span>
-                    <span class="truncate">Set new password for <strong id="gateResetEmailBadge" class="text-white">your account</strong></span>
-                </div>
-                <p class="text-xs text-on-surface-variant leading-relaxed">
-                    Create a secure new password for your account (minimum 6 characters).
-                </p>
-
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-medium text-on-surface-variant" for="gateNewPassword">New Password</label>
-                    <input type="password" id="gateNewPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required minlength="6" autocomplete="new-password">
-                </div>
-
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-medium text-on-surface-variant" for="gateConfirmNewPassword">Confirm New Password</label>
-                    <input type="password" id="gateConfirmNewPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required minlength="6" autocomplete="new-password">
-                </div>
-
-                <button type="submit" id="btnGateSetNewPassword" class="w-full py-3.5 bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 active:scale-[0.98] transition shadow-[0_0_25px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">check_circle</span>
-                    <span>Update Password & Enter Studio</span>
-                </button>
-
-                <button type="button" id="gateBtnToSignInFromReset" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition border border-white/10 text-center cursor-pointer active:scale-95">
-                    ← Back to Sign In
-                </button>
-            </form>
-
-            <!-- Bottom Branding Security Note & Primary GitHub Link -->
-            <div class="pt-2 text-center flex flex-col items-center gap-2">
-                <div class="text-[10px] text-on-surface-variant/60 font-mono">
-                    Encrypted Vault • Supabase Cloud Sync • EngBot v1.47.5
-                </div>
-                <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs text-primary-fixed-dim hover:text-primary-container transition font-medium">
-                    <svg class="w-3.5 h-3.5 fill-current text-white/80" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    <span>GitHub: devsura3939/oudio-books-AI</span>
-                    <span class="material-symbols-outlined text-[13px]">open_in_new</span>
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Direct Touch and Click Event Attacher for Auth Gate (v1.47.5) -->
-    <script>
-    (function() {
-        function bindGateTouchEvents() {
-            var map = [
-                ['gateTabSignIn', function() { window.switchGateMode('signin'); }],
-                ['gateTabRegister', function() { window.switchGateMode('register'); }],
-                ['gateBtnForgot', function() { window.switchGateMode('forgot'); }],
-                ['gateBtnQuickFillAdmin', function() { window.fillAdminCredentials(); }],
-                ['gateBtnToSignInFromReg', function() { window.switchGateMode('signin'); }],
-                ['gateBtnToSignInFromForgot', function() { window.switchGateMode('signin'); }],
-                ['gateBtnToSignInFromReset', function() { window.switchGateMode('signin'); }]
-            ];
-            map.forEach(function(item) {
-                var el = document.getElementById(item[0]);
-                if (el) {
-                    el.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        item[1]();
-                    });
-                }
-            });
-        }
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', bindGateTouchEvents);
-        } else {
-            bindGateTouchEvents();
-        }
-    })();
-    </script>
-
-    <!-- ════════════════ App Main Container (hidden when not logged in) ════════════════ -->
-    <div id="appMainContainer" class="hidden flex-1 flex flex-col md:flex-row w-full min-h-screen">
     <!-- ════════════════ Mobile Top Bar (visible < md) ════════════════ -->
     <header class="md:hidden glass-header fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4">
         <button onclick="openMobileNav()" class="p-2 -ml-2 rounded-xl text-white hover:bg-white/10 transition" aria-label="Open menu" title="Menu">
@@ -1047,23 +564,14 @@
         </button>
         <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
-            <span class="font-label-caps font-bold tracking-tight text-white">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">v1.47.5</span></span>
-            <div id="adminVersionPillMobile" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)]">
-                <span>👑</span><span>v1.47.5</span>
-            </div>
+            <span class="font-label-caps font-bold tracking-tight text-white">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">PRO</span></span>
         </div>
         <div class="flex items-center gap-0.5 -mr-2">
-            <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition flex items-center justify-center" aria-label="GitHub Repository" title="GitHub Repository">
-                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-            </a>
             <button onclick="LuminaScanner.open()" class="p-2 rounded-xl text-georgian-gold hover:bg-white/10 transition" aria-label="Scan book pages" title="Scan book pages">
                 <span class="material-symbols-outlined text-2xl">document_scanner</span>
             </button>
             <button onclick="openModal('uploadModal')" class="p-2 rounded-xl text-primary-fixed hover:bg-white/10 transition" aria-label="Upload PDF" title="Upload PDF">
                 <span class="material-symbols-outlined text-2xl">upload_file</span>
-            </button>
-            <button id="mobileTopProfileBtn" onclick="openAccountCabinet()" class="p-2 rounded-xl text-white hover:bg-white/10 transition" aria-label="Account & Cabinet" title="Account & Cabinet">
-                <span class="material-symbols-outlined text-2xl">account_circle</span>
             </button>
         </div>
 
@@ -1079,29 +587,12 @@
                             <span class="material-symbols-outlined text-primary-fixed text-lg" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
                         </div>
                     </div>
-                    <div>
-                        <span class="font-label-caps font-bold text-white block leading-tight">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">PRO</span></span>
-                        <span class="text-[10px] text-on-surface-variant font-mono">App v1.47.5 • Engine v1.47.5</span>
-                    </div>
+                    <span class="font-label-caps font-bold text-white">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">PRO</span></span>
                 </div>
                 <button onclick="closeMobileNav()" class="p-1.5 rounded-lg hover:bg-white/10 transition" aria-label="Close menu">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-
-            <!-- Mobile Admin Status Box -->
-            <div id="mobileAdminCard" class="hidden mx-3 mt-3 p-2.5 rounded-xl bg-primary-container/15 border border-primary-container/40 text-[10px] font-mono text-primary-fixed shadow-[0_0_15px_rgba(0,240,255,0.2)]">
-                <div class="flex items-center justify-between font-bold">
-                    <span>👑 Admin Logged In</span>
-                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-primary-container/25">ACTIVE</span>
-                </div>
-                <p class="text-white text-[10px] truncate mt-0.5 font-sans" id="mobileAdminEmail"></p>
-                <div class="mt-1 pt-1 border-t border-white/10 space-y-0.5">
-                    <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">v1.47.5</span></p>
-                    <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">v1.47.5 (Lumina-PermanentDelete+FastLib+PrimaryGitHub)</span></p>
-                </div>
-            </div>
-
             <nav class="flex-grow overflow-y-auto p-3 space-y-1.5">
                 <button onclick="navigate('library');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
                     <span class="material-symbols-outlined text-[20px]">library_music</span><span>My Library</span>
@@ -1118,14 +609,7 @@
                 <button onclick="openModal('aiSettingsModal');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-primary-fixed hover:bg-white/5 transition">
                     <span class="material-symbols-outlined text-[20px]">smart_toy</span><span>Gemini AI Engine</span>
                 </button>
-                <button onclick="openTrainingLabModal();closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-secondary hover:bg-white/5 transition">
-                    <span class="material-symbols-outlined text-[20px]">model_training</span><span>AI Training Lab & LLMs</span>
-                </button>
-                <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
-                    <svg class="w-5 h-5 fill-current text-white/80" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    <span>GitHub Repository</span>
-                </a>
-                <button onclick="openAccountCabinet();closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
+                <button onclick="openModal('authModal');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
                     <span class="material-symbols-outlined text-[20px]">person</span><span id="mobileNavUserName">Sign In</span>
                 </button>
             </nav>
@@ -1205,22 +689,10 @@
                     <span>Gemini AI Engine</span>
                 </button>
             </li>
-            <li>
-                <button onclick="openTrainingLabModal()" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-secondary hover:bg-white/5 hover:text-white transition-all font-medium text-sm">
-                    <span class="material-symbols-outlined text-[20px]">model_training</span>
-                    <span>AI Training Lab & LLMs</span>
-                </button>
-            </li>
-            <li>
-                <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-white transition-all font-medium text-sm">
-                    <svg class="w-5 h-5 fill-current text-white/80" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    <span>GitHub Repository</span>
-                </a>
-            </li>
         </ul>
 
         <div class="mt-auto pt-6 border-t border-white/10" id="userNavSection">
-            <button onclick="openAccountCabinet()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-on-surface-variant hover:text-white transition-all text-sm font-medium">
+            <button onclick="openModal('authModal')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-on-surface-variant hover:text-white transition-all text-sm font-medium">
                 <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-primary-fixed">
                     <span class="material-symbols-outlined text-lg">person</span>
                 </div>
@@ -1242,19 +714,6 @@
         </div>
 
         <div class="flex items-center gap-3">
-            <div id="adminVersionPill" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-primary-container/20 border border-primary-container/40 text-[11px] font-mono text-primary-fixed font-bold shadow-[0_0_15px_rgba(0,240,255,0.2)]">
-                <span>👑 Admin</span>
-                <span class="opacity-40">•</span>
-                <span>App v1.47.5</span>
-                <span class="opacity-40">•</span>
-                <span>Engine v1.47.5</span>
-            </div>
-
-            <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/12 text-xs font-semibold text-white transition shadow-sm" title="View Project on GitHub">
-                <svg class="w-4 h-4 fill-current text-white/90" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                <span>GitHub</span>
-            </a>
-
             <button onclick="openCurrentBookInReader()" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-georgian-gold/15 hover:bg-georgian-gold/25 border border-georgian-gold/30 text-xs font-bold text-georgian-gold transition shadow-sm" title="Open Moon+ Reader view">
                 <span class="material-symbols-outlined text-base">menu_book</span>
                 <span>Moon Reader</span>
@@ -1266,7 +725,7 @@
                 <span class="material-symbols-outlined text-sm text-on-surface-variant">expand_more</span>
             </button>
 
-            <button id="topProfileBtn" onclick="openAccountCabinet()" class="p-1 rounded-full text-on-surface-variant hover:text-white transition flex items-center gap-2" title="Your Account & Cabinet">
+            <button id="topProfileBtn" onclick="openModal('authModal')" class="p-1 rounded-full text-on-surface-variant hover:text-white transition flex items-center gap-2">
                 <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-container/20 to-secondary/30 border border-white/15 flex items-center justify-center text-primary-fixed font-bold text-xs" id="topAvatarBadge">
                     G
                 </div>
@@ -1419,7 +878,7 @@
     </main>
 
     <!-- ════════════════ Bottom Floating Player Dock ════════════════ -->
-    <div id="playerDock" class="fixed bottom-16 md:bottom-6 left-1/2 -translate-x-1/2 w-[95%] md:w-[86%] max-w-5xl z-30 p-3 md:px-6 md:py-3 glass-dock rounded-2xl opacity-0 translate-y-12 transition-all duration-500 pointer-events-none flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+    <div id="playerDock" class="fixed bottom-3 md:bottom-6 left-1/2 -translate-x-1/2 w-[95%] md:w-[86%] max-w-5xl z-50 p-3 md:px-6 md:py-3 glass-dock rounded-2xl opacity-0 translate-y-12 transition-all duration-500 pointer-events-none flex flex-col md:flex-row md:items-center justify-between gap-2.5">
         
         <!-- Mobile Top Row / Desktop Left -->
         <div class="flex items-center justify-between md:justify-start gap-3 w-full md:w-1/4 min-w-0">
@@ -1509,7 +968,7 @@
     <!-- ════════════════ MOON+ READER RESPONSIVE VIEW ════════════════ -->
     <div id="readerView" class="reader-theme-sepia">
         <!-- Top Toolbar -->
-        <header id="readerTopToolbar" class="reader-toolbar px-3 sm:px-6 py-2.5 border-b flex items-center justify-between flex-shrink-0 z-30 shadow-sm transition-transform duration-300">
+        <header class="reader-toolbar px-3 sm:px-6 py-2.5 border-b flex items-center justify-between flex-shrink-0 z-30 shadow-sm">
             <!-- Left: Back & Title -->
             <div class="flex items-center gap-2 sm:gap-3 min-w-0">
                 <button onclick="closeReader()" class="reader-btn px-2.5 py-1.5 rounded-xl font-bold transition flex items-center gap-1 text-xs" title="Exit Reader (Esc)">
@@ -1539,17 +998,13 @@
                     <span class="hidden md:inline">Voice Settings</span>
                 </button>
 
-                <button onclick="openToCDrawer()" class="reader-btn px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition" title="Table of Contents (Key: C)">
+                <button onclick="openToCDrawer()" class="reader-btn px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition" title="Table of Contents">
                     <span class="material-symbols-outlined text-base">format_list_bulleted</span>
                     <span class="hidden md:inline">Chapters</span>
                 </button>
 
                 <button onclick="openModal('readerThemeModal')" class="reader-btn p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition" title="Typography & Themes">
                     <span class="material-symbols-outlined text-base">format_size</span>
-                </button>
-
-                <button onclick="toggleReaderToolbars()" class="reader-btn p-1.5 rounded-xl hover:opacity-80 transition" title="Toggle Distraction-Free Immersion (Key: H / Tap Center)">
-                    <span class="material-symbols-outlined text-base">visibility</span>
                 </button>
 
                 <button onclick="toggleReaderFullscreen()" class="reader-btn hidden sm:block p-1.5 rounded-xl hover:opacity-80 transition" title="Toggle Fullscreen (Key: F)">
@@ -1561,7 +1016,7 @@
         <!-- Reader Canvas -->
         <div id="readerScrollContainer" class="flex-grow overflow-y-auto overscroll-contain px-2 sm:px-6 md:px-12 py-3 sm:py-6 flex flex-col justify-start relative select-text" style="-webkit-overflow-scrolling: touch;">
             <!-- Left Page Floating Turn Button -->
-            <button onclick="readerPrevPage()" class="hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/40 hover:bg-black/70 text-white items-center justify-center backdrop-blur-md border border-white/20 transition-all opacity-40 hover:opacity-100 hover:scale-110 shadow-2xl z-40" title="Previous Page (Key: Left Arrow / Tap Left)">
+            <button onclick="readerPrevPage()" class="hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/40 hover:bg-black/70 text-white items-center justify-center backdrop-blur-md border border-white/20 transition-all opacity-40 hover:opacity-100 hover:scale-110 shadow-2xl z-40" title="Previous Page (Key: Left Arrow)">
                 <span class="material-symbols-outlined text-2xl">chevron_left</span>
             </button>
 
@@ -1570,19 +1025,13 @@
             </div>
 
             <!-- Right Page Floating Turn Button -->
-            <button onclick="readerNextPage()" class="hidden md:flex fixed right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/40 hover:bg-black/70 text-white items-center justify-center backdrop-blur-md border border-white/20 transition-all opacity-40 hover:opacity-100 hover:scale-110 shadow-2xl z-40" title="Next Page (Key: Right Arrow / Tap Right)">
+            <button onclick="readerNextPage()" class="hidden md:flex fixed right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/40 hover:bg-black/70 text-white items-center justify-center backdrop-blur-md border border-white/20 transition-all opacity-40 hover:opacity-100 hover:scale-110 shadow-2xl z-40" title="Next Page (Key: Right Arrow)">
                 <span class="material-symbols-outlined text-2xl">chevron_right</span>
             </button>
         </div>
 
-        <!-- Floating Minimal Page Indicator for Distraction-Free Immersion Mode -->
-        <div id="readerFloatingPageIndicator" onclick="toggleReaderToolbars(true)" class="fixed bottom-4 left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-full bg-black/70 text-white/90 backdrop-blur-md border border-white/15 text-xs font-mono font-semibold opacity-0 pointer-events-none transition-all duration-300 z-30 cursor-pointer shadow-2xl flex items-center gap-2" title="Click to show controls">
-            <span id="floatingPageText">Page 1 of 1</span>
-            <span class="material-symbols-outlined text-sm opacity-60">expand_less</span>
-        </div>
-
         <!-- Reader Bottom Sticky Synchronized Playbar -->
-        <footer id="readerBottomToolbar" class="reader-toolbar px-3 sm:px-8 py-2.5 border-t flex flex-col gap-1.5 flex-shrink-0 z-30 shadow-lg transition-transform duration-300">
+        <footer class="reader-toolbar px-3 sm:px-8 py-2.5 border-t flex flex-col gap-1.5 flex-shrink-0 z-30 shadow-lg">
             <div class="flex items-center justify-between w-full">
                 <!-- Prev Page Button -->
                 <button onclick="readerPrevPage()" class="reader-btn px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm">
@@ -1638,356 +1087,6 @@
         </div>
     </div>
 
-    <!-- ════════════════ Mobile Bottom Navigation Bar (matches Lovable app shell) ════════════════ -->
-    <nav id="mobileBottomNav" class="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around border-t border-white/15 bg-[#0e131d]/90 py-2 px-3 backdrop-blur-[24px] shadow-[0_-4px_24px_rgba(0,0,0,0.6)]">
-        <button type="button" onclick="navToSection('home')" id="bottomNavHome" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-primary-fixed-dim">
-            <span class="material-symbols-outlined text-2xl">home</span>
-            <span>Home</span>
-        </button>
-        <button type="button" onclick="navToSection('scanner')" id="bottomNavScanner" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
-            <span class="material-symbols-outlined text-2xl">document_scanner</span>
-            <span>Scanner</span>
-        </button>
-        <button type="button" onclick="navToSection('engbot')" id="bottomNavEngbot" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
-            <span class="material-symbols-outlined text-2xl">graphic_eq</span>
-            <span>EngBot</span>
-        </button>
-        <button type="button" onclick="navToSection('profile')" id="bottomNavProfile" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
-            <span class="material-symbols-outlined text-2xl">account_circle</span>
-            <span>Profile</span>
-        </button>
-    </nav>
-    </div> <!-- /#appMainContainer -->
-
-    <!-- ════════════════ ACCOUNT / PROFILE CABINET MODAL ════════════════ -->
-    <div id="accountCabinetModal" class="modal-overlay">
-        <div class="modal-content glass-panel p-6 rounded-3xl max-w-md w-full border border-white/15 shadow-2xl mx-4 space-y-5 my-auto">
-            <div class="flex justify-between items-center border-b border-white/10 pb-3">
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary-fixed text-xl">account_circle</span>
-                    <h3 class="font-bold text-base text-white">Your Account & Cabinet</h3>
-                </div>
-                <button type="button" onclick="closeAccountCabinet()" class="p-1.5 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-white transition" aria-label="Close modal">
-                    <span class="material-symbols-outlined text-lg">close</span>
-                </button>
-            </div>
-
-            <!-- User Status Card -->
-            <div id="cabinetUserCard" class="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-4">
-                <div id="cabinetAvatar" class="w-12 h-12 rounded-full bg-gradient-to-tr from-primary-container to-secondary flex items-center justify-center text-on-primary-container font-extrabold text-xl shadow-[0_0_20px_rgba(0,240,255,0.3)]">
-                    👤
-                </div>
-                <div class="overflow-hidden flex-1 min-w-0">
-                    <p id="cabinetEmail" class="text-sm font-bold text-white truncate">Not signed in</p>
-                    <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-                        <span id="cabinetRoleBadge" class="px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold">
-                            User
-                        </span>
-                        <span id="cabinetCloudBadge" class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">
-                            ☁️ Supabase Cloud
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Action Buttons List -->
-            <div class="space-y-2.5">
-                <div class="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant px-1">
-                    Cabinet Navigation & Actions
-                </div>
-
-                <!-- Admin Training Lab Shortcut -->
-                <!-- AI Training Lab & LLM Keys Shortcut -->
-                <button type="button" id="cabinetBtnTraining" onclick="openTrainingLabModal()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary-container/20 to-secondary/20 hover:from-primary-container/30 hover:to-secondary/30 text-white border border-primary-container/30 text-xs font-bold transition flex items-center justify-between">
-                    <span class="flex items-center gap-2.5">
-                        <span class="material-symbols-outlined text-base text-primary-fixed">model_training</span>
-                        <span>AI Training Lab & LLM Keys</span>
-                    </span>
-                    <span class="px-2 py-0.5 rounded-full bg-primary-container/30 text-[10px] text-primary-fixed border border-primary-container/40">OPEN LAB</span>
-                </button>
-
-                <!-- AI Engine & Frontier API Keys Shortcut -->
-                <button type="button" onclick="closeAccountCabinet(); openModal('aiSettingsModal')" class="w-full py-3 px-4 rounded-xl bg-primary-container/15 hover:bg-primary-container/25 text-white border border-primary-container/30 text-xs font-bold transition flex items-center justify-between">
-                    <span class="flex items-center gap-2.5">
-                        <span class="material-symbols-outlined text-base text-primary-fixed">smart_toy</span>
-                        <span>AI Engine & Frontier API Keys</span>
-                    </span>
-                    <span class="material-symbols-outlined text-sm text-primary-fixed">chevron_right</span>
-                </button>
-
-                <!-- Open Full Auth / Login / Switch Account Screen -->
-                <button type="button" onclick="openAuthGate('signin')" class="w-full py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-medium transition flex items-center justify-between">
-                    <span class="flex items-center gap-2.5">
-                        <span class="material-symbols-outlined text-base text-primary-fixed">login</span>
-                        <span>Log In / Switch Account</span>
-                    </span>
-                    <span class="material-symbols-outlined text-sm text-on-surface-variant">chevron_right</span>
-                </button>
-
-                <!-- Create New Account -->
-                <button type="button" onclick="openAuthGate('register')" class="w-full py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-medium transition flex items-center justify-between">
-                    <span class="flex items-center gap-2.5">
-                        <span class="material-symbols-outlined text-base text-secondary">person_add</span>
-                        <span>Create New Account</span>
-                    </span>
-                    <span class="material-symbols-outlined text-sm text-on-surface-variant">chevron_right</span>
-                </button>
-
-                <!-- Password Recovery / Reset -->
-                <button type="button" onclick="openAuthGate('forgot')" class="w-full py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-medium transition flex items-center justify-between">
-                    <span class="flex items-center gap-2.5">
-                        <span class="material-symbols-outlined text-base text-amber-400">lock_reset</span>
-                        <span>Reset / Recover Password</span>
-                    </span>
-                    <span class="material-symbols-outlined text-sm text-on-surface-variant">chevron_right</span>
-                </button>
-
-                <!-- Sign Out -->
-                <button type="button" onclick="logout(); closeAccountCabinet();" class="w-full py-3 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 text-xs font-bold transition flex items-center justify-between">
-                    <span class="flex items-center gap-2.5">
-                        <span class="material-symbols-outlined text-base">logout</span>
-                        <span>Sign Out & Return to Login Gate</span>
-                    </span>
-                    <span class="material-symbols-outlined text-sm text-rose-300/60">chevron_right</span>
-                </button>
-            </div>
-
-            <!-- Footer info -->
-            <div class="pt-2 text-center text-[10px] text-on-surface-variant/70 border-t border-white/10 flex items-center justify-between px-1">
-                <span>EngBot Audiobooks AI</span>
-                <span class="font-mono">v1.47.5 Multi-Domain</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- ════════════════ AI TRAINING LAB & LLM KEYS MODAL ════════════════ -->
-    <div id="trainingLabModal" class="modal-overlay">
-        <div class="modal-content glass-panel p-6 sm:p-7 rounded-3xl max-w-4xl w-full border border-white/15 shadow-2xl mx-4 space-y-6 my-auto max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <!-- Header -->
-            <div class="flex justify-between items-center border-b border-white/10 pb-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary-container/30 to-secondary/30 border border-primary-container/40 flex items-center justify-center text-primary-fixed">
-                        <span class="material-symbols-outlined text-2xl">model_training</span>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h3 class="font-bold text-lg text-white">AI Training Lab & LLM Engine</h3>
-                            <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">v1.47.5 LIVE</span>
-                        </div>
-                        <p class="text-xs text-on-surface-variant">Train translation, grammar & OCR rules with external LLMs (Claude, GPT-4o, Gemini, DeepSeek)</p>
-                    </div>
-                </div>
-                <button type="button" onclick="closeModal('trainingLabModal')" class="p-2 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-white transition" aria-label="Close training modal">
-                    <span class="material-symbols-outlined text-xl">close</span>
-                </button>
-            </div>
-
-            <!-- API Key Generation & Management Card -->
-            <div class="p-5 rounded-2xl bg-gradient-to-r from-white/[0.04] to-primary-container/10 border border-white/12 space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary-fixed text-lg">vpn_key</span>
-                            <h4 class="text-sm font-bold text-white">Autonomous Training API Key</h4>
-                            <span id="trainingKeyStatusBadge" class="px-2 py-0.5 rounded-full bg-primary-container/20 text-primary-fixed text-[10px] font-mono font-bold border border-primary-container/40">Ready</span>
-                        </div>
-                        <p class="text-xs text-on-surface-variant mt-1">Authenticate external LLMs or automation scripts against the training REST API.</p>
-                    </div>
-                    <button type="button" onclick="generateTrainingApiKey()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] transition active:scale-[0.98]">
-                        <span class="material-symbols-outlined text-base">add_circle</span>
-                        <span>Generate New Key</span>
-                    </button>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <div class="relative flex-1">
-                        <input id="trainingApiKeyDisplay" type="password" readonly value="engbot_tk_dev_training_key_ka_2026" class="w-full bg-black/40 border border-white/15 rounded-xl px-4 py-2.5 font-mono text-xs text-primary-fixed tracking-wider focus:outline-none select-all" />
-                    </div>
-                    <button type="button" onclick="toggleTrainingKeyMask()" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white border border-white/10 text-xs font-semibold transition" title="Toggle Key Visibility">
-                        <span id="trainingKeyMaskIcon" class="material-symbols-outlined text-base">visibility</span>
-                    </button>
-                    <button type="button" onclick="copyTrainingApiKey()" class="px-3.5 py-2.5 rounded-xl bg-primary-container/20 hover:bg-primary-container/30 text-primary-fixed border border-primary-container/40 text-xs font-bold transition flex items-center gap-1.5" title="Copy Key">
-                        <span class="material-symbols-outlined text-base">content_copy</span>
-                        <span id="copyKeyBtnText">Copy</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tab Navigation -->
-            <div class="flex items-center gap-2 border-b border-white/10 overflow-x-auto pb-1">
-                <button type="button" onclick="switchTrainingTab('instructions')" id="tabBtn-instructions" class="training-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-primary-container/20 text-primary-fixed border border-primary-container/30">
-                    <span class="material-symbols-outlined text-base">prompt_suggestion</span>
-                    <span>Instructions for LLMs</span>
-                </button>
-                <button type="button" onclick="switchTrainingTab('corpora')" id="tabBtn-corpora" class="training-tab-btn px-4 py-2 rounded-xl text-xs font-medium text-on-surface-variant hover:text-white hover:bg-white/5 transition flex items-center gap-2 border border-transparent">
-                    <span class="material-symbols-outlined text-base">history_edu</span>
-                    <span>Corpora & Antiquity</span>
-                </button>
-                <button type="button" onclick="switchTrainingTab('rules')" id="tabBtn-rules" class="training-tab-btn px-4 py-2 rounded-xl text-xs font-medium text-on-surface-variant hover:text-white hover:bg-white/5 transition flex items-center gap-2 border border-transparent">
-                    <span class="material-symbols-outlined text-base">rule</span>
-                    <span>5 Safe Rule Types</span>
-                </button>
-                <button type="button" onclick="switchTrainingTab('api')" id="tabBtn-api" class="training-tab-btn px-4 py-2 rounded-xl text-xs font-medium text-on-surface-variant hover:text-white hover:bg-white/5 transition flex items-center gap-2 border border-transparent">
-                    <span class="material-symbols-outlined text-base">terminal</span>
-                    <span>REST API & Loop</span>
-                </button>
-            </div>
-
-            <!-- Tab 1: Instructions for LLMs -->
-            <div id="trainingTab-instructions" class="training-tab-pane space-y-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h4 class="text-sm font-bold text-white">System Prompt Template for Frontier LLMs</h4>
-                        <p class="text-xs text-on-surface-variant">Paste this prompt into Claude 3.7 / 3.5 Sonnet, ChatGPT GPT-4o, Gemini 2.0 / 1.5 Pro, or DeepSeek.</p>
-                    </div>
-                    <button type="button" onclick="copyLlmTrainingPrompt()" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/15 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
-                        <span class="material-symbols-outlined text-base text-primary-fixed">content_copy</span>
-                        <span id="copyPromptBtnText">Copy Full System Prompt</span>
-                    </button>
-                </div>
-                <div class="relative">
-                    <textarea id="llmPromptTextarea" readonly rows="12" class="w-full bg-black/50 border border-white/15 rounded-2xl p-4 font-mono text-[11px] leading-relaxed text-neutral-200 select-all focus:outline-none custom-scrollbar">You are an Autonomous AI Linguistic Trainer for the EngBot / Lumina Audiobooks Engine (English <-> Georgian).
-
-MISSION:
-Your job is to inspect translation/transcription benchmarks, diagnose quality defects or literalisms, and formulate non-executable, structured rule proposals.
-
-SAFETY CONTRACT (5 DATA-ONLY ITEM TYPES):
-External models cannot submit executable code or scripts. You can only propose items matching one of these 5 types:
-1. `glossary`: Exact term mapping (e.g. source: "Stoicism" -> target: "სტოიციზმი").
-2. `autofix`: Safe regex with replacement. NEVER use ASCII \b with Georgian letters! Use (?<![ა-ჰ]) and (?![ა-ჰ]).
-3. `qa_rule`: Quality inspection detector with severity ("warn", "error", "info").
-4. `prompt_block`: Systemic instruction appended to Tier A LLM translation prompts.
-5. `ocr_fix`: Distorted scan token repair (e.g. "შემოგგვიერთდა" -> "შემოგვიერთდა").
-
-THE AUTONOMOUS API LOOP:
-1. Call POST /api/public/train/session with header X-Training-Key: {YOUR_API_KEY}
-2. Call POST /api/public/train/context with {"session_id": "..."} to view failing benchmarks.
-3. Formulate proposed rules in JSON format: {"session_id": "...", "items": [...]}.
-4. Call POST /api/public/train/propose. The server evaluates against ground truth:
-   - If composite score improves AND zero existing benchmarks regress, it is INSTANTLY promoted as the new active rule pack!
-   - If regressions occur, detailed diagnostics are returned.
-5. Call POST /api/public/train/finish with a summary of improvements.
-
-CRITICAL LINGUISTIC RULES FOR GEORGIAN:
-- No ASCII \b: Georgian letters (U+10A0 to U+10FF) are not word characters in ASCII regexes.
-- Vigesimal numbering: Georgian uses base-20 (e.g. 73 = სამოცდაცამეტი, 3x20 + 13).
-- 7 Cases: N (სახელობითი), E (მოთხრობითი), D (მიცემითი), G (ნათესაობითი), I (მოქმედებითი), A (ვითარებითი), V (წოდებითი).
-- Poly-personal verb concord and screeve aspect harmony.</textarea>
-                </div>
-            </div>
-
-            <!-- Tab 2: Corpora & Training Data -->
-            <div id="trainingTab-corpora" class="training-tab-pane hidden space-y-4">
-                <h4 class="text-sm font-bold text-white">What the Engine is Trained On</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                        <div class="flex items-center gap-2 text-primary-fixed">
-                            <span class="material-symbols-outlined text-lg">account_balance</span>
-                            <span class="font-bold text-xs">Classical Antiquity</span>
-                        </div>
-                        <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                            Ground truth corpora from <strong>Sun Tzu</strong> (<em>The Art of War</em>), <strong>Marcus Aurelius</strong> (<em>Meditations</em>), <strong>Homer</strong> (<em>Iliad/Odyssey</em>), <strong>Plato</strong> (<em>The Republic</em>), <strong>William Shakespeare</strong>, and <strong>Shota Rustaveli</strong> (<em>The Knight in the Panther's Skin</em>).
-                        </p>
-                    </div>
-                    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                        <div class="flex items-center gap-2 text-secondary">
-                            <span class="material-symbols-outlined text-lg">translate</span>
-                            <span class="font-bold text-xs">Georgian Pro Morphosyntax</span>
-                        </div>
-                        <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                            Vigesimal numeral synthesizer (0 to 999 Billion), 7-case noun declensions, Ergative-Aorist transitive verb concord, Dative experiencer inversions, and root vowel syncopation (კუმშვა/კვეცა).
-                        </p>
-                    </div>
-                    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                        <div class="flex items-center gap-2 text-amber-400">
-                            <span class="material-symbols-outlined text-lg">document_scanner</span>
-                            <span class="font-bold text-xs">Vision OCR Restoration</span>
-                        </div>
-                        <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                            Distorted scan token repair, historical ligature resolution (შ/წ, ხ/ჯ, ი/1, ო/0), soft-hyphen rejoining across line-breaks, and punctuation normalization.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab 3: 5 Safe Rule Types -->
-            <div id="trainingTab-rules" class="training-tab-pane hidden space-y-3">
-                <h4 class="text-sm font-bold text-white">Strictly Non-Executable Data-Only Rule Specifications</h4>
-                <div class="space-y-2.5">
-                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1 font-mono text-xs">
-                        <div class="flex items-center justify-between text-primary-fixed font-bold">
-                            <span>1. glossary (Exact Terminology)</span>
-                            <span class="text-[10px] bg-primary-container/20 px-2 py-0.5 rounded border border-primary-container/30">Data</span>
-                        </div>
-                        <pre class="text-[11px] text-neutral-300 overflow-x-auto p-2 bg-black/40 rounded-lg">{"type": "glossary", "pattern": "virtue", "replacement": "სათნოება", "note": "Stoic ethics"}</pre>
-                    </div>
-                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1 font-mono text-xs">
-                        <div class="flex items-center justify-between text-secondary font-bold">
-                            <span>2. autofix (Safe Regex Replacement)</span>
-                            <span class="text-[10px] bg-secondary/20 px-2 py-0.5 rounded border border-secondary/30">Regex</span>
-                        </div>
-                        <pre class="text-[11px] text-neutral-300 overflow-x-auto p-2 bg-black/40 rounded-lg">{"type": "autofix", "pattern": "(?<![ა-ჰ])ომის ხელოვნება(?![ა-ჰ])", "replacement": "ომის ხელოვნება", "note": "Sun Tzu title"}</pre>
-                    </div>
-                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1 font-mono text-xs">
-                        <div class="flex items-center justify-between text-amber-400 font-bold">
-                            <span>3. qa_rule (Quality & Calque Detector)</span>
-                            <span class="text-[10px] bg-amber-400/20 px-2 py-0.5 rounded border border-amber-400/30">Audit</span>
-                        </div>
-                        <pre class="text-[11px] text-neutral-300 overflow-x-auto p-2 bg-black/40 rounded-lg">{"type": "qa_rule", "pattern": "(?<![ა-ჰ])გააკეთა გადაწყვეტილება(?![ა-ჰ])", "replacement": "Use მიიღო გადაწყვეტილება instead of English calque", "severity": "error"}</pre>
-                    </div>
-                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1 font-mono text-xs">
-                        <div class="flex items-center justify-between text-emerald-400 font-bold">
-                            <span>4. prompt_block (Tier A LLM Prompt Directive)</span>
-                            <span class="text-[10px] bg-emerald-400/20 px-2 py-0.5 rounded border border-emerald-400/30">Guidance</span>
-                        </div>
-                        <pre class="text-[11px] text-neutral-300 overflow-x-auto p-2 bg-black/40 rounded-lg">{"type": "prompt_block", "text": "Maintain classical epic register when translating Homeric epithets and philosophical dialogues."}</pre>
-                    </div>
-                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1 font-mono text-xs">
-                        <div class="flex items-center justify-between text-rose-400 font-bold">
-                            <span>5. ocr_fix (OCR & Ligature Correction)</span>
-                            <span class="text-[10px] bg-rose-400/20 px-2 py-0.5 rounded border border-rose-400/30">Vision</span>
-                        </div>
-                        <pre class="text-[11px] text-neutral-300 overflow-x-auto p-2 bg-black/40 rounded-lg">{"type": "ocr_fix", "pattern": "ფილოსოფ1ა", "replacement": "ფილოსოფია", "note": "Digit 1 substituted for letter i"}</pre>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab 4: REST API & Loop -->
-            <div id="trainingTab-api" class="training-tab-pane hidden space-y-3">
-                <h4 class="text-sm font-bold text-white">Interactive REST API Endpoints</h4>
-                <div class="space-y-2">
-                    <div class="p-3 rounded-xl bg-black/40 border border-white/10">
-                        <p class="text-xs font-bold text-primary-fixed mb-1">1. Open Training Session</p>
-                        <pre class="text-[11px] font-mono text-neutral-300 overflow-x-auto">curl -X POST "http://localhost:8000/api/public/train/session" \
-  -H "Content-Type: application/json" \
-  -H "X-Training-Key: <span class="trainingKeyPlaceholder text-primary-fixed font-bold">engbot_tk_...</span>" \
-  -d '{"model": "claude-3-7-sonnet"}'</pre>
-                    </div>
-                    <div class="p-3 rounded-xl bg-black/40 border border-white/10">
-                        <p class="text-xs font-bold text-secondary mb-1">2. Fetch Benchmark Context & Failing Cases</p>
-                        <pre class="text-[11px] font-mono text-neutral-300 overflow-x-auto">curl -X POST "http://localhost:8000/api/public/train/context" \
-  -H "Content-Type: application/json" \
-  -H "X-Training-Key: <span class="trainingKeyPlaceholder text-secondary font-bold">engbot_tk_...</span>" \
-  -d '{"session_id": "&lt;SESSION_ID&gt;"}'</pre>
-                    </div>
-                    <div class="p-3 rounded-xl bg-black/40 border border-white/10">
-                        <p class="text-xs font-bold text-emerald-400 mb-1">3. Propose Rules (Auto-Benchmarked against Ground Truth)</p>
-                        <pre class="text-[11px] font-mono text-neutral-300 overflow-x-auto">curl -X POST "http://localhost:8000/api/public/train/propose" \
-  -H "Content-Type: application/json" \
-  -H "X-Training-Key: <span class="trainingKeyPlaceholder text-emerald-400 font-bold">engbot_tk_...</span>" \
-  -d '{"session_id": "&lt;SESSION_ID&gt;", "items": [{"type": "glossary", "pattern": "virtue", "replacement": "სათნოება"}]}'</pre>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer info -->
-            <div class="pt-3 text-center text-[10px] text-on-surface-variant/70 border-t border-white/10 flex items-center justify-between">
-                <span>EngBot Autonomous Training Engine</span>
-                <span class="font-mono">Deterministic Benchmark Guarantee</span>
-            </div>
-        </div>
-    </div>
-
     <!-- ════════════════ READER TYPOGRAPHY & THEMES MODAL ════════════════ -->
     <div id="readerThemeModal" class="modal-overlay">
         <div class="modal-content glass-panel p-6 rounded-3xl max-w-sm w-full border border-white/15 shadow-2xl mx-4 space-y-5">
@@ -2024,17 +1123,16 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
             <!-- Layout Mode -->
             <div>
                 <label class="block text-xs font-semibold text-primary-fixed uppercase tracking-wider mb-2">Page Layout</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <button onclick="setReaderMode('single')" class="py-2 px-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold border border-white/10 text-center">📱 Single</button>
-                    <button onclick="setReaderMode('dual')" class="py-2 px-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold border border-white/10 text-center">📄 Dual</button>
-                    <button onclick="setReaderMode('scroll')" class="py-2 px-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold border border-white/10 text-center">📜 Scroll</button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="readerMode = 'dual'; renderCurrentPage(); closeModal('readerThemeModal');" class="py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold border border-white/10">📄 Pages</button>
+                    <button onclick="readerMode = 'scroll'; renderCurrentPage(); closeModal('readerThemeModal');" class="py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold border border-white/10">📜 Continuous</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ════════════════ WHOLE BOOK TRANSLATION PANEL (dismissible floating panel) ════════════════ -->
-    <div id="wholeBookTranslateModal" class="modal-overlay" onclick="if (event.target === this) minimizeTranslationPanel()">
+    <div id="wholeBookTranslateModal" class="modal-overlay">
         <div class="modal-content glass-panel p-4 md:p-6 rounded-3xl max-w-2xl w-full border border-georgian-gold/30 shadow-2xl mx-4 space-y-3">
             <div class="flex justify-between items-center border-b border-georgian-gold/20 pb-3">
                 <div class="flex items-center gap-3">
@@ -2111,18 +1209,16 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
     </div>
 
     <!-- Floating minimized pill (visible when panel is minimized during translation) -->
-    <div id="translationMiniDock" class="hidden fixed bottom-24 right-4 z-50 cursor-pointer select-none" onclick="restoreTranslationPanel()" title="Translation in progress — click to reopen">
-        <div class="glass-panel rounded-full pl-3 pr-4 py-2 flex items-center gap-2.5 border border-georgian-gold/50 shadow-2xl shadow-black/60 hover:border-georgian-gold transition-all group">
-            <div class="relative w-6 h-6 flex items-center justify-center">
+    <div id="translationMiniDock" class="hidden fixed bottom-24 right-4 z-40 cursor-pointer select-none" onclick="restoreTranslationPanel()" title="Translation in progress — click to reopen">
+        <div class="glass-panel rounded-full pl-3 pr-4 py-2 flex items-center gap-2.5 border border-georgian-gold/40 shadow-2xl shadow-black/50 hover:border-georgian-gold/70 transition-all">
+            <div class="relative w-6 h-6">
                 <div class="absolute inset-0 rounded-full border-2 border-georgian-gold/30"></div>
                 <div id="miniDockSpinner" class="absolute inset-0 rounded-full border-2 border-transparent border-t-georgian-gold animate-spin"></div>
-                <span class="text-xs">🇬🇪</span>
             </div>
             <div class="flex flex-col leading-tight">
-                <span id="miniDockLabel" class="text-[11px] font-bold text-white whitespace-nowrap max-w-[170px] truncate">Translating…</span>
-                <span id="miniDockPct" class="text-[10px] font-mono text-georgian-gold font-bold">0%</span>
+                <span id="miniDockLabel" class="text-[11px] font-bold text-white whitespace-nowrap">Translating…</span>
+                <span id="miniDockPct" class="text-[10px] font-mono text-georgian-gold">0%</span>
             </div>
-            <span class="material-symbols-outlined text-xs text-georgian-gold/80 group-hover:text-georgian-gold ml-1 transition">open_in_full</span>
         </div>
     </div>
 
@@ -2134,79 +1230,33 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                 <div>
                     <h2 class="text-xl font-bold text-white flex items-center gap-2">
                         <span class="material-symbols-outlined text-primary-fixed">smart_toy</span>
-                        AI Engine & Frontier Models
+                        Gemini AI Translation
                     </h2>
-                    <p class="text-xs text-on-surface-variant mt-0.5">Frontier Intelligence for Translation, Scanning & Linguistic Restoration</p>
+                    <p class="text-xs text-on-surface-variant mt-0.5">High-Fidelity Contextual Translation Engine</p>
                 </div>
                 <button onclick="closeModal('aiSettingsModal')" class="p-1.5 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
             
-            <!-- Smart Auto-Connect & Key Merge System -->
-            <div class="rounded-2xl border border-primary-container/30 bg-gradient-to-br from-primary-container/10 via-white/5 to-secondary-container/10 p-4 sm:p-5 space-y-3 shadow-lg">
-                <div class="flex items-center justify-between flex-wrap gap-2">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xl">⚡</span>
-                        <div>
-                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                                Smart Auto-Connect &amp; Key Merge
-                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary-fixed/20 text-primary-fixed font-semibold">Auto-Configures All Models</span>
-                            </h3>
-                            <p class="text-[11px] text-on-surface-variant mt-0.5">
-                                Paste any API key (Gemini, Groq, OpenRouter, ElevenLabs) or paste multiple keys, <code class="text-primary-fixed">.env</code> lines, or JSON. The engine auto-identifies each provider, sanitizes quotes/whitespace, and connects everything automatically.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <textarea id="smartKeyMergeInput" rows="2" class="w-full glass-input rounded-xl px-4 py-2.5 text-xs font-mono focus:outline-none placeholder:text-on-surface-variant/60 resize-y" placeholder="Paste single key (e.g. AIzaSy..., gsk_..., sk-or-..., ElevenLabs) or multi-line .env / JSON bundle..."></textarea>
-                    <div class="flex items-center justify-between flex-wrap gap-2">
-                        <div class="flex items-center gap-2">
-                            <button type="button" onclick="handleSmartKeyMerge()" class="px-4 py-2 rounded-xl text-xs font-bold bg-primary-fixed text-on-primary-container hover:bg-primary-container transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,240,255,0.25)] cursor-pointer">
-                                <span class="material-symbols-outlined text-sm">auto_fix_high</span>
-                                Auto-Detect &amp; Connect
-                            </button>
-                            <button type="button" onclick="document.getElementById('smartKeyMergeInput').value=''; document.getElementById('smartKeyMergeFeedback').innerHTML='';" class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-on-surface-variant transition cursor-pointer">
-                                Clear
-                            </button>
-                        </div>
-                        <div id="smartKeyMergeFeedback" class="text-[11px] text-primary-fixed flex items-center gap-1.5 flex-wrap"></div>
-                    </div>
-                </div>
-            </div>
-            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
-                        <span>Gemini API Key (Frontier Reasoning)</span>
-                        <span id="geminiSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
-                    </label>
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Gemini API Key</label>
                     <input type="password" id="geminiApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="AIzaSy...">
-                    <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
-                        Google Gemini API key. Powers frontier deep reasoning, scanner glitch correction, and missing symbol & word recovery. Key: aistudio.google.com/apikey.
-                    </p>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Frontier AI Model</label>
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">AI Model</label>
                     <select id="geminiModelSelect" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none appearance-none">
-                        <option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended — Fast, Multimodal &amp; Reliable)</option>
-                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Reasoning &amp; Long Context)</option>
-                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (High Quota &amp; Speed)</option>
-                        <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Lightweight Free Tier)</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro (Best Quality - Recommended)</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fastest)</option>
+                        <option value="gemini-2.5-flash-8b">Gemini 2.5 Flash-8B</option>
+                        <option value="gemini-2.0-pro-exp-02-05">Gemini 2.0 Pro Experimental</option>
                     </select>
-                    <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
-                        Selected model will automatically be used for re-transcribing, scanning OCR, and literary translation.
-                    </p>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
-                        <span>OpenRouter API Key (Main Engine)</span>
-                        <span id="openRouterSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
-                    </label>
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">OpenRouter API Key (Main Engine)</label>
                     <input type="password" id="openRouterApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-or-v1-...">
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Primary engine — free models on OpenRouter. A default key is built in; your own (openrouter.ai/keys) replaces it.
@@ -2226,10 +1276,7 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
-                        <span>Groq API Key (Fallback #1)</span>
-                        <span id="groqSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
-                    </label>
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Groq API Key (Fallback #1)</label>
                     <input type="password" id="groqApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="gsk_...">
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         First fallback when OpenRouter is rate-limited. Free tier ~500K tokens/day — enough for a whole book. Key: console.groq.com/keys.
@@ -2237,56 +1284,11 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Groq Model</label>
-                    <select id="groqModelSelect" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none appearance-none">
-                        <option value="">Auto — use best available Groq model</option>
-                        <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Recommended)</option>
-                        <option value="llama3-70b-8192">Llama 3 70B (8K context)</option>
-                        <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (Fastest)</option>
-                        <option value="gemma2-9b-it">Gemma 2 9B IT</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
-                        <span>Mistral API Key (Fallback #2)</span>
-                        <span id="mistralSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
-                    </label>
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Mistral API Key (Fallback #2)</label>
                     <input type="password" id="mistralApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="...">
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Second fallback (~1B free tokens/month). If CORS blocks browser calls it's skipped automatically. Key: console.mistral.ai.
                     </p>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center justify-between">
-                        <span>ElevenLabs API Key (Neural Voice Studio)</span>
-                        <span id="elevenLabsSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
-                    </label>
-                    <input type="password" id="elevenLabsAiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="32-character hex key (e.g. 1a2b3c...)">
-                    <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
-                        High-fidelity emotional speech in Georgian &amp; English. Auto-syncs with Voice modal and activates ElevenLabs mode. Key: elevenlabs.io.
-                    </p>
-                </div>
-
-                <div class="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-                    <p class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Custom AI Provider (Optional)</p>
-                    <p class="text-[11px] text-on-surface-variant leading-relaxed">Connect any OpenAI-compatible endpoint (Ollama, LM Studio, Together AI, Perplexity, etc.).</p>
-                    <div>
-                        <label class="block text-xs text-on-surface-variant mb-1">Base URL (e.g. http://localhost:11434/v1/chat/completions)</label>
-                        <input type="text" id="customProviderUrlInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="https://api.together.xyz/v1/chat/completions">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-on-surface-variant mb-1">Model Name</label>
-                        <input type="text" id="customProviderModelInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-on-surface-variant mb-1 flex items-center justify-between">
-                            <span>API Key (leave blank if not required)</span>
-                            <span id="customSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
-                        </label>
-                        <input type="password" id="customProviderKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-...">
-                    </div>
                 </div>
 
                 <div>
@@ -2344,77 +1346,18 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                     </label>
                 </div>
 
-                <div id="elevenLabsKeySection" class="hidden space-y-3 pt-2 border-t border-white/10">
-                    <div class="space-y-1">
-                        <label class="block text-[11px] font-semibold text-white/80">ElevenLabs API Key</label>
-                        <div class="flex gap-2">
-                            <input type="password" id="elevenLabsApiKey" placeholder="Enter your ElevenLabs API Key (sk_...)" class="flex-grow glass-input rounded-xl p-2.5 text-xs text-white outline-none">
-                            <button id="btnSyncElevenVoices" onclick="fetchElevenLabsUserVoices(true)" title="Fetch and sync voices from your ElevenLabs account" class="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/15 text-primary-fixed font-bold text-xs rounded-xl flex items-center gap-1 transition whitespace-nowrap">
-                                <span class="material-symbols-outlined text-sm">sync</span>
-                                Sync Voices
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- English Voice Selector -->
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="block text-[11px] font-semibold text-white/80">🇺🇸 English Narrator</label>
-                            <button onclick="previewElevenLabsVoice('en')" class="text-[10px] text-primary-fixed hover:underline flex items-center gap-0.5">
-                                <span class="material-symbols-outlined text-xs">volume_up</span> Test English
-                            </button>
-                        </div>
-                        <select id="elevenLabsVoiceSelect" class="w-full glass-input rounded-xl p-2 text-xs text-white outline-none">
-                            <optgroup label="✨ Curated English Voices">
-                                <option value="pNInz6obpgDQGcFmaJgB">Adam (Deep Male Narrator)</option>
-                                <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Warm & Natural Female)</option>
-                                <option value="JBFqnCBsd6RMkjVDRZzb">George (Classic British Storyteller)</option>
-                                <option value="ErXwobaYiN019PkySvjV">Antoni (Energetic Storyteller)</option>
-                                <option value="EXAVITQu4vr4xnSDxMaL">Bella (Expressive Dramatic Female)</option>
-                                <option value="TX3LPaxmHKxFdv7VOQHJ">Liam (Articulate Young Male)</option>
-                                <option value="VR6AewLTigWG4xSOukaG">Arnold (Crisp & Articulate)</option>
-                            </optgroup>
-                            <optgroup label="🎙️ From Your ElevenLabs Account" id="elevenUserVoicesEn">
-                                <option disabled>Click "Sync Voices" above to load account voices</option>
-                            </optgroup>
+                <div id="elevenLabsKeySection" class="hidden space-y-2 pt-2 border-t border-white/10">
+                    <input type="password" id="elevenLabsApiKey" placeholder="Enter your ElevenLabs API Key (sk_...)" class="w-full glass-input rounded-xl p-2.5 text-xs text-white outline-none">
+                    <div class="flex gap-2">
+                        <select id="elevenLabsVoiceSelect" class="flex-grow glass-input rounded-xl p-2 text-xs text-white outline-none">
+                            <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Warm & Natural Female)</option>
+                            <option value="pNInz6obpgDQGcFmaJgB">Adam (Deep Male Narrator)</option>
+                            <option value="ErXwobaYiN019PkySvjV">Antoni (Energetic Storyteller)</option>
+                            <option value="JBFqnCBsd6RMkjVDRZzb">George (British Audiobook Voice)</option>
+                            <option value="EXAVITQu4vr4xnSDxMaL">Bella (Expressive Female)</option>
+                            <option value="VR6AewLTigWG4xSOukaG">Arnold (Crisp & Articulate)</option>
                         </select>
-                    </div>
-
-                    <!-- Georgian Voice Selector -->
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="block text-[11px] font-semibold text-georgian-gold flex items-center gap-1">
-                                <span>🇬🇪</span> Georgian Narrator (High Quality)
-                            </label>
-                            <button onclick="previewElevenLabsVoice('ka')" class="text-[10px] text-georgian-gold hover:underline flex items-center gap-0.5">
-                                <span class="material-symbols-outlined text-xs">volume_up</span> Test Georgian
-                            </button>
-                        </div>
-                        <select id="elevenLabsVoiceSelectKa" onchange="onElevenLabsVoiceKaChange(this.value)" class="w-full glass-input rounded-xl p-2 text-xs text-white outline-none">
-                            <optgroup label="🇬🇪 Curated for Georgian Storytelling">
-                                <option value="nPczCjzI2devNBz1zQrb" selected>Brian (Deep Resonant Literary Epic Narrator - Recommended)</option>
-                                <option value="JBFqnCBsd6RMkjVDRZzb">George (Warm & Engaging Classic Storyteller)</option>
-                                <option value="pNInz6obpgDQGcFmaJgB">Adam (Deep & Calm Natural Narrator)</option>
-                                <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Calm & Clear Expressive Female)</option>
-                                <option value="XB0fDUnXU5powFXDhCwa">Charlotte (Poetic & Expressive Female Voice)</option>
-                                <option value="TX3LPaxmHKxFdv7VOQHJ">Liam (Articulate & Clear Modern Voice)</option>
-                                <option value="Xb7hH8MSUJpSbSDYk0k2">Alice (Confident & Dramatic Female Voice)</option>
-                                <option value="onwK4e9ZLuTAKqWW03F9">Daniel (Authoritative & Solemn Narrator)</option>
-                                <option value="pqHfZKP75CvOlQylNhV4">Bill (Mature & Trustworthy Storyteller)</option>
-                            </optgroup>
-                            <optgroup label="🎙️ From Your ElevenLabs Account" id="elevenUserVoicesKa">
-                                <option disabled>Click "Sync Voices" above to load account voices</option>
-                            </optgroup>
-                            <optgroup label="Custom Voice">
-                                <option value="custom">-- Enter Custom Voice ID below --</option>
-                            </optgroup>
-                        </select>
-                        <input type="text" id="elevenLabsCustomVoiceIdKa" placeholder="Enter custom ElevenLabs Voice ID for Georgian..." class="w-full glass-input rounded-xl p-2 text-xs text-white outline-none mt-1 hidden">
-                    </div>
-
-                    <div class="flex items-center justify-between pt-1">
-                        <span class="text-[10px] text-white/50">Uses Eleven Multilingual v2 with Georgian emotional inflection</span>
-                        <button onclick="saveElevenLabsSettings()" class="px-4 py-2 bg-primary-container text-on-primary-container font-bold text-xs rounded-xl hover:brightness-110 transition shadow-md">Save Settings</button>
+                        <button onclick="saveElevenLabsSettings()" class="px-3 py-2 bg-primary-container text-on-primary-container font-bold text-xs rounded-xl hover:brightness-110 transition">Save</button>
                     </div>
                 </div>
             </div>
@@ -2506,153 +1449,39 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
             <div class="flex justify-between items-center mb-6">
                 <div>
                     <h2 class="text-2xl font-bold text-white" id="authTitle">Sign In</h2>
-                    <p class="text-xs text-on-surface-variant mt-0.5" id="authSubtitle">Sync books across your devices</p>
+                    <p class="text-xs text-on-surface-variant mt-0.5">Sync books across your devices</p>
                 </div>
-                <button onclick="closeModal('authModal')" class="p-2 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition" aria-label="Close modal">
+                <button onclick="closeModal('authModal')" class="p-2 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition">
                     <span class="material-symbols-outlined text-xl">close</span>
                 </button>
             </div>
             
-            <!-- Error Banner -->
-            <div id="authErrorMsg" class="hidden mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 font-medium leading-relaxed"></div>
-            <div id="authSuccessMsg" class="hidden mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300 font-medium leading-relaxed"></div>
-
-            <!-- Login / Register Form -->
-            <div id="authMainForm" class="space-y-4">
+            <div class="space-y-4">
                 <input type="email" id="authEmail" placeholder="name@example.com" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none">
                 <input type="password" id="authPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none">
                 
-                <div class="flex justify-between items-center text-xs px-1">
-                    <button type="button" onclick="toggleAuthForgot(true)" class="text-on-surface-variant hover:text-primary-container transition">
-                        Forgot password?
-                    </button>
-                    <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="text-primary-fixed-dim hover:text-primary-container transition text-[11px] flex items-center gap-1">
-                        <span>GitHub Source</span>
-                        <span class="material-symbols-outlined text-[11px]">open_in_new</span>
-                    </a>
-                </div>
-
-                <div class="flex items-center gap-2 py-0.5 px-1">
-                    <input type="checkbox" id="authRememberMe" class="w-4 h-4 rounded bg-white/10 border border-white/20 text-primary-fixed accent-primary-container cursor-pointer">
-                    <label for="authRememberMe" class="text-xs text-on-surface-variant select-none cursor-pointer hover:text-white transition">
-                        Remember me on this device
-                    </label>
-                </div>
-
-                <div class="flex gap-2.5 pt-1">
-                    <button id="btnAuthSignIn" class="flex-1 py-3 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 active:scale-98 transition shadow-lg flex items-center justify-center gap-1.5">
-                        <span>Log In</span>
-                    </button>
-                    <button id="btnAuthRegister" class="flex-1 py-3 bg-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/15 active:scale-98 transition border border-white/10">
-                        <span>Register</span>
-                    </button>
+                <div class="flex gap-2.5 pt-2">
+                    <button id="btnAuthSignIn" class="flex-1 py-3 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 transition shadow-lg">Log In</button>
+                    <button id="btnAuthRegister" class="flex-1 py-3 bg-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/15 transition border border-white/10">Register</button>
                 </div>
             </div>
-
-            <!-- Password Reset Form (Forgot Mode) -->
-            <div id="authForgotForm" class="hidden space-y-4">
-                <p class="text-xs text-on-surface-variant leading-relaxed">
-                    Enter your account email. We'll send you a password reset recovery link.
-                </p>
-                <input type="email" id="authForgotEmail" placeholder="name@example.com" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none">
-                
-                <div class="space-y-2 pt-1">
-                    <button id="btnAuthSendReset" onclick="sendPasswordReset()" class="w-full py-3 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:brightness-110 active:scale-98 transition shadow-lg flex items-center justify-center gap-1.5">
-                        <span class="material-symbols-outlined text-sm">mail</span>
-                        <span>Send Recovery Link</span>
-                    </button>
-                    <button type="button" onclick="toggleAuthForgot(false)" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition border border-white/10">
-                        ← Back to Sign In
-                    </button>
-                </div>
-            </div>
-
-            <p class="text-center text-[11px] text-on-surface-variant/60 mt-5">
-                External Supabase Vault • 100% Encrypted
+            <p class="text-center text-xs text-on-surface-variant mt-5">
+                Session active & locally encrypted.
             </p>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-
-    <!-- ════════════════ Re-transcribe & AI Repair Modal ════════════════ -->
-    <div id="retranscribeModal" class="modal-overlay">
-        <div class="modal-content glass-panel p-6 rounded-3xl max-w-lg w-full border border-white/15 shadow-2xl mx-4 space-y-4">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary-fixed">neurology</span>
-                        <span>Re-transcribe & Repair</span>
-                    </h3>
-                    <p class="text-xs text-on-surface-variant mt-0.5" id="retranscribeBookTitle">Scanned book</p>
-                </div>
-                <button onclick="closeModal('retranscribeModal')" class="p-1.5 rounded-full text-on-surface-variant hover:text-white transition">
-                    <span class="material-symbols-outlined text-lg">close</span>
-                </button>
-            </div>
-
-            <p class="text-xs text-on-surface-variant leading-relaxed">
-                Choose how you want to restore this scanned book. Frontier AI Linguistic Repair detects scanner glitches, recovers missing punctuation & symbols („“, —, quotes), deduces clipped or faint words using narrative context, and reconstructs flawless literary prose.
-            </p>
-
-            <!-- Active AI Engine & API Key Status Card -->
-            <div class="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="material-symbols-outlined text-xl text-primary-fixed flex-shrink-0">neurology</span>
-                    <div class="min-w-0">
-                        <span class="block text-white font-bold text-xs truncate" id="retranscribeAiStatusTitle">Frontier AI: Gemini 2.5 Pro</span>
-                        <span class="block text-on-surface-variant text-[11px] truncate" id="retranscribeAiStatusSub">Custom API key active (High Precision)</span>
-                    </div>
-                </div>
-                <button type="button" onclick="closeModal('retranscribeModal'); openModal('aiSettingsModal')" class="flex-shrink-0 px-3 py-1.5 rounded-xl bg-primary-container/20 hover:bg-primary-container/35 border border-primary-container/40 text-primary-fixed text-xs font-bold transition flex items-center gap-1">
-                    <span class="material-symbols-outlined text-sm">key</span>
-                    <span>Set API Key</span>
-                </button>
-            </div>
-
-            <div class="space-y-3 pt-1">
-                <button id="btnAiRepairText" onclick="executeRetranscribeRepair()" class="w-full flex items-start gap-3.5 p-4 rounded-2xl bg-primary-container/15 hover:bg-primary-container/25 border border-primary-container/40 text-left transition">
-                    <span class="material-symbols-outlined text-2xl text-primary-fixed flex-shrink-0 mt-0.5">auto_fix_high</span>
-                    <div>
-                        <span class="block text-white font-bold text-sm">AI Linguistic Text Repair</span>
-                        <span class="block text-on-surface-variant text-xs mt-0.5">Reconstruct garbled OCR sentences, fix character confusion (ვ/პ/კ, შ/წ/ჭ), and purge punctuation noise</span>
-                    </div>
-                </button>
-
-                <button id="btnRescanCamera" onclick="executeRetranscribeRescan()" class="w-full flex items-start gap-3.5 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition">
-                    <span class="material-symbols-outlined text-2xl text-secondary flex-shrink-0 mt-0.5">photo_camera</span>
-                    <div>
-                        <span class="block text-white font-bold text-sm">Re-photograph Pages</span>
-                        <span class="block text-on-surface-variant text-xs mt-0.5">Launch camera with continuous autofocus and upscaling to capture fresh high-res photos</span>
-                    </div>
-                </button>
-            </div>
-
-            <div id="retranscribeProgressArea" class="hidden space-y-2 pt-2 border-t border-white/10">
-                <div class="flex justify-between text-xs font-medium">
-                    <span id="retranscribeStatusText" class="text-primary-fixed">Repairing chapter 1…</span>
-                    <span id="retranscribePctText" class="text-white">0%</span>
-                </div>
-                <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                    <div id="retranscribeProgressBar" class="h-full bg-gradient-to-r from-primary-container to-secondary w-0 transition-all duration-300"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- ════════════════ Scan Book Modal (photos → book) ════════════════ -->
     <div id="scanModal" class="modal-overlay">
         <div id="scanShell" class="modal-content glass-panel p-6 rounded-3xl max-w-lg w-full border border-white/15 shadow-2xl mx-4"></div>
     </div>
 
-    <!-- Continuous Silent Audio Loop: keeps OS audio hardware pipeline awake for lock-screen & background narration -->
-    <audio id="backgroundKeepAliveAudio" preload="auto" loop playsinline webkit-playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA" style="display:none;"></audio>
-
-    <script src="static/supabase-store.js?v=1.47.5"></script>
-    <script src="static/app.js?v=1.47.5"></script>
-    <script src="static/georgian-linguistics.js?v=1.47.5"></script>
-    <script src="static/engine-pack.js?v=1.47.5"></script>
-    <script src="static/scanner.js?v=1.47.5"></script>
+    <script src="static/supabase-store.js"></script>
+    <script src="static/georgian-linguistics.js"></script>
+    <script src="static/app.js"></script>
+    <script src="static/engine-pack.js"></script>
+    <script src="static/scanner.js"></script>
 
 
 </body>

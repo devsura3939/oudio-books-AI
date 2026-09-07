@@ -36,24 +36,6 @@ export const VOICE_PRESETS: VoicePreset[] = [
     instructions:
       "Speak with a clear British RP accent. Elegant, calm audiobook narration.",
   },
-  {
-    id: "en-gb-libby",
-    label: "British · Gentle Storyteller (Charlotte)",
-    group: "English — British",
-    provider: "openai",
-    voice: "shimmer",
-    instructions:
-      "Speak with a gentle, melodic British RP accent. Poetic and soothing audiobook narration.",
-  },
-  {
-    id: "en-gb-thomas",
-    label: "British · Classical Theater (Arthur)",
-    group: "English — British",
-    provider: "openai",
-    voice: "echo",
-    instructions:
-      "Speak with a classical, theatrical British RP accent. Dignified, articulate, and resonant.",
-  },
   // English — American
   {
     id: "en-us-male",
@@ -80,33 +62,6 @@ export const VOICE_PRESETS: VoicePreset[] = [
     instructions: "Expressive storyteller delivery with dramatic pacing.",
   },
   {
-    id: "en-us-aria",
-    label: "American · Bright Storyteller (Aria)",
-    group: "English — American",
-    provider: "openai",
-    voice: "nova",
-    instructions:
-      "Speak with an expressive, warm, and highly engaging American storytelling delivery.",
-  },
-  {
-    id: "en-us-eric",
-    label: "American · Deep Resonance (Marcus)",
-    group: "English — American",
-    provider: "openai",
-    voice: "onyx",
-    instructions:
-      "Speak with a deep, resonant American narrator delivery, commanding and atmospheric.",
-  },
-  {
-    id: "en-us-ava",
-    label: "American · Emotive Novel Reader (Ava)",
-    group: "English — American",
-    provider: "openai",
-    voice: "alloy",
-    instructions:
-      "Speak with a natural, emotive American novel reading cadence.",
-  },
-  {
     id: "en-neutral",
     label: "Neutral · Alloy",
     group: "English — American",
@@ -121,17 +76,6 @@ export const VOICE_PRESETS: VoicePreset[] = [
     group: "Georgian — ქართული",
     provider: "gemini",
     voice: "Charon",
-    instructions:
-      "Narrate in pristine literary Georgian (Kartlian standard) with crystal-clear articulation, authentic ejective and aspirated consonant contrasts, natural vigesimal phrasing, a warm resonant baritone, and organic breathing pauses at commas and punctuation.",
-  },
-  {
-    id: "ka-actor",
-    label: "ქართული · დრამატული არტისტი (დავითი)",
-    group: "Georgian — ქართული",
-    provider: "gemini",
-    voice: "Fenrir",
-    instructions:
-      "Narrate in expressive Georgian dramatic theater delivery with vivid character voices, heroic classical cadence, rich emotional depth, crisp Kartvelian phonology, and cinematic storytelling pauses.",
   },
   {
     id: "ka-female",
@@ -139,8 +83,6 @@ export const VOICE_PRESETS: VoicePreset[] = [
     group: "Georgian — ქართული",
     provider: "gemini",
     voice: "Kore",
-    instructions:
-      "Narrate in clear, elegant standard Georgian with lyrical warmth, flawless native phonology, crisp consonant articulation, melodic sentence intonation, and thoughtful narrative breathing.",
   },
   {
     id: "ka-soft",
@@ -148,8 +90,6 @@ export const VOICE_PRESETS: VoicePreset[] = [
     group: "Georgian — ქართული",
     provider: "gemini",
     voice: "Aoede",
-    instructions:
-      "Narrate in gentle, poetic Georgian with a soothing intimate cadence, delicate melodic contours, pristine literary pronunciation, tranquil pacing, and soft breath releases.",
   },
   // Multilingual / other languages
   {

@@ -39,11 +39,10 @@ export const Route = createFileRoute("/api/tts")({
           preset.provider === "gemini"
             ? {
                 model: "google/gemini-2.5-flash-tts",
-                ...(steer ? { systemInstruction: { parts: [{ text: steer }] } } : {}),
                 contents: [
                   {
                     role: "user",
-                    parts: [{ text: input.text }],
+                    parts: [{ text: steer ? `${steer}: ${input.text}` : input.text }],
                   },
                 ],
                 generationConfig: {

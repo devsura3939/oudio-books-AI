@@ -178,47 +178,11 @@
 
 @utility btn-glow {
   box-shadow: 0 0 20px color-mix(in oklab, var(--primary-container) 40%, transparent);
-  touch-action: manipulation;
-  will-change: transform, box-shadow;
-  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease;
+  transition: all 0.3s ease;
   &:hover {
     box-shadow: 0 0 30px color-mix(in oklab, var(--primary-container) 60%, transparent);
-    transform: translateY(-1.5px) scale(1.02);
+    transform: translateY(-1px);
   }
-  &:active {
-    transform: translateY(0.5px) scale(0.965);
-    transition-duration: 0.05s;
-  }
-}
-
-/* Fast-Action Button Performance & Mobile Touch Optimization */
-button,
-[role="button"],
-.btn {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  -webkit-user-select: none;
-  cursor: pointer;
-  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
-              background-color 0.15s ease,
-              border-color 0.15s ease,
-              box-shadow 0.15s ease,
-              opacity 0.12s ease;
-  will-change: transform;
-}
-
-button:active:not(:disabled),
-[role="button"]:active:not([aria-disabled="true"]) {
-  transform: scale(0.965);
-  transition-duration: 0.05s;
-}
-
-button:disabled,
-[role="button"][aria-disabled="true"] {
-  cursor: not-allowed;
-  opacity: 0.55;
-  transform: none !important;
 }
 
 @utility bg-radial-gradient {

@@ -7,28 +7,23 @@ export const EXTERNAL_SUPABASE_URL = "https://oakikavdnnvxzlcvsovq.supabase.co";
 export const EXTERNAL_SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_oTAYwkdt1yebGkrlKOoijw_9fE4OUBd";
 
-// New-format sb_publishable_* keys must be sent as `apikey`, NOT as Authorization Bearer.
-// When the SDK auto-sets Authorization: Bearer <api_key> (not a user JWT), we replace it
-// with apikey only. User JWTs (which start with "eyJ") are preserved untouched.
+function isNewApiKey(value: string) {
+  return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
+}
+
+// New-format sb_* keys are opaque strings, not JWTs: send them as `apikey` only.
 function supabaseFetch(key: string): typeof fetch {
   return (input, init) => {
-    const isReq = typeof Request !== "undefined" && input instanceof Request;
-    const headers = new Headers(isReq ? input.headers : undefined);
+    const headers = new Headers(
+      typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined,
+    );
     if (init?.headers) {
-      new Headers(init.headers as HeadersInit).forEach((value, name) => headers.set(name, value));
+      new Headers(init.headers).forEach((value, name) => headers.set(name, value));
     }
-    // Only strip Authorization when it equals the api key itself (not a user JWT).
-    // Real user JWTs start with "eyJ" — always keep those for authenticated calls.
-    const authHeader = headers.get("Authorization");
-    if (authHeader === `Bearer ${key}`) {
+    if (isNewApiKey(key) && headers.get("Authorization") === `Bearer ${key}`) {
       headers.delete("Authorization");
     }
-    // Always set apikey for Supabase routing.
     headers.set("apikey", key);
-
-    if (isReq) {
-      return fetch(new Request(input, { ...init, headers }));
-    }
     return fetch(input, { ...init, headers });
   };
 }

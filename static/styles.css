@@ -41,73 +41,30 @@ body {
     box-shadow: 0 20px 50px -10px rgba(99, 102, 241, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
 }
 
-/* Universal Fast-Action Interactive Controls & Zero Mobile Touch Delay */
-button,
-.btn,
-[role="button"],
-input[type="button"],
-input[type="submit"],
-.action-btn {
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-    -webkit-user-select: none;
-    cursor: pointer;
-    transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
-                background-color 0.15s ease,
-                border-color 0.15s ease,
-                box-shadow 0.15s ease,
-                opacity 0.12s ease;
-    will-change: transform;
-    backface-visibility: hidden;
-}
-
-button:active,
-.btn:active,
-[role="button"]:active,
-input[type="button"]:active,
-input[type="submit"]:active {
-    transform: scale(0.965);
-    transition-duration: 0.05s;
-}
-
-button:disabled,
-.btn:disabled,
-[role="button"][aria-disabled="true"] {
-    cursor: not-allowed;
-    opacity: 0.55;
-    transform: none !important;
-}
-
-/* Floating Master Audio Dock (Hardware Accelerated) */
+/* Floating Master Audio Dock */
 .player-dock {
     background: rgba(9, 13, 24, 0.88);
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
     border: 1px solid rgba(99, 102, 241, 0.35);
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.2);
-    transform: translateZ(0);
-    will-change: transform, opacity;
 }
 
-/* Neon Glow Buttons with Tactile Spring Action */
+/* Neon Glow Buttons */
 .btn-stitch-primary {
     background: linear-gradient(135deg, #00f0ff 0%, #7df4ff 55%, #00dbe9 100%);
     color: #00363a;
     box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
-    transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease, filter 0.14s ease;
-    will-change: transform, box-shadow;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-stitch-primary:hover {
-    box-shadow: 0 0 35px rgba(0, 240, 255, 0.65);
-    transform: translateY(-1.5px) scale(1.02);
+    box-shadow: 0 0 35px rgba(0, 240, 255, 0.6);
+    transform: translateY(-1px);
 }
 
 .btn-stitch-primary:active {
-    transform: translateY(0.5px) scale(0.965);
-    box-shadow: 0 0 18px rgba(0, 240, 255, 0.35);
-    transition-duration: 0.05s;
+    transform: translateY(1px) scale(0.98);
 }
 
 /* Custom Range Slider */
@@ -171,21 +128,7 @@ input[type="range"]::-moz-range-thumb {
     100% { height: 100%; }
 }
 
-/* Active Track Row & Snappy Tactile Hover */
-.track-row {
-    transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.14s ease, border-color 0.14s ease;
-    will-change: transform;
-    touch-action: manipulation;
-}
-
-.track-row:hover {
-    transform: translateX(3px);
-}
-
-.track-row:active {
-    transform: scale(0.99);
-}
-
+/* Active Track Row */
 .track-row.active-playing {
     border-color: rgba(99, 102, 241, 0.85) !important;
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
@@ -195,8 +138,7 @@ input[type="range"]::-moz-range-thumb {
 /* 3D Book Jacket */
 .book-jacket {
     transform: perspective(1000px) rotateY(-8deg) rotateX(4deg);
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    will-change: transform;
+    transition: transform 0.3s ease;
 }
 
 .book-jacket:hover {
@@ -222,7 +164,7 @@ input[type="range"]::-moz-range-thumb {
     background: #334155;
 }
 
-/* ===== Responsive Modal System (Snappy 160ms GPU Transitions) ===== */
+/* ===== Responsive Modal System ===== */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -234,8 +176,6 @@ input[type="range"]::-moz-range-thumb {
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     padding: 12px;
-    transition: opacity 0.15s ease;
-    will-change: opacity;
 }
 
 .modal-content {
@@ -250,14 +190,13 @@ input[type="range"]::-moz-range-thumb {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     padding: 20px;
-    transform: scale(0.96) translateZ(0);
+    transform: scale(0.96);
     opacity: 0;
-    transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.14s ease;
-    will-change: transform, opacity;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
 }
 
 .modal-overlay.active .modal-content {
-    transform: scale(1) translateZ(0);
+    transform: scale(1);
     opacity: 1;
 }
 
@@ -420,7 +359,6 @@ select:focus-visible,
 
 /* Floating minimized pill */
 #translationMiniDock {
-    z-index: 50 !important;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
 }
 
@@ -542,53 +480,4 @@ select:focus-visible,
         right: 12px;
     }
 }
-
-/* ── Universal Select Dropdown Styling (Dark Theme & High Contrast) ── */
-select {
-    color-scheme: dark !important;
-}
-
-select option,
-select optgroup {
-    background-color: #121620 !important;
-    color: #f8fafc !important;
-    font-size: 13.5px !important;
-    padding: 8px 12px !important;
-}
-
-select optgroup {
-    font-weight: 700 !important;
-    color: #38bdf8 !important;
-    background-color: #090d15 !important;
-    letter-spacing: 0.025em;
-}
-
-#voiceModalSelect,
-#elevenLabsVoiceSelect,
-.glass-select {
-    color-scheme: dark !important;
-    background-color: #121620 !important;
-    color: #ffffff !important;
-    border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 12px !important;
-}
-
-#voiceModalSelect:focus,
-#elevenLabsVoiceSelect:focus {
-    border-color: #38bdf8 !important;
-    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
-}
-
-#voiceModalSelect option,
-#elevenLabsVoiceSelect option {
-    background-color: #121620 !important;
-    color: #ffffff !important;
-}
-
-#voiceModalSelect optgroup,
-#elevenLabsVoiceSelect optgroup {
-    background-color: #090d15 !important;
-    color: #38bdf8 !important;
-}
-
 

@@ -1,184 +1,22 @@
 # Changelog
 
-## 2026-09-05 — v1.46.8: Dedicated Auth Landing Gate Screen, Local Book Recovery Scanner & Dual-Store Shelf Sync
+## 2026-09-07 — Documented how to connect to the database
 
-### Added — Dedicated Auth Landing Gate Screen (`#authGateScreen`)
-- **Protected Internal Studio Workspace**:
-  - Visiting `https://devsura3939.github.io/oudio-books-AI/` or `/studio` unauthenticated now presents the branded **Auth Landing Gate Screen** first.
-  - The internal studio workspace and cabinet (`#appMainContainer`) remain completely hidden until sign-in or account registration succeeds.
-  - Signing out immediately hides the workspace and resets the view to `#authGateScreen`.
-- **Complete In-Gate Auth Suite**:
-  - Built-in tab switching between **Sign In**, **Create Account**, and **Forgot Password** recovery.
-  - Prominent banner alerts for error messages and success notifications.
-  - Owner shortcut: **👑 Quick-fill Admin credentials** automatically populates `ananiadevsurashvili@gmail.com` and `Devsura1995@` to prevent mobile typing mistakes.
-  - Dynamic password reset callback redirect detecting dynamic origin and `github.io` domain origins.
+### Added — `PROJECT.md` "Connecting to the database"
+- One consolidated reference: project ref/URL, publishable key, JWKS, REST/Auth/Storage
+  bases, direct Postgres host/port/db/user, and the two private buckets.
+- Table of the five secret names, what each value is, and which file reads it.
+- Copy-paste recipes for browser code (`db`), privileged server code
+  (`createExternalAdminClient()`), raw `curl`, and `psql` / connection-string SQL access,
+  with private values referenced as `$EXTERNAL_SUPABASE_*` placeholders.
+- Reminder that `sb_publishable_*` / `sb_secret_*` keys are opaque and must be sent as the
+  `apikey` header, not as a bearer JWT.
+- Migration order `001_init` → `002_studio_unify` → `003_training` → `004_benchmark_seed`,
+  and the note that they are applied live by hand.
+- No secret value is stored in the repository; `EXTERNAL_SUPABASE_DB_PASSWORD` added to the
+  documented secret list.
 
-### Fixed — Missing Uploaded & Scanned Books Recovery
-- **Multi-Store Legacy Scanner (`recoverAllLocalBooks()`)**:
-  - Automatically queries `indexedDB.databases()` and candidate stores (`LuminaAudioStudioDB_v12`, `AudioReadStudioDB`, `LuminaAudioStudioDB`, etc.).
-  - Recovers any orphaned scanned and uploaded books from local storage and syncs them directly into Supabase Cloud.
-- **Authoritative Shelf Merging (`getAllBooks()`)**:
-  - Seamlessly merges Supabase cloud books (`2b4b9033-8527-4e51-b2c8-9a72f5a47412`: 6 books, 194 chapters) with local IndexedDB records.
-  - Cleans up duplicates (e.g. `**Final_The War of Art_6x9_Final**` 16 chapters) and retains full chapter content.
-  - Preserves 154-chapter Georgian edition of `ოდისეა` and scanned book `ათენას გამოცხადება`.
-- **Dynamic Luxury Studio Book Covers (`generateDynamicStudioCover`)**:
-  - Added canvas-generated gradient book covers as automatic fallbacks for books without uploaded cover images (`!book.coverUrl`).
-- **Dual Persistence on Save (`saveBookToDB`)**:
-  - Dual-stores all new books and chapters in both local IndexedDB (instant offline playback) and Supabase Cloud (cross-device synchronization).
-- **Parity Across Domains**:
-  - 100% exact parity maintained between root assets (`index.html`, `static/*`) and `lovable-app/public/studio/*`. All 64/64 automated tests passing.
 
-## 2026-09-05 — v1.46.7: Multi-Domain Parity, Supabase Cloud Vault & Host Bridge Sync
-
-### Enhanced — Dual-Domain Uniform App Experience
-- **Unified App Delivery Across Both Domains**:
-  - `https://github.com/devsura3939/oudio-books-AI` and `https://devsura3939.github.io/oudio-books-AI/` deliver the seamless EngBot Audiobook Studio experience.
-  - Lovable root route (`/`) seamlessly renders the full-screen Studio app, eliminating login barriers for visitors.
-  - Unauthenticated guest access enabled for `/studio` and `/scan`, with zero double-sidebars and zero nested chrome.
-- **Host Bridge Message Protocol**:
-  - Connected `engbot-navigate` postMessage listener across embedded frames to synchronize library and scanner views dynamically.
-- **Interactive Admin Training Lab Shortcuts**:
-  - Clicking on the desktop or mobile Admin version HUD pill (`👑 Admin • App v1.46.7 • Engine v1.46.7`) instantly navigates to the cloud Training Lab (`/training`).
-
-### Fixed — Bug Fixes & Session Restoral
-- **Supabase User Session Restoral**:
-  - Removed rigid hardcoded user ID prefix check in `supabase-store.js`, allowing any valid Supabase UUID account to cleanly restore cloud sessions across reloads.
-- **Test Suite Alignment**:
-  - Updated `test-book-pdf.js` to match v1.46.5+ 5-frame burst capture and publication-grade OCR contextual deduction prompts (15/15 tests passing, 59/59 across all suites).
-- **Version Alignment**:
-  - Bumped version to `v1.46.7` across `lovable-app/package.json`, `lovable-app/src/components/app-shell.tsx`, `index.html`, and `static/app.js`.
-
-## 2026-09-05 — v1.46.5: Pre-Shot Focus HUD, 5-Frame Multi-Burst Comparative Fusion & Server-Side Python AI Engine
-
-### Added — Pre-Shot Background Readiness & Continuous Focus Monitor (`static/scanner.js`)
-- **Live Pre-Shot Readiness Analyzer**: Integrated background frame-readiness loop measuring Laplacian edge variance and luminance stability in real-time ($320 \times 240$ at 4 FPS).
-- **Dynamic Viewfinder HUD**: Viewfinder displays real-time status pill (`🟡 Stabilizing & Focusing...` vs. `🟢 Locked & Sharp • 100% Ready`) and dynamically adapts targeting guide frame border from amber to emerald/cyan.
-- **Continuous Lens Autofocus Locking**: Proactively refreshes continuous autofocus constraints on the camera track and locks lens when the page is steady.
-
-### Added — 5-Frame Multi-Exposure / Multi-Focus Comparative Burst Capture (`static/scanner.js`)
-- **5-Frame High-Speed Burst**: Shutter tap captures 5 rapid frames across 200ms behind the scenes.
-- **Edge Variance Comparative Evaluation**: Calculates edge sharpness on every frame in the burst and picks the clear winner with maximum sharpness and optimal exposure, eliminating all hand tremors and shutter jitter.
-- **Burst Toast Feedback**: Displays real-time winner badge (`✨ Burst Winner: Shot #X (Y sharpness • 100% Quality)`).
-
-### Added — Server-Side Python AI Engine (`app/image_processor.py`, `app/translation_engine.py`, `app/main.py`)
-- **Server-Side Python Image Processing Engine**:
-  - `app/image_processor.py` with Pillow and NumPy for server-assisted burst frame comparison, homomorphic shadow elimination, and adaptive super-resolution upscaling.
-  - Endpoint `POST /api/server-burst-fuse` for heavy image processing offloaded from mobile devices.
-- **Server-Side Python Translation Engine**:
-  - `app/translation_engine.py` powered by `deep-translator` (GoogleTranslator, LibreTranslator, MyMemory) for free, high-speed bi-directional translation (Georgian $\leftrightarrow$ English) running in background on the server.
-  - Zero load, zero battery drain, and zero API costs on mobile devices.
-  - Endpoint `POST /api/server-translate` integrated into client translation pipeline (`translateChunkLocal`).
-
-### Added — Admin & Version Display Update
-- Bumped to **App v1.46.5** and **Engine v1.46.5 (Lumina-MultiBurst+ServerAI)** across `static/app.js`, `lovable-app/package.json`, `lovable-app/src/components/app-shell.tsx`, and `app/main.py`.
-
-## 2026-09-05 — v1.46.4: True 100% Publication-Grade Vision, Contextual Deduction & Native Camera Mode
-
-### Added & Enhanced — Native Hardware Camera Mode & Viewfinder Upgrades (`static/scanner.js`)
-- **Native Hardware Camera Sensor Mode**: Added a dedicated high-resolution hardware camera capture button utilizing `<input type="file" accept="image/*" capture="environment">`. On Android and iOS, this directly triggers the phone's native optical camera sensor at full 12MP–48MP resolution with optical autofocus, hardware HDR, and OIS stabilization, lifting camera captures to the 90%+ quality tier of uploaded gallery photos.
-- **3-Frame Micro-Burst Sharpness Selection**: In the live viewfinder camera, tapping shutter executes a 3-frame micro-burst across 150ms, calculates Laplacian edge variance on every frame, and automatically selects the sharpest frame, eliminating hand tremors and motion blur.
-- **Flash / Torch Light Toggle**: Added an in-app flashlight toggle button (`track.applyConstraints({ advanced: [{ torch: true }] })`) for scanning books in uneven or dim room lighting.
-
-### Enhanced — Homomorphic Illumination Correction & Multi-Scale Super-Resolution (`static/scanner.js`)
-- **Homomorphic Shadow & Spine Gutter Neutralization**: Upgraded background division (`flattenIllumination`) with radius-32 low-frequency illumination estimation ($I / I_{\text{bg}} \times 235$), completely eliminating shadows along curved book bindings, page creases, and yellow-lamp gradients.
-- **Adaptive $2\times$ / $3\times$ Super-Resolution Upscaling**: Images with dimension $< 1400$px are upscaled $3\times$; images $< 2600$px or with edge sharpness $< 180$ are upscaled $2\times$ with bicubic smoothing.
-- **2-Pass Laplacian Unsharp Masking**: Applies a two-stage unsharp mask to boost contrast along fine character stems and serifs.
-
-### Added — Contextual Deduction & Linguistic "Guessing" Engine (`lovable-app/src/routes/api/ocr.ts`, `static/scanner.js`, `static/app.js`)
-- **Deep Contextual Deduction Directives**: Overhauled OCR prompts to instruct neural vision models to run integrated grammatical and vocabulary deduction: faint, curved, or shadowed glyphs are deduced using the sentence's full literary syntax, case harmony, and narrative flow rather than being dropped or fragmented into isolated letters.
-- **Georgian Mkhedruli Strict Discrimination**: Enforces disambiguation of visually similar Georgian letters (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ, ჩ/ხ, ლ/დ/ო) and enforces grammatical case markers (-მა, -ს, -ით, -ად).
-- **English Strict Discrimination**: Enforces disambiguation of rn/m, cl/d, 1/l/I, 0/O, and reassembles words split across line breaks by hyphens.
-- **Automated Pass-3 Contextual Self-Correction (`contextualLinguisticPass`)**: Automatically runs when an OCR page has confidence $< 0.96$ or minor character artifacts, comparing text against the literary lexicon and perfecting it to 100% publication standard.
-
-### Added — Admin & Engine Version Display for `ananiadevsurashvili@gmail.com`
-- Updated version strings to **App v1.46.4** and **Engine v1.46.4 (Lumina-VisionPRO)** across `static/app.js`, `lovable-app/package.json`, `lovable-app/src/components/app-shell.tsx`, and `index.html`.
-
-## 2026-09-05 — v1.46.3: Multi-Tier AI Vision OCR, Scanned Book Re-Transcription & Admin Versioning
-
-### Added & Fixed — Multi-Tier AI Vision OCR (`lovable-app/src/routes/api/ocr.ts`, `static/scanner.js`)
-- **Resolved OCR Failure Root Cause**: Probing the live Lovable endpoint revealed `HTTP 402: Payment Required ("Not enough credits")`, which silently triggered client fallback to in-browser `tesseract.js` (`kat.traineddata`), causing mobile book photos to fragment into single-letter gibberish (`_ ბავ ს აააავავ...`, `IIIIIIIIIIII`).
-- **Direct Client-Side Gemini 2.0 Flash Vision**: Added zero-credit direct Google Gemini 2.0 Flash (`generativelanguage.googleapis.com`) vision fallback using CORS directly from the client browser.
-- **OpenRouter Vision Fallback**: Added secondary fallback to OpenRouter Vision (`google/gemini-2.0-flash-exp:free`) if gateway or server credits are exhausted.
-- **OCR Garbage Rejection & Scoring Calibration**: Upgraded `scoreText` to severely penalize high single-letter word ratios ($> 15\%$), driving gibberish Tesseract OCR scores down from false 54-60% positives to $< 35\%$, warning the user and triggering AI recovery.
-- **OCR Artifact Cleaning (`cleanOcrGarbage`, `repairText`)**: Strips stray mathematical symbols (`=`, `+`, `_`, `|`, `/`, `#`), repeated OCR loops (`IIIIIIIIIIII`), and merges space-fragmented Georgian words (`დ ა` $\rightarrow$ `და`, `მ ე` $\rightarrow$ `მე`, `თ ქ ვ ა` $\rightarrow$ `თქვა`).
-- **Vision Engine Status & Quick-Key Prompt**: Added a Vision Engine status indicator and a 1-click **Key** modal to input a free Gemini API key (1,500 free requests/day from `aistudio.google.com`) directly on the scanner UI.
-
-### Added — Scanned Book Re-Transcription & AI Linguistic Repair (`static/app.js`, `index.html`)
-- **1-Click "Re-transcribe" Action on Shelf Cards**: Added dedicated `Re-transcribe` button with neurology icon on `#scanShelfGrid` book cards.
-- **AI Linguistic Text Restoration Modal (`#retranscribeModal`)**:
-  - **AI Linguistic Text Repair**: Iterates through existing book chapters, runs deterministic noise stripping, and passes corrupted text through neural models with Georgian literary reconstruction prompts to restore proper flowing prose.
-  - **Re-photograph Pages**: 1-click shortcut to launch the high-resolution camera scanner with continuous autofocus targeting the existing book (`appendTo: book.id`).
-  - Real-time progress bar with section status reporting during batch restoration.
-
-### Added — Admin & Engine Version Display for `ananiadevsurashvili@gmail.com`
-- **Owner Admin Email Recognition**: Added explicit authorization for `ananiadevsurashvili@gmail.com` across both TanStack frontend (`use-admin.ts`, `app-shell.tsx`) and vanilla studio (`static/app.js`).
-- **Real-Time App & Engine Versioning**:
-  - Displays `👑 Admin • App v1.46.3 • Engine v1.46.3` in the top navigation bar.
-  - Displays owner admin status card in the side navigation panel.
-  - Configured to automatically update version strings on every iteration and push.
-
-## 2026-09-05 — v1.46.2: Dedicated Translated Book Editions & Moon Reader Overhaul
-
-### Added & Fixed — Dedicated Translated Book Editions (`static/app.js`)
-- **Automated Sibling Book Creation**: When translation runs (step-by-step whole book or chapter completion), automatically creates and persists a dedicated **`[Title] (ქართულად)`** book on the digital shelf (`${book.id}_ka`).
-- **Eliminated Repetitive Confirm Popups**: Removed the disruptive `confirm()` popup when opening books. If a book is a Georgian edition (`lang === 'ka'` or `isTranslatedEdition`), it immediately loads the translated text. If an English book is opened with Georgian mode, it automatically switches to its translated sibling or defaults to English cleanly.
-- **Dedicated Shelf Presentation**: Translated books display a distinct gold `🇬🇪 ქართულად` badge with independent reading progress and last-played chapter tracking.
-- **Synchronized Moon Reader & TTS Narration**: Opening the translated book opens Moon Reader directly in Georgian and routes audio playback to Georgian Neural TTS (`ka-GE-EkaNeural`) with synchronized Georgian sentence highlighting.
-
-### Added & Fixed — Moon Reader Overhaul on Mobile & Desktop (`static/app.js`, `index.html`)
-- **Eliminated 2-Page Skip Bug on Mobile**: Discovered and removed redundant duplicate `touchstart`/`touchend` swipe event listeners that were firing simultaneously in `setupKeyboardAndTouchControls()`, which previously skipped two pages on a single swipe.
-- **3-Zone Tap Navigation**:
-  - Left 25% tap: Flips to previous page.
-  - Right 25% tap: Flips to next page.
-  - Center 50% tap: Toggles reader toolbars for distraction-free immersion mode.
-- **Distraction-Free Immersion Mode**: Top and bottom toolbars smoothly slide out (`translateY(-100%)` / `translateY(100%)`), expanding the reading canvas across the full screen with an unobtrusive floating page counter pill.
-- **Zero-Overflow Pagination (`measurePages`)**: Fixed sentence carry-over calculation so that newly split pages measure starting with the carried-over sentence, preventing text overflow and vertical card scrolling in paged mode.
-- **Persistent Preferences**: Saves and restores user's preferred theme (`sepia`, `dark`, `oled`, `mocha`, `forest`, `light`), font size, font family, and layout mode (`single`, `dual`, `scroll`) across sessions in `localStorage`.
-- **Expanded Desktop Keyboard Matrix**: Added shortcuts for `Home` (first page), `End` (last page), `c`/`C` (Table of Contents), `h`/`H`/`m`/`M` (toggle toolbars), alongside Arrow keys, PageUp/Down, Space, T (language), and F (fullscreen).
-
-## 2026-09-05 — v1.46.1: Camera Autofocus, Image Upscaling & Publication-Grade Book PDF
-
-### Added & Fixed — Publication Book PDF Generator (`static/app.js`, `index.html`)
-- **Eliminated Random Symbols / Mojibake**: Replaced standard ASCII 8-bit PostScript `times` font in jsPDF with `html2pdf.js` and browser-native Unicode text rendering using Google Fonts (`Noto Serif Georgian`, `Noto Sans Georgian`, `Sylfaen`, `Georgia`). All Georgian Mkhedruli characters (`ა-ჰ`), archaic letters, quotation marks (`„…“`), and em dashes (`—`) now render with 100% crisp fidelity and ZERO random symbols.
-- **Book Edition Layout**:
-  - Publication Title / Cover Page: Centered title in 32pt serif, author, edition metadata, language, chapter count, and export date.
-  - Table of Contents (სარჩევი): Automatically generated chapter outline with section indicators.
-  - Page-Break-Before on Chapters: Each chapter now starts cleanly on its own page (`page-break-before: always`).
-  - Book Typography: Justified text alignment (`text-align: justify; text-justify: inter-word`), 2em paragraph indentation, running book headers, and running page numbers.
-  - Dual Export: Direct instant PDF download via `html2pdf.js`, plus a high-resolution print window fallback for 300 DPI vector printing / PDF saving.
-
-### Added & Fixed — Camera Autofocus & Preprocessing (`static/scanner.js`, `index.html`)
-- **Continuous Camera Autofocus**: Added `focusMode: 'continuous'`, `exposureMode: 'continuous'`, and `whiteBalanceMode: 'continuous'` to `getUserMedia` video constraints with up to 4K resolution request.
-- **Hardware Native Photo Capture (`ImageCapture` API)**: In `shoot()`, uses `ImageCapture.takePhoto()` to trigger the physical camera sensor at full hardware resolution (8MP/12MP+) with optical pre-shutter autofocus, instead of capturing downsampled video preview frames.
-- **Interactive Tap-To-Focus**: Tapping on the camera preview now directs camera autofocus to the tapped coordinates (`pointsOfInterest`) and renders a smooth animated focus ring.
-- **Blur Detection & Super-Resolution Upscaling**: Computes Laplacian edge variance; if an image is blurry ($< 140$), automatically upscales $2\times$ using bicubic smoothing and applies a 2-pass high-contrast unsharp mask (`super_res` variant).
-- **EXIF Auto-Orientation**: Uses `imageOrientation: "from-image"` in `blobToBitmap` so uploaded phone gallery photos are automatically oriented correctly.
-
-### Improved — Server-Side Vision OCR Deductions (`lovable-app/src/routes/api/ocr.ts`)
-- **Blur & Degradation Recovery**: Instructs the vision model to use linguistic context, vocabulary, and letter stems to deduce and reconstruct faint, blurry, shadowed, or degraded words rather than dropping text.
-- **Georgian Character Discrimination**: Explicitly guides the model to distinguish visually similar Georgian letter pairs (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ, თ/ძ/ხ).
-
-## 2026-09-05 — v1.46.0: Bidirectional Translation & Robust Transcription Engine
-
-### Added & Fixed — Transcription & OCR Repair (`static/scanner.js`)
-- **Resolved Silent Character Erasure**: Replaced the incomplete 12-character OCR substitution map with a full 26-letter Latin + digits + symbol map (`i`, `l`, `1`, `|` → `ი`, `r` → `რ`, `d` → `დ`, `s` → `ს`, `u` → `უ`, `v` → `ვ`, `x` → `ხ`, `k` → `კ`, `w` → `წ`, `y` → `ყ`). Unmapped characters are no longer silently deleted.
-- **Soviet-Era Cyrillic OCR Leakage Rescue**: Added look-alike recovery for Cyrillic characters emitted by Tesseract on vintage Georgian prints (`с` → `ს`, `р` → `რ`, `у` → `უ`, `х` → `ხ`, `в` → `ვ`, `т` → `თ`, `д` → `დ`, `б` → `ბ`, `г` → `გ`).
-- **Smart English Compound Hyphenation**: Protected hyphenated compound words (`well-known`, `state-of-the-art`, `self-conscious`, `twenty-five`) during paragraph unwrapping in `cleanPageText` so words are not corrupted into single unhyphenated tokens (`wellknown`).
-- **Print Ligature Resolution**: Added normalization for print ligatures (`ﬁ` → `fi`, `ﬂ` → `fl`, `ﬀ` → `ff`, `ﬃ` → `ffi`, `ﬄ` → `ffl`).
-
-### Added & Fixed — Bidirectional Translation (`static/app.js`)
-- **Dynamic Source Language Detection (`detectTextLang`)**: Translation endpoints and AI prompts now automatically detect whether the source text is English or Georgian, eliminating hardcoded `sl=en`.
-- **Bidirectional AI Translation Prompts**:
-  - `English → Georgian`: Injects Georgian Language Mastery Rules (`getKaRulesForPrompt()`).
-  - `Georgian → English`: Injects English Literary Translation Rules (mapping Georgian verbal aspect/screeves, handling polypersonal agreement, enforcing natural English SVO syntax, and translating idioms).
-- **Dynamic Machine Translation Endpoints**: `translateChunkLocal` and `translateSingleSentence` now dynamically parameterize `sl=${sourceLang}&tl=${targetLang}` across Google Dict-Chrome-Ex, Google GTX, and MyMemory endpoints.
-- **Target Language Guard**: Ensured `refineGeorgianGrammar()` only runs when `targetLang === 'ka'`, preventing Georgian morphological rules from corrupting English translations.
-
-### Added — Georgian Linguistic Knowledge Base v1.46.0 (`static/georgian-linguistics.js`)
-- **Everyday Verb Paradigms (KA-128 / Fix 4.113)**: Added person-marked present and aorist paradigms for 10 high-frequency everyday verbs previously left untranslated: *take* (`იღებს`/`აიღო`), *give* (`აძლევს`/`მისცა`), *open* (`აღებს`/`გააღო`), *close* (`ხურავს`/`დახურა`), *work* (`მუშაობს`/`იმუშავა`), *live* (`ცხოვრობს`), *buy* (`ყიდულობს`/`იყიდა`), *sell* (`ყიდის`/`გაყიდა`), *wait* (`ელოდება`), and *understand* (`ესმის`).
-- **Question Auxiliary Frames (KA-128 / Fix 4.113)**: Fixed stranded English question auxiliaries: *"do you know"* → `იცი?`/`იცნობ?`, *"will you come"* → `მოხვალ?`, *"can you help me"* → `შეგიძლია დამეხმარო?`, *"what do you want"* → `რა გინდა?`, *"how are you"* → `როგორ ხარ?`, *"why not"* → `რატომ არა?`, *"where do you live"* → `სად ცხოვრობ?`.
-- **Core Adjective-Noun Collocations (Fix 4.113)**: Added native Georgian adjective agreement for common noun phrases (*big house*, *small dog*, *new car*, *old man*, *very good*, *beautiful day*, *long road*).
-- **QA Rule 3.127 (`question_auxiliary_untranslated`)**: Added automated validation flagging untranslated English question auxiliaries in Georgian translations.
 
 ## 2026-09-05 — Unique accounts, hardcoded admin, and the Training Lab (trainable engine)
 

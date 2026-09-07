@@ -8,10 +8,10 @@ import { z } from "zod";
  * machine translation whenever no OpenRouter/Groq/Gemini key was entered).
  */
 const schema = z.object({
-  // The Georgian mastery prompt ships linguistic knowledge base and instructions,
-  // so the limit must accommodate prompt caching and context.
+  // The Georgian mastery prompt ships a ~220k-char linguistic knowledge base,
+  // so the limit must be well above it — a 400 here silently degraded every
+  // chunk to machine translation.
   prompt: z.string().min(1).max(600_000),
-  systemPrompt: z.string().max(200_000).optional(),
   temperature: z.number().min(0).max(2).default(0.2),
   maxTokens: z.number().min(256).max(32_000).default(8192),
 });
@@ -19,30 +19,6 @@ const schema = z.object({
 export const Route = createFileRoute("/api/ai")({
   server: {
     handlers: {
-      GET: async () => {
-        const apiKey = process.env["LOVABLE_API_KEY"];
-        if (!apiKey) {
-          return json({ status: "unconfigured", error: "LOVABLE_API_KEY not set" }, 200);
-        }
-        try {
-          const ctrl = new AbortController();
-          const tid = setTimeout(() => ctrl.abort(), 6000);
-          const upstream = await fetch("https://ai.gateway.lovable.dev/v1/models", {
-            headers: { Authorization: `Bearer ${apiKey}` },
-            signal: ctrl.signal,
-          });
-          clearTimeout(tid);
-          if (upstream.status === 402) {
-            return json({ status: "depleted", code: 402, error: "AI gateway out of credits" }, 200);
-          }
-          if (upstream.ok) {
-            return json({ status: "healthy", code: 200 }, 200);
-          }
-          return json({ status: "degraded", code: upstream.status }, 200);
-        } catch (e: any) {
-          return json({ status: "unreachable", error: e?.message || "timeout" }, 200);
-        }
-      },
       POST: async ({ request }) => {
         const apiKey = process.env["LOVABLE_API_KEY"];
         if (!apiKey) {
@@ -56,13 +32,6 @@ export const Route = createFileRoute("/api/ai")({
           return json({ error: "Invalid request" }, 400);
         }
 
-        const messages = input.systemPrompt
-          ? [
-              { role: "system", content: input.systemPrompt },
-              { role: "user", content: input.prompt },
-            ]
-          : [{ role: "user", content: input.prompt }];
-
         const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -71,7 +40,7 @@ export const Route = createFileRoute("/api/ai")({
           },
           body: JSON.stringify({
             model: "google/gemini-3.7-flash",
-            messages,
+            messages: [{ role: "user", content: input.prompt }],
             temperature: input.temperature,
             max_tokens: input.maxTokens,
             response_format: { type: "json_object" },
@@ -85,16 +54,11 @@ export const Route = createFileRoute("/api/ai")({
         }
 
         const data = (await upstream.json()) as {
-          choices?: { message?: { content?: string }; finish_reason?: string }[];
+          choices?: { message?: { content?: string } }[];
         };
-        const choice = data.choices?.[0];
-        const text = choice?.message?.content ?? "";
-        const finishReason = choice?.finish_reason;
+        const text = data.choices?.[0]?.message?.content ?? "";
         if (!text) return json({ error: "Empty AI response" }, 502);
-        if (finishReason === "length") {
-          return json({ error: "Response truncated by token limit", text, finish_reason: finishReason, truncated: true }, 422);
-        }
-        return json({ text, finish_reason: finishReason }, 200);
+        return json({ text }, 200);
       },
     },
   },

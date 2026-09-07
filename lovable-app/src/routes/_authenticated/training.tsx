@@ -5,7 +5,6 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { adminApi, useIsAdmin } from "@/lib/use-admin";
-import { EngineArchitectureGuide } from "@/components/training-architecture-guide";
 
 export const Route = createFileRoute("/_authenticated/training")({
   head: () => ({
@@ -143,9 +142,6 @@ function TrainingLab() {
               </button>
             </div>
           </section>
-
-          {/* Engine Architecture & Autonomous LLM Training Guide */}
-          <EngineArchitectureGuide />
 
           {/* Run training in-app */}
           <section className="glass-panel rounded-xl p-6">
