@@ -243,17 +243,14 @@ class TestBackendEndpointsAndEngines(unittest.TestCase):
         self.assertNotIn("Page 1 of 5", cleaned)
 
     def test_14_supabase_bridge_health(self):
-        """Test Supabase bridge health check and session fallback"""
+        """Unconfigured admin access must not manufacture a session or call the network."""
         from app.supabase_bridge import check_supabase_health, get_admin_session
-        health = check_supabase_health()
-        self.assertIsInstance(health, dict)
-        self.assertIn("status", health)
-        self.assertIn(health["status"], ("connected", "offline", "unconfigured"))
-        session = get_admin_session()
-        self.assertIsInstance(session, dict)
-        self.assertIn("access_token", session)
-        if "user" in session:
-            self.assertIn("email", session["user"])
+        from unittest.mock import patch
+        with patch('app.supabase_bridge.SUPABASE_SECRET_KEY', ''), patch('urllib.request.urlopen') as network:
+            self.assertEqual(check_supabase_health()['status'], 'unconfigured')
+            with self.assertRaisesRegex(RuntimeError, 'not configured'):
+                get_admin_session()
+            network.assert_not_called()
 
 
 

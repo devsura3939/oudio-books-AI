@@ -215,6 +215,7 @@ export interface EvalResult {
   total: number;
   failures: { id: string; got: string; expected: string }[];
   qaFalsePositives: number;
+  caseResults: { id: string; score: number; passed: boolean }[];
 }
 
 function normalise(text: string) {
@@ -248,11 +249,13 @@ export function evaluatePack(items: PackItem[], cases: BenchmarkCase[]): EvalRes
   let weight = 0;
   let passed = 0;
   const failures: EvalResult["failures"] = [];
+  const caseResults: EvalResult["caseResults"] = [];
 
   for (const testCase of cases) {
     const got = normalise(applyPack(testCase.source, items, testCase.kind));
     const expected = normalise(testCase.expected);
     const sim = similarity(got, expected);
+    caseResults.push({ id: testCase.id, score: sim, passed: got === expected });
     const w = testCase.weight || 1;
     weighted += sim * w;
     weight += w;
@@ -273,12 +276,27 @@ export function evaluatePack(items: PackItem[], cases: BenchmarkCase[]): EvalRes
     passed,
     total: cases.length,
     failures: failures.slice(0, 25),
+    caseResults,
     qaFalsePositives,
   };
 }
 
 /** Was the candidate an improvement with no regression? */
 export function isImprovement(before: EvalResult, after: EvalResult): { ok: boolean; reason: string } {
+  if (!before.caseResults?.length || !after.caseResults?.length || before.total !== after.total) {
+    return { ok: false, reason: "rejected: full results from the same benchmark are required" };
+  }
+  const old = new Map(before.caseResults.map(c => [c.id, c]));
+  const next = new Map(after.caseResults.map(c => [c.id, c]));
+  if (old.size !== before.total || next.size !== after.total || [...old.keys()].some(id => !next.has(id))) {
+    return { ok: false, reason: "rejected: benchmark case IDs differ or are duplicated" };
+  }
+  for (const [id, prior] of old) {
+    const result = next.get(id)!;
+    if ((prior.passed && !result.passed) || result.score < prior.score - 0.0001) {
+      return { ok: false, reason: `rejected: benchmark case ${id} regressed` };
+    }
+  }
   if (after.qaFalsePositives > before.qaFalsePositives) {
     return { ok: false, reason: "rejected: a QA rule fires on known-good text (false positive)" };
   }

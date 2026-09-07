@@ -956,63 +956,11 @@
 
   // ── Tier 0: gateway vision OCR ─────────────────────────────────────────────
   function getVisionPrompt(lang, hint) {
-    const isKa = lang === "kat" || lang === "ka";
-    const base = `You are a world-class high-accuracy publication-grade OCR, vision transcription, and document restoration engine.
-Your mission is to produce a 100% faithful, verbatim plain-text transcription of the printed book page.
-
-CRITICAL RECONSTRUCTION DIRECTIVES:
-1. Verbatim Accuracy & Integrity:
-   - Transcribe every word and sentence exactly as written. Never translate, never paraphrase, never summarize, never add commentary or notes.
-   - Return ONLY the pure reconstructed literary text. No markdown fences, no labels.
-
-2. Glitch & Scanner Noise Recovery:
-   - Book scans frequently suffer from gutter shadows, perspective skew, lens softness, scanner lines, or page curvature warping.
-   - Actively identify and eliminate non-text noise (=, +, _, |, #, IIII, %%%, ~~~, stray slashes) and repeated artifact characters.
-   - When character glyphs are faint or distorted near the spine: NEVER drop words, NEVER leave blanks, and NEVER output fragmented single letters (e.g. "ა ა ა", "ს ს ს").
-
-3. Missing Symbols & Punctuation Recovery:
-   - Actively detect and restore MISSING punctuation and symbols:
-     * Quotation marks: ${isKa ? 'Strictly use authentic Georgian quotes: „ at the start and “ at the end (e.g. „გამარჯობა“, თქვა მან), or «...».' : 'Use authentic double quotes ("...") for speech.'}
-     * Dialogue dashes: Use proper em-dashes (—) for dialogue turns and parenthetical pauses.
-     * Punctuation marks: Restore missing commas, colons, semicolons, periods, question marks, and exclamation marks.
-
-4. Missing & Clipped Words Deduction:
-   - Inspect visible character stems of clipped or faint words at margins or line endings.
-   - Combine grammatical syntax, case harmony, and literary context to deduce and restore missing words seamlessly into complete, flowing prose.
-
-5. Hyphenation & Structure:
-   - Join words split across line breaks by a hyphen into a single word (e.g. "მო-ხერხებულ" -> "მოხერხებულ", "trans-cription" -> "transcription").
-   - Preserve genuine hyphenated compound words (e.g. "სამხრეთ-აღმოსავლეთი", "well-known").
-   - Merge line wraps within the same paragraph into clean continuous prose; preserve real paragraph breaks with a single blank line.
-   - Skip running page headers, running footers, page numbers, and library stamps.
-   - If the page contains no readable body text, return exactly: [[NO_TEXT]]`;
-
-    const ka = `LANGUAGE: Georgian (ქართული, მხედრული).
-- Use ONLY standard Georgian Mkhedruli alphabet letters (ა-ჰ). Never substitute Latin or Cyrillic characters.
-- Georgian has NO capital letters.
-- Strict Character Discrimination (differentiate visually similar characters using grammatical and root-word context):
-  - ვ (v) vs პ (p) vs კ (k) (e.g. პატარა, not *კატარა or *ვატარა)
-  - შ (sh) vs წ (ts) vs ჭ (ch') (e.g. ჭეშმარიტი, წყალი, შვიდი)
-  - რ (r) vs უ (u) vs ყ (q') (e.g. სიყვარული, not *სიყვარუღი or *სამყაყო)
-  - ქ (k') vs ფ (p') (e.g. ფიქრი, ქალაქი)
-  - თ (t) vs ძ (dz) vs ხ (kh) (e.g. თავისუფლება, ძმა, ხალხი)
-  - ჩ (ch) vs ხ (kh) (e.g. ჩემი, ხელი)
-  - ლ (l) vs დ (d) vs ო (o) (e.g. ლამაზი, დიდი, ოთახი)
-  - ზ (z) vs გ (g)
-  - ს (s) vs ხ (kh)
-  - ც (ts) vs ტ (t') vs ე (e)
-- Grammatical Harmony & Root Verification: Every Georgian word must obey standard Georgian nominal and verbal morphology (proper case markers: -მა, -ს, -ით, -ად; postpositions: -ში, -ზე, -თან, -დან, -კენ). If an optical glyph is ambiguous, choose the letter that produces a valid Georgian root and valid inflection.
-- Preserve authentic Georgian quotation marks („...“ or «...») and em dashes (—).
-- Preserve historical/archaic letters (ჱ, ჲ, ჳ, ჴ, ჵ, ჶ, ჷ, ჸ) if present in classical texts.`;
-
-    const en = `LANGUAGE: English.
-- Transcribe verbatim preserving original spelling (including British or archaic forms) and punctuation exactly.
-- Strict Character Discrimination:
-  - Distinguish rn vs m, cl vs d, vv vs w, fi vs fl, 1 vs l vs I, 0 vs O.
-  - Fix broken apostrophes and contractions (e.g. don't, it's, wouldn't).
-- Hyphenation across line breaks must be cleanly joined into complete words.`;
-
-    return [base, isKa ? ka : en, hint ? `Context from previous page: ${hint}` : ""].filter(Boolean).join("\n\n");
+    return `Transcribe this page verbatim in its printed language (${lang === 'auto' ? 'detect automatically' : lang}).
+Preserve exact wording, numbers, punctuation, mathematical operators, paragraph order, Georgian Mtavruli capitals and historical letters.
+Do not translate, modernize, paraphrase, or fill gaps from context. Mark unreadable spans [[UNCLEAR]].
+Output plain text only, or [[NO_TEXT]] for an empty page.
+${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
   }
 
   async function ocrGateway(dataUrl, lang, hint) {
@@ -1027,12 +975,14 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
 
       const res = await fetch("/api/ocr", {
         method: "POST",
+              signal: AbortSignal.timeout(45000),
         headers,
         body: JSON.stringify({ image: dataUrl, lang, hint: hint || undefined }),
       });
       if (res.ok) {
         state.tier0 = true;
         const data = await res.json();
+        if (!window.EngbotCore.providerOutputComplete(data)) throw new Error('OCR response incomplete; retry this page');
         return { text: data.text || "", engine: data.engine || "neural-gateway" };
       }
       console.warn(`[scanner] /api/ocr responded with status ${res.status}`);
@@ -1042,9 +992,8 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
 
     // 2. Direct Client-Side Gemini Vision (Frontier Models: Gemini 2.5 Pro / Flash)
     if (geminiKey) {
-      let prefModel = localStorage.getItem("geminiModel") || "gemini-2.0-flash";
-      if (prefModel.includes("2.5") || prefModel.includes("2.0-pro-exp") || prefModel.includes("-exp")) prefModel = "gemini-2.0-flash";
-      const modelsToTry = [prefModel, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"].filter((m, i, arr) => arr.indexOf(m) === i);
+      let prefModel = localStorage.getItem("geminiModel") || "gemini-2.5-flash";
+      const modelsToTry = window.EngbotCore.geminiModels(prefModel);
 
       for (const model of modelsToTry) {
         try {
@@ -1057,6 +1006,7 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
             {
               method: "POST",
+              signal: AbortSignal.timeout(45000),
               headers: {
                 "Content-Type": "application/json",
                 "x-goog-api-key": geminiKey
@@ -1079,6 +1029,7 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
           );
           if (gRes.ok) {
             const gData = await gRes.json();
+        if (!window.EngbotCore.providerOutputComplete(gData)) throw new Error('OCR response incomplete; retry this page');
             let text = (gData.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
             if (text === "[[NO_TEXT]]") text = "";
             text = text.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
@@ -1101,6 +1052,7 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
         const orModel = localStorage.getItem("openRouterModel") || "openrouter/free";
         const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
+              signal: AbortSignal.timeout(45000),
           headers: {
             Authorization: `Bearer ${openRouterKey}`,
             "Content-Type": "application/json"
@@ -1120,6 +1072,7 @@ CRITICAL RECONSTRUCTION DIRECTIVES:
         });
         if (orRes.ok) {
           const orData = await orRes.json();
+        if (!window.EngbotCore.providerOutputComplete(orData)) throw new Error('OCR response incomplete; retry this page');
           let text = (orData.choices?.[0]?.message?.content ?? "").trim();
           if (text === "[[NO_TEXT]]") text = "";
           text = text.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
@@ -1260,9 +1213,8 @@ Text to perfect:
 ${text.slice(0, 10000)}`;
 
     if (geminiKey) {
-      let prefModel = localStorage.getItem("geminiModel") || "gemini-2.0-flash";
-      if (prefModel.includes("2.5") || prefModel.includes("2.0-pro-exp") || prefModel.includes("-exp")) prefModel = "gemini-2.0-flash";
-      const modelsToTry = [prefModel, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"].filter((m, i, arr) => arr.indexOf(m) === i);
+      let prefModel = localStorage.getItem("geminiModel") || "gemini-2.5-flash";
+      const modelsToTry = window.EngbotCore.geminiModels(prefModel);
 
       for (const model of modelsToTry) {
         try {
@@ -1689,37 +1641,12 @@ ${text.slice(0, 10000)}`;
       }
 
       const best = attempts.sort((a, b) => b.score - a.score)[0] || { text: "", engine: "" };
-      let repaired = repairText(cleanPageText(best.text, lang), lang);
-
-      // Pass 3: Contextual Deduction & Linguistic Self-Correction ("Intelligent Guessing")
-      // If quality is not near-perfect (< 0.96) or has minor OCR artifacts, run contextual proofreading
-      let contextualApplied = false;
-      if (repaired && best.score < 0.96 && (localStorage.getItem("geminiApiKey") || state.tier0 !== false)) {
-        try {
-          const guessed = await contextualLinguisticPass(repaired, lang);
-          if (guessed && guessed.trim().length > 15) {
-            repaired = guessed.trim();
-            best.score = Math.max(best.score, scoreText(repaired, lang));
-            best.engine += "+contextual-deduction";
-            contextualApplied = true;
-          }
-        } catch (e) {
-          console.warn("[scanner] contextual deduction pass skipped:", e);
-        }
-      }
-
-      // Pass 4: Offline Linguistic Deduction & Morphological Pass
-      if (repaired && (lang === "kat" || lang === "ka" || (repaired.match(/[\u10A0-\u10FF]/g) || []).length > 8)) {
-        repaired = offlineLinguisticPass(repaired, lang);
-        if (!contextualApplied && best.engine.indexOf("offline") !== -1) {
-          best.engine += "+offline-deduction";
-        }
-      }
-
-      page.text = repaired;
+      // The raw recognition is the source of truth; editorial changes require review.
+      page.text = window.EngbotCore.cleanVerbatim(best.text === '[[NO_TEXT]]' ? '' : best.text);
+      page.rawText = page.text;
       page.engine = best.engine;
       page.quality = Math.round((best.score || 0) * 100);
-      page.warning = qualityWarning(page, best.score);
+      page.warning = page.text.includes("[[UNCLEAR]]") ? "Unclear text: inspect the image and correct before saving." : qualityWarning(page, best.score);
       if (best.score < 0.55) {
         page.status = "unreadable";
         page.warning = page.warning || "Unreadable OCR (<55% word validity) — photo needs rescan.";
@@ -1742,7 +1669,7 @@ ${text.slice(0, 10000)}`;
     const bits = [];
     if (lang === "kat") bits.push("The page is Georgian (Mkhedruli). Distinguish visually close letters (ვ/პ/კ, შ/წ/ჭ, რ/უ/ყ, ქ/ფ). Never transliterate into Latin.");
     if (lang === "eng") bits.push("The page is English prose. Preserve compound hyphenated words (e.g. well-known).");
-    if ((page._sharpness || 999) < 140) bits.push("The photo has softness or blur: deduce faint and degraded character stems from surrounding sentence context, grammar and vocabulary. Transcribe completely without dropping words.");
+    if ((page._sharpness || 999) < 140) bits.push("The photo is blurred. Use only visible evidence; mark unreadable spans [[UNCLEAR]] for review.");
     if ((page._exposure || 128) < 70) bits.push("The photo is under-exposed/dark.");
     if ((page._exposure || 128) > 215) bits.push("The photo is over-exposed with glare.");
     return bits.join(" ");
@@ -1798,7 +1725,7 @@ ${text.slice(0, 10000)}`;
   }
 
   // Deterministic repair of the OCR mistakes each language actually makes.
-  function repairText(text, lang) {
+  function legacyRepairText(text, lang) {
     let t = text || "";
     if (!t) return t;
 
@@ -1982,6 +1909,8 @@ ${text.slice(0, 10000)}`;
   }
 
   // ── Text post-processing ───────────────────────────────────────────────────
+  function repairText(text, lang) { return window.EngbotCore.cleanVerbatim(text); }
+
   function cleanPageText(raw, lang) {
     let t = (raw || "").replace(/\r/g, "");
     if (!t.trim()) return "";
@@ -2093,12 +2022,7 @@ ${text.slice(0, 10000)}`;
       // Georgian pages go through the same in-house rule engine (v1.45.0
       // auto-fixes + QA rules) that the translation engine uses, so scanned
       // Georgian is cleaned up the same way translated Georgian is.
-      const cleanup = (t) => {
-        let out = isKa && typeof window.applyKaRuleEngine === "function" ? window.applyKaRuleEngine(t) : t;
-        // Trained OCR pack (Training Lab) runs last; no-op when no pack is active.
-        if (window.EngbotPack) out = window.EngbotPack.apply(out, isKa ? "ka" : "en", "transcribe");
-        return out;
-      };
+      const cleanup = t => window.EngbotCore.cleanVerbatim(t);
       // Photographed cover page → the book's cover image on every shelf.
       const frontImages = {};
       for (let i = 0; i < Math.min(2, pages.length); i++) {

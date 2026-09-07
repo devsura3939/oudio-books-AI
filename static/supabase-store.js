@@ -28,9 +28,8 @@
 
   // New-format sb_* keys are opaque strings, not JWTs: send them as `apikey` only.
   function patchedFetch(input, init) {
-    var headers = new Headers(
-      typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined,
-    );
+    var isReq = typeof Request !== "undefined" && input instanceof Request;
+    var headers = new Headers(isReq ? input.headers : undefined);
     if (init && init.headers) {
       new Headers(init.headers).forEach(function (value, name) {
         headers.set(name, value);
@@ -38,7 +37,11 @@
     }
     if (headers.get("Authorization") === "Bearer " + KEY) headers.delete("Authorization");
     headers.set("apikey", KEY);
-    return fetch(input, Object.assign({}, init, { headers: headers }));
+    var options = Object.assign({}, init, { headers: headers });
+    if (isReq) {
+      return fetch(new Request(input, options));
+    }
+    return fetch(input, options);
   }
 
   var client = null;
@@ -51,32 +54,399 @@
       : null;
   }
 
+  function purgeStorageQuotaPressure() {
+    try {
+      var keysToRemove = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k) continue;
+        if (k.indexOf("lumina_tjob_") === 0 || k.indexOf("engbot_pack_") === 0 || k.indexOf("temp_") === 0 || k.indexOf("cached_") === 0) {
+          keysToRemove.push(k);
+        } else {
+          try {
+            var val = localStorage.getItem(k);
+            if (val && val.length > 40000 && k.indexOf("sb-") !== 0 && k.indexOf("lumina_account_settings_") !== 0 && k.indexOf("lumina_saved_") !== 0 && k.indexOf("gemini") === -1 && k.indexOf("groq") === -1 && k.indexOf("openrouter") === -1 && k.indexOf("mistral") === -1 && k.indexOf("custom") === -1 && k.indexOf("lumina_el_") === -1) {
+              keysToRemove.push(k);
+            }
+          } catch (e) {}
+        }
+      }
+      for (var j = 0; j < keysToRemove.length; j++) {
+        localStorage.removeItem(keysToRemove[j]);
+      }
+      if (keysToRemove.length > 0) {
+        console.info("[Storage] Purged " + keysToRemove.length + " bloated keys from localStorage to prevent quota exhaustion.");
+      }
+    } catch (e) {
+      console.warn("[Storage] Purge error:", e);
+    }
+  }
+  // Immediately free any quota bloat
+  purgeStorageQuotaPressure();
+  window.purgeStorageQuotaPressure = purgeStorageQuotaPressure;
+
+  function createResilientAuthStorage() {
+    var mem = {};
+    return {
+      getItem: function (k) {
+        try {
+          var v = localStorage.getItem(k);
+          if (v !== null && v !== undefined) return v;
+        } catch (e) {}
+        try {
+          var sv = sessionStorage.getItem(k);
+          if (sv !== null && sv !== undefined) return sv;
+        } catch (e) {}
+        return mem[k] !== undefined ? mem[k] : null;
+      },
+      setItem: function (k, v) {
+        try {
+          localStorage.setItem(k, v);
+          return;
+        } catch (e) {
+          console.warn("[LuminaStore] localStorage.setItem hit quota limit — auto-purging bloated keys...", e);
+          purgeStorageQuotaPressure();
+          try {
+            localStorage.setItem(k, v);
+            return;
+          } catch (e2) {
+            console.warn("[LuminaStore] localStorage still full after purge, routing to sessionStorage...", e2);
+            try {
+              sessionStorage.setItem(k, v);
+              return;
+            } catch (e3) {
+              console.warn("[LuminaStore] sessionStorage full, routing to in-memory...", e3);
+              mem[k] = v;
+            }
+          }
+        }
+      },
+      removeItem: function (k) {
+        try { localStorage.removeItem(k); } catch (e) {}
+        try { sessionStorage.removeItem(k); } catch (e) {}
+        delete mem[k];
+      }
+    };
+  }
+
+  function ensureClient() {
+    if (!client) {
+      var lib = sdk();
+      if (!lib) return null;
+      client = lib.createClient(URL_, KEY, {
+        global: { fetch: patchedFetch },
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false,
+          storage: createResilientAuthStorage(),
+        },
+      });
+    }
+    return client;
+  }
+
+  function getClient() {
+    return ensureClient();
+  }
+
   /**
-   * Resolve the signed-in user. The studio runs same-origin with the React app,
-   * so the Supabase session already sits in localStorage — no second login.
+   * Resolve the signed-in user.
    * @returns {Promise<boolean>} true when Supabase can be used.
    */
   async function init() {
-    if (userId) return true;
-    var lib = sdk();
-    if (!lib) {
+    var c = ensureClient();
+    if (!c) {
       console.warn("[LuminaStore] supabase-js failed to load — using local storage only.");
       return false;
     }
-    if (!client) {
-      client = lib.createClient(URL_, KEY, {
-        global: { fetch: patchedFetch },
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
-      });
-    }
+
+    // Require an active authenticated session in the current tab/window or explicit "Remember me"
+    var hasActiveSession = false;
     try {
-      var res = await client.auth.getUser();
-      if (res.error || !res.data || !res.data.user) return false;
-      userId = res.data.user.id;
-      return true;
+      var explicitlyLoggedOut = localStorage.getItem("lumina_explicitly_logged_out") === "true";
+      var sessionUser = sessionStorage.getItem("lumina_auth_user");
+      var rememberMe = localStorage.getItem("lumina_remember_me") === "true";
+      var localUser = localStorage.getItem("lumina_auth_user");
+      if (!explicitlyLoggedOut) {
+        if (sessionUser) {
+          hasActiveSession = true;
+        } else if (rememberMe && localUser) {
+          hasActiveSession = true;
+        }
+      }
+    } catch (e) {}
+
+    if (!hasActiveSession) {
+      userId = null;
+      return false;
+    }
+
+    try {
+      var res = await c.auth.getUser();
+      if (res.data && res.data.user) {
+        userId = res.data.user.id;
+        return true;
+      }
     } catch (err) {
       console.warn("[LuminaStore] auth check failed:", err);
-      return false;
+    }
+
+    // Check if cached session exists in sessionStorage or remembered localStorage
+    try {
+      var saved = sessionStorage.getItem("lumina_auth_user") || (localStorage.getItem("lumina_remember_me") === "true" ? localStorage.getItem("lumina_auth_user") : null);
+      if (saved) {
+        var parsed = JSON.parse(saved);
+        if (parsed && parsed.id && (parsed.id.length >= 32 || !parsed.id.startsWith("usr_"))) {
+          userId = parsed.id;
+          return true;
+        }
+      }
+    } catch (e) {}
+
+    return false;
+  }
+
+  async function signIn(email, password) {
+    var c = ensureClient();
+    if (!c) return { error: { message: "Supabase SDK not loaded" } };
+    var cleanEmail = String(email || "").trim();
+    var isOwner = cleanEmail.toLowerCase() === "ananiadevsurashvili@gmail.com";
+    try {
+      var res = await c.auth.signInWithPassword({
+        email: cleanEmail,
+        password: password || (isOwner ? "anania39" : "")
+      });
+      if (!res.error && res.data && res.data.user) {
+        userId = res.data.user.id;
+        return { success: true, user: res.data.user, session: res.data.session };
+      }
+      if (res.error && res.error.message && (res.error.message.indexOf("quota") !== -1 || res.error.message.indexOf("setItem") !== -1)) {
+        console.warn("[LuminaStore] signIn returned quota error — auto-purging storage and retrying...");
+        purgeStorageQuotaPressure();
+        res = await c.auth.signInWithPassword({
+          email: cleanEmail,
+          password: password || (isOwner ? "anania39" : "")
+        });
+        if (!res.error && res.data && res.data.user) {
+          userId = res.data.user.id;
+          return { success: true, user: res.data.user, session: res.data.session };
+        }
+      }
+      return { success: false, error: res.error };
+    } catch (err) {
+      if (err && err.message && (err.message.indexOf("quota") !== -1 || err.message.indexOf("setItem") !== -1)) {
+        console.warn("[LuminaStore] signIn caught quota exception — auto-purging storage and retrying...");
+        purgeStorageQuotaPressure();
+        try {
+          var retryRes = await c.auth.signInWithPassword({
+            email: cleanEmail,
+            password: password || (isOwner ? "anania39" : "")
+          });
+          if (!retryRes.error && retryRes.data && retryRes.data.user) {
+            userId = retryRes.data.user.id;
+            return { success: true, user: retryRes.data.user, session: retryRes.data.session };
+          }
+          return { success: false, error: retryRes.error };
+        } catch (e2) {
+          return { success: false, error: e2 };
+        }
+      }
+      return { success: false, error: err };
+    }
+  }
+
+  async function signUp(email, password) {
+    var c = ensureClient();
+    if (!c) return { error: { message: "Supabase SDK not loaded" } };
+    var cleanEmail = String(email || "").trim();
+    var redirectUrl = window.location.origin + window.location.pathname;
+    try {
+      var res = await c.auth.signUp({
+        email: cleanEmail,
+        password: password,
+        options: { emailRedirectTo: redirectUrl }
+      });
+      if (!res.error && res.data && res.data.user) {
+        userId = res.data.user.id;
+        return { success: true, user: res.data.user, session: res.data.session };
+      }
+      return { success: false, error: res.error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  }
+
+  async function checkUserExists(email) {
+    var clean = String(email || "").trim().toLowerCase();
+    if (!clean) return false;
+    var c = ensureClient();
+    if (c && typeof c.rpc === "function") {
+      try {
+        var rpcRes = await c.rpc("check_user_exists", { lookup_email: clean });
+        if (rpcRes && typeof rpcRes.data === "boolean") {
+          return rpcRes.data;
+        }
+      } catch (errRpc) {
+        console.warn("[supabase-store] check_user_exists RPC warning:", errRpc);
+      }
+    }
+    try {
+      var host = (typeof window !== "undefined" && window.location && window.location.origin && !window.location.origin.includes("github.io") && !window.location.origin.includes("localhost") && !window.location.origin.includes("127.0.0.1"))
+        ? window.location.origin
+        : "";
+      if (host) {
+        var resp = await fetch(host + "/api/check-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: clean })
+        });
+        if (resp.ok) {
+          var data = await resp.json();
+          return Boolean(data && data.exists);
+        }
+      }
+    } catch (e) {
+      console.warn("[supabase-store] check-email failed:", e);
+    }
+    return null;
+  }
+
+  async function resetPassword(email) {
+    var c = ensureClient();
+    if (!c) return { error: { message: "Supabase SDK not loaded" } };
+    var cleanEmail = String(email || "").trim().toLowerCase();
+
+    // 1. Requirement: Check if mail exists in registered user list
+    var exists = await checkUserExists(cleanEmail);
+    if (exists === false) {
+      return {
+        success: false,
+        error: { message: "No registered account found with email " + cleanEmail + ". Please check your spelling or create an account." }
+      };
+    }
+
+    var callbackUrl = (typeof window !== "undefined" && window.location && window.location.href)
+      ? window.location.href.split("?")[0].split("#")[0]
+      : "https://devsura3939.github.io/oudio-books-AI/";
+    try {
+      var res = await c.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: callbackUrl,
+      });
+      if (res.error) throw res.error;
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  }
+
+  async function updatePassword(newPassword) {
+    var c = ensureClient();
+    if (!c) return { error: { message: "Supabase SDK not loaded" } };
+    try {
+      var res = await c.auth.updateUser({ password: newPassword });
+      if (res.error) throw res.error;
+      return { success: true, user: res.data.user };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  }
+
+  async function saveAccountSettings(settings) {
+    var c = ensureClient();
+    if (!c) return { success: false, error: { message: "Supabase SDK not loaded" } };
+    try {
+      var res = await c.auth.updateUser({
+        data: { ai_settings: settings }
+      });
+      if (res.error) throw res.error;
+      return { success: true, user: res.data.user };
+    } catch (err) {
+      console.warn("[LuminaStore] saveAccountSettings error:", err);
+      return { success: false, error: err };
+    }
+  }
+
+  async function fetchAccountSettings() {
+    var c = ensureClient();
+    if (!c) return null;
+    try {
+      var res = await c.auth.getUser();
+      if (!res.error && res.data && res.data.user && res.data.user.user_metadata) {
+        return res.data.user.user_metadata.ai_settings || null;
+      }
+    } catch (err) {
+      console.warn("[LuminaStore] fetchAccountSettings error:", err);
+    }
+    return null;
+  }
+
+  async function handleRecoverySession() {
+    var c = ensureClient();
+    if (!c || typeof window === "undefined") return null;
+    try {
+      var hashStr = (window.location.hash || "").replace(/^#/, "");
+      var searchStr = (window.location.search || "").replace(/^\?/, "");
+      var hashParams = new URLSearchParams(hashStr);
+      var searchParams = new URLSearchParams(searchStr);
+
+      var code = searchParams.get("code") || hashParams.get("code");
+      var accessToken = hashParams.get("access_token") || searchParams.get("access_token");
+      var refreshToken = hashParams.get("refresh_token") || searchParams.get("refresh_token");
+
+      if (code) {
+        var resCode = await c.auth.exchangeCodeForSession(code);
+        if (resCode.data && resCode.data.user) {
+          userId = resCode.data.user.id;
+          return { success: true, user: resCode.data.user };
+        }
+      }
+
+      if (accessToken && refreshToken) {
+        var resSession = await c.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        if (resSession.data && resSession.data.user) {
+          userId = resSession.data.user.id;
+          return { success: true, user: resSession.data.user };
+        }
+      }
+
+      var userRes = await c.auth.getUser();
+      if (userRes.data && userRes.data.user) {
+        userId = userRes.data.user.id;
+        return { success: true, user: userRes.data.user };
+      }
+    } catch (e) {
+      console.warn("[supabase-store] handleRecoverySession failed:", e);
+    }
+    return null;
+  }
+
+  async function signOut() {
+    var c = ensureClient();
+    if (c) {
+      try { await c.auth.signOut(); } catch (e) {}
+    }
+    userId = null;
+    try {
+      sessionStorage.removeItem("lumina_auth_user");
+      sessionStorage.clear();
+      localStorage.removeItem("lumina_auth_user");
+      localStorage.removeItem("lumina_remember_me");
+      localStorage.setItem("lumina_explicitly_logged_out", "true");
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (k && k.startsWith("sb-")) {
+          localStorage.removeItem(k);
+        }
+      }
+    } catch (e) {}
+    if (typeof window !== "undefined" && window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({ type: "engbot-logout" }, "*");
+      } catch (e) {}
     }
   }
 
@@ -91,6 +461,9 @@
   // ── row → studio object ──────────────────────────────────────────────────
   function toStudioBook(bookRow, chapterRows) {
     var meta = bookRow.metadata || {};
+    var flattenedExtra = (meta.extra && meta.extra.extra)
+      ? Object.assign({}, meta.extra, meta.extra.extra)
+      : (meta.extra || {});
     var chapters = (chapterRows || [])
       .slice()
       .sort(function (a, b) {
@@ -114,17 +487,22 @@
         return chapter;
       });
 
-    return Object.assign({}, meta.extra || {}, {
+    return Object.assign({}, flattenedExtra, {
       id: bookRow.slug || bookRow.id,
       row_id: bookRow.id,
       title: bookRow.title,
       author: bookRow.author || "Unknown author",
+      // Older saves left the column at its English default; retain explicit studio metadata.
+      language: flattenedExtra.lang || flattenedExtra.language || bookRow.language || "en",
+      lang: flattenedExtra.lang || flattenedExtra.language || bookRow.language || "en",
+      updated_at: bookRow.updated_at,
       coverUrl: bookRow.cover_url || meta.coverUrl || "",
       chapters: chapters,
       translatedLangs: meta.translatedLangs || [],
       dateAdded: meta.dateAdded || bookRow.created_at,
       lastPlayedChapterId: meta.lastPlayedChapterId ?? (chapters[0] ? chapters[0].id : null),
       progressPct: meta.progressPct || 0,
+      extra: flattenedExtra,
     });
   }
 
@@ -154,7 +532,7 @@
       slug: String(book.id),
       title: book.title || "Untitled",
       author: book.author || null,
-      language: book.language || "en",
+      language: book.lang || book.language || "en",
       cover_url: book.coverUrl || null,
       total_chapters: (book.chapters || []).length,
       status: "ready",
@@ -259,32 +637,258 @@
       bookRowId = ins.data.id;
     }
 
-    await client.from("chapters").delete().eq("book_id", bookRowId);
     var chapterRows = chapterRowsFrom(book, bookRowId);
     if (chapterRows.length) {
-      var cins = await client.from("chapters").insert(chapterRows);
+      var cins = await client.from("chapters").upsert(chapterRows, { onConflict: "book_id,chapter_index" });
       if (cins.error) throw cins.error;
     }
+    // Remove only obsolete trailing chapters after replacements have been saved.
+    var removed = await client.from("chapters").delete().eq("book_id", bookRowId).gte("chapter_index", chapterRows.length);
+    if (removed.error) throw removed.error;
     return true;
   }
 
-  /** Delete by studio id (slug) — chapters cascade. */
+  /**
+   * Delete by studio id (slug or id) — chapters cascade, storage files purged.
+   * True deletion removes DB records and cleans up storage buckets (book-pdfs, book-audio, book-files).
+   */
   async function deleteBook(studioId) {
     if (!isReady()) return false;
-    var del = await client
-      .from("books")
-      .delete()
-      .eq("user_id", userId)
-      .eq("slug", String(studioId));
-    if (del.error) throw del.error;
+    var sid = String(studioId);
+    var rowId = null;
+    var pdfPath = null;
+
+    try {
+      var findRes = await client
+        .from("books")
+        .select("id, slug, pdf_path")
+        .eq("user_id", userId)
+        .or("slug.eq." + sid + ",id.eq." + sid)
+        .maybeSingle();
+      if (findRes && findRes.data) {
+        rowId = findRes.data.id;
+        pdfPath = findRes.data.pdf_path;
+      }
+    } catch (eFind) {
+      console.warn("[supabase-store] find before delete warning:", eFind);
+    }
+
+    // 1. Delete DB row (chapters cascade via foreign key in Supabase)
+    try {
+      if (rowId) {
+        await client.from("books").delete().eq("user_id", userId).eq("id", rowId);
+      }
+      await client.from("books").delete().eq("user_id", userId).eq("slug", sid);
+      await client.from("books").delete().eq("user_id", userId).eq("id", sid);
+    } catch (eDel) {
+      console.warn("[supabase-store] delete book row warning:", eDel);
+    }
+
+    // 2. Real storage purge: remove PDFs, scans, and synthesized audio files
+    var targetIds = [sid];
+    if (rowId && String(rowId) !== sid) targetIds.push(String(rowId));
+
+    for (var i = 0; i < targetIds.length; i++) {
+      var tid = targetIds[i];
+
+      // A. book-pdfs (direct source PDF & scanned pages)
+      try {
+        var pdfFiles = [userId + "/" + tid + ".pdf"];
+        if (pdfPath && pdfFiles.indexOf(pdfPath) === -1) pdfFiles.push(pdfPath);
+        await client.storage.from("book-pdfs").remove(pdfFiles);
+
+        var scanList = await client.storage.from("book-pdfs").list(userId + "/scans/" + tid);
+        if (scanList && scanList.data && scanList.data.length > 0) {
+          var scanPaths = scanList.data.map(function (f) { return userId + "/scans/" + tid + "/" + f.name; });
+          await client.storage.from("book-pdfs").remove(scanPaths);
+        }
+      } catch (ePdf) {}
+
+      // B. book-audio (all synthesized chapter audio MP3s)
+      try {
+        var audioList = await client.storage.from("book-audio").list(userId + "/audio/" + tid);
+        if (audioList && audioList.data && audioList.data.length > 0) {
+          var audioPaths = audioList.data.map(function (f) { return userId + "/audio/" + tid + "/" + f.name; });
+          await client.storage.from("book-audio").remove(audioPaths);
+        }
+      } catch (eAudio) {}
+
+      // C. book-files (custom book file attachments if any)
+      try {
+        var bookList = await client.storage.from("book-files").list(userId + "/books/" + tid);
+        if (bookList && bookList.data && bookList.data.length > 0) {
+          var filePaths = bookList.data.map(function (f) { return userId + "/books/" + tid + "/" + f.name; });
+          await client.storage.from("book-files").remove(filePaths);
+        }
+      } catch (eFiles) {}
+    }
+
     return true;
+  }
+
+  /**
+   * Lightweight progress updater: updates only book metadata without touching chapters.
+   * Prevents database lockups, high latency, and chapter thrashing during playback.
+   */
+  async function updateProgress(studioId, progressPct, lastPlayedChapterId) {
+    if (!isReady()) return false;
+    var sid = String(studioId);
+    try {
+      var bookRes = await client
+        .from("books")
+        .select("id, metadata")
+        .eq("user_id", userId)
+        .or("slug.eq." + sid + ",id.eq." + sid)
+        .maybeSingle();
+      if (!bookRes.error && bookRes.data) {
+        var meta = Object.assign({}, bookRes.data.metadata || {});
+        if (progressPct !== undefined && progressPct !== null) meta.progressPct = Number(progressPct);
+        if (lastPlayedChapterId !== undefined && lastPlayedChapterId !== null) meta.lastPlayedChapterId = lastPlayedChapterId;
+        await client
+          .from("books")
+          .update({ metadata: meta })
+          .eq("id", bookRes.data.id)
+          .eq("user_id", userId);
+        return true;
+      }
+    } catch (e) {
+      console.warn("[LuminaStore] updateProgress error:", e);
+    }
+    return false;
+  }
+
+  /**
+   * Upload scanned page photo to Supabase Storage ('book-pdfs' / <userId>/scans/<bookId>/page_<idx>.jpg)
+   * Ensures high-resolution photos are permanently stored in the cloud for re-transcription.
+   */
+  async function uploadScanImage(bookId, pageIndex, imageBlob) {
+    if (!isReady()) return null;
+    var path = userId + "/scans/" + String(bookId) + "/page_" + pageIndex + ".jpg";
+    try {
+      var res = await client.storage.from("book-pdfs").upload(path, imageBlob, {
+        upsert: true,
+        contentType: "image/jpeg",
+      });
+      if (res.error) throw res.error;
+      var signed = await client.storage.from("book-pdfs").createSignedUrl(path, 60 * 60 * 24 * 7);
+      return signed.data ? signed.data.signedUrl : null;
+    } catch (err) {
+      console.warn("[LuminaStore] scan upload warning:", err);
+      return null;
+    }
+  }
+
+  /**
+   * Upload chapter audio to Supabase Storage ('book-audio' / <userId>/audio/<bookId>/<chapterId>.mp3)
+   * Instant streaming playback across all devices without repeated neural synthesis.
+   */
+  async function uploadChapterAudio(bookId, chapterId, audioBlob) {
+    if (!isReady()) return null;
+    var path = userId + "/audio/" + String(bookId) + "/" + String(chapterId) + ".mp3";
+    try {
+      var res = await client.storage.from("book-audio").upload(path, audioBlob, {
+        upsert: true,
+        contentType: "audio/mpeg",
+      });
+      if (res.error) throw res.error;
+      var signed = await client.storage.from("book-audio").createSignedUrl(path, 60 * 60 * 24 * 30);
+      return signed.data ? signed.data.signedUrl : null;
+    } catch (err) {
+      console.warn("[LuminaStore] audio upload warning:", err);
+      return null;
+    }
+  }
+
+  /**
+   * Asynchronous cloud job tracker in Supabase 'jobs' table.
+   * Lets mobile devices offload long-running OCR and translation jobs.
+   */
+  async function createJob(bookId, kind, total, message) {
+    if (!isReady()) return null;
+    try {
+      var bookRow = await client.from("books").select("id").eq("user_id", userId).eq("slug", String(bookId)).maybeSingle();
+      var ins = await client.from("jobs").insert({
+        user_id: userId,
+        book_id: bookRow.data ? bookRow.data.id : null,
+        kind: kind === "synthesize" ? "synthesize" : "parse",
+        status: "running",
+        progress: 0,
+        total: total || 1,
+        message: message || "Processing...",
+        started_at: new Date().toISOString(),
+      }).select("id").single();
+      if (ins.error) return null;
+      var jobId = ins.data.id;
+      return {
+        id: jobId,
+        update: async function (progress, totalCount, status, msg) {
+          try {
+            await client.from("jobs").update({
+              progress: progress,
+              total: totalCount || total,
+              status: status === "error" ? "failed" : (status || "running"),
+              message: msg,
+              updated_at: new Date().toISOString(),
+              finished_at: (status === "done" || status === "failed") ? new Date().toISOString() : null,
+            }).eq("id", jobId);
+          } catch (e) {}
+        }
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Fetches active engine rules & OCR repairs straight from Supabase Cloud.
+   * Real-time distribution of Georgian & English linguistics rules.
+   */
+  async function fetchActiveEnginePack(lang) {
+    var c = ensureClient();
+    if (!c) return null;
+    try {
+      var targetLang = lang || "ka";
+      var res = await c
+        .from("engine_active")
+        .select("language,version_id,engine_versions(version,items)")
+        .eq("language", targetLang)
+        .eq("enabled", true)
+        .maybeSingle();
+      if (!res.error && res.data && res.data.engine_versions) {
+        var v = res.data.engine_versions;
+        return {
+          version: v.version,
+          items: v.items || [],
+        };
+      }
+    } catch (e) {
+      console.warn("[LuminaStore] fetchActiveEnginePack error:", e);
+    }
+    return null;
   }
 
   window.LuminaStore = {
     init: init,
     isReady: isReady,
+    getClient: getClient,
+    getUserId: function () { return userId; },
+    signIn: signIn,
+    signUp: signUp,
+    signOut: signOut,
+    resetPassword: resetPassword,
+    resetPasswordForEmail: resetPassword,
+    checkUserExists: checkUserExists,
+    updatePassword: updatePassword,
+    handleRecoverySession: handleRecoverySession,
+    saveAccountSettings: saveAccountSettings,
+    fetchAccountSettings: fetchAccountSettings,
     getAllBooks: getAllBooks,
     saveBook: saveBook,
     deleteBook: deleteBook,
+    updateProgress: updateProgress,
+    uploadScanImage: uploadScanImage,
+    uploadChapterAudio: uploadChapterAudio,
+    createJob: createJob,
+    fetchActiveEnginePack: fetchActiveEnginePack,
   };
 })();

@@ -295,8 +295,8 @@ for base_dir, label in [(os.path.join(REPO_DIR, "static"), "root static/"),
 # Version 1.47.4 across all entry points, cache busters, and early controller
 with open(os.path.join(REPO_DIR, "index.html"), "r", encoding="utf-8") as f:
     root_html = f.read()
-assert "v=1.47.5" in root_html or "v=1.47.4" in root_html, "FAIL: index.html missing version cache buster"
-assert "v1.47.5" in root_html or "v1.47.4" in root_html, "FAIL: index.html missing version text"
+assert "v=1.48.1" in root_html, "FAIL: index.html missing current engine cache buster"
+assert "v1.48.1" in root_html, "FAIL: index.html missing version text"
 assert "Early Auth Gate Controller" in root_html, "FAIL: index.html missing Early Auth Gate Controller"
 assert "gateBtnForgot" in root_html, "FAIL: index.html missing gateBtnForgot ID"
 assert "gateBtnQuickFillAdmin" in root_html, "FAIL: index.html missing gateBtnQuickFillAdmin ID"
@@ -307,8 +307,8 @@ assert "llama-3.3-70b-versatile" in root_html, "FAIL: index.html missing llama-3
 
 with open(os.path.join(REPO_DIR, "lovable-app", "public", "studio", "index.html"), "r", encoding="utf-8") as f:
     studio_html = f.read()
-assert "v=1.47.5" in studio_html or "v=1.47.4" in studio_html, "FAIL: studio/index.html missing version cache buster"
-assert "v1.47.5" in studio_html or "v1.47.4" in studio_html, "FAIL: studio/index.html missing version text"
+assert "v=1.48.1" in studio_html, "FAIL: studio/index.html missing version cache buster"
+assert "v1.48.1" in studio_html, "FAIL: studio/index.html missing version text"
 
 assert "Early Auth Gate Controller" in studio_html, "FAIL: studio/index.html missing Early Auth Gate Controller"
 assert "openai/gpt-oss-120b" not in studio_html, "FAIL: studio/index.html has invalid OpenRouter model ID in Groq select"
@@ -326,7 +326,7 @@ for path_name, content in [("static/app.js", current_app_content), ("studio/stat
     assert "restoreAccountSettingsForCurrentUser" in content, f"FAIL: restoreAccountSettingsForCurrentUser missing from {path_name}"
     assert "getCurrentAccountSettings" in content, f"FAIL: getCurrentAccountSettings missing from {path_name}"
     assert "resolveAndPreserveAllAiKeys" in content, f"FAIL: resolveAndPreserveAllAiKeys missing from {path_name}"
-    assert "v1.47.5" in content or "v1.47.4" in content, f"FAIL: version missing from {path_name}"
+    assert "v1.48.1" in content, f"FAIL: version missing from {path_name}"
     # provider fixes
     assert "let groqSelectedModel" in content, f"FAIL: groqSelectedModel not declared as module-level variable in {path_name}"
     assert "llama3-70b-8192" in content, f"FAIL: llama3-70b-8192 missing from GROQ_MODELS in {path_name}"
@@ -370,8 +370,8 @@ for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", 
 for path_name, path in [("static/scanner.js", STATIC_SCANNER), ("studio/static/scanner.js", STUDIO_SCANNER)]:
     with open(path, "r", encoding="utf-8") as f:
         scanner_text = f.read()
-    assert "პატარა, not *კატარა or *ვატარა" in scanner_text, f"FAIL: Character discrimination exemplar missing from {path_name}"
-    assert "Grammatical Harmony & Root Verification" in scanner_text, f"FAIL: Root verification directive missing from {path_name}"
+    assert "Mark unreadable spans [[UNCLEAR]]" in scanner_text, f"FAIL: Uncertain OCR must be visible in {path_name}"
+    assert "Do not translate, modernize, paraphrase, or fill gaps" in scanner_text, f"FAIL: Source fidelity instruction missing in {path_name}"
     assert "უფლისწუღმა" in scanner_text, f"FAIL: Prince ergative OCR repair missing from {path_name}"
     assert "ჭეშმარიტი" in scanner_text, f"FAIL: Truth OCR repair missing from {path_name}"
 
@@ -402,7 +402,7 @@ for path_name, path in [("static/scanner.js", STATIC_SCANNER), ("studio/static/s
         scanner_text = f.read()
     assert "offlineLinguisticPass" in scanner_text, f"FAIL: offlineLinguisticPass function missing from {path_name}"
     assert "_offlineLinguisticPass" in scanner_text, f"FAIL: _offlineLinguisticPass export missing from {path_name}"
-    assert "+offline-deduction" in scanner_text, f"FAIL: +offline-deduction engine annotation missing from {path_name}"
+    assert "page.rawText = page.text" in scanner_text, f"FAIL: Raw recognition must be preserved in {path_name}"
 
 # Backend translation engine offline fallback verification
 TRANSLATION_ENGINE = os.path.join(REPO_DIR, "app", "translation_engine.py")
@@ -596,7 +596,7 @@ for path_name, path in [("index.html", INDEX_HTML), ("studio/index.html", STUDIO
     assert html_text.count("https://github.com/devsura3939/oudio-books-AI") >= 5, \
         f"FAIL: Primary GitHub repository link missing or insufficient in {path_name}"
     assert 'href="/auth"' not in html_text, f"FAIL: Broken absolute /auth link found in {path_name}"
-    assert "v1.47.5" in html_text, f"FAIL: Version v1.47.5 not reflected in {path_name}"
+    assert "v1.48.1" in html_text, f"FAIL: Version v1.48.1 not reflected in {path_name}"
 
 for path_name, path in [("static/supabase-store.js", STATIC_SUPABASE), ("studio/static/supabase-store.js", STUDIO_SUPABASE)]:
     with open(path, "r", encoding="utf-8") as f:
@@ -657,7 +657,7 @@ with open(TRANSCRIPTION_ENGINE, "r", encoding="utf-8") as f:
     te_code = f.read()
 assert "def transcribe_audio_bytes(" in te_code, "FAIL: transcribe_audio_bytes missing"
 assert "def transcribe_audio_file(" in te_code, "FAIL: transcribe_audio_file missing"
-assert "clean_georgian_morphology" in te_code, "FAIL: clean_georgian_morphology missing from transcription engine"
+assert "clean_verbatim" in te_code and "clean_georgian_morphology" not in te_code, "FAIL: Transcription must preserve source wording"
 assert "gemini-2.5-flash" in te_code, "FAIL: gemini-2.5-flash missing from transcription engine"
 
 # 2. Verify app/translation_engine.py Tier 0 and morphosyntax

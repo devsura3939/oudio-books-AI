@@ -1,5 +1,6 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "engbot",
+  "version": "1.48.1",
   "private": true,
   "sideEffects": false,
   "type": "module",

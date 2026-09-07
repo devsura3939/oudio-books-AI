@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -22,7 +22,10 @@ const NAV: NavItem[] = [
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAdmin } = useIsAdmin();
+  const { isAdmin, userEmail } = useIsAdmin();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isStudio = pathname.startsWith("/studio") || pathname.startsWith("/scan");
+
   // Admin-only Training Lab entry (owner account).
   const nav = isAdmin ? [...NAV, { to: "/training", icon: "model_training", label: "Training" }] : NAV;
 
@@ -34,6 +37,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
+    <>
+      {/* Stable siblings keep the studio mounted when the surrounding navigation changes. */}
+      <StudioHost />
+      <TranslationProgressPill />
+      {!isStudio && (
     <div className="relative min-h-screen overflow-x-hidden bg-background text-on-surface">
       <div className="pointer-events-none fixed top-1/2 left-1/2 -z-10 h-[150vh] w-[150vw] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,rgba(0,240,255,0.08)_0%,rgba(119,1,208,0.05)_40%,rgba(16,19,26,0)_70%)]" />
 
@@ -42,7 +50,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link to="/dashboard" className="text-2xl font-bold text-primary-container">
           EngBot
         </Link>
-        <p className="mt-1 mb-8 text-sm text-on-surface-variant">Premium AI Listening</p>
+        <p className="mt-1 mb-6 text-sm text-on-surface-variant">Premium AI Listening</p>
+
+        {isAdmin && (
+          <div className="mb-6 rounded-xl border border-primary-container/30 bg-primary-container/10 p-3 text-[11px] font-mono text-primary-fixed shadow-[0_0_15px_rgba(0,240,255,0.1)]">
+            <div className="flex items-center justify-between font-bold">
+              <span>👑 Owner Admin</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary-container/20 text-primary-fixed">PRO</span>
+            </div>
+            <p className="mt-1 truncate text-[10px] text-on-surface-variant">{userEmail || "ananiadevsurashvili@gmail.com"}</p>
+            <div className="mt-2 border-t border-white/10 pt-1.5 space-y-0.5 text-[10px]">
+              <p><span className="text-on-surface-variant">App:</span> <span className="text-white font-bold">v1.47.5</span></p>
+              <p><span className="text-on-surface-variant">Engine:</span> <span className="text-white font-bold">v1.47.5 (Lumina-PermanentDelete+FastLib+PrimaryGitHub)</span></p>
+            </div>
+          </div>
+        )}
 
         <nav className="flex-1 space-y-2">
           {nav.map((item) => (
@@ -70,10 +92,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
 
         <div className="space-y-2 border-t border-white/10 pt-4">
+          <a
+            href="https://github.com/devsura3939/oudio-books-AI"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-on-surface-variant transition-all hover:bg-white/10 hover:text-primary-fixed-dim text-sm"
+          >
+            <span className="material-symbols-outlined">code</span>
+            <span>GitHub Repo</span>
+          </a>
           <button
             type="button"
             onClick={signOut}
-            className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-on-surface-variant transition-all hover:bg-white/10 hover:text-primary-fixed-dim"
+            className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-on-surface-variant transition-all hover:bg-white/10 hover:text-primary-fixed-dim text-sm"
           >
             <span className="material-symbols-outlined">logout</span>
             <span>Sign Out</span>
@@ -83,8 +114,25 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Top bar */}
       <nav className="fixed top-0 right-0 z-40 flex w-full items-center justify-between border-b border-white/15 bg-surface/40 px-5 py-4 backdrop-blur-[24px] md:w-[calc(100%-16rem)] md:px-10">
-        <span className="font-bold tracking-tight text-primary-fixed md:text-lg">EngBot</span>
+        <div className="flex items-center gap-3">
+          <span className="font-bold tracking-tight text-primary-fixed md:text-lg">EngBot</span>
+          {isAdmin && (
+            <div className="hidden sm:flex items-center gap-2 rounded-full border border-primary-container/40 bg-primary-container/15 px-3 py-1 text-[11px] font-mono font-bold text-primary-fixed shadow-[0_0_15px_rgba(0,240,255,0.2)]">
+              <span>👑 Admin</span>
+              <span className="opacity-40">•</span>
+              <span>App v1.47.5</span>
+              <span className="opacity-40">•</span>
+              <span>Engine v1.47.5</span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <div className="sm:hidden flex items-center gap-1.5 rounded-full border border-primary-container/40 bg-primary-container/15 px-2 py-0.5 text-[10px] font-mono font-bold text-primary-fixed">
+              <span>👑</span>
+              <span>v1.47.5</span>
+            </div>
+          )}
           <Link
             to="/upload"
             className="rounded-full p-2 text-on-surface-variant transition-colors hover:text-primary-container md:hidden"
@@ -92,6 +140,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <span className="material-symbols-outlined">upload_file</span>
           </Link>
+          <a
+            href="https://github.com/devsura3939/oudio-books-AI"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-on-surface-variant hover:text-white transition-colors"
+            title="View Source on GitHub"
+          >
+            <span>GitHub</span>
+          </a>
           <Link
             to="/profile"
             className="rounded-full p-2 text-on-surface-variant transition-colors hover:text-primary-container"
@@ -103,10 +160,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       <div className="pt-20 pb-24 md:ml-64 md:pt-24">{children}</div>
-
-      {/* Studio frame stays mounted so translations keep running across pages */}
-      <StudioHost />
-      <TranslationProgressPill />
 
       {/* Mobile bottom bar */}
       <nav className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-white/15 bg-surface-container/80 py-2 backdrop-blur-[24px] md:hidden">
@@ -124,5 +177,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         ))}
       </nav>
     </div>
+      )}
+    </>
   );
 }

@@ -19,36 +19,17 @@ const schema = z.object({
   hint: z.string().max(2_000).optional(),
 });
 
-const BASE_RULES = `You are a high-accuracy OCR engine for scanned/photographed book pages.
-Return ONLY the text that is printed on the page, as plain text.
-Rules:
-- Transcribe verbatim. Never translate, never paraphrase, never summarise, never add commentary.
-- Preserve paragraph breaks with a blank line. Join words split across line ends by a hyphen into one word (remove the hyphen).
-- Merge lines inside the same paragraph into flowing text (single spaces, no hard line breaks).
-- Skip running headers, running footers, page numbers, and library stamps.
-- Keep italic/bold text as plain text. Keep quotation marks and dashes as printed.
-- Keep chapter/section headings on their own line.
-- If a word is unreadable, write it as best you can; do not invent sentences.
-- If the page has no readable body text, return exactly: [[NO_TEXT]]
-Output: the transcription only. No markdown fences, no labels, no explanations.`;
-
-const KA_RULES = `The page is in Georgian (ქართული).
-- Use ONLY Georgian Mkhedruli letters (ა-ჰ). Never substitute Latin or Cyrillic look-alikes.
-- Georgian has no letter case: never capitalise.
-- Punctuation must be standard Georgian/Latin punctuation: . , ? ! : ; « » " ' – —
-- NEVER output the Devanagari danda (।), the Armenian or Arabic full stops, or any other foreign sentence terminator. A sentence ends with a normal period (.).
-- Preserve Georgian quotation marks as printed, and keep the archaic letters (ჱ ჲ ჳ ჴ ჵ ჶ ჷ ჸ) if they really appear.
-- Do not "modernise" spelling; transcribe what is printed.`;
-
-const EN_RULES = `The page is in English. Preserve original spelling (including British/archaic forms) and punctuation exactly.`;
+const BASE_RULES = `Transcribe the visible page verbatim in its printed language. Do not assume the language when automatic detection is selected.
+Preserve exact wording, numbers, punctuation, mathematical operators and paragraph order.
+Do not translate, modernize, summarize, paraphrase or reconstruct missing words from context.
+Mark unreadable spans [[UNCLEAR]] for review. Return plain text only, or [[NO_TEXT]] if the page is empty.`;
+const KA_RULES = `Language: Georgian. Preserve Mkhedruli, Mtavruli capitals and historical letters as printed. Do not rewrite grammar or remove meaningful symbols.`;
+const EN_RULES = `Language: English. Preserve original spelling, punctuation, names and compound words.`;
 
 export const Route = createFileRoute("/api/ocr")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = process.env["LOVABLE_API_KEY"];
-        if (!apiKey) return json({ error: "OCR gateway is not configured" }, 500);
-
         let input: z.infer<typeof schema>;
         try {
           input = schema.parse(await request.json());
@@ -60,6 +41,9 @@ export const Route = createFileRoute("/api/ocr")({
           return json({ error: "image must be a base64 image data URL" }, 400);
         }
 
+        const customGeminiKey = request.headers.get("x-gemini-key")?.trim() || "";
+        const customOpenRouterKey = request.headers.get("x-openrouter-key")?.trim() || "";
+
         const rules = [
           BASE_RULES,
           input.lang === "kat" ? KA_RULES : input.lang === "eng" ? EN_RULES : "",
@@ -68,52 +52,150 @@ export const Route = createFileRoute("/api/ocr")({
           .filter(Boolean)
           .join("\n\n");
 
-        let upstream: Response;
-        try {
-          upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-3.7-flash",
-              temperature: 0,
-              max_tokens: 8192,
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    { type: "text", text: rules },
-                    { type: "image_url", image_url: { url: input.image } },
+        const env = (request as unknown as { env?: Record<string, string> }).env || {};
+        const lovableKey = env["LOVABLE_API_KEY"] || process.env["LOVABLE_API_KEY"] || "";
+        const geminiKey = customGeminiKey || env["GEMINI_API_KEY"] || process.env["GEMINI_API_KEY"] || "";
+        const openRouterKey = customOpenRouterKey || env["OPENROUTER_API_KEY"] || process.env["OPENROUTER_API_KEY"] || "";
+
+        // Tier 0A: Try Lovable AI Gateway if key exists
+        if (lovableKey) {
+          try {
+            const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              signal: AbortSignal.any([request.signal, AbortSignal.timeout(45000)]),
+              headers: {
+                Authorization: `Bearer ${lovableKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash",
+                temperature: 0,
+                max_tokens: 8192,
+                messages: [
+                  {
+                    role: "user",
+                    content: [
+                      { type: "text", text: rules },
+                      { type: "image_url", image_url: { url: input.image } },
+                    ],
+                  },
+                ],
+              }),
+            });
+
+            if (upstream.ok) {
+              const data = (await upstream.json()) as {
+                choices?: { message?: { content?: string }; finish_reason?: string }[];
+              };
+              if (data.choices?.[0]?.finish_reason !== "stop") throw new Error("Incomplete OCR output");
+              let text = (data.choices?.[0]?.message?.content ?? "").trim();
+              if (text === "[[NO_TEXT]]") text = "";
+              text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
+              return json({ text, engine: "gateway-vision" }, 200);
+            } else {
+              console.warn(`[ocr] gateway returned ${upstream.status}, attempting fallback`);
+            }
+          } catch (err) {
+            console.warn("[ocr] gateway error, attempting fallback", err);
+          }
+        }
+
+        // Tier 0B: Direct Google Gemini 2.5 Frontier Vision (Gemini 2.5 Flash / Pro)
+        if (geminiKey) {
+          try {
+            const match = input.image.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+            const mimeType = match ? match[1] : "image/jpeg";
+            const base64Data = match ? match[2] : input.image;
+            let geminiModel = request.headers.get("x-gemini-model")?.trim() || "gemini-2.5-flash";
+            if (geminiModel.includes("2.0")) geminiModel = "gemini-2.5-flash";
+
+            const gRes = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
+              {
+                method: "POST",
+              signal: AbortSignal.any([request.signal, AbortSignal.timeout(45000)]),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [
+                    {
+                      parts: [
+                        { text: rules },
+                        { inlineData: { mimeType, data: base64Data } },
+                      ],
+                    },
                   ],
-                },
-              ],
-            }),
-          });
-        } catch (err) {
-          console.error("[ocr] gateway unreachable", err);
-          return json({ error: "OCR gateway unreachable" }, 502);
+                  generationConfig: {
+                    temperature: 0,
+                    maxOutputTokens: 8192,
+                  },
+                }),
+              },
+            );
+
+            if (gRes.ok) {
+              const gData = (await gRes.json()) as {
+                candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
+              };
+              if (gData.candidates?.[0]?.finishReason !== "STOP") throw new Error("Incomplete OCR output");
+              let text = (gData.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+              if (text === "[[NO_TEXT]]") text = "";
+              text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
+              return json({ text, engine: geminiModel }, 200);
+            } else {
+              const gErr = await gRes.text().catch(() => "");
+              console.warn(`[ocr] direct gemini error ${gRes.status}: ${gErr.slice(0, 200)}`);
+            }
+          } catch (err) {
+            console.warn("[ocr] direct gemini call failed", err);
+          }
         }
 
-        if (!upstream.ok) {
-          const detail = await upstream.text().catch(() => "");
-          console.error(`[ocr] gateway ${upstream.status}: ${detail.slice(0, 400)}`);
-          return json(
-            { error: detail || `OCR request failed (${upstream.status})` },
-            upstream.status,
-          );
+        // Tier 0C: OpenRouter Vision
+        if (openRouterKey) {
+          try {
+            const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              signal: AbortSignal.any([request.signal, AbortSignal.timeout(45000)]),
+              headers: {
+                Authorization: `Bearer ${openRouterKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash",
+                messages: [
+                  {
+                    role: "user",
+                    content: [
+                      { type: "text", text: rules },
+                      { type: "image_url", image_url: { url: input.image } },
+                    ],
+                  },
+                ],
+              }),
+            });
+
+            if (orRes.ok) {
+              const orData = (await orRes.json()) as {
+                choices?: { message?: { content?: string }; finish_reason?: string }[];
+              };
+              if (orData.choices?.[0]?.finish_reason !== "stop") throw new Error("Incomplete OCR output");
+              let text = (orData.choices?.[0]?.message?.content ?? "").trim();
+              if (text === "[[NO_TEXT]]") text = "";
+              text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
+              return json({ text, engine: "openrouter-vision" }, 200);
+            }
+          } catch (err) {
+            console.warn("[ocr] openrouter vision failed", err);
+          }
         }
 
-        const data = (await upstream.json()) as {
-          choices?: { message?: { content?: string } }[];
-        };
-        let text = (data.choices?.[0]?.message?.content ?? "").trim();
-        if (text === "[[NO_TEXT]]") text = "";
-        // Strip a stray markdown fence if the model wraps the page.
-        text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/, "").trim();
-
-        return json({ text, engine: "gateway-vision" }, 200);
+        return json(
+          {
+            error: "Neural OCR is unavailable. Please configure a free Gemini API key in settings.",
+            code: "NO_VISION_KEY",
+          },
+          503,
+        );
       },
     },
   },

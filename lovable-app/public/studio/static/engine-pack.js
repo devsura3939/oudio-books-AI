@@ -71,6 +71,12 @@
     return out;
   }
 
+  function buildPrompt(items) {
+    const glossary = items.filter(i => i.type === 'glossary').slice(0, 800).map(i => `- ${i.pattern} → ${i.replacement}`);
+    const blocks = items.filter(i => i.type === 'prompt_block' && i.text).slice(0, 20).map(i => i.text);
+    return [glossary.length ? 'TRAINED GLOSSARY:\n' + glossary.join('\n') : '', ...blocks].filter(Boolean).join('\n\n');
+  }
+
   function promptAddendum(lang) {
     const pack = packs[lang || "ka"];
     return (pack && pack.prompt) || "";
@@ -95,8 +101,8 @@
     if (window.LuminaStore && window.LuminaStore.fetchActiveEnginePack) {
       try {
         const cloudPack = await window.LuminaStore.fetchActiveEnginePack(language);
-        if (cloudPack && cloudPack.items && cloudPack.items.length) {
-          packs[language] = { items: cloudPack.items, prompt: "", version: cloudPack.version || 1 };
+        if (cloudPack && Array.isArray(cloudPack.items)) {
+          packs[language] = { items: cloudPack.items, prompt: buildPrompt(cloudPack.items), version: cloudPack.version || 0 };
           writeCache();
           return packs[language];
         }

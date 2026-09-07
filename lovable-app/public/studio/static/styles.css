@@ -224,6 +224,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* ===== Responsive Modal System (Snappy 160ms GPU Transitions) ===== */
 .modal-overlay {
+    visibility: hidden;
     position: fixed;
     inset: 0;
     z-index: 50;
@@ -260,6 +261,8 @@ input[type="range"]::-moz-range-thumb {
     transform: scale(1) translateZ(0);
     opacity: 1;
 }
+
+.modal-overlay.active { visibility: visible; }
 
 .modal-content::-webkit-scrollbar {
     width: 4px;

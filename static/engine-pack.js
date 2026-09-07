@@ -71,6 +71,12 @@
     return out;
   }
 
+  function buildPrompt(items) {
+    const glossary = items.filter(i => i.type === 'glossary').slice(0, 800).map(i => `- ${i.pattern} → ${i.replacement}`);
+    const blocks = items.filter(i => i.type === 'prompt_block' && i.text).slice(0, 20).map(i => i.text);
+    return [glossary.length ? 'TRAINED GLOSSARY:\n' + glossary.join('\n') : '', ...blocks].filter(Boolean).join('\n\n');
+  }
+
   function promptAddendum(lang) {
     const pack = packs[lang || "ka"];
     return (pack && pack.prompt) || "";
@@ -90,6 +96,20 @@
 
   async function load(lang) {
     const language = lang || "ka";
+
+    // 1. Try fetching directly from Supabase Cloud (works on GitHub Pages & mobile!)
+    if (window.LuminaStore && window.LuminaStore.fetchActiveEnginePack) {
+      try {
+        const cloudPack = await window.LuminaStore.fetchActiveEnginePack(language);
+        if (cloudPack && Array.isArray(cloudPack.items)) {
+          packs[language] = { items: cloudPack.items, prompt: buildPrompt(cloudPack.items), version: cloudPack.version || 0 };
+          writeCache();
+          return packs[language];
+        }
+      } catch (e) {}
+    }
+
+    // 2. Fall back to local server /api/engine-pack if running locally
     try {
       const res = await fetch("/api/engine-pack?language=" + encodeURIComponent(language), {
         headers: { Accept: "application/json" },

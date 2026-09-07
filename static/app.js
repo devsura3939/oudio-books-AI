@@ -8,6 +8,9 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
+const APP_VERSION = 'v1.48.1';
+const ENGINE_VERSION = 'v1.48.1 (Bilingual translation and source integrity)';
+
 let db = null;
 let currentBook = null;
 let currentPlayingChapterId = null;
@@ -25,6 +28,37 @@ let utteranceTimeout = null;
 let secondsElapsed = 0;
 let timerInterval = null;
 let currentUser = null;
+// Strict Authorization Guard: Lock out dashboard immediately if not authenticated
+(function() {
+    try {
+        var explicitlyLoggedOut = localStorage.getItem('lumina_explicitly_logged_out') === 'true';
+        var isAuthed = false;
+        if (!explicitlyLoggedOut) {
+            // 1. Prioritize sessionStorage (strictly isolated per window/tab, empty in new Incognito windows)
+            var sessionUser = sessionStorage.getItem('lumina_auth_user');
+            if (sessionUser) {
+                var u = JSON.parse(sessionUser);
+                if (u && u.email) isAuthed = true;
+            } else if (localStorage.getItem('lumina_remember_me') === 'true') {
+                // 2. Only allow persistent localStorage if user explicitly opted in with "Remember me"
+                var saved = localStorage.getItem('lumina_auth_user');
+                if (saved) {
+                    var u2 = JSON.parse(saved);
+                    if (u2 && u2.email) {
+                        isAuthed = true;
+                        try { sessionStorage.setItem('lumina_auth_user', saved); } catch(err) {}
+                    }
+                }
+            }
+        }
+        if (!isAuthed) {
+            var appEl = document.getElementById('appMainContainer');
+            if (appEl) appEl.classList.add('hidden');
+            var gateEl = document.getElementById('authGateScreen');
+            if (gateEl) gateEl.classList.remove('hidden');
+        }
+    } catch(e) {}
+})();
 let isSpeakingLock = false;
 
 // Moon+ Reader State
@@ -32,13 +66,14 @@ let readerActive = false;
 let readerBook = null;
 let readerChapterId = null;
 let readerLang = 'en'; // 'en' or 'ka'
-let readerMode = 'dual'; // 'dual' (Pages), 'scroll' (Continuous)
+let readerMode = localStorage.getItem('lumina_reader_mode') || 'dual'; // 'single', 'dual', 'scroll'
 let readerCurrentPage = 1;
 let readerPages = []; // Array of arrays of sentence objects { text: string, globalIndex: number }
 let readerSentenceToPageMap = {}; // Map: sentenceGlobalIndex -> pageIndex (0-based)
-let readerFontSize = 19; // in px
-let readerTheme = 'sepia'; // 'sepia', 'mocha', 'dark', 'light', 'forest', 'oled'
-let readerFontFamily = 'font-serif-book';
+let readerFontSize = parseInt(localStorage.getItem('lumina_reader_fontsize'), 10) || 19; // in px
+let readerTheme = localStorage.getItem('lumina_reader_theme') || 'sepia'; // 'sepia', 'mocha', 'dark', 'light', 'forest', 'oled'
+let readerFontFamily = localStorage.getItem('lumina_reader_fontfamily') || 'font-serif-book';
+let readerToolbarsVisible = true;
 
 // Touch Gesture Detection
 let touchStartX = 0;
@@ -49,28 +84,663 @@ let touchEndY = 0;
 // ElevenLabs Audio State
 let elevenLabsEnabled = false;
 let elevenLabsApiKey = '';
-let elevenLabsVoiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam
+let elevenLabsVoiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam (English default)
+let elevenLabsVoiceIdKa = localStorage.getItem('lumina_el_voice_ka') || 'nPczCjzI2devNBz1zQrb'; // Brian (Georgian recommended)
 let elevenLabsModelId = localStorage.getItem('lumina_el_model') || 'eleven_multilingual_v2';
 let currentElevenAudio = null;
+
+// Lock-Screen Background Audio Keep-Alive & Wake Lock State
+let backgroundKeepAliveAudio = null;
+let screenWakeLock = null;
+const SILENT_AUDIO_URI = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
 
 // Whole Book Translation State
 let isTranslatingWholeBook = false;
 let cancelTranslationFlag = false;
+let translationRequestController = null;
+
+// ── Global Toast Feedback System ──────────────────────────────────────────
+function showToast(message, type = 'info', duration = 3500) {
+    if (!message) return;
+    try {
+        let container = document.getElementById('globalToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'globalToastContainer';
+            container.className = 'fixed bottom-20 md:bottom-6 right-4 left-4 md:left-auto md:max-w-md z-[9999] pointer-events-none flex flex-col gap-2.5 items-center md:items-end transition-all duration-300';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-xl text-xs font-semibold transform transition-all duration-300 translate-y-4 opacity-0';
+
+        let icon = 'info';
+        let bgClass = 'bg-[#101926]/95 text-cyan-100 border-cyan-500/40 shadow-[0_4px_25px_rgba(6,182,212,0.25)]';
+        let iconColor = 'text-cyan-400';
+
+        if (type === 'success') {
+            icon = 'check_circle';
+            bgClass = 'bg-[#0f1d18]/95 text-emerald-100 border-emerald-500/40 shadow-[0_4px_25px_rgba(16,185,129,0.25)]';
+            iconColor = 'text-emerald-400';
+        } else if (type === 'error') {
+            icon = 'error';
+            bgClass = 'bg-[#221115]/95 text-rose-100 border-rose-500/40 shadow-[0_4px_25px_rgba(244,63,94,0.25)]';
+            iconColor = 'text-rose-400';
+        } else if (type === 'warning') {
+            icon = 'warning';
+            bgClass = 'bg-[#241a0d]/95 text-amber-100 border-amber-500/40 shadow-[0_4px_25px_rgba(245,158,11,0.25)]';
+            iconColor = 'text-amber-400';
+        }
+
+        toast.className += ' ' + bgClass;
+        const iconSpan = document.createElement('span');
+        iconSpan.className = `material-symbols-outlined text-lg ${iconColor} flex-shrink-0`;
+        iconSpan.textContent = icon;
+        
+        const textSpan = document.createElement('span');
+        textSpan.className = 'leading-snug';
+        textSpan.textContent = String(message);
+
+        toast.appendChild(iconSpan);
+        toast.appendChild(textSpan);
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-4', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        });
+
+        setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 300);
+        }, duration);
+    } catch (e) {
+        console.log('[Toast]', type, message);
+    }
+}
+window.showToast = showToast;
+
+// ── Account-Scoped AI Settings & Persistent Storage ─────────────────────────
+function getActiveUserEmail() {
+    if (typeof currentUser !== 'undefined' && currentUser && currentUser.email) {
+        return currentUser.email.trim().toLowerCase();
+    }
+    try {
+        const sessionSaved = sessionStorage.getItem('lumina_auth_user');
+        if (sessionSaved) {
+            const u = JSON.parse(sessionSaved);
+            if (u && u.email) return u.email.trim().toLowerCase();
+        }
+        if (localStorage.getItem('lumina_remember_me') === 'true') {
+            const saved = localStorage.getItem('lumina_auth_user');
+            if (saved) {
+                const u = JSON.parse(saved);
+                if (u && u.email) return u.email.trim().toLowerCase();
+            }
+        }
+    } catch (e) {}
+    return '';
+}
+
+function getAccountSettingsStorageKey(email) {
+    const clean = String(email || getActiveUserEmail() || '').trim().toLowerCase();
+    return clean ? 'lumina_account_settings_' + clean : 'lumina_account_settings_local';
+}
+
+function getCachedAccountSettings(email) {
+    const storageKey = getAccountSettingsStorageKey(email);
+    try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+}
+
+// ── Universal AI Keys Resilience, Sanitization & Auto-Classifier (v1.51.0) ───
+function sanitizeApiKey(rawKey) {
+    if (!rawKey || typeof rawKey !== 'string') return '';
+    let k = rawKey.trim();
+    // Remove zero-width spaces, BOM, non-breaking spaces
+    k = k.replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim();
+    // Strip bash export prefix or variable assignment: export KEY=... or KEY=... or KEY: ...
+    k = k.replace(/^(?:export\s+)?[A-Za-z0-9_]*(?:API_KEY|KEY|TOKEN|SECRET)[\s:=]+/i, '').trim();
+    // Strip Bearer prefix
+    k = k.replace(/^Bearer\s+/i, '').trim();
+    // Strip wrapping quotes (single, double, backtick)
+    k = k.replace(/^["'`]+|["'`]+$/g, '').trim();
+    // Strip trailing semicolons or commas
+    k = k.replace(/[;,]+$/, '').trim();
+    // Strip wrapping quotes again if nested inside assignment
+    k = k.replace(/^["'`]+|["'`]+$/g, '').trim();
+    return k;
+}
+window.sanitizeApiKey = sanitizeApiKey;
+
+function detectApiKeyProvider(rawKey) {
+    const k = sanitizeApiKey(rawKey);
+    if (!k) return null;
+    // 1. Google Gemini: Starts with AIzaSy (typically 39 characters)
+    if (k.startsWith('AIzaSy') && k.length >= 35) {
+        return 'gemini';
+    }
+    // 2. OpenRouter: Starts with sk-or- or sk-or-v1-
+    if (/^sk-or(?:-v1)?-[a-zA-Z0-9_-]{16,}/i.test(k)) {
+        return 'openrouter';
+    }
+    // 3. Groq: Starts with gsk_
+    if (/^gsk_[a-zA-Z0-9_-]{20,}/.test(k)) {
+        return 'groq';
+    }
+    // 4. Anthropic: Starts with sk-ant-
+    if (/^sk-ant-[a-zA-Z0-9_-]{16,}/.test(k)) {
+        return 'anthropic';
+    }
+    // 5. ElevenLabs: 32-character hexadecimal string
+    if (/^[0-9a-fA-F]{32}$/.test(k)) {
+        return 'elevenlabs';
+    }
+    // 6. OpenAI / Compatible: Starts with sk-proj- or sk- (excluding sk-or- and sk-ant-)
+    if (/^sk-(?:proj-)?[a-zA-Z0-9_-]{20,}/.test(k)) {
+        return 'openai';
+    }
+    // 7. Mistral: 32-character alphanumeric not purely hex
+    if (/^[a-zA-Z0-9]{32}$/.test(k) && !/^[0-9a-fA-F]{32}$/.test(k)) {
+        return 'mistral';
+    }
+    return null;
+}
+window.detectApiKeyProvider = detectApiKeyProvider;
+
+function parseAndMergeApiKeys(rawText) {
+    if (!rawText || typeof rawText !== 'string') {
+        return { detected: {}, count: 0 };
+    }
+    const detected = {};
+
+    // 1. Try parsing JSON
+    const trimmed = rawText.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                for (const [k, v] of Object.entries(parsed)) {
+                    if (typeof v !== 'string') continue;
+                    const cleanV = sanitizeApiKey(v);
+                    const kLow = k.toLowerCase();
+                    if (kLow.includes('gemini')) detected.gemini = cleanV;
+                    else if (kLow.includes('openrouter') || kLow.includes('open_router')) detected.openrouter = cleanV;
+                    else if (kLow.includes('groq')) detected.groq = cleanV;
+                    else if (kLow.includes('eleven') || kLow.includes('xi-api')) detected.elevenlabs = cleanV;
+                    else if (kLow.includes('mistral')) detected.mistral = cleanV;
+                    else if (kLow.includes('openai') || kLow.includes('custom')) detected.custom = cleanV;
+                    else {
+                        const prov = detectApiKeyProvider(cleanV);
+                        if (prov) detected[prov] = cleanV;
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    // 2. Line by line parsing (.env variables or tokens)
+    const lines = rawText.split(/[\r\n]+/);
+    for (const line of lines) {
+        const lineS = line.trim();
+        if (!lineS || lineS.startsWith('#')) continue;
+
+        if (lineS.includes('=') || lineS.includes(':')) {
+            const parts = lineS.split(/[:=]/);
+            if (parts.length >= 2) {
+                const propName = parts[0].trim().toLowerCase();
+                const val = parts.slice(1).join('=').trim();
+                const cleanV = sanitizeApiKey(val);
+                if (cleanV) {
+                    if (propName.includes('gemini')) { detected.gemini = cleanV; continue; }
+                    if (propName.includes('openrouter') || propName.includes('open_router')) { detected.openrouter = cleanV; continue; }
+                    if (propName.includes('groq')) { detected.groq = cleanV; continue; }
+                    if (propName.includes('eleven') || propName.includes('xi-api')) { detected.elevenlabs = cleanV; continue; }
+                    if (propName.includes('mistral')) { detected.mistral = cleanV; continue; }
+                    if (propName.includes('openai') || propName.includes('custom')) { detected.custom = cleanV; continue; }
+                    const prov = detectApiKeyProvider(cleanV);
+                    if (prov) { detected[prov] = cleanV; continue; }
+                }
+            }
+        }
+
+        // Split line by whitespace / comma / semicolon tokens
+        const tokens = lineS.split(/[\s,;]+/);
+        for (const tok of tokens) {
+            const cleanTok = sanitizeApiKey(tok);
+            if (!cleanTok) continue;
+            const prov = detectApiKeyProvider(cleanTok);
+            if (prov && !detected[prov]) {
+                detected[prov] = cleanTok;
+            }
+        }
+    }
+
+    // Apply detected keys into live state and localStorage
+    if (detected.gemini) {
+        geminiApiKey = detected.gemini;
+        localStorage.setItem('geminiApiKey', detected.gemini);
+        localStorage.setItem('lumina_saved_gemini_key', detected.gemini);
+        if (!geminiModel || /^gemini-(1\.5|2\.0)(-|$)/.test(geminiModel)) {
+            geminiModel = 'gemini-2.5-flash';
+            localStorage.setItem('geminiModel', geminiModel);
+        }
+    }
+    if (detected.openrouter) {
+        openRouterApiKey = detected.openrouter;
+        localStorage.setItem('openRouterApiKey', detected.openrouter);
+        localStorage.setItem('lumina_saved_openrouter_key', detected.openrouter);
+    }
+    if (detected.groq) {
+        groqApiKey = detected.groq;
+        if (typeof setGroqApiKey === 'function') setGroqApiKey(detected.groq);
+        localStorage.setItem('groqApiKey', detected.groq);
+        localStorage.setItem('lumina_saved_groq_key', detected.groq);
+    }
+    if (detected.mistral) {
+        mistralApiKey = detected.mistral;
+        if (typeof setMistralApiKey === 'function') setMistralApiKey(detected.mistral);
+        localStorage.setItem('mistralApiKey', detected.mistral);
+        localStorage.setItem('lumina_saved_mistral_key', detected.mistral);
+    }
+    if (detected.elevenlabs) {
+        elevenLabsApiKey = detected.elevenlabs;
+        elevenLabsEnabled = true;
+        localStorage.setItem('lumina_el_key', detected.elevenlabs);
+        localStorage.setItem('lumina_saved_el_key', detected.elevenlabs);
+        localStorage.setItem('lumina_el_enabled', 'true');
+        if (DOM && DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = true;
+        if (DOM && DOM.elevenLabsKeySection) DOM.elevenLabsKeySection.classList.remove('hidden');
+        if (typeof updateTopVoiceBadge === 'function') updateTopVoiceBadge();
+    }
+    if (detected.custom) {
+        customProviderKey = detected.custom;
+        if (!customProviderUrl) customProviderUrl = 'https://api.openai.com/v1/chat/completions';
+        if (!customProviderModel) customProviderModel = 'gpt-4o-mini';
+        localStorage.setItem('customProviderKey', detected.custom);
+        localStorage.setItem('lumina_saved_custom_key', detected.custom);
+        localStorage.setItem('customProviderUrl', customProviderUrl);
+        localStorage.setItem('customProviderModel', customProviderModel);
+    }
+
+    // Persist into user account settings
+    const email = getActiveUserEmail();
+    const accountSettings = getCurrentAccountSettings();
+    if (detected.gemini) accountSettings.geminiApiKey = detected.gemini;
+    if (detected.openrouter) accountSettings.openRouterApiKey = detected.openrouter;
+    if (detected.groq) accountSettings.groqApiKey = detected.groq;
+    if (detected.mistral) accountSettings.mistralApiKey = detected.mistral;
+    if (detected.elevenlabs) {
+        accountSettings.elevenLabsApiKey = detected.elevenlabs;
+        accountSettings.elevenLabsEnabled = true;
+    }
+    if (detected.custom) {
+        accountSettings.customProviderKey = detected.custom;
+        accountSettings.customProviderUrl = customProviderUrl;
+        accountSettings.customProviderModel = customProviderModel;
+    }
+    accountSettings.updatedAt = new Date().toISOString();
+    const storageKey = getAccountSettingsStorageKey(email);
+    localStorage.setItem(storageKey, JSON.stringify(accountSettings));
+    try { localStorage.setItem('lumina_account_settings_local', JSON.stringify(accountSettings)); } catch (e) {}
+
+    return {
+        detected,
+        count: Object.keys(detected).length
+    };
+}
+window.parseAndMergeApiKeys = parseAndMergeApiKeys;
+
+function flashInputGlow(el) {
+    if (!el) return;
+    el.classList.add('ring-2', 'ring-primary-fixed', 'bg-primary-fixed/10');
+    setTimeout(() => {
+        el.classList.remove('ring-2', 'ring-primary-fixed', 'bg-primary-fixed/10');
+    }, 2000);
+}
+window.flashInputGlow = flashInputGlow;
+
+function handleSmartKeyMerge() {
+    const input = document.getElementById('smartKeyMergeInput');
+    const feedback = document.getElementById('smartKeyMergeFeedback');
+    if (!input) return;
+    const raw = input.value.trim();
+    if (!raw) {
+        if (feedback) feedback.innerHTML = '<span class="text-amber-400">Please paste at least one API key or .env snippet.</span>';
+        showToast('Please paste an API key to auto-detect and connect');
+        return;
+    }
+
+    const res = parseAndMergeApiKeys(raw);
+    if (res.count === 0) {
+        if (feedback) feedback.innerHTML = '<span class="text-error">Could not recognize any API key signatures. Check formatting or paste directly into specific fields below.</span>';
+        showToast('Could not recognize any valid API key signature');
+        return;
+    }
+
+    const labels = [];
+    if (res.detected.gemini) labels.push('Gemini (Frontier AI)');
+    if (res.detected.openrouter) labels.push('OpenRouter (Free Models)');
+    if (res.detected.groq) labels.push('Groq (Ultra-Fast)');
+    if (res.detected.elevenlabs) labels.push('ElevenLabs (Neural Voice)');
+    if (res.detected.mistral) labels.push('Mistral (Fallback #2)');
+    if (res.detected.custom) labels.push('Custom / OpenAI Provider');
+
+    const msg = `⚡ Configured & connected ${res.count} provider${res.count > 1 ? 's' : ''}: ${labels.join(', ')}`;
+    if (feedback) {
+        feedback.innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> ${escapeHtml(msg)}</span>`;
+    }
+    showToast(msg);
+    input.value = '';
+
+    syncSettingsToDOMInputs();
+    renderAiKeyStatusPanel();
+    setTimeout(probeAiKeyStatus, 50);
+}
+window.handleSmartKeyMerge = handleSmartKeyMerge;
+
+function parseAndMergeApiKeysPreview(rawText) {
+    if (!rawText || typeof rawText !== 'string') return [];
+    const providers = new Set();
+    const lines = rawText.split(/[\r\n]+/);
+    for (const line of lines) {
+        const s = line.trim();
+        if (!s || s.startsWith('#')) continue;
+        if (s.includes('=') || s.includes(':')) {
+            const prop = s.split(/[:=]/)[0].toLowerCase();
+            if (prop.includes('gemini')) providers.add('Gemini');
+            else if (prop.includes('openrouter')) providers.add('OpenRouter');
+            else if (prop.includes('groq')) providers.add('Groq');
+            else if (prop.includes('eleven')) providers.add('ElevenLabs');
+            else if (prop.includes('mistral')) providers.add('Mistral');
+        }
+        const tokens = s.split(/[\s,;]+/);
+        for (const tok of tokens) {
+            const det = detectApiKeyProvider(tok);
+            if (det === 'gemini') providers.add('Gemini');
+            else if (det === 'openrouter') providers.add('OpenRouter');
+            else if (det === 'groq') providers.add('Groq');
+            else if (det === 'elevenlabs') providers.add('ElevenLabs');
+            else if (det === 'mistral') providers.add('Mistral');
+            else if (det === 'openai') providers.add('OpenAI');
+        }
+    }
+    return Array.from(providers);
+}
+window.parseAndMergeApiKeysPreview = parseAndMergeApiKeysPreview;
+
+function setupKeyInputAutoRouting() {
+    const routingMap = [
+        { id: 'geminiApiKeyInput', provider: 'gemini' },
+        { id: 'openRouterApiKeyInput', provider: 'openrouter' },
+        { id: 'groqApiKeyInput', provider: 'groq' },
+        { id: 'mistralApiKeyInput', provider: 'mistral' },
+        { id: 'elevenLabsAiKeyInput', provider: 'elevenlabs' },
+        { id: 'elevenLabsApiKey', provider: 'elevenlabs' },
+        { id: 'customProviderKeyInput', provider: 'custom' },
+    ];
+
+    routingMap.forEach(item => {
+        const el = document.getElementById(item.id);
+        if (!el || el.dataset.autoRoutingAttached) return;
+        el.dataset.autoRoutingAttached = 'true';
+
+        const checkAndRoute = () => {
+            const raw = el.value;
+            if (!raw || raw.length < 16) return;
+            const detected = detectApiKeyProvider(raw);
+            if (detected && detected !== item.provider) {
+                const cleanKey = sanitizeApiKey(raw);
+                if (detected === 'openrouter') {
+                    const target = document.getElementById('openRouterApiKeyInput');
+                    if (target) {
+                        target.value = cleanKey;
+                        openRouterApiKey = cleanKey;
+                        localStorage.setItem('openRouterApiKey', cleanKey);
+                        localStorage.setItem('lumina_saved_openrouter_key', cleanKey);
+                        flashInputGlow(target);
+                    }
+                    showToast('⚡ Auto-detected OpenRouter key — routed to OpenRouter field!');
+                } else if (detected === 'gemini') {
+                    const target = document.getElementById('geminiApiKeyInput');
+                    if (target) {
+                        target.value = cleanKey;
+                        geminiApiKey = cleanKey;
+                        localStorage.setItem('geminiApiKey', cleanKey);
+                        localStorage.setItem('lumina_saved_gemini_key', cleanKey);
+                        flashInputGlow(target);
+                    }
+                    showToast('⚡ Auto-detected Google Gemini key — routed to Gemini field!');
+                } else if (detected === 'groq') {
+                    const target = document.getElementById('groqApiKeyInput');
+                    if (target) {
+                        target.value = cleanKey;
+                        groqApiKey = cleanKey;
+                        localStorage.setItem('groqApiKey', cleanKey);
+                        localStorage.setItem('lumina_saved_groq_key', cleanKey);
+                        flashInputGlow(target);
+                    }
+                    showToast('⚡ Auto-detected Groq key — routed to Groq field!');
+                } else if (detected === 'elevenlabs') {
+                    const target1 = document.getElementById('elevenLabsAiKeyInput');
+                    const target2 = document.getElementById('elevenLabsApiKey');
+                    if (target1) target1.value = cleanKey;
+                    if (target2) target2.value = cleanKey;
+                    elevenLabsApiKey = cleanKey;
+                    elevenLabsEnabled = true;
+                    localStorage.setItem('lumina_el_key', cleanKey);
+                    localStorage.setItem('lumina_saved_el_key', cleanKey);
+                    localStorage.setItem('lumina_el_enabled', 'true');
+                    if (DOM && DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = true;
+                    if (DOM && DOM.elevenLabsKeySection) DOM.elevenLabsKeySection.classList.remove('hidden');
+                    if (typeof updateTopVoiceBadge === 'function') updateTopVoiceBadge();
+                    if (target1) flashInputGlow(target1);
+                    showToast('⚡ Auto-detected ElevenLabs key — activated voice engine!');
+                } else if (detected === 'mistral') {
+                    const target = document.getElementById('mistralApiKeyInput');
+                    if (target) {
+                        target.value = cleanKey;
+                        mistralApiKey = cleanKey;
+                        localStorage.setItem('mistralApiKey', cleanKey);
+                        localStorage.setItem('lumina_saved_mistral_key', cleanKey);
+                        flashInputGlow(target);
+                    }
+                    showToast('⚡ Auto-detected Mistral key — routed to Mistral field!');
+                }
+                el.value = '';
+                syncSettingsToDOMInputs();
+            }
+        };
+
+        el.addEventListener('paste', () => setTimeout(checkAndRoute, 50));
+        el.addEventListener('change', checkAndRoute);
+        el.addEventListener('blur', () => {
+            if (el.value) el.value = sanitizeApiKey(el.value);
+        });
+    });
+
+    const mergeInput = document.getElementById('smartKeyMergeInput');
+    const mergeFeedback = document.getElementById('smartKeyMergeFeedback');
+    if (mergeInput && !mergeInput.dataset.liveAttached) {
+        mergeInput.dataset.liveAttached = 'true';
+        mergeInput.addEventListener('input', () => {
+            const val = mergeInput.value.trim();
+            if (!val || val.length < 10) {
+                if (mergeFeedback) mergeFeedback.innerHTML = '';
+                return;
+            }
+            const preview = parseAndMergeApiKeysPreview(val);
+            if (preview && preview.length && mergeFeedback) {
+                mergeFeedback.innerHTML = preview.map(p => `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-fixed/20 text-primary-fixed text-[10px] font-semibold">● ${p}</span>`).join(' ');
+            }
+        });
+    }
+}
+window.setupKeyInputAutoRouting = setupKeyInputAutoRouting;
+
+// ── Universal AI Keys Resilience & Auto-Healing Layer (v1.51.0) ────────────
+// Guarantee: User API keys NEVER get lost across reloads, builds, logouts,
+// or account switches. Scans memory, dedicated storage, backup slots, and all
+// account objects to find and heal active keys across all storage layers.
+function resolveAndPreserveAllAiKeys() {
+    function findBestStringKey(curVal, keysToSearch, accountProp) {
+        if (curVal && typeof curVal === 'string') {
+            const sanitizedVal = sanitizeApiKey(curVal);
+            if (sanitizedVal.length > 0) return sanitizedVal;
+        }
+        for (const k of keysToSearch) {
+            try {
+                const val = localStorage.getItem(k);
+                if (val && typeof val === 'string') {
+                    const sanitizedVal = sanitizeApiKey(val);
+                    if (sanitizedVal.length > 0) return sanitizedVal;
+                }
+            } catch (e) {}
+        }
+        // Search current user account
+        try {
+            const email = getActiveUserEmail();
+            const curAcc = getCachedAccountSettings(email);
+            if (curAcc && curAcc[accountProp] && String(curAcc[accountProp]).trim().length > 0) {
+                const sanitizedVal = sanitizeApiKey(String(curAcc[accountProp]));
+                if (sanitizedVal.length > 0) return sanitizedVal;
+            }
+        } catch (e) {}
+        // Search local account
+        try {
+            const locAcc = getCachedAccountSettings('');
+            if (locAcc && locAcc[accountProp] && String(locAcc[accountProp]).trim().length > 0) {
+                const sanitizedVal = sanitizeApiKey(String(locAcc[accountProp]));
+                if (sanitizedVal.length > 0) return sanitizedVal;
+            }
+        } catch (e) {}
+        // Deep scan across ANY lumina_account_settings_* in localStorage
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const lk = localStorage.key(i);
+                if (lk && lk.indexOf('lumina_account_settings_') === 0) {
+                    try {
+                        const parsed = JSON.parse(localStorage.getItem(lk));
+                        if (parsed && parsed[accountProp] && String(parsed[accountProp]).trim().length > 0) {
+                            const sanitizedVal = sanitizeApiKey(String(parsed[accountProp]));
+                            if (sanitizedVal.length > 0) return sanitizedVal;
+                        }
+                    } catch (e) {}
+                }
+            }
+        } catch (e) {}
+        return '';
+    }
+
+    // 1. Gemini API Key
+    const resolvedGemini = findBestStringKey((typeof geminiApiKey !== 'undefined' ? geminiApiKey : ''), ['geminiApiKey', 'lumina_saved_gemini_key', 'gemini_api_key'], 'geminiApiKey');
+    if (resolvedGemini) {
+        geminiApiKey = resolvedGemini;
+        try {
+            localStorage.setItem('geminiApiKey', resolvedGemini);
+            localStorage.setItem('lumina_saved_gemini_key', resolvedGemini);
+        } catch (e) {}
+    }
+
+    // 2. OpenRouter API Key
+    const resolvedOR = findBestStringKey((typeof openRouterApiKey !== 'undefined' ? openRouterApiKey : ''), ['openRouterApiKey', 'lumina_saved_openrouter_key', 'openrouter_api_key'], 'openRouterApiKey');
+    if (resolvedOR && resolvedOR !== OPENROUTER_DEFAULT_KEY) {
+        openRouterApiKey = resolvedOR;
+        try {
+            localStorage.setItem('openRouterApiKey', resolvedOR);
+            localStorage.setItem('lumina_saved_openrouter_key', resolvedOR);
+        } catch (e) {}
+    }
+
+    // 3. Groq API Key
+    const resolvedGroq = findBestStringKey((typeof groqApiKey !== 'undefined' ? groqApiKey : ''), ['groqApiKey', 'lumina_saved_groq_key', 'groq_api_key'], 'groqApiKey');
+    if (resolvedGroq) {
+        groqApiKey = resolvedGroq;
+        try {
+            localStorage.setItem('groqApiKey', resolvedGroq);
+            localStorage.setItem('lumina_saved_groq_key', resolvedGroq);
+        } catch (e) {}
+    }
+
+    // 4. Mistral API Key
+    const resolvedMistral = findBestStringKey((typeof mistralApiKey !== 'undefined' ? mistralApiKey : ''), ['mistralApiKey', 'lumina_saved_mistral_key', 'mistral_api_key'], 'mistralApiKey');
+    if (resolvedMistral) {
+        mistralApiKey = resolvedMistral;
+        try {
+            localStorage.setItem('mistralApiKey', resolvedMistral);
+            localStorage.setItem('lumina_saved_mistral_key', resolvedMistral);
+        } catch (e) {}
+    }
+
+    // 5. Custom Provider
+    const resolvedCpKey = findBestStringKey((typeof customProviderKey !== 'undefined' ? customProviderKey : ''), ['customProviderKey', 'lumina_saved_custom_key'], 'customProviderKey');
+    if (resolvedCpKey) {
+        customProviderKey = resolvedCpKey;
+        try {
+            localStorage.setItem('customProviderKey', resolvedCpKey);
+            localStorage.setItem('lumina_saved_custom_key', resolvedCpKey);
+        } catch (e) {}
+    }
+    const resolvedCpUrl = findBestStringKey((typeof customProviderUrl !== 'undefined' ? customProviderUrl : ''), ['customProviderUrl', 'lumina_saved_custom_url'], 'customProviderUrl');
+    if (resolvedCpUrl) {
+        customProviderUrl = resolvedCpUrl;
+        try {
+            localStorage.setItem('customProviderUrl', resolvedCpUrl);
+            localStorage.setItem('lumina_saved_custom_url', resolvedCpUrl);
+        } catch (e) {}
+    }
+    const resolvedCpModel = findBestStringKey((typeof customProviderModel !== 'undefined' ? customProviderModel : ''), ['customProviderModel', 'lumina_saved_custom_model'], 'customProviderModel');
+    if (resolvedCpModel) {
+        customProviderModel = resolvedCpModel;
+        try {
+            localStorage.setItem('customProviderModel', resolvedCpModel);
+            localStorage.setItem('lumina_saved_custom_model', resolvedCpModel);
+        } catch (e) {}
+    }
+
+    // 6. ElevenLabs
+    const resolvedEL = findBestStringKey((typeof elevenLabsApiKey !== 'undefined' ? elevenLabsApiKey : ''), ['lumina_el_key', 'lumina_saved_el_key'], 'elevenLabsApiKey');
+    if (resolvedEL) {
+        elevenLabsApiKey = resolvedEL;
+        try {
+            localStorage.setItem('lumina_el_key', resolvedEL);
+            localStorage.setItem('lumina_saved_el_key', resolvedEL);
+        } catch (e) {}
+    }
+}
+window.resolveAndPreserveAllAiKeys = resolveAndPreserveAllAiKeys;
+
+const _initialAcc = getCachedAccountSettings();
 
 // Gemini AI State
-let geminiApiKey = localStorage.getItem('geminiApiKey') || '';
-let geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.5-pro';
+let geminiApiKey = (_initialAcc && _initialAcc.geminiApiKey)
+    || localStorage.getItem('geminiApiKey')
+    || localStorage.getItem('lumina_saved_gemini_key')
+    || '';
+
+let storedGeminiModel = (_initialAcc && _initialAcc.geminiModel)
+    ? _initialAcc.geminiModel
+    : (localStorage.getItem('geminiModel') || 'gemini-2.5-flash');
+if (!storedGeminiModel || /^gemini-(1\.5|2\.0)(-|$)/.test(storedGeminiModel)) {
+    storedGeminiModel = 'gemini-2.5-flash';
+    try { localStorage.setItem('geminiModel', storedGeminiModel); } catch (e) {}
+}
+let geminiModel = storedGeminiModel;
 // Translation depth: 1 = draft only, 2 = draft + AI review, 3 = full pipeline
 // (draft → structured critique → refinement → final QA). Default: full.
-let geminiPasses = parseInt(localStorage.getItem('geminiPasses') || '3', 10);
+let geminiPasses = (_initialAcc && _initialAcc.geminiPasses !== undefined)
+    ? parseInt(_initialAcc.geminiPasses, 10)
+    : parseInt(localStorage.getItem('geminiPasses') || '3', 10);
 if (![1, 2, 3].includes(geminiPasses)) geminiPasses = 3;
 
-// Gemini fallback chain: when the preferred model is rate-limited (429) or
-// unavailable, cheaper/speedier models in the same key's free tier take over
-// instead of the whole AI tier failing to machine translation. Flash models
-// carry much larger free-tier quotas than Pro — this alone rescues most
-// whole-book runs that currently die at "Gemini 0%".
-const GEMINI_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+// Gemini fallback chain: real production Google AI Studio models
+const GEMINI_FALLBACK_MODELS = EngbotCore.geminiModels(geminiModel);
 const geminiModelCooldown = {}; // model -> earliest ms it may be retried
 const GEMINI_MODEL_COOLDOWN_MS = 60_000;
 
@@ -95,8 +765,13 @@ const OPENROUTER_FREE_MODELS = [
     'nvidia/nemotron-3-super-120b-a12b:free',
     'nvidia/nemotron-3-ultra-550b-a55b:free',
 ];
-let openRouterApiKey = localStorage.getItem('openRouterApiKey') || OPENROUTER_DEFAULT_KEY;
-let openRouterModel = localStorage.getItem('openRouterModel') || '';
+let openRouterApiKey = (_initialAcc && _initialAcc.openRouterApiKey && _initialAcc.openRouterApiKey !== OPENROUTER_DEFAULT_KEY)
+    || localStorage.getItem('openRouterApiKey')
+    || localStorage.getItem('lumina_saved_openrouter_key')
+    || OPENROUTER_DEFAULT_KEY;
+let openRouterModel = (_initialAcc && _initialAcc.openRouterModel !== undefined)
+    ? _initialAcc.openRouterModel
+    : (localStorage.getItem('openRouterModel') || '');
 // Monotonic index into OPENROUTER_FREE_MODELS — the first model with no recent
 // failure is tried first. A 429/5xx marks the model dead for a cool-off window
 // so the batch loop does not hammer a rate-limited provider.
@@ -131,37 +806,58 @@ function openRouterMarkModelFailed(model) {
 // rotation continues; the moment every model is cooling, the call bails and
 // the provider chain drops to the next tier. The 60s windows are short, so
 // OpenRouter re-enters rotation naturally on a later chunk.
-const OPENROUTER_CALL_DEADLINE_MS = 45_000;
-const OPENROUTER_CALL_MAX_ATTEMPTS = 14;
+const OPENROUTER_CALL_DEADLINE_MS = 20_000;
+const OPENROUTER_CALL_MAX_ATTEMPTS = 4;
 
-// ── Tier 0: Lumina server AI gateway (no user key required) ─────────────────
-// The app's own same-origin endpoint proxies a strong JSON-mode model through
-// the Lovable AI Gateway. This is the reason the translation engine no longer
-// degrades to "Machine translation (LOW QUALITY)" when the user has entered
-// no OpenRouter/Groq/Mistral/Gemini key. On static hosting (GitHub Pages) the
-// endpoint does not exist, so a single 404 disables the tier permanently and
-// the original key-based chain takes over unchanged.
-let luminaGatewayAvailable = true;
+// // Auto-detect static GitHub Pages hosting — /api/* endpoints don't exist there,
+// so skip the gateway entirely and go straight to key-based providers.
+// GitHub Pages always uses *.github.io, and we also skip for any host that
+// looks like a plain static CDN (no localhost / no vercel / no railway etc).
+const _isStaticHost = (() => {
+    try {
+        const h = location.hostname;
+        return h.endsWith('.github.io') || h.endsWith('.pages.dev') || h.endsWith('.netlify.app');
+    } catch (e) { return false; }
+})();
+let luminaGatewayAvailable = !_isStaticHost;
 
-async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
     if (!luminaGatewayAvailable) return null;
     try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 5000); // 5s max
+        const payload = { prompt, temperature, maxTokens };
+        if (systemPrompt) payload.systemPrompt = systemPrompt;
         const res = await fetch('/api/ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, temperature, maxTokens }),
+            body: JSON.stringify(payload),
+            signal: jobSignal ? AbortSignal.any([controller.signal, jobSignal]) : controller.signal,
         });
+        clearTimeout(tid);
         if (res.status === 404 || res.status === 401 || res.status === 403 || res.status === 402) {
             luminaGatewayAvailable = false;
             console.warn('[Lumina AI] gateway unavailable (' + res.status + ') — falling back to key-based providers.');
             return null;
         }
         if (!res.ok) return null;
+        // Check Content-Type: static hosts return HTML for unknown paths
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            luminaGatewayAvailable = false;
+            console.warn('[Lumina AI] gateway returned non-JSON (' + ct + ') — this is likely GitHub Pages. Disabling gateway.');
+            return null;
+        }
         const data = await res.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
         return data && data.text ? parseModelJSON(data.text) : null;
     } catch (e) {
+        jobSignal?.throwIfAborted();
         luminaGatewayAvailable = false;
         console.warn('[Lumina AI] gateway unreachable — falling back to key-based providers.', e && e.message);
+
         return null;
     }
 }
@@ -171,18 +867,20 @@ async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 81
 // keys alone was why every chunk fell through to Google/MyMemory and the
 // status panel reported "Machine translation (LOW QUALITY)".
 function aiTranslationAvailable() {
-    return luminaGatewayAvailable || !!geminiApiKey || !!groqApiKey || !!mistralApiKey || !!openRouterApiKey;
+    return luminaGatewayAvailable || !!geminiApiKey || !!groqApiKey || !!mistralApiKey || !!openRouterApiKey
+        || !!(customProviderUrl && customProviderModel);
 }
 
-// Georgian rule block for prompts. Quality mode ships the full research
-// knowledge base; budget mode (whole-book runs) ships the compact checklist so
-// hundreds of chunks stay fast without losing the morphology guardrails.
+// Georgian rule block for prompts. Quality mode ships the compact research
+// knowledge base (~12k chars) with core morphology, verbs, defects, decision table,
+// punctuation, wordbank, preverbs, and case system; preventing prompt blowout,
+// 429 quota traps, and 20-minute stalls.
 function getKaRulesForPrompt() {
-    if (translationBudgetMode === 'budget') {
-        return (typeof getKaCompactRules === 'function' ? getKaCompactRules() : '') + kaTrainedAddendum();
+    if (typeof getKaCompactRules === 'function') {
+        return getKaCompactRules() + kaTrainedAddendum();
     }
     if (typeof getKaKnowledgeBase === 'function') return getKaKnowledgeBase() + kaTrainedAddendum();
-    return (typeof getKaCompactRules === 'function' ? getKaCompactRules() : '') + kaTrainedAddendum();
+    return kaTrainedAddendum();
 }
 
 // Trained rules from the Training Lab, appended to (never replacing) the built-in
@@ -194,7 +892,9 @@ function kaTrainedAddendum() {
     } catch (e) { return ''; }
 }
 
-async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
     if (!openRouterApiKey) return null;
     // All models cooling from a recent run? Skip the network entirely — the
     // 60s windows are short, so OpenRouter re-enters rotation on a later
@@ -203,6 +903,8 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
     const started = Date.now();
 
     for (let attempt = 0; attempt < OPENROUTER_CALL_MAX_ATTEMPTS; attempt++) {
+        jobSignal?.throwIfAborted();
+        if (Date.now() - started > OPENROUTER_CALL_DEADLINE_MS) return null;
         const { model, idx } = openRouterNextModel();
         openRouterModelIndex = (idx + 1) % OPENROUTER_FREE_MODELS.length;
         const preferred = openRouterModel && (openRouterModelCooldown[openRouterModel] || 0) <= Date.now()
@@ -210,6 +912,13 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
             : model;
 
         try {
+            // AbortController with 25s per-request timeout — prevents a single
+            // hanging OpenRouter request from blocking the whole translation run.
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 25000);
+            const messages = systemPrompt
+                ? [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }]
+                : [{ role: 'user', content: prompt }];
             const response = await fetch(OPENROUTER_API_URL, {
                 method: 'POST',
                 headers: {
@@ -218,14 +927,20 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
                     'HTTP-Referer': location.origin,
                     'X-Title': 'Lumina Audio',
                 },
+                // NOTE: response_format json_object is intentionally omitted —
+                // most free OpenRouter models don't support it and return 400/422,
+                // causing every chunk to cycle through all attempts and freeze.
+                // We rely on the prompt-level JSON instruction instead and parse
+                // with parseModelJSON which handles markdown fences and trailing text.
                 body: JSON.stringify({
                     model: preferred,
-                    messages: [{ role: 'user', content: prompt }],
+                    messages,
                     temperature,
                     max_tokens: maxTokens,
-                    response_format: { type: 'json_object' },
                 }),
+                signal: jobSignal ? AbortSignal.any([ctrl.signal, jobSignal]) : ctrl.signal,
             });
+            clearTimeout(tid);
 
             if (response.status === 429 || response.status >= 500) {
                 openRouterMarkModelFailed(preferred);
@@ -248,6 +963,7 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
             }
 
             const data = await response.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
             const text = data?.choices?.[0]?.message?.content;
             if (!text) {
                 openRouterMarkModelFailed(preferred);
@@ -259,9 +975,11 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
             openRouterMarkModelFailed(preferred);
             continue;
         } catch (e) {
-            console.warn('OpenRouter network error:', e);
+        jobSignal?.throwIfAborted();
+            console.warn('OpenRouter network error:', e && e.message);
+            openRouterMarkModelFailed(preferred);
             if (Date.now() - started > OPENROUTER_CALL_DEADLINE_MS) return null;
-            await new Promise(r => setTimeout(r, 1500));
+            await new Promise(r => setTimeout(r, 500));
         }
     }
     return null;
@@ -277,15 +995,27 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192 
 //     headers are inconsistent for direct browser calls, so failures are
 //     detected at runtime and the provider is parked briefly instead of
 //     stalling every chunk on a preflight error.
-let groqApiKey = localStorage.getItem('groqApiKey') || '';
-let mistralApiKey = localStorage.getItem('mistralApiKey') || '';
+let groqApiKey = (_initialAcc && _initialAcc.groqApiKey)
+    || localStorage.getItem('groqApiKey')
+    || localStorage.getItem('lumina_saved_groq_key')
+    || '';
+// groqSelectedModel is a first-class module variable (account-scoped settings restore writes it here)
+let groqSelectedModel = (_initialAcc && _initialAcc.groqSelectedModel)
+    || localStorage.getItem('groqSelectedModel')
+    || '';
+let mistralApiKey = (_initialAcc && _initialAcc.mistralApiKey)
+    || localStorage.getItem('mistralApiKey')
+    || localStorage.getItem('lumina_saved_mistral_key')
+    || '';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-// Groq retired its llama-3.x models; these are the current production
-// catalog entries (verified live: /models 200 + chat completions 200 with
-// JSON mode). All are reasoning-capable, so we send reasoning_effort:'low'
-// to keep reasoning tokens from eating the translation output budget.
-const GROQ_MODELS = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
+// Current Groq production catalog: ultra-fast Llama 3.3 70B & Llama 3.1 8B.
+const GROQ_MODELS = [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'llama3-70b-8192',
+    'gemma2-9b-it',
+];
 const GROQ_MODEL_COOLDOWN_MS = 60_000;
 const groqModelCooldown = {}; // model -> earliest ms it may be retried
 
@@ -296,6 +1026,127 @@ const MISTRAL_CORS_COOLDOWN_MS = 10 * 60_000; // parked 10 min after CORS failur
 const mistralModelCooldown = {};
 let mistralCorsFailures = 0;
 let mistralCorsBlockedUntil = 0;
+
+// ── Custom Provider (user-supplied OpenAI-compatible endpoint) ────────────────
+let customProviderUrl = (_initialAcc && _initialAcc.customProviderUrl)
+    || localStorage.getItem('customProviderUrl')
+    || localStorage.getItem('lumina_saved_custom_url')
+    || '';
+let customProviderModel = (_initialAcc && _initialAcc.customProviderModel)
+    || localStorage.getItem('customProviderModel')
+    || localStorage.getItem('lumina_saved_custom_model')
+    || '';
+let customProviderKey = (_initialAcc && _initialAcc.customProviderKey)
+    || localStorage.getItem('customProviderKey')
+    || localStorage.getItem('lumina_saved_custom_key')
+    || '';
+
+function setCustomProvider(url, model, key) {
+    customProviderUrl = (url || '').trim();
+    customProviderModel = (model || '').trim();
+    customProviderKey = (key || '').trim();
+    if (customProviderUrl) localStorage.setItem('customProviderUrl', customProviderUrl);
+    else localStorage.removeItem('customProviderUrl');
+    if (customProviderModel) localStorage.setItem('customProviderModel', customProviderModel);
+    else localStorage.removeItem('customProviderModel');
+    if (customProviderKey) localStorage.setItem('customProviderKey', customProviderKey);
+    else localStorage.removeItem('customProviderKey');
+}
+
+// Normalize user-entered custom provider URLs. If user provides only a base URL (e.g.
+// http://localhost:11434 or https://api.together.xyz/v1), auto-append /chat/completions.
+function normalizeCustomProviderUrl(url) {
+    if (!url) return '';
+    let u = url.trim().replace(/\/+$/, '');
+    if (u.endsWith('/chat/completions') || u.includes(':generateContent') || u.endsWith('/api/chat') || u.endsWith('/api/generate')) {
+        return u;
+    }
+    if (u.endsWith('/v1')) {
+        return u + '/chat/completions';
+    }
+    return u + '/v1/chat/completions';
+}
+
+// Call custom provider (OpenAI-compatible OR Gemini-compatible endpoint). Returns text or null.
+// Handles multiple response shapes:
+//   1. OpenAI-compatible: choices[0].message.content
+//   2. Ollama native:     message.content or response
+//   3. Gemini REST:       candidates[0].content.parts[0].text
+//   4. Plain text wrappers: data.text, data.output, data.result, or raw response text
+async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8192, systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
+    if (!customProviderUrl) return null;
+    try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 30000); // 30s max
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (customProviderKey && customProviderKey.trim()) {
+            headers['Authorization'] = `Bearer ${customProviderKey.trim()}`;
+        }
+
+        const endpoint = normalizeCustomProviderUrl(customProviderUrl);
+        const effectiveModel = (customProviderModel || 'default').trim();
+        // Safe maxTokens limit to avoid context length overflow on local/custom models
+        const safeTokens = Math.min(maxTokens || 4096, 4096);
+
+        const messages = systemPrompt
+            ? [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }]
+            : [{ role: 'user', content: prompt }];
+        const body = JSON.stringify({
+            model: effectiveModel,
+            messages,
+            temperature,
+            max_tokens: safeTokens,
+        });
+
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body,
+            signal: jobSignal ? AbortSignal.any([ctrl.signal, jobSignal]) : ctrl.signal,
+        });
+        clearTimeout(tid);
+
+        if (!res.ok) {
+            const errText = await res.text().catch(() => '');
+            console.warn('[CustomProvider] HTTP', res.status, endpoint, errText.slice(0, 200));
+            return null;
+        }
+
+        const rawText = await res.text();
+        let data = null;
+        try {
+            data = JSON.parse(rawText);
+        } catch {
+            // Not JSON — might be raw plain text from custom proxy/service
+            if (rawText && rawText.trim().length > 5) {
+                return rawText.trim();
+            }
+            return null;
+        }
+
+        // Shape 1: OpenAI-compatible
+        let text = (data?.choices?.[0]?.message?.content || '').trim();
+        // Shape 2: Ollama chat / generate
+        if (!text) text = (data?.message?.content || data?.response || '').trim();
+        // Shape 3: Gemini REST API
+        if (!text) text = (data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '').trim();
+        // Shape 4: generic text / output wrappers
+        if (!text) text = (data?.text || data?.output || data?.result || '').trim();
+
+        return text.length > 5 ? text : null;
+    } catch (e) {
+        jobSignal?.throwIfAborted();
+        if (e && e.name === 'AbortError') {
+            console.warn('[CustomProvider] request timed out after 30s');
+        } else {
+            console.warn('[CustomProvider] call failed:', e?.message || e);
+        }
+        return null;
+    }
+}
 
 function setGroqApiKey(key) {
     groqApiKey = key || '';
@@ -316,31 +1167,43 @@ function setMistralApiKey(key) {
 
 // Generic OpenAI-compatible JSON-mode call with model rotation. Used by both
 // Groq and Mistral (identical request shape). Returns parsed JSON or null.
-async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs, apiKey, prompt, { temperature = 0.2, maxTokens = 8192, providerLabel = 'provider' } = {}) {
+async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs, apiKey, prompt, { temperature = 0.2, maxTokens = 8192, providerLabel = 'provider', systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
     const now = Date.now();
     const candidates = models.filter(m => (cooldownMap[m] || 0) <= now);
     if (!candidates.length) return null;
 
     for (const model of candidates) {
+        jobSignal?.throwIfAborted();
         try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 20000); // 20s max
+
+            const messages = systemPrompt
+                ? [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }]
+                : [{ role: 'user', content: prompt }];
+
+            const payload = {
+                model,
+                messages,
+                temperature,
+                max_tokens: maxTokens,
+            };
+            if (model.includes('deepseek-r1') || model.includes('o1-')) {
+                payload.reasoning_effort = 'low';
+            }
+
             const response = await fetch(baseUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    model,
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature,
-                    max_tokens: maxTokens,
-                    // Both Groq catalog models are reasoning models — keep
-                    // reasoning minimal so the output budget stays available
-                    // for the actual translation JSON.
-                    reasoning_effort: 'low',
-                    response_format: { type: 'json_object' },
-                }),
+                body: JSON.stringify(payload),
+                signal: jobSignal ? AbortSignal.any([ctrl.signal, jobSignal]) : ctrl.signal,
             });
+            clearTimeout(tid);
 
             if (response.status === 429 || response.status >= 500) {
                 cooldownMap[model] = Date.now() + cooldownMs;
@@ -359,6 +1222,7 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
             }
 
             const data = await response.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
             const text = data?.choices?.[0]?.message?.content;
             if (!text) {
                 cooldownMap[model] = Date.now() + cooldownMs;
@@ -366,12 +1230,14 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
             }
             const parsed = parseModelJSON(text);
             if (parsed) return parsed;
+            // If the model responded with translation text directly instead of JSON, salvage it
+            if (text && text.trim().length > 5) {
+                return { translation: text.trim() };
+            }
             console.warn(`[${providerLabel}] returned unparseable JSON from`, model);
             cooldownMap[model] = Date.now() + cooldownMs;
         } catch (e) {
-            // TypeError from fetch here is usually a CORS preflight failure —
-            // the browser cannot read the response, so retrying immediately
-            // would just burn time on every subsequent chunk.
+        jobSignal?.throwIfAborted();
             console.warn(`[${providerLabel}] network error:`, e?.message || e);
             cooldownMap[model] = Date.now() + cooldownMs;
             return null;
@@ -380,15 +1246,24 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
     return null;
 }
 
-async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!groqApiKey) return null;
-    return callOpenAICompatibleJSON(GROQ_API_URL, GROQ_MODELS, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, groqApiKey, prompt, { temperature, maxTokens, providerLabel: 'Groq' });
+    // Read from module-level variable (kept in sync with account settings), fallback to localStorage.
+    // IMPORTANT: only use selected model if it's a known Groq model ID — prevents OpenRouter
+    // model IDs (e.g. 'openai/gpt-oss-120b') from being sent to api.groq.com and getting blacklisted.
+    const rawSelected = (groqSelectedModel || localStorage.getItem('groqSelectedModel') || '').trim();
+    const selected = GROQ_MODELS.includes(rawSelected) ? rawSelected : '';
+    const models = selected ? [selected, ...GROQ_MODELS.filter(m => m !== selected)] : GROQ_MODELS;
+    // CRITICAL: Groq models have a strict max output token limit (8192 or 4096).
+    // Passing > 8192 (e.g. 16384 from whole-book batch) causes an immediate HTTP 400 rejection from api.groq.com.
+    const safeTokens = Math.min(maxTokens || 4096, 8192);
+    return callOpenAICompatibleJSON(GROQ_API_URL, models, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, groqApiKey.trim(), prompt, { temperature, maxTokens: safeTokens, providerLabel: 'Groq', systemPrompt });
 }
 
-async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192 } = {}) {
+async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!mistralApiKey) return null;
     if (Date.now() < mistralCorsBlockedUntil) return null; // CORS parked — fail fast to the next tier
-    const result = await callOpenAICompatibleJSON(MISTRAL_API_URL, MISTRAL_MODELS, mistralModelCooldown, MISTRAL_MODEL_COOLDOWN_MS, mistralApiKey, prompt, { temperature, maxTokens, providerLabel: 'Mistral' });
+    const result = await callOpenAICompatibleJSON(MISTRAL_API_URL, MISTRAL_MODELS, mistralModelCooldown, MISTRAL_MODEL_COOLDOWN_MS, mistralApiKey, prompt, { temperature, maxTokens, providerLabel: 'Mistral', systemPrompt });
     if (result) {
         mistralCorsFailures = 0; // healthy again
     } else {
@@ -443,8 +1318,21 @@ function normalizeGeorgian(text) {
     const res = [];
     for (let i = 0; i < text.length; i++) {
         const code = text.charCodeAt(i);
-        if (code >= 0x1C90 && code <= 0x1CBA) {
+        // Mtavruli (Georgian All-Caps Unicode block U+1C90-U+1CBF) -> Mkhedruli
+        if (code >= 0x1C90 && code <= 0x1CBF) {
             res.push(String.fromCharCode(code - 0x1C90 + 0x10D0));
+        // Asomtavruli (Classic Georgian Capitals U+10A0-U+10C5) -> Mkhedruli
+        } else if (code >= 0x10A0 && code <= 0x10C5) {
+            res.push(String.fromCharCode(code + 0x30));
+        // Archaic letters frequently found in vintage Georgian books
+        } else if (code === 0x10F3) { // ჳ (vie)
+            res.push('ვ');
+        } else if (code === 0x10F4) { // ჴ (qhar)
+            res.push('ხ');
+        } else if (code === 0x10F5) { // ჵ (hoe)
+            res.push('ჰ');
+        } else if (code === 0x10F6) { // ჶ (fi)
+            res.push('ფ');
         } else {
             res.push(text[i]);
         }
@@ -536,9 +1424,13 @@ function georgianOrdinalToWords(n) {
         16: 'მეთექვსმეტე', 17: 'მეჩვიდმეტე', 18: 'მეთვრამეტე', 19: 'მეცხრამეტე'
     };
     if (teensStem[n]) return teensStem[n];
-    if (n === 20) return 'მეოცე';
-    if (n === 100) return 'მეასე';
-    if (n === 1000) return 'მეათასე';
+    const exactMultiples = {
+        20: 'მეოცე', 40: 'მეორმოცე', 60: 'მესამოცე', 80: 'მეოთხმოცე',
+        100: 'მეასე', 200: 'მეორასე', 300: 'მესამასე', 400: 'მეოთხასე',
+        500: 'მეხუთასე', 600: 'მეექვსასე', 700: 'მეშვიდასე', 800: 'მერვაასე', 900: 'მეცხრაასე',
+        1000: 'მეათასე'
+    };
+    if (exactMultiples[n]) return exactMultiples[n];
 
     const last20 = n % 20;
     const base = Math.floor(n / 20) * 20;
@@ -551,6 +1443,105 @@ function georgianOrdinalToWords(n) {
 }
 
 // ── Advanced Georgian Linguistic Verbalizer for Flawless Native Speech ───────
+var KA_CHARS = (typeof window !== 'undefined' && window.KA_CHARS) || '\\u10A0-\\u10FF';
+var kaWord = (typeof window !== 'undefined' && window.kaWord) || ((src, flags = 'g') => new RegExp(`(?<![${KA_CHARS}])(?:${src})(?![${KA_CHARS}])`, flags));
+
+function transliterateLatinWordToGeorgian(word) {
+    if (!word || typeof word !== 'string') return '';
+    const lower = word.toLowerCase();
+    
+    // Known literary names, classical authors, philosophers, titles, and locations
+    const commonNames = {
+        'mr': 'მისტერ', 'mrs': 'მისის', 'ms': 'მის', 'dr': 'დოქტორ', 'prof': 'პროფესორ',
+        'sir': 'სერ', 'lord': 'ლორდ', 'lady': 'ლედი', 'prince': 'უფლისწული', 'king': 'მეფე',
+        'queen': 'დედოფალი', 'emperor': 'იმპერატორი', 'captain': 'კაპიტანი',
+        // Classical Antiquity & Philosophers
+        'marcus': 'მარკუს', 'aurelius': 'ავრელიუსი', 'socrates': 'სოკრატე', 'plato': 'პლატონი',
+        'aristotle': 'არისტოტელე', 'homer': 'ჰომეროსი', 'achilles': 'აქილევსი', 'odysseus': 'ოდისევსი',
+        'odyssey': 'ოდისეა', 'iliad': 'ილიადა', 'caesar': 'კეისარი', 'cicero': 'ციცერონი',
+        'alexander': 'ალექსანდრე', 'seneca': 'სენეკა', 'epictetus': 'ეპიქტეტე', 'herodotus': 'ჰეროდოტე',
+        'thucydides': 'თუკიდიდე', 'pythagoras': 'პითაგორა', 'archimedes': 'არქიმედე',
+        'virgil': 'ვირგილიუსი', 'ovid': 'ოვიდიუსი', 'horace': 'ჰორაციუსი',
+        // Classical Mythology & Geography
+        'rome': 'რომი', 'athens': 'ათენი', 'sparta': 'სპარტა', 'troy': 'ტროა', 'carthage': 'კართაგენი',
+        'olympus': 'ოლიმპო', 'zeus': 'ზევსი', 'apollo': 'აპოლონი', 'athena': 'ათენა', 'ares': 'არესი',
+        'poseidon': 'პოსეიდონი', 'hades': 'ჰადესი', 'hermes': 'ჰერმესი', 'hercules': 'ჰერკულესი',
+        // Literary Giants & World Figures
+        'shakespeare': 'შექსპირი', 'dante': 'დანტე', 'cervantes': 'სერვანტესი', 'goethe': 'გოეთე',
+        'dostoevsky': 'დოსტოევსკი', 'tolstoy': 'ტოლსტოი', 'kafka': 'კაფკა', 'nietzsche': 'ნიცშე',
+        'kant': 'კანტი', 'hegel': 'ჰეგელი', 'schopenhauer': 'შოპენჰაუერი', 'freud': 'ფროიდი',
+        'jung': 'იუნგი', 'darwin': 'დარვინი', 'newton': 'ნიუტონი', 'einstein': 'აინშტაინი',
+        'hemingway': 'ჰემინგუეი', 'orwell': 'ორუელი', 'dickens': 'დიკენსი', 'austen': 'ოსტინი',
+        'chekhov': 'ჩეხოვი', 'sun': 'სუნ', 'tzu': 'ძი',
+        // Common English & Literary Names
+        'john': 'ჯონ', 'james': 'ჯეიმს', 'george': 'ჯორჯ', 'william': 'უილიამ', 'charles': 'ჩარლზ',
+        'david': 'დავით', 'robert': 'რობერტ', 'edward': 'ედუარდ', 'henry': 'ჰენრი', 'thomas': 'თომას',
+        'mary': 'მერი', 'elizabeth': 'ელიზაბეთ', 'sarah': 'სარა', 'jane': 'ჯეინ', 'emma': 'ემა',
+        'london': 'ლონდონი', 'england': 'ინგლისი', 'paris': 'პარიზი', 'france': 'საფრანგეთი',
+        'america': 'ამერიკა', 'york': 'იორკი', 'street': 'სტრიტი',
+        // Modern Acronyms & International Terms
+        'ai': 'ეი-აი', 'it': 'აი-ტი', 'usa': 'იუ-ეს-ეი', 'eu': 'ევროკავშირი',
+        'nato': 'ნატო', 'unesco': 'იუნესკო', 'ceo': 'სი-ი-ო', 'dna': 'დნმ',
+        'rna': 'რნმ', 'fbi': 'ეფ-ბი-აი', 'cia': 'სი-აი-ეი', 'nasa': 'ნასა'
+    };
+    if (commonNames[lower]) return commonNames[lower];
+
+    let s = lower;
+
+    // Silent clusters and special English onsets
+    s = s.replace(/^kn/g, 'ნ')
+         .replace(/^wr/g, 'რ')
+         .replace(/^ps/g, 'ფს')
+         .replace(/^wh/g, 'ვ');
+
+    // Suffixes and Latinate endings
+    s = s.replace(/tion\b/g, 'შენ')
+         .replace(/sion\b/g, 'ჟენ')
+         .replace(/igh/g, 'აი')
+         .replace(/ew\b/g, 'იუ');
+
+    // Digraphs & Multigraphs
+    s = s.replace(/sch/g, 'შ')
+         .replace(/tch/g, 'ჩ')
+         .replace(/ch/g, 'ჩ')
+         .replace(/sh/g, 'შ')
+         .replace(/th/g, 'თ')
+         .replace(/ph/g, 'ფ')
+         .replace(/kh/g, 'ხ')
+         .replace(/zh/g, 'ჟ')
+         .replace(/gh/g, 'ღ')
+         .replace(/ts/g, 'ც')
+         .replace(/dz/g, 'ძ')
+         .replace(/ck/g, 'კ')
+         .replace(/qu/g, 'კვ')
+         .replace(/ee/g, 'ი')
+         .replace(/ea/g, 'ი')
+         .replace(/oo/g, 'უ')
+         .replace(/ou/g, 'აუ')
+         .replace(/au|aw/g, 'ო')
+         .replace(/ai|ay|ei|ey/g, 'ეი');
+
+    // Soft/Hard c and g
+    s = s.replace(/c([eiy])/g, 'ს$1')
+         .replace(/c/g, 'კ')
+         .replace(/g([eiy])/g, 'ჯ$1')
+         .replace(/g/g, 'გ');
+
+    const map = {
+        'a': 'ა', 'b': 'ბ', 'd': 'დ', 'e': 'ე', 'f': 'ფ', 'h': 'ჰ', 'i': 'ი', 'j': 'ჯ',
+        'k': 'კ', 'l': 'ლ', 'm': 'მ', 'n': 'ნ', 'o': 'ო', 'p': 'პ', 'q': 'კ', 'r': 'რ',
+        's': 'ს', 't': 'ტ', 'u': 'უ', 'v': 'ვ', 'w': 'ვ', 'x': 'ქს', 'y': 'ი', 'z': 'ზ'
+    };
+    return s.split('').map(ch => map[ch] || ch).join('');
+}
+
+function transliterateLatinInGeorgian(text) {
+    if (!text || !/[a-zA-Z]/.test(text)) return text;
+    return text.replace(/\b[A-Za-z]+(?:'[A-Za-z]+)?\b/g, (match) => {
+        return transliterateLatinWordToGeorgian(match);
+    });
+}
+
 function verbalizeGeorgianTextForTTS(text) {
     if (!text) return '';
     let out = normalizeGeorgian(text);
@@ -563,7 +1554,7 @@ function verbalizeGeorgianTextForTTS(text) {
         'XV': 'მეთხუთმეტე', 'XVI': 'მეთექვსმეტე', 'XVII': 'მეჩვიდმეტე', 'XVIII': 'მეთვრამეტე',
         'XIX': 'მეცხრამეტე', 'XX': 'მეოცე'
     };
-    out = out.replace(/\b(თავი|ნაწილი|წიგნი|ტომი|კარი)\s+([IVXLCDM]+)\b/gi, (match, prefix, roman) => {
+    out = out.replace(new RegExp(`(?<![${KA_CHARS}])(თავი|ნაწილი|წიგნი|ტომი|კარი)\\s+([IVXLCDM]+)\\b`, 'gi'), (match, prefix, roman) => {
         const upper = roman.toUpperCase();
         return `${prefix} ${romanToGeorgian[upper] || roman}`;
     });
@@ -576,9 +1567,37 @@ function verbalizeGeorgianTextForTTS(text) {
         return ord;
     });
 
-    // 3. Percentages: 50% -> ორმოცდაათი პროცენტი
-    out = out.replace(/(\d+)\s*%/g, (match, num) => {
+    // 3. Percentages & Decimals
+    out = out.replace(/(\b\d{1,9})\s*%/g, (match, num) => {
         return georgianNumberToWords(parseInt(num, 10)) + ' პროცენტი';
+    });
+    out = out.replace(/(\b\d{1,9})\.(\d{1,4})\b/g, (match, intPart, decPart) => {
+        return georgianNumberToWords(parseInt(intPart, 10)) + ' მთელი ' + georgianNumberToWords(parseInt(decPart, 10));
+    });
+
+    // 3.5 Common Fractions
+    out = out.replace(/(?<!\d)1\/2(?!\d)/g, 'ნახევარი');
+    out = out.replace(/(?<!\d)1\/3(?!\d)/g, 'მესამედი');
+    out = out.replace(/(?<!\d)1\/4(?!\d)/g, 'მეოთხედი');
+    out = out.replace(/(?<!\d)3\/4(?!\d)/g, 'სამი მეოთხედი');
+
+    // 3.6 Metric Measurements
+    out = out.replace(/(\b\d{1,9})\s*(კმ|კილომეტრი|კილომეტრში)(?![\u10A0-\u10FF])/g, (m, n, u) => {
+        const w = georgianNumberToWords(parseInt(n, 10));
+        return u === 'კილომეტრში' ? `${w} კილომეტრში` : `${w} კილომეტრი`;
+    });
+    out = out.replace(/(\b\d{1,9})\s*(მ|მეტრი|მეტრში)(?![\u10A0-\u10FF])/g, (m, n, u) => {
+        const w = georgianNumberToWords(parseInt(n, 10));
+        return u === 'მეტრში' ? `${w} მეტრში` : `${w} მეტრი`;
+    });
+    out = out.replace(/(\b\d{1,9})\s*(კგ|კილოგრამი)(?![\u10A0-\u10FF])/g, (m, n) => {
+        return georgianNumberToWords(parseInt(n, 10)) + ' კილოგრამი';
+    });
+    out = out.replace(/(\b\d{1,9})\s*(სმ|სანტიმეტრი)(?![\u10A0-\u10FF])/g, (m, n) => {
+        return georgianNumberToWords(parseInt(n, 10)) + ' სანტიმეტრი';
+    });
+    out = out.replace(/(\b\d{1,9})\s*°C\b/g, (m, n) => {
+        return georgianNumberToWords(parseInt(n, 10)) + ' გრადუსი ცელსიუსით';
     });
 
     // 4. Currencies: $100, 100₾, 100€
@@ -597,19 +1616,77 @@ function verbalizeGeorgianTextForTTS(text) {
 
     // 5. Common Abbreviations
     const abbrevMap = [
-        [/\bდა\s*ა\.შ\./g, 'და ასე შემდეგ'],
-        [/\bე\.ი\./g, 'ესე იგი'],
-        [/\bე\.წ\./g, 'ეგრეთ წოდებული'],
-        [/\bმაგ\./g, 'მაგალითად'],
-        [/\bბ-ნი\b/g, 'ბატონი'],
-        [/\bქ-ნი\b/g, 'ქალბატონი'],
-        [/\bდოქტ\./g, 'დოქტორი'],
-        [/\bპროფ\./g, 'პროფესორი'],
-        [/\bწ\./g, 'წელი'],
-        [/\bსს\./g, 'საუკუნე']
+        [kaWord('და\\s*ა\\.შ\\.', 'g'), 'და ასე შემდეგ'],
+        [kaWord('ე\\.ი\\.', 'g'), 'ესე იგი'],
+        [kaWord('ე\\.წ\\.', 'g'), 'ეგრეთ წოდებული'],
+        [kaWord('მაგ\\.', 'g'), 'მაგალითად'],
+        [kaWord('ბ-ნი', 'g'), 'ბატონი'],
+        [kaWord('ქ-ნი', 'g'), 'ქალბატონი'],
+        [kaWord('დოქტ\\.', 'g'), 'დოქტორი'],
+        [kaWord('პროფ\\.', 'g'), 'პროფესორი'],
+        [kaWord('წ\\.', 'g'), 'წელი'],
+        [kaWord('სს\\.', 'g'), 'საუკუნე']
     ];
     abbrevMap.forEach(([regex, repl]) => {
         out = out.replace(regex, repl);
+    });
+
+    // 5.4 Roman Numerals in Chapter/Book Headings, Centuries & Monarchs
+    const romanToOrdinalKa = {
+        'I': 'პირველი', 'II': 'მეორე', 'III': 'მესამე', 'IV': 'მეოთხე', 'V': 'მეხუთე',
+        'VI': 'მეექვსე', 'VII': 'მეშვიდე', 'VIII': 'მერვე', 'IX': 'მეცხრე', 'X': 'მეათე',
+        'XI': 'მეთერთმეტე', 'XII': 'მეთორმეტე', 'XIII': 'მეცამეტე', 'XIV': 'მეთოთხმეტე', 'XV': 'მეთხუთმეტე',
+        'XVI': 'მეთექვსმეტე', 'XVII': 'მეჩვიდმეტე', 'XVIII': 'მეთვრამეტე', 'XIX': 'მეცხრამეტე', 'XX': 'მეოცე',
+        'XXI': 'ოცდამეერთე', 'XXII': 'ოცდამეორე', 'XXIII': 'ოცდამესამე', 'XXIV': 'ოცდამეოთხე', 'XXV': 'ოცდამეხუთე',
+        'XXVI': 'ოცდამეექვსე', 'XXVII': 'ოცდამეშვიდე', 'XXVIII': 'ოცდამერვე', 'XXIX': 'ოცდამეცხრე', 'XXX': 'ოცდამეათე'
+    };
+
+    // A. Headings: "თავი IV" -> "თავი მეოთხე", "ნაწილი II" -> "ნაწილი მეორე"
+    out = out.replace(/(?<![A-Za-z0-9])(თავი|კარი|ნაწილი|წიგნი|ტომი|გვერდი)\s+([IVXLCDM]+)(?![A-Za-z0-9])/gi, (m, prefix, rom) => {
+        const u = rom.toUpperCase();
+        return romanToOrdinalKa[u] ? `${prefix} ${romanToOrdinalKa[u]}` : m;
+    });
+
+    // B. Centuries: "XXI საუკუნე" -> "ოცდამეერთე საუკუნე", "XX საუკუნეში" -> "მეოცე საუკუნეში"
+    out = out.replace(/(?<![A-Za-z0-9])([IVXLCDM]+)\s+(საუკუნე(?:ში|დან|მდე|ს)?)(?![A-Za-z0-9])/gi, (m, rom, suffix) => {
+        const u = rom.toUpperCase();
+        return romanToOrdinalKa[u] ? `${romanToOrdinalKa[u]} ${suffix}` : m;
+    });
+
+    // C. Monarchs & Popes: "ერეკლე II" -> "ერეკლე მეორე", "ლუი XIV" -> "ლუი მეთოთხმეტე"
+    out = out.replace(/([ა-ჰ]+)\s+([IVXLCDM]+)(?![A-Za-z0-9])/g, (m, name, rom) => {
+        const u = rom.toUpperCase();
+        return romanToOrdinalKa[u] ? `${name} ${romanToOrdinalKa[u]}` : m;
+    });
+
+    // 5.5 Year ranges: 1939-1945 -> ათას ცხრაას ოცდაცხრამეტიდან ათას ცხრაას ორმოცდახუთ წლამდე
+    out = out.replace(/(\b\d{4})\s*[-–—]\s*(\d{4}\b)/g, (match, y1, y2) => {
+        const n1 = parseInt(y1, 10);
+        const n2 = parseInt(y2, 10);
+        if (n1 >= 1000 && n1 <= 2100 && n2 >= 1000 && n2 <= 2100) {
+            const w1 = georgianNumberToWords(n1);
+            const w2 = georgianNumberToWords(n2);
+            const from1 = w1.endsWith('ი') ? w1.slice(0, -1) + 'იდან' : w1 + 'დან';
+            const to2 = w2.endsWith('ი') ? w2.slice(0, -1) : w2;
+            return `${from1} ${to2} წლამდე`;
+        }
+        return match;
+    });
+
+    // 5.6 Standalone Years: 1909 წელს -> ათას ცხრაას ცხრა წელს, 1920 წელს -> ათას ცხრაას ოც წელს
+    out = out.replace(/(\b\d{4})\s+(წელს|წლიდან|წლამდე|წლის|წლები|წლებში)(?![\u10A0-\u10FF])/g, (match, y, suffix) => {
+        const n = parseInt(y, 10);
+        if (n >= 1000 && n <= 2100) {
+            const w = georgianNumberToWords(n);
+            const stem = w.endsWith('ი') ? w.slice(0, -1) : w;
+            if (suffix === 'წელს') return `${stem} წელს`;
+            if (suffix === 'წლიდან') return `${stem} წლიდან`;
+            if (suffix === 'წლამდე') return `${stem} წლამდე`;
+            if (suffix === 'წლის') return `${stem} წლის`;
+            if (suffix === 'წლებში') return `${stem} წლებში`;
+            if (suffix === 'წლები') return `${w} წლები`;
+        }
+        return match;
     });
 
     // 6. Standalone numbers: 1984 -> ათას ცხრაას ოთხმოცდაოთხი
@@ -617,65 +1694,247 @@ function verbalizeGeorgianTextForTTS(text) {
         return georgianNumberToWords(parseInt(num, 10));
     });
 
+    // 6.5 Latin names and proper nouns in Georgian text -> phonetic Mkhedruli
+    out = transliterateLatinInGeorgian(out);
+
     // 7. Dialogue & Punctuation cadence
+    // Strip line-initial dialogue dashes so spoken lines do not begin with an acoustic comma click
+    out = out.replace(/(^|[\r\n]+)\s*[—–-]\s*/g, '$1');
+
+    // Convert quotation marks into conversational breath pauses
     out = out
-        .replace(/[""„“«»]/g, '')
-        .replace(/\s*—\s*/g, ', ')
-        .replace(/\s*–\s*/g, ', ')
-        .replace(/\s*-\s*/g, ', ')
-        .replace(/;/g, '.')
-        .replace(/:/g, ',')
+        .replace(/(:\s*)?[„"“]/g, ', ')
+        .replace(/[”"»]/g, ', ')
+        .replace(/\s+[—–-](\s|$)/g, ', $1')
+        .replace(/\s*[—–]\s*/g, ', ')
+        .replace(/([ა-ჰ]+)-([ა-ჰ]+)/g, '$1 $2')
+        .replace(/;/g, ', ')
+        .replace(/:/g, ', ')
+        .replace(/^[,\s]+/, '')
         .replace(/\s+/g, ' ')
         .trim();
 
     // 8. Natural breath pause before Georgian conjunctions
-    out = out.replace(/([^,.;:!?])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|როდესაც|რომელიც)\b/g, '$1, $2');
+    out = out.replace(/([^,.;:!?])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|როდესაც|რომელიც|რომ|სანამ|ვიდრე)(?![\u10A0-\u10FF])/g, '$1, $2');
 
     // 9. Interrogative & Question Mark Acoustic Prosody
     out = out.replace(/\s*\?\s*/g, '? ');
     out = out.replace(/\s*!\s*/g, '! ');
 
+    // 10. Terminology and name phonetic pronunciation tuning for Edge-TTS
+    out = out
+        .replace(kaWord('სუნ\\s+ცუ', 'gi'), 'სუნ ძი')
+        .replace(kaWord('სუნ\\s+ტზუ', 'gi'), 'სუნ ძი');
+
     return out;
 }
 
-// ── Sentence-type detection for expressive TTS ──────────────────────────────
-// Classifies a sentence so the narration engine can apply the right prosody:
-// questions rise, exclamations carry energy, dialogue gets a distinct voice
-// colour, quotes breathe. Detection runs on the ORIGINAL text (before
-// punctuation normalization strips the signals).
-function detectSentenceType(text) {
+// ── English Number & Verbalization Helpers ──────────────────────────────────
+function englishSmallNumber(n) {
+    const units = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+                   'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen',
+                   'seventeen', 'eighteen', 'nineteen'];
+    const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+    if (n < 20) return units[n] || '';
+    const t = tens[Math.floor(n / 10)] || '';
+    const u = units[n % 10] || '';
+    return u ? `${t}-${u}` : t;
+}
+
+function englishOrdinal(n) {
+    const ords = {
+        1: 'first', 2: 'second', 3: 'third', 4: 'fourth', 5: 'fifth',
+        6: 'sixth', 7: 'seventh', 8: 'eighth', 9: 'ninth', 10: 'tenth',
+        11: 'eleventh', 12: 'twelfth', 13: 'thirteenth', 14: 'fourteenth',
+        15: 'fifteenth', 16: 'sixteenth', 17: 'seventeenth', 18: 'eighteenth',
+        19: 'nineteenth', 20: 'twentieth', 30: 'thirtieth', 40: 'fortieth',
+        50: 'fiftieth', 60: 'sixtieth', 70: 'seventieth', 80: 'eightieth', 90: 'ninetieth'
+    };
+    if (ords[n]) return ords[n];
+    if (n < 100) {
+        const t = Math.floor(n / 10) * 10;
+        const u = n % 10;
+        return `${englishSmallNumber(t)}-${ords[u] || ''}`;
+    }
+    return `${n}th`;
+}
+
+// ── English Text Verbalization for Natural Storytelling TTS ─────────────────
+function verbalizeEnglishTextForTTS(text) {
+    if (!text) return '';
+    let out = String(text);
+
+    // 1. Strip markdown artifacts & footnote brackets that cause robotic stumbles
+    out = out
+        .replace(/\[\d+\]/g, '')
+        .replace(/https?:\/\/\S+/gi, '')
+        .replace(/[*_#`~>]+/g, ' ')
+        .replace(/[\r\n\t]+/g, ' ');
+
+    // 2. English Honorifics & Titles
+    const titles = [
+        [/\bMr\.(?=\s+[A-Z])/g, 'Mister'],
+        [/\bMrs\.(?=\s+[A-Z])/g, 'Missus'],
+        [/\bMs\.(?=\s+[A-Z])/g, 'Mizz'],
+        [/\bDr\.(?=\s+[A-Z])/g, 'Doctor'],
+        [/\bProf\.(?=\s+[A-Z])/g, 'Professor'],
+        [/\bSt\.(?=\s+[A-Z])/g, 'Saint'],
+        [/\bCapt\.(?=\s+[A-Z])/g, 'Captain'],
+        [/\bCol\.(?=\s+[A-Z])/g, 'Colonel'],
+        [/\bGen\.(?=\s+[A-Z])/g, 'General'],
+        [/\bLt\.(?=\s+[A-Z])/g, 'Lieutenant'],
+        [/\bSgt\.(?=\s+[A-Z])/g, 'Sergeant'],
+    ];
+    titles.forEach(([re, repl]) => { out = out.replace(re, repl); });
+
+    // 3. Common Abbreviations
+    const abbrevs = [
+        [/\be\.g\.,?\s*/gi, 'for example, '],
+        [/\bi\.e\.,?\s*/gi, 'that is, '],
+        [/\betc\.(?!\w)/gi, 'etcetera'],
+        [/\bvs\.(?!\w)/gi, 'versus'],
+        [/\bv\.(?=\s+[A-Z])/g, 'versus'],
+        [/\bapprox\.(?!\w)/gi, 'approximately'],
+        [/\bno\.\s*(?=\d+)/gi, 'number '],
+        [/\bvol\.\s*(?=\d+)/gi, 'volume '],
+        [/\bch\.\s*(?=\d+)/gi, 'chapter '],
+    ];
+    abbrevs.forEach(([re, repl]) => { out = out.replace(re, repl); });
+
+    // 4. Roman Numerals in Chapter / Part / Book Headings & Monarchs
+    const romanMap = {
+        'I': 'one', 'II': 'two', 'III': 'three', 'IV': 'four', 'V': 'five',
+        'VI': 'six', 'VII': 'seven', 'VIII': 'eight', 'IX': 'nine', 'X': 'ten',
+        'XI': 'eleven', 'XII': 'twelve', 'XIII': 'thirteen', 'XIV': 'fourteen', 'XV': 'fifteen'
+    };
+    out = out.replace(/\b(Chapter|Part|Book|Act|Section|Volume)\s+([IVXLCDM]+)\b/gi, (m, prefix, roman) => {
+        const r = roman.toUpperCase();
+        return `${prefix} ${romanMap[r] || roman}`;
+    });
+
+    const romanOrd = {
+        'I': 'the first', 'II': 'the second', 'III': 'the third', 'IV': 'the fourth',
+        'V': 'the fifth', 'VI': 'the sixth', 'VII': 'the seventh', 'VIII': 'the eighth'
+    };
+    out = out.replace(/\b([A-Z][a-z]+)\s+([IVXLCDM]+)\b/g, (m, name, roman) => {
+        const r = roman.toUpperCase();
+        return romanOrd[r] ? `${name} ${romanOrd[r]}` : m;
+    });
+
+    // 5. 4-Digit Years (e.g. 1984 -> nineteen eighty-four, 2024 -> twenty twenty-four)
+    out = out.replace(/\b(1[5-9]\d{2}|20\d{2})\b/g, (match) => {
+        const y = parseInt(match, 10);
+        if (y >= 2000 && y <= 2009) {
+            return y === 2000 ? 'two thousand' : `two thousand and ${englishSmallNumber(y - 2000)}`;
+        }
+        const c = Math.floor(y / 100);
+        const rem = y % 100;
+        const cText = englishSmallNumber(c);
+        if (rem === 0) return `${cText} hundred`;
+        const remText = rem < 10 ? `oh ${englishSmallNumber(rem)}` : englishSmallNumber(rem);
+        return `${cText} ${remText}`;
+    });
+
+    // 6. Ordinal numbers (1st, 2nd, 3rd, 4th, 21st...)
+    out = out.replace(/\b(\d+)(?:st|nd|rd|th)\b/gi, (m, num) => {
+        return englishOrdinal(parseInt(num, 10)) || m;
+    });
+
+    // 7. Currencies, Percentages & Units
+    out = out.replace(/\$(\d+[\d,]*)(?:\.(\d{2}))?\b/g, (m, dol, cent) => {
+        const d = dol.replace(/,/g, '');
+        let res = `${d} dollars`;
+        if (cent && parseInt(cent, 10) > 0) res += ` and ${parseInt(cent, 10)} cents`;
+        return res;
+    });
+    out = out.replace(/£(\d+[\d,]*)\b/g, '$1 pounds');
+    out = out.replace(/€(\d+[\d,]*)\b/g, '$1 euros');
+    out = out.replace(/(\b\d+)\s*%/g, '$1 percent');
+
+    // 8. Natural dialogue quotes & punctuation cadence
+    out = out
+        .replace(/(:\s*)?[“"«]/g, ', ')
+        .replace(/[”"»]/g, ', ')
+        .replace(/\s*[—–]\s*/g, ', ')
+        .replace(/\s*(\.{3}|…)\s*/g, '... ')
+        .replace(/^[,\s]+/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    return out;
+}
+
+// ── Unified Sentence-Type & Emotion Detection ──────────────────────────────
+function detectSentenceType(text, lang = 'en') {
     const t = String(text || '').trim();
     if (!t) return 'statement';
 
-    if (/[?]\s*$/.test(t) || /^(ვინ|რა|სად|როდის|როგორ|რატომ|რამდენი|რომელ|ხომ|განა|ნუთუ)\b/i.test(t)) return 'question';
+    // Question: rising acoustic inflection
+    if (/[?]\s*$/.test(t)) return 'question';
+    if (lang === 'ka') {
+        if (/^(ვინ|რა|სად|როდის|როგორ|რატომ|რამდენი|რომელ|ხომ|განა|ნუთუ)(?![\u10A0-\u10FF])/i.test(t)) return 'question';
+    } else {
+        if (/^(who|what|where|when|why|how|which|whose|whom|did|do|does|can|could|would|should|is|are|was|were|will|shall|have|has|had|am|aren't|isn't|wasn't|weren't|don't|doesn't|didn't|can't|couldn't|won't)\b/i.test(t)) {
+            return 'question';
+        }
+    }
+
+    // Exclamation: emphatic energy
     if (/[!]\s*$/.test(t)) return 'exclamation';
-    if (/^["“„«][^"”“»]{2,}["””»]/.test(t) || /^—\s?\S/.test(t) || /^–\s?\S/.test(t)) return 'dialogue';
-    if (/^(დიახ|არა|კი)\b[.,!]?$/i.test(t)) return 'short';
-    if (t.split(/\s+/).length <= 3) return 'short';
+
+    // Suspense / reflective storytelling: deliberate tempo & contemplative breath
+    if (/(\.{3}|…|[—–])/.test(t) && t.split(/\s+/).length >= 4) return 'suspense';
+
+    // Dialogue: direct spoken character line
+    if (/^["“„«][^"”“»]{2,}["””»]/.test(t) || /^[—–-]\s*\S/.test(t) || /["“„«]/.test(t)) return 'dialogue';
+
+    // Short punchy phrase
+    if (t.split(/\s+/).filter(Boolean).length <= 3) return 'short';
+
     return 'statement';
 }
 
-// Apply sentence-type-specific prosody to the verbalized Georgian text.
-// edge-tts (ka-GE-Giorgi/Eka Neural) responds to punctuation cadence, so we
-// shape pauses and emphasis with punctuation — never with SSML (the HF
-// mirrors pass plain text).
+// Apply sentence-type-specific prosody to Georgian verbalized text
 function applyGeorgianProsody(text, sentenceType) {
     let out = text;
     switch (sentenceType) {
         case 'question':
-            // Slight lead-in pause, then the rising terminal.
-            out = out.replace(/\?$/, '?');
+            if (!/[?]$/.test(out.trim())) out = out.replace(/[.!]?$/, '?');
             break;
         case 'exclamation':
-            // Emphatic terminal — keep energy, no trailing silence.
-            out = out.replace(/!+$/, '!');
+            if (!/[!]$/.test(out.trim())) out = out.replace(/[.?]?$/, '!');
             break;
         case 'dialogue':
-            // Breathing pause after the opening quote/dash mark.
-            out = out.replace(/^([“„«—–]\s*)/, '$1, ');
+            if (!/^[,\s]/.test(out)) out = ', ' + out;
+            break;
+        case 'suspense':
+            if (!/(\.{3}|…)\s*$/.test(out.trim())) out = out.replace(/[.]?$/, '...');
             break;
         case 'short':
-            // Punchy delivery: no comma inserted, crisp ending.
+            break;
+        default:
+            break;
+    }
+    return out;
+}
+
+// Apply sentence-type-specific prosody to English verbalized text
+function applyEnglishProsody(text, sentenceType) {
+    let out = text;
+    switch (sentenceType) {
+        case 'question':
+            if (!/[?]$/.test(out.trim())) out = out.replace(/[.!]?$/, '?');
+            break;
+        case 'exclamation':
+            if (!/[!]$/.test(out.trim())) out = out.replace(/[.?]?$/, '!');
+            break;
+        case 'dialogue':
+            if (!/^[,\s]/.test(out)) out = ', ' + out;
+            break;
+        case 'suspense':
+            if (!/(\.{3}|…)\s*$/.test(out.trim())) out = out.replace(/[.]?$/, '...');
+            break;
+        case 'short':
             break;
         default:
             break;
@@ -697,24 +1956,24 @@ function refineGeorgianGrammar(text) {
     // 1. Critical Idiom, Metaphor & Vulgarity Filters from English MT artifacts
     const idiomFixes = [
         // "how anal I can get" -> "რამდენად პედანტური/დეტალური შემიძლია ვიყო"
-        [/\b(?:თუ\s+)?როგორი\s+ანალის\s+მიღება\s+შემიძლია\b/gi, 'თუ რამდენად პედანტური და ზედმიწევნითი შემიძლია ვიყო'],
-        [/\bანალის\s+მიღება\b/gi, 'ზედმიწევნითობა'],
-        [/\bროგორი\s+ანალი\b/gi, 'როგორი პედანტი'],
+        [kaWord('(?:თუ\\s+)?როგორი\\s+ანალის\\s+მიღება\\s+შემიძლია', 'gi'), 'თუ რამდენად პედანტური და ზედმიწევნითი შემიძლია ვიყო'],
+        [kaWord('ანალის\\s+მიღება', 'gi'), 'ზედმიწევნითობა'],
+        [kaWord('როგორი\\s+ანალი', 'gi'), 'როგორი პედანტი'],
 
         // "got to me" (moved to tears / affected me deeply) -> "ცრემლებამდე ამაღელვა"
-        [/\bეს\s+რომანები\s+მომივიდა\b/gi, 'ამ რომანებმა ცრემლებამდე ამაღელვა'],
-        [/\bმომივიდა\s+გულზე\b/gi, 'გულზე მომხვდა'],
+        [kaWord('ეს\\s+რომანები\\s+მომივიდა', 'gi'), 'ამ რომანებმა ცრემლებამდე ამაღელვა'],
+        [kaWord('მომივიდა\\s+გულზე', 'gi'), 'გულზე მომხვდა'],
 
         // "choking up" -> "ცრემლებს ძლივს ვიკავებდი" (NOT "ვხრჩობდი")
-        [/\bვიჯექი\s+და\s+ვხრჩობდი\b/gi, 'ვიჯექი და ცრემლებს ძლივს ვიკავებდი'],
-        [/\bდა\s+ვხრჩობდი\b/gi, 'და ემოციებისგან ყელში ბურთი მებჯინებოდა'],
+        [kaWord('ვიჯექი\\s+და\\s+ვხრჩობდი', 'gi'), 'ვიჯექი და ცრემლებს ძლივს ვიკავებდი'],
+        [kaWord('და\\s+ვხრჩობდი', 'gi'), 'და ემოციებისგან ყელში ბურთი მებჯინებოდა'],
 
         // "backs away / backwards" -> "უკან იხევს / აჭიანურებს"
-        [/\bუკუღმა\s+მოძრაობს\b/gi, 'უკან იხევს და საქმეს აჭიანურებს'],
-        [/\bუკუღმა\s+წავიკითხე\b/gi, 'თავიდან ბოლომდე, ერთი ამოსუნთქვით წავიკითხე'],
+        [kaWord('უკუღმა\\s+მოძრაობს', 'gi'), 'უკან იხევს და საქმეს აჭიანურებს'],
+        [kaWord('უკუღმა\\s+წავიკითხე', 'gi'), 'თავიდან ბოლომდე, ერთი ამოსუნთქვით წავიკითხე'],
 
         // "Resistance" (War of Art core theme) -> "შინაგანი წინააღმდეგობა"
-        [/\bსხვა\s+სიტყვებით\s+რომ\s+ვთქვათ,\s+წინააღმდეგობა\b/gi, 'სხვა სიტყვებით რომ ვთქვათ — შინაგანი წინააღმდეგობა'],
+        [kaWord('სხვა\\s+სიტყვებით\\s+რომ\\s+ვთქვათ,\\s+წინააღმდეგობა', 'gi'), 'სხვა სიტყვებით რომ ვთქვათ — შინაგანი წინააღმდეგობა'],
 
         // "writer's block" / "the block" -> "შემოქმედებითი ბლოკი"
         [/როგორც\s+„ბლოკი“,\s+დამბლა/gi, 'როგორც „შემოქმედებითი დამბლა“ და ბლოკი'],
@@ -722,14 +1981,47 @@ function refineGeorgianGrammar(text) {
         // "Salvation Army" in clothing pile context -> "საქველმოქმედო გროვა"
         [/ზამთარი,\s*ხსნის\s*არმია/gi, 'ზამთარი და საქველმოქმედო ყუთი'],
 
-        // General Idioms
-        [/\bერთხელ\s+დროში\b/gi, 'იყო და არა იყო რა'],
-        [/\bსხვა\s+მხრივ\b/gi, 'მეორეს მხრივ'],
-        [/\bყველაფერში\s+ყველაფერში\b/gi, 'საბოლოო ჯამში'],
-        [/\bსაქმის\s+ფაქტად\b/gi, 'სინამდვილეში'],
-        [/\bსხვა\s+სიტყვებით\b/gi, 'სხვა სიტყვებით რომ ვთქვათ'],
-        [/\bზედმეტია\s+იმის\s+თქმა\b/gi, 'რა თქმა უნდა'],
-        [/\bთავის\s+თავად\b/gi, 'თავისთავად']
+        // General Idioms & Calque Fixes
+        [kaWord('ერთხელ\\s+დროში', 'gi'), 'იყო და არა იყო რა'],
+        [kaWord('სხვა\\s+მხრივ', 'gi'), 'მეორეს მხრივ'],
+        [kaWord('ყველაფერში\\s+ყველაფერში', 'gi'), 'საბოლოო ჯამში'],
+        [kaWord('საქმის\\s+ფაქტად', 'gi'), 'სინამდვილეში'],
+        [kaWord('სხვა\\s+სიტყვებით', 'gi'), 'სხვა სიტყვებით რომ ვთქვათ'],
+        [kaWord('ზედმეტია\\s+იმის\\s+თქმა', 'gi'), 'რა თქმა უნდა'],
+        [kaWord('თავის\\s+თავად', 'gi'), 'თავისთავად'],
+        // English calque fixes
+        [kaWord('ჯერ,?\\s*ბოლოს\\s*და\\s*ყოველთვის', 'gi'), 'უპირველეს ყოვლისა და მუდამ'],
+        [kaWord('ხვალში\\s+ყვავის', 'gi'), 'მომავალში ისხამს ნაყოფს'],
+        [kaWord('მაგნიტური\\s+ჯოხივით', 'gi'), 'მაგნიტივით'],
+        [kaWord('ყოველ\\s+დღეს', 'gi'), 'ყოველდღე'],
+        [kaWord('დროის\\s+გასვლასთან\\s+ერთად', 'gi'), 'დროთა განმავლობაში'],
+        [kaWord('მიიღო\\s+გადაწყვეტილება', 'gi'), 'გადაწყვიტა'],
+        [kaWord('მოახდინა\\s+გავლენა', 'gi'), 'გავლენა იქონია'],
+        [kaWord('ადგილი\\s+დაიკავა', 'gi'), 'მოხდა'],
+        [kaWord('ადგილი\\s+ჰქონდა', 'gi'), 'მოხდა'],
+        [kaWord('ნაწილი\\s+მიიღო', 'gi'), 'მონაწილეობა მიიღო'],
+        [kaWord('ყურადღება\\s+გადაიხადა', 'gi'), 'ყურადღება მიაქცია'],
+        [kaWord('რაც\\s+შეიძლება\\s+სწრაფად', 'gi'), 'რაც შეიძლება მალე'],
+        [kaWord('დროიდან\\s+დრომდე', 'gi'), 'დროდადრო'],
+        [kaWord('ნაბიჯით\\s+ნაბიჯზე', 'gi'), 'ნაბიჯ-ნაბიჯ'],
+        [kaWord('დღიდან\\s+დღემდე', 'gi'), 'დღითიდღე'],
+        [kaWord('ხელი\\s+ხელში', 'gi'), 'ხელიხელჩაკიდებული'],
+        [kaWord('სრული\\s+აზრი\\s+აქვს', 'gi'), 'სავსებით ლოგიკურია'],
+        [kaWord('აზრს\\s+არ\\s+აკეთებს', 'gi'), 'აზრი არ აქვს'],
+        [kaWord('გააკეთა\\s+დარწმუნებული', 'gi'), 'დარწმუნდა'],
+        [kaWord('დარწმუნებული\\s+გახადა', 'gi'), 'დაარწმუნა'],
+        [kaWord('ეს\\s+ხუთი\\s+თავი', 'gi'), 'ეს ხუთი ძირითადი საწყისი'],
+        [kaWord('ხუთი\\s+მუდმივი\\s+ფაქტორით', 'gi'), 'ხუთი მუდმივი პრინციპით'],
+        [kaWord('ვინც\\s+მათ\\s+იცის', 'gi'), 'ვინც მათ ფლობს'],
+        [kaWord('გამარჯვებული\\s+იქნება', 'gi'), 'გაიმარჯვებს'],
+        [kaWord('დამარცხებული\\s+იქნება', 'gi'), 'დამარცხდება'],
+        [kaWord('განასახიერებს\\s+სიბრძნის', 'gi'), 'უნდა ახასიათებდეს სიბრძნის'],
+        [kaWord('დიდსა\\s+და\\s+პატარას', 'gi'), 'დიდსა და მცირეს'],
+        [kaWord('არმიის\\s+სწორი\\s+დაყოფა', 'gi'), 'ჯარის სწორი განაწილება'],
+        [kaWord('მიწა\\s+მოიცავს\\s+დისტანციებს', 'gi'), 'მიწა განსაზღვრავს მანძილს'],
+        [kaWord('სასიცოცხლო\\s+მნიშვნელობა\\s+აქვს\\s+სახელმწიფოსთვის', 'gi'), 'სახელმწიფოსთვის უდიდესი, სასიცოცხლო მნიშვნელობის საქმეა'],
+        [kaWord('იქნა\\s+მიღებული', 'gi'), 'მიიღეს'],
+        [kaWord('უნდა\\s+იქნეს\\s+გაგებული', 'gi'), 'უნდა გავიგოთ']
     ];
     idiomFixes.forEach(([pattern, repl]) => {
         out = out.replace(pattern, repl);
@@ -737,10 +2029,10 @@ function refineGeorgianGrammar(text) {
 
     // 2. Historical & Literary Name Localization
     const nameReplacements = [
-        [/\bსუნ\s+ცუ\b/gi, 'სუნ ძი'],
-        [/\bსუნ\s+ტზუ\b/gi, 'სუნ ძი'],
-        [/\bალექსანდრე\s+დიდი\b/gi, 'ალექსანდრე მაკედონელი'],
-        [/\bიულიუს\s+ცეზარი\b/gi, 'იულიუს კეისარი']
+        [kaWord('სუნ\\s+ცუ', 'gi'), 'სუნ ძი'],
+        [kaWord('სუნ\\s+ტზუ', 'gi'), 'სუნ ძი'],
+        [kaWord('ალექსანდრე\\s+დიდი', 'gi'), 'ალექსანდრე მაკედონელი'],
+        [kaWord('იულიუს\\s+ცეზარი', 'gi'), 'იულიუს კეისარი']
     ];
     nameReplacements.forEach(([pat, repl]) => {
         out = out.replace(pat, repl);
@@ -756,20 +2048,41 @@ function refineGeorgianGrammar(text) {
         'მოიტანა', 'წაიყვანა', 'მიატოვა', 'აირჩია', 'შექმნა', 'შეჭამა'
     ];
     ergativeVerbs.forEach(verb => {
-        out = out.replace(new RegExp(`\\bის\\s+(${verb})\\b`, 'g'), 'მან $1');
-        out = out.replace(new RegExp(`\\bის\\s+([ა-ჰ]+ად|[ა-ჰ]+ადვე|[ა-ჰ]+თ)\\s+(${verb})\\b`, 'g'), 'მან $1 $2');
+        out = out.replace(kaWord(`ის\\s+(${verb})`, 'g'), 'მან $1');
+        out = out.replace(kaWord(`ის\\s+([ა-ჰ]+ად|[ა-ჰ]+ადვე|[ა-ჰ]+თ)\\s+(${verb})`, 'g'), 'მან $1 $2');
     });
 
-    // 4. Format Authentic Georgian Literary Quotations: „...“
+    // 4. Fix Machine Translation Dative Experiencer Inversion Errors
+    // (translating "I/he is hungry/cold/afraid" as nominative copula instead of dative experiencer)
+    out = out.replace(/(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?მშიერი\s+და\s+ცივი(?![ა-ჰ])/g, (m, subj) => subj === 'მე' ? 'მშია და მცივა' : 'მას შია და სცივა');
+    out = out.replace(/(?<![ა-ჰ])მშიერი\s+და\s+ცივი(?![ა-ჰ])/g, 'მშია და სცივა');
+    out = out.replace(/(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?მშიერი(?![ა-ჰ])/g, (m, subj) => subj === 'მე' ? 'მშია' : 'მას შია');
+    out = out.replace(/(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?ცივი(?![ა-ჰ])/g, (m, subj) => subj === 'მე' ? 'მცივა' : 'მას სცივა');
+    out = out.replace(/(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?მწყურვალი(?![ა-ჰ])/g, (m, subj) => subj === 'მე' ? 'მწყურია' : 'მას სწყურია');
+    out = out.replace(/(?<![ა-ჰ])(მე|ის)\s+(?:არის\s+|ვარ\s+)?შეშინებული(?![ა-ჰ])/g, (m, subj) => subj === 'მე' ? 'მეშინია' : 'მას ეშინია');
+    out = out.replace(/(?<![ა-ჰ])(ის\s+საჭიროებს|მას\s+აქვს\s+საჭიროება)\s+([ა-ჰ]+ს)(?![ა-ჰ])/g, 'მას $2 სჭირდება');
+    out = out.replace(/(?<![ა-ჰ])მე\s+მჭირდება\s+([ა-ჰ]+ს)(?![ა-ჰ])/g, 'მჭირდება $1');
+
+    // 5. Strip dummy leading "რომ" at sentence or paragraph starts (calque of English "That...")
+    out = out.replace(/(^|[\n\r]+|[.!?…]\s+)([„"“]?)\s*რომ\s+([ა-ჰ])/g, '$1$2$3');
+
+    // 6. Ensure comma precedes Georgian subordinate conjunctions (რომ, რომელიც, როდესაც, რადგან, რადგანაც, ვინაიდან, რაკი, თუმცა, ხოლო, სანამ, ვიდრე)
+    out = out.replace(/([ა-ჰ0-9])\s+(რომ|რომელიც|როდესაც|რადგან|რადგანაც|ვინაიდან|რაკი|თუმცა|ხოლო|სანამ|ვიდრე)(?![ა-ჰ])/g, '$1, $2');
+
+    // 7. Dialogue dashes for spoken lines: "- გამარჯობა" -> "— გამარჯობა"
+    out = out.replace(/(^|[\r\n]+)\s*[-–]\s+([ა-ჰ])/g, '$1— $2');
+
+    // 8. Format Authentic Georgian Literary Quotations: „...“
     out = out.replace(/(^|[\s(\[])["“]([^\s"”])/g, '$1„$2');
     out = out.replace(/([^\s"„])["”]([\s)\].,!?;:]|$)/g, '$1“$2');
 
-    // 5. Fix Machine Translation Spacing Artifacts Around Punctuation
+    // 9. Fix Machine Translation Spacing Artifacts Around Punctuation
     out = out.replace(/\s+([,.:;!?])/g, '$1');
     out = out.replace(/([,.:;!?])(?=[ა-ჰA-Za-z0-9])/g, '$1 ');
 
     return out.trim();
 }
+
 
 const GEORGIAN_TO_PHONETIC = {
     'ა': 'a', 'ბ': 'b', 'გ': 'g', 'დ': 'd', 'ე': 'e',
@@ -804,7 +2117,7 @@ const DISCOVER_CLASSICS = [
                 id: 1,
                 title: 'Chapter 1: Laying Plans',
                 text: "The art of war is of vital importance to the State. It is a matter of life and death, a road either to safety or to ruin. Hence it is a subject of inquiry which can on no account be neglected. The art of war, then, is governed by five constant factors, to be taken into account in one's deliberations, when seeking to determine the conditions obtaining in the field. These are: The Moral Law; Heaven; Earth; The Commander; Method and Discipline. The Moral Law causes the people to be in complete accord with their ruler, so that they will follow him regardless of their lives, undismayed by any danger. Heaven signifies night and day, cold and heat, times and the seasons. Earth comprises distances, great and small; danger and security; open ground and narrow passes; the chances of life and death. The Commander stands for the virtues of wisdom, sincerely, benevolence, courage and strictness. By method and discipline are to be understood the marshaling of the army in its proper subdivisions, the graduations of rank among the officers, the maintenance of roads by which supplies may reach the army, and the control of military expenditure. These five heads should be familiar to every general: he who knows them will be victorious; he who knows them not will fail. Therefore, in your deliberations, when seeking to determine the military conditions, let them be made the basis of a comparison. Which of the two sovereigns is imbued with the Moral law? Which of the two generals has most ability? With whom lie the advantages derived from Heaven and Earth? On which side is discipline most rigorously enforced? Which army is stronger? On which side are officers and men more highly trained? In which army is there the greater constancy both in reward and punishment? By means of these seven considerations I can forecast victory or defeat.",
-                text_ka: "ომის ხელოვნებას სასიცოცხლო მნიშვნელობა აქვს სახელმწიფოსთვის. ეს არის სიცოცხლისა და სიკვდილის საკითხი, გზა ან უსაფრთხოებისკენ, ან დაღუპვისკენ. აქედან გამომდინარე, ეს არის კვლევის საგანი, რომლის უგულებელყოფა არავითარ შემთხვევაში არ შეიძლება. ომის ხელოვნება იმართება ხუთი მუდმივი ფაქტორით: მორალური კანონი; ცა; მიწა; მხედართმთავარი; მეთოდი და დისციპლინა. მორალური კანონი აიძულებს ხალხს იყოს სრულ თანხმობაში თავის მმართველთან. ცა ნიშნავს ღამესა და დღეს, სიცივესა და სიცხეს. მიწა მოიცავს დისტანციებს, დიდსა და პატარას. მხედართმთავარი განასახიერებს სიბრძნის, გულწრფელობის, კეთილგანწყობის, გამბედაობისა და სიმკაცრის სათნოებებს. მეთოდითა და დისციპლინით უნდა გავიგოთ არმიის სწორი დაყოფა და მომარაგების გზები. ეს ხუთი თავი ნაცნობი უნდა იყოს ყოველი გენერლისთვის: ვინც მათ იცის, გამარჯვებული იქნება; ვინც არ იცის, დამარცხდება.",
+                text_ka: "ომის ხელოვნებას სასიცოცხლო მნიშვნელობა აქვს სახელმწიფოსთვის. ეს გახლავთ სიცოცხლისა და სიკვდილის საკითხი, გზა გადარჩენისკენ ან წარწყმედისკენ. ამიტომაც, იგი კვლევის ისეთი საგანია, რომლის უგულებელყოფა არავითარ შემთხვევაში არ შეიძლება. ომის ხელოვნება იმართება ხუთი მუდმივი საწყისით, რომლებიც საგულდაგულოდ უნდა შეფასდეს ბრძოლის ველზე არსებული ვითარების განსაზღვრისას. ესენია: ზნეობრივი კანონი, ცა, მიწა, მხედართმთავარი, წესი და დისციპლინა. ზნეობრივი კანონი ხალხს მმართველთან სრულ ერთსულოვნებას შთააგონებს, რათა ისინი მას სიცოცხლის დაუზოგავად გაჰყვნენ და ყოველგვარ საფრთხეს გაბედულად შეეგებონ. ცა განასახიერებს დღესა და ღამეს, სიცივესა და სიცხეს, დროთა ცვალებადობასა და წელიწადის დროებს. მიწა მოიცავს მანძილებს — შორსა და ახლოს; საფრთხესა და სიმშვიდეს; გაშლილ ველებსა და ვიწრო ხეობებს; სიცოცხლისა და სიკვდილის შესაძლებლობებს. მხედართმთავარი თავის თავში აერთიანებს სიბრძნის, ერთგულების, კეთილგანწყობის, სიმამაცისა და სიმკაცრის სათნოებებს. წესსა და დისციპლინაში იგულისხმება ლაშქრის სათანადო დანაყოფებად განლაგება, ოფიცერთა ჩინების თანმიმდევრობა, მომარაგების გზების მოწესრიგება და სამხედრო ხარჯების მართვა. ეს ხუთი ძირითადი საწყისი ყოველი სარდლისთვის ზედმიწევნით ცნობილი უნდა იყოს: ვინც მათ ფლობს, გაიმარჯვებს, ხოლო ვინც ვერ ჩასწვდომია — დამარცხდება. ამგვარად, სამხედრო მდგომარეობის შეფასებისას, სწორედ ეს საწყისები დაუდეთ საფუძვლად ურთიერთშედარებას. ორი მმართველიდან რომელია ზნეობრივი კანონით აღსავსე? რომელი მხედართმთავარი გამოირჩევა უპირატესი ნიჭითა და ოსტატობით? ვის მხარესაა ცისა და მიწისგან ბოძებული უპირატესობანი? რომელ ბანაკში აღსრულდება დისციპლინა ყველაზე მკაცრად? რომელი ლაშქარია უფრო ძლიერი? სად არიან ოფიცრები და მეომრები უკეთ გაწვრთნილნი? რომელ არმიაშია უდიდესი სამართლიანობა და თანმიმდევრულობა როგორც ჯილდოს, ისე სასჯელის მიგებისას? სწორედ ამ შვიდი განსჯის საფუძველზე შემიძლია წინასწარ განვჭვრიტო გამარჯვება ან მარცხი.",
                 word_count: 260,
                 estimated_duration_sec: 95
             },
@@ -812,7 +2125,7 @@ const DISCOVER_CLASSICS = [
                 id: 2,
                 title: 'Chapter 2: Waging War',
                 text: "Sun Tzu said: In the operations of war, where there are in the field a thousand swift chariots, as many heavy chariots, and a hundred thousand mail-clad soldiers, with provisions enough to carry them a thousand li, the expenditure at home and at the front, including entertainment of guests, small items such as glue and paint, and sums spent on chariots and armor, will reach the total of a thousand ounces of silver per day. Such is the cost of raising an army of 100,000 men. When you engage in actual fighting, if victory is long in coming, then men's weapons will grow dull and their ardor will be damped. If you lay siege to a town, you will exhaust your strength. Again, if the campaign is protracted, the resources of the State will not be equal to the strain. Now, when your weapons are dulled, your ardor damped, your strength exhausted and your treasure spent, other chieftains will spring up to take advantage of your extremity. Then no man, however wise, will be able to avert the consequences that must ensue. Thus, though we have heard of stupid haste in war, cleverness has never been seen associated with long delays. In war, then, let your great object be victory, not lengthy campaigns.",
-                text_ka: "სუნ ძიმ თქვა: საომარ ოპერაციებში, როდესაც ბრძოლის ველზე არის ათასი სწრაფი ეტლი და ასი ათასი ჯარისკაცი, ხარჯები მიაღწევს ათას უნცია ვერცხლს დღეში. ასეთია არმიის შეკრების ფასი. როდესაც რეალურ ბრძოლაში ერთვებით, თუ გამარჯვება აგვიანებს, იარაღი დაბლაგვდება და მხნეობა გაქრება. თუ ქალაქს ალყას შემოარტყამთ, ძალებს ამოწურავთ. თუ კამპანია გაჭიანურდა, სახელმწიფოს რესურსები ვერ გაუძლებს დაძაბულობას. ამიტომ ომში თქვენი მთავარი მიზანი უნდა იყოს სწრაფი გამარჯვება და არა ხანგრძლივი კამპანიები.",
+                text_ka: "სუნ ძიმ ბრძანა: საომარ მოქმედებებში, როდესაც ბრძოლის ველზე ათასი სწრაფი საომარი ეტლი, ათასი მძიმე ეტლი და ასი ათასი ჯავშნოსანი მეომარი გყავს, ათასი ლის მანძილზე საკმარისი საგზლით, ხარჯები ზურგსა და ფრონტზე — სტუმართა მიღების, ისეთი წვრილმანების, როგორიცაა წებო და საღებავი, ასევე ეტლებისა და აბჯრის შესაკეთებლად — დღეში ათას უნცია ვერცხლს მიაღწევს. ასეთია ასიათასიანი ლაშქრის გამოყვანის ფასი. როდესაც რეალურ ბრძოლაში ებმებით, თუ გამარჯვება აგვიანებს, მეომართა იარაღი დაბლაგვდება და მათი შემართება დაცხრება. თუ ციხე-ქალაქს შემოადგებით ალყით, ძალ-ღონეს ამოწურავთ. ხოლო თუ ლაშქრობა გაჭიანურდა, სახელმწიფოს რესურსები ვეღარ გაუძლებს ამ სიმძიმეს. როდესაც თქვენი იარაღი დაბლაგვდება, შემართება განელდება, ძალები ამოიწურება და ხაზინა დაცარიელდება, მეზობელი მმართველები წამოდგებიან, რათა თქვენი გაჭირვებით ისარგებლონ. მაშინ ვერავინ, რაოდენ ბრძენიც არ უნდა იყოს, ვეღარ აიცილებს გარდაუვალ შედეგებს. ამიტომ, მართალია გვსმენია ომში უგუნური სისწრაფის შესახებ, მაგრამ სიბრძნე გაჭიანურებულ ომებთან დაკავშირებული არასოდეს გვინახავს. მაშასადამე, ომში თქვენი უპირველესი მიზანი იყოს გამარჯვება და არა ხანგრძლივი ლაშქრობა.",
                 word_count: 240,
                 estimated_duration_sec: 85
             },
@@ -820,7 +2133,7 @@ const DISCOVER_CLASSICS = [
                 id: 3,
                 title: 'Chapter 3: Attack by Stratagem',
                 text: "In the practical art of war, the best thing of all is to take the enemy's country whole and intact; to shatter and destroy it is not so good. So, too, it is better to recapture an army entire than to destroy it. Hence to fight and conquer in all your battles is not supreme excellence; supreme excellence consists in breaking the enemy's resistance without fighting. Thus the highest form of generalship is to balk the enemy's plans; the next best is to prevent the junction of the enemy's forces; the next in order is to attack the enemy's army in the field; and the worst policy of all is to besiege walled cities. If you know the enemy and know yourself, you need not fear the result of a hundred battles. If you know yourself but not the enemy, for every victory gained you will also suffer a defeat. If you know neither the enemy nor yourself, you will succumb in every battle.",
-                text_ka: "ომის პრაქტიკულ ხელოვნებაში ყველაზე კარგია მტრის ქვეყნის ხელუხლებლად აღება; მისი განადგურება არც ისე კარგია. უმაღლესი სრულყოფილება მდგომარეობს მტრის წინააღმდეგობის გატეხვაში უბრძოლველად. ამიტომ მხედართმთავრობის უმაღლესი ფორმაა მტრის გეგმების ჩაშლა. თუ იცნობ მტერს და იცნობ საკუთარ თავს, ასი ბრძოლის შედეგისაც არ შეგეშინდება. თუ იცნობ საკუთარ თავს, მაგრამ არა მტერს, ყოველი გამარჯვებისთვის მარცხსაც განიცდი. თუ არც მტერს იცნობ და არც საკუთარ თავს, ყველა ბრძოლაში დამარცხდები.",
+                text_ka: "ომის პრაქტიკულ ხელოვნებაში უპირველესი და საუკეთესოა მტრის ქვეყნის მთლიანად და ხელუხლებლად დამორჩილება; მისი დანგრევა და განადგურება ნაკლებად სასურველია. ასევე, უმჯობესია მტრის ლაშქრის მთლიანად ჩაგდება ხელში, ვიდრე მისი მოსპობა. ამდენად, ყველა ბრძოლაში შებმა და გამარჯვება არ გახლავთ უმაღლესი ოსტატობა; უმაღლესი სრულყოფილება იმაში მდგომარეობს, რომ მტრის წინააღმდეგობა უბრძოლველად გატეხო. ამიტომ, სარდლობის უმაღლესი მწვერვალია მტრის გეგმების ჩაშლა; მომდევნო საუკეთესო გზაა მტრის ძალთა გაერთიანების აღკვეთა; შემდეგ მოდის მტრის არმიაზე იერიშის მიტანა გაშლილ ველზე; ხოლო ყველაზე უარესი გზა გალავნიანი ქალაქების ალყაში მოქცევაა. თუ იცნობ მტერს და იცნობ საკუთარ თავს, ასი ბრძოლის შედეგის წინაშეც კი შიში არ გაგეკარება. თუ საკუთარ თავს იცნობ, ხოლო მტერს არა, ყოველი მოპოვებული გამარჯვებისთვის მარცხსაც იწვნევ. ხოლო თუ არც მტერს იცნობ და არც საკუთარ თავს, ყოველ ბრძოლაში გარდაუვალი მარცხი გელის.",
                 word_count: 175,
                 estimated_duration_sec: 65
             },
@@ -828,7 +2141,7 @@ const DISCOVER_CLASSICS = [
                 id: 4,
                 title: 'Chapter 4: Tactical Dispositions',
                 text: "Sun Tzu said: The good fighters of old first put themselves beyond the possibility of defeat, and then waited for an opportunity of defeating the enemy. To secure ourselves against defeat lies in our own hands, but the opportunity of defeating the enemy is provided by the enemy himself. Thus the good fighter is able to secure himself against defeat, but cannot make certain of defeating the enemy. Hence the saying: One may know how to conquer without being able to do it. Security against defeat implies defensive tactics; ability to defeat the enemy means taking the offensive. Standing on the defensive indicates insufficient strength; attacking, a superabundance of strength.",
-                text_ka: "სუნ ძიმ თქვა: ძველი დროის გამოცდილი მებრძოლები ჯერ თავად იცავდნენ თავს დამარცხებისგან, შემდეგ კი ელოდნენ მტრის დამარცხების ხელსაყრელ მომენტს. თავის დაცვა ჩვენს ხელშია, ხოლო მტრის დამარცხების შესაძლებლობას თავად მტერი გვაძლევს. თავდაცვითი ტაქტიკა მიუთითებს ძალების ნაკლებობაზე; თავდასხმა - ძალების სიჭარბეზე.",
+                text_ka: "სუნ ძიმ ბრძანა: ძველი დროის გამოცდილი მეომრები ჯერ საკუთარ თავს აქცევდნენ დაუმარცხებელ მდგომარეობაში, შემდეგ კი მოთმინებით ელოდნენ მტრის დამარცხების ხელსაყრელ ჟამს. საკუთარი თავის დაცვა მარცხისგან ჩვენს ხელთაა, ხოლო მტრის დამარცხების შესაძლებლობას თავად მოწინააღმდეგე გვაძლევს. ამგვარად, უებრო მეომარს ძალუძს დაიცვას თავი მარცხისგან, თუმცა ვერ ექნება სრული თავდაჯერებულობა, რომ მტერს დაამარცხებს. აქედან მომდინარეობს გამონათქვამი: შეიძლება იცოდე, როგორ გაიმარჯვო, მაგრამ ვერ შეძლო ამის აღსრულება. მარცხისგან დაზღვევა თავდაცვით ტაქტიკას გულისხმობს, ხოლო მტრის დამარცხების შესაძლებლობა — შეტევაზე გადასვლას. თავდაცვაზე დგომა ძალთა სიმცირეზე მიანიშნებს, ხოლო შეტევა — ძალების სიჭარბეზე.",
                 word_count: 120,
                 estimated_duration_sec: 45
             },
@@ -836,7 +2149,7 @@ const DISCOVER_CLASSICS = [
                 id: 5,
                 title: 'Chapter 5: Energy and Direct Force',
                 text: "The control of a large force is the same principle as the control of a few men: it is merely a question of dividing up their numbers. Fighting with a large army under your command is nowise different from fighting with a small one: it is merely a question of instituting signs and signals. In all fighting, the direct method may be used for joining battle, but indirect methods will be needed in order to secure victory. In battle there are not more than two methods of attack: the direct and the indirect; yet these two in combination give rise to an endless series of maneuvers.",
-                text_ka: "დიდი ძალის მართვა იგივე პრინციპია, რაც რამდენიმე ადამიანის მართვა: ეს მხოლოდ მათი რიცხვის სწორი განაწილების საკითხია. ბრძოლაში არსებობს შეტევის მხოლოდ ორი მეთოდი: პირდაპირი და ირიბი; თუმცა ეს ორი ერთად ქმნის მანევრების უსასრულო სერიას.",
+                text_ka: "დიდი ძალის მართვა იმავე პრინციპს ემყარება, რასაც მცირერიცხოვანი რაზმის გაძღოლა: ეს მხოლოდ მათი რიცხოვნობის სწორი დანაწილების საკითხია. დიდი არმიით ბრძოლა არაფრით განსხვავდება მცირე რაზმით შებმისგან: ეს მხოლოდ ნიშნებისა და სიგნალების დაწესების საქმეა. ყოველგვარ ბრძოლაში პირდაპირი მეთოდი გამოიყენება შესაბმელად, ხოლო გამარჯვების მოსაპოვებლად ირიბი ხერხებია საჭირო. ბრძოლისას იერიშის მხოლოდ ორი მეთოდი არსებობს: პირდაპირი და ირიბი; თუმცა მათი შერწყმა მანევრების უსასრულო მრავალფეროვნებას ბადებს.",
                 word_count: 110,
                 estimated_duration_sec: 40
             }
@@ -855,7 +2168,7 @@ const DISCOVER_CLASSICS = [
                 id: 1,
                 title: 'Book 1: Debts and Lessons',
                 text: "From my grandfather Verus I learned good morals and the government of my temper. From the reputation and remembrance of my father, modesty and a manly character. From my mother, piety and beneficence, and abstinence, not only from evil deeds, but even from evil thoughts; and further, simplicity in my way of living, far removed from the habits of the rich. When you wake up in the morning, tell yourself: The people I deal with today will be meddling, ungrateful, arrogant, dishonest, jealous, and surly. They are like this because they cannot distinguish good from evil. But I have seen the beauty of good, and the ugliness of evil, and have recognized that the wrongdoer has a nature related to my own.",
-                text_ka: "ჩემი ბაბუა ვერუსისგან ვისწავლე კარგი ზნეობა და ხასიათის სიმშვიდე. მამაჩემის ხსოვნისგან - მოკრძალება და ვაჟკაცური ხასიათი. დედაჩემისგან - ღვთისმოსაობა, სიკეთე და თავშეკავება არა მხოლოდ ბოროტი საქმეებისგან, არამედ ბოროტი აზრებისგანაც. როდესაც დილით იღვიძებ, უთხარი საკუთარ თავს: ადამიანები, ვისთანაც დღეს მექნება საქმე, იქნებიან უმადურები და ქედმაღლები. ისინი ასეთები არიან იმიტომ, რომ არ შეუძლიათ სიკეთის გარჩევა ბოროტებისგან. მაგრამ მე დავინახე სიკეთის სილამაზე.",
+                text_ka: "ჩემი პაპა ვერუსისგან შევიმეცნე კეთილი ზნეობა და საკუთარი გულისწყრომის დაოკება. მამაჩემის ხსოვნისა და კეთილი სახელისგან — თავმდაბლობა და ვაჟკაცური ხასიათი. დედაჩემისგან — ღვთისმოსაობა, გულმოწყალება და თავშეკავება არა მხოლოდ ავი საქმეებისგან, არამედ ბოროტი ზრახვებისგანაც; და კიდევ, ცხოვრების უბრალო წესი, შორს მდგარი მდიდრულ ჩვევათაგან. როდესაც დილით გაიღვიძებ, უთხარი საკუთარ თავს: ადამიანები, ვისთანაც დღეს შეხვედრა მომიწევს, იქნებიან აბეზრები, უმადურები, ქედმაღლები, მზაკვარნი, შურიანები და უჟმურნი. ისინი ასეთები იმიტომ არიან, რომ ვერ ასხვავებენ სიკეთეს ბოროტებისგან. მაგრამ მე შევიცანი სიკეთის მშვენიერება და ბოროტების სიმახინჯე, და გავაცნობიერე, რომ შემცოდეს ჩემთან მონათესავე ბუნება აქვს.",
                 word_count: 155,
                 estimated_duration_sec: 55
             },
@@ -863,7 +2176,7 @@ const DISCOVER_CLASSICS = [
                 id: 2,
                 title: 'Book 2: The Inner Citadel',
                 text: "Remember how long you have been putting this off, how many times the gods have granted you a period of grace of which you have made no use. It is high time now that you understood the universe of which you are a part, and the Ruler of that universe by whose emanation you subsist; that there is a limit set to your time, which will shortly pass away, and you with it, and will not return. Every hour focus your mind attentively on the performance of the task in hand, with dignity, human sympathy, benevolence and freedom, and rid yourself of all other thoughts.",
-                text_ka: "გახსოვდეთ, რამდენ ხანს დებდით ამას, რამდენჯერ მოგცეს ღმერთებმა მადლის პერიოდი, რომელიც არ გამოგიყენებიათ. დროა გააცნობიეროთ სამყარო, რომლის ნაწილიც ხართ. ყოველ საათში ყურადღება გაამახვილეთ მიმდინარე დავალების შესრულებაზე ღირსებით, ადამიანური თანაგრძნობით, კეთილგანწყობითა და თავისუფლებით.",
+                text_ka: "გახსოვდეს, რამდენ ხანს დებდი ამას სამომავლოდ, რამდენჯერ მოგმადლეს ღმერთებმა წყალობის ჟამი, რომელიც არ გამოგიყენებია. უკვე დროა შეიცნო სამყარო, რომლის ნაწილიც ხარ, და ამ სამყაროს განმგებელი, რომლის გამოსხივებითაც ცოცხლობ; რომ შენს დროს საზღვარი აქვს დადებული, რომელიც მალე გაივლის, შენც თან გაგიყოლებს და აღარასოდეს დაბრუნდება. ყოველ საათს მთელი გულისყური მიაპყარი ხელთ არსებული საქმის პირნათლად შესრულებას — ღირსებით, ადამიანური თანაგრძნობით, კეთილშობილებითა და თავისუფლებით, და გაითავისუფლე გონება ყველა სხვა ზედმეტი ფიქრისგან.",
                 word_count: 105,
                 estimated_duration_sec: 42
             },
@@ -871,7 +2184,7 @@ const DISCOVER_CLASSICS = [
                 id: 3,
                 title: 'Book 3: Harmony and Reason',
                 text: "We ought to observe also that even the things which follow after the things which are produced according to nature contain something pleasing and attractive. For instance, when bread is baked some parts are split open, and these crevices, though in a manner contrary to the art of the baker, look well and in a peculiar way excite the desire for eating. Do not waste the remainder of your life in thoughts about others, when you do not refer your thoughts to some object of common utility.",
-                text_ka: "ჩვენ ასევე უნდა დავაკვირდეთ, რომ ბუნების მიერ წარმოებულ მოვლენებშიც კი არის რაღაც სასიამოვნო და მიმზიდველი. ნუ დაკარგავთ თქვენი ცხოვრების დარჩენილ ნაწილს სხვებზე ფიქრში, როდესაც თქვენი აზრები არ ემსახურება საზოგადო სიკეთეს.",
+                text_ka: "ჩვენ ასევე უნდა დავაკვირდეთ, რომ ბუნების თანახმად წარმოქმნილ საგანთა თანმდევი მოვლენებიც კი შეიცავს რაღაც სასიამოვნოსა და მიმზიდველს. მაგალითად, როდესაც პური ცხვება, მისი ზოგიერთი ნაწილი იბზარება; და ეს ნაპრალები, თუმცა კი თითქოს ეწინააღმდეგება მცხობელის ხელოვნებას, მაინც მშვენივრად გამოიყურება და თავისებურად აღძრავს ჭამის მადას. ნუ გაფლანგავთ თქვენი ცხოვრების დარჩენილ ნაწილს სხვებზე ფიქრში, თუკი თქვენი ზრახვები საერთო საზოგადო სიკეთისკენ არ არის მიმართული.",
                 word_count: 90,
                 estimated_duration_sec: 35
             }
@@ -956,6 +2269,10 @@ function cacheDOM() {
         elevenLabsKeySection: document.getElementById('elevenLabsKeySection'),
         elevenLabsApiKey: document.getElementById('elevenLabsApiKey'),
         elevenLabsVoiceSelect: document.getElementById('elevenLabsVoiceSelect'),
+        elevenLabsVoiceSelectKa: document.getElementById('elevenLabsVoiceSelectKa'),
+        elevenLabsCustomVoiceIdKa: document.getElementById('elevenLabsCustomVoiceIdKa'),
+        btnSyncElevenVoices: document.getElementById('btnSyncElevenVoices'),
+        backgroundKeepAliveAudio: document.getElementById('backgroundKeepAliveAudio'),
 
         // Moon+ Reader View
         readerView: document.getElementById('readerView'),
@@ -997,12 +2314,18 @@ function cacheDOM() {
 
 // ── Initialization ──────────────────────────────────────────────────────────
 async function init() {
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
     cacheDOM();
+    initBackgroundAudioKeepAlive();
+    initMediaSessionHandlers();
+    checkAuthState(); // Immediately lock dashboard if not authenticated
     await initDB();
+    try { await restoreAccountSettingsForCurrentUser(); } catch (e) {}
     setupEventListeners();
     setupKeyboardAndTouchControls();
     checkAuthState();
     loadElevenLabsSettings();
+    syncSettingsToDOMInputs();
 
     populateVoiceList();
     if (window.speechSynthesis) {
@@ -1017,19 +2340,20 @@ async function init() {
         localStorage.setItem(seedFlag, 'true');
     }
 
+    if (currentUser && currentUser.email) {
+        await renderDigitalShelf();
+        renderDiscoverClassics();
 
-    await renderDigitalShelf();
-    renderDiscoverClassics();
-
-    const books = await getAllBooks();
-    if (books.length > 0) {
-        selectBook(books[0].id, false);
+        const books = await getAllBooks();
+        if (books.length > 0) {
+            selectBook(books[0].id, false);
+        }
     }
 
     if (window.lucide) lucide.createIcons();
 
     // Pick up an interrupted Georgian translation exactly where it stopped.
-    setTimeout(() => { resumeTranslationJobIfAny(); }, 800);
+    setTimeout(() => { if (currentUser && currentUser.email) resumeTranslationJobIfAny(); }, 800);
 }
 
 
@@ -1065,41 +2389,477 @@ function initLocalDB() {
     });
 }
 
-async function saveBookToDB(book) {
-    if (usingCloud) {
+// ════════════════ User Identification & Shelf Isolation (v1.47.6) ════════════════
+function getCurrentUserId() {
+    if (window.LuminaStore && typeof window.LuminaStore.getUserId === 'function') {
+        const sid = window.LuminaStore.getUserId();
+        if (sid) return String(sid);
+    }
+    try {
+        const saved = sessionStorage.getItem('lumina_auth_user') ||
+            (localStorage.getItem('lumina_remember_me') === 'true' ? localStorage.getItem('lumina_auth_user') : null);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && (parsed.id || parsed.email)) return String(parsed.id || parsed.email);
+        }
+    } catch (e) {}
+    if (typeof currentUser !== 'undefined' && currentUser && (currentUser.id || currentUser.email)) {
+        return String(currentUser.id || currentUser.email);
+    }
+    return 'guest';
+}
+
+// ════════════════ Book Deletion Tombstone Store (User-Scoped) ════════════════
+// Prevents deleted audiobooks from ever resurrecting via seedDefaultBooks,
+// legacy indexedDB recovery, or asynchronous Supabase sync, completely isolated per account.
+function getDeletedBooksStorageKey() {
+    const uid = getCurrentUserId();
+    return 'lumina_deleted_book_ids_' + (uid ? encodeURIComponent(uid) : 'guest');
+}
+
+function getDeletedBookIds() {
+    try {
+        const key = getDeletedBooksStorageKey();
+        let raw = localStorage.getItem(key);
+        if (!raw && getCurrentUserId() === 'guest') {
+            raw = localStorage.getItem('lumina_deleted_book_ids');
+        }
+        if (!raw) return new Set();
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return new Set(parsed.map(x => String(x).toLowerCase().trim()));
+    } catch (e) {}
+    return new Set();
+}
+
+function markBookAsDeleted(bookId, title, slug) {
+    try {
+        const set = getDeletedBookIds();
+        if (bookId) {
+            set.add(String(bookId).toLowerCase().trim());
+        }
+        if (title) {
+            const cleanTitle = String(title).toLowerCase().trim();
+            set.add('title:' + cleanTitle);
+        }
+        if (slug) {
+            const cleanSlug = String(slug).toLowerCase().trim();
+            set.add('slug:' + cleanSlug);
+        }
+        localStorage.setItem(getDeletedBooksStorageKey(), JSON.stringify(Array.from(set)));
+    } catch (e) {
+        console.warn('[store] Could not write deletion tombstone:', e);
+    }
+}
+
+function clearBookTombstone(bookId, title, slug) {
+    try {
+        const set = getDeletedBookIds();
+        let changed = false;
+        if (bookId) {
+            changed = set.delete(String(bookId).toLowerCase().trim()) || changed;
+        }
+        if (title) {
+            changed = set.delete('title:' + String(title).toLowerCase().trim()) || changed;
+        }
+        if (slug) {
+            changed = set.delete('slug:' + String(slug).toLowerCase().trim()) || changed;
+        }
+        if (changed) {
+            localStorage.setItem(getDeletedBooksStorageKey(), JSON.stringify(Array.from(set)));
+        }
+    } catch (e) {}
+}
+
+function isBookDeleted(bookOrId) {
+    if (!bookOrId) return false;
+    const set = getDeletedBookIds();
+    if (set.size === 0) return false;
+
+    if (typeof bookOrId === 'string' || typeof bookOrId === 'number') {
+        const idStr = String(bookOrId).toLowerCase().trim();
+        return set.has(idStr);
+    }
+
+    const b = bookOrId;
+    if (b.id && set.has(String(b.id).toLowerCase().trim())) return true;
+    if (b.slug && (set.has(String(b.slug).toLowerCase().trim()) || set.has('slug:' + String(b.slug).toLowerCase().trim()))) return true;
+    if (b.title) {
+        const t = String(b.title).toLowerCase().trim();
+        if (set.has('title:' + t)) return true;
+    }
+    return false;
+}
+
+async function deleteBookFromAllLocalDBs(id, title) {
+    const candidateDBs = [
+        'LuminaAudioStudioDB_v12',
+        'LuminaAudioStudioDB_v11',
+        'LuminaAudioStudioDB_v10',
+        'LuminaAudioStudioDB',
+        'AudioReadStudioDB',
+        'AudiobookStudioDB'
+    ];
+    if (typeof indexedDB !== 'undefined' && typeof indexedDB.databases === 'function') {
         try {
-            await window.LuminaStore.saveBook(book);
-            return;
+            const list = await indexedDB.databases();
+            if (Array.isArray(list)) {
+                for (const dbInfo of list) {
+                    if (dbInfo && dbInfo.name && !candidateDBs.includes(dbInfo.name)) {
+                        candidateDBs.push(dbInfo.name);
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    const normTitle = (title || '').trim().toLowerCase();
+    const idStr = String(id);
+    const idNum = Number(id);
+
+    for (const dbName of candidateDBs) {
+        try {
+            await new Promise((resolve) => {
+                const req = indexedDB.open(dbName);
+                req.onsuccess = (e) => {
+                    const idb = e.target.result;
+                    if (!idb.objectStoreNames.contains('books')) {
+                        idb.close();
+                        return resolve();
+                    }
+                    try {
+                        const tx = idb.transaction('books', 'readwrite');
+                        const store = tx.objectStore('books');
+                        try { store.delete(idStr); } catch (e) {}
+                        if (!isNaN(idNum)) {
+                            try { store.delete(idNum); } catch (e) {}
+                        }
+                        if (normTitle) {
+                            const cursorReq = store.openCursor();
+                            cursorReq.onsuccess = (ev) => {
+                                const cursor = ev.target.result;
+                                if (cursor) {
+                                    const val = cursor.value;
+                                    if (val && ((val.title && val.title.trim().toLowerCase() === normTitle) || String(val.id) === idStr)) {
+                                        cursor.delete();
+                                    }
+                                    cursor.continue();
+                                }
+                            };
+                        }
+                        tx.oncomplete = () => { idb.close(); resolve(); };
+                        tx.onerror = () => { idb.close(); resolve(); };
+                    } catch (err) {
+                        idb.close();
+                        resolve();
+                    }
+                };
+                req.onerror = () => resolve();
+            });
+        } catch (e) {}
+    }
+}
+
+async function saveBookToDB(book) {
+    if (!book) return;
+    const uid = getCurrentUserId();
+    if (!book.user_id && uid !== 'guest') {
+        book.user_id = uid;
+    }
+    book.updatedAt = new Date().toISOString();
+    try { clearBookTombstone(book.id, book.title, book.slug); } catch (e) {}
+    // Dual persistence: always store in local IndexedDB for instant offline access
+    try {
+        await saveBookToLocalDB(book);
+    } catch (localErr) {
+        throw new Error('Local save failed: ' + localErr.message);
+    }
+
+    // And persist to Supabase Cloud if user is authenticated
+    if (usingCloud && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
+        try {
+            const saved = await window.LuminaStore.saveBook(book);
+            if (saved === false) throw new Error('Cloud session is unavailable');
         } catch (err) {
-            console.error('[store] Supabase save failed, keeping a local copy:', err);
+            throw new Error('Cloud sync failed; local copy retained: ' + err.message);
         }
     }
-    return saveBookToLocalDB(book);
+}
+
+// ════════════════ Lightweight Playback Progress Saver (v1.47.6) ════════════════
+let _progressDebounceTimer = null;
+let _lastSavedProgressPct = -1;
+let _lastSavedChapterId = null;
+
+function saveBookProgress(book, progressPct, lastPlayedChapterId) {
+    if (!book) return;
+    book.progressPct = progressPct;
+    if (lastPlayedChapterId !== undefined && lastPlayedChapterId !== null) {
+        book.lastPlayedChapterId = lastPlayedChapterId;
+    }
+    // 1. Immediately update local IndexedDB (zero network latency)
+    try {
+        saveBookToLocalDB(book).catch(() => {});
+    } catch (e) {}
+
+    // 2. Debounce cloud update to Supabase metadata without touching chapters
+    if (usingCloud && window.LuminaStore && typeof window.LuminaStore.updateProgress === 'function') {
+        const sid = book.id || book.slug;
+        if (!sid) return;
+
+        const chapterChanged = lastPlayedChapterId !== _lastSavedChapterId;
+        const pctDiff = Math.abs(progressPct - _lastSavedProgressPct);
+
+        if (chapterChanged || pctDiff >= 5) {
+            clearTimeout(_progressDebounceTimer);
+            _progressDebounceTimer = setTimeout(() => {
+                _lastSavedProgressPct = progressPct;
+                _lastSavedChapterId = lastPlayedChapterId;
+                window.LuminaStore.updateProgress(sid, progressPct, lastPlayedChapterId).catch(() => {});
+            }, 6000);
+        }
+    }
+}
+
+function flushBookProgressImmediate(book) {
+    if (!book) return;
+    clearTimeout(_progressDebounceTimer);
+    try {
+        saveBookToLocalDB(book).catch(() => {});
+    } catch (e) {}
+    if (usingCloud && window.LuminaStore && typeof window.LuminaStore.updateProgress === 'function') {
+        const sid = book.id || book.slug;
+        if (sid) {
+            _lastSavedProgressPct = book.progressPct || 0;
+            _lastSavedChapterId = book.lastPlayedChapterId || null;
+            window.LuminaStore.updateProgress(sid, book.progressPct, book.lastPlayedChapterId).catch(() => {});
+        }
+    }
+}
+
+function readBooksFromIndexedDB(dbName) {
+    return new Promise((resolve) => {
+        try {
+            if (typeof indexedDB === 'undefined') return resolve([]);
+            const req = indexedDB.open(dbName);
+            req.onsuccess = (e) => {
+                const dbInst = e.target.result;
+                if (!dbInst.objectStoreNames.contains('books')) {
+                    dbInst.close();
+                    return resolve([]);
+                }
+                try {
+                    const tx = dbInst.transaction('books', 'readonly');
+                    const store = tx.objectStore('books');
+                    const getAllReq = store.getAll();
+                    getAllReq.onsuccess = () => {
+                        const res = getAllReq.result || [];
+                        dbInst.close();
+                        resolve(res);
+                    };
+                    getAllReq.onerror = () => {
+                        dbInst.close();
+                        resolve([]);
+                    };
+                } catch (err) {
+                    dbInst.close();
+                    resolve([]);
+                }
+            };
+            req.onerror = () => resolve([]);
+        } catch (err) {
+            resolve([]);
+        }
+    });
+}
+
+async function recoverAllLocalBooks() {
+    const candidateDBs = [
+        'LuminaAudioStudioDB_v12',
+        'LuminaAudioStudioDB_v11',
+        'LuminaAudioStudioDB_v10',
+        'LuminaAudioStudioDB',
+        'AudioReadStudioDB',
+        'AudiobookStudioDB'
+    ];
+
+    if (typeof indexedDB !== 'undefined' && typeof indexedDB.databases === 'function') {
+        try {
+            const list = await indexedDB.databases();
+            if (Array.isArray(list)) {
+                for (const dbInfo of list) {
+                    if (dbInfo && dbInfo.name && !candidateDBs.includes(dbInfo.name)) {
+                        candidateDBs.push(dbInfo.name);
+                    }
+                }
+            }
+        } catch (e) {
+            console.debug('[recovery] indexedDB.databases() not available:', e);
+        }
+    }
+
+    const recoveredBooks = [];
+
+    for (const dbName of candidateDBs) {
+        try {
+            const books = await readBooksFromIndexedDB(dbName);
+            for (const book of books) {
+                if (!book || !book.title) continue;
+                // STRICT: If user deleted this book, NEVER resurrect it!
+                if (isBookDeleted(book)) continue;
+
+                const isUserBook = book.isUserUploaded ||
+                    (book.extra && (book.extra.source === 'scan' || book.extra.scanned_pages)) ||
+                    (book.chapters && book.chapters.length > 0 && !DISCOVER_CLASSICS.some(c => c.id === book.id && c.chapters.length === book.chapters.length));
+
+                if (isUserBook || (book.chapters && book.chapters.length > 0)) {
+                    const key = (book.title || '').trim().toLowerCase();
+                    const exists = recoveredBooks.find(b => (b.title || '').trim().toLowerCase() === key || String(b.id) === String(book.id));
+                    if (!exists) {
+                        recoveredBooks.push(book);
+                    } else if (book.chapters && book.chapters.length > (exists.chapters ? exists.chapters.length : 0)) {
+                        const idx = recoveredBooks.indexOf(exists);
+                        recoveredBooks[idx] = book;
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    // Re-save recovered books into active local store LuminaAudioStudioDB_v12 and Supabase (asynchronously)
+    const currentUid = getCurrentUserId();
+    for (const book of recoveredBooks) {
+        if (isBookDeleted(book)) continue;
+        // Strict isolation: Never cross-sync books belonging to another account!
+        if (book.user_id && currentUid !== 'guest' && book.user_id !== currentUid) {
+            continue;
+        }
+        if (currentUid !== 'guest' && !book.user_id) {
+            book.user_id = currentUid;
+        }
+        try {
+            await saveBookToLocalDB(book);
+        } catch (e) {}
+        if (usingCloud && currentUid !== 'guest' && book.user_id === currentUid && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
+            window.LuminaStore.saveBook(book).catch(e => console.warn('[recovery] Cloud sync error:', e));
+        }
+    }
+
+    return recoveredBooks;
 }
 
 async function getAllBooks() {
-    if (usingCloud) {
+    let cloudBooks = [];
+    let localBooks = [];
+
+    if (usingCloud && window.LuminaStore) {
         try {
-            return await window.LuminaStore.getAllBooks();
+            cloudBooks = await window.LuminaStore.getAllBooks();
         } catch (err) {
             console.error('[store] Supabase read failed, falling back to local copy:', err);
         }
     }
-    return getAllLocalBooks();
+
+    try {
+        localBooks = await getAllLocalBooks();
+    } catch (err) {
+        console.warn('[store] Local IndexedDB read error:', err);
+    }
+
+    const bookMap = new Map();
+
+    const getBookKey = b => b ? String(b.id || b.row_id || b.slug || '') : '';
+
+    // First populate from local DB (strictly filtering out any deleted books)
+    for (const lb of localBooks) {
+        if (isBookDeleted(lb)) continue;
+        const key = getBookKey(lb);
+        if (key) bookMap.set(key, lb);
+    }
+
+    // Merge cloud books (strictly filtering out deleted books)
+    for (const cb of cloudBooks) {
+        if (isBookDeleted(cb)) {
+            // Reconcile cloud: ensure deleted from Supabase in background
+            if (usingCloud && window.LuminaStore && typeof window.LuminaStore.deleteBook === 'function') {
+                window.LuminaStore.deleteBook(cb.id).catch(() => {});
+            }
+            continue;
+        }
+        const key = getBookKey(cb);
+        if (!key) continue;
+        if (!bookMap.has(key)) {
+            bookMap.set(key, cb);
+        } else {
+            const existing = bookMap.get(key);
+            // Prefer a later explicit revision; never upload a guessed chapter-count merge.
+            const localTime = Math.max(Date.parse(existing.updated_at || '') || 0, Date.parse(existing.updatedAt || '') || 0);
+            const cloudTime = Math.max(Date.parse(cb.updated_at || '') || 0, Date.parse(cb.updatedAt || '') || 0);
+            const chosen = localTime > cloudTime ? existing : cb;
+            if (!chosen.coverUrl) chosen.coverUrl = existing.coverUrl || cb.coverUrl;
+            bookMap.set(key, chosen);
+        }
+    }
+
+    const merged = Array.from(bookMap.values()).filter(b => !isBookDeleted(b));
+    return merged.length > 0 ? merged : localBooks.filter(b => !isBookDeleted(b));
 }
 
-async function deleteBookFromDB(id) {
-    if (usingCloud) {
+async function loadBooks() {
+    // 1. FAST LOCAL-FIRST RENDER: Immediately render the shelf from local DB (<25ms)!
+    await renderDigitalShelf();
+    renderDiscoverClassics();
+    try {
+        if (typeof renderScanShelf === 'function') await renderScanShelf();
+    } catch (e) {}
+
+    // Auto-select first book if nothing currently selected
+    try {
+        const localList = (await getAllLocalBooks()).filter(b => !isBookDeleted(b));
+        if (localList.length > 0 && (!currentBook || !localList.find(b => String(b.id) === String(currentBook.id)))) {
+            selectBook(localList[0].id, false);
+        }
+    } catch (e) {}
+
+    // 2. ASYNC BACKGROUND RECONCILIATION:
+    // Run legacy DB recovery & Supabase cloud sync in background without blocking shelf UI
+    (async () => {
+        try {
+            await recoverAllLocalBooks();
+        } catch (e) {
+            console.warn('[store] Recovery warning in loadBooks:', e);
+        }
+        if (usingCloud) {
+            try {
+                await renderDigitalShelf();
+            } catch (e) {}
+        }
+    })();
+}
+
+async function deleteBookFromDB(id, title, slug) {
+    // 1. Record permanent deletion tombstone
+    markBookAsDeleted(id, title, slug);
+
+    // 2. Delete from Supabase Cloud
+    if (usingCloud && window.LuminaStore && typeof window.LuminaStore.deleteBook === 'function') {
         try {
             await window.LuminaStore.deleteBook(id);
         } catch (err) {
             console.error('[store] Supabase delete failed:', err);
         }
     }
-    return deleteBookFromLocalDB(id);
+
+    // 3. Purge across all local and legacy IndexedDB databases
+    await deleteBookFromAllLocalDBs(id, title);
+    return true;
 }
 
 function saveBookToLocalDB(book) {
+    if (!book) return Promise.resolve();
+    const uid = getCurrentUserId();
+    if (!book.user_id && uid !== 'guest') {
+        book.user_id = uid;
+    }
     return new Promise((resolve, reject) => {
         const tx = db.transaction('books', 'readwrite');
         tx.objectStore('books').put(book);
@@ -1112,7 +2872,29 @@ function getAllLocalBooks() {
     return new Promise((resolve, reject) => {
         const tx = db.transaction('books', 'readonly');
         const req = tx.objectStore('books').getAll();
-        req.onsuccess = () => resolve(req.result || []);
+        req.onsuccess = () => {
+            const uid = getCurrentUserId();
+            const all = req.result || [];
+            // Strict account shelf isolation:
+            // 1. Classic books (starting with classic_) are public defaults available to all.
+            // 2. If authenticated user (uid !== 'guest'), only show:
+            //    - books explicitly tagged with book.user_id === uid
+            //    - freshly created local books without a user_id
+            //    - NEVER show books tagged with a different user's user_id!
+            // 3. If guest (uid === 'guest'), do NOT show books tagged with an authenticated user_id!
+            const filtered = all.filter(b => {
+                if (!b || isBookDeleted(b)) return false;
+                if (b.id && String(b.id).startsWith('classic_')) return true;
+                if (uid === 'guest') {
+                    return !b.user_id || b.user_id === 'guest';
+                }
+                if (b.user_id) {
+                    return b.user_id === uid;
+                }
+                return true;
+            });
+            resolve(filtered);
+        };
         req.onerror = (e) => reject(e);
     });
 }
@@ -1126,12 +2908,21 @@ function deleteBookFromLocalDB(id) {
     });
 }
 
-
 async function seedDefaultBooks() {
     const existing = await getAllBooks();
     for (const b of DISCOVER_CLASSICS) {
-        const found = existing.find(e => String(e.id) === String(b.id));
-        if (!found || (found.chapters && found.chapters.length < b.chapters.length)) {
+        // STRICT: If user deleted this classic, NEVER re-seed it!
+        if (isBookDeleted(b)) continue;
+
+        const found = existing.find(e => String(e.id) === String(b.id) || (e.title && b.title && e.title.trim().toLowerCase() === b.title.trim().toLowerCase()));
+        const needsUpgrade = !found ||
+            !found.chapters ||
+            found.chapters.length < b.chapters.length ||
+            b.chapters.some((bc, idx) => {
+                const fc = found.chapters[idx];
+                return bc.text_ka && (!fc || !fc.text_ka || fc.text_ka.length < bc.text_ka.length * 0.75);
+            });
+        if (needsUpgrade) {
             await saveBookToDB(b);
         }
     }
@@ -1157,6 +2948,38 @@ function getBookStats(book) {
 }
 
 // ── Navigation & Modals ─────────────────────────────────────────────────────
+function updateBottomNavActive(tab) {
+    ['home', 'scanner', 'engbot', 'profile'].forEach(t => {
+        const btn = document.getElementById('bottomNav' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (btn) {
+            if (t === tab) {
+                btn.className = 'flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-primary-fixed-dim';
+            } else {
+                btn.className = 'flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white';
+            }
+        }
+    });
+}
+
+function navToSection(tab) {
+    updateBottomNavActive(tab);
+    if (tab === 'home') {
+        navigate('library');
+        const shelf = document.getElementById('booksGrid') || document.getElementById('view-library');
+        if (shelf) shelf.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (tab === 'scanner') {
+        navigate('scanner');
+        if (typeof renderScanShelf === 'function') renderScanShelf();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (tab === 'engbot') {
+        navigate('library');
+        const hero = document.getElementById('heroSection');
+        if (hero) hero.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (tab === 'profile') {
+        openAccountCabinet();
+    }
+}
+
 function navigate(viewId) {
     ['library', 'discover', 'scanner'].forEach(id => {
         const view = document.getElementById(`view-${id}`);
@@ -1175,35 +2998,363 @@ function navigate(viewId) {
         activeNav.classList.add('text-primary-fixed-dim', 'bg-white/10', 'border-l-2', 'border-primary-container');
         activeNav.classList.remove('text-on-surface-variant');
     }
+
+    // Keep bottom nav tabs synchronized
+    if (viewId === 'library') updateBottomNavActive('home');
+    else if (viewId === 'scanner') updateBottomNavActive('scanner');
+}
+
+function getCurrentAccountSettings() {
+    const email = getActiveUserEmail();
+    const local = getCachedAccountSettings(email) || {};
+
+    return {
+        geminiApiKey: (typeof geminiApiKey !== 'undefined' && geminiApiKey) ? geminiApiKey : (local.geminiApiKey || localStorage.getItem('geminiApiKey') || localStorage.getItem('lumina_saved_gemini_key') || ''),
+        geminiModel: (typeof geminiModel !== 'undefined' && geminiModel) ? geminiModel : (local.geminiModel || localStorage.getItem('geminiModel') || 'gemini-2.5-flash'),
+        geminiPasses: (typeof geminiPasses !== 'undefined' && [1, 2, 3].includes(geminiPasses)) ? geminiPasses : (local.geminiPasses || parseInt(localStorage.getItem('geminiPasses') || '3', 10) || 3),
+        openRouterApiKey: (typeof openRouterApiKey !== 'undefined' && openRouterApiKey && openRouterApiKey !== OPENROUTER_DEFAULT_KEY) ? openRouterApiKey : (local.openRouterApiKey || localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || ''),
+        openRouterModel: (typeof openRouterModel !== 'undefined' && openRouterModel) ? openRouterModel : (local.openRouterModel || localStorage.getItem('openRouterModel') || ''),
+        groqApiKey: (typeof groqApiKey !== 'undefined' && groqApiKey) ? groqApiKey : (local.groqApiKey || localStorage.getItem('groqApiKey') || localStorage.getItem('lumina_saved_groq_key') || ''),
+        groqSelectedModel: (typeof groqSelectedModel !== 'undefined' && groqSelectedModel) ? groqSelectedModel : (local.groqSelectedModel || localStorage.getItem('groqSelectedModel') || ''),
+        mistralApiKey: (typeof mistralApiKey !== 'undefined' && mistralApiKey) ? mistralApiKey : (local.mistralApiKey || localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || ''),
+        customProviderUrl: (typeof customProviderUrl !== 'undefined' && customProviderUrl) ? customProviderUrl : (local.customProviderUrl || localStorage.getItem('customProviderUrl') || localStorage.getItem('lumina_saved_custom_url') || ''),
+        customProviderModel: (typeof customProviderModel !== 'undefined' && customProviderModel) ? customProviderModel : (local.customProviderModel || localStorage.getItem('customProviderModel') || localStorage.getItem('lumina_saved_custom_model') || ''),
+        customProviderKey: (typeof customProviderKey !== 'undefined' && customProviderKey) ? customProviderKey : (local.customProviderKey || localStorage.getItem('customProviderKey') || localStorage.getItem('lumina_saved_custom_key') || ''),
+        elevenLabsEnabled: (typeof elevenLabsEnabled !== 'undefined') ? Boolean(elevenLabsEnabled) : (local.elevenLabsEnabled !== undefined ? Boolean(local.elevenLabsEnabled) : (localStorage.getItem('lumina_el_enabled') === 'true')),
+        elevenLabsApiKey: (typeof elevenLabsApiKey !== 'undefined' && elevenLabsApiKey) ? elevenLabsApiKey : (local.elevenLabsApiKey || localStorage.getItem('lumina_el_key') || localStorage.getItem('lumina_saved_el_key') || ''),
+        elevenLabsVoiceId: (typeof elevenLabsVoiceId !== 'undefined' && elevenLabsVoiceId) ? elevenLabsVoiceId : (local.elevenLabsVoiceId || localStorage.getItem('lumina_el_voice') || 'pNInz6obpgDQGcFmaJgB'),
+        elevenLabsVoiceIdKa: (typeof elevenLabsVoiceIdKa !== 'undefined' && elevenLabsVoiceIdKa) ? elevenLabsVoiceIdKa : (local.elevenLabsVoiceIdKa || localStorage.getItem('lumina_el_voice_ka') || 'nPczCjzI2devNBz1zQrb'),
+        updatedAt: local.updatedAt || new Date().toISOString()
+    };
+}
+
+function syncSettingsToDOMInputs() {
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
+
+    const keyInput = document.getElementById('geminiApiKeyInput');
+    const effGemini = geminiApiKey || localStorage.getItem('geminiApiKey') || localStorage.getItem('lumina_saved_gemini_key') || '';
+    if (keyInput) keyInput.value = effGemini;
+    const gemBadge = document.getElementById('geminiSavedBadge');
+    if (gemBadge) gemBadge.classList.toggle('hidden', !effGemini);
+
+    const modelSelect = document.getElementById('geminiModelSelect');
+    if (modelSelect && geminiModel) {
+        let found = false;
+        for (let i = 0; i < modelSelect.options.length; i++) {
+            if (modelSelect.options[i].value === geminiModel) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            const opt = document.createElement('option');
+            opt.value = geminiModel;
+            opt.textContent = geminiModel;
+            modelSelect.appendChild(opt);
+        }
+        modelSelect.value = geminiModel;
+    }
+
+    const passesSelect = document.getElementById('geminiPassesSelect');
+    if (passesSelect && geminiPasses) passesSelect.value = String(geminiPasses);
+
+    const orKeyInput = document.getElementById('openRouterApiKeyInput');
+    const effOR = (openRouterApiKey && openRouterApiKey !== OPENROUTER_DEFAULT_KEY) ? openRouterApiKey : (localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || '');
+    if (orKeyInput) orKeyInput.value = effOR;
+    const orBadge = document.getElementById('openRouterSavedBadge');
+    if (orBadge) orBadge.classList.toggle('hidden', !effOR);
+
+    const orModelSelect = document.getElementById('openRouterModelSelect');
+    if (orModelSelect && openRouterModel) {
+        let found = false;
+        for (let i = 0; i < orModelSelect.options.length; i++) {
+            if (orModelSelect.options[i].value === openRouterModel) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            const opt = document.createElement('option');
+            opt.value = openRouterModel;
+            opt.textContent = openRouterModel;
+            orModelSelect.appendChild(opt);
+        }
+        orModelSelect.value = openRouterModel;
+    }
+
+    const groqKeyInput = document.getElementById('groqApiKeyInput');
+    const effGroq = groqApiKey || localStorage.getItem('groqApiKey') || localStorage.getItem('lumina_saved_groq_key') || '';
+    if (groqKeyInput) groqKeyInput.value = effGroq;
+    const groqBadge = document.getElementById('groqSavedBadge');
+    if (groqBadge) groqBadge.classList.toggle('hidden', !effGroq);
+
+    const groqModelSelect = document.getElementById('groqModelSelect');
+    // Use module-level groqSelectedModel (synced with account settings), fallback to localStorage.
+    const groqSaved = (groqSelectedModel || localStorage.getItem('groqSelectedModel') || '').trim();
+    if (groqModelSelect && groqSaved) {
+        if (GROQ_MODELS.includes(groqSaved)) {
+            let found = false;
+            for (let i = 0; i < groqModelSelect.options.length; i++) {
+                if (groqModelSelect.options[i].value === groqSaved) { found = true; break; }
+            }
+            if (!found) {
+                const opt = document.createElement('option');
+                opt.value = groqSaved;
+                opt.textContent = groqSaved;
+                groqModelSelect.appendChild(opt);
+            }
+            groqModelSelect.value = groqSaved;
+        } else {
+            groqModelSelect.value = '';
+        }
+    }
+
+    const mistralKeyInput = document.getElementById('mistralApiKeyInput');
+    const effMistral = mistralApiKey || localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || '';
+    if (mistralKeyInput) mistralKeyInput.value = effMistral;
+    const mistralBadge = document.getElementById('mistralSavedBadge');
+    if (mistralBadge) mistralBadge.classList.toggle('hidden', !effMistral);
+
+    const cpUrlInput = document.getElementById('customProviderUrlInput');
+    if (cpUrlInput) cpUrlInput.value = customProviderUrl || localStorage.getItem('customProviderUrl') || localStorage.getItem('lumina_saved_custom_url') || '';
+    const cpModelInput = document.getElementById('customProviderModelInput');
+    if (cpModelInput) cpModelInput.value = customProviderModel || localStorage.getItem('customProviderModel') || localStorage.getItem('lumina_saved_custom_model') || '';
+    const cpKeyInput = document.getElementById('customProviderKeyInput');
+    const effCpKey = customProviderKey || localStorage.getItem('customProviderKey') || localStorage.getItem('lumina_saved_custom_key') || '';
+    if (cpKeyInput) cpKeyInput.value = effCpKey;
+    const cpBadge = document.getElementById('customSavedBadge');
+    if (cpBadge) cpBadge.classList.toggle('hidden', !effCpKey && !(customProviderUrl || localStorage.getItem('customProviderUrl')));
+
+    const elAiInput = document.getElementById('elevenLabsAiKeyInput');
+    const effEL = elevenLabsApiKey || localStorage.getItem('lumina_el_key') || localStorage.getItem('lumina_saved_el_key') || '';
+    if (elAiInput) elAiInput.value = effEL;
+    const elBadge = document.getElementById('elevenLabsSavedBadge');
+    if (elBadge) elBadge.classList.toggle('hidden', !effEL);
+
+    if (DOM && DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = Boolean(elevenLabsEnabled);
+    if (DOM && DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = effEL;
+    if (DOM && DOM.elevenLabsVoiceSelect && elevenLabsVoiceId) DOM.elevenLabsVoiceSelect.value = elevenLabsVoiceId;
+    if (DOM && DOM.elevenLabsKeySection) {
+        if (elevenLabsEnabled) DOM.elevenLabsKeySection.classList.remove('hidden');
+        else DOM.elevenLabsKeySection.classList.add('hidden');
+    }
+    if (typeof updateTopVoiceBadge === 'function') updateTopVoiceBadge();
+    if (typeof setupKeyInputAutoRouting === 'function') setupKeyInputAutoRouting();
+}
+
+function applyAccountSettings(settings, saveToLegacyStorage = true) {
+    if (!settings || typeof settings !== 'object') return;
+
+    if (settings.geminiApiKey !== undefined) {
+        const inKey = String(settings.geminiApiKey || '').trim();
+        if (inKey) {
+            geminiApiKey = inKey;
+            if (saveToLegacyStorage) {
+                try {
+                    localStorage.setItem('geminiApiKey', inKey);
+                    localStorage.setItem('lumina_saved_gemini_key', inKey);
+                } catch (e) {}
+            }
+        } else if (!geminiApiKey) {
+            geminiApiKey = localStorage.getItem('geminiApiKey') || localStorage.getItem('lumina_saved_gemini_key') || '';
+        }
+    }
+    if (settings.geminiModel) {
+        geminiModel = String(settings.geminiModel);
+        if (saveToLegacyStorage) localStorage.setItem('geminiModel', geminiModel);
+    }
+    if (settings.geminiPasses !== undefined) {
+        const p = parseInt(settings.geminiPasses, 10);
+        geminiPasses = [1, 2, 3].includes(p) ? p : 3;
+        if (saveToLegacyStorage) localStorage.setItem('geminiPasses', String(geminiPasses));
+    }
+    if (settings.openRouterApiKey !== undefined) {
+        const inOR = String(settings.openRouterApiKey || '').trim();
+        if (inOR && inOR !== OPENROUTER_DEFAULT_KEY) {
+            openRouterApiKey = inOR;
+            if (saveToLegacyStorage) {
+                try {
+                    localStorage.setItem('openRouterApiKey', inOR);
+                    localStorage.setItem('lumina_saved_openrouter_key', inOR);
+                } catch (e) {}
+            }
+        } else if (!openRouterApiKey || openRouterApiKey === OPENROUTER_DEFAULT_KEY) {
+            openRouterApiKey = localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || OPENROUTER_DEFAULT_KEY;
+        }
+    }
+    if (settings.openRouterModel !== undefined) {
+        openRouterModel = String(settings.openRouterModel || '');
+        if (saveToLegacyStorage && openRouterModel) {
+            localStorage.setItem('openRouterModel', openRouterModel);
+        }
+    }
+    if (settings.groqApiKey !== undefined) {
+        const inGroq = String(settings.groqApiKey || '').trim();
+        if (inGroq) {
+            groqApiKey = inGroq;
+            if (saveToLegacyStorage) {
+                try {
+                    localStorage.setItem('groqApiKey', inGroq);
+                    localStorage.setItem('lumina_saved_groq_key', inGroq);
+                } catch (e) {}
+            }
+            if (typeof groqModelCooldownClear === 'function') groqModelCooldownClear();
+        } else if (!groqApiKey) {
+            groqApiKey = localStorage.getItem('groqApiKey') || localStorage.getItem('lumina_saved_groq_key') || '';
+        }
+    }
+    if (settings.groqSelectedModel !== undefined) {
+        const gm = String(settings.groqSelectedModel || '');
+        if (gm) {
+            groqSelectedModel = gm;
+            if (saveToLegacyStorage) localStorage.setItem('groqSelectedModel', gm);
+        }
+    }
+    if (settings.mistralApiKey !== undefined) {
+        const inMistral = String(settings.mistralApiKey || '').trim();
+        if (inMistral) {
+            mistralApiKey = inMistral;
+            if (saveToLegacyStorage) {
+                try {
+                    localStorage.setItem('mistralApiKey', inMistral);
+                    localStorage.setItem('lumina_saved_mistral_key', inMistral);
+                } catch (e) {}
+            }
+        } else if (!mistralApiKey) {
+            mistralApiKey = localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || '';
+        }
+    }
+    if (settings.customProviderUrl !== undefined || settings.customProviderModel !== undefined || settings.customProviderKey !== undefined) {
+        const inCpUrl = String(settings.customProviderUrl || '').trim();
+        const inCpModel = String(settings.customProviderModel || '').trim();
+        const inCpKey = String(settings.customProviderKey || '').trim();
+        if (inCpUrl) {
+            customProviderUrl = inCpUrl;
+            if (saveToLegacyStorage) {
+                localStorage.setItem('customProviderUrl', inCpUrl);
+                localStorage.setItem('lumina_saved_custom_url', inCpUrl);
+            }
+        }
+        if (inCpModel) {
+            customProviderModel = inCpModel;
+            if (saveToLegacyStorage) {
+                localStorage.setItem('customProviderModel', inCpModel);
+                localStorage.setItem('lumina_saved_custom_model', inCpModel);
+            }
+        }
+        if (inCpKey) {
+            customProviderKey = inCpKey;
+            if (saveToLegacyStorage) {
+                localStorage.setItem('customProviderKey', inCpKey);
+                localStorage.setItem('lumina_saved_custom_key', inCpKey);
+            }
+        }
+    }
+    if (settings.elevenLabsEnabled !== undefined) {
+        elevenLabsEnabled = Boolean(settings.elevenLabsEnabled);
+        if (saveToLegacyStorage) localStorage.setItem('lumina_el_enabled', elevenLabsEnabled ? 'true' : 'false');
+    }
+    if (settings.elevenLabsApiKey !== undefined) {
+        const inEL = String(settings.elevenLabsApiKey || '').trim();
+        if (inEL) {
+            elevenLabsApiKey = inEL;
+            if (saveToLegacyStorage) {
+                localStorage.setItem('lumina_el_key', inEL);
+                localStorage.setItem('lumina_saved_el_key', inEL);
+            }
+        }
+    }
+    if (settings.elevenLabsVoiceId !== undefined) {
+        elevenLabsVoiceId = String(settings.elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
+        if (saveToLegacyStorage) localStorage.setItem('lumina_el_voice', elevenLabsVoiceId);
+    }
+    if (settings.elevenLabsVoiceIdKa !== undefined) {
+        elevenLabsVoiceIdKa = String(settings.elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb');
+        if (saveToLegacyStorage) localStorage.setItem('lumina_el_voice_ka', elevenLabsVoiceIdKa);
+    }
+
+    syncSettingsToDOMInputs();
+}
+
+async function restoreAccountSettingsForCurrentUser() {
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
+
+    const email = getActiveUserEmail();
+    const storageKey = getAccountSettingsStorageKey(email);
+    let localSettings = null;
+    try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) localSettings = JSON.parse(raw);
+    } catch (e) {}
+
+    // If local settings are empty or missing keys, populate from active/preserved keys
+    if (!localSettings || !localSettings.geminiApiKey) {
+        localSettings = Object.assign({}, localSettings || {}, getCurrentAccountSettings());
+        try { localStorage.setItem(storageKey, JSON.stringify(localSettings)); } catch (e) {}
+    }
+
+    // 1. Immediately apply local cached account settings so inputs and engines have ZERO latency
+    if (localSettings) {
+        applyAccountSettings(localSettings, true);
+    }
+
+    // 2. If logged in and Supabase Cloud is available, fetch and sync cloud settings
+    if (email && window.LuminaStore && typeof window.LuminaStore.fetchAccountSettings === 'function') {
+        try {
+            const cloudSettings = await window.LuminaStore.fetchAccountSettings();
+            if (cloudSettings && typeof cloudSettings === 'object' && Object.keys(cloudSettings).length > 0) {
+                const merged = Object.assign({}, localSettings || {});
+                for (const k in cloudSettings) {
+                    if (cloudSettings[k] !== undefined && cloudSettings[k] !== '') {
+                        merged[k] = cloudSettings[k];
+                    }
+                }
+                localStorage.setItem(storageKey, JSON.stringify(merged));
+                applyAccountSettings(merged, true);
+                console.info('[AccountSettings] Restored and synced AI settings from Supabase Cloud for', email);
+                return;
+            } else if (localSettings && (localSettings.geminiApiKey || localSettings.groqApiKey || localSettings.openRouterApiKey)) {
+                window.LuminaStore.saveAccountSettings(localSettings).then(() => {
+                    console.info('[AccountSettings] Backed up AI settings to Supabase Cloud for', email);
+                }).catch(err => {
+                    console.warn('[AccountSettings] Initial cloud push warning:', err);
+                });
+            }
+        } catch (err) {
+            console.warn('[AccountSettings] Cloud fetch error, using local cache:', err);
+        }
+    }
+    syncSettingsToDOMInputs();
+}
+
+function clearActiveAiSettings() {
+    // API keys are deliberately PRESERVED on the user's device and never wiped on sign out
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
+    syncSettingsToDOMInputs();
 }
 
 function openModal(modalId) {
+    if (modalId === 'authModal') {
+        openAuthGate('signin');
+        return;
+    }
     const modal = document.getElementById(modalId);
     if (modal) {
+        if (modalId === 'authModal') {
+            if (typeof toggleAuthForgot === 'function') toggleAuthForgot(false);
+            if (typeof setAuthError === 'function') setAuthError('');
+            if (typeof setAuthSuccess === 'function') setAuthSuccess('');
+        }
+        if (modalId === 'voiceModal') {
+            populateVoiceList();
+        }
         if (modalId === 'aiSettingsModal') {
-            const keyInput = document.getElementById('geminiApiKeyInput');
-            if (keyInput) keyInput.value = geminiApiKey || '';
-            
-            const modelSelect = document.getElementById('geminiModelSelect');
-            if (modelSelect) modelSelect.value = geminiModel || 'gemini-2.5-pro';
-
-            const passesSelect = document.getElementById('geminiPassesSelect');
-            if (passesSelect) passesSelect.value = String(geminiPasses || 3);
-
-            const orKeyInput = document.getElementById('openRouterApiKeyInput');
-            if (orKeyInput) orKeyInput.value = openRouterApiKey || '';
-
-            const orModelSelect = document.getElementById('openRouterModelSelect');
-            if (orModelSelect) orModelSelect.value = openRouterModel || '';
-
-            const groqKeyInput = document.getElementById('groqApiKeyInput');
-            if (groqKeyInput) groqKeyInput.value = groqApiKey || '';
-
-            const mistralKeyInput = document.getElementById('mistralApiKeyInput');
-            if (mistralKeyInput) mistralKeyInput.value = mistralApiKey || '';
-
+            syncSettingsToDOMInputs();
             renderAiKeyStatusPanel();
             probeAiKeyStatus();
+        }
+        if (modalId === 'trainingLabModal') {
+            if (typeof initTrainingLabUI === 'function') initTrainingLabUI();
         }
         modal.classList.add('active');
         document.body.classList.add('modal-open');
@@ -1212,79 +3363,107 @@ function openModal(modalId) {
 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+        if (modalId === 'authModal') {
+            if (typeof toggleAuthForgot === 'function') toggleAuthForgot(false);
+            if (typeof setAuthError === 'function') setAuthError('');
+            if (typeof setAuthSuccess === 'function') setAuthSuccess('');
+        }
+        modal.classList.remove('active');
+    }
     if (!document.querySelector('.modal-overlay.active')) {
         document.body.classList.remove('modal-open');
     }
 }
 
 function saveGeminiSettings() {
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
+
     const keyInput = document.getElementById('geminiApiKeyInput');
-    const key = keyInput ? keyInput.value.trim() : '';
+    const inKey = keyInput ? sanitizeApiKey(keyInput.value) : '';
+    // Safe preservation: An empty input NEVER erases an existing saved key!
+    const key = inKey || sanitizeApiKey(geminiApiKey) || sanitizeApiKey(localStorage.getItem('geminiApiKey')) || sanitizeApiKey(localStorage.getItem('lumina_saved_gemini_key')) || '';
 
     const modelSelect = document.getElementById('geminiModelSelect');
-    const model = modelSelect ? modelSelect.value : 'gemini-2.5-pro';
+    const model = modelSelect ? modelSelect.value : (geminiModel || 'gemini-2.5-flash');
 
     const passesSelect = document.getElementById('geminiPassesSelect');
-    const passes = passesSelect ? parseInt(passesSelect.value, 10) : 3;
+    const passes = passesSelect ? parseInt(passesSelect.value, 10) : (geminiPasses || 3);
 
     const orKeyInput = document.getElementById('openRouterApiKeyInput');
-    const orKey = orKeyInput ? orKeyInput.value.trim() : '';
+    const inOrKey = orKeyInput ? sanitizeApiKey(orKeyInput.value) : '';
+    const orKey = inOrKey || sanitizeApiKey(openRouterApiKey) || sanitizeApiKey(localStorage.getItem('openRouterApiKey')) || sanitizeApiKey(localStorage.getItem('lumina_saved_openrouter_key')) || '';
 
     const orModelSelect = document.getElementById('openRouterModelSelect');
-    const orModel = orModelSelect ? orModelSelect.value : '';
+    const orModel = orModelSelect ? orModelSelect.value : (openRouterModel || '');
 
     const groqKeyInput = document.getElementById('groqApiKeyInput');
-    const groqKey = groqKeyInput ? groqKeyInput.value.trim() : '';
+    const inGroqKey = groqKeyInput ? sanitizeApiKey(groqKeyInput.value) : '';
+    const groqKey = inGroqKey || sanitizeApiKey(groqApiKey) || sanitizeApiKey(localStorage.getItem('groqApiKey')) || sanitizeApiKey(localStorage.getItem('lumina_saved_groq_key')) || '';
+
+    const groqModelSelectEl = document.getElementById('groqModelSelect');
+    const groqSelectedModelVal = groqModelSelectEl ? groqModelSelectEl.value : (groqSelectedModel || '');
 
     const mistralKeyInput = document.getElementById('mistralApiKeyInput');
-    const mistralKey = mistralKeyInput ? mistralKeyInput.value.trim() : '';
+    const inMistralKey = mistralKeyInput ? sanitizeApiKey(mistralKeyInput.value) : '';
+    const mistralKey = inMistralKey || sanitizeApiKey(mistralApiKey) || sanitizeApiKey(localStorage.getItem('mistralApiKey')) || sanitizeApiKey(localStorage.getItem('lumina_saved_mistral_key')) || '';
 
-    if (orKey) {
+    const elAiKeyInput = document.getElementById('elevenLabsAiKeyInput');
+    const inELKey = elAiKeyInput ? sanitizeApiKey(elAiKeyInput.value) : '';
+    const elKey = inELKey || sanitizeApiKey(elevenLabsApiKey) || sanitizeApiKey(localStorage.getItem('lumina_el_key')) || sanitizeApiKey(localStorage.getItem('lumina_saved_el_key')) || '';
+
+    const cpUrlInput = document.getElementById('customProviderUrlInput');
+    const cpUrl = (cpUrlInput ? cpUrlInput.value.trim() : '') || customProviderUrl || localStorage.getItem('customProviderUrl') || '';
+    const cpModelInput = document.getElementById('customProviderModelInput');
+    const cpModel = (cpModelInput ? cpModelInput.value.trim() : '') || customProviderModel || localStorage.getItem('customProviderModel') || '';
+    const cpKeyInput = document.getElementById('customProviderKeyInput');
+    const cpKey = (cpKeyInput ? sanitizeApiKey(cpKeyInput.value) : '') || sanitizeApiKey(customProviderKey) || sanitizeApiKey(localStorage.getItem('customProviderKey')) || '';
+
+    if (orKey && orKey !== OPENROUTER_DEFAULT_KEY) {
         localStorage.setItem('openRouterApiKey', orKey);
+        localStorage.setItem('lumina_saved_openrouter_key', orKey);
         openRouterApiKey = orKey;
-    } else {
-        localStorage.removeItem('openRouterApiKey');
-        openRouterApiKey = '';
     }
 
-    localStorage.setItem('openRouterModel', orModel);
-    openRouterModel = orModel;
-
-    setGroqApiKey(groqKey);
-    setMistralApiKey(mistralKey);
+    if (orModel) {
+        localStorage.setItem('openRouterModel', orModel);
+        openRouterModel = orModel;
+    }
 
     if (groqKey) {
-        // Probe Groq right away: bad keys must surface at save time, not
-        // silently degrade a 2-hour batch translation. The probe walks the
-        // whole model catalog, so a retired model can't fail a valid key.
-        probeOpenAICompatibleKey(GROQ_API_URL, groqKey, GROQ_MODELS).then(res => {
-            if (res.ok) alert('Groq API key verified — free-tier fallback engine is active.');
-            else if (res.status === 401 || res.status === 403) alert('Groq key saved, but it was rejected (status ' + res.status + ').\nCheck the key at console.groq.com/keys.');
-            else if (res.status === 429) alert('Groq key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
-            else if (res.status === 0) alert('Groq key saved, but could not reach api.groq.com (network error).');
-            else alert('Groq key saved, but the probe returned status ' + res.status + '.');
-        });
+        setGroqApiKey(groqKey);
+        localStorage.setItem('lumina_saved_groq_key', groqKey);
     }
+    // Update module-level groqSelectedModel so callGroqJSON sees the new value immediately
+    groqSelectedModel = groqSelectedModelVal;
+    if (groqSelectedModelVal) localStorage.setItem('groqSelectedModel', groqSelectedModelVal);
+
     if (mistralKey) {
-        // Same save-time probe for Mistral. A CORS-style network failure is
-        // reported distinctly so the user knows the key may still work
-        // in non-browser contexts but not from this page.
-        probeOpenAICompatibleKey(MISTRAL_API_URL, mistralKey, MISTRAL_MODELS).then(res => {
-            if (res.ok) alert('Mistral API key verified — free-tier fallback engine is active.');
-            else if (res.status === 401 || res.status === 403) alert('Mistral key saved, but it was rejected (status ' + res.status + ').\nCheck the key at console.mistral.ai.');
-            else if (res.status === 429) alert('Mistral key saved and valid, but rate-limited right now (429).\nThe chain will retry automatically.');
-            else if (res.status === 0) alert('Mistral key saved, but the browser could not reach api.mistral.ai.\nThis is usually a CORS restriction — Mistral will be skipped automatically and the chain continues with the other providers.');
-            else alert('Mistral key saved, but the probe returned status ' + res.status + '.');
-        });
+        setMistralApiKey(mistralKey);
+        localStorage.setItem('lumina_saved_mistral_key', mistralKey);
     }
+
+    if (elKey) {
+        elevenLabsApiKey = elKey;
+        elevenLabsEnabled = true;
+        localStorage.setItem('lumina_el_key', elKey);
+        localStorage.setItem('lumina_saved_el_key', elKey);
+        localStorage.setItem('lumina_el_enabled', 'true');
+        if (DOM && DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = true;
+        if (DOM && DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = elKey;
+        if (DOM && DOM.elevenLabsKeySection) DOM.elevenLabsKeySection.classList.remove('hidden');
+        if (typeof updateTopVoiceBadge === 'function') updateTopVoiceBadge();
+    }
+
+    setCustomProvider(cpUrl, cpModel, cpKey);
+    if (cpKey) localStorage.setItem('lumina_saved_custom_key', cpKey);
+    if (cpUrl) localStorage.setItem('lumina_saved_custom_url', cpUrl);
+    if (cpModel) localStorage.setItem('lumina_saved_custom_model', cpModel);
 
     if (key) {
         localStorage.setItem('geminiApiKey', key);
+        localStorage.setItem('lumina_saved_gemini_key', key);
         geminiApiKey = key;
-    } else {
-        localStorage.removeItem('geminiApiKey');
-        geminiApiKey = '';
     }
 
     localStorage.setItem('geminiModel', model);
@@ -1293,64 +3472,56 @@ function saveGeminiSettings() {
     localStorage.setItem('geminiPasses', String([1, 2, 3].includes(passes) ? passes : 3));
     geminiPasses = [1, 2, 3].includes(passes) ? passes : 3;
 
-    if (key) {
-        // Probe the key right away so a bad key is caught HERE, not silently
-        // during a 2-hour batch translation that degrades to machine output.
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: 'Reply with exactly: OK' }] }],
-                generationConfig: { maxOutputTokens: 8 }
-            })
-        }).then(r => {
-            if (r.ok) {
-                alert('Gemini API key verified — all translation stages are active!');
-            } else if (r.status === 400 || r.status === 403) {
-                alert('Key saved, but Gemini rejected it (status ' + r.status + ').\n\nTranslation will fall back to machine quality.\nCheck the key is a valid Google AI Studio API key.');
-            } else if (r.status === 429) {
-                alert('Key saved, but quota is exhausted (429).\n\nTranslation will fall back to machine quality until quota resets.');
-            } else {
-                alert('Key saved, but Gemini returned status ' + r.status + '. Translation may fall back to machine quality.');
+    // Persist into user's account settings (Local + Supabase Cloud)
+    const email = getActiveUserEmail();
+    const accountSettings = getCurrentAccountSettings();
+    accountSettings.geminiApiKey = key;
+    accountSettings.geminiModel = model;
+    accountSettings.geminiPasses = geminiPasses;
+    accountSettings.openRouterApiKey = orKey;
+    accountSettings.openRouterModel = orModel;
+    accountSettings.groqApiKey = groqKey;
+    accountSettings.groqSelectedModel = groqSelectedModel;
+    accountSettings.mistralApiKey = mistralKey;
+    accountSettings.elevenLabsApiKey = elKey;
+    accountSettings.elevenLabsEnabled = Boolean(elevenLabsEnabled);
+    accountSettings.customProviderUrl = cpUrl;
+    accountSettings.customProviderModel = cpModel;
+    accountSettings.customProviderKey = cpKey;
+    accountSettings.updatedAt = new Date().toISOString();
+
+    const storageKey = getAccountSettingsStorageKey(email);
+    localStorage.setItem(storageKey, JSON.stringify(accountSettings));
+    try { localStorage.setItem('lumina_account_settings_local', JSON.stringify(accountSettings)); } catch (e) {}
+
+    if (email && window.LuminaStore && typeof window.LuminaStore.saveAccountSettings === 'function') {
+        window.LuminaStore.saveAccountSettings(accountSettings).then((res) => {
+            if (res && res.success) {
+                console.info('[AccountSettings] Synced AI settings with Supabase account for', email);
             }
-        }).catch(() => {
-            alert('Key saved, but could not reach Gemini (network error).\nTranslation will use fallback engines until connection is restored.');
-        });
-    } else {
-        alert("Gemini AI Engine disabled (no key). Model preference saved.");
-    }
-    if (orKey) {
-        // Probe the OpenRouter key the same way: a bad key must surface here,
-        // not silently degrade a batch translation to machine output.
-        fetch(OPENROUTER_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${orKey}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': location.origin,
-                'X-Title': 'Lumina Audio',
-            },
-            body: JSON.stringify({
-                model: orModel || OPENROUTER_FREE_MODELS[0],
-                messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
-                max_tokens: 8,
-            }),
-        }).then(r => {
-            if (r.ok) {
-                alert('OpenRouter API key verified — free-model engine is active.');
-            } else if (r.status === 401 || r.status === 403) {
-                alert('OpenRouter key saved, but it was rejected (status ' + r.status + ').\nCheck the key at openrouter.ai/keys.');
-            } else if (r.status === 429) {
-                alert('OpenRouter key saved and valid, but the free model is rate-limited right now (429).\nThe engine will retry other free models automatically.');
-            } else {
-                alert('OpenRouter key saved, but the probe returned status ' + r.status + '.');
-            }
-        }).catch(() => {
-            alert('OpenRouter key saved, but could not reach openrouter.ai (network error).');
+        }).catch(err => {
+            console.warn('[AccountSettings] Cloud sync warning:', err);
         });
     }
-    // Re-probe the panel with the just-saved keys so the status is fresh.
-    setTimeout(probeAiKeyStatus, 0);
+
+    syncSettingsToDOMInputs();
+
+    const activeEngines = [];
+    if (key) activeEngines.push('Google Gemini (Frontier)');
+    if (orKey) activeEngines.push('OpenRouter (Free)');
+    if (groqKey) activeEngines.push('Groq (Fast)');
+    if (mistralKey) activeEngines.push('Mistral');
+    if (elKey) activeEngines.push('ElevenLabs Voice');
+    if (cpUrl) activeEngines.push('Custom Provider');
+
+    const summaryMsg = activeEngines.length
+        ? `⚡ AI settings saved! Active: ${activeEngines.join(', ')}`
+        : 'AI settings saved. Free offline & machine engines active.';
+    showToast(summaryMsg);
+
+    // Run non-blocking live probe in background
+    renderAiKeyStatusPanel();
+    setTimeout(probeAiKeyStatus, 100);
     closeModal('aiSettingsModal');
 }
 
@@ -1385,7 +3556,7 @@ function renderToCDrawerList() {
 
     readerBook.chapters.forEach((chap, idx) => {
         const isCurrent = String(chap.id) === String(readerChapterId);
-        const hasKa = !!chap.text_ka;
+        const hasKa = false; // Checkpoints are validated against source and settings during resume.
         const btn = document.createElement('button');
         btn.className = `w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-3 ${isCurrent ? 'bg-primary-container/20 border-primary-container/50 text-white font-bold' : 'bg-white/5 border-white/10 hover:bg-white/10 text-on-surface'}`;
         btn.onclick = () => {
@@ -1406,24 +3577,141 @@ function renderToCDrawerList() {
 
 // ── Authentication ──────────────────────────────────────────────────────────
 function checkAuthState() {
-    const saved = localStorage.getItem('lumina_auth_user');
-    if (saved) {
+    const explicitlyLoggedOut = localStorage.getItem('lumina_explicitly_logged_out') === 'true';
+    if (explicitlyLoggedOut) {
+        currentUser = null;
         try {
-            currentUser = JSON.parse(saved);
-        } catch (e) {
-            // Corrupted state must never break boot: fall back to signed-out.
-            console.warn('Corrupted auth state ignored:', e);
+            sessionStorage.removeItem('lumina_auth_user');
             localStorage.removeItem('lumina_auth_user');
-            currentUser = null;
+            localStorage.removeItem('lumina_remember_me');
+        } catch (e) {}
+    } else {
+        currentUser = null;
+        // 1. Check current tab/window session first (empty in fresh incognito windows)
+        try {
+            const sessionSaved = sessionStorage.getItem('lumina_auth_user');
+            if (sessionSaved) {
+                currentUser = JSON.parse(sessionSaved);
+            }
+        } catch (e) {
+            sessionStorage.removeItem('lumina_auth_user');
         }
-        updateAuthUI();
+
+        // 2. Only check localStorage if user explicitly opted in with "Remember me"
+        if (!currentUser && localStorage.getItem('lumina_remember_me') === 'true') {
+            const saved = localStorage.getItem('lumina_auth_user');
+            if (saved) {
+                try {
+                    currentUser = JSON.parse(saved);
+                    if (currentUser && currentUser.email) {
+                        try { sessionStorage.setItem('lumina_auth_user', saved); } catch(err) {}
+                    }
+                } catch (e) {
+                    console.warn('Corrupted auth state ignored:', e);
+                    localStorage.removeItem('lumina_auth_user');
+                    currentUser = null;
+                }
+            }
+        } else if (!currentUser) {
+            // Not remembered and no active tab session: clean up any stale localStorage user
+            localStorage.removeItem('lumina_auth_user');
+        }
     }
+    if (currentUser && currentUser.email) {
+        try {
+            restoreAccountSettingsForCurrentUser();
+        } catch (e) {}
+    }
+    updateAuthUI();
+    updateAuthGateVisibility();
 }
 
 function updateAuthUI() {
+    const emailClean = (currentUser?.email || '').trim().toLowerCase();
+    const isAdmin = !!(emailClean === 'ananiadevsurashvili@gmail.com' || currentUser?.role === 'admin');
+
+    // 1. Desktop Top Bar Pill
+    const pill = document.getElementById('adminVersionPill');
+    if (pill) {
+        if (isAdmin) {
+            pill.classList.remove('hidden');
+            pill.classList.add('flex');
+            pill.innerHTML = `<span>👑 Admin</span><span class="opacity-40">•</span><span>App ${APP_VERSION}</span><span class="opacity-40">•</span><span>Engine ${ENGINE_VERSION}</span>`;
+            pill.style.cursor = 'pointer';
+            pill.title = 'Click to open AI Training Lab';
+            pill.onclick = function () {
+                var target = window.location.hostname.includes('github.io')
+                    ? 'https://github.com/devsura3939/oudio-books-AI'
+                    : '/training';
+                if (target.startsWith('http')) window.open(target, '_blank');
+                else window.location.href = target;
+            };
+        } else {
+            pill.classList.add('hidden');
+            pill.classList.remove('flex');
+            pill.onclick = null;
+        }
+    }
+
+    // 2. Mobile Top Bar Pill
+    const mobilePill = document.getElementById('adminVersionPillMobile');
+    if (mobilePill) {
+        if (isAdmin) {
+            mobilePill.classList.remove('hidden');
+            mobilePill.classList.add('flex');
+            mobilePill.innerHTML = `<span>👑 Admin</span><span>${APP_VERSION}</span>`;
+            mobilePill.style.cursor = 'pointer';
+            mobilePill.title = 'Click to open AI Training Lab';
+            mobilePill.onclick = function () {
+                var target = window.location.hostname.includes('github.io')
+                    ? 'https://github.com/devsura3939/oudio-books-AI'
+                    : '/training';
+                if (target.startsWith('http')) window.open(target, '_blank');
+                else window.location.href = target;
+            };
+        } else {
+            mobilePill.classList.add('hidden');
+            mobilePill.classList.remove('flex');
+            mobilePill.onclick = null;
+        }
+    }
+
+    // 3. Mobile Nav Drawer Admin Card
+    const mobileAdminCard = document.getElementById('mobileAdminCard');
+    const mobileAdminEmail = document.getElementById('mobileAdminEmail');
+    if (mobileAdminCard) {
+        if (isAdmin) {
+            mobileAdminCard.classList.remove('hidden');
+            if (mobileAdminEmail) mobileAdminEmail.textContent = currentUser.email;
+            mobileAdminCard.style.cursor = 'pointer';
+            mobileAdminCard.title = 'Click to open AI Training Lab';
+            mobileAdminCard.onclick = function () {
+                var target = window.location.hostname.includes('github.io')
+                    ? 'https://github.com/devsura3939/oudio-books-AI'
+                    : '/training';
+                if (target.startsWith('http')) window.open(target, '_blank');
+                else window.location.href = target;
+            };
+        } else {
+            mobileAdminCard.classList.add('hidden');
+            mobileAdminCard.onclick = null;
+        }
+    }
+
+    // 4. Mobile Nav Drawer User Name
+    const mobileUserName = document.getElementById('mobileNavUserName');
+    if (mobileUserName) {
+        if (currentUser) {
+            const name = currentUser.email.split('@')[0];
+            mobileUserName.textContent = isAdmin ? `${name} (Admin)` : name;
+        } else {
+            mobileUserName.textContent = "Sign In";
+        }
+    }
+
     if (currentUser) {
         const name = currentUser.email.split('@')[0];
-        if (DOM.sideNavUserName) DOM.sideNavUserName.textContent = name;
+        if (DOM.sideNavUserName) DOM.sideNavUserName.textContent = isAdmin ? `${name} (👑 Admin)` : name;
         if (DOM.topAvatarBadge) DOM.topAvatarBadge.textContent = name.charAt(0).toUpperCase();
         if (DOM.userNavSection) {
             DOM.userNavSection.innerHTML = `
@@ -1434,60 +3722,1244 @@ function updateAuthUI() {
                         </div>
                         <div class="truncate">
                             <p class="text-xs font-semibold text-white truncate">${name}</p>
-                            <p class="text-[10px] text-primary-fixed">PRO Studio</p>
+                            <p class="text-[10px] text-primary-fixed">${isAdmin ? '👑 Owner Admin' : 'PRO Studio'}</p>
                         </div>
                     </div>
                     <button onclick="logout()" class="p-1.5 text-on-surface-variant hover:text-error transition" title="Sign Out">
                         <span class="material-symbols-outlined text-base">logout</span>
                     </button>
                 </div>
+                ${isAdmin ? `
+                    <div class="mt-2 p-2 rounded-xl bg-primary-container/10 border border-primary-container/30 text-[10px] font-mono text-primary-fixed">
+                        <div class="flex items-center justify-between font-bold">
+                            <span>👑 Admin Status</span>
+                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-primary-container/20">ACTIVE</span>
+                        </div>
+                        <div class="mt-1 pt-1 border-t border-white/10 space-y-0.5 text-[10px]">
+                            <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">${APP_VERSION}</span></p>
+                            <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">${ENGINE_VERSION}</span></p>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="mt-2 px-2 text-[10px] text-on-surface-variant font-mono">
+                        App ${APP_VERSION} • Engine ${ENGINE_VERSION}
+                    </div>
+                `}
             `;
         }
     } else {
         if (DOM.sideNavUserName) DOM.sideNavUserName.textContent = "Sign In / Register";
-        if (DOM.topAvatarBadge) DOM.topAvatarBadge.textContent = "G";
+        if (DOM.topAvatarBadge) DOM.topAvatarBadge.textContent = "🔐";
         if (DOM.userNavSection) {
             DOM.userNavSection.innerHTML = `
-                <button onclick="openModal('authModal')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-on-surface-variant hover:text-white transition-all text-sm font-medium">
+                <button onclick="openAuthGate('signin')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-on-surface-variant hover:text-white transition-all text-sm font-medium">
                     <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-primary-fixed">
-                        <span class="material-symbols-outlined text-lg">person</span>
+                        <span class="material-symbols-outlined text-lg">login</span>
                     </div>
                     <div class="text-left overflow-hidden">
                         <p class="text-sm font-medium text-white truncate">Sign In</p>
-                        <p class="text-xs text-on-surface-variant">Sync your books</p>
+                        <p class="text-xs text-on-surface-variant">Authorization Required</p>
                     </div>
                 </button>
+                <div class="mt-2 px-2 text-[10px] text-on-surface-variant/60 font-mono">
+                    EngBot App ${APP_VERSION}
+                </div>
             `;
         }
     }
 }
 
-function login(email, password) {
-    if (!email || !email.includes('@')) {
-        alert('Please enter a valid email address.');
-        return;
+function setAuthError(msg) {
+    const errEl = document.getElementById('authErrorMsg');
+    const succEl = document.getElementById('authSuccessMsg');
+    if (succEl) succEl.classList.add('hidden');
+    if (errEl) {
+        if (msg) {
+            errEl.textContent = msg;
+            errEl.classList.remove('hidden');
+        } else {
+            errEl.textContent = '';
+            errEl.classList.add('hidden');
+        }
     }
-    currentUser = { email, id: 'usr_' + Date.now(), pro: true };
-    localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
-    updateAuthUI();
-    closeModal('authModal');
+    setGateError(msg);
 }
 
-function logout() {
-    currentUser = null;
-    localStorage.removeItem('lumina_auth_user');
-    updateAuthUI();
+function setAuthSuccess(msg) {
+    const errEl = document.getElementById('authErrorMsg');
+    const succEl = document.getElementById('authSuccessMsg');
+    if (errEl) errEl.classList.add('hidden');
+    if (succEl) {
+        if (msg) {
+            succEl.textContent = msg;
+            succEl.classList.remove('hidden');
+        } else {
+            succEl.textContent = '';
+            succEl.classList.add('hidden');
+        }
+    }
+    setGateSuccess(msg);
 }
+
+function openAuthGate(mode) {
+    closeAccountCabinet();
+    try { closeModal('authModal'); } catch (e) {}
+    const gateScreen = document.getElementById('authGateScreen');
+    const appContainer = document.getElementById('appMainContainer');
+    if (appContainer) appContainer.classList.add('hidden');
+    if (gateScreen) {
+        gateScreen.classList.remove('hidden');
+        switchGateMode(mode || 'signin');
+    }
+}
+
+function closeAuthGate() {
+    if (!currentUser || !currentUser.email) {
+        // STRICT LOCKOUT: Unauthenticated user cannot close auth gate
+        return;
+    }
+    const gateScreen = document.getElementById('authGateScreen');
+    const appContainer = document.getElementById('appMainContainer');
+    if (gateScreen) gateScreen.classList.add('hidden');
+    if (appContainer) appContainer.classList.remove('hidden');
+}
+
+function openAccountCabinet() {
+    if (!currentUser || !currentUser.email) {
+        openAuthGate('signin');
+        return;
+    }
+    updateCabinetUI();
+    openModal('accountCabinetModal');
+}
+
+function closeAccountCabinet() {
+    closeModal('accountCabinetModal');
+}
+
+function updateCabinetUI() {
+    const avatar = document.getElementById('cabinetAvatar');
+    const email = document.getElementById('cabinetEmail');
+    const roleBadge = document.getElementById('cabinetRoleBadge');
+    const cloudBadge = document.getElementById('cabinetCloudBadge');
+    const btnTraining = document.getElementById('cabinetBtnTraining');
+
+    const userEmail = (currentUser?.email || '').trim();
+    const isAdmin = !!(userEmail.toLowerCase() === 'ananiadevsurashvili@gmail.com' || currentUser?.role === 'admin');
+
+    if (!currentUser || !userEmail) {
+        closeAccountCabinet();
+        openAuthGate('signin');
+        return;
+    }
+
+    if (avatar) avatar.textContent = userEmail.charAt(0).toUpperCase();
+    if (email) email.textContent = userEmail;
+    if (roleBadge) {
+        roleBadge.textContent = isAdmin ? '👑 Administrator v1.47.0' : '🎧 PRO Listener';
+        roleBadge.className = isAdmin
+            ? 'px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold'
+            : 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-white';
+    }
+    if (cloudBadge) {
+        cloudBadge.textContent = usingCloud ? '☁️ Supabase Cloud' : '💾 Local Storage';
+    }
+    if (btnTraining) {
+        btnTraining.classList.remove('hidden');
+    }
+}
+
+function openTrainingLabModal() {
+    initTrainingLabUI();
+    if (typeof closeAccountCabinet === 'function') closeAccountCabinet();
+    openModal('trainingLabModal');
+}
+
+function openTrainingLab() {
+    openTrainingLabModal();
+}
+
+function initTrainingLabUI() {
+    const defaultDevKey = 'engbot_tk_dev_training_key_ka_2026';
+    const activeKey = localStorage.getItem('lumina_training_api_key') || defaultDevKey;
+    
+    const keyDisplay = document.getElementById('trainingApiKeyDisplay');
+    if (keyDisplay) {
+        keyDisplay.value = activeKey;
+    }
+
+    const placeholders = document.querySelectorAll('.trainingKeyPlaceholder');
+    placeholders.forEach(el => {
+        el.textContent = activeKey;
+    });
+
+    const statusBadge = document.getElementById('trainingKeyStatusBadge');
+    if (statusBadge) {
+        statusBadge.textContent = 'Active';
+        statusBadge.className = 'px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/40';
+    }
+}
+
+async function generateTrainingApiKey() {
+    let newKey = '';
+    try {
+        const resp = await fetch('/api/public/train/key/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                label: 'Client Generated Training Key',
+                language: 'ka',
+                scope: 'both'
+            })
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data && data.key) {
+                newKey = data.key;
+            }
+        }
+    } catch (e) {
+        console.warn('Backend key generation endpoint not reachable, generating crypto client key:', e);
+    }
+
+    if (!newKey) {
+        const randBytes = new Uint8Array(16);
+        if (window.crypto && window.crypto.getRandomValues) {
+            window.crypto.getRandomValues(randBytes);
+        } else {
+            for (let i = 0; i < 16; i++) randBytes[i] = Math.floor(Math.random() * 256);
+        }
+        const hex = Array.from(randBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        newKey = `engbot_tk_${hex}`;
+    }
+
+    localStorage.setItem('lumina_training_api_key', newKey);
+
+    const keyDisplay = document.getElementById('trainingApiKeyDisplay');
+    if (keyDisplay) {
+        keyDisplay.value = newKey;
+        keyDisplay.type = 'text';
+    }
+
+    const maskIcon = document.getElementById('trainingKeyMaskIcon');
+    if (maskIcon) maskIcon.textContent = 'visibility_off';
+
+    const placeholders = document.querySelectorAll('.trainingKeyPlaceholder');
+    placeholders.forEach(el => {
+        el.textContent = newKey;
+    });
+
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(newKey);
+        }
+    } catch (err) {
+        console.warn('Clipboard write prevented:', err);
+    }
+
+    showToast('New Training API Key generated & copied to clipboard!', 'success');
+}
+
+async function copyTrainingApiKey() {
+    const keyDisplay = document.getElementById('trainingApiKeyDisplay');
+    const key = keyDisplay ? keyDisplay.value : (localStorage.getItem('lumina_training_api_key') || 'engbot_tk_dev_training_key_ka_2026');
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(key);
+        }
+        const btnText = document.getElementById('copyKeyBtnText');
+        if (btnText) {
+            const old = btnText.textContent;
+            btnText.textContent = 'Copied!';
+            setTimeout(() => { btnText.textContent = old; }, 2000);
+        }
+        showToast('Training API Key copied to clipboard!', 'success');
+    } catch (e) {
+        showToast('Key copied!', 'info');
+    }
+}
+
+function toggleTrainingKeyMask() {
+    const keyDisplay = document.getElementById('trainingApiKeyDisplay');
+    const maskIcon = document.getElementById('trainingKeyMaskIcon');
+    if (!keyDisplay) return;
+    if (keyDisplay.type === 'password') {
+        keyDisplay.type = 'text';
+        if (maskIcon) maskIcon.textContent = 'visibility_off';
+    } else {
+        keyDisplay.type = 'password';
+        if (maskIcon) maskIcon.textContent = 'visibility';
+    }
+}
+
+async function copyLlmTrainingPrompt() {
+    const textarea = document.getElementById('llmPromptTextarea');
+    const activeKey = localStorage.getItem('lumina_training_api_key') || 'engbot_tk_dev_training_key_ka_2026';
+    let text = textarea ? textarea.value : '';
+    text = text.replace('{YOUR_API_KEY}', activeKey);
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+        }
+        const btnText = document.getElementById('copyPromptBtnText');
+        if (btnText) {
+            const old = btnText.textContent;
+            btnText.textContent = 'Copied Prompt!';
+            setTimeout(() => { btnText.textContent = old; }, 2000);
+        }
+        showToast('System Prompt template copied to clipboard!', 'success');
+    } catch (e) {
+        showToast('System Prompt copied!', 'info');
+    }
+}
+
+function switchTrainingTab(tabName) {
+    const tabs = ['instructions', 'corpora', 'rules', 'api'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tabBtn-${t}`);
+        const pane = document.getElementById(`trainingTab-${t}`);
+        if (btn) {
+            if (t === tabName) {
+                btn.className = 'training-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-primary-container/20 text-primary-fixed border border-primary-container/30';
+            } else {
+                btn.className = 'training-tab-btn px-4 py-2 rounded-xl text-xs font-medium text-on-surface-variant hover:text-white hover:bg-white/5 transition flex items-center gap-2 border border-transparent';
+            }
+        }
+        if (pane) {
+            if (t === tabName) {
+                pane.classList.remove('hidden');
+            } else {
+                pane.classList.add('hidden');
+            }
+        }
+    });
+}
+
+function updateAuthGateVisibility() {
+    const gateScreen = document.getElementById('authGateScreen');
+    const appContainer = document.getElementById('appMainContainer');
+
+    const explicitlyLoggedOut = localStorage.getItem('lumina_explicitly_logged_out') === 'true';
+    const isLoggedIn = Boolean(currentUser && currentUser.email) && !explicitlyLoggedOut;
+    const hash = (window.location.hash || '').toLowerCase();
+    const search = (window.location.search || '').toLowerCase();
+
+    // Check if recovery / reset is explicitly in URL
+    const isRecovery = hash.includes('type=recovery') || search.includes('type=recovery');
+    const wantsRegister = hash.includes('register') || hash.includes('signup');
+    const wantsForgot = hash.includes('forgot');
+
+    // 1. Password Recovery Flow
+    if (isRecovery) {
+        if (appContainer) appContainer.classList.add('hidden');
+        if (gateScreen) gateScreen.classList.remove('hidden');
+        switchGateMode('reset');
+        if (window.LuminaStore && window.LuminaStore.handleRecoverySession) {
+            window.LuminaStore.handleRecoverySession().then(res => {
+                if (res?.user?.email) {
+                    const badge = document.getElementById('gateResetEmailBadge');
+                    if (badge) badge.textContent = res.user.email;
+                }
+            }).catch(e => console.warn('Recovery session check error:', e));
+        }
+        return;
+    }
+
+    // 2. STRICT ENFORCEMENT: Unauthenticated users are completely LOCKED OUT of dashboard.
+    // There is NO guest mode and NO entering the dashboard without logging in or registering.
+    if (!isLoggedIn) {
+        if (appContainer) appContainer.classList.add('hidden');
+        if (gateScreen) gateScreen.classList.remove('hidden');
+        try { closeModal('authModal'); } catch (e) {}
+        closeAccountCabinet();
+        try { if (typeof stopAudio === 'function') stopAudio(); } catch (e) {}
+
+        if (wantsRegister) {
+            switchGateMode('register');
+        } else if (wantsForgot) {
+            switchGateMode('forgot');
+        } else {
+            switchGateMode('signin');
+        }
+        return;
+    }
+
+    // 3. User is authenticated: allow access to dashboard
+    if (wantsRegister) {
+        if (appContainer) appContainer.classList.add('hidden');
+        if (gateScreen) gateScreen.classList.remove('hidden');
+        switchGateMode('register');
+    } else if (wantsForgot) {
+        if (appContainer) appContainer.classList.add('hidden');
+        if (gateScreen) gateScreen.classList.remove('hidden');
+        switchGateMode('forgot');
+    } else {
+        if (gateScreen) gateScreen.classList.add('hidden');
+        if (appContainer) appContainer.classList.remove('hidden');
+    }
+}
+
+function switchGateMode(mode) {
+    const signInForm = document.getElementById('gateSignInForm');
+    const registerForm = document.getElementById('gateRegisterForm');
+    const forgotForm = document.getElementById('gateForgotForm');
+    const resetForm = document.getElementById('gateResetForm');
+    const tabs = document.getElementById('gateTabs');
+    const tabSignIn = document.getElementById('gateTabSignIn');
+    const tabRegister = document.getElementById('gateTabRegister');
+    const subtitle = document.getElementById('gateSubtitle');
+
+    setGateError('');
+    setGateSuccess('');
+
+    if (mode === 'reset') {
+        if (signInForm) signInForm.classList.add('hidden');
+        if (registerForm) registerForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.add('hidden');
+        if (resetForm) resetForm.classList.remove('hidden');
+        if (tabs) tabs.classList.add('hidden');
+        if (subtitle) subtitle.textContent = 'Create a secure new password for your account';
+        const newPwdInput = document.getElementById('gateNewPassword');
+        if (newPwdInput) newPwdInput.focus();
+    } else if (mode === 'register') {
+        if (signInForm) signInForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.add('hidden');
+        if (resetForm) resetForm.classList.add('hidden');
+        if (registerForm) registerForm.classList.remove('hidden');
+        if (tabs) tabs.classList.remove('hidden');
+        if (tabSignIn) {
+            tabSignIn.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all';
+        }
+        if (tabRegister) {
+            tabRegister.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold';
+        }
+        if (subtitle) subtitle.textContent = 'Create your free Studio account to sync books across devices';
+        const regInput = document.getElementById('gateRegEmail');
+        if (regInput) regInput.focus();
+    } else if (mode === 'forgot') {
+        if (signInForm) signInForm.classList.add('hidden');
+        if (registerForm) registerForm.classList.add('hidden');
+        if (resetForm) resetForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.remove('hidden');
+        if (tabs) tabs.classList.add('hidden');
+        if (subtitle) subtitle.textContent = 'Enter your email to receive a password reset recovery link';
+        const forgotInput = document.getElementById('gateForgotEmail');
+        const signinEmail = document.getElementById('gateEmail');
+        if (forgotInput && signinEmail && signinEmail.value) {
+            forgotInput.value = signinEmail.value;
+        }
+        if (forgotInput) forgotInput.focus();
+    } else {
+        // signin
+        if (registerForm) registerForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.add('hidden');
+        if (resetForm) resetForm.classList.add('hidden');
+        if (signInForm) signInForm.classList.remove('hidden');
+        if (tabs) tabs.classList.remove('hidden');
+        if (tabSignIn) {
+            tabSignIn.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold';
+        }
+        if (tabRegister) {
+            tabRegister.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all';
+        }
+        if (subtitle) subtitle.textContent = 'Sign in to access your personal audiobooks, scanned books, and studio workspace';
+    }
+}
+
+function fillAdminCredentials() {
+    const emailInput = document.getElementById('gateEmail');
+    const pwdInput = document.getElementById('gatePassword');
+    if (emailInput) {
+        emailInput.value = 'ananiadevsurashvili@gmail.com';
+        emailInput.classList.add('ring-2', 'ring-primary-container');
+    }
+    if (pwdInput) {
+        pwdInput.value = 'anania39';
+        pwdInput.classList.add('ring-2', 'ring-primary-container');
+    }
+    setTimeout(() => {
+        if (emailInput) emailInput.classList.remove('ring-2', 'ring-primary-container');
+        if (pwdInput) pwdInput.classList.remove('ring-2', 'ring-primary-container');
+    }, 1500);
+}
+
+function setGateError(msg) {
+    const errEl = document.getElementById('gateErrorMsg');
+    const succEl = document.getElementById('gateSuccessMsg');
+    if (succEl) succEl.classList.add('hidden');
+    if (errEl) {
+        if (msg) {
+            errEl.textContent = msg;
+            errEl.classList.remove('hidden');
+        } else {
+            errEl.textContent = '';
+            errEl.classList.add('hidden');
+        }
+    }
+}
+
+function setGateSuccess(msg) {
+    const errEl = document.getElementById('gateErrorMsg');
+    const succEl = document.getElementById('gateSuccessMsg');
+    if (errEl) errEl.classList.add('hidden');
+    if (succEl) {
+        if (msg) {
+            succEl.textContent = msg;
+            succEl.classList.remove('hidden');
+        } else {
+            succEl.textContent = '';
+            succEl.classList.add('hidden');
+        }
+    }
+}
+
+async function handleGateSignIn() {
+    const email = (document.getElementById('gateEmail')?.value || '').trim();
+    const password = (document.getElementById('gatePassword')?.value || '').trim();
+    const rememberMe = Boolean(document.getElementById('gateRememberMe')?.checked);
+    const btn = document.getElementById('btnGateSignIn');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    if (!email || !email.includes('@')) {
+        setGateError('Please enter a valid email address.');
+        return;
+    }
+    if (!password) {
+        setGateError('Please enter your password.');
+        return;
+    }
+
+    setGateError('');
+    setGateSuccess('');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Signing In...</span>';
+    }
+
+    try {
+        await login(email, password, rememberMe);
+        if (!currentUser) {
+            const modalErr = document.getElementById('authErrorMsg')?.textContent;
+            if (modalErr) setGateError(modalErr);
+        }
+    } catch (e) {
+        setGateError(e.message || 'Could not log in. Please check your credentials.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+async function handleGateRegister() {
+    const email = (document.getElementById('gateRegEmail')?.value || '').trim();
+    const password = (document.getElementById('gateRegPassword')?.value || '').trim();
+    const rememberMe = Boolean(document.getElementById('gateRegRememberMe')?.checked);
+    const btn = document.getElementById('btnGateRegister');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    if (!email || !email.includes('@')) {
+        setGateError('Please enter a valid email address.');
+        return;
+    }
+    if (!password || password.length < 6) {
+        setGateError('Password must be at least 6 characters.');
+        return;
+    }
+
+    setGateError('');
+    setGateSuccess('');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Registering...</span>';
+    }
+
+    try {
+        await register(email, password, rememberMe);
+    } catch (e) {
+        setGateError(e.message || 'Registration failed.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+async function handleGateForgot() {
+    const email = (document.getElementById('gateForgotEmail')?.value || '').trim();
+    const btn = document.getElementById('btnGateForgot');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    if (!email || !email.includes('@')) {
+        setGateError('Please enter a valid email address.');
+        return;
+    }
+
+    setGateError('');
+    setGateSuccess('');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Sending...</span>';
+    }
+
+    try {
+        if (window.LuminaStore && window.LuminaStore.resetPassword) {
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Password reset request timed out. Please check your network connection.')), 12000)
+            );
+            const res = await Promise.race([window.LuminaStore.resetPassword(email), timeoutPromise]);
+            if (res.success) {
+                setGateSuccess('Password recovery email sent! Check your inbox for the reset link.');
+            } else {
+                setGateError(res.error?.message || 'Could not send recovery link.');
+            }
+        } else {
+            setGateError('Authentication service not connected.');
+        }
+    } catch (e) {
+        setGateError(e.message || 'Error sending recovery link.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+async function handleGateSetNewPassword() {
+    const newPassword = (document.getElementById('gateNewPassword')?.value || '').trim();
+    const confirmPassword = (document.getElementById('gateConfirmNewPassword')?.value || '').trim();
+    const btn = document.getElementById('btnGateSetNewPassword');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    if (!newPassword || newPassword.length < 6) {
+        setGateError('Password must be at least 6 characters long.');
+        return;
+    }
+    if (newPassword !== confirmPassword) {
+        setGateError('Passwords do not match. Please re-enter.');
+        return;
+    }
+
+    setGateError('');
+    setGateSuccess('');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Updating Password...</span>';
+    }
+
+    try {
+        if (!window.LuminaStore || !window.LuminaStore.updatePassword) {
+            throw new Error('Supabase database service not available.');
+        }
+
+        const res = await window.LuminaStore.updatePassword(newPassword);
+        if (!res.success) {
+            throw new Error(res.error?.message || 'Failed to update password.');
+        }
+
+        localStorage.removeItem('lumina_explicitly_logged_out');
+        const updatedUser = res.user;
+        const email = updatedUser?.email || currentUser?.email || 'User';
+        const isAdmin = email.toLowerCase() === 'ananiadevsurashvili@gmail.com';
+
+        currentUser = {
+            email: email,
+            id: updatedUser?.id || currentUser?.id || 'usr_' + Date.now(),
+            pro: true,
+            role: isAdmin ? 'admin' : 'user',
+            supabaseAuth: true
+        };
+        try { sessionStorage.setItem('lumina_auth_user', JSON.stringify(currentUser)); } catch (e) {}
+        localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+        localStorage.setItem('lumina_remember_me', 'true');
+        try { restoreAccountSettingsForCurrentUser(); } catch (e) {}
+
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({ type: 'engbot-login-success', user: currentUser }, '*');
+            } catch (e) {}
+        }
+
+        // Clean up recovery query/hash from URL so reloads don't reopen reset mode
+        if (window.history && window.history.replaceState) {
+            try {
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState(null, '', cleanUrl);
+            } catch (e) {}
+        }
+
+        setGateSuccess('Password updated successfully! Entering your profile...');
+        showToast('Password updated! Welcome back.');
+
+        setTimeout(async () => {
+            closeAuthGate();
+            updateAuthUI();
+            openAccountCabinet();
+            try {
+                await loadBooks();
+            } catch (e) {}
+        }, 600);
+    } catch (err) {
+        setGateError(err.message || 'Could not update password. Please try again or request a new recovery link.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+function toggleAuthForgot(showForgot) {
+    const mainForm = document.getElementById('authMainForm');
+    const forgotForm = document.getElementById('authForgotForm');
+    const titleEl = document.getElementById('authTitle');
+    const subtitleEl = document.getElementById('authSubtitle');
+    const emailVal = (document.getElementById('authEmail')?.value || '').trim();
+    const forgotEmailInput = document.getElementById('authForgotEmail');
+
+    setAuthError('');
+    setAuthSuccess('');
+
+    if (showForgot) {
+        if (mainForm) mainForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.remove('hidden');
+        if (titleEl) titleEl.textContent = 'Reset Password';
+        if (subtitleEl) subtitleEl.textContent = 'Receive a secure recovery link';
+        if (forgotEmailInput && emailVal) {
+            forgotEmailInput.value = emailVal;
+        }
+        if (forgotEmailInput) forgotEmailInput.focus();
+    } else {
+        if (forgotForm) forgotForm.classList.add('hidden');
+        if (mainForm) mainForm.classList.remove('hidden');
+        if (titleEl) titleEl.textContent = 'Sign In';
+        if (subtitleEl) subtitleEl.textContent = 'Sync books across your devices';
+    }
+}
+
+async function sendPasswordReset() {
+    const input = document.getElementById('authForgotEmail');
+    const email = (input ? input.value : '').trim();
+    if (!email || !email.includes('@')) {
+        setAuthError('Please enter a valid email address.');
+        return;
+    }
+    const btn = document.getElementById('btnAuthSendReset');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Sending...</span>';
+    }
+    setAuthError('');
+    setAuthSuccess('');
+
+    try {
+        if (window.LuminaStore && window.LuminaStore.resetPassword) {
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Password reset request timed out. Please check your network connection.')), 12000)
+            );
+            const res = await Promise.race([window.LuminaStore.resetPassword(email), timeoutPromise]);
+            if (res.success) {
+                setAuthSuccess('Password recovery email sent! Check your inbox for the reset link.');
+            } else {
+                setAuthError(res.error?.message || 'Could not send reset email. Please try again.');
+            }
+        } else {
+            setAuthError('Authentication service not connected.');
+        }
+    } catch (e) {
+        setAuthError(e.message || 'Error sending recovery link.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+async function login(email, password, rememberParam) {
+    email = (email || '').trim();
+    if (!email || !email.includes('@')) {
+        setAuthError('Please enter a valid email address.');
+        return;
+    }
+    const isAdmin = email.toLowerCase() === 'ananiadevsurashvili@gmail.com';
+    const pwd = password ? password.trim() : (isAdmin ? 'anania39' : '');
+
+    if (!pwd) {
+        setAuthError('Please enter your password.');
+        return;
+    }
+
+    const rememberMe = (typeof rememberParam === 'boolean')
+        ? rememberParam
+        : Boolean(document.getElementById('gateRememberMe')?.checked || document.getElementById('gateRegRememberMe')?.checked || document.getElementById('authRememberMe')?.checked);
+
+    setAuthError('');
+    setAuthSuccess('');
+
+    const btn = document.getElementById('btnAuthSignIn');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Signing In...</span>';
+    }
+
+    let supabaseUser = null;
+    let cloudConnected = false;
+
+    try {
+        // Connect with Supabase Cloud
+        if (window.LuminaStore && window.LuminaStore.signIn) {
+            try {
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Sign in timed out. Please check your network connection.')), 12000)
+                );
+                const authRes = await Promise.race([window.LuminaStore.signIn(email, pwd), timeoutPromise]);
+                if (authRes.success && authRes.user) {
+                    supabaseUser = authRes.user;
+                    cloudConnected = true;
+                } else if (authRes.error) {
+                    console.warn('[auth] Supabase sign-in response:', authRes.error.message);
+                    const errMsg = authRes.error.message || '';
+                    if (errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('setitem')) {
+                        if (typeof purgeStorageQuotaPressure === 'function') purgeStorageQuotaPressure();
+                        try {
+                            const retryRes = await window.LuminaStore.signIn(email, pwd);
+                            if (retryRes.success && retryRes.user) {
+                                supabaseUser = retryRes.user;
+                                cloudConnected = true;
+                            }
+                        } catch (e2) {}
+                    }
+                    if (!cloudConnected) {
+                        let userMsg = errMsg;
+                        if (errMsg.toLowerCase().includes('invalid login credentials') || errMsg.toLowerCase().includes('invalid credentials')) {
+                            userMsg = 'Wrong email or password. Check your credentials or click "Forgot password?" below.';
+                        } else if (errMsg.toLowerCase().includes('email not confirmed')) {
+                            userMsg = 'Please confirm your email address first. Check your inbox.';
+                        } else if (errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('setitem')) {
+                            userMsg = 'Browser storage was full. Storage has been automatically cleaned — please click "Log In to Studio" again.';
+                        }
+                        setAuthError(userMsg);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('[auth] Supabase connection error:', e);
+                setAuthError('Authentication error: ' + (e.message || 'Could not connect to server'));
+                return;
+            }
+        }
+
+        currentUser = {
+            email: email,
+            id: supabaseUser ? supabaseUser.id : (isAdmin ? '2b4b9033-8527-4e51-b2c8-9a72f5a47412' : 'usr_' + Date.now()),
+            pro: true,
+            role: isAdmin ? 'admin' : 'user',
+            supabaseAuth: cloudConnected
+        };
+
+        // Always store in sessionStorage for current tab/window session
+        try {
+            sessionStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+        } catch (e) {}
+
+        // Only persist across device restarts if user explicitly checked "Remember me"
+        if (rememberMe) {
+            localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+            localStorage.setItem('lumina_remember_me', 'true');
+        } else {
+            localStorage.removeItem('lumina_auth_user');
+            localStorage.removeItem('lumina_remember_me');
+        }
+        localStorage.removeItem('lumina_explicitly_logged_out');
+
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({ type: 'engbot-login-success', user: currentUser }, '*');
+            } catch (e) {}
+        }
+
+        // Re-initialize database store with newly acquired Supabase credentials
+        if (window.LuminaStore) {
+            usingCloud = await window.LuminaStore.init();
+        }
+
+        // Restore and activate account-scoped AI settings immediately
+        try {
+            await restoreAccountSettingsForCurrentUser();
+        } catch (e) {
+            console.warn('[AccountSettings] restore error after login:', e);
+        }
+
+        updateAuthUI();
+        closeAuthGate();
+        updateAuthGateVisibility();
+        // Reset active book state to guarantee clean shelf load for authenticated user
+        currentBook = null;
+        currentPlayingChapterId = null;
+
+        // Fast local-first library load
+        try {
+            await loadBooks();
+        } catch (e) {
+            console.warn('loadBooks error after login:', e);
+        }
+
+        showToast(isAdmin
+            ? `👑 Welcome Admin • Studio Ready (${APP_VERSION})`
+            : `Logged in as ${email} • Studio Ready`);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+async function register(email, password, rememberParam) {
+    email = (email || '').trim();
+    if (!email || !email.includes('@')) {
+        setAuthError('Please enter a valid email address.');
+        return;
+    }
+    if (!password || password.length < 6) {
+        setAuthError('Password must be at least 6 characters.');
+        return;
+    }
+
+    const rememberMe = (typeof rememberParam === 'boolean')
+        ? rememberParam
+        : Boolean(document.getElementById('gateRegRememberMe')?.checked || document.getElementById('gateRememberMe')?.checked || document.getElementById('authRememberMe')?.checked);
+
+    setAuthError('');
+    setAuthSuccess('');
+
+    const btn = document.getElementById('btnAuthRegister');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Registering...</span>';
+    }
+
+    try {
+        if (window.LuminaStore && window.LuminaStore.signUp) {
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Registration timed out. Please check your network connection.')), 12000)
+            );
+            const res = await Promise.race([window.LuminaStore.signUp(email, password), timeoutPromise]);
+            if (res.success) {
+                setAuthSuccess('Account created! Signing you in...');
+                await login(email, password, rememberMe);
+                return;
+            } else {
+                setAuthError('Registration error: ' + (res.error?.message || 'Could not register user.'));
+                return;
+            }
+        }
+        // Offline fallback
+        await login(email, password, rememberMe);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+async function logout() {
+    // Stop playback and close reader to prevent audio or text from leaking into next user session
+    try { stopSpeech(); } catch (e) {}
+    try {
+        if (typeof closeReader === 'function') closeReader();
+    } catch (e) {}
+    currentBook = null;
+    currentPlayingChapterId = null;
+    if (DOM.chaptersContainer) DOM.chaptersContainer.classList.add('hidden');
+    if (DOM.playerDock) DOM.playerDock.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+
+    currentUser = null;
+    try {
+        sessionStorage.removeItem('lumina_auth_user');
+        sessionStorage.clear();
+    } catch (e) {}
+    try {
+        localStorage.removeItem('lumina_auth_user');
+        localStorage.removeItem('lumina_remember_me');
+        localStorage.setItem('lumina_explicitly_logged_out', 'true');
+        // Clear all Supabase auth tokens so they cannot revive session
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('sb-')) {
+                localStorage.removeItem(k);
+            }
+        }
+    } catch (e) {}
+    clearActiveAiSettings();
+    closeAccountCabinet();
+    if (window.LuminaStore && window.LuminaStore.signOut) {
+        await window.LuminaStore.signOut();
+    }
+    usingCloud = false;
+    updateAuthUI();
+    updateAuthGateVisibility();
+    await loadBooks();
+    showToast('Signed out successfully.');
+}
+
+window.setAuthError = setAuthError;
+window.setAuthSuccess = setAuthSuccess;
+window.toggleAuthForgot = toggleAuthForgot;
+window.sendPasswordReset = sendPasswordReset;
+window.login = login;
+window.register = register;
+window.logout = logout;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.switchGateMode = switchGateMode;
+window.fillAdminCredentials = fillAdminCredentials;
+window.setGateError = setGateError;
+window.setGateSuccess = setGateSuccess;
+window.handleGateSignIn = handleGateSignIn;
+window.handleGateRegister = handleGateRegister;
+window.handleGateForgot = handleGateForgot;
+window.handleGateSetNewPassword = handleGateSetNewPassword;
+window._realHandleGateSignIn = handleGateSignIn;
+window._realHandleGateRegister = handleGateRegister;
+window._realHandleGateForgot = handleGateForgot;
+window._realHandleGateSetNewPassword = handleGateSetNewPassword;
+window.updateAuthGateVisibility = updateAuthGateVisibility;
+window.recoverAllLocalBooks = recoverAllLocalBooks;
+window.loadBooks = loadBooks;
+window.navToSection = navToSection;
+window.updateBottomNavActive = updateBottomNavActive;
+window.openAccountCabinet = openAccountCabinet;
+window.closeAccountCabinet = closeAccountCabinet;
+window.updateCabinetUI = updateCabinetUI;
+window.openAuthGate = openAuthGate;
+window.closeAuthGate = closeAuthGate;
+window.openTrainingLab = openTrainingLab;
+window.openTrainingLabModal = openTrainingLabModal;
+window.initTrainingLabUI = initTrainingLabUI;
+window.generateTrainingApiKey = generateTrainingApiKey;
+window.copyTrainingApiKey = copyTrainingApiKey;
+window.copyLlmTrainingPrompt = copyLlmTrainingPrompt;
+window.toggleTrainingKeyMask = toggleTrainingKeyMask;
+window.switchTrainingTab = switchTrainingTab;
+window.saveGeminiSettings = saveGeminiSettings;
+window.saveElevenLabsSettings = saveElevenLabsSettings;
+window.toggleElevenLabsMode = toggleElevenLabsMode;
+window.loadElevenLabsSettings = loadElevenLabsSettings;
+window.restoreAccountSettingsForCurrentUser = restoreAccountSettingsForCurrentUser;
+window.applyAccountSettings = applyAccountSettings;
+window.getCurrentAccountSettings = getCurrentAccountSettings;
+window.getCachedAccountSettings = getCachedAccountSettings;
+window.clearActiveAiSettings = clearActiveAiSettings;
+
+window.addEventListener('hashchange', () => {
+    updateAuthGateVisibility();
+});
+
+// ── ElevenLabs Voice Collection Engine ─────────────────────────────────────
+function onElevenLabsVoiceKaChange(val) {
+    const customInput = document.getElementById('elevenLabsCustomVoiceIdKa');
+    if (!customInput) return;
+    if (val === 'custom') {
+        customInput.classList.remove('hidden');
+        customInput.focus();
+    } else {
+        customInput.classList.add('hidden');
+    }
+}
+window.onElevenLabsVoiceKaChange = onElevenLabsVoiceKaChange;
+
+function populateElevenLabsVoiceDropdowns(accountVoices = []) {
+    const enSelect = document.getElementById('elevenLabsVoiceSelect');
+    const kaSelect = document.getElementById('elevenLabsVoiceSelectKa');
+    if (!enSelect || !kaSelect) return;
+
+    const userGroupEn = document.getElementById('elevenUserVoicesEn');
+    const userGroupKa = document.getElementById('elevenUserVoicesKa');
+
+    if (accountVoices && accountVoices.length > 0) {
+        if (userGroupEn) {
+            userGroupEn.innerHTML = accountVoices.map(v => {
+                const category = v.category ? ` [${v.category}]` : '';
+                return `<option value="${v.voice_id}">${escapeHtml(v.name)}${category}</option>`;
+            }).join('');
+        }
+        if (userGroupKa) {
+            userGroupKa.innerHTML = accountVoices.map(v => {
+                const isKa = (v.name && /georgian|ქართული|ka\b/i.test(v.name)) || (v.labels && JSON.stringify(v.labels).toLowerCase().includes('georgian'));
+                const badge = isKa ? '🇬🇪 ' : '';
+                const category = v.category ? ` [${v.category}]` : '';
+                return `<option value="${v.voice_id}">${badge}${escapeHtml(v.name)}${category}</option>`;
+            }).join('');
+        }
+    }
+
+    if (elevenLabsVoiceId) enSelect.value = elevenLabsVoiceId;
+    if (elevenLabsVoiceIdKa) {
+        const optionExists = Array.from(kaSelect.options).some(o => o.value === elevenLabsVoiceIdKa);
+        if (optionExists) {
+            kaSelect.value = elevenLabsVoiceIdKa;
+        } else {
+            kaSelect.value = 'custom';
+            const customInput = document.getElementById('elevenLabsCustomVoiceIdKa');
+            if (customInput) {
+                customInput.classList.remove('hidden');
+                customInput.value = elevenLabsVoiceIdKa;
+            }
+        }
+    }
+}
+
+async function fetchElevenLabsUserVoices(showFeedback = true) {
+    const key = (DOM.elevenLabsApiKey ? DOM.elevenLabsApiKey.value.trim() : '') || elevenLabsApiKey;
+    if (!key) {
+        if (showFeedback) {
+            if (typeof showToast === 'function') showToast("Please enter an ElevenLabs API key first.");
+            else alert("Please enter an ElevenLabs API key first.");
+        }
+        return;
+    }
+
+    const syncBtn = document.getElementById('btnSyncElevenVoices');
+    if (syncBtn) {
+        syncBtn.disabled = true;
+        syncBtn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Syncing...';
+    }
+
+    try {
+        const res = await fetch('https://api.elevenlabs.io/v1/voices', {
+            headers: { 'xi-api-key': key }
+        });
+        if (!res.ok) throw new Error(`ElevenLabs API returned ${res.status}`);
+        const data = await res.json();
+        const voices = data.voices || [];
+        populateElevenLabsVoiceDropdowns(voices);
+        try {
+            localStorage.setItem('lumina_cached_el_voices', JSON.stringify(voices));
+        } catch (e) {}
+        if (showFeedback) {
+            if (typeof showToast === 'function') showToast(`Loaded ${voices.length} voices from your ElevenLabs collection! 🎙️`);
+        }
+    } catch (err) {
+        console.warn('[ElevenLabs] Failed to fetch account voices:', err);
+        if (showFeedback) {
+            if (typeof showToast === 'function') showToast("Could not sync voices. Please check your ElevenLabs API Key.");
+            else alert("Could not sync voices. Please check your ElevenLabs API Key.");
+        }
+    } finally {
+        if (syncBtn) {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = '<span class="material-symbols-outlined text-sm">sync</span> Sync Voices';
+        }
+    }
+}
+window.fetchElevenLabsUserVoices = fetchElevenLabsUserVoices;
+
+async function previewElevenLabsVoice(lang = 'en') {
+    const key = (DOM.elevenLabsApiKey ? DOM.elevenLabsApiKey.value.trim() : '') || elevenLabsApiKey;
+    if (!key) {
+        if (typeof showToast === 'function') showToast("Enter your ElevenLabs API Key to test voice preview");
+        else alert("Enter your ElevenLabs API Key to test voice preview");
+        return;
+    }
+
+    const isKa = (lang === 'ka');
+    let voiceId = 'pNInz6obpgDQGcFmaJgB';
+    if (isKa) {
+        const kaSelect = document.getElementById('elevenLabsVoiceSelectKa');
+        const customInput = document.getElementById('elevenLabsCustomVoiceIdKa');
+        const customVal = customInput ? customInput.value.trim() : '';
+        const selectVal = kaSelect ? kaSelect.value : '';
+        voiceId = (selectVal === 'custom' && customVal) ? customVal : (selectVal || elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb');
+    } else {
+        const enSelect = document.getElementById('elevenLabsVoiceSelect');
+        voiceId = (enSelect ? enSelect.value : '') || elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB';
+    }
+
+    const sampleText = isKa
+        ? "გამარჯობა! ეს არის ქართული ნარაციის ხმის ნიმუში."
+        : "Hello! This is a preview of your selected ElevenLabs audiobook narrator.";
+
+    if (typeof showToast === 'function') showToast(`Generating ${isKa ? 'Georgian 🇬🇪' : 'English 🇺🇸'} sample audio...`);
+
+    try {
+        const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'xi-api-key': key,
+                'Content-Type': 'application/json',
+                'Accept': 'audio/mpeg'
+            },
+            body: JSON.stringify({
+                text: sampleText,
+                model_id: lang === 'ka' ? 'eleven_v3' : 'eleven_multilingual_v2',
+                voice_settings: { stability: 0.35, similarity_boost: 0.85, style: 0.25, use_speaker_boost: true }
+            })
+        });
+
+        if (!res.ok) throw new Error(`ElevenLabs API returned ${res.status}`);
+        const blob = await res.blob();
+        const testAudio = new Audio(URL.createObjectURL(blob));
+        startBackgroundKeepAlive();
+        await testAudio.play();
+    } catch (e) {
+        console.warn('[ElevenLabs] preview failed:', e);
+        if (typeof showToast === 'function') showToast("Voice preview failed. Verify your ElevenLabs API Key and Voice ID.");
+        else alert("Voice preview failed. Verify your ElevenLabs API Key and Voice ID.");
+    }
+}
+window.previewElevenLabsVoice = previewElevenLabsVoice;
 
 // ── ElevenLabs Settings ────────────────────────────────────────────────────
 function loadElevenLabsSettings() {
-    elevenLabsEnabled = localStorage.getItem('lumina_el_enabled') === 'true';
-    elevenLabsApiKey = localStorage.getItem('lumina_el_key') || '';
-    elevenLabsVoiceId = localStorage.getItem('lumina_el_voice') || 'pNInz6obpgDQGcFmaJgB';
+    const acc = getCachedAccountSettings();
+    if (acc) {
+        if (acc.elevenLabsEnabled !== undefined) elevenLabsEnabled = Boolean(acc.elevenLabsEnabled);
+        if (acc.elevenLabsApiKey !== undefined) elevenLabsApiKey = String(acc.elevenLabsApiKey || '').trim();
+        if (acc.elevenLabsVoiceId !== undefined) elevenLabsVoiceId = String(acc.elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
+        if (acc.elevenLabsVoiceIdKa !== undefined) elevenLabsVoiceIdKa = String(acc.elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb');
+    } else {
+        elevenLabsEnabled = localStorage.getItem('lumina_el_enabled') === 'true';
+        elevenLabsApiKey = localStorage.getItem('lumina_el_key') || '';
+        elevenLabsVoiceId = localStorage.getItem('lumina_el_voice') || 'pNInz6obpgDQGcFmaJgB';
+        elevenLabsVoiceIdKa = localStorage.getItem('lumina_el_voice_ka') || 'nPczCjzI2devNBz1zQrb';
+    }
 
     if (DOM.elevenLabsToggle) DOM.elevenLabsToggle.checked = elevenLabsEnabled;
     if (DOM.elevenLabsApiKey) DOM.elevenLabsApiKey.value = elevenLabsApiKey;
     if (DOM.elevenLabsVoiceSelect) DOM.elevenLabsVoiceSelect.value = elevenLabsVoiceId;
+    if (DOM.elevenLabsVoiceSelectKa) DOM.elevenLabsVoiceSelectKa.value = elevenLabsVoiceIdKa;
+
+    // Load cached voices if available
+    try {
+        const cachedRaw = localStorage.getItem('lumina_cached_el_voices');
+        if (cachedRaw) {
+            const cachedVoices = JSON.parse(cachedRaw);
+            populateElevenLabsVoiceDropdowns(cachedVoices);
+        }
+    } catch (e) {}
+
+    if (elevenLabsVoiceIdKa) {
+        const kaSelect = document.getElementById('elevenLabsVoiceSelectKa');
+        const customInput = document.getElementById('elevenLabsCustomVoiceIdKa');
+        if (kaSelect && customInput) {
+            const exists = Array.from(kaSelect.options).some(o => o.value === elevenLabsVoiceIdKa);
+            if (!exists) {
+                kaSelect.value = 'custom';
+                customInput.classList.remove('hidden');
+                customInput.value = elevenLabsVoiceIdKa;
+            }
+        }
+    }
 
     if (elevenLabsEnabled && DOM.elevenLabsKeySection) {
         DOM.elevenLabsKeySection.classList.remove('hidden');
@@ -1502,19 +4974,71 @@ function toggleElevenLabsMode(enabled) {
         else DOM.elevenLabsKeySection.classList.add('hidden');
     }
     updateTopVoiceBadge();
+
+    const email = getActiveUserEmail();
+    const storageKey = getAccountSettingsStorageKey(email);
+    const accountSettings = getCurrentAccountSettings();
+    accountSettings.elevenLabsEnabled = enabled;
+    accountSettings.updatedAt = new Date().toISOString();
+    localStorage.setItem(storageKey, JSON.stringify(accountSettings));
+    if (email && window.LuminaStore && typeof window.LuminaStore.saveAccountSettings === 'function') {
+        window.LuminaStore.saveAccountSettings(accountSettings).catch(() => {});
+    }
 }
 
 function saveElevenLabsSettings() {
     if (DOM.elevenLabsApiKey) {
         elevenLabsApiKey = DOM.elevenLabsApiKey.value.trim();
-        localStorage.setItem('lumina_el_key', elevenLabsApiKey);
+        if (elevenLabsApiKey) localStorage.setItem('lumina_el_key', elevenLabsApiKey);
+        else localStorage.removeItem('lumina_el_key');
     }
     if (DOM.elevenLabsVoiceSelect) {
         elevenLabsVoiceId = DOM.elevenLabsVoiceSelect.value;
         localStorage.setItem('lumina_el_voice', elevenLabsVoiceId);
     }
-    alert('ElevenLabs settings saved successfully!');
+    if (DOM.elevenLabsVoiceSelectKa) {
+        const selectVal = DOM.elevenLabsVoiceSelectKa.value;
+        const customInput = document.getElementById('elevenLabsCustomVoiceIdKa');
+        const customVal = customInput ? customInput.value.trim() : '';
+        elevenLabsVoiceIdKa = (selectVal === 'custom' && customVal) ? customVal : (selectVal || 'nPczCjzI2devNBz1zQrb');
+        localStorage.setItem('lumina_el_voice_ka', elevenLabsVoiceIdKa);
+    }
+    if (DOM.elevenLabsToggle) {
+        elevenLabsEnabled = DOM.elevenLabsToggle.checked;
+        localStorage.setItem('lumina_el_enabled', elevenLabsEnabled ? 'true' : 'false');
+    }
+
+    const email = getActiveUserEmail();
+    const accountSettings = getCurrentAccountSettings();
+    accountSettings.elevenLabsApiKey = elevenLabsApiKey;
+    accountSettings.elevenLabsVoiceId = elevenLabsVoiceId;
+    accountSettings.elevenLabsVoiceIdKa = elevenLabsVoiceIdKa;
+    accountSettings.elevenLabsEnabled = elevenLabsEnabled;
+    accountSettings.updatedAt = new Date().toISOString();
+
+    const storageKey = getAccountSettingsStorageKey(email);
+    localStorage.setItem(storageKey, JSON.stringify(accountSettings));
+
+    if (email && window.LuminaStore && typeof window.LuminaStore.saveAccountSettings === 'function') {
+        window.LuminaStore.saveAccountSettings(accountSettings).then((res) => {
+            if (res && res.success) {
+                console.info('[AccountSettings] Synced ElevenLabs settings with Supabase account for', email);
+            }
+        }).catch(err => {
+            console.warn('[AccountSettings] ElevenLabs cloud sync warning:', err);
+        });
+    }
+
+    if (typeof showToast === 'function') {
+        showToast('ElevenLabs settings saved to your account successfully! ✨');
+    } else {
+        alert('ElevenLabs settings saved to your account successfully!');
+    }
     updateTopVoiceBadge();
+
+    if (elevenLabsApiKey) {
+        fetchElevenLabsUserVoices(false);
+    }
 }
 
 // ── Voice Management ────────────────────────────────────────────────────────
@@ -1524,17 +5048,30 @@ function saveElevenLabsSettings() {
 // browser exposes any — on Android inside an iframe that list is usually empty,
 // which is why the old browser-only picker looked completely blank.
 const ENGBOT_VOICES = [
-    { id: 'en-gb-male',        label: 'Oliver — British male',            group: '🇬🇧 English · British',  lang: 'en' },
-    { id: 'en-gb-female',      label: 'Amelia — British female',          group: '🇬🇧 English · British',  lang: 'en' },
-    { id: 'en-us-male',        label: 'Ethan — American male',            group: '🇺🇸 English · American', lang: 'en' },
-    { id: 'en-us-female',      label: 'Nova — American female',           group: '🇺🇸 English · American', lang: 'en' },
-    { id: 'en-us-storyteller', label: 'Fable — American storyteller',     group: '🇺🇸 English · American', lang: 'en' },
-    { id: 'en-neutral',        label: 'Alloy — neutral narrator',         group: '🇺🇸 English · American', lang: 'en' },
-    { id: 'ka-male',           label: 'გიორგი — ქართული მამრობითი',       group: '🇬🇪 ქართული (Georgian)', lang: 'ka' },
-    { id: 'ka-female',         label: 'ეკა — ქართული მდედრობითი',         group: '🇬🇪 ქართული (Georgian)', lang: 'ka' },
-    { id: 'ka-soft',           label: 'ნინო — რბილი ქართული ტონი',        group: '🇬🇪 ქართული (Georgian)', lang: 'ka' },
-    { id: 'multi-puck',        label: 'Puck — multilingual',              group: '🌍 Multilingual',        lang: 'multi' },
-    { id: 'multi-fenrir',      label: 'Fenrir — multilingual',            group: '🌍 Multilingual',        lang: 'multi' },
+    // 🇬🇧 English · British Narrators
+    { id: 'en-gb-male',        label: 'Oliver — British classic narrator (warm & deep)',     group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-RyanNeural - en-GB (Male)', rate: -3, pitch: -1, gender: 'male', locale: 'en-GB' },
+    { id: 'en-gb-female',      label: 'Amelia — British dramatic narrator (poetic & clear)',  group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-SoniaNeural - en-GB (Female)', rate: -2, pitch: 0, gender: 'female', locale: 'en-GB' },
+    { id: 'en-gb-libby',       label: 'Charlotte — British gentle storyteller',               group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-LibbyNeural - en-GB (Female)', rate: -3, pitch: -1, gender: 'female', locale: 'en-GB' },
+    { id: 'en-gb-thomas',      label: 'Arthur — British classical theater reader',            group: '🇬🇧 English · British',  lang: 'en', edgeVoice: 'en-GB-ThomasNeural - en-GB (Male)', rate: -3, pitch: -2, gender: 'male', locale: 'en-GB' },
+
+    // 🇺🇸 English · American Narrators
+    { id: 'en-us-storyteller', label: 'Fable — American master storyteller (expressive)',     group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-ChristopherNeural - en-US (Male)', rate: -4, pitch: -2, gender: 'male', locale: 'en-US' },
+    { id: 'en-us-aria',        label: 'Aria — American bright & engaging storyteller',        group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-AriaNeural - en-US (Female)', rate: -2, pitch: 1, gender: 'female', locale: 'en-US' },
+    { id: 'en-us-male',        label: 'Ethan — American casual & lively narrator',            group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-GuyNeural - en-US (Male)', rate: -2, pitch: 0, gender: 'male', locale: 'en-US' },
+    { id: 'en-us-female',      label: 'Nova — American warm & natural narrator',              group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-JennyNeural - en-US (Female)', rate: -2, pitch: 0, gender: 'female', locale: 'en-US' },
+    { id: 'en-us-eric',        label: 'Marcus — American deep resonance audiobook voice',    group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-EricNeural - en-US (Male)', rate: -3, pitch: -3, gender: 'male', locale: 'en-US' },
+    { id: 'en-us-ava',         label: 'Ava — American expressive novel reader',               group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-AvaNeural - en-US (Female)', rate: -2, pitch: 0, gender: 'female', locale: 'en-US' },
+    { id: 'en-neutral',        label: 'Alloy — balanced studio narrator',                     group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-AriaNeural - en-US (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'en-US' },
+
+    // 🇬🇪 ქართული (Georgian) Narrators
+    { id: 'ka-male',           label: 'გიორგი — ქართველი მთხრობელი (ღრმა და ბუნებრივი)',   group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: -3, pitch: -1, gender: 'male', locale: 'ka-GE' },
+    { id: 'ka-actor',          label: 'დავითი — დრამატული არტისტი (დინამიკური)',             group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'ka-GE' },
+    { id: 'ka-female',         label: 'ეკა — ქართველი მთხრობელი ქალი (მკაფიო და ცოცხალი)',    group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -2, pitch: 0, gender: 'female', locale: 'ka-GE' },
+    { id: 'ka-soft',           label: 'ნინო — ლირიკული & რბილი კითხვა',                      group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -5, pitch: -2, gender: 'female', locale: 'ka-GE' },
+
+    // 🌍 Multilingual
+    { id: 'multi-puck',        label: 'Puck — multilingual lively',                          group: '🌍 Multilingual',        lang: 'multi', edgeVoice: 'en-US-GuyNeural - en-US (Male)', rate: -2, pitch: 0, gender: 'male', locale: 'en-US' },
+    { id: 'multi-fenrir',      label: 'Fenrir — multilingual deep narrator',                  group: '🌍 Multilingual',        lang: 'multi', edgeVoice: 'en-US-ChristopherNeural - en-US (Male)', rate: -3, pitch: -2, gender: 'male', locale: 'en-US' },
 ];
 
 function engbotVoice(id) {
@@ -1543,7 +5080,7 @@ function engbotVoice(id) {
 
 /** Currently selected EngBot preset for a language ('en' | 'ka'). */
 function selectedEngbotPreset(lang) {
-    const savedEn = localStorage.getItem('lumina_voice_preset_en') || 'en-us-female';
+    const savedEn = localStorage.getItem('lumina_voice_preset_en') || 'en-gb-male';
     const savedKa = localStorage.getItem('lumina_voice_preset_ka') || 'ka-male';
     return lang === 'ka' ? savedKa : savedEn;
 }
@@ -1570,10 +5107,15 @@ function populateVoiceList() {
     groups.forEach((options, label) => {
         const og = document.createElement('optgroup');
         og.label = label;
+        og.style.backgroundColor = '#090d15';
+        og.style.color = '#38bdf8';
+        og.style.fontWeight = 'bold';
         options.forEach(o => {
             const opt = document.createElement('option');
             opt.value = o.value;
             opt.textContent = o.text;
+            opt.style.backgroundColor = '#121620';
+            opt.style.color = '#f8fafc';
             og.appendChild(opt);
         });
         select.appendChild(og);
@@ -1583,6 +5125,13 @@ function populateVoiceList() {
     // being read, so the picker always shows what you will actually hear.
     const stored = localStorage.getItem('lumina_voice_choice');
     let value = stored;
+    if (value && value.startsWith('preset:')) {
+        const pId = value.slice(7);
+        const pObj = engbotVoice(pId);
+        if (pObj && pObj.lang !== 'multi' && pObj.lang !== (currentLang === 'ka' ? 'ka' : 'en')) {
+            value = 'preset:' + selectedEngbotPreset(currentLang === 'ka' ? 'ka' : 'en');
+        }
+    }
     if (!value || !select.querySelector(`option[value="${CSS.escape(value)}"]`)) {
         value = 'preset:' + selectedEngbotPreset(currentLang === 'ka' ? 'ka' : 'en');
     }
@@ -1622,10 +5171,19 @@ function applyVoiceChoice(value, opts = {}) {
             ? 'High-fidelity EngBot narration — works on mobile, English and Georgian.'
             : 'Device voice — availability depends on your phone/browser.';
     }
-    // Clear buffered audio so the new narrator is heard from the next sentence
-    // (no chapter restart, no repeated sentence).
+    // Clear buffered audio so the new narrator is heard immediately
     clearNarrationBuffers();
     updateTopVoiceBadge();
+
+    // LIVE VOICE SWITCHING: If audio is currently playing and user changed voice in UI,
+    // immediately re-speak the current sentence with the newly selected voice!
+    if (!opts.silent && isPlaying && !isPaused) {
+        stopCurrentSpeechAudio(false);
+        if (window.speechSynthesis) {
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+        }
+        speakCurrentSentence();
+    }
 }
 
 function updateTopVoiceBadge() {
@@ -1647,36 +5205,98 @@ function updateTopVoiceBadge() {
     DOM.topVoiceBadge.textContent = preset ? `🎙️ ${preset.label.split(' — ')[0]}` : '🎙️ Studio Narrator';
 }
 
-/** Preview whatever is selected in the picker, in its own language. */
+/** Preview whatever is selected in the picker, in its own language and neural voice. */
 function previewSelectedNarrator() {
     const value = (DOM.voiceModalSelect && DOM.voiceModalSelect.value) || '';
-    const isKa = value.startsWith('preset:') && (engbotVoice(value.slice(7)) || {}).lang === 'ka';
-    if (isKa) testGeorgianVoicePreview();
-    else testVoicePreview();
+    if (value.startsWith('device:')) {
+        const text = currentLang === 'ka'
+            ? "გამარჯობა! მე ვარ თქვენი მოწყობილობის ხმა."
+            : "Hello! This is your device voice speaking.";
+        speakStandardSentence(text, currentLang);
+        return;
+    }
+
+    const presetId = value.startsWith('preset:') ? value.slice(7) : selectedEngbotPreset(currentLang === 'ka' ? 'ka' : 'en');
+    const v = engbotVoice(presetId);
+    const lang = (v && v.lang === 'ka') ? 'ka' : 'en';
+
+    if (lang === 'ka') {
+        testGeorgianVoicePreview(presetId);
+    } else {
+        testVoicePreview(presetId);
+    }
 }
 
-function testVoicePreview() {
-    const text = "Hello! This is your EngBot narrator. Enjoy your high-fidelity reading and listening experience.";
-    if (gatewayTTSAvailable) { void previewGatewayVoice(text, 'en'); return; }
+async function testVoicePreview(presetId) {
+    const pId = presetId || selectedEngbotPreset('en');
+    const v = engbotVoice(pId);
+    const voiceId = v ? v.edgeVoice : 'en-GB-RyanNeural - en-GB (Male)';
+    const rateDelta = v ? (v.rate || 0) : 0;
+    const pitchDelta = v ? (v.pitch || 0) : 0;
+    const label = v ? v.label.split(' — ')[0] : 'Oliver';
+    const text = `Hello! This is ${label} narrating. Enjoy your high-fidelity reading and listening experience.`;
+
+    if (gatewayTTSAvailable) {
+        const handled = await previewGatewayVoice(text, 'en', pId);
+        if (handled) return;
+    }
+
+    try {
+        if (window._voicePreviewAudio) {
+            try { window._voicePreviewAudio.pause(); } catch (e) {}
+        }
+        const url = await fetchNeuralSpeechAudioUrl(text, voiceId, rateDelta, pitchDelta, 'en');
+        if (url) {
+            const audio = new Audio(url);
+            audio.playbackRate = currentGlobalSpeed;
+            window._voicePreviewAudio = audio;
+            await audio.play();
+            return;
+        }
+    } catch (e) {
+        console.warn('Neural preview failed:', e);
+    }
     speakStandardSentence(text, 'en');
 }
 
-function testGeorgianVoicePreview() {
-    const text = "გამარჯობა! მე ვარ თქვენი ქართული მთხრობელი. სასიამოვნო მოსმენა გისურვებთ.";
-    if (gatewayTTSAvailable) { void previewGatewayVoice(text, 'ka'); return; }
-    const isCloudKaVoice = selectedVoiceURI === 'ka-GE-EkaNeural - ka-GE (Female)' || selectedVoiceURI === 'ka-GE-GiorgiNeural - ka-GE (Male)';
-    const voiceId = isCloudKaVoice ? selectedVoiceURI : 'ka-GE-GiorgiNeural - ka-GE (Male)';
+async function testGeorgianVoicePreview(presetId) {
+    const pId = presetId || selectedEngbotPreset('ka');
+    const v = engbotVoice(pId);
+    const voiceId = v ? v.edgeVoice : 'ka-GE-GiorgiNeural - ka-GE (Male)';
+    const rateDelta = v ? (v.rate || 0) : 0;
+    const pitchDelta = v ? (v.pitch || 0) : 0;
+    const label = v ? v.label.split(' — ')[0] : 'გიორგი';
+    const text = `გამარჯობა! მე ვარ თქვენი ქართული მთხრობელი ${label}. სასიამოვნო მოსმენას გისურვებთ.`;
+
+    if (gatewayTTSAvailable) {
+        const handled = await previewGatewayVoice(text, 'ka', pId);
+        if (handled) return;
+    }
+
+    try {
+        if (window._voicePreviewAudio) {
+            try { window._voicePreviewAudio.pause(); } catch (e) {}
+        }
+        const url = await fetchNeuralSpeechAudioUrl(text, voiceId, rateDelta, pitchDelta, 'ka');
+        if (url) {
+            const audio = new Audio(url);
+            audio.playbackRate = currentGlobalSpeed;
+            window._voicePreviewAudio = audio;
+            await audio.play();
+            return;
+        }
+    } catch (e) {
+        console.warn('Georgian neural preview failed:', e);
+    }
     speakFreeGeorgianNeural(text, voiceId);
 }
 
 /** One-off neural preview that never touches the reading player state. */
-async function previewGatewayVoice(text, lang) {
+async function previewGatewayVoice(text, lang, overridePreset = null) {
     try {
-        const url = await fetchGatewaySpeechUrl(text, lang);
+        const url = await fetchGatewaySpeechUrl(text, lang, overridePreset);
         if (!url) {
-            if (lang === 'ka') speakFreeGeorgianNeural(text);
-            else speakStandardSentence(text, lang);
-            return;
+            return false;
         }
         if (window._voicePreviewAudio) {
             try { window._voicePreviewAudio.pause(); } catch (e) {}
@@ -1685,8 +5305,9 @@ async function previewGatewayVoice(text, lang) {
         audio.playbackRate = currentGlobalSpeed;
         window._voicePreviewAudio = audio;
         await audio.play();
+        return true;
     } catch (e) {
-        if (typeof showToast === 'function') showToast('Voice preview failed — try again.', 'error');
+        return false;
     }
 }
 
@@ -1701,12 +5322,27 @@ function openCurrentBookInReader() {
         return;
     }
     const chapId = currentPlayingChapterId || (currentBook.chapters[0] ? currentBook.chapters[0].id : 1);
-    openReader(currentBook.id, chapId, currentLang);
+    const isKa = currentBook.lang === 'ka' || currentBook.isTranslatedEdition || bookHasGeorgian(currentBook);
+    // If audio is currently playing, ALWAYS open the reader in the audio's active language!
+    const targetLang = isPlaying ? currentLang : (isKa ? 'ka' : currentLang);
+    openReader(currentBook.id, chapId, targetLang);
 }
 
 async function openReader(bookId, chapterId, lang = 'en') {
-    const books = await getAllBooks();
-    readerBook = books.find(b => String(b.id) === String(bookId));
+    isUserManuallyNavigating = false;
+    let books = null;
+    if (currentBook && String(currentBook.id) === String(bookId)) {
+        readerBook = currentBook;
+    } else {
+        try {
+            const localBooks = await getAllLocalBooks();
+            readerBook = localBooks.find(b => String(b.id) === String(bookId));
+        } catch (e) {}
+        if (!readerBook) {
+            books = await getAllBooks();
+            readerBook = books.find(b => String(b.id) === String(bookId));
+        }
+    }
     if (!readerBook) {
         if (currentBook && String(currentBook.id) === String(bookId)) {
             readerBook = currentBook;
@@ -1720,17 +5356,35 @@ async function openReader(bookId, chapterId, lang = 'en') {
     readerLang = lang;
     readerCurrentPage = 1;
 
-    if (readerLang === 'ka') {
-        const hasKa = bookHasGeorgian(readerBook);
-        if (!hasKa) {
-            const doTranslate = confirm('This book is not yet translated to Georgian. Would you like to translate the whole book now?');
-            if (doTranslate) {
-                startWholeBookTranslation();
-                return;
-            } else {
-                readerLang = 'en';
+    // Check if the book is an explicit Georgian edition or already has Georgian text
+    const isGeorgianEdition = readerBook.lang === 'ka' || readerBook.isTranslatedEdition || bookHasGeorgian(readerBook);
+    if (readerBook.lang === 'ka' || (isGeorgianEdition && (lang === 'ka' || !isPlaying))) {
+        readerLang = 'ka';
+        currentLang = 'ka';
+    } else if (isGeorgianEdition && lang !== 'en') {
+        readerLang = 'ka';
+        currentLang = 'ka';
+    } else if (readerLang === 'ka' && !isGeorgianEdition) {
+        // If Georgian was requested for an untranslated English book, check if a separate translated sibling exists
+        if (!books) books = await getAllBooks();
+        const translatedSibling = books.find(b => String(b.id) === `${readerBook.id}_ka` || (b.originalBookId && String(b.originalBookId) === String(readerBook.id)));
+        if (translatedSibling) {
+            readerBook = translatedSibling;
+            currentBook = translatedSibling;
+            readerChapterId = chapterId !== undefined ? chapterId : (readerBook.chapters[0] ? readerBook.chapters[0].id : 1);
+            readerLang = 'ka';
+            currentLang = 'ka';
+        } else {
+            readerLang = 'en';
+            if (typeof showToast === 'function') {
+                showToast('Book is in English. Click Translate to create a Georgian edition.', 'info');
             }
         }
+    }
+
+    // If audio is currently playing this book and chapter, ensure language matches audio 100%
+    if (isPlaying && String(currentPlayingChapterId) === String(readerChapterId)) {
+        readerLang = currentLang;
     }
 
     readerActive = true;
@@ -1742,6 +5396,11 @@ async function openReader(bookId, chapterId, lang = 'en') {
     // Measured pagination needs the reader box to have a real size first.
     requestAnimationFrame(() => {
         paginateChapter();
+        if (isPlaying && String(currentPlayingChapterId) === String(readerChapterId)) {
+            if (readerSentenceToPageMap[currentSentenceIndex] !== undefined) {
+                readerCurrentPage = readerSentenceToPageMap[currentSentenceIndex] + 1;
+            }
+        }
         renderCurrentPage();
         initReaderGestures();
     });
@@ -1755,7 +5414,7 @@ function closeReader() {
 
 function onReaderChapterChange(targetChapId) {
     if (!readerBook) return;
-    isUserManuallyNavigating = true;
+    isUserManuallyNavigating = false;
     const matched = readerBook.chapters.find(c => String(c.id) === String(targetChapId));
     if (!matched) return;
 
@@ -1766,7 +5425,7 @@ function onReaderChapterChange(targetChapId) {
     renderCurrentPage();
 
     if (isPlaying) {
-        playChapterAudio(readerChapterId);
+        playChapterAudio(readerChapterId, 0, true);
     }
 }
 
@@ -1783,25 +5442,87 @@ function updateReaderLangUI() {
 
 function toggleReaderLanguage() {
     if (!readerBook) return;
-    if (readerLang === 'en') {
-        if (!bookHasGeorgian(readerBook)) {
-            notifyNeedsTranslation();
-            return;
-        }
-        readerLang = 'ka';
-        currentLang = 'ka';
-    } else {
-        readerLang = 'en';
-        currentLang = 'en';
+    const oldLang = readerLang;
+    const newLang = oldLang === 'en' ? 'ka' : 'en';
+
+    if (newLang === 'ka' && !bookHasGeorgian(readerBook)) {
+        notifyNeedsTranslation();
+        return;
     }
+
+    readerLang = newLang;
+    currentLang = newLang;
     updateReaderLangUI();
-    paginateChapter();
-    renderCurrentPage();
     updateLangToggleUI();
 
-    if (isPlaying) {
-        playChapterAudio(readerChapterId);
+    // Map sentence progress proportionally across languages
+    const currentProg = sentenceQueue.length > 0 ? (currentSentenceIndex / sentenceQueue.length) : 0;
+
+    paginateChapter();
+
+    const newTotalSentences = Object.keys(readerSentenceToPageMap).length || 1;
+    const targetSentenceIdx = Math.min(newTotalSentences - 1, Math.max(0, Math.round(currentProg * (newTotalSentences - 1))));
+
+    if (readerSentenceToPageMap[targetSentenceIdx] !== undefined) {
+        readerCurrentPage = readerSentenceToPageMap[targetSentenceIdx] + 1;
     }
+    renderCurrentPage();
+
+    if (isPlaying) {
+        stopSpeech();
+        playChapterAudio(readerChapterId, targetSentenceIdx, true);
+    }
+}
+
+let currentTurnDir = 'next';
+
+// ── Reader Typography & Sentence Preparation ──────────────────────────────
+function cleanReaderTypography(text) {
+    if (!text) return '';
+    let out = String(text);
+    // 1. Strip bracketed footnote reference numbers: [4], [5], [12], etc.
+    out = out.replace(/\[\d+\]/g, '');
+    // 2. Fix spaces before standard punctuation: "მიიღო ." -> "მიიღო."
+    out = out.replace(/\s+([.,;:!?])/g, '$1');
+    // 3. Fix dialogue colon dash: " : - " -> ": — "
+    out = out.replace(/:\s*-\s*/g, ': — ');
+    // 4. Normalize em-dashes and surrounding spacing
+    out = out.replace(/\s*[—–]\s*/g, ' — ');
+    // 5. Normalize multiple spaces / tabs within lines
+    out = out.replace(/[ \t\f]+/g, ' ');
+    // 6. Rejoin detached drop-cap / initial letter from OCR artifacts: "ჰ ეკატომბა" -> "ჰეკატომბა"
+    out = out.replace(/^([ა-ჰa-zA-Z])\s+([ა-ჰa-zA-Z]{2,})/g, '$1$2');
+    return out.trim();
+}
+
+function prepareChapterSentences(rawText) {
+    const cleaned = cleanReaderTypography(rawText);
+    const rawParas = cleaned.split(/\n\s*\n+/).map(p => p.trim()).filter(Boolean);
+    const allSentences = [];
+
+    if (rawParas.length <= 1) {
+        // Flat text without clear paragraph breaks
+        const rawSents = splitIntoNaturalSentences(cleaned).map(x => x.trim()).filter(Boolean);
+        rawSents.forEach((sText, idx) => {
+            // Group sentences every ~5 sentences into natural paragraphs if completely unformatted
+            const isParaBreak = (idx > 0 && idx % 5 === 0) || (idx === rawSents.length - 1);
+            allSentences.push({ text: sText, globalIndex: idx, isParaBreak });
+        });
+    } else {
+        let gIdx = 0;
+        rawParas.forEach(para => {
+            const pSents = splitIntoNaturalSentences(para).map(x => x.trim()).filter(Boolean);
+            pSents.forEach((sText, sIdx) => {
+                const isParaBreak = (sIdx === pSents.length - 1);
+                allSentences.push({ text: sText, globalIndex: gIdx++, isParaBreak });
+            });
+        });
+    }
+
+    if (allSentences.length === 0 && cleaned.length > 0) {
+        allSentences.push({ text: cleaned, globalIndex: 0, isParaBreak: true });
+    }
+    return allSentences;
 }
 
 // ── Dynamic Book Pagination Engine ─────────────────────────────────────────
@@ -1814,39 +5535,37 @@ function paginateChapter() {
     if (readerLang === 'ka') {
         rawText = (chap.text_ka && chap.text_ka.trim().length > 0) ? chap.text_ka : (chap.text || '');
     } else {
-        rawText = chap.text || '';
+        rawText = chap.text_en || chap.text || '';
     }
 
     if (!rawText || rawText.trim().length === 0) {
         rawText = "No chapter text available.";
     }
 
-    const sentences = splitIntoNaturalSentences(rawText).map(x => x.trim()).filter(Boolean);
+    const sentences = prepareChapterSentences(rawText);
     readerPages = [];
     readerSentenceToPageMap = {};
 
-    // Measured pagination: we lay the sentences out in an invisible clone of the
-    // real page box and cut a page exactly where the text stops fitting. The old
-    // words-per-page estimate is what made text overflow the card (or leave half
-    // the page empty) on different screens and font sizes.
+    // Measured pagination: we lay sentences out in a clean offscreen clone
+    // matching the real page spread dimensions and font geometry.
     const measured = measurePages(sentences);
     if (measured) {
         readerPages = measured;
     } else {
         const vw = window.innerWidth;
         let baseWords;
-        if (vw < 480)       baseWords = 55;
-        else if (vw < 640)  baseWords = 75;
-        else if (vw < 900)  baseWords = 110;
-        else if (vw < 1300) baseWords = 135;
-        else                baseWords = 150;
+        if (vw < 480)       baseWords = 140;
+        else if (vw < 640)  baseWords = 180;
+        else if (vw < 900)  baseWords = 220;
+        else if (vw < 1300) baseWords = 280;
+        else                baseWords = 340;
         const fontRatio = 18 / readerFontSize;
-        const WORDS_PER_PAGE = Math.max(25, Math.floor(baseWords * fontRatio * fontRatio));
+        const WORDS_PER_PAGE = Math.max(70, Math.floor(baseWords * fontRatio * fontRatio));
         let cur = [];
         let curWords = 0;
-        sentences.forEach((clean, globalIdx) => {
-            cur.push({ text: clean, globalIndex: globalIdx });
-            curWords += clean.split(/\s+/).length;
+        sentences.forEach((item) => {
+            cur.push(item);
+            curWords += item.text.split(/\s+/).length;
             if (curWords >= WORDS_PER_PAGE) {
                 readerPages.push(cur);
                 cur = [];
@@ -1861,7 +5580,7 @@ function paginateChapter() {
     });
 
     if (readerPages.length === 0) {
-        readerPages.push([{ text: rawText, globalIndex: 0 }]);
+        readerPages.push([{ text: rawText, globalIndex: 0, isParaBreak: true }]);
         readerSentenceToPageMap[0] = 0;
     }
 
@@ -1883,73 +5602,82 @@ function measurePages(sentences) {
 
         const isDual = readerMode === 'dual' && window.innerWidth >= 900;
         const style = getComputedStyle(container);
-        const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-        const padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+        const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
         let boxW = (container.clientWidth - padX);
-        if (isDual) boxW = (boxW - 24) / 2;
-        boxW = Math.min(boxW, isDual ? 640 : 1300);
-        // Page-card padding from CSS breakpoints.
+        if (isDual) boxW = (boxW - 20) / 2;
+        boxW = Math.min(boxW, isDual ? 860 : 1720);
+
         const vw = window.innerWidth;
-        const cardPadX = vw <= 400 ? 20 : vw <= 640 ? 28 : vw <= 1024 ? 40 : 80;
-        const cardPadY = vw <= 400 ? 24 : vw <= 640 ? 32 : vw <= 1024 ? 44 : 64;
+        const cardPadX = vw <= 400 ? 20 : vw <= 640 ? 28 : vw <= 900 ? 40 : vw <= 1200 ? 56 : 72;
+        const cardPadY = vw <= 400 ? 24 : vw <= 640 ? 28 : vw <= 900 ? 36 : vw <= 1200 ? 44 : 52;
         const innerW = Math.max(160, boxW - cardPadX);
-        const innerH = Math.max(160, container.clientHeight - padY - cardPadY - 34 /* page footer */ - 8 /* safety */);
-        // Page 1 also carries the chapter header, so it fits less text.
-        const headerReserve = vw <= 640 ? 92 : 116;
+
+        const spreadH = spread.clientHeight || (window.innerHeight - (vw <= 640 ? 110 : vw <= 900 ? 116 : 124));
+        const footerReserve = 34;
+        const headerReserve = vw <= 640 ? 66 : 74;
+        const safety = 8;
+
+        const page1MaxH = Math.max(220, spreadH - cardPadY - footerReserve - headerReserve - safety);
+        const pageOtherMaxH = Math.max(260, spreadH - cardPadY - footerReserve - safety);
 
         const probe = document.createElement('div');
-        probe.className = readerFontFamily;
-        probe.style.cssText = `position:absolute;left:-99999px;top:0;visibility:hidden;width:${innerW}px;font-size:${readerFontSize}px;line-height:1.85;`;
+        probe.className = `${readerFontFamily} space-y-3.5`;
+        probe.style.cssText = `position:absolute;left:-99999px;top:0;visibility:hidden;width:${innerW}px;font-size:${readerFontSize}px;line-height:1.85;box-sizing:border-box;`;
         document.body.appendChild(probe);
 
-        // Reserve the chapter-header space while filling the first page.
-        const spacer = document.createElement('div');
-        spacer.style.height = headerReserve + 'px';
-        probe.appendChild(spacer);
-
         const pages = [];
-        let current = [];
-        let buffer = [];
-        const flushParagraph = () => {
-            if (!buffer.length) return;
-            const p = document.createElement('p');
-            p.className = 'text-justify indent-6';
-            p.textContent = buffer.join(' ');
-            probe.appendChild(p);
-            buffer = [];
-        };
+        let curPageSentences = [];
+        let curP = null;
 
         for (let i = 0; i < sentences.length; i++) {
-            const text = sentences[i];
-            buffer.push(text);
-            current.push({ text, globalIndex: i });
-            if (buffer.length >= 3) flushParagraph();
-            // Measure with the pending buffer included.
-            const pending = buffer.length ? buffer.join(' ') : '';
-            let extra = null;
-            if (pending) {
-                extra = document.createElement('p');
-                extra.className = 'text-justify indent-6';
-                extra.textContent = pending;
-                probe.appendChild(extra);
-            }
-            const overflows = probe.scrollHeight > innerH;
-            if (extra) probe.removeChild(extra);
+            const item = sentences[i];
+            const isFirstPage = (pages.length === 0);
+            const targetMaxH = isFirstPage ? page1MaxH : pageOtherMaxH;
 
-            if (overflows && current.length > 1) {
-                const last = current.pop();
-                pages.push(current);
-                current = [last];
-                buffer = [last.text];
-                probe.innerHTML = ''; // header space only applies to page 1
-            } else if (overflows) {
-                pages.push(current);
-                current = [];
-                buffer = [];
+            // Ensure paragraph container exists
+            if (!curP) {
+                curP = document.createElement('p');
+                const isVeryFirstPara = isFirstPage && curPageSentences.length === 0;
+                curP.className = `book-prose indent-6 ${isVeryFirstPara ? 'book-drop-cap' : ''}`;
+                probe.appendChild(curP);
+            }
+
+            const testSpan = document.createElement('span');
+            testSpan.textContent = (curP.childNodes.length > 0 ? ' ' : '') + item.text;
+            curP.appendChild(testSpan);
+
+            const overflows = probe.scrollHeight > targetMaxH;
+
+            if (overflows && curPageSentences.length > 0) {
+                // Pop the sentence that caused the overflow
+                curP.removeChild(testSpan);
+
+                // Commit current page
+                pages.push(curPageSentences);
+                curPageSentences = [];
                 probe.innerHTML = '';
+                curP = null;
+
+                // Start new page with this sentence
+                curP = document.createElement('p');
+                curP.className = 'book-prose indent-6';
+                curP.textContent = item.text;
+                probe.appendChild(curP);
+                curPageSentences.push(item);
+            } else {
+                curPageSentences.push(item);
+            }
+
+            // If this sentence marks the end of a paragraph, next sentence starts in a fresh <p>
+            if (item.isParaBreak) {
+                curP = null;
             }
         }
-        if (current.length) pages.push(current);
+
+        if (curPageSentences.length > 0) {
+            pages.push(curPageSentences);
+        }
+
         probe.remove();
         return pages.length ? pages : null;
     } catch (e) {
@@ -1980,12 +5708,13 @@ function scheduleRepaginate() {
 window.addEventListener('resize', scheduleRepaginate);
 window.addEventListener('orientationchange', scheduleRepaginate);
 
-// Swipe / tap page turning — what makes it feel like a real reader on a phone.
+// Swipe / tap page turning — authentic Moon+ Reader gestures on mobile & desktop.
 function initReaderGestures() {
     const el = DOM.readerScrollContainer;
     if (!el || el._gesturesBound) return;
     el._gesturesBound = true;
     let x0 = 0, y0 = 0, t0 = 0, moved = false;
+
     el.addEventListener('touchstart', (e) => {
         if (e.touches.length !== 1) return;
         x0 = e.touches[0].clientX;
@@ -1993,7 +5722,16 @@ function initReaderGestures() {
         t0 = Date.now();
         moved = false;
     }, { passive: true });
-    el.addEventListener('touchmove', () => { moved = true; }, { passive: true });
+
+    el.addEventListener('touchmove', (e) => {
+        if (e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - x0;
+        const dy = e.touches[0].clientY - y0;
+        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+            moved = true;
+        }
+    }, { passive: true });
+
     el.addEventListener('touchend', (e) => {
         if (readerMode === 'scroll') return;
         const t = e.changedTouches[0];
@@ -2001,11 +5739,45 @@ function initReaderGestures() {
         const dx = t.clientX - x0;
         const dy = t.clientY - y0;
         const dt = Date.now() - t0;
-        if (!moved || dt > 800) return;
-        if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
-        if (window.getSelection && String(window.getSelection())) return; // user is selecting text
-        if (dx < 0) readerNextPage(); else readerPrevPage();
+
+        // Skip if user is actively selecting text
+        if (window.getSelection && String(window.getSelection()).trim().length > 0) return;
+
+        // Horizontal Swipe gesture
+        if (moved && dt < 700 && Math.abs(dx) >= 35 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+            if (dx < 0) readerNextPage();
+            else readerPrevPage();
+            return;
+        }
+
+        // Tap gesture: 3-Zone Navigation (Left 25% = Prev, Right 25% = Next, Center 50% = Immersion Toggle)
+        if (!moved && dt < 400) {
+            if (e.target.closest('button, .reader-sentence, a, input, select, textarea')) return;
+            const vw = window.innerWidth;
+            const tapX = t.clientX;
+            if (tapX < vw * 0.25) {
+                readerPrevPage();
+            } else if (tapX > vw * 0.75) {
+                readerNextPage();
+            } else {
+                toggleReaderToolbars();
+            }
+        }
     }, { passive: true });
+
+    // Desktop click zones on container sides
+    el.addEventListener('click', (e) => {
+        if (readerMode === 'scroll') return;
+        if (e.target.closest('button, .reader-sentence, a, input, select, textarea, .book-page-card')) return;
+        const vw = window.innerWidth;
+        if (e.clientX < vw * 0.25) {
+            readerPrevPage();
+        } else if (e.clientX > vw * 0.75) {
+            readerNextPage();
+        } else {
+            toggleReaderToolbars();
+        }
+    });
 }
 window.initReaderGestures = initReaderGestures;
 
@@ -2017,9 +5789,9 @@ function renderCurrentPage() {
     DOM.readerChapterTitle.textContent = chap.title;
     const totalPages = readerPages.length;
 
-    DOM.readerPageSpread.classList.remove('page-flip-anim');
+    DOM.readerPageSpread.classList.remove('page-flip-anim', 'page-turn-next', 'page-turn-prev');
     void DOM.readerPageSpread.offsetWidth;
-    DOM.readerPageSpread.classList.add('page-flip-anim');
+    DOM.readerPageSpread.classList.add(currentTurnDir === 'prev' ? 'page-turn-prev' : 'page-turn-next');
 
     if (DOM.readerScrollContainer) {
         DOM.readerScrollContainer.scrollTop = 0;
@@ -2053,9 +5825,9 @@ function renderCurrentPage() {
         readerPages.forEach(p => {
             p.forEach(item => {
                 pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${item.text}</span> `);
-                if (pBuffer.length >= 3) {
+                if (item.isParaBreak) {
                     const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
-                    html += `<p class="text-justify indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
+                    html += `<p class="book-prose indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
                     pBuffer = [];
                     isFirstParagraph = false;
                 }
@@ -2063,7 +5835,7 @@ function renderCurrentPage() {
         });
 
         if (pBuffer.length > 0) {
-            html += `<p class="text-justify indent-6">${pBuffer.join('')}</p>`;
+            html += `<p class="book-prose indent-6">${pBuffer.join('')}</p>`;
         }
 
         html += `
@@ -2110,6 +5882,10 @@ function renderCurrentPage() {
     if (DOM.readerPageStatusBottom) {
         DOM.readerPageStatusBottom.textContent = `Page ${readerCurrentPage} of ${totalPages}`;
     }
+    const floatingText = document.getElementById('floatingPageText');
+    if (floatingText) {
+        floatingText.textContent = `Page ${readerCurrentPage} of ${totalPages}`;
+    }
 
     if (DOM.readerReadingProgressText && sentenceQueue.length > 0) {
         DOM.readerReadingProgressText.textContent = `Sentence ${currentSentenceIndex + 1} / ${sentenceQueue.length}`;
@@ -2130,13 +5906,13 @@ function renderCurrentPage() {
 
 function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPage, spineClass) {
     let cardHtml = `
-        <div class="book-page-card ${spineClass}" style="height: max-content; min-height: 100%;">
-            <div class="flex-grow">
+        <div class="book-page-card ${spineClass}">
+            <div class="book-page-text-flow">
     `;
 
     if (isFirstPage) {
         cardHtml += `
-            <header class="mb-5 text-center border-b border-black/10 dark:border-white/10 pb-3 select-none">
+            <header class="mb-4 text-center border-b border-black/10 dark:border-white/10 pb-2.5 select-none">
                 <span class="text-[10px] sm:text-[11px] font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${readerBook.title} ✦</span>
                 <h2 class="text-lg sm:text-2xl font-extrabold mt-1 mb-1 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${escapeHtml(chap.title)}</h2>
                 <div class="mt-1 text-xs opacity-60">── ❖ ──</div>
@@ -2144,7 +5920,7 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
         `;
     }
 
-    cardHtml += `<div class="space-y-4 ${readerFontFamily}" style="font-size: ${readerFontSize}px; line-height: 1.85;">`;
+    cardHtml += `<div class="space-y-3.5 ${readerFontFamily}" style="font-size: ${readerFontSize}px; line-height: 1.85;">`;
 
     let pBuffer = [];
     let isFirstParagraph = isFirstPage;
@@ -2152,18 +5928,22 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
     sentences.forEach((item, idx) => {
         pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${item.text}</span> `);
 
-        if (pBuffer.length >= 3 || idx === sentences.length - 1) {
+        if (item.isParaBreak || idx === sentences.length - 1) {
             const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
-            cardHtml += `<p class="text-justify indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
+            cardHtml += `<p class="book-prose indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
             pBuffer = [];
             isFirstParagraph = false;
         }
     });
 
+    if (pBuffer.length > 0) {
+        cardHtml += `<p class="book-prose indent-6">${pBuffer.join('')}</p>`;
+    }
+
     cardHtml += `</div></div>`;
 
     cardHtml += `
-        <div class="mt-6 pt-3 border-t border-black/10 dark:border-white/10 flex justify-between items-center text-[10px] sm:text-[11px] opacity-70 select-none font-mono">
+        <div class="mt-4 pt-2.5 border-t border-black/10 dark:border-white/10 flex justify-between items-center text-[10px] sm:text-[11px] opacity-70 select-none font-mono">
             <span>Page ${pageNumber} of ${totalPages}</span>
             <span class="truncate max-w-[140px]">${escapeHtml(chap.title)}</span>
         </div>
@@ -2196,7 +5976,8 @@ window.addEventListener('resize', () => {
 // ── Page Steppers ──────────────────────────────────────────────────────────
 function readerNextPage() {
     if (!readerBook) return;
-    isUserManuallyNavigating = true;
+    currentTurnDir = 'next';
+    flagUserManualNav();
     const totalPages = readerPages.length;
 
     if (readerMode === 'scroll') {
@@ -2239,7 +6020,8 @@ function readerNextPage() {
 
 function readerPrevPage() {
     if (!readerBook) return;
-    isUserManuallyNavigating = true;
+    currentTurnDir = 'prev';
+    flagUserManualNav();
 
     if (readerMode === 'scroll') {
         if (DOM.readerScrollContainer) {
@@ -2277,10 +6059,25 @@ function readerPrevPage() {
     }
 }
 
+let userNavTimer = null;
+function flagUserManualNav() {
+    isUserManuallyNavigating = true;
+    clearTimeout(userNavTimer);
+    if (isPlaying) {
+        userNavTimer = setTimeout(() => {
+            isUserManuallyNavigating = false;
+            if (isPlaying && String(currentPlayingChapterId) === String(readerChapterId)) {
+                highlightReaderSentence(currentSentenceIndex);
+            }
+        }, 4000);
+    }
+}
+
 function syncAudioToCurrentPage() {
     if (!isPlaying) return;
     const pageSentences = readerPages[readerCurrentPage - 1];
     if (pageSentences && pageSentences.length > 0) {
+        isUserManuallyNavigating = false;
         currentSentenceIndex = pageSentences[0].globalIndex;
         speakCurrentSentence();
     }
@@ -2304,7 +6101,8 @@ function showReaderToast(msg) {
 }
 
 function readerPrevChapter() {
-    isUserManuallyNavigating = true;
+    isUserManuallyNavigating = false;
+    currentTurnDir = 'prev';
     if (!readerBook) {
         if (currentBook) readerBook = currentBook;
         else return;
@@ -2323,7 +6121,7 @@ function readerPrevChapter() {
         }
         renderCurrentPage();
         if (isPlaying) {
-            playChapterAudio(readerChapterId);
+            playChapterAudio(readerChapterId, 0, true);
         }
         showReaderToast(`📖 ${prevChap.title}`);
     } else {
@@ -2332,7 +6130,8 @@ function readerPrevChapter() {
 }
 
 function readerNextChapter() {
-    isUserManuallyNavigating = true;
+    isUserManuallyNavigating = false;
+    currentTurnDir = 'next';
     if (!readerBook) {
         if (currentBook) readerBook = currentBook;
         else return;
@@ -2345,7 +6144,7 @@ function readerNextChapter() {
         paginateChapter();
         renderCurrentPage();
         if (isPlaying) {
-            playChapterAudio(readerChapterId);
+            playChapterAudio(readerChapterId, 0, true);
         }
         showReaderToast(`📖 ${nextChap.title}`);
     } else {
@@ -2358,7 +6157,7 @@ function onReaderSentenceClick(sentenceIdx) {
     isUserManuallyNavigating = false;
     if (String(currentBook?.id) !== String(readerBook.id) || String(currentPlayingChapterId) !== String(readerChapterId)) {
         selectBook(readerBook.id, false);
-        playChapterAudio(readerChapterId, sentenceIdx);
+        playChapterAudio(readerChapterId, sentenceIdx, true);
         return;
     }
     currentSentenceIndex = sentenceIdx;
@@ -2370,7 +6169,16 @@ function highlightReaderSentence(sentenceIdx, forceSync = false) {
         isUserManuallyNavigating = false;
     }
 
-    if (!isUserManuallyNavigating && readerActive && readerMode !== 'scroll' && readerSentenceToPageMap[sentenceIdx] !== undefined) {
+    if (!readerActive) return;
+
+    // Safety guard: ensure reader language matches current audio language
+    if (isPlaying && currentLang && readerLang !== currentLang && bookHasGeorgian(readerBook)) {
+        readerLang = currentLang;
+        updateReaderLangUI();
+        paginateChapter();
+    }
+
+    if (!isUserManuallyNavigating && readerMode !== 'scroll' && readerSentenceToPageMap[sentenceIdx] !== undefined) {
         const targetPage = readerSentenceToPageMap[sentenceIdx] + 1;
         const isDual = readerMode === 'dual' && window.innerWidth >= 900;
 
@@ -2378,11 +6186,13 @@ function highlightReaderSentence(sentenceIdx, forceSync = false) {
             const leftPage = readerCurrentPage % 2 === 0 ? readerCurrentPage - 1 : readerCurrentPage;
             const rightPage = leftPage + 1;
             if (targetPage !== leftPage && targetPage !== rightPage) {
+                currentTurnDir = targetPage > readerCurrentPage ? 'next' : 'prev';
                 readerCurrentPage = targetPage;
                 renderCurrentPage();
             }
         } else {
             if (targetPage !== readerCurrentPage) {
+                currentTurnDir = targetPage > readerCurrentPage ? 'next' : 'prev';
                 readerCurrentPage = targetPage;
                 renderCurrentPage();
             }
@@ -2408,11 +6218,13 @@ function highlightReaderSentence(sentenceIdx, forceSync = false) {
 
 function setReaderTheme(theme) {
     readerTheme = theme;
+    localStorage.setItem('lumina_reader_theme', theme);
     DOM.readerView.className = `reader-theme-${theme} active`;
 }
 
 function changeReaderFontSize(delta) {
     readerFontSize = Math.max(14, Math.min(32, readerFontSize + delta));
+    localStorage.setItem('lumina_reader_fontsize', readerFontSize);
     if (DOM.readerModalFontSizeText) DOM.readerModalFontSizeText.textContent = `${readerFontSize}px`;
     // Keep the reader on the same sentence after re-flowing.
     repaginateKeepingPosition();
@@ -2420,8 +6232,44 @@ function changeReaderFontSize(delta) {
 
 function changeReaderFontFamily(fontClass) {
     readerFontFamily = fontClass;
+    localStorage.setItem('lumina_reader_fontfamily', fontClass);
     repaginateKeepingPosition();
 }
+
+function setReaderMode(mode) {
+    readerMode = mode;
+    localStorage.setItem('lumina_reader_mode', mode);
+    paginateChapter();
+    renderCurrentPage();
+    closeModal('readerThemeModal');
+}
+
+function toggleReaderToolbars(forceState) {
+    readerToolbarsVisible = typeof forceState === 'boolean' ? forceState : !readerToolbarsVisible;
+    const topBar = document.getElementById('readerTopToolbar');
+    const bottomBar = document.getElementById('readerBottomToolbar');
+    const floating = document.getElementById('readerFloatingPageIndicator');
+
+    if (topBar) {
+        topBar.style.transform = readerToolbarsVisible ? 'translateY(0)' : 'translateY(-100%)';
+        topBar.style.pointerEvents = readerToolbarsVisible ? 'auto' : 'none';
+    }
+    if (bottomBar) {
+        bottomBar.style.transform = readerToolbarsVisible ? 'translateY(0)' : 'translateY(100%)';
+        bottomBar.style.pointerEvents = readerToolbarsVisible ? 'auto' : 'none';
+    }
+    if (floating) {
+        if (!readerToolbarsVisible) {
+            floating.classList.remove('opacity-0', 'pointer-events-none');
+            floating.classList.add('opacity-100', 'pointer-events-auto');
+        } else {
+            floating.classList.add('opacity-0', 'pointer-events-none');
+            floating.classList.remove('opacity-100', 'pointer-events-auto');
+        }
+    }
+}
+window.toggleReaderToolbars = toggleReaderToolbars;
+window.setReaderMode = setReaderMode;
 
 function toggleReaderFullscreen() {
     if (!document.fullscreenElement) {
@@ -2445,8 +6293,12 @@ function setupKeyboardAndTouchControls() {
                 return;
             }
             const openModalEl = document.querySelector('.modal-overlay.active');
-            if (openModalEl && !openModalEl.id.startsWith('wholeBook')) {
-                closeModal(openModalEl.id);
+            if (openModalEl) {
+                if (openModalEl.id === 'wholeBookTranslateModal') {
+                    minimizeTranslationPanel();
+                } else {
+                    closeModal(openModalEl.id);
+                }
                 e.preventDefault();
                 return;
             }
@@ -2464,6 +6316,18 @@ function setupKeyboardAndTouchControls() {
             case 'PageUp':
                 e.preventDefault();
                 readerPrevPage();
+                break;
+            case 'Home':
+                e.preventDefault();
+                currentTurnDir = 'prev';
+                readerCurrentPage = 1;
+                renderCurrentPage();
+                break;
+            case 'End':
+                e.preventDefault();
+                currentTurnDir = 'next';
+                readerCurrentPage = readerPages.length;
+                renderCurrentPage();
                 break;
             case 'ArrowDown':
                 e.preventDefault();
@@ -2487,6 +6351,18 @@ function setupKeyboardAndTouchControls() {
                 e.preventDefault();
                 toggleReaderFullscreen();
                 break;
+            case 'c':
+            case 'C':
+                e.preventDefault();
+                openToCDrawer();
+                break;
+            case 'h':
+            case 'H':
+            case 'm':
+            case 'M':
+                e.preventDefault();
+                toggleReaderToolbars();
+                break;
             case 'Escape':
                 e.preventDefault();
                 closeReader();
@@ -2494,32 +6370,11 @@ function setupKeyboardAndTouchControls() {
         }
     });
 
-    const container = document.getElementById('readerScrollContainer');
-    if (container) {
-        container.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: true });
-
-        container.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            touchEndY = e.changedTouches[0].screenY;
-            handleTouchSwipe();
-        }, { passive: true });
-    }
+    // Note: Touch and tap gestures are consolidated inside initReaderGestures() to prevent duplicate triggers
 }
 
 function handleTouchSwipe() {
-    const diffX = touchEndX - touchStartX;
-    const diffY = touchEndY - touchStartY;
-
-    if (Math.abs(diffX) > Math.abs(diffY) * 1.3 && Math.abs(diffX) > 40) {
-        if (diffX < 0) {
-            readerNextPage();
-        } else {
-            readerPrevPage();
-        }
-    }
+    // Kept as safe compatibility helper; gestures are handled by initReaderGestures
 }
 
 // ── Dock Chapter Steppers ──────────────────────────────────────────────────
@@ -2559,71 +6414,103 @@ function readerForwardSentence() {
 
 // ── AI call funnel ──────────────────────────────────────────────────────────
 // One JSON-mode call to the AI tier, routed through the provider chain:
-//   OpenRouter free models (MAIN) → Groq → Mistral → Gemini.
-// Each tier is skipped when its key is absent, in cooldown, or CORS-blocked,
+//   Gemini (Frontier Flagship) → Groq (Ultra-Fast) → Custom Provider → OpenRouter → Mistral.
+// Each tier is skipped when its key is absent, in cooldown, or blocked,
 // so a whole-book batch keeps running on AI quality even when one or two
 // providers exhaust their free quota mid-run. Returns parsed JSON or null.
-// Retries transient failures (429/5xx) with linear backoff — the whole-book
-// batch sends hundreds of calls, so a single blip must not degrade a chunk
-// to the ML fallback tier.
-async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
-    // Tier 0 (MAIN): the app's own server AI gateway — highest quality, no key.
-    {
-        const res = await callLuminaGatewayJSON(prompt, { temperature, maxTokens });
-        if (res !== null) return res;
-    }
-    // Tier 1: OpenRouter free models — zero-cost engine behind the gateway.
-    if (openRouterApiKey) {
-        const res = await callOpenRouterJSON(prompt, { temperature, maxTokens, retries: retries + 1 });
-        if (res !== null) return res;
-        console.warn('OpenRouter tier failed — trying Groq free tier.');
-    }
-    // Tier 2: Groq (free, ~500K tokens/day) — first fallback.
-    if (groqApiKey) {
-        const res = await callGroqJSON(prompt, { temperature, maxTokens });
-        if (res !== null) return res;
-        console.warn('Groq tier failed — trying Mistral free tier.');
-    }
-    // Tier 3: Mistral (free experiment plan) — second fallback.
-    if (mistralApiKey) {
-        const res = await callMistralJSON(prompt, { temperature, maxTokens });
-        if (res !== null) return res;
-        console.warn('Mistral tier failed — trying Gemini.');
-    }
-    // Tier 4: Gemini (user key) — last in chain.
+async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
+    // Tier 1: Gemini (user's direct Google AI Studio key: 2.0 Flash / 1.5 Pro / 1.5 Flash)
     if (geminiApiKey) {
-        const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries });
+        const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries, systemPrompt });
+        jobSignal?.throwIfAborted();
         if (res !== null) return res;
-        console.warn('Gemini tier failed — no providers left.');
+        console.warn('Gemini direct tier failed — trying Groq fallback.');
+    }
+    // Tier 2: Groq (free, ~500K tokens/day, ultra-fast)
+    if (groqApiKey) {
+        const res = await callGroqJSON(prompt, { temperature, maxTokens, systemPrompt });
+        jobSignal?.throwIfAborted();
+        if (res !== null) return res;
+        console.warn('Groq tier failed — trying Custom Provider.');
+    }
+    // Tier 3: Custom provider (user-configured OpenAI-compatible or local endpoint)
+    if (customProviderUrl) {
+        const txt = await callCustomProviderText(prompt, { temperature, maxTokens, systemPrompt });
+        if (txt) {
+            const parsed = parseModelJSON(txt);
+            if (parsed) return parsed;
+
+        }
+        console.warn('Custom provider failed — trying OpenRouter.');
+    }
+    // Tier 4: OpenRouter free models
+    if (openRouterApiKey) {
+        const res = await callOpenRouterJSON(prompt, { temperature, maxTokens, systemPrompt });
+        jobSignal?.throwIfAborted();
+        if (res !== null) return res;
+        console.warn('OpenRouter tier failed — trying Mistral.');
+    }
+    // Tier 5: Mistral (free experiment plan)
+    if (mistralApiKey) {
+        const res = await callMistralJSON(prompt, { temperature, maxTokens, systemPrompt });
+        jobSignal?.throwIfAborted();
+        if (res !== null) return res;
+    }
+    // Tier 6: Server gateway (only if available, e.g. local backend)
+    if (luminaGatewayAvailable) {
+        const res = await callLuminaGatewayJSON(prompt, { temperature, maxTokens, systemPrompt });
+        jobSignal?.throwIfAborted();
+        if (res !== null) return res;
     }
     return null;
 }
 
-async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2 } = {}) {
-    if (!geminiApiKey) return null;
+async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null } = {}) {
+    const jobSignal = translationRequestController?.signal;
+    jobSignal?.throwIfAborted();
+    const cleanKey = sanitizeApiKey(geminiApiKey);
+    if (!cleanKey) return null;
+
+    // Select candidate model without mutating user's saved preference
+    const preferredModel = EngbotCore.geminiModels(geminiModel)[0];
 
     // Build the candidate model chain: preferred model first, then fallbacks
     // that aren't in cooldown, ordered by descending capability.
     const now = Date.now();
-    const candidates = [geminiModel, ...GEMINI_FALLBACK_MODELS.filter(m => m !== geminiModel)]
+    const candidates = [preferredModel, ...GEMINI_FALLBACK_MODELS.filter(m => m !== preferredModel)]
         .filter(m => (geminiModelCooldown[m] || 0) <= now);
     if (!candidates.length) return null;
 
     for (const model of candidates) {
+        jobSignal?.throwIfAborted();
         for (let attempt = 0; attempt <= retries; attempt++) {
+        jobSignal?.throwIfAborted();
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
+                const ctrl = new AbortController();
+                const tid = setTimeout(() => ctrl.abort(), 25000); // 25s max
+                const requestPayload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature,
+                        maxOutputTokens: Math.min(maxTokens || 8192, 8192),
+                        responseMimeType: 'application/json'
+                    }
+                };
+                if (systemPrompt) {
+                    requestPayload.systemInstruction = { parts: [{ text: systemPrompt }] };
+                }
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: {
-                            temperature,
-                            maxOutputTokens: maxTokens,
-                            responseMimeType: 'application/json'
-                        }
-                    })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': cleanKey
+                    },
+                    body: JSON.stringify(requestPayload),
+                    signal: jobSignal ? AbortSignal.any([ctrl.signal, jobSignal]) : ctrl.signal,
                 });
+                clearTimeout(tid);
 
                 if (response.status === 429 || response.status >= 500) {
                     // Model-level quota exhaustion → blacklist briefly and try
@@ -2651,13 +6538,17 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
                 }
 
                 const data = await response.json();
-                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (data?.candidates?.[0]?.finishReason !== 'STOP') continue;
+                const parts = data?.candidates?.[0]?.content?.parts;
+                const text = parts && Array.isArray(parts) ? parts.map(p => p.text || '').join('').trim() : '';
                 if (!text) break;
                 const parsed = parseModelJSON(text);
                 if (parsed) return parsed;
+
                 console.warn('Gemini returned unparseable JSON');
                 break;
             } catch (e) {
+        jobSignal?.throwIfAborted();
                 if (attempt >= retries) {
                     console.warn('Gemini call failed:', e);
                     break;
@@ -2700,30 +6591,7 @@ function parseModelJSON(raw) {
     if (start >= 0 && end > start) {
         try { return JSON.parse(text.slice(start, end + 1)); } catch { /* continue */ }
     }
-    // 4. Truncated-JSON repair: close the open string, strip dangling
-    //    separators, then close every still-open bracket/brace in order.
-    if (start >= 0) {
-        const s = text.slice(start);
-        let inStr = false, esc = false;
-        const stack = [];
-        for (let i = 0; i < s.length; i++) {
-            const ch = s[i];
-            if (esc) { esc = false; continue; }
-            if (ch === '\\') { if (inStr) esc = true; continue; }
-            if (ch === '"') { inStr = !inStr; continue; }
-            if (inStr) continue;
-            if (ch === '{' || ch === '[') stack.push(ch);
-            else if (ch === '}' || ch === ']') stack.pop();
-        }
-        let candidate = s;
-        if (inStr) candidate += '"';
-        candidate = candidate.replace(/,\s*$/, '').replace(/:\s*$/, '');
-        while (stack.length) {
-            const open = stack.pop();
-            candidate += open === '{' ? '}' : ']';
-        }
-        try { return JSON.parse(candidate); } catch { /* give up */ }
-    }
+    // Incomplete structured output is retried, never salvaged as a complete passage.
     return null;
 }
 
@@ -2746,11 +6614,24 @@ function extractTranslation(raw) {
     return out.trim();
 }
 
+function detectTextLang(text) {
+    return EngbotCore.detectLanguage(text);
+}
+
+function getBookGlossaryBlock(book = null) {
+    const b = book || activeTranslationBook || currentBook;
+    if (!b || !Array.isArray(b.glossary) || b.glossary.length === 0) return '';
+    const lines = b.glossary.map(g => `- English: "${g.en}" ↔ Georgian: "${g.ka}"`).join('\n');
+    return `\n\n=== BOOK GLOSSARY (MANDATORY CHARACTER NAMES & TERMS) ===\nUse these exact translations consistently across all chapters:\n${lines}\n=== END BOOK GLOSSARY ===`;
+}
+
 // Stage 1 — literary draft translation. Receives neighbouring sentences as
 // context so pronouns, tense and terminology stay coherent across chunk
 // boundaries (the draft never sees a sentence in isolation).
 async function geminiDraftTranslate(text, targetLang, contextBefore = '', contextAfter = '') {
-    const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
+    const srcLang = detectTextLang(text);
+    const srcLangName = srcLang === 'ka' ? 'Georgian' : 'English';
+    const targetLangName = targetLang === 'ka' ? 'Georgian' : (targetLang === 'en' ? 'English' : targetLang);
     const ctxBefore = contextBefore ? `\n\n[PRECEDING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextBefore.slice(-600)}` : '';
     const ctxAfter = contextAfter ? `\n\n[FOLLOWING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextAfter.slice(0, 600)}` : '';
 
@@ -2759,25 +6640,48 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
     // style exemplars from classic and modern Georgian prose).
     const kaKnowledge = targetLang === 'ka' ? getKaRulesForPrompt() : '';
     const kaBlock = kaKnowledge
-        ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
+        ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===\n${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
 
-    const prompt = `You are an elite literary translator (English → ${langName}). Your translations read like the book was originally written in ${langName} — the register of a respected literary publishing house, not a machine.
+    const enStyleGuide = targetLang === 'en' ? `
+=== ENGLISH LITERARY STYLE RULES (mandatory) ===
+- Translate Georgian verb screeves accurately into natural English tenses (Aorist → Simple Past, Imperfect → Past Continuous or 'used to', Present → Present).
+- Resolve Georgian polypersonal verb agreement into clear English subjects, objects, and pronouns.
+- Do not calque Georgian SOV word order: use natural English SVO syntax.
+- Convert Georgian idioms and cultural metaphors into authentic English equivalents.
+- Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
+=== END ENGLISH RULES ===` : '';
 
-Process:
+    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang) || '');
+    const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Your translations read like the book was originally written in ${targetLangName} — the register of a respected literary publishing house, not a machine.${kaBlock}${enStyleGuide}${glossaryBlock}`;
+
+    const prompt = `Process:
 1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
 2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
-3. Replace idioms with their natural ${langName} equivalents; never translate them literally.
-4. Write flowing native prose — no translationese.${targetLang === 'ka' ? '\n   Georgian word order is verb-FINAL: subject/object first, verb last (კაცმა წიგნი წაიკითხა). Weather/feelings are impersonal (წვიმს, ცივა, მშია, მოსწონს) — never invent a dummy subject. Numerals are vigesimal (ორმოცი=40, ოთხმოცდაშვიდი=87); after numerals 2+ the noun stays SINGULAR (ოცი კაცი).' : ''}
-5. Before answering, silently verify every sentence against the grammar rules below (case alignment, verb screeves, agreement).${kaBlock}
+3. Replace idioms with their natural ${targetLangName} equivalents; never translate them literally.
+4. Write flowing native prose — no translationese.${targetLang === 'ka' ? `
+   - Word Order & Focus: Georgian is SOV with pre-verbal focus slot (Subject Object FOCUS-Verb). Never calque English SVO word order.
+   - De-nominalization: Convert passive English nominalizations ("the decision was made") into dynamic active Georgian aorists ("კომიტეტმა გადაწყვეტილება მიიღო").
+   - Participial Reduction: Replace repetitive, stacked "რომელიც" relative clauses with elegant pre-nominal participles (e.g. "გუშინ მიღებული წერილი" instead of "წერილი, რომელიც გუშინ მიიღეს").
+   - Experiencer Dative Inversion: Physical/emotional/cognitive/need states (hunger, cold, pain, love, hate, fear, need, memory) MUST use inverted Dative experiencer + Nominative stimulus: მშია, მცივა, მტკივა, მიყვარს, მძულს, მეშინია, მჭირდება, მახსოვს, მინდა. NEVER produce nominative copula calques (*მე ვარ მშიერი, *ის საჭიროებს, *ის გრძნობს ტკივილს).
+   - Polypersonal Pro-drop: Verb inflection marks both subject and object; prune redundant personal pronouns (მე, შენ, ის, მან, მას) unless contrastive emphasis is explicitly intended.
+   - Reflexives & Discourse: Inviolability of reflexive თავისი (subject-coreferent) vs disjoint მისი (someone else's) — NEVER use მისი when possessor is the clause subject (*ავტორმა დაწერა მისი წიგნი -> ავტორმა თავისი წიგნი დაწერა; *მან მისი წიგნი აიღო -> მან თავისი წიგნი აიღო). Neutral literary SOV with PRE-VERBAL FOCUS immediately preceding the verb ([Subject] [Object] [FOCUS]-Verb).
+   - Postpositions & Syncopation: Suffix postpositions directly to nominal roots without spaces (-ში, -ზე, -თან, -თვის, -გან, -დან, -კენ, -მდე). Consonant stems drop nominative -ი (ქალაქში, წიგნში, კაცთან); syncopate internal stem vowels (წყლიდან, მგლის, ქვეყნიდან).
+   - Screeve Series Case Concord: Transitive Aorist (Series II) subject MUST take Ergative (-მა / -მ) with Nominative object (მაგ. უფლისწულმა ვარდი დაინახა). Series III (Evidentials/Perfects) invert: Dative subject + Nominative object with -ია / -ულა / -ებია.
+   - Negative Imperatives: NEVER use declarative არ with imperative verbs (use ნუ წახვალ, ნუ გეშინია, ნუ ტირი, ნუ დაივიწყებ).
+   - Proper Noun Transliteration: Foreign names ending in consonants require nominative -ი suffix. Phonetically adapt digraphs (kn- -> ნ, ps- -> ფს, th -> თ, ph -> ფ, ch -> ჩ, sh -> შ, -tion -> შენ/ცია). Classical/historical names must use standard Georgian literary forms (Marcus Aurelius -> მარკუს ავრელიუსი, Socrates -> სოკრატე, Shakespeare -> შექსპირი).
+   - Impersonal verbs & numerals: Weather/states are impersonal (წვიმს, ცივა); numerals are vigesimal, and nouns after numerals 2+ remain strictly SINGULAR (ოცი კაცი, ხუთი წიგნი).
+   - Georgian Pro Literary Standards: Ban bureaucratic Soviet calques (კანცელარიზმები: NEVER write „განხორციელება“, „ადგილი ჰქონდა“, „წარმოადგენს“, „მოცემულ მომენტში“). Use synthetic verbal strength (გადაწყვიტა, not *მიიღო გადაწყვეტილება; გაიღიმა, not *გააკეთა ღიმილი; ყურადღება მიაქცია, not *ყურადღება გადაიხადა; ისაუბრა, not *ჰქონდა საუბარი).` : ''}
+5. Maintain all paragraph breaks (separate paragraphs with blank lines \\n\\n) matching the source structure.
+6. Before answering, silently verify every sentence against the grammar rules (case alignment, verb screeves, agreement).
 
 TTS note: this translation will be narrated aloud. Use correct terminal punctuation (? ! .) so the voice produces natural prosody.${targetLang === 'ka' ? ' Use Georgian punctuation: „…“ for quotes, a plain full stop "." for sentence end (NEVER the danda "।" or any non-Georgian mark), — for dashes (never " - ").' : ''}
 
-Answer as JSON: {"translation": "..."} — the ${langName} translation ONLY, no notes, no markdown fences.
+Answer as JSON: {"translation": "..."} — the ${targetLangName} translation ONLY, no notes, no markdown fences.
 
-English text:
+${srcLangName} source text:
 ${text}${ctxBefore}${ctxAfter}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.25 });
+    const data = await callGeminiJSON(prompt, { temperature: 0.25, systemPrompt });
     const translation = extractTranslation(data?.translation);
     return translation || null;
 }
@@ -2794,16 +6698,18 @@ async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
     const kaReviewerRules = targetLang === 'ka' && typeof getKaCompactRules === 'function'
         ? getKaCompactRules() : '';
     const kaChecklist = kaReviewerRules
-        ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===${kaReviewerRules}\n=== END CHECKLIST ===\nAny violation of the checklist is at least a "major" grammar error.` : '';
+        ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===\n${kaReviewerRules}\n=== END CHECKLIST ===\nAny violation of the checklist is at least a "major" grammar error.` : '';
 
-    const prompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer. Compare the SOURCE (English) against the TRANSLATION (${langName}) and find every real defect.
+    const systemPrompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer.${kaChecklist}`;
+
+    const prompt = `Compare the SOURCE against the TRANSLATION (${langName}) and find every real defect.
 
 Check, in order of severity:
 1. Accuracy: omissions, additions, reversed meaning, lost negation, changed names/numbers/units.
-2. Grammar & morphology: ${langName} case endings, ergative alignment (aorist transitive subjects take -მა; present takes nominative), verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment: Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Negation: აר (declarative), ვერ (failed ability), ნუ (prohibitive — never არ for commands), one negator per clause.' : ''}
-3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart).' : ''}
-4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb).' : ''}
-5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before . , ; : punctuation, no foreign sentence marks (।, ฯ, ۔), exactly one terminal mark per sentence, no doubled punctuation.' : ''}${kaChecklist}
+2. Grammar & morphology: ${langName} case endings, verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment & screeves: Series I (present/imperfect/future) requires Nominative subject and Dative direct object. Series II (aorist/optative) requires Ergative subject (-მა/-მ) for transitive verbs and Nominative direct object (e.g. უფლისწულმა ვარდი დაინახა; NEVER nominative subject *უფლისწული დაინახა). Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Postposition syncopation (კუმშვა/კვეცა): locatives (-ში, -ზე, -დან, -კენ, -თვის) drop nominative -ი (ქალაქში, წიგნში) and syncopate internal stem vowels (წყალი->წყლიდან, მგელი->მგლის, ქვეყანა->ქვეყანაში). Negation: არ (declarative), ვერ (failed ability), ნუ (prohibitive — NEVER არ for commands/imperatives like *არ წახვიდე -> ნუ წახვალ), one negator per clause. Experiencer verbs (სჭირდება, უყვარს, ეშინია, ახსოვს, სტკივა, შია, ცივა, უნდა) MUST have Dative experiencer, never Nominative (*ის საჭიროებს / *ის არის მშიერი / *ის გრძნობს ტკივილს).' : ''}
+3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart). Foreign names: missing nominative -ი on consonant-ending names (e.g. *პიტერ instead of პიტერი) or unadapted Latin clusters.' : ''}
+4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: bureaucratic Soviet calques (განხორციელება, ადგილი ჰქონდა, წარმოადგენს, მოცემულ მომენტში), reflexive pronoun violation (NEVER allow „მისი“ when referring back to the clause subject — must be „თავისი“ / „თავის“), numeral plural calque (NEVER use plural nouns after cardinals: ხუთი წიგნი, not *ხუთი წიგნები; ოცი კაცი, not *ოცი კაცები), hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb), robotic stacked "რომელიც" clauses (convert to pre-nominal participles), English passive calques (convert to active aorist).' : ''}
+5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before . , ; : punctuation, no foreign sentence marks (।, ฯ, ۔), exactly one terminal mark per sentence, no doubled punctuation.' : ''}
 
 Be demanding: an accurate but stilted translation still gets flagged under style. If the translation is genuinely publication-ready, return an empty error list. Never invent problems.
 
@@ -2816,7 +6722,7 @@ ${sourceText}
 TRANSLATION:
 ${translation}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.1 });
+    const data = await callGeminiJSON(prompt, { temperature: 0.1, systemPrompt });
     if (!data || !Array.isArray(data.errors)) return null;
     return data;
 }
@@ -2830,39 +6736,29 @@ async function geminiRefineTranslation(sourceText, translation, errors, targetLa
         .map((e, i) => `${i + 1}. [${e.severity || 'major'}/${e.type || 'style'}] ${e.issue}\n   → ${e.fix || 'fix it'}`)
         .join('\n');
 
-    // The reviser also sees the compact grammar rules so its surgical fixes
-    // don't introduce NEW morphology violations (the classic refinement trap).
-    const kaReviserRules = targetLang === 'ka' && typeof getKaCompactRules === 'function'
-        ? getKaCompactRules() : '';
-    const kaBlock = kaReviserRules
-        ? `\n\n=== GEORGIAN GRAMMAR RULES (your fixes must obey these) ===${kaReviserRules}\n=== END RULES ===` : '';
+    const systemPrompt = `You are a master literary editor. Produce the complete REVISED translation in ${langName} with every defect corrected.`;
 
-    const prompt = `You are the final editor of a ${langName} literary translation. A reviewer found the following defects. Apply EVERY fix precisely while keeping everything that was already correct. Do not re-translate from scratch — surgically correct the listed problems and polish only where a fix demands it.
+    const prompt = `Rules:
+1. Fix every listed error cleanly.
+2. Do not touch parts of the translation that are not broken.
+3. Keep register, tone and character voice intact across the revision.
+4. Maintain all paragraph breaks (separate paragraphs with blank lines \\n\\n) matching the source structure.
+5. Output the complete revised translation only.
 
-Keep: meaning, names, numbers, length roughly proportional, natural literary ${langName}, TTS-friendly punctuation.${kaBlock}
+Answer as JSON: {"revised_translation": "..."}
 
-Answer as JSON: {"translation": "..."} — the complete corrected ${langName} text, no notes.
-
-SOURCE (English):
+SOURCE:
 ${sourceText}
 
-CURRENT TRANSLATION (${langName}):
+CURRENT DRAFT:
 ${translation}
 
-CONFIRMED DEFECTS:
+DEFECTS TO FIX:
 ${errorList}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.2 });
-    const refined = extractTranslation(data?.translation);
-    if (textHasMarkupLeak(refined)) {
-        console.warn('[Refine] markup leak detected in refined text — rejecting rewrite');
-        return null;
-    }
-    if (refined && refined.length > 40 && refined.length < translation.length * 0.5) {
-        console.warn('[Refine] output suspiciously short vs current translation — rejecting rewrite');
-        return null;
-    }
-    return refined || null;
+    const data = await callGeminiJSON(prompt, { temperature: 0.15, systemPrompt });
+    const revised = extractTranslation(data?.revised_translation);
+    return revised || null;
 }
 
 // Full pipeline for one chunk. geminiPasses gates the depth:
@@ -2875,46 +6771,41 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
 
     const draft = await geminiDraftTranslate(text, targetLang, contextBefore, contextAfter);
     if (!draft) return null;
-    if (geminiPasses < 2) return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+    if (geminiPasses < 2) return draft;
 
     const critique = await geminiCritiqueTranslation(text, draft, targetLang);
-    if (!critique) {
-        // Critique unavailable (rate limits) — the deterministic QA gate still
-        // catches high-confidence defects so a corrupted draft never ships.
-        if (targetLang === 'ka' && typeof applyGeorgianQaGate === 'function') {
-            return await applyGeorgianQaGate(refineGeorgianGrammar(draft));
-        }
-        return draft;
-    }
+    if (!critique) return null; // Review is required by the selected mode.
 
-    const blocking = critique.errors.filter(e => e.severity === 'critical' || e.severity === 'major');
-    if (critique.verdict === 'approved' || blocking.length === 0) {
-        return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+    const blocking = critique.errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major' || e.severity === 'blocking'));
+    if (critique.verdict === 'approved' && blocking.length === 0) {
+        return draft;
     }
 
     if (geminiPasses < 3) {
         const quick = await geminiRefineTranslation(text, draft, blocking, targetLang);
-        const result = quick || draft;
-        return targetLang === 'ka' ? refineGeorgianGrammar(result) : result;
+        if (!quick || !assessTranslation(text, quick, targetLang).ok) return null;
+        const result = quick;
+        return result;
     }
 
     const revised = await geminiRefineTranslation(text, draft, blocking, targetLang);
-    if (!revised) return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+    if (!revised || !assessTranslation(text, revised, targetLang).ok) return null;
 
     // Final QA: re-review the revision; keep it only if it is genuinely
     // better than the draft — a bad refinement can never make things worse.
     const revisedAudit = await geminiCritiqueTranslation(text, revised, targetLang);
+    if (!revisedAudit) return null;
     const revisedBlocking = revisedAudit
-        ? revisedAudit.errors.filter(e => e.severity === 'critical' || e.severity === 'major').length
+        ? revisedAudit.errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major' || e.severity === 'blocking')).length
         : blocking.length;
-    if (revisedBlocking < blocking.length || revisedAudit?.verdict === 'approved') {
-        return targetLang === 'ka' ? refineGeorgianGrammar(revised) : revised;
+    if (revisedBlocking === 0 && revisedAudit?.verdict === 'approved') {
+        return revised;
     }
-    return targetLang === 'ka' ? refineGeorgianGrammar(draft) : draft;
+    return null; // Blocking defects remain unresolved.
 }
 
 // Budget pipeline for whole-book jobs. Whole books translate ~120k+ chars in
-// 3000-char chunks; the interactive 3-4 call pipeline per chunk exhausts
+// 2000-char chunks; the interactive 3-4 call pipeline per chunk exhausts
 // free-tier quotas within the first chapter and the rest silently degrades
 // to machine translation. This variant fuses draft + self-critique into ONE
 // call (the model audits its own draft against the same grammar rules), and
@@ -2922,46 +6813,64 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
 // defects. Typical cost: 1 call per chunk instead of 3-4.
 async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', contextAfter = '') {
     if (!aiTranslationAvailable()) return null;
-    const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
+    const srcLang = detectTextLang(text);
+    const srcLangName = srcLang === 'ka' ? 'Georgian' : 'English';
+    const targetLangName = targetLang === 'ka' ? 'Georgian' : (targetLang === 'en' ? 'English' : targetLang);
     const ctxBefore = contextBefore ? `\n\n[PRECEDING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextBefore.slice(-600)}` : '';
     const ctxAfter = contextAfter ? `\n\n[FOLLOWING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextAfter.slice(0, 600)}` : '';
 
     const kaKnowledge = targetLang === 'ka' ? getKaRulesForPrompt() : '';
     const kaBlock = kaKnowledge
-        ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
+        ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===\n${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
 
-    const prompt = `You are an elite literary translator (English → ${langName}). Translate the passage below, then audit and correct your own translation BEFORE answering.
+    const enStyleGuide = targetLang === 'en' ? `
+=== ENGLISH LITERARY STYLE RULES (mandatory) ===
+- Translate Georgian verb screeves accurately into natural English tenses (Aorist → Simple Past, Imperfect → Past Continuous or 'used to', Present → Present).
+- Resolve Georgian polypersonal verb agreement into clear English subjects, objects, and pronouns.
+- Do not calque Georgian SOV word order: use natural English SVO syntax.
+- Convert Georgian idioms and cultural metaphors into authentic English equivalents.
+- Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
+=== END ENGLISH RULES ===` : '';
+
+    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang) || '');
+    const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Translate faithfully, preserving literary register and character voice.${kaBlock}${enStyleGuide}${glossaryBlock}`;
+
+    const prompt = `Translate the passage below, then audit and correct your own translation BEFORE answering.
 
 Process:
 1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
 2. Translate faithfully: preserve meaning, names, numbers, negations — nothing omitted, nothing invented.
-3. Replace idioms with their natural ${langName} equivalents; never translate them literally.
-4. Write flowing native prose — no translationese. Check case alignment, verb screeves and agreement in EVERY sentence.${kaBlock}
-5. Self-audit: review your draft for omissions, wrong verb forms (especially ergative aorists), agreement errors, broken idiom and translationese. Fix every defect you find, then report in "self_check" ONLY the significant defects you corrected (or could not fully fix). If the final text is publication-ready, return an empty errors list.
+3. Replace idioms with their natural ${targetLangName} equivalents; never translate them literally.
+4. Write flowing native prose — no translationese.
+5. Maintain all paragraph breaks (separate paragraphs with blank lines \\n\\n) matching the source structure.
+6. Self-audit: review your draft for omissions, wrong verb forms, agreement errors, broken idiom and translationese. Fix every defect you find, then report in "self_check" ONLY the significant defects you corrected (or could not fully fix). If the final text is publication-ready, return an empty errors list.
 
 TTS note: the translation will be narrated aloud — use correct terminal punctuation (? ! .).
 
 Answer as JSON exactly:
 {"translation": "...", "self_check": {"errors": [{"severity": "critical|major|minor", "type": "accuracy|grammar|style", "issue": "...", "fix": "..."}], "verdict": "approved|needs_revision"}}
 
-English text:
+${srcLangName} source text:
 ${text}${ctxBefore}${ctxAfter}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.25, maxTokens: 16384 });
+    const data = await callGeminiJSON(prompt, { temperature: 0.25, maxTokens: 16384, systemPrompt });
     let result = extractTranslation(data?.translation);
     if (!result) return null;
 
     // Spend a refine call only when the fused self-check reports significant
     // defects — the same targeted surgical editor as the interactive pipeline.
     const errors = Array.isArray(data?.self_check?.errors) ? data.self_check.errors : [];
-    const blocking = errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major'));
+    const blocking = errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major' || e.severity === 'blocking'));
     if (blocking.length && typeof geminiRefineTranslation === 'function') {
         console.log(`[Batch] self-check flagged ${blocking.length} defect(s) — one refine pass`);
         const refined = await geminiRefineTranslation(text, result, blocking, targetLang);
         if (refined && !textHasMarkupLeak(refined)) result = refined;
     }
 
-    return targetLang === 'ka' ? refineGeorgianGrammar(result) : result;
+    if (result && targetLang === 'ka') {
+        return refineGeorgianGrammar(result);
+    }
+    return result;
 }
 
 // ── Georgian morphological QA gate ──────────────────────────────────────────
@@ -3030,18 +6939,24 @@ async function applyGeorgianQaGate(text) {
     georgianQaStats.checked++;
     if (!issues.length) return text;
 
+    // Gate LLM repair: only trigger expensive model refinement for blocking grammatical/syntax issues
+    const blocking = issues.filter(i => i.severity === 'blocking');
+    if (!blocking.length) {
+        return text; // Stylistic hints are handled without extra LLM roundtrips
+    }
+
     georgianQaStats.violations++;
-    console.warn(`[Georgian QA] ${issues.length} rule violation(s): ${issues.map(i => i.rule).join(', ')}`);
+    console.warn(`[Georgian QA] ${blocking.length} blocking rule violation(s): ${blocking.map(i => i.rule).join(', ')}`);
 
     // One targeted LLM repair pass (cheap, surgical). Any key source works —
     // callGeminiJSON dispatches to Gemini or OpenRouter free models. The
     // result is only accepted if it passes the degradation guard — free
     // models sometimes corrupt correct text while "fixing" it.
     try {
-        const prompt = georgianQaRepairPrompt(text, issues);
+        const prompt = georgianQaRepairPrompt(text, blocking);
         const data = await callGeminiJSON(prompt, { temperature: 0.1, maxTokens: 4096 });
         const repaired = extractTranslation(data?.translation);
-        if (georgianRepairIsAcceptable(text, repaired, issues)) {
+        if (georgianRepairIsAcceptable(text, repaired, blocking)) {
             georgianQaStats.repaired++;
             return repaired;
         }
@@ -3125,7 +7040,7 @@ function renderAiKeyStatusPanel() {
 
     if (aiKeyStatusProbeBusy) return; // keep previous content while probing
 
-    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey) {
+    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey && !elevenLabsApiKey && !customProviderUrl) {
         list.innerHTML = '<p class="text-on-surface-variant">No AI keys configured — translation uses free machine engines (Google / MyMemory).</p>';
         return;
     }
@@ -3147,8 +7062,16 @@ function renderAiKeyStatusPanel() {
         : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Mistral (free tier)</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
 
     rows.push(geminiApiKey
-        ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(geminiApiKey))}</span><br><span class="text-on-surface-variant">Fallback #3 · Model: ${escapeHtml(geminiModel)} · ${geminiPasses}-stage literary pipeline</span></div></div>`
+        ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(geminiApiKey))}</span><br><span class="text-on-surface-variant">Tier 1 (Frontier) · Model: ${escapeHtml(geminiModel)} · ${geminiPasses}-stage literary pipeline</span></div></div>`
         : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Gemini</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
+
+    rows.push(elevenLabsApiKey
+        ? `<div class="flex items-start gap-2"><span class="${elevenLabsEnabled ? 'text-green-400' : 'text-amber-400'}">●</span><div><span class="font-semibold text-white">ElevenLabs (Neural Voice)</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(elevenLabsApiKey))}</span><br><span class="text-on-surface-variant">${elevenLabsEnabled ? 'Voice Studio Active · High-Fidelity Neural TTS' : 'Key saved · Voice toggle is OFF'}</span></div></div>`
+        : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">ElevenLabs (Neural Voice)</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
+
+    rows.push(customProviderUrl
+        ? `<div class="flex items-start gap-2"><span class="text-blue-400">●</span><div><span class="font-semibold text-white">Custom Provider</span><br><span class="text-on-surface-variant">Tier 3 · ${escapeHtml(customProviderModel || 'default')} · ${escapeHtml(customProviderUrl.slice(0, 45))}</span></div></div>`
+        : `<div class="flex items-start gap-2"><span class="text-on-surface-variant">○</span><div><span class="font-semibold text-on-surface-variant">Custom Provider</span> <span class="text-on-surface-variant">not configured</span></div></div>`);
 
     list.innerHTML = rows.join('');
 }
@@ -3160,27 +7083,46 @@ async function probeAiKeyStatus() {
     if (!list || aiKeyStatusProbeBusy) return;
     aiKeyStatusProbeBusy = true;
     try {
-        const results = { gemini: null, groq: null, mistral: null, openrouter: null };
+        const results = { gemini: null, groq: null, custom: null, mistral: null, openrouter: null, elevenlabs: null };
 
         const tasks = [];
         if (geminiApiKey) {
-            tasks.push(fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
+            const cleanKey = sanitizeApiKey(geminiApiKey);
+            const probeModel = EngbotCore.geminiModels(geminiModel)[0];
+            tasks.push(fetch(`https://generativelanguage.googleapis.com/v1beta/models/${probeModel}:generateContent?key=${encodeURIComponent(cleanKey)}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': cleanKey
+                },
                 body: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with exactly: OK' }] }], generationConfig: { maxOutputTokens: 8 } })
             }).then(r => { results.gemini = r.ok; }).catch(() => { results.gemini = false; }));
         }
         if (groqApiKey) {
-            tasks.push(probeOpenAICompatibleKey(GROQ_API_URL, groqApiKey, GROQ_MODELS).then(res => { results.groq = res.ok; }));
+            tasks.push(probeOpenAICompatibleKey(GROQ_API_URL, sanitizeApiKey(groqApiKey), GROQ_MODELS).then(res => { results.groq = res.ok; }));
+        }
+        if (customProviderUrl) {
+            const endpoint = normalizeCustomProviderUrl(customProviderUrl);
+            const headers = { 'Content-Type': 'application/json' };
+            if (customProviderKey && customProviderKey.trim()) headers['Authorization'] = `Bearer ${sanitizeApiKey(customProviderKey)}`;
+            tasks.push(fetch(endpoint, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    model: customProviderModel || 'default',
+                    messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                    max_tokens: 8,
+                })
+            }).then(r => { results.custom = r.ok; }).catch(() => { results.custom = false; }));
         }
         if (mistralApiKey) {
-            tasks.push(probeOpenAICompatibleKey(MISTRAL_API_URL, mistralApiKey, MISTRAL_MODELS).then(res => { results.mistral = res.ok; }));
+            tasks.push(probeOpenAICompatibleKey(MISTRAL_API_URL, sanitizeApiKey(mistralApiKey), MISTRAL_MODELS).then(res => { results.mistral = res.ok; }));
         }
         if (openRouterApiKey) {
             tasks.push(fetch(OPENROUTER_API_URL, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${openRouterApiKey}`,
+                    'Authorization': `Bearer ${sanitizeApiKey(openRouterApiKey)}`,
                     'Content-Type': 'application/json',
                     'HTTP-Referer': location.origin,
                     'X-Title': 'Lumina Audio',
@@ -3192,6 +7134,12 @@ async function probeAiKeyStatus() {
                 }),
             }).then(r => { results.openrouter = r.ok; }).catch(() => { results.openrouter = false; }));
         }
+        if (elevenLabsApiKey) {
+            tasks.push(fetch('https://api.elevenlabs.io/v1/user', {
+                method: 'GET',
+                headers: { 'xi-api-key': sanitizeApiKey(elevenLabsApiKey) }
+            }).then(r => { results.elevenlabs = r.ok; }).catch(() => { results.elevenlabs = false; }));
+        }
 
         await Promise.all(tasks);
 
@@ -3202,10 +7150,12 @@ async function probeAiKeyStatus() {
                 : '<span class="text-red-400 font-bold">● FAILED</span>';
 
         const rows = [];
-        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">OpenRouter free models</span> <span class="text-on-surface-variant">${openRouterApiKey ? escapeHtml(maskKey(openRouterApiKey)) + ' · Main Engine · ' + OPENROUTER_FREE_MODELS.length + ' models in rotation' : ''}</span> ${openRouterApiKey ? badge(results.openrouter) : badge(null)}</div>`);
-        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Groq (free tier)</span> <span class="text-on-surface-variant">${groqApiKey ? escapeHtml(maskKey(groqApiKey)) + ' · Fallback #1 · ' + GROQ_MODELS.join(', ') : ''}</span> ${groqApiKey ? badge(results.groq) : badge(null)}</div>`);
-        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Mistral (free tier)</span> <span class="text-on-surface-variant">${mistralApiKey ? escapeHtml(maskKey(mistralApiKey)) + ' · Fallback #2 · ' + MISTRAL_MODELS.join(', ') : ''}</span> ${mistralApiKey ? badge(results.mistral) : badge(null)}</div>`);
-        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${geminiApiKey ? escapeHtml(maskKey(geminiApiKey)) + ' · Fallback #3 · ' + escapeHtml(geminiModel) : ''}</span> ${geminiApiKey ? badge(results.gemini) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${geminiApiKey ? escapeHtml(maskKey(geminiApiKey)) + ' · Tier 1 (Frontier) · ' + escapeHtml(geminiModel) : ''}</span> ${geminiApiKey ? badge(results.gemini) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Groq</span> <span class="text-on-surface-variant">${groqApiKey ? escapeHtml(maskKey(groqApiKey)) + ' · Tier 2 (Ultra-Fast) · ' + GROQ_MODELS.slice(0, 2).join(', ') : ''}</span> ${groqApiKey ? badge(results.groq) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">ElevenLabs</span> <span class="text-on-surface-variant">${elevenLabsApiKey ? escapeHtml(maskKey(elevenLabsApiKey)) + ' · Neural Speech' : ''}</span> ${elevenLabsApiKey ? badge(results.elevenlabs) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Custom Provider</span> <span class="text-on-surface-variant">${customProviderUrl ? escapeHtml(customProviderModel || 'default') + ' · ' + escapeHtml(customProviderUrl.slice(0, 35)) : ''}</span> ${customProviderUrl ? badge(results.custom) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">OpenRouter</span> <span class="text-on-surface-variant">${openRouterApiKey ? escapeHtml(maskKey(openRouterApiKey)) + ' · ' + OPENROUTER_FREE_MODELS.length + ' free models' : ''}</span> ${openRouterApiKey ? badge(results.openrouter) : badge(null)}</div>`);
+        rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Mistral</span> <span class="text-on-surface-variant">${mistralApiKey ? escapeHtml(maskKey(mistralApiKey)) : ''}</span> ${mistralApiKey ? badge(results.mistral) : badge(null)}</div>`);
         rows.push(`<div class="text-on-surface-variant pt-1 border-t border-white/10">Free models in rotation: ${OPENROUTER_FREE_MODELS.map(m => `<span class="inline-block px-1.5 py-0.5 rounded bg-white/10 mr-1 mt-1">${escapeHtml(m)}</span>`).join('')}</div>`);
 
         list.innerHTML = rows.join('');
@@ -3237,6 +7187,7 @@ function setTranslationBudgetMode(mode) {
 let translationPanelMinimized = false;
 let translationStartTime = 0;
 let translationChunkTimestamps = [];
+let activeTranslationBook = null;
 // Live progress state shared between workers; updated at most every 250ms
 // to keep the UI smooth without causing layout thrash on every chunk.
 let wbProgressState = {
@@ -3276,24 +7227,36 @@ function flushWbProgress() {
 function minimizeTranslationPanel() {
     translationPanelMinimized = true;
     const panel = document.getElementById('wholeBookTranslateModal');
-    const dock = DOM.translationMiniDock;
+    const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
     if (panel) panel.classList.remove('active');
-    if (dock) dock.classList.remove('hidden');
+    if (dock) {
+        dock.classList.remove('hidden');
+        dock.style.display = 'block';
+    }
+    // CRITICAL: Unblock page scrolling and interaction for bookshelf, reader, and controls
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
     updateMiniDock();
 }
 
 function restoreTranslationPanel() {
     translationPanelMinimized = false;
     const panel = document.getElementById('wholeBookTranslateModal');
-    const dock = DOM.translationMiniDock;
-    if (panel) panel.classList.add('active');
-    if (dock) dock.classList.add('hidden');
+    const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
+    if (panel) {
+        panel.classList.add('active');
+        document.body.classList.add('modal-open');
+    }
+    if (dock) {
+        dock.classList.add('hidden');
+        dock.style.display = 'none';
+    }
 }
 
 function updateMiniDock() {
     if (!translationPanelMinimized) return;
-    const label = DOM.miniDockLabel;
-    const pct = DOM.miniDockPct;
+    const label = DOM.miniDockLabel || document.getElementById('miniDockLabel');
+    const pct = DOM.miniDockPct || document.getElementById('miniDockPct');
     if (label && DOM.wbChapterLabel) label.textContent = DOM.wbChapterLabel.textContent;
     if (pct && DOM.wbProgressPct) pct.textContent = DOM.wbProgressPct.textContent;
 }
@@ -3321,13 +7284,14 @@ function updateChunkRate() {
     DOM.wbChunkRate.textContent = `${translationChunkTimestamps.length} chunks/min`;
 }
 
-function buildChapterQueue() {
-    if (!DOM.wbChapterQueue || !currentBook) return;
+function buildChapterQueue(book = null) {
+    const b = book || activeTranslationBook || currentBook;
+    if (!DOM.wbChapterQueue || !b || !b.chapters) return;
     DOM.wbChapterQueue.innerHTML = '';
-    currentBook.chapters.forEach((chap, idx) => {
+    b.chapters.forEach((chap, idx) => {
         const row = document.createElement('div');
         row.dataset.chapterIdx = idx;
-        const hasKa = !!chap.text_ka;
+        const hasKa = false; // Checkpoints are validated against source and settings during resume.
         row.innerHTML = `<span class="ch-status-icon">${hasKa ? '✅' : '⏳'}</span><span class="ch-title">${escapeHtml(chap.title)}</span><span class="ch-pct">${hasKa ? '100%' : '—'}</span>`;
         DOM.wbChapterQueue.appendChild(row);
     });
@@ -3490,13 +7454,90 @@ function applyKaRuleEngine(text) {
 }
 window.applyKaRuleEngine = applyKaRuleEngine;
 
+/**
+ * Strict Translation Quality Gate (P0-2, P0-3)
+ * Blocks identical source leaks, wrong alphabets, corrupt outputs, and runaway loops
+ * from ever reaching text_ka or being persisted to database.
+ */
+function assessTranslation(src, out, targetLang = 'ka') {
+    return EngbotCore.assessTranslation(src, out, targetLang);
+}
+
+window.assessTranslation = assessTranslation;
+
 // Machine-translation draft + the full rule engine. `translateChunkLocal` keeps
 // its name (many call sites) but it is now Tier B, not a raw MT passthrough.
 async function translateChunkLocal(clean, targetLang) {
-    // Google Dict-Chrome-Ex first (ultra-stable, zero rate-limiting)
+    const srcLang = detectTextLang(clean);
+
+    // Tier 0: Check server-side Python translation engine (/api/server-translate) only if not static host
+    if (!_isStaticHost) {
+        try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 6000);
+            const srvRes = await fetch("/api/server-translate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: clean, source_lang: srcLang, target_lang: targetLang }),
+                signal: ctrl.signal,
+            });
+            clearTimeout(tid);
+            if (srvRes.ok) {
+                const srvData = await srvRes.json();
+                if (srvData && srvData.translated && srvData.translated.trim()) {
+                    const refined = targetLang === 'ka' ? applyKaRuleEngine(srvData.translated) : srvData.translated;
+                    const assess = assessTranslation(clean, refined, targetLang);
+                    if (assess.ok) {
+                        recordEngineUse('rules');
+                        return refined;
+                    }
+                }
+            }
+        } catch (e) {
+            // Server not available, fallback to client endpoints
+        }
+    }
+
+    // If clean text is longer than 500 chars, split into sentences for reliable HTTP GET queries
+    if (clean.length > 500) {
+        try {
+            const sentences = splitIntoNaturalSentences(clean);
+            const translatedParts = [];
+            let batch = '';
+            for (const s of sentences) {
+                if (batch.length + s.length > 400 && batch.trim()) {
+                    const transPart = await translateSingleSentence(batch.trim(), targetLang);
+                    if (transPart) translatedParts.push(transPart);
+                    batch = s + ' ';
+                } else {
+                    batch += s + ' ';
+                }
+            }
+            if (batch.trim()) {
+                const transPart = await translateSingleSentence(batch.trim(), targetLang);
+                if (transPart) translatedParts.push(transPart);
+            }
+            const full = translatedParts.filter(Boolean).join(' ');
+            if (full && full.trim().length > 0) {
+                const refined = targetLang === 'ka' ? applyKaRuleEngine(full) : full;
+                const assess = assessTranslation(clean, refined, targetLang);
+                if (assess.ok) {
+                    recordEngineUse('rules');
+                    return refined;
+                }
+            }
+        } catch (e) {
+            console.warn('Sentence-split translation failed:', e);
+        }
+    }
+
+    // Google Dict-Chrome-Ex (ultra-stable)
     try {
-        const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean)}`;
-        const gRes = await fetch(gUrl);
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 8000);
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=${srcLang}&tl=${targetLang}&dt=t&dt=bd&dt=rm&q=${encodeURIComponent(clean.slice(0, 800))}`;
+        const gRes = await fetch(gUrl, { signal: ctrl.signal });
+        clearTimeout(tid);
 
         if (gRes.ok) {
             const data = await gRes.json();
@@ -3509,8 +7550,11 @@ async function translateChunkLocal(clean, targetLang) {
                 }
                 const refined = targetLang === 'ka' ? applyKaRuleEngine(fullTrans) : fullTrans;
                 if (refined && refined.trim().length > 0) {
-                    recordEngineUse('rules');
-                    return refined;
+                    const assess = assessTranslation(clean, refined, targetLang);
+                    if (assess.ok) {
+                        recordEngineUse('rules');
+                        return refined;
+                    }
                 }
             }
         }
@@ -3520,8 +7564,11 @@ async function translateChunkLocal(clean, targetLang) {
 
     // Google GTX mirror
     try {
-        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean)}`;
-        const gRes2 = await fetch(gUrl2);
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 8000);
+        const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcLang}&tl=${targetLang}&dt=t&dt=bd&dt=rm&dt=qca&q=${encodeURIComponent(clean.slice(0, 800))}`;
+        const gRes2 = await fetch(gUrl2, { signal: ctrl.signal });
+        clearTimeout(tid);
         if (gRes2.ok) {
             const data2 = await gRes2.json();
             if (data2 && data2[0] && Array.isArray(data2[0])) {
@@ -3533,8 +7580,11 @@ async function translateChunkLocal(clean, targetLang) {
                 }
                 const refined2 = targetLang === 'ka' ? applyKaRuleEngine(fullTrans2) : fullTrans2;
                 if (refined2 && refined2.trim().length > 0) {
-                    recordEngineUse('rules');
-                    return refined2;
+                    const assess = assessTranslation(clean, refined2, targetLang);
+                    if (assess.ok) {
+                        recordEngineUse('rules');
+                        return refined2;
+                    }
                 }
             }
         }
@@ -3542,39 +7592,57 @@ async function translateChunkLocal(clean, targetLang) {
         console.warn('Rule engine: Google GTX draft failed:', e);
     }
 
-    // MyMemory last resort inside the local path (Tier C — raw MT)
+    // MyMemory last resort inside the local path
     const mm = await translateSingleSentence(clean, targetLang);
-    recordEngineUse(mm === clean ? 'failed' : 'raw');
-    return targetLang === 'ka' ? applyKaRuleEngine(mm) : mm;
-}
-
-// Tier A: your original multi-pass AI pipeline + Georgian QA gate + the rule
-// engine on top of the result. `deep` decides how many passes are spent:
-// complex chunks get the full draft → critique → refine → QA pipeline, simple
-// chunks get the fused single call. Neither one skips the engine.
-async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, deep = true) {
-    const wantFull = deep && translationBudgetMode !== 'budget';
-    const pipeline = !wantFull && typeof translateWithGeminiAIBatch === 'function'
-        ? translateWithGeminiAIBatch
-        : translateWithGeminiAI;
-    const aiRes = await pipeline(clean, targetLang, contextBefore, contextAfter);
-    if (aiRes) {
-        recordEngineUse('ai');
-        if (targetLang === 'ka') {
-            const gated = typeof applyGeorgianQaGate === 'function'
-                ? await applyGeorgianQaGate(aiRes)
-                : aiRes;
-            return applyKaRuleEngine(gated);
+    if (mm) {
+        const trans = targetLang === 'ka' ? applyKaRuleEngine(mm) : mm;
+        const assess = assessTranslation(clean, trans, targetLang);
+        if (assess.ok) {
+            recordEngineUse('raw');
+            return trans;
         }
-        return aiRes;
     }
-    console.warn('[Engine] Tier A (AI pipeline) produced nothing — falling back to the rule engine.');
+
+    // Deterministic Offline Engine Fallback (Zero LLM, 100% Offline)
+    if (targetLang === 'ka' && (typeof translateOfflineEnToKa === 'function' || typeof window !== 'undefined' && typeof window.translateOfflineEnToKa === 'function')) {
+        try {
+            const fn = typeof translateOfflineEnToKa === 'function' ? translateOfflineEnToKa : window.translateOfflineEnToKa;
+            const synFn = typeof synthesizeGeorgianMorphology === 'function' ? synthesizeGeorgianMorphology : (typeof window !== 'undefined' && typeof window.synthesizeGeorgianMorphology === 'function' ? window.synthesizeGeorgianMorphology : null);
+            const raw = fn(clean);
+            const offlineTrans = applyKaRuleEngine(synFn ? synFn(raw) : raw);
+            const assess = assessTranslation(clean, offlineTrans, targetLang);
+            if (assess.ok) {
+                recordEngineUse('rules');
+                return offlineTrans;
+            }
+        } catch (e) {
+            console.warn('Deterministic offline translation failed:', e);
+        }
+    }
+
+    recordEngineUse('failed');
     return null;
 }
 
-// Tier router. Tier A whenever a quality engine is reachable (your key OR the
-// keyless gateway); complexity only chooses the refinement depth. Tier B (rule
-// engine, no LLM) when no engine is reachable or Tier A fails.
+// Tier A: AI pipeline with literary prompt and Georgian mastery rules.
+async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, deep = true) {
+    const pipeline = translateWithGeminiAI;
+    const aiRes = await pipeline(clean, targetLang, contextBefore, contextAfter);
+    if (aiRes) {
+        const refined = aiRes;
+        const assess = assessTranslation(clean, refined, targetLang);
+        if (assess.ok) {
+            recordEngineUse('ai');
+            return refined;
+        }
+        console.warn('[Engine] Tier A (AI pipeline) rejected by assessTranslation:', assess.reason);
+    }
+    console.warn('[Engine] Tier A (AI pipeline) produced nothing or failed quality gate — falling back to rule engine.');
+    return null;
+}
+
+// Tier router. Tier A whenever a quality engine is reachable (user key OR gateway);
+// Tier B (rule engine, no LLM) when no engine is reachable or Tier A fails.
 async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
@@ -3587,11 +7655,26 @@ async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', 
         if (aiRes) return aiRes;
     }
 
-    // No engine reachable (offline / GitHub Pages / no key), or Tier A failed:
-    // the in-house rule engine still produces corrected Georgian.
-    return await translateChunkLocal(clean, targetLang);
-}
+    // Fallback: rule engine
+    const local = await translateChunkLocal(clean, targetLang);
+    if (local) return local;
 
+    // Direct offline rule engine fallback if translateChunkLocal failed
+    if (targetLang === 'ka' && (typeof translateOfflineEnToKa === 'function' || typeof window !== 'undefined' && typeof window.translateOfflineEnToKa === 'function')) {
+        try {
+            const fn = typeof translateOfflineEnToKa === 'function' ? translateOfflineEnToKa : window.translateOfflineEnToKa;
+            const synFn = typeof synthesizeGeorgianMorphology === 'function' ? synthesizeGeorgianMorphology : (typeof window !== 'undefined' && typeof window.synthesizeGeorgianMorphology === 'function' ? window.synthesizeGeorgianMorphology : null);
+            const raw = fn(clean);
+            const off = applyKaRuleEngine(synFn ? synFn(raw) : raw);
+            const assess = assessTranslation(clean, off, targetLang);
+            if (assess.ok) {
+                recordEngineUse('rules');
+                return off;
+            }
+        } catch (e) { /* non-fatal */ }
+    }
+    return null;
+}
 
 async function translateChunkContextually(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
@@ -3605,21 +7688,25 @@ async function translateChunkContextually(text, targetLang = 'ka', contextBefore
     return await translateChunkLocal(clean, targetLang);
 }
 
-
 async function translateSingleSentence(text, targetLang = 'ka') {
-    if (!text || !text.trim()) return '';
+    if (!text || !text.trim()) return null;
     const clean = text.trim();
+    const srcLang = detectTextLang(clean);
 
     // Try MyMemory
     try {
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.slice(0, 480))}&langpair=en|${targetLang}`;
-        const res = await fetch(url);
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 10000);
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.slice(0, 480))}&langpair=${srcLang}|${targetLang}`;
+        const res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(tid);
         if (res.ok) {
             const data = await res.json();
             if (data && data.responseData && data.responseData.translatedText) {
-                const trans = refineGeorgianGrammar(data.responseData.translatedText);
+                const trans = targetLang === 'ka' ? refineGeorgianGrammar(data.responseData.translatedText) : data.responseData.translatedText;
                 if (trans && !trans.includes('MYMEMORY WARNING') && !trans.includes('QUERY LENGTH LIMIT')) {
-                    return trans;
+                    const check = assessTranslation(clean, trans, targetLang);
+                    if (check.ok) return trans;
                 }
             }
         }
@@ -3629,55 +7716,78 @@ async function translateSingleSentence(text, targetLang = 'ka') {
 
     // Direct Google GTX minimal fallback
     try {
-        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
-        const gRes = await fetch(gUrl);
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 10000);
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
+        const gRes = await fetch(gUrl, { signal: ctrl.signal });
+        clearTimeout(tid);
         if (gRes.ok) {
             const gData = await gRes.json();
             if (gData && gData[0]) {
                 const trans = gData[0].map(item => item[0]).filter(Boolean).join('');
-                return refineGeorgianGrammar(trans);
+                const refined = targetLang === 'ka' ? refineGeorgianGrammar(trans) : trans;
+                const check = assessTranslation(clean, refined, targetLang);
+                if (check.ok) return refined;
             }
         }
     } catch (e) {
-        console.warn('Minimal Google GTX failed:', e);
+        console.warn('Google GTX fallback failed:', e);
     }
 
-    return clean;
+    // Offline in-house fallback: if network is down or endpoints fail, use translateOfflineEnToKa
+    if (targetLang === 'ka' && (typeof translateOfflineEnToKa === 'function' || typeof window !== 'undefined' && typeof window.translateOfflineEnToKa === 'function')) {
+        try {
+            const fn = typeof translateOfflineEnToKa === 'function' ? translateOfflineEnToKa : window.translateOfflineEnToKa;
+            const synFn = typeof synthesizeGeorgianMorphology === 'function' ? synthesizeGeorgianMorphology : (typeof window !== 'undefined' && typeof window.synthesizeGeorgianMorphology === 'function' ? window.synthesizeGeorgianMorphology : null);
+            const raw = fn(clean);
+            const off = applyKaRuleEngine(synFn ? synFn(raw) : raw);
+            const check = assessTranslation(clean, off, targetLang);
+            if (check.ok) return off;
+        } catch (e) { /* ignore */ }
+    }
+
+    // NEVER return raw source text as translation! Return null on failure.
+    return null;
 }
 
 // ══ Resumable translation jobs ══════════════════════════════════════════════
-// Every finished chunk is checkpointed to localStorage, so navigating away,
+// Every finished chunk is checkpointed to IndexedDB, so navigating away,
 // reloading, or closing the tab and coming back resumes exactly where it
 // stopped instead of starting over (and never re-translates a finished
 // chapter). Completed chapters are saved immediately, so you can start
 // listening to chapter 1 while chapter 7 is still being translated.
 const TJOB_PREFIX = 'lumina_tjob_';
-const tjobKey = id => TJOB_PREFIX + id;
-
-function loadTranslationJob(bookId) {
-    try { return JSON.parse(localStorage.getItem(tjobKey(bookId)) || 'null'); }
-    catch (e) { return null; }
+const tjobKey = (id, ownerId = getCurrentUserId()) => TJOB_PREFIX + ownerId + '_' + id;
+async function loadTranslationJob(bookId) {
+    return await window.EngbotJobStore.get(tjobKey(bookId));
 }
-function saveTranslationJob(job) {
+async function saveTranslationJob(job) {
     if (!job || !job.bookId) return;
     job.updatedAt = Date.now();
-    try { localStorage.setItem(tjobKey(job.bookId), JSON.stringify(job)); }
-    catch (e) { /* quota — progress still lives in saved chapters */ }
+    // Await the transaction before claiming a checkpoint is saved.
+    await window.EngbotJobStore.put(tjobKey(job.bookId, job.ownerId), JSON.parse(JSON.stringify(job)));
+    localStorage.setItem(tjobKey(job.bookId, job.ownerId), JSON.stringify({
+        bookId: job.bookId, title: job.title, status: job.status,
+        chapterIdx: job.chapterIdx, totalChapters: job.totalChapters, updatedAt: job.updatedAt
+    }));
 }
-function clearTranslationJob(bookId) {
-    try { localStorage.removeItem(tjobKey(bookId)); } catch (e) { }
+async function clearTranslationJob(bookId) {
+    await window.EngbotJobStore.remove(tjobKey(bookId));
+    localStorage.removeItem(tjobKey(bookId));
 }
 function findResumableTranslationJob() {
+    const prefix = TJOB_PREFIX + getCurrentUserId() + '_';
     for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k || !k.startsWith(TJOB_PREFIX)) continue;
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith(prefix)) continue;
         try {
-            const job = JSON.parse(localStorage.getItem(k) || 'null');
+            const job = JSON.parse(localStorage.getItem(key));
             if (job && job.status === 'running') return job;
-        } catch (e) { }
+        } catch (e) { /* Ignore corrupt metadata; never infer a completed chapter. */ }
     }
     return null;
 }
+
 window.getTranslationJobProgress = () => {
     const job = findResumableTranslationJob();
     return job ? { bookId: job.bookId, title: job.title || '', chapterIdx: job.chapterIdx || 0, totalChapters: job.totalChapters || 0 } : null;
@@ -3690,10 +7800,10 @@ async function resumeTranslationJobIfAny() {
     try {
         const books = await getAllBooks();
         const book = books.find(b => String(b.id) === String(job.bookId));
-        if (!book) { clearTranslationJob(job.bookId); return; }
+        if (!book) { await clearTranslationJob(job.bookId); return; }
         if (currentBook?.id !== book.id) await selectBook(book.id, false);
         if (typeof showToast === 'function') {
-            showToast(`Resuming Georgian translation of “${book.title}” where it stopped…`, 'info');
+            showToast(`Resuming translation of “${book.title}” where it stopped…`, 'info');
         }
         startWholeBookTranslation(true);
     } catch (e) {
@@ -3701,271 +7811,463 @@ async function resumeTranslationJobIfAny() {
     }
 }
 
-async function startWholeBookTranslation(resume = false) {
-    if (!currentBook) {
-        alert('Please select an audiobook to translate.');
-        return;
+/**
+ * Sentence-aware dynamic chunking for whole-book translation.
+ * Preserves authentic paragraph breaks (\n\n) when present, but decomposes
+ * oversized paragraphs (> targetCharLimit) or unsegmented text into natural
+ * sentences of ~1,400–1,800 characters (max 16 sentences) so that AI engines
+ * (Gemini, Groq, OpenRouter) process them with zero freeze, maximum literary quality,
+ * and high-frequency real-time progress updates.
+ */
+function buildTranslationChunks(chapterText, targetCharLimit = 1800, maxSentencesPerChunk = 16) {
+    if (!chapterText || !chapterText.trim()) return { chunks: [], chunkSentenceCounts: [] };
+
+    const rawParagraphs = chapterText
+        .split(/\n\s*\n/)
+        .map(p => p.trim())
+        .filter(Boolean);
+
+    let paragraphs = rawParagraphs.length > 0 ? rawParagraphs : [chapterText.trim()];
+    if (paragraphs.length <= 1 && chapterText.includes('\n')) {
+        const lineParagraphs = chapterText
+            .split(/\n+/)
+            .map(p => p.trim())
+            .filter(Boolean);
+        if (lineParagraphs.length > 1) {
+            paragraphs = lineParagraphs;
+        }
     }
-    if (isTranslatingWholeBook) { openModal('wholeBookTranslateModal'); return; }
 
-    const existing = resume ? loadTranslationJob(currentBook.id) : null;
-    const job = existing && existing.status === 'running' ? existing : {
-        bookId: currentBook.id,
-        title: currentBook.title,
-        status: 'running',
-        chapterIdx: 0,
-        partial: [],
-        totalChapters: currentBook.chapters.length,
-    };
-    job.status = 'running';
-    job.totalChapters = currentBook.chapters.length;
-    saveTranslationJob(job);
+    const chunks = [];
+    const chunkSentenceCounts = [];
 
+    function pushChunk(text, sCount) {
+        const trimmed = text.trim();
+        if (trimmed.length > 0) {
+            chunks.push(trimmed);
+            chunkSentenceCounts.push(Math.max(1, sCount));
+        }
+    }
+
+    let currentChunkParts = [];
+    let currentChunkLen = 0;
+    let currentChunkSCount = 0;
+
+    for (const para of paragraphs) {
+        if (para.length > targetCharLimit) {
+            if (currentChunkParts.length > 0) {
+                pushChunk(currentChunkParts.join('\n\n'), currentChunkSCount);
+                currentChunkParts = [];
+                currentChunkLen = 0;
+                currentChunkSCount = 0;
+            }
+
+            const pSentences = splitIntoNaturalSentences(para);
+            if (pSentences.length <= 1) {
+                const wordChunks = typeof chunkByWords === 'function' ? chunkByWords(para, 250) : [para];
+                for (const wc of wordChunks) {
+                    pushChunk(wc, 1);
+                }
+            } else {
+                let subParts = [];
+                let subLen = 0;
+                let subCount = 0;
+                for (const s of pSentences) {
+                    if ((subLen + s.length > targetCharLimit || subCount >= maxSentencesPerChunk) && subParts.length > 0) {
+                        pushChunk(subParts.join(' '), subCount);
+                        subParts = [s];
+                        subLen = s.length;
+                        subCount = 1;
+                    } else {
+                        subParts.push(s);
+                        subLen += (subLen > 0 ? 1 : 0) + s.length;
+                        subCount++;
+                    }
+                }
+                if (subParts.length > 0) {
+                    pushChunk(subParts.join(' '), subCount);
+                }
+            }
+            continue;
+        }
+
+        const pSentences = splitIntoNaturalSentences(para);
+        const pSCount = Math.max(1, pSentences.length);
+
+        if ((currentChunkLen + para.length > targetCharLimit || (currentChunkSCount + pSCount > maxSentencesPerChunk && currentChunkLen > 800)) && currentChunkParts.length > 0) {
+            pushChunk(currentChunkParts.join('\n\n'), currentChunkSCount);
+            currentChunkParts = [para];
+            currentChunkLen = para.length;
+            currentChunkSCount = pSCount;
+        } else {
+            currentChunkParts.push(para);
+            currentChunkLen += (currentChunkLen > 0 ? 2 : 0) + para.length;
+            currentChunkSCount += pSCount;
+        }
+    }
+
+    if (currentChunkParts.length > 0) {
+        pushChunk(currentChunkParts.join('\n\n'), currentChunkSCount);
+    }
+
+    return { chunks, chunkSentenceCounts };
+}
+
+async function startWholeBookTranslation(resume = false) {
+    if (isTranslatingWholeBook) { restoreTranslationPanel(); return; }
+    if (typeof navigator !== 'undefined' && navigator.locks && currentBook) {
+        return navigator.locks.request(tjobKey(currentBook.id), {ifAvailable:true}, async lock => {
+            if (!lock) { showToast('This book is already being translated in another tab.', 'info'); return; }
+            return runWholeBookTranslation(resume);
+        });
+    }
+    return runWholeBookTranslation(resume);
+}
+
+async function runWholeBookTranslation(resume = false) {
+    if (!currentBook?.chapters?.length) return;
+    if (isTranslatingWholeBook) { restoreTranslationPanel(); return; }
+    const targetBook = currentBook;
+    const ownerId = getCurrentUserId();
+    const checkOwner = () => { if (getCurrentUserId() !== ownerId) throw new Error('Account changed; sign in to the original account to resume'); };
+    const sourceLang = EngbotCore.normalizeLanguage(targetBook.lang || targetBook.language) === 'ka' ? 'ka' : detectTextLang(targetBook.chapters.map(c => c.text || '').join(' ').slice(0, 6000));
+    const targetLang = sourceLang === 'ka' ? 'en' : 'ka';
+    const field = 'text_' + targetLang;
+    const targetName = targetLang === 'ka' ? 'Georgian' : 'English';
+    let job, cloudJob;
+    activeTranslationBook = targetBook;
     isTranslatingWholeBook = true;
     cancelTranslationFlag = false;
-    openModal('wholeBookTranslateModal');
-
+    translationRequestController = new AbortController();
     translationPanelMinimized = false;
-    translationStartTime = Date.now();
-    translationChunkTimestamps = [];
-
-    // Reset engine stats for this run and wire the live indicator.
-    Object.keys(translationEngineStats).forEach(k => { translationEngineStats[k] = 0; });
-    setTranslationEngineStatusEl(document.getElementById('wbEngineStatus'));
-
-    // Reset and build the detailed progress UI
-    if (DOM.wbChunkLog) DOM.wbChunkLog.innerHTML = '';
-    if (DOM.wbChunkRate) DOM.wbChunkRate.textContent = '0 chunks/min';
-    buildChapterQueue();
-
-    const totalChapters = currentBook.chapters.length;
-    let totalSentencesCount = 0;
-    let completedSentencesCount = 0;
-    let totalCharsTranslated = 0;
-
-    currentBook.chapters.forEach(chap => {
-        const s = splitIntoNaturalSentences(chap.text);
-        totalSentencesCount += s.length;
-    });
-
+    openModal('wholeBookTranslateModal');
     try {
-        for (let chIdx = 0; chIdx < totalChapters; chIdx++) {
-            if (cancelTranslationFlag) break;
-
-            const chapter = currentBook.chapters[chIdx];
-
-            // Already-translated chapters are never redone (resume or restart).
-            if (chapter.text_ka && chapter.text_ka.trim().length > 0) {
-                updateChapterQueueStatus(-1, chIdx);
-                if (chIdx >= (job.chapterIdx || 0)) { job.chapterIdx = chIdx + 1; job.partial = []; saveTranslationJob(job); }
-                continue;
-            }
-
-            const sentences = splitIntoNaturalSentences(chapter.text);
-            // Resume inside a chapter: reuse the chunks we already checkpointed.
-            const resumedPartial = (job.chapterIdx === chIdx && Array.isArray(job.partial)) ? job.partial : [];
-            const translatedArr = resumedPartial.slice();
-            job.chapterIdx = chIdx;
-            saveTranslationJob(job);
-
-
-            if (DOM.wbChapterLabel) {
-                DOM.wbChapterLabel.textContent = `Translating Chapter ${chIdx + 1} of ${totalChapters}: ${chapter.title}`;
-            }
-            updateChapterQueueStatus(chIdx, -1);
-            updateMiniDock();
-
-            const chunks = [];
-            let currentChunk = '';
-            let chunkSentenceCounts = [];
-            let currentChunkSCount = 0;
-            
-            for (let i = 0; i < sentences.length; i++) {
-                // MASSIVE Context Window (3000 chars) to force NMT into semantic translation mode
-                if (currentChunk.length + sentences[i].length > 3000 && currentChunk.trim().length > 0) {
-                    chunks.push(currentChunk);
-                    chunkSentenceCounts.push(currentChunkSCount);
-                    currentChunk = sentences[i] + ' ';
-                    currentChunkSCount = 1;
-                } else {
-                    currentChunk += sentences[i] + ' ';
-                    currentChunkSCount++;
+        const saved = await loadTranslationJob(targetBook.id);
+        job = saved?.targetLang === targetLang ? saved : { bookId: targetBook.id, title: targetBook.title, targetLang, chapters: {} };
+        job.chapters ||= {};
+        job.ownerId = ownerId;
+        job.status = 'running';
+        job.totalChapters = targetBook.chapters.length;
+        await saveTranslationJob(job);
+        buildChapterQueue(targetBook);
+        if (typeof aiTranslationAvailable === 'function' && aiTranslationAvailable() && !job.glossaryChecked && !targetBook.glossary?.length) {
+            const sample = targetBook.chapters.slice(0, 2).map(c => c.text || '').join('\n\n').slice(0, 3000);
+            if (sample.length > 80) {
+                const data = await callGeminiJSON(`Extract up to 20 names and recurring terms from this book opening. Return English and Georgian equivalents as JSON: {"glossary":[{"en":"English term","ka":"ქართული შესატყვისი"}]}. Preserve names consistently; do not invent entries.\n${sample}`, {temperature:0.1,maxTokens:2048});
+                translationRequestController?.signal.throwIfAborted();
+                checkOwner();
+                if (Array.isArray(data?.glossary)) {
+                    targetBook.glossary = data.glossary.filter(g => typeof g?.en === 'string' && typeof g?.ka === 'string' && g.en.trim() && g.ka.trim()).slice(0,20);
+                    await saveBookToDB(targetBook);
                 }
             }
-            if (currentChunk.trim().length > 0) {
-                chunks.push(currentChunk);
-                chunkSentenceCounts.push(currentChunkSCount);
+            job.glossaryChecked = true;
+            await saveTranslationJob(job);
+        }
+        if (window.LuminaStore?.createJob && usingCloud) {
+            cloudJob = await window.LuminaStore.createJob(targetBook.id, 'parse', job.totalChapters, `Translating to ${targetName}`);
+        }
+        const config = JSON.stringify({targetLang, geminiModel, geminiPasses, openRouterModel, customProviderModel,
+            glossary: targetBook.glossary || [], pack: window.EngbotPack?.version(targetLang) || 0});
+        let completed = 0;
+        for (let index = 0; index < targetBook.chapters.length; index++) {
+            checkOwner();
+            if (cancelTranslationFlag) break;
+            const chapter = targetBook.chapters[index];
+            const source = chapter.text || '';
+            const chunks = EngbotCore.splitText(source, 1800).filter(t => t.trim());
+            const key = String(chapter.id ?? index);
+            let checkpoint = job.chapters[key];
+            if (!checkpoint || checkpoint.source !== source || checkpoint.config !== config) {
+                checkpoint = job.chapters[key] = { source, config, outputs: new Array(chunks.length).fill(null) };
             }
-
-            // ══ PARALLEL BATCH TRANSLATION ══
-            // Worker pool: local-engine chunks run freely; AI-routed chunks
-            // are throttled to CONCURRENT_AI_LIMIT to respect rate limits.
-            // Removes the sequential bottleneck and the per-chunk 200ms delay.
-            const CONCURRENT_AI_LIMIT = 3;
-            let aiRunning = 0;
-            let nextChunkIdx = 0;
-            let completedInChapter = 0;
-            const chunkResults = new Array(chunks.length).fill(null);
-            // Seed already-checkpointed chunks so a resumed run never redoes work.
+            job.chapterIdx = index;
+            await saveTranslationJob(job);
+            updateChapterQueueStatus(index, -1);
+            if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `${targetName}: chapter ${index + 1} / ${job.totalChapters}`;
             for (let i = 0; i < chunks.length; i++) {
-                if (typeof resumedPartial[i] === 'string' && resumedPartial[i]) {
-                    chunkResults[i] = resumedPartial[i];
-                    completedInChapter++;
+                if (cancelTranslationFlag) break;
+                if (checkpoint.outputs[i] && assessTranslation(chunks[i], checkpoint.outputs[i], targetLang).ok) continue;
+                if (DOM.wbLiveOriginal) DOM.wbLiveOriginal.textContent = chunks[i];
+                if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = `Translating segment ${i + 1} / ${chunks.length}…`;
+                // Do not silently replace reviewed LLM translation with dictionary drafts.
+                const output = await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true);
+                if (cancelTranslationFlag) break; // Late provider responses cannot commit after stop.
+                checkOwner();
+                if (!assessTranslation(chunks[i], output, targetLang).ok) {
+                    throw new Error(`Chapter ${index + 1}, segment ${i + 1} needs retry or review. Check your AI provider.`);
                 }
+                checkpoint.outputs[i] = output;
+                await saveTranslationJob(job);
+                if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = output;
+                const pct = Math.min(99, Math.round(((index + checkpoint.outputs.filter(Boolean).length / Math.max(1, chunks.length)) / job.totalChapters) * 100));
+                if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
+                if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
+                if (DOM.wbSentenceCounter) DOM.wbSentenceCounter.textContent = `Accepted segments: ${checkpoint.outputs.filter(Boolean).length} / ${chunks.length}`;
             }
-
-
-            // Reset shared progress state for this chapter
-            wbProgressState.completedInChapter = completedInChapter;
-            wbProgressState.totalChunks = chunks.length;
-            wbProgressState.totalSentences = totalSentencesCount;
-            wbProgressState.completedSentences = completedSentencesCount;
-            wbProgressState.totalChars = totalCharsTranslated;
-            flushWbProgress();
-
-
-            async function processChunk(idx) {
-                if (typeof chunkResults[idx] === 'string' && chunkResults[idx]) return; // resumed
-                const orig = chunks[idx].trim();
-                if (!orig) { chunkResults[idx] = ''; return; }
-
-
-                const isComplex = scoreChunkComplexity(orig) > SMART_ROUTE_EASY_THRESHOLD;
-                if (isComplex) {
-                    while (aiRunning >= CONCURRENT_AI_LIMIT) {
-                        await new Promise(r => setTimeout(r, 100));
-                    }
-                    aiRunning++;
-                }
-
-                let engineUsed = 'local';
-                try {
-                    const before = idx > 0 ? chunks[idx - 1].trim() : '';
-                    const after = idx < chunks.length - 1 ? chunks[idx + 1].trim() : '';
-                    chunkResults[idx] = await translateChunkSmart(orig, 'ka', before, after);
-                    if (isComplex) engineUsed = 'ai';
-                } catch (e) {
-                    console.warn(`Chunk ${idx} translation error:`, e);
-                    chunkResults[idx] = await translateChunkLocal(orig, 'ka');
-                    engineUsed = 'fail';
-                } finally {
-                    if (isComplex) aiRunning--;
-                }
-                appendChunkLog(idx, engineUsed, orig.slice(0, 60));
-                updateChunkRate();
-            }
-
-            const workers = [];
-            for (let w = 0; w < CONCURRENT_AI_LIMIT; w++) {
-                workers.push((async () => {
-                    while (nextChunkIdx < chunks.length) {
-                        if (cancelTranslationFlag) return;
-                        const idx = nextChunkIdx++;
-                        const wasResumed = typeof chunkResults[idx] === 'string' && chunkResults[idx];
-                        await processChunk(idx);
-
-                        if (chunkResults[idx] && !wasResumed) {
-                            translatedArr[idx] = chunkResults[idx];
-                            totalCharsTranslated += chunkResults[idx].length;
-                            completedInChapter++;
-                            completedSentencesCount += chunkSentenceCounts[idx];
-                            // Checkpoint after EVERY chunk so nothing is lost.
-                            job.chapterIdx = chIdx;
-                            job.partial = chunkResults.map(v => (typeof v === 'string' ? v : null));
-                            saveTranslationJob(job);
-                        }
-
-
-                        // Update shared progress state, then refresh the UI
-                        // (throttled to 4/sec to avoid layout thrash).
-                        wbProgressState.completedInChapter = completedInChapter;
-                        wbProgressState.completedSentences = completedSentencesCount;
-                        wbProgressState.totalChars = totalCharsTranslated;
-                        if (DOM.wbLiveGeorgian && chunkResults[idx]) {
-                            DOM.wbLiveGeorgian.textContent = chunkResults[idx];
-                        }
-                        if (DOM.wbLiveOriginal && chunks[idx]) {
-                            DOM.wbLiveOriginal.textContent = chunks[idx].trim().slice(0, 200);
-                        }
-                        renderWbProgress();
-                    }
-                })());
-            }
-            await Promise.all(workers);
-
-            // Force a final UI flush for this chapter (bypasses throttle)
-            // and roll the book-level counters into the next chapter.
-            wbProgressState.completedInChapter = completedInChapter;
-            wbProgressState.completedSentences = completedSentencesCount;
-            wbProgressState.totalChars = totalCharsTranslated;
-            flushWbProgress();
-
-            // Chapter finished: mark queue status, refresh the chapter list
-            // so the just-completed chapter is immediately readable/listenable,
-            // and persist progress so the reader can pick it up mid-run.
-            updateChapterQueueStatus(-1, chIdx);
             if (cancelTranslationFlag) break;
-            chapter.text_ka = translatedArr.filter(Boolean).join(' ');
-            if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
-            if (!currentBook.translatedLangs.includes('ka')) {
-                currentBook.translatedLangs.push('ka');
-            }
-            await saveBookToDB(currentBook);
-            // Chapter checkpoint: next resume starts at the following chapter.
-            job.chapterIdx = chIdx + 1;
-            job.partial = [];
-            saveTranslationJob(job);
-            renderChaptersList();
-            updateMiniDock();
+            if (checkpoint.outputs.length !== chunks.length || checkpoint.outputs.some(t => !t)) throw new Error('Incomplete chapter');
+            const translated = checkpoint.outputs.join('\n\n');
+            chapter.translation_history ||= [];
+            if (chapter[field] && chapter[field] !== translated) chapter.translation_history.push({language:targetLang, text:chapter[field], savedAt:new Date().toISOString()});
+            chapter[field] = translated;
+            chapter.translation_state ||= {};
+            chapter.translation_state[targetLang] = {status:'complete', source, config};
+            await saveBookToDB(targetBook);
+            checkpoint.status = 'complete';
+            completed++;
+            job.chapterIdx = index + 1;
+            await saveTranslationJob(job);
+            updateChapterQueueStatus(-1, index);
+            if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'running', `${completed} chapters saved`);
         }
-
-        if (!cancelTranslationFlag) {
-            clearTranslationJob(currentBook.id);
-
-            if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = 'Translation Complete! 🇬🇪';
-            if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
-            if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '100%';
-
-            setTimeout(() => {
-                closeModal('wholeBookTranslateModal');
-                isTranslatingWholeBook = false;
-                renderChaptersList();
-                renderDigitalShelf();
-                if (DOM.heroGeorgianBadge) DOM.heroGeorgianBadge.classList.remove('hidden');
-                if (readerActive) {
-                    readerBook = currentBook;
-                    readerLang = 'ka';
-                    updateReaderLangUI();
-                    paginateChapter();
-                    renderCurrentPage();
-                }
-            }, 1200);
+        if (cancelTranslationFlag) {
+            job.status = 'paused';
+            await saveTranslationJob(job);
+            if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'failed', 'Paused by user; resume retains accepted segments');
+            return;
         }
-
-    } catch (err) {
-        console.error('Whole-book translation error:', err);
-        // The job stays 'running' so the next load resumes from the checkpoint.
-        if (typeof showToast === 'function') {
-            showToast('Translation paused — progress saved, it will resume automatically.', 'info');
+        if (completed !== job.totalChapters) throw new Error('Translation is incomplete');
+        checkOwner();
+        targetBook.translatedLangs = [...new Set([...(targetBook.translatedLangs || []), targetLang])];
+        await saveBookToDB(targetBook);
+        await saveTranslatedBookEdition(targetBook, targetLang);
+        if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'done', `${targetName} edition complete`);
+        await clearTranslationJob(targetBook.id);
+        if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `${targetName} translation complete`;
+        if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '100%';
+        if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
+        showToast(`${targetName} edition saved.`, 'success');
+    } catch (error) {
+        if (job) {
+            job.status = cancelTranslationFlag ? 'paused' : 'failed';
+            job.error = cancelTranslationFlag ? 'Paused by user' : error.message;
+            try { await saveTranslationJob(job); } catch (storageError) { console.error('Checkpoint could not be saved:', storageError); }
         }
+        if (cloudJob) { try { await cloudJob.update(job.chapterIdx || 0, job.totalChapters, 'failed', error.message); } catch (e) {} }
+        if (cancelTranslationFlag) return;
+        if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `Incomplete: ${error.message}`;
+        showToast(`Translation incomplete: ${error.message} Press Translate to retry.`, 'error');
     } finally {
+        activeTranslationBook = null;
+        translationRequestController = null;
         isTranslatingWholeBook = false;
+        renderChaptersList();
+        renderDigitalShelf();
     }
 }
 
 function cancelWholeBookTranslation() {
     cancelTranslationFlag = true;
-    if (currentBook) {
-        // Stopping is explicit: drop the resume job but keep finished chapters.
-        clearTranslationJob(currentBook.id);
-    }
+    translationRequestController?.abort();
+    // Keep the running guard until the in-flight operation settles.
     closeModal('wholeBookTranslateModal');
-    if (DOM.translationMiniDock) DOM.translationMiniDock.classList.add('hidden');
+    const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
+    if (dock) dock.classList.add('hidden');
     translationPanelMinimized = false;
-    isTranslatingWholeBook = false;
-    renderChaptersList();
-    renderDigitalShelf();
+    showToast('Pausing translation. Accepted segments are retained for retry.', 'info');
 }
+
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// ██ LOCK-SCREEN BACKGROUND AUDIO & HARDWARE MEDIA SESSION ENGINE ██
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Initializes and manages continuous low-volume / silent background audio loop.
+ * Mobile platforms (iOS Safari, Android Chrome, mobile WebView) freeze background
+ * timers and fetch queues between TTS sentences if no audio element is actively playing.
+ * Running an inaudible loop keeps the OS audio pipeline and JS event loop alive across
+ * lock-screen and device sleep events.
+ */
+function initBackgroundAudioKeepAlive() {
+    if (!backgroundKeepAliveAudio) {
+        backgroundKeepAliveAudio = (DOM && DOM.backgroundKeepAliveAudio) || document.getElementById('backgroundKeepAliveAudio');
+    }
+    if (!backgroundKeepAliveAudio) {
+        try {
+            backgroundKeepAliveAudio = new Audio(SILENT_AUDIO_URI);
+            backgroundKeepAliveAudio.id = 'backgroundKeepAliveAudio';
+            backgroundKeepAliveAudio.loop = true;
+            backgroundKeepAliveAudio.volume = 0.001;
+            document.body.appendChild(backgroundKeepAliveAudio);
+        } catch (e) {
+            console.warn('[KeepAlive] Audio element creation error:', e);
+        }
+    }
+    if (backgroundKeepAliveAudio) {
+        backgroundKeepAliveAudio.volume = 0.001;
+        backgroundKeepAliveAudio.loop = true;
+    }
+}
+window.initBackgroundAudioKeepAlive = initBackgroundAudioKeepAlive;
+
+function startBackgroundKeepAlive() {
+    try {
+        if (!backgroundKeepAliveAudio) {
+            initBackgroundAudioKeepAlive();
+        }
+        if (backgroundKeepAliveAudio && backgroundKeepAliveAudio.paused) {
+            backgroundKeepAliveAudio.play().catch(err => {
+                // Audio autoplay might wait for user gesture, which is fine
+                console.debug('[KeepAlive] Silent audio play deferred or auto-play prevented:', err && err.message);
+            });
+        }
+    } catch (e) {
+        console.warn('[KeepAlive] Failed to start silent audio:', e);
+    }
+}
+window.startBackgroundKeepAlive = startBackgroundKeepAlive;
+
+function stopBackgroundKeepAlive() {
+    try {
+        if (backgroundKeepAliveAudio && !backgroundKeepAliveAudio.paused) {
+            backgroundKeepAliveAudio.pause();
+        }
+    } catch (e) {}
+}
+window.stopBackgroundKeepAlive = stopBackgroundKeepAlive;
+
+/**
+ * Screen Wake Lock API to prevent the screen from turning off while reading/listening
+ */
+async function requestScreenWakeLock() {
+    if ('wakeLock' in navigator && !screenWakeLock) {
+        try {
+            screenWakeLock = await navigator.wakeLock.request('screen');
+            screenWakeLock.addEventListener('release', () => {
+                screenWakeLock = null;
+            });
+        } catch (e) {
+            // Wake lock may fail if battery saver is active or document is hidden
+            console.debug('[WakeLock] Request failed:', e && e.message);
+        }
+    }
+}
+window.requestScreenWakeLock = requestScreenWakeLock;
+
+function releaseScreenWakeLock() {
+    if (screenWakeLock) {
+        try {
+            screenWakeLock.release();
+        } catch (e) {}
+        screenWakeLock = null;
+    }
+}
+window.releaseScreenWakeLock = releaseScreenWakeLock;
+
+// Re-acquire wake lock if page becomes visible while playing
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isPlaying && !isPaused) {
+        requestScreenWakeLock();
+    }
+});
+
+/**
+ * Updates OS lock-screen Media Session controls, artwork, title, author, and chapter info
+ */
+function updateMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+
+    try {
+        const bookTitle = (currentBook && currentBook.title) ? currentBook.title : 'Audiobook';
+        const author = (currentBook && currentBook.author) ? currentBook.author : 'Lumina Audio';
+        const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
+        const chapterTitle = currentChap ? currentChap.title : `Chapter ${currentPlayingChapterId || 1}`;
+        
+        let coverUrl = (currentBook && currentBook.coverUrl) ? currentBook.coverUrl : '';
+        if (coverUrl && !coverUrl.startsWith('http') && !coverUrl.startsWith('data:') && !coverUrl.startsWith('blob:')) {
+            coverUrl = window.location.origin + '/' + coverUrl.replace(/^\//, '');
+        }
+
+        const artwork = coverUrl ? [
+            { src: coverUrl, sizes: '96x96', type: 'image/png' },
+            { src: coverUrl, sizes: '128x128', type: 'image/png' },
+            { src: coverUrl, sizes: '256x256', type: 'image/png' },
+            { src: coverUrl, sizes: '512x512', type: 'image/png' }
+        ] : [];
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: chapterTitle,
+            artist: author,
+            album: bookTitle,
+            artwork: artwork
+        });
+
+        navigator.mediaSession.playbackState = (isPlaying && !isPaused) ? 'playing' : 'paused';
+
+        // Update position state if supported
+        if ('setPositionState' in navigator.mediaSession && currentChap && currentChap.estimated_duration_sec) {
+            try {
+                navigator.mediaSession.setPositionState({
+                    duration: Math.max(1, currentChap.estimated_duration_sec),
+                    playbackRate: currentGlobalSpeed || 1.0,
+                    position: Math.min(secondsElapsed, currentChap.estimated_duration_sec)
+                });
+            } catch (posErr) {}
+        }
+    } catch (err) {
+        console.warn('[MediaSession] Metadata update error:', err);
+    }
+}
+window.updateMediaSession = updateMediaSession;
+
+/**
+ * Registers Media Session hardware / headphone / lock-screen action handlers
+ */
+function initMediaSessionHandlers() {
+    if (!('mediaSession' in navigator)) return;
+
+    const actionMap = [
+        ['play', () => {
+            if (isPaused || !isPlaying) togglePlayPause();
+        }],
+        ['pause', () => {
+            if (isPlaying && !isPaused) togglePlayPause();
+        }],
+        ['previoustrack', () => {
+            if (currentSentenceIndex > 2) {
+                currentSentenceIndex = Math.max(0, currentSentenceIndex - 3);
+                speakCurrentSentence();
+            } else {
+                playPrevChapter();
+            }
+        }],
+        ['nexttrack', () => {
+            if (sentenceQueue.length > 0 && currentSentenceIndex < sentenceQueue.length - 3) {
+                currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 3);
+                speakCurrentSentence();
+            } else {
+                playNextChapter();
+            }
+        }],
+        ['seekbackward', (details) => {
+            const seekSec = (details && details.seekOffset) ? details.seekOffset : 10;
+            secondsElapsed = Math.max(0, secondsElapsed - seekSec);
+            currentSentenceIndex = Math.max(0, currentSentenceIndex - 2);
+            speakCurrentSentence();
+        }],
+        ['seekforward', (details) => {
+            const seekSec = (details && details.seekOffset) ? details.seekOffset : 10;
+            secondsElapsed += seekSec;
+            currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 2);
+            speakCurrentSentence();
+        }],
+        ['stop', () => {
+            stopSpeech();
+        }]
+    ];
+
+    actionMap.forEach(([action, handler]) => {
+        try {
+            navigator.mediaSession.setActionHandler(action, handler);
+        } catch (err) {
+            // Action may not be supported by this browser
+        }
+    });
+}
+window.initMediaSessionHandlers = initMediaSessionHandlers;
 
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -3998,7 +8300,7 @@ async function speakCurrentSentence() {
     if (currentBook) {
         currentBook.progressPct = pct;
         currentBook.lastPlayedChapterId = currentPlayingChapterId;
-        saveBookToDB(currentBook);
+        saveBookProgress(currentBook, pct, currentPlayingChapterId);
         if (DOM.heroProgressText) DOM.heroProgressText.textContent = `${pct}% Completed`;
         if (DOM.heroProgressBarInner) DOM.heroProgressBarInner.style.width = `${pct}%`;
         if (DOM.heroProgressCircle) {
@@ -4017,19 +8319,27 @@ async function speakCurrentSentence() {
         highlightReaderSentence(currentSentenceIndex);
     }
 
-    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-    const hasNativeKaVoice = voices.some(v => v.lang.startsWith('ka'));
-    const isCloudKaVoice = selectedVoiceURI === 'ka-GE-EkaNeural - ka-GE (Female)' || selectedVoiceURI === 'ka-GE-GiorgiNeural - ka-GE (Male)';
+    const choice = localStorage.getItem('lumina_voice_choice') || '';
+    const isDeviceVoice = choice.startsWith('device:');
+
+    startBackgroundKeepAlive();
+    requestScreenWakeLock();
+    updateMediaSession();
 
     if (elevenLabsEnabled && elevenLabsApiKey) {
-        speakElevenLabsSentence(cleanSentence);
+        speakElevenLabsSentence(cleanSentence, currentLang);
     } else if (gatewayTTSAvailable) {
         // Real audio file from the app's own TTS endpoint — the only engine
         // that reliably produces sound on mobile, in Georgian included.
         void speakGatewayNeural(cleanSentence, currentLang);
-    } else if (currentLang === 'ka' && (!hasNativeKaVoice || isCloudKaVoice)) {
-        const voiceId = isCloudKaVoice ? selectedVoiceURI : 'ka-GE-GiorgiNeural - ka-GE (Male)';
-        speakFreeGeorgianNeural(cleanSentence, voiceId);
+    } else if (!isDeviceVoice) {
+        // Universal Neural Edge-TTS Engine (English British/American & Georgian)
+        const presetId = selectedEngbotPreset(currentLang === 'ka' ? 'ka' : 'en');
+        const v = engbotVoice(presetId);
+        const voiceId = v ? v.edgeVoice : (currentLang === 'ka' ? 'ka-GE-GiorgiNeural - ka-GE (Male)' : 'en-GB-RyanNeural - en-GB (Male)');
+        const rateDelta = v ? (v.rate || 0) : 0;
+        const pitchDelta = v ? (v.pitch || 0) : 0;
+        speakFreeNeural(cleanSentence, currentLang, voiceId, rateDelta, pitchDelta);
     } else {
         speakStandardSentence(cleanSentence, currentLang);
     }
@@ -4043,7 +8353,11 @@ let narrationGeneration = 0;
 function playUltimateFallbackTTS(text, lang, token) {
     const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.slice(0, 200))}`;
     const audio = new Audio(url);
+    currentElevenAudio = audio;
     audio.playbackRate = currentGlobalSpeed;
+    startBackgroundKeepAlive();
+    requestScreenWakeLock();
+    updateMediaSession();
     audio.onended = () => {
         if (token !== currentSpeechToken || !isPlaying || isPaused) return;
         currentSentenceIndex++;
@@ -4093,7 +8407,35 @@ function speakStandardSentence(text, lang) {
             utter.voice = matched;
             utter.lang = matched.lang || 'en-US';
         } else {
-            utter.lang = 'en-US';
+            // Intelligent browser voice matching for presets when selectedVoiceURI is empty
+            const presetId = selectedEngbotPreset(lang === 'ka' ? 'ka' : 'en');
+            const p = engbotVoice(presetId);
+            const targetLocale = (p && p.locale) ? p.locale.toLowerCase() : 'en-gb';
+            const targetGender = (p && p.gender) ? p.gender : 'male';
+
+            let bestVoice = voices.find(v => {
+                const vLang = (v.lang || '').toLowerCase().replace(/_/g, '-');
+                const vName = (v.name || '').toLowerCase();
+                const matchesLang = vLang.startsWith(targetLocale.slice(0, 5)) || vLang.startsWith(targetLocale.slice(0, 2));
+                const matchesGender = targetGender === 'female'
+                    ? (vName.includes('female') || vName.includes('zira') || vName.includes('susan') || vName.includes('hazel') || vName.includes('catherine') || vName.includes('jenny'))
+                    : (vName.includes('male') || vName.includes('david') || vName.includes('george') || vName.includes('mark') || vName.includes('james') || vName.includes('ryan') || vName.includes('guy'));
+                return matchesLang && matchesGender;
+            });
+
+            if (!bestVoice) {
+                bestVoice = voices.find(v => (v.lang || '').toLowerCase().replace(/_/g, '-').startsWith(targetLocale.slice(0, 5)));
+            }
+            if (!bestVoice) {
+                bestVoice = voices.find(v => (v.lang || '').toLowerCase().startsWith(lang));
+            }
+
+            if (bestVoice) {
+                utter.voice = bestVoice;
+                utter.lang = bestVoice.lang;
+            } else {
+                utter.lang = targetLocale.startsWith('en-gb') ? 'en-GB' : 'en-US';
+            }
         }
     }
 
@@ -4134,6 +8476,10 @@ function speakStandardSentence(text, lang) {
             }, 300);
         }
     };
+
+    startBackgroundKeepAlive();
+    requestScreenWakeLock();
+    updateMediaSession();
 
     window._activeUtterance = utter;
     window.speechSynthesis.speak(utter);
@@ -4204,12 +8550,12 @@ function clearNarrationBuffers() {
 window.clearNarrationBuffers = clearNarrationBuffers;
 
 
-async function fetchGatewaySpeechUrl(text, lang) {
+async function fetchGatewaySpeechUrl(text, lang, overridePreset = null) {
     if (!gatewayTTSAvailable) return null;
-    const preset = gatewayPresetForLang(lang);
+    const preset = overridePreset || gatewayPresetForLang(lang);
     const spoken = lang === 'ka'
-        ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), detectSentenceType(text))
-        : text;
+        ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), detectSentenceType(text, 'ka'))
+        : applyEnglishProsody(verbalizeEnglishTextForTTS(text), detectSentenceType(text, 'en'));
     if (!spoken || !spoken.trim()) return null;
 
     const key = preset + '|' + spoken;
@@ -4275,6 +8621,10 @@ function primeGatewayPrefetchWindow(fromIndex, lang) {
 }
 window.primeGatewayPrefetchWindow = primeGatewayPrefetchWindow;
 
+/**
+ * Plays a sentence using the Lovable AI Gateway (/api/tts). Falls back to the
+ * free Hugging Face edge-tts mirror if the gateway is unconfigured or errors.
+ */
 async function speakGatewayNeural(text, lang) {
     stopCurrentSpeechAudio(true); // keep the prefetch window warm
     const myToken = currentSpeechToken;
@@ -4296,13 +8646,27 @@ async function speakGatewayNeural(text, lang) {
         currentElevenAudio = audioToPlay;
         currentElevenAudio.playbackRate = currentGlobalSpeed;
 
-        primeGatewayPrefetchWindow(currentSentenceIndex, lang);
+        startBackgroundKeepAlive();
+        requestScreenWakeLock();
+        updateMediaSession();
 
+        primeGatewayPrefetchWindow(currentSentenceIndex, lang);
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            currentSentenceIndex++;
-            speakCurrentSentence();
+            // Organic human breathing pause between sentences
+            let breathDelay = 220; // baseline human breath
+            const trimmed = String(text || '').trim();
+            if (/[?!]$/.test(trimmed)) {
+                breathDelay = 320; // reflective hesitation after question/exclamation
+            } else if (/(\.{3}|…)$/.test(trimmed)) {
+                breathDelay = 420; // contemplative storytelling pause
+            }
+            setTimeout(() => {
+                if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+                currentSentenceIndex++;
+                speakCurrentSentence();
+            }, breathDelay);
         };
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
@@ -4314,13 +8678,12 @@ async function speakGatewayNeural(text, lang) {
         isSpeakingLock = false;
     } catch (e) {
         if (myToken !== currentSpeechToken) return;
-        console.warn('Gateway TTS failed — falling back:', e && e.message);
-        if (lang === 'ka') speakFreeGeorgianNeural(text);
-        else speakStandardSentence(text, lang);
+        console.warn('Gateway TTS failed — falling back to Free Neural:', e && e.message);
+        speakFreeNeural(text, lang);
     }
 }
 
-function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
+function prefetchNextNeuralSentence(index, voiceId, ratePct, pitchHz, lang = 'en') {
     if (index >= sentenceQueue.length || index < 0) return;
     if (georgianAudioPrefetchCache.has(index)) return;
 
@@ -4328,9 +8691,7 @@ function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
     if (!nextText || !nextText.trim()) return;
 
     const myGen = narrationGeneration;
-    fetchGeorgianSpeechAudioUrl(nextText, voiceId, ratePct, pitchHz).then(url => {
-        // A prefetch resolving after a stop/seek must not enter the cache:
-        // the entry would replay stale audio for a future sentence.
+    fetchNeuralSpeechAudioUrl(nextText, voiceId, ratePct, pitchHz, lang).then(url => {
         if (myGen !== narrationGeneration) return;
         if (url) {
             const audio = new Audio(url);
@@ -4340,18 +8701,32 @@ function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
     }).catch(() => {});
 }
 
-async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
-    const sentenceType = detectSentenceType(text);
-    // Expressive modulation: questions lift slightly, exclamations carry a
-    // touch more energy, dialogue gets a subtle intimate drop. Small deltas —
-    // the base rate/pitch from the player controls still dominate.
-    const typeRate = { question: 0, exclamation: 4, dialogue: -2, short: 3, statement: 0 }[sentenceType] ?? 0;
-    const typePitch = { question: 3, exclamation: 4, dialogue: -3, short: 1, statement: 0 }[sentenceType] ?? 0;
-    const rate = Math.max(-50, Math.min(50, ratePct + typeRate));
-    const pitch = Math.max(-20, Math.min(20, pitchHz + typePitch));
+function prefetchNextGeorgianSentence(index, voiceId, ratePct, pitchHz) {
+    prefetchNextNeuralSentence(index, voiceId, ratePct, pitchHz, 'ka');
+}
 
-    const verbalized = applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), sentenceType);
-    if (!verbalized || !verbalized.trim()) return null;
+async function fetchNeuralSpeechAudioUrl(text, voiceId, ratePct = 0, pitchHz = 0, lang = 'en') {
+    let spoken = text;
+    let effectiveRate = ratePct;
+    let effectivePitch = pitchHz;
+
+    const sentenceType = detectSentenceType(text, lang);
+
+    if (lang === 'ka') {
+        const typeRate = { question: 0, exclamation: 3, dialogue: -2, suspense: -4, short: 2, statement: 0 }[sentenceType] ?? 0;
+        const typePitch = { question: 3, exclamation: 3, dialogue: -2, suspense: -2, short: 1, statement: 0 }[sentenceType] ?? 0;
+        effectiveRate = Math.max(-50, Math.min(50, ratePct + typeRate));
+        effectivePitch = Math.max(-20, Math.min(20, pitchHz + typePitch));
+        spoken = applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), sentenceType);
+    } else {
+        const typeRate = { question: 0, exclamation: 3, dialogue: -2, suspense: -5, short: 2, statement: 0 }[sentenceType] ?? 0;
+        const typePitch = { question: 3, exclamation: 3, dialogue: -2, suspense: -2, short: 0, statement: 0 }[sentenceType] ?? 0;
+        effectiveRate = Math.max(-50, Math.min(50, ratePct + typeRate));
+        effectivePitch = Math.max(-20, Math.min(20, pitchHz + typePitch));
+        spoken = applyEnglishProsody(verbalizeEnglishTextForTTS(text), sentenceType);
+    }
+
+    if (!spoken || !spoken.trim()) return null;
 
     const mirrors = [
         "https://innoai-edge-tts-text-to-speech.hf.space/gradio_api",
@@ -4364,7 +8739,7 @@ async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    data: [verbalized, voiceId, rate, pitch]
+                    data: [spoken, voiceId, effectiveRate, effectivePitch]
                 })
             });
 
@@ -4410,23 +8785,33 @@ async function fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz) {
     return null;
 }
 
-async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)') {
+async function fetchGeorgianSpeechAudioUrl(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)', ratePct = 0, pitchHz = 0) {
+    return fetchNeuralSpeechAudioUrl(text, voiceId, ratePct, pitchHz, 'ka');
+}
+
+async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, pitchDelta = 0) {
     stopCurrentSpeechAudio(true); // keep the prefetch window warm
     const myToken = currentSpeechToken;
     updatePlayerUIState(true);
 
-    const ratePct = Math.max(-50, Math.min(50, Math.round((currentGlobalSpeed - 1.0) * 100)));
-    const pitchHz = Math.max(-20, Math.min(20, Math.round((currentPitch - 1.0) * 40)));
+    const presetId = selectedEngbotPreset(lang === 'ka' ? 'ka' : 'en');
+    const v = engbotVoice(presetId);
+    const voiceId = targetVoiceId || (v ? v.edgeVoice : (lang === 'ka' ? 'ka-GE-GiorgiNeural - ka-GE (Male)' : 'en-GB-RyanNeural - en-GB (Male)'));
+    const finalRateDelta = rateDelta || (v ? (v.rate || 0) : 0);
+    const finalPitchDelta = pitchDelta || (v ? (v.pitch || 0) : 0);
+
+    const ratePct = Math.max(-50, Math.min(50, Math.round((currentGlobalSpeed - 1.0) * 100) + finalRateDelta));
+    const pitchHz = Math.max(-20, Math.min(20, Math.round((currentPitch - 1.0) * 40) + finalPitchDelta));
 
     try {
         let audioToPlay = null;
 
-        // Check lookahead buffer (token re-checked after any await below)
+        // Check lookahead buffer
         const cachedAudio = prefetchCacheTake(currentSentenceIndex);
         if (cachedAudio) {
             audioToPlay = cachedAudio;
         } else {
-            const audioUrl = await fetchGeorgianSpeechAudioUrl(text, voiceId, ratePct, pitchHz);
+            const audioUrl = await fetchNeuralSpeechAudioUrl(text, voiceId, ratePct, pitchHz, lang);
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             if (audioUrl) {
                 audioToPlay = new Audio(audioUrl);
@@ -4436,27 +8821,41 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
         if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
 
         if (!audioToPlay) {
-            throw new Error("Could not obtain Georgian Neural audio stream");
+            throw new Error(`Could not obtain Neural audio stream for ${voiceId}`);
         }
 
         currentElevenAudio = audioToPlay;
         currentElevenAudio.playbackRate = currentGlobalSpeed;
 
-        // Trigger prefetch for next sentence in background
-        // Rolling window (not just +1) so the next clips are already synthesized.
+        startBackgroundKeepAlive();
+        requestScreenWakeLock();
+        updateMediaSession();
+
+        // Trigger prefetch for next sentences in background
         for (let i = 1; i <= GATEWAY_PREFETCH_AHEAD; i++) {
-            prefetchNextGeorgianSentence(currentSentenceIndex + i, voiceId, ratePct, pitchHz);
+            prefetchNextNeuralSentence(currentSentenceIndex + i, voiceId, ratePct, pitchHz, lang);
         }
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            currentSentenceIndex++;
-            speakCurrentSentence();
+            // Organic human breathing pause between sentences
+            let breathDelay = 220; // baseline human breath
+            const trimmed = String(text || '').trim();
+            if (/[?!]$/.test(trimmed)) {
+                breathDelay = 320; // reflective hesitation after question/exclamation
+            } else if (/(\.{3}|…)$/.test(trimmed)) {
+                breathDelay = 420; // contemplative storytelling pause
+            }
+            setTimeout(() => {
+                if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+                currentSentenceIndex++;
+                speakCurrentSentence();
+            }, breathDelay);
         };
 
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
-            console.error("Georgian Neural Audio Error");
+            console.error("Neural Audio Error, falling back to standard");
             currentSentenceIndex++;
             speakCurrentSentence();
         };
@@ -4466,9 +8865,14 @@ async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-
 
     } catch (e) {
         if (myToken !== currentSpeechToken) return;
-        console.error("Free Georgian TTS Failed:", e);
-        speakStandardSentence(text, 'ka');
+        console.error("Free Neural TTS Failed, falling back to Web Speech:", e);
+        speakStandardSentence(text, lang);
     }
+}
+
+async function speakFreeGeorgianNeural(text, voiceId = 'ka-GE-GiorgiNeural - ka-GE (Male)') {
+    const v = ENGBOT_VOICES.find(x => x.edgeVoice === voiceId) || engbotVoice('ka-male');
+    return speakFreeNeural(text, 'ka', voiceId, v ? v.rate : 0, v ? v.pitch : 0);
 }
 
 // ElevenLabs: per-sentence expressive delivery. v3 (eleven_v3) understands
@@ -4495,21 +8899,24 @@ function elevenLabsVoiceSettings(modelId, sentenceType) {
         // v3: lower stability = more expressive variance; dialogue gets the
         // most freedom, statements stay composed for long-form listening.
         const stability = { dialogue: 0.3, exclamation: 0.35, question: 0.4, short: 0.5, statement: 0.55 }[sentenceType] ?? 0.5;
-        return { stability, similarity_boost: 0.8 };
+        return { stability: stability < 0.4 ? 0 : 0.5, similarity_boost: 0.8 };
     }
     // multilingual v2: stability 0.35 keeps long narration natural without
     // drifting; slightly higher similarity preserves the chosen voice.
     return { stability: 0.35, similarity_boost: 0.85, style: sentenceType === 'exclamation' ? 0.45 : 0.25, use_speaker_boost: true };
 }
 
-async function speakElevenLabsSentence(text) {
+async function speakElevenLabsSentence(text, lang = null) {
     stopCurrentSpeechAudio(true); // keep the prefetch window warm
     const myToken = currentSpeechToken;
     updatePlayerUIState(true);
 
     try {
-        const voiceId = elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB';
-        const modelId = elevenLabsModelId || 'eleven_multilingual_v2';
+        const actualLang = lang || currentLang || 'en';
+        const isKa = (actualLang === 'ka');
+        const voiceId = isKa ? (elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb') : (elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
+        const modelId = isKa ? 'eleven_v3' : (elevenLabsModelId || 'eleven_multilingual_v2');
+        const textToRead = isKa ? verbalizeGeorgianTextForTTS(text) : verbalizeEnglishTextForTTS(text);
         const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
 
         const res = await fetch(url, {
@@ -4520,9 +8927,9 @@ async function speakElevenLabsSentence(text) {
                 'Accept': 'audio/mpeg'
             },
             body: JSON.stringify({
-                text: elevenLabsExpressiveText(text, modelId),
+                text: elevenLabsExpressiveText(textToRead, modelId),
                 model_id: modelId,
-                voice_settings: elevenLabsVoiceSettings(modelId, detectSentenceType(text))
+                voice_settings: elevenLabsVoiceSettings(modelId, detectSentenceType(textToRead))
             })
         });
 
@@ -4536,25 +8943,50 @@ async function speakElevenLabsSentence(text) {
         currentElevenAudio = audio;
         audio.playbackRate = currentGlobalSpeed;
 
+        startBackgroundKeepAlive();
+        requestScreenWakeLock();
+        updateMediaSession();
+
         audio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            currentSentenceIndex++;
+            // Organic human breathing pause between sentences
+            let breathDelay = 220;
+            const trimmed = String(textToRead || '').trim();
+            if (/[?!]$/.test(trimmed)) {
+                breathDelay = 320;
+            } else if (/(\.{3}|…)$/.test(trimmed)) {
+                breathDelay = 420;
+            }
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
-                if (myToken === currentSpeechToken && isPlaying && !isPaused) speakCurrentSentence();
-            }, 200);
+                if (myToken === currentSpeechToken && isPlaying && !isPaused) {
+                    currentSentenceIndex++;
+                    speakCurrentSentence();
+                }
+            }, breathDelay);
         };
 
         audio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
-            speakStandardSentence(text, currentLang);
+            console.warn('[ElevenLabs] Audio playback error — falling back to neural TTS');
+            if (gatewayTTSAvailable) {
+                speakGatewayNeural(text, actualLang);
+            } else {
+                speakFreeNeural(text, actualLang);
+            }
         };
 
         await audio.play();
 
     } catch (err) {
         if (myToken !== currentSpeechToken) return;
-        speakStandardSentence(text, currentLang);
+        console.warn('[ElevenLabs] Fetch/synthesis failed — falling back to neural TTS:', err && err.message);
+        const actualLang = lang || currentLang || 'en';
+        if (gatewayTTSAvailable) {
+            speakGatewayNeural(text, actualLang);
+        } else {
+            speakFreeNeural(text, actualLang);
+        }
     }
 }
 
@@ -4595,13 +9027,13 @@ function stopCurrentSpeechAudio(keepBuffers = false) {
 }
 
 // ── Playback Controls ───────────────────────────────────────────────────────
-function playChapterAudio(chapId, startSentenceIdx = 0) {
+function playChapterAudio(chapId, startSentenceIdx = 0, forceReload = false) {
     if (!currentBook) return;
     const chap = currentBook.chapters.find(c => String(c.id) === String(chapId));
     if (!chap) return;
 
-    if (String(currentPlayingChapterId) === String(chapId) && isPlaying) {
-        if (startSentenceIdx > 0 && currentSentenceIndex !== startSentenceIdx) {
+    if (!forceReload && String(currentPlayingChapterId) === String(chapId) && isPlaying) {
+        if (startSentenceIdx !== undefined && startSentenceIdx !== null && currentSentenceIndex !== startSentenceIdx) {
             currentSentenceIndex = startSentenceIdx;
             speakCurrentSentence();
         } else {
@@ -4614,16 +9046,20 @@ function playChapterAudio(chapId, startSentenceIdx = 0) {
 
     currentPlayingChapterId = chap.id;
 
-    let textToRead = chap.text;
-    if (currentLang === 'ka' && chap.text_ka) {
-        textToRead = chap.text_ka;
+    if (currentBook.lang === 'ka' || currentBook.isTranslatedEdition || bookHasGeorgian(currentBook)) {
+        currentLang = 'ka';
     }
 
-    sentenceQueue = splitIntoNaturalSentences(textToRead);
+    let textToRead = chap['text_' + currentLang] || chap.text;
+    if (!textToRead && chap.text) textToRead = chap.text;
+
+    const preparedAudioSentences = prepareChapterSentences(textToRead);
+    sentenceQueue = preparedAudioSentences.map(x => x.text);
     currentSentenceIndex = Math.min(startSentenceIdx, Math.max(0, sentenceQueue.length - 1));
     secondsElapsed = 0;
     isPlaying = true;
     isPaused = false;
+    isUserManuallyNavigating = false;
 
     // Reveal player dock
     DOM.playerDock.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
@@ -4636,17 +9072,36 @@ function playChapterAudio(chapId, startSentenceIdx = 0) {
 
     updateLangToggleUI();
     startTimer();
+    startBackgroundKeepAlive();
+    requestScreenWakeLock();
+    updateMediaSession();
     speakCurrentSentence();
     renderChaptersList();
 
     if (readerActive) {
         readerChapterId = chap.id;
+        readerLang = currentLang;
+        updateReaderLangUI();
         paginateChapter();
+        if (readerSentenceToPageMap[currentSentenceIndex] !== undefined) {
+            readerCurrentPage = readerSentenceToPageMap[currentSentenceIndex] + 1;
+        }
         renderCurrentPage();
     }
 }
 
 function togglePlayPause() {
+    if (readerActive && readerBook) {
+        // If reader is open and audio is stopped or on a different chapter, start reading from current page
+        if (!isPlaying || String(currentPlayingChapterId) !== String(readerChapterId)) {
+            const startIdx = (readerPages[readerCurrentPage - 1]?.[0]?.globalIndex) || 0;
+            currentLang = readerLang;
+            updateLangToggleUI();
+            playChapterAudio(readerChapterId, startIdx, true);
+            return;
+        }
+    }
+
     if (!currentPlayingChapterId) {
         if (currentBook && currentBook.chapters.length > 0) {
             playChapterAudio(currentBook.chapters[0].id);
@@ -4656,14 +9111,23 @@ function togglePlayPause() {
 
     if (isPlaying && !isPaused) {
         isPaused = true;
+        if (typeof flushBookProgressImmediate === 'function' && currentBook) {
+            flushBookProgressImmediate(currentBook);
+        }
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
         if (currentElevenAudio) currentElevenAudio.pause();
         if (window.speechSynthesis) window.speechSynthesis.pause();
+        stopBackgroundKeepAlive();
+        releaseScreenWakeLock();
         stopTimer();
         updatePlayerUIState(false);
+        updateMediaSession();
     } else if (isPlaying && isPaused) {
         isPaused = false;
         startTimer();
+        startBackgroundKeepAlive();
+        requestScreenWakeLock();
+        updateMediaSession();
         if (currentElevenAudio) {
             currentElevenAudio.play().catch(() => speakCurrentSentence());
         } else if (window.speechSynthesis && window.speechSynthesis.paused) {
@@ -4686,17 +9150,24 @@ function updatePlayerUIState(speaking) {
         else DOM.dockVisualizer.classList.add('hidden');
     }
     renderChaptersList();
+    updateMediaSession();
 }
 
 function stopSpeech() {
+    if (typeof flushBookProgressImmediate === 'function' && currentBook) {
+        flushBookProgressImmediate(currentBook);
+    }
     isPlaying = false;
     isPaused = false;
     sentenceQueue = [];
     currentSentenceIndex = 0;
     if (utteranceTimeout) clearTimeout(utteranceTimeout);
     stopCurrentSpeechAudio();
+    stopBackgroundKeepAlive();
+    releaseScreenWakeLock();
     stopTimer();
     updatePlayerUIState(false);
+    updateMediaSession();
 }
 
 function startTimer() {
@@ -4719,9 +9190,13 @@ function stopTimer() {
 // `text_ka` on its chapters even if `translatedLangs` was lost, so ask the data.
 function bookHasGeorgian(book) {
     if (!book) return false;
+    if (book.lang === 'ka' || book.originalLang === 'ka' || book.isTranslatedEdition) return true;
     if (book.translatedLangs && book.translatedLangs.includes('ka')) return true;
     const has = Array.isArray(book.chapters) &&
-        book.chapters.some(c => c && typeof c.text_ka === 'string' && c.text_ka.trim().length > 0);
+        book.chapters.some(c => c && (
+            (typeof c.text_ka === 'string' && c.text_ka.trim().length > 0) ||
+            (typeof c.text === 'string' && /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(c.text))
+        ));
     if (has) {
         if (!book.translatedLangs) book.translatedLangs = [];
         if (!book.translatedLangs.includes('ka')) book.translatedLangs.push('ka');
@@ -4738,6 +9213,66 @@ function notifyNeedsTranslation() {
         alert('This book is not translated to Georgian yet. Use the Translate button to start.');
     }
 }
+
+// ── Dedicated Translated Book Persistence ──────────────────────────────────
+// When a book is translated, we create a dedicated sibling edition on the shelf
+// so the user can see and open it separately, with its own Georgian text,
+// instant Moon Reader loading, and Georgian voice listening.
+async function saveTranslatedBookEdition(originalBook, targetLang = 'ka') {
+    if (!originalBook) return null;
+    const field = 'text_' + targetLang;
+    if (!(originalBook.chapters || []).every(c => c.translation_state?.[targetLang]?.status === 'complete' && c.translation_state[targetLang].source === c.text)) throw new Error('Edition has incomplete or stale chapters');
+    const translatedId = `${originalBook.id}_${targetLang}`;
+
+    let all = [];
+    try {
+        all = await getAllBooks();
+    } catch (e) {
+        all = [];
+    }
+    const existing = all.find(b => String(b.id) === String(translatedId));
+
+    const cleanBaseTitle = (originalBook.title || 'Untitled').replace(/\s*\(ქართულად\)\s*$/, '').trim();
+    const translatedTitle = `${cleanBaseTitle} (${targetLang === 'ka' ? 'ქართულად' : 'English'})`;
+
+    const translatedChapters = (originalBook.chapters || []).map((chap, idx) => {
+        const textKa = chap[field] || '';
+        const words = textKa ? textKa.split(/\s+/).filter(Boolean).length : 0;
+        return {
+            id: chap.id || (idx + 1),
+            title: chap.title || `თავი ${idx + 1}`,
+            text: textKa, // Primary text IS the Georgian translation
+            [field]: textKa,
+            word_count: words,
+            estimated_duration_sec: Math.max(10, Math.round(words / 2.3))
+        };
+    });
+
+    const translatedBook = {
+        id: translatedId,
+        title: translatedTitle,
+        author: originalBook.author || 'Unknown Author',
+        coverUrl: originalBook.coverUrl,
+        lang: targetLang,
+        language: targetLang,
+        translatedLangs: [targetLang],
+        isTranslatedEdition: true,
+        originalBookId: originalBook.id,
+        dateAdded: existing?.dateAdded || new Date().toISOString(),
+        lastPlayedChapterId: existing?.lastPlayedChapterId || (translatedChapters[0] ? translatedChapters[0].id : 1),
+        progressPct: existing?.progressPct || 0,
+        chapters: translatedChapters,
+        extra: {
+            ...(originalBook.extra || {}),
+            is_translated_copy: true,
+            source_book_id: originalBook.id
+        }
+    };
+
+    await saveBookToDB(translatedBook);
+    return translatedBook;
+}
+window.saveTranslatedBookEdition = saveTranslatedBookEdition;
 
 function setGlobalSpeed(value) {
     // Fine 0.05 steps across 0.50x–2.00x, applied live to whatever is playing
@@ -4772,21 +9307,38 @@ function nudgeSpeed(delta) {
 
 function togglePlaybackLanguage() {
     if (!currentBook) return;
-    if (currentLang === 'en') {
-        if (!bookHasGeorgian(currentBook)) {
-            notifyNeedsTranslation();
-            return;
-        }
-        currentLang = 'ka';
-    } else {
-        currentLang = 'en';
+    const newLang = currentLang === 'en' ? 'ka' : 'en';
+    if (newLang === 'ka' && !bookHasGeorgian(currentBook)) {
+        notifyNeedsTranslation();
+        return;
     }
 
+    currentLang = newLang;
     updateLangToggleUI();
 
+    const currentProg = sentenceQueue.length > 0 ? (currentSentenceIndex / sentenceQueue.length) : 0;
+
+    if (readerActive) {
+        readerLang = currentLang;
+        updateReaderLangUI();
+        paginateChapter();
+        const newTotalSentences = Object.keys(readerSentenceToPageMap).length || 1;
+        const targetSentenceIdx = Math.min(newTotalSentences - 1, Math.max(0, Math.round(currentProg * (newTotalSentences - 1))));
+        if (readerSentenceToPageMap[targetSentenceIdx] !== undefined) {
+            readerCurrentPage = readerSentenceToPageMap[targetSentenceIdx] + 1;
+        }
+        renderCurrentPage();
+    }
+
     if (currentPlayingChapterId) {
-        stopSpeech();
-        playChapterAudio(currentPlayingChapterId);
+        const chap = currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId));
+        if (chap) {
+            const rawText = (currentLang === 'ka' && chap.text_ka) ? chap.text_ka : (chap.text || '');
+            const newSentences = prepareChapterSentences(rawText);
+            const targetIdx = Math.min(newSentences.length - 1, Math.max(0, Math.round(currentProg * Math.max(0, newSentences.length - 1))));
+            stopSpeech();
+            playChapterAudio(currentPlayingChapterId, targetIdx, true);
+        }
     }
 }
 
@@ -4797,76 +9349,195 @@ function updateLangToggleUI() {
     if (DOM.dockLangBadgeMobile) {
         DOM.dockLangBadgeMobile.textContent = currentLang === 'ka' ? '🇬🇪 KA' : '🇺🇸 EN';
     }
+    updateTopVoiceBadge();
 }
 
 // ══════════════════════════════════════════════════════════════════════════
 // ██ 4. FORMATTED PDF EXPORT GENERATOR ██
 // ══════════════════════════════════════════════════════════════════════════
 
-function exportCurrentBookPDF() {
+async function exportCurrentBookPDF() {
     if (!currentBook) {
         alert('Please select a book to export.');
         return;
     }
 
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert('PDF generator is initializing, please try again in a moment.');
-        return;
+    const isKa = readerLang === 'ka';
+    const langLabel = isKa ? 'ქართული (Georgian)' : 'English (Original)';
+    const bookTitle = currentBook.title || 'Untitled Book';
+    const author = currentBook.author || 'Author Unknown';
+
+    const exportBtn = document.querySelector('button[onclick="exportCurrentBookPDF()"]');
+    const oldBtnContent = exportBtn ? exportBtn.innerHTML : null;
+    if (exportBtn) {
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm align-middle">progress_activity</span> Generating Book PDF…';
     }
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    let html = '';
+    try {
+        const container = document.createElement('div');
+        container.id = 'book-pdf-render-container';
+        container.style.cssText = `
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            width: 794px;
+            background: #ffffff;
+            color: #1a1a1a;
+            font-family: 'Noto Serif Georgian', 'Sylfaen', 'Georgia', 'Times New Roman', serif;
+            font-size: 11pt;
+            line-height: 1.7;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        `;
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 45;
-    const maxLineWidth = pageWidth - margin * 2;
+        // 1. Book Cover / Title Page
+        html = `
+        <div class="book-cover-page" style="page-break-after: always; padding: 140px 60px 80px 60px; text-align: center; min-height: 1050px; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div>
+                <div style="font-size: 10.5pt; letter-spacing: 4px; text-transform: uppercase; color: #666; margin-bottom: 50px;">Lumina AI Studio Edition</div>
+                <h1 style="font-size: 32pt; font-weight: 700; line-height: 1.25; margin: 0 0 25px 0; color: #111; word-break: break-word;">${escapeHtml(bookTitle)}</h1>
+                <div style="width: 100px; height: 2px; background: #222; margin: 0 auto 30px auto;"></div>
+                <h2 style="font-size: 18pt; font-weight: 400; font-style: italic; color: #333; margin: 0 0 20px 0;">${escapeHtml(author)}</h2>
+            </div>
+            <div style="font-size: 9.5pt; color: #666; border-top: 1px solid #ddd; padding-top: 30px; text-align: center;">
+                <p style="margin: 5px 0;"><strong>${isKa ? 'გამოცემის ენა' : 'Language'}:</strong> ${escapeHtml(langLabel)}</p>
+                <p style="margin: 5px 0;"><strong>${isKa ? 'თავების რაოდენობა' : 'Total Chapters'}:</strong> ${currentBook.chapters.length}</p>
+                <p style="margin: 5px 0;"><strong>${isKa ? 'თარიღი' : 'Export Date'}:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+        </div>
+        `;
 
-    doc.setFont("times", "bold");
-    doc.setFontSize(26);
-    doc.text(currentBook.title, margin, 120);
-
-    doc.setFont("times", "normal");
-    doc.setFontSize(13);
-    doc.text(`By ${currentBook.author || 'Author'} • Lumina AI Studio Edition`, margin, 150);
-    doc.text(`Language: ${readerLang === 'ka' ? 'Georgian (ქართული)' : 'English (Original)'}`, margin, 172);
-    doc.text(`Exported on: ${new Date().toLocaleDateString()}`, margin, 194);
-
-    doc.setLineWidth(1);
-    doc.line(margin, 215, pageWidth - margin, 215);
-
-    let yPos = 250;
-
-    currentBook.chapters.forEach((chap, cIdx) => {
-        if (yPos > 650) {
-            doc.addPage();
-            yPos = 60;
+        // 2. Table of Contents (სარჩევი)
+        if (currentBook.chapters.length > 1) {
+            html += `
+            <div class="book-toc-page" style="page-break-after: always; padding: 70px 60px; min-height: 1050px; box-sizing: border-box;">
+                <h2 style="font-size: 22pt; font-weight: 700; text-align: center; margin-bottom: 40px; border-bottom: 2px solid #222; padding-bottom: 12px;">
+                    ${isKa ? 'სარჩევი' : 'Table of Contents'}
+                </h2>
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+            `;
+            currentBook.chapters.forEach((chap, idx) => {
+                const title = chap.title || (isKa ? `თავი ${idx + 1}` : `Chapter ${idx + 1}`);
+                html += `
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding-bottom: 5px; font-size: 11pt;">
+                        <span style="font-weight: 600;">${idx + 1}. ${escapeHtml(title)}</span>
+                        <span style="color: #666;">§ ${idx + 1}</span>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
         }
 
-        doc.setFont("times", "bold");
-        doc.setFontSize(18);
-        doc.text(chap.title, margin, yPos);
-        yPos += 25;
+        // 3. Chapters
+        currentBook.chapters.forEach((chap, idx) => {
+            const title = chap.title || (isKa ? `თავი ${idx + 1}` : `Chapter ${idx + 1}`);
+            const content = (isKa && chap.text_ka) ? chap.text_ka : (chap.text || '');
+            const paragraphs = content.split(/\n\s*\n|\r\n\s*\r\n/).map(p => p.trim()).filter(Boolean);
 
-        doc.setFont("times", "normal");
-        doc.setFontSize(11);
+            html += `
+            <div class="book-chapter-section" style="page-break-before: always; padding: 70px 60px 60px 60px; min-height: 1050px; box-sizing: border-box;">
+                <div style="font-size: 8.5pt; text-transform: uppercase; letter-spacing: 2px; color: #888; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #eaeaea; padding-bottom: 8px;">
+                    ${escapeHtml(bookTitle)} — ${escapeHtml(title)}
+                </div>
+                <h2 style="font-size: 22pt; font-weight: 700; text-align: center; margin: 30px 0 35px 0; color: #111; line-height: 1.3;">
+                    ${escapeHtml(title)}
+                </h2>
+                <div style="text-align: justify; text-justify: inter-word; hyphens: auto;">
+            `;
 
-        const chapterContent = (readerLang === 'ka' && chap.text_ka) ? chap.text_ka : chap.text;
-        const lines = doc.splitTextToSize(chapterContent, maxLineWidth);
+            paragraphs.forEach((p) => {
+                html += `<p style="margin: 0 0 16px 0; text-indent: 2em; line-height: 1.75; font-size: 11pt;">${escapeHtml(p)}</p>`;
+            });
 
-        lines.forEach(line => {
-            if (yPos > 780) {
-                doc.addPage();
-                yPos = 60;
-            }
-            doc.text(line, margin, yPos);
-            yPos += 16;
+            html += `
+                </div>
+                <div style="text-align: center; font-size: 9pt; color: #888; margin-top: 50px; border-top: 1px solid #f0f0f0; padding-top: 12px;">
+                    — ${idx + 1} —
+                </div>
+            </div>
+            `;
         });
 
-        yPos += 30;
-    });
+        container.innerHTML = html;
+        document.body.appendChild(container);
 
-    const safeTitle = currentBook.title.replace(/[^a-zA-Z0-9]/g, '_');
-    doc.save(`${safeTitle}_${readerLang === 'ka' ? 'Georgian' : 'English'}.pdf`);
+        const safeTitle = (bookTitle.replace(/[^a-zA-Z0-9\u10A0-\u10FF]/g, '_') || 'Book').slice(0, 40);
+        const fileName = `${safeTitle}_${isKa ? 'Georgian_Edition' : 'English_Edition'}.pdf`;
+
+        if (window.html2pdf) {
+            const opt = {
+                margin: [0, 0, 0, 0],
+                filename: fileName,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+                jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
+
+            await window.html2pdf().set(opt).from(container).save();
+        } else {
+            openPrintableBookWindow(bookTitle, html);
+        }
+
+        if (container.parentNode) container.parentNode.removeChild(container);
+    } catch (err) {
+        console.error('[exportCurrentBookPDF] Error generating PDF:', err);
+        alert('Could not export PDF automatically. Opening print-friendly book view...');
+        openPrintableBookWindow(bookTitle, html);
+    } finally {
+        if (exportBtn && oldBtnContent) {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = oldBtnContent;
+        }
+    }
+}
+
+function openPrintableBookWindow(bookTitle, bookHtml) {
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+        alert('Please allow pop-ups to view or print the book PDF.');
+        return;
+    }
+    printWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>${escapeHtml(bookTitle)} — Lumina Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Georgian:wght@400;600;700&family=Noto+Sans+Georgian:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 20mm 15mm 20mm 15mm;
+        }
+        body {
+            font-family: 'Noto Serif Georgian', 'Sylfaen', 'Georgia', 'Times New Roman', serif;
+            font-size: 11pt;
+            line-height: 1.7;
+            color: #111;
+            margin: 0;
+            padding: 20px;
+            background: #fff;
+        }
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="position: fixed; top: 15px; right: 15px; background: #0f172a; color: #fff; padding: 10px 18px; border-radius: 8px; font-family: sans-serif; font-size: 13px; font-weight: bold; cursor: pointer; z-index: 99999; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" onclick="window.print()">
+        🖨️ Print / Save as PDF
+    </div>
+    ${bookHtml}
+    <script>
+        setTimeout(() => { window.print(); }, 800);
+    <\/script>
+</body>
+</html>`);
+    printWin.document.close();
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -4971,105 +9642,164 @@ function generateDynamicStudioCover(title) {
 }
 
 async function handleFileUpload(file) {
-    if (!file || file.type !== 'application/pdf') {
-        alert('Please select a valid PDF file.');
+    if (!file) return;
+
+    const fileName = (file.name || '').toLowerCase();
+    const isPdf = file.type === 'application/pdf' || fileName.endsWith('.pdf');
+    const isText = (file.type && file.type.startsWith('text/')) || fileName.endsWith('.txt') || fileName.endsWith('.md');
+
+    if (!isPdf && !isText) {
+        alert('Please select a valid PDF or text document (.pdf, .txt, .md).');
         return;
     }
 
     DOM.uploadProgressContainer.classList.remove('hidden');
-    DOM.uploadStatusText.textContent = "Extracting text from PDF...";
+    DOM.uploadStatusText.classList.remove('text-error');
+    DOM.uploadStatusText.textContent = isPdf ? "Extracting text from PDF..." : "Reading document text...";
     DOM.uploadProgressBar.style.width = '15%';
     DOM.uploadProgressPct.textContent = '15%';
 
     try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let totalPages = 1;
+        let fileTitle = cleanBookTitle(file.name);
+        let title = fileTitle.charAt(0).toUpperCase() + fileTitle.slice(1);
+        let author = isPdf ? 'PDF Audiobook' : 'Text Document';
+        let detectedLang = 'en';
+        let isGeorgianBook = false;
+        let coverUrl = null;
+        let chapters = [];
 
-        const pageTexts = [];
-        const totalPages = pdf.numPages;
+        if (isPdf) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            totalPages = pdf.numPages;
+            const pageTexts = [];
 
-        for (let i = 1; i <= totalPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            pageTexts.push({ index: i, text: pdfPageLines(content) });
+            for (let i = 1; i <= totalPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                pageTexts.push({ index: i, text: pdfPageLines(content) });
 
-            const pct = 15 + Math.round((i / totalPages) * 45);
-            DOM.uploadProgressBar.style.width = `${pct}%`;
-            DOM.uploadProgressPct.textContent = `${pct}%`;
+                const pct = 15 + Math.round((i / totalPages) * 45);
+                DOM.uploadProgressBar.style.width = `${pct}%`;
+                DOM.uploadProgressPct.textContent = `${pct}%`;
+            }
+
+            DOM.uploadStatusText.textContent = "Detecting cover, title and chapters...";
+            DOM.uploadProgressBar.style.width = '70%';
+            DOM.uploadProgressPct.textContent = '70%';
+
+            let info = {};
+            try { info = (await pdf.getMetadata()).info || {}; } catch (e) {}
+
+            const usableMeta = (v) => {
+                const t = (v || '').trim();
+                return t.length > 1 && !/^\(?(anonymous|unknown|untitled|none|n\/a|microsoft word.*)\)?$/i.test(t) ? t : null;
+            };
+
+            const sampleText = pageTexts.slice(0, 30).map(p => p.text).join(' ');
+            const kaCount = (sampleText.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+            const enCount = (sampleText.match(/[A-Za-z]/g) || []).length;
+            isGeorgianBook = kaCount > 25 && (kaCount >= enCount * 0.25 || kaCount > 100);
+            detectedLang = isGeorgianBook ? 'ka' : 'en';
+
+            const structure = detectBookStructure(pageTexts, { isKa: isGeorgianBook });
+            title = usableMeta(info.Title)
+                || structure.title
+                || title;
+            author = usableMeta(info.Author) || structure.author || (isGeorgianBook ? 'ქართული აუდიოწიგნი' : 'PDF Audiobook');
+
+            try { coverUrl = await fetchBookCoverArt(title, { fallback: false }); } catch (e) {}
+            if (!coverUrl) coverUrl = await renderPdfPageAsCover(pdf, structure.coverIndex || 1);
+            if (!coverUrl) coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
+
+            chapters = structure.chapters.length
+                ? structure.chapters
+                : splitIntoChapters(pageTexts.map(p => p.text).join('\n\n'), isGeorgianBook);
+        } else {
+            // Text or Markdown document
+            const fullText = await file.text();
+            DOM.uploadProgressBar.style.width = '50%';
+            DOM.uploadProgressPct.textContent = '50%';
+            DOM.uploadStatusText.textContent = "Formatting document chapters...";
+
+            const kaCount = (fullText.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+            const enCount = (fullText.match(/[A-Za-z]/g) || []).length;
+            isGeorgianBook = kaCount > 25 && (kaCount >= enCount * 0.25 || kaCount > 100);
+            detectedLang = isGeorgianBook ? 'ka' : 'en';
+            author = isGeorgianBook ? 'ქართული ტექსტი' : 'Text Document';
+
+            chapters = splitIntoChapters(fullText, isGeorgianBook);
+            coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
         }
 
-        DOM.uploadStatusText.textContent = "Detecting cover, title and chapters...";
-        DOM.uploadProgressBar.style.width = '70%';
-        DOM.uploadProgressPct.textContent = '70%';
-
-        // Embedded PDF metadata is the most reliable title/author when present.
-        let info = {};
-        try { info = (await pdf.getMetadata()).info || {}; } catch (e) { /* optional */ }
-
-        // Producer tools stamp junk metadata ("(anonymous)", "untitled"); ignore it.
-        const usableMeta = (v) => {
-            const t = (v || '').trim();
-            return t.length > 1 && !/^\(?(anonymous|unknown|untitled|none|n\/a|microsoft word.*)\)?$/i.test(t) ? t : null;
-        };
-        const structure = detectBookStructure(pageTexts, { isKa: false });
-        const fileTitle = cleanBookTitle(file.name);
-        const title = usableMeta(info.Title)
-            || structure.title
-            || (fileTitle.charAt(0).toUpperCase() + fileTitle.slice(1));
-        const author = usableMeta(info.Author) || structure.author || 'PDF Audiobook';
-
-        // Cover: official art if the title is a known book, otherwise the PDF's
-        // own detected cover page rendered to an image.
-        let coverUrl = null;
-        try { coverUrl = await fetchBookCoverArt(title, { fallback: false }); } catch (e) { /* optional */ }
-        if (!coverUrl) coverUrl = await renderPdfPageAsCover(pdf, structure.coverIndex || 1);
-        if (!coverUrl) coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
-
-        DOM.uploadStatusText.textContent = "Structuring chapters...";
+        DOM.uploadStatusText.textContent = isGeorgianBook ? "თავების სტრუქტურირება..." : "Structuring chapters...";
         DOM.uploadProgressBar.style.width = '90%';
         DOM.uploadProgressPct.textContent = '90%';
 
-        const chapters = structure.chapters.length
-            ? structure.chapters
-            : splitIntoChapters(pageTexts.map(p => p.text).join('\n\n'));
+        if (isGeorgianBook) {
+            chapters.forEach(ch => {
+                if (!ch.text_ka && ch.text) {
+                    ch.text_ka = ch.text;
+                }
+            });
+        }
+
+        const newBookId = 'book_' + Date.now();
+        // Clear any deletion tombstone so user can re-upload or add this book fresh
+        clearBookTombstone(newBookId, title);
 
         const newBook = {
-            id: 'book_' + Date.now(),
+            id: newBookId,
             title,
             author,
             coverUrl: coverUrl,
             chapters: chapters,
-            translatedLangs: [],
+            lang: detectedLang,
+            originalLang: detectedLang,
+            translatedLangs: isGeorgianBook ? ['ka'] : [],
             dateAdded: new Date().toISOString(),
             lastPlayedChapterId: chapters.length > 0 ? chapters[0].id : null,
             progressPct: 0,
+            isUserUploaded: true,
             extra: {
-                source: 'pdf',
+                source: isPdf ? 'pdf' : 'text',
                 page_count: totalPages,
-                cover_page: structure.coverIndex || null,
-                detected_title: structure.title || null,
-                detected_author: structure.author || null,
-                detected_sections: chapters.length
+                detected_title: title,
+                detected_author: author,
+                detected_sections: chapters.length,
+                detected_lang: detectedLang
             }
         };
 
         await saveBookToDB(newBook);
         DOM.uploadProgressBar.style.width = '100%';
         DOM.uploadProgressPct.textContent = '100%';
-        DOM.uploadStatusText.textContent = "Import complete!";
+        DOM.uploadStatusText.textContent = isGeorgianBook ? "ქართული წიგნი წარმატებით ჩაიტვირთა!" : "Import complete!";
 
-        setTimeout(() => {
+        // Reset file input value so uploading the same file again triggers change event
+        const fileInputEl = document.getElementById('fileInput');
+        if (fileInputEl) fileInputEl.value = '';
+
+        setTimeout(async () => {
             closeModal('uploadModal');
             DOM.uploadProgressContainer.classList.add('hidden');
-            renderDigitalShelf();
+            if (typeof navigate === 'function') navigate('library');
+            await renderDigitalShelf();
             selectBook(newBook.id, true);
-        }, 800);
-
+            if (typeof showToast === 'function') {
+                showToast(isGeorgianBook
+                    ? `🇬🇪 „${title}“ — წარმატებით დაემატა ბიბლიოთეკას!`
+                    : `📖 "${title}" added to your library!`, 'success');
+            }
+        }, 600);
 
     } catch (err) {
-        console.error('PDF Parse Error:', err);
-        DOM.uploadStatusText.textContent = "Error parsing PDF document.";
+        console.error('File Upload Error:', err);
+        DOM.uploadStatusText.textContent = "Error parsing document: " + (err.message || 'Unknown error');
         DOM.uploadStatusText.classList.add('text-error');
+        const fileInputEl = document.getElementById('fileInput');
+        if (fileInputEl) fileInputEl.value = '';
     }
 }
 
@@ -5124,12 +9854,18 @@ async function createBookFromScannedPages(pages, meta) {
     const list = (pages || []).filter(p => p && p.text && p.text.trim());
     if (!list.length) throw new Error('No recognised page text');
 
-    const isKa = (meta && meta.lang) === 'ka';
+    const sampleKa = (list.slice(0, 15).map(p => p.text).join(' ').match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+    const isKa = (meta && meta.lang) === 'ka' || sampleKa > 25;
     const structure = detectBookStructure(list, { isKa });
     const chapters = structure.chapters;
+    if (isKa) {
+        chapters.forEach(ch => {
+            if (!ch.text_ka && ch.text) ch.text_ka = ch.text;
+        });
+    }
 
     const title = ((meta && meta.title) || structure.title || 'Scanned book').trim();
-    const author = ((meta && meta.author) || structure.author || '').trim();
+    const author = ((meta && meta.author) || structure.author || (isKa ? 'ქართული წიგნი' : '')).trim();
 
     // Cover: the photographed cover page itself wins (it *is* the real cover of
     // this book), then official art, then the generated studio cover.
@@ -5145,9 +9881,11 @@ async function createBookFromScannedPages(pages, meta) {
     const newBook = {
         id: 'book_' + Date.now(),
         title,
-        author: author || 'Scanned book',
+        author: author || (isKa ? 'ქართული წიგნი' : 'Scanned book'),
         coverUrl,
         chapters,
+        lang: isKa ? 'ka' : 'en',
+        originalLang: isKa ? 'ka' : 'en',
         translatedLangs: isKa ? ['ka'] : [],
         dateAdded: new Date().toISOString(),
         lastPlayedChapterId: chapters.length ? chapters[0].id : null,
@@ -5229,12 +9967,12 @@ window.appendScannedPagesToBook = appendScannedPagesToBook;
 // PDFs — so a book looks the same on the shelf however it arrived.
 // ══════════════════════════════════════════════════════════════════════════
 
-const FRONT_MATTER_RE = /^(contents|table of contents|copyright|dedication|acknowledg(e)?ments?|about the author|სარჩევი|შინაარსი|მიძღვნა)\b/i;
+const FRONT_MATTER_RE = /^(contents|table of contents|copyright|dedication|acknowledg(e)?ments?|about the author|სარჩევი|შინაარსი|მიძღვნა)(?![\u10A0-\u10FFa-zA-Z])/i;
 const HEADING_RE = [
     /^(chapter|part|book|section|volume)\s+([0-9]{1,3}|[ivxlcdm]{1,7})\b[\s.:—–-]*(.{0,70})$/i,
     /^(prologue|epilogue|introduction|preface|foreword|afterword|appendix|conclusion|interlude)\b[\s.:—–-]*(.{0,70})$/i,
-    /^(თავი|ნაწილი|წიგნი|კარი)\s+([0-9]{1,3}|[ა-ჰ]{1,4})\b[\s.:—–-]*(.{0,70})$/,
-    /^(შესავალი|წინასიტყვაობა|ბოლოსიტყვაობა|დასკვნა|დანართი|პროლოგი|ეპილოგი)\b[\s.:—–-]*(.{0,70})$/,
+    /^(თავი|ნაწილი|წიგნი|კარი)\s+([0-9]{1,3}|[ა-ჰ]{1,4})(?![\u10A0-\u10FFa-zA-Z])[\s.:—–-]*(.{0,70})$/,
+    /^(შესავალი|წინასიტყვაობა|ბოლოსიტყვაობა|დასკვნა|დანართი|პროლოგი|ეპილოგი)(?![\u10A0-\u10FFa-zA-Z])[\s.:—–-]*(.{0,70})$/,
 ];
 
 /** A short standalone line that starts a new chapter, or null. */
@@ -5297,9 +10035,16 @@ function detectTitleAndAuthor(text) {
  * `pages` is [{ index, text }] — pages from a scan, or per-page PDF text.
  */
 function detectBookStructure(pages, opts) {
-    const isKa = !!(opts && opts.isKa);
     const list = (pages || []).filter(p => p && typeof p.text === 'string');
     if (!list.length) return { coverIndex: null, title: null, author: null, chapters: [] };
+
+    let isKa = opts && typeof opts.isKa === 'boolean' ? opts.isKa : undefined;
+    if (isKa === undefined) {
+        const sample = list.slice(0, 20).map(p => p.text).join(' ');
+        const ka = (sample.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+        const en = (sample.match(/[A-Za-z]/g) || []).length;
+        isKa = ka > 25 && (ka >= en * 0.25 || ka > 100);
+    }
 
     // 1. Cover: only the first two pages can be one.
     let coverIndex = null;
@@ -5326,7 +10071,7 @@ function detectBookStructure(pages, opts) {
                 current = { title: heading, text: '', firstPage: page.index, lastPage: page.index };
                 return;
             }
-            if (!current) current = { title: 'Opening', text: '', firstPage: page.index, lastPage: page.index };
+            if (!current) current = { title: isKa ? 'შესავალი ნაწილი' : 'Opening', text: '', firstPage: page.index, lastPage: page.index };
             current.text += (current.text ? '\n' : '') + line;
             current.lastPage = page.index;
         });
@@ -5334,7 +10079,7 @@ function detectBookStructure(pages, opts) {
     push();
 
     let sections = found.filter(c => c.text.split(/\s+/).filter(Boolean).length > 25);
-    if (sections.length < 2) sections = bucketPages(body);
+    if (sections.length < 2) sections = bucketPages(body, isKa);
 
     // 3. Very long chapters are parted so narration and translation stay snappy.
     const MAX_WORDS = 1800;
@@ -5348,7 +10093,7 @@ function detectBookStructure(pages, opts) {
             const text = slice.join(' ');
             chapters.push({
                 id: chapters.length + 1,
-                title: partCount > 1 ? `${section.title} (part ${p + 1})` : section.title,
+                title: partCount > 1 ? (isKa ? `${section.title} (ნაწილი ${p + 1})` : `${section.title} (part ${p + 1})`) : section.title,
                 text,
                 text_ka: isKa ? text : null,
                 word_count: slice.length,
@@ -5361,7 +10106,7 @@ function detectBookStructure(pages, opts) {
 }
 
 /** Fallback when a book has no detectable headings: read it page by page. */
-function bucketPages(pages) {
+function bucketPages(pages, isKa = false) {
     const MAX_WORDS = 600;
     const out = [];
     let bucket = [];
@@ -5375,7 +10120,9 @@ function bucketPages(pages) {
             const text = bucket.join('\n\n').trim();
             if (text) {
                 out.push({
-                    title: first === page.index ? `Page ${first}` : `Pages ${first}–${page.index}`,
+                    title: first === page.index
+                        ? (isKa ? `გვერდი ${first}` : `Page ${first}`)
+                        : (isKa ? `გვერდები ${first}–${page.index}` : `Pages ${first}–${page.index}`),
                     text,
                     firstPage: first,
                     lastPage: page.index
@@ -5394,10 +10141,14 @@ window.detectBookStructure = detectBookStructure;
 
 
 
-function splitIntoChapters(text) {
+function splitIntoChapters(text, isKa = false) {
     const chapters = [];
     const MAX_WORDS = 600;
     const words = text.split(/\s+/).filter(w => w.trim().length > 0);
+
+    const sample = text.slice(0, 4000);
+    const ka = (sample.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
+    const isGeorgian = isKa || (ka > 25);
 
     let currentChunk = [];
     let chapIndex = 1;
@@ -5405,11 +10156,12 @@ function splitIntoChapters(text) {
     for (let i = 0; i < words.length; i++) {
         currentChunk.push(words[i]);
         if (currentChunk.length >= MAX_WORDS) {
+            const chunkText = currentChunk.join(' ');
             chapters.push({
                 id: chapIndex,
-                title: `Chapter ${chapIndex}`,
-                text: currentChunk.join(' '),
-                text_ka: null,
+                title: isGeorgian ? `თავი ${chapIndex}` : `Chapter ${chapIndex}`,
+                text: chunkText,
+                text_ka: isGeorgian ? chunkText : null,
                 word_count: currentChunk.length,
                 estimated_duration_sec: Math.round((currentChunk.length / 140) * 60)
             });
@@ -5419,22 +10171,24 @@ function splitIntoChapters(text) {
     }
 
     if (currentChunk.length > 0) {
+        const chunkText = currentChunk.join(' ');
         chapters.push({
             id: chapIndex,
-            title: `Chapter ${chapIndex}`,
-            text: currentChunk.join(' '),
-            text_ka: null,
+            title: isGeorgian ? `თავი ${chapIndex}` : `Chapter ${chapIndex}`,
+            text: chunkText,
+            text_ka: isGeorgian ? chunkText : null,
             word_count: currentChunk.length,
             estimated_duration_sec: Math.round((currentChunk.length / 140) * 60)
         });
     }
 
     if (chapters.length === 0) {
+        const sampleT = text.substring(0, 4000);
         chapters.push({
             id: 1,
-            title: 'Full Reading',
-            text: text.substring(0, 4000),
-            text_ka: null,
+            title: isGeorgian ? 'სრული ტექსტი' : 'Full Reading',
+            text: sampleT,
+            text_ka: isGeorgian ? sampleT : null,
             word_count: 500,
             estimated_duration_sec: 180
         });
@@ -5447,7 +10201,7 @@ function splitIntoNaturalSentences(text) {
     if (!text || !text.trim()) return [];
 
     // 1. Clean PDF broken hyphenations: "con- \n tinue" -> "continue"
-    let clean = text.replace(/(\b[a-zA-Zა-ჰ]+)-\s*[\r\n]+\s*([a-zA-Zა-ჰ]+\b)/g, '$1$2');
+    let clean = text.replace(/(?<![\u10A0-\u10FFa-zA-Z])([a-zA-Zა-ჰ]+)-\s*[\r\n]+\s*([a-zA-Zა-ჰ]+)(?![\u10A0-\u10FFa-zA-Z])/g, '$1$2');
     clean = clean.replace(/[ \t\f]+/g, ' ');
 
     // 2. Protect standard title abbreviations
@@ -5458,7 +10212,7 @@ function splitIntoNaturalSentences(text) {
     clean = clean.replace(/\b(e\.g\.|i\.e\.|etc\.|vs\.)/gi, (m) => m.replace(/\./g, '__DOT__'));
 
     // 4. Protect Georgian abbreviations
-    clean = clean.replace(/\b(ე\.ი\.|ე\.წ\.|და\s*ა\.შ\.|და\s*სხვ\.)/g, (m) => m.replace(/\./g, '__DOT__'));
+    clean = clean.replace(/(?<![\u10A0-\u10FF])(ე\.ი\.|ე\.წ\.|და\s*ა\.შ\.|და\s*სხვ\.)/g, (m) => m.replace(/\./g, '__DOT__'));
 
     // 5. Protect decimals and currency
     clean = clean.replace(/(\d+)\.(\d+)/g, '$1__DOT__$2');
@@ -5467,21 +10221,20 @@ function splitIntoNaturalSentences(text) {
     const regex = /[^.!?…\n]+(?:[.!?…]+["„”'»)]*(?=\s+|$)|[\n]{2,}|$)/g;
     const matches = clean.match(regex);
 
-    if (!matches) return chunkByWords(text.trim(), 40);
+    if (!matches) return chunkByWords(text.trim(), 16);
 
     const sentences = [];
     for (let i = 0; i < matches.length; i++) {
         const s = matches[i].replace(/__DOT__/g, '.').trim();
         if (s.length > 0) {
-            if (s.split(/\s+/).length > 34) {
-                sentences.push(...splitLongIntoClauses(s, 34));
-
+            if (s.split(/\s+/).length > 16) {
+                sentences.push(...splitLongIntoClauses(s, 16));
             } else {
                 sentences.push(s);
             }
         }
     }
-    return sentences.length > 0 ? sentences : chunkByWords(text.trim(), 40);
+    return sentences.length > 0 ? sentences : chunkByWords(text.trim(), 16);
 }
 
 function chunkByWords(text, limit) {
@@ -5502,10 +10255,10 @@ function chunkByWords(text, limit) {
 /**
  * Splits an over-long sentence at natural clause boundaries (, ; : — and
  * Georgian conjunctions) instead of at an arbitrary word count. Shorter,
- * naturally-bounded pieces synthesize much faster, which is what removes the
- * long pauses between sentences on scanned books where punctuation is sparse.
+ * naturally-bounded pieces synthesize much faster and produce clean, comfortable
+ * reading highlights (1-2 lines) instead of highlighting giant 50-word walls.
  */
-function splitLongIntoClauses(text, limit) {
+function splitLongIntoClauses(text, limit = 16) {
     const parts = String(text)
         .split(/(?<=[,;:—–])\s+/)
         .flatMap(p => (p.split(/\s+/).length > limit ? chunkByWords(p, limit) : [p]));
@@ -5579,9 +10332,13 @@ async function renderDigitalShelf(filterText = '') {
         div.className = 'group relative cursor-pointer';
         div.onclick = () => selectBook(book.id, true);
 
+        const coverSrc = (book.coverUrl && typeof book.coverUrl === 'string' && book.coverUrl.trim().length > 5 && !book.coverUrl.includes('undefined'))
+            ? book.coverUrl
+            : (typeof generateDynamicStudioCover === 'function' ? generateDynamicStudioCover(book.title || 'Audiobook') : '');
+
         div.innerHTML = `
             <div class="aspect-[2/3] rounded-2xl overflow-hidden mb-2 relative glass-card p-1.5 ${isSelected ? 'border-primary-container ring-2 ring-primary-container/30 shadow-[0_0_25px_rgba(0,240,255,0.25)]' : 'border border-white/5'}">
-                <img src="${book.coverUrl}" class="w-full h-full object-cover rounded-xl group-hover:scale-[1.03] transition-transform duration-500 bg-surface-container">
+                <img src="${coverSrc}" class="w-full h-full object-cover rounded-xl group-hover:scale-[1.03] transition-transform duration-500 bg-surface-container">
                 
                 <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center rounded-2xl gap-3">
                     <div class="flex items-center gap-3">
@@ -5598,7 +10355,7 @@ async function renderDigitalShelf(filterText = '') {
                     <span class="material-symbols-outlined text-[15px]">delete</span>
                 </button>
 
-                ${hasGeorgian ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold/90 text-[10px] font-bold text-black shadow-lg">🇬🇪 KA</div>' : ''}
+                ${book.isTranslatedEdition ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold text-[10px] font-extrabold text-black shadow-lg flex items-center gap-1"><span>🇬🇪</span><span>ქართულად</span></div>' : hasGeorgian ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold/90 text-[10px] font-bold text-black shadow-lg">🇬🇪 KA</div>' : ''}
                 ${book.progressPct > 0 ? `<div class="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-full h-1 overflow-hidden"><div class="h-full bg-primary-container" style="width: ${book.progressPct}%"></div></div>` : ''}
             </div>
             <h4 class="font-bold text-white text-xs sm:text-sm truncate group-hover:text-primary-fixed transition-colors">${escapeHtml(book.title)}</h4>
@@ -5637,8 +10394,8 @@ function renderDiscoverClassics() {
                 <p class="text-xs text-on-surface-variant mt-1">${stats.chaptersCount} Chapters • ${stats.totalWords.toLocaleString()} Words • ~${stats.totalFormattedTime}</p>
             </div>
             <button class="mt-4 w-full py-2.5 rounded-xl bg-white/5 group-hover:bg-primary-container group-hover:text-on-primary-container text-white text-xs font-semibold flex items-center justify-center gap-2 transition">
-                <span class="material-symbols-outlined text-base">headphones</span>
-                Read & Listen
+                <span class="material-symbols-outlined text-base">add_to_photos</span>
+                Add to My Audiobooks
             </button>
         `;
         DOM.discoverGrid.appendChild(div);
@@ -5651,6 +10408,31 @@ async function selectBook(bookId, autoPlayFirst = false) {
     if (!currentBook) return;
 
     if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
+    const hasGeorgianText = (currentBook.chapters || []).some(c =>
+        (c && typeof c.text_ka === 'string' && /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(c.text_ka)) ||
+        (c && typeof c.text === 'string' && /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(c.text))
+    );
+    const isGeorgian = currentBook.lang === 'ka' || currentBook.originalLang === 'ka' || currentBook.isTranslatedEdition || hasGeorgianText;
+
+    if (isGeorgian) {
+        currentBook.lang = 'ka';
+        currentLang = 'ka';
+        if (!currentBook.translatedLangs.includes('ka')) currentBook.translatedLangs.push('ka');
+        // Heal chapters missing text_ka
+        let healed = false;
+        (currentBook.chapters || []).forEach(c => {
+            if ((!c.text_ka || !c.text_ka.trim()) && c.text && /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(c.text)) {
+                c.text_ka = c.text;
+                healed = true;
+            }
+        });
+        if (healed) {
+            try { await saveBookToDB(currentBook); } catch (e) { /* background heal */ }
+        }
+    } else {
+        currentLang = 'en';
+    }
+    updateLangToggleUI();
 
     const stats = getBookStats(currentBook);
 
@@ -5660,12 +10442,24 @@ async function selectBook(bookId, autoPlayFirst = false) {
 
     const hasKa = bookHasGeorgian(currentBook);
     if (DOM.heroGeorgianBadge) {
-        if (hasKa) DOM.heroGeorgianBadge.classList.remove('hidden');
-        else DOM.heroGeorgianBadge.classList.add('hidden');
+        if (hasKa) {
+            DOM.heroGeorgianBadge.classList.remove('hidden');
+            if (currentBook.lang === 'ka' && !currentBook.isTranslatedEdition) {
+                DOM.heroGeorgianBadge.textContent = '🇬🇪 ქართული გამოცემა (Georgian Edition)';
+            } else {
+                DOM.heroGeorgianBadge.textContent = '🇬🇪 Georgian Translated';
+            }
+        } else {
+            DOM.heroGeorgianBadge.classList.add('hidden');
+        }
     }
 
     if (DOM.btnTranslateWholeBookText) {
-        DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Book (Georgian)";
+        if (currentBook.lang === 'ka' && !currentBook.isTranslatedEdition) {
+            DOM.btnTranslateWholeBookText.textContent = "Translate Book (English)";
+        } else {
+            DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Book (Georgian)";
+        }
     }
 
     const lastChap = currentBook.chapters.find(c => String(c.id) === String(currentBook.lastPlayedChapterId)) || currentBook.chapters[0];
@@ -5693,16 +10487,60 @@ async function selectBook(bookId, autoPlayFirst = false) {
 }
 
 async function deleteBook(e, bookId) {
-    e.stopPropagation();
-    if (confirm('Are you sure you want to delete this audiobook from your shelf?')) {
-        await deleteBookFromDB(bookId);
-        if (currentBook && String(currentBook.id) === String(bookId)) {
-            stopSpeech();
-            currentBook = null;
-            DOM.chaptersContainer.classList.add('hidden');
-            DOM.playerDock.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    let bookTitle = '';
+    let bookSlug = '';
+    try {
+        const all = await getAllLocalBooks();
+        const found = all.find(b => String(b.id) === String(bookId));
+        if (found) {
+            bookTitle = found.title;
+            bookSlug = found.slug || '';
+        } else if (currentBook && String(currentBook.id) === String(bookId)) {
+            bookTitle = currentBook.title;
+            bookSlug = currentBook.slug || '';
         }
-        await renderDigitalShelf();
+    } catch (err) {}
+
+    const confirmTitle = bookTitle ? `„${bookTitle}“` : 'this audiobook';
+    if (!confirm(`Are you sure you want to permanently delete ${confirmTitle} from your shelf?`)) {
+        return;
+    }
+
+    // 1. Immediately record deletion tombstone
+    markBookAsDeleted(bookId, bookTitle, bookSlug);
+
+    // 2. Stop playback and clear reader if this was active book
+    if (currentBook && (String(currentBook.id) === String(bookId) || (bookTitle && currentBook.title === bookTitle))) {
+        try { stopSpeech(); } catch (err) {}
+        try {
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.src = '';
+            }
+        } catch (err) {}
+        currentBook = null;
+        currentPlayingChapterId = null;
+        if (DOM.chaptersContainer) DOM.chaptersContainer.classList.add('hidden');
+        if (DOM.playerDock) DOM.playerDock.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+        if (typeof closeReader === 'function') {
+            closeReader();
+        }
+        const readerModal = document.getElementById('kindleReaderModal');
+        if (readerModal && !readerModal.classList.contains('hidden')) {
+            readerModal.classList.add('hidden');
+        }
+    }
+
+    // 3. Purge across all databases and Supabase
+    await deleteBookFromDB(bookId, bookTitle, bookSlug);
+
+    // 4. Update digital shelf immediately
+    await renderDigitalShelf();
+
+    if (typeof showToast === 'function') {
+        showToast(`Permanently deleted ${confirmTitle}`, 'info');
     }
 }
 
@@ -5757,6 +10595,20 @@ function formatTime(sec) {
 
 // ── Event Listeners Binding ─────────────────────────────────────────────────
 function setupEventListeners() {
+    // Host bridge navigation listener (for Lovable app shell and embedded frames)
+    window.addEventListener('message', (e) => {
+        if (!e || !e.data) return;
+        if (e.data.type === 'engbot-navigate') {
+            if (e.data.view === 'scanner') {
+                if (typeof navigate === 'function') navigate('scanner');
+                if (typeof renderScanShelf === 'function') renderScanShelf();
+            } else if (e.data.view === 'library') {
+                if (typeof navigate === 'function') navigate('library');
+                if (typeof renderDigitalShelf === 'function') renderDigitalShelf();
+            }
+        }
+    });
+
     const btnNavUpload = document.getElementById('btnNavUpload');
     if (btnNavUpload) {
         btnNavUpload.addEventListener('click', () => openModal('uploadModal'));
@@ -5852,7 +10704,46 @@ function setupEventListeners() {
     const btnAuthRegister = document.getElementById('btnAuthRegister');
     if (btnAuthRegister) {
         btnAuthRegister.addEventListener('click', () => {
-            login(document.getElementById('authEmail').value, document.getElementById('authPassword').value);
+            register(document.getElementById('authEmail').value, document.getElementById('authPassword').value);
+        });
+    }
+
+    const authEmailInput = document.getElementById('authEmail');
+    if (authEmailInput) {
+        authEmailInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const pwd = document.getElementById('authPassword');
+                if (pwd && !pwd.value) pwd.focus();
+                else login(authEmailInput.value, pwd ? pwd.value : '');
+            }
+        });
+    }
+
+    const authPasswordInput = document.getElementById('authPassword');
+    if (authPasswordInput) {
+        authPasswordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                login(document.getElementById('authEmail').value, authPasswordInput.value);
+            }
+        });
+    }
+
+    const authForgotEmailInput = document.getElementById('authForgotEmail');
+    if (authForgotEmailInput) {
+        authForgotEmailInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendPasswordReset();
+            }
+        });
+    }
+
+    const btnAuthSendReset = document.getElementById('btnAuthSendReset');
+    if (btnAuthSendReset) {
+        btnAuthSendReset.addEventListener('click', () => {
+            sendPasswordReset();
         });
     }
 
@@ -5878,6 +10769,10 @@ function setupEventListeners() {
 
 // Start App
 document.addEventListener('DOMContentLoaded', init);
+window.addEventListener('load', function() {
+    if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
+    if (typeof syncSettingsToDOMInputs === 'function') syncSettingsToDOMInputs();
+});
 
 // ══════════════════════════════════════════════════════════════════════════
 // ██ SCANNER LIBRARY VIEW ██
@@ -5889,8 +10784,9 @@ document.addEventListener('DOMContentLoaded', init);
 
 function isScannedBook(book) {
     if (!book) return false;
-    const src = (book.extra && book.extra.source) || book.source;
-    return src === 'scan';
+    const src = (book.extra && (book.extra.source || (book.extra.extra && book.extra.extra.source))) || book.source;
+    const pages = (book.extra && (book.extra.scanned_pages || (book.extra.extra && book.extra.extra.scanned_pages))) || book.scanned_pages;
+    return src === 'scan' || Boolean(pages);
 }
 
 async function renderScanShelf() {
@@ -5914,11 +10810,14 @@ async function renderScanShelf() {
     books.forEach(book => {
         const stats = getBookStats(book);
         const hasKa = bookHasGeorgian(book);
-        const pages = (book.extra && book.extra.scanned_pages) || book.scanned_pages || 0;
+        const pages = (book.extra && (book.extra.scanned_pages || (book.extra.extra && book.extra.extra.scanned_pages))) || book.scanned_pages || 0;
+        const coverSrc = (book.coverUrl && typeof book.coverUrl === 'string' && book.coverUrl.trim().length > 5 && !book.coverUrl.includes('undefined'))
+            ? book.coverUrl
+            : (typeof generateDynamicStudioCover === 'function' ? generateDynamicStudioCover(book.title || 'Scanned Book') : '');
         const card = document.createElement('div');
         card.className = 'glass-card rounded-2xl p-4 flex gap-4';
         card.innerHTML = `
-            <img src="${book.coverUrl || ''}" class="w-20 h-28 rounded-xl object-cover bg-surface-container flex-shrink-0" alt="">
+            <img src="${coverSrc}" class="w-20 h-28 rounded-xl object-cover bg-surface-container flex-shrink-0" alt="">
             <div class="flex-grow min-w-0">
                 <div class="flex items-start gap-2">
                     <h4 class="font-bold text-white text-sm truncate flex-grow">${escapeHtml(book.title)}</h4>
@@ -5930,6 +10829,7 @@ async function renderScanShelf() {
                     <button onclick="engbotScanListen('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-primary-container text-on-primary-container text-[11px] font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">play_arrow</span>Listen</button>
                     <button onclick="engbotScanRead('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/10 text-white text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">menu_book</span>Read</button>
                     <button onclick="engbotScanTranslate('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-georgian-gold/15 text-georgian-gold text-[11px] font-bold border border-georgian-gold/30 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">translate</span>${hasKa ? 'Re-translate' : 'Translate'}</button>
+                    <button onclick="engbotScanRetranscribe('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-secondary/20 text-secondary-fixed text-[11px] font-bold border border-secondary/30 flex items-center gap-1 hover:scale-105 transition" title="Re-transcribe with AI Neural Vision or repair OCR errors"><span class="material-symbols-outlined text-[14px]">neurology</span>Re-transcribe</button>
                     <button onclick="engbotScanAddPages('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/10 text-white text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">add_a_photo</span>Add pages</button>
                     <button onclick="engbotScanRename('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/5 text-on-surface-variant text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit</span>Edit</button>
                     <button onclick="engbotScanPdf('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-white/5 text-on-surface-variant text-[11px] font-bold border border-white/10 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">picture_as_pdf</span>PDF</button>
@@ -5969,6 +10869,317 @@ async function engbotScanAddPages(bookId) {
     }
 }
 window.engbotScanAddPages = engbotScanAddPages;
+
+let activeRetranscribeBook = null;
+
+async function engbotScanRetranscribe(bookId) {
+    const books = await getAllBooks();
+    const book = books.find(b => String(b.id) === String(bookId));
+    if (!book) return;
+    activeRetranscribeBook = book;
+
+    const titleEl = document.getElementById('retranscribeBookTitle');
+    if (titleEl) {
+        titleEl.textContent = `“${book.title}” • ${book.chapters ? book.chapters.length : 0} sections`;
+    }
+
+    const key = (localStorage.getItem('geminiApiKey') || geminiApiKey || '').trim();
+    let model = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.5-flash';
+    model = EngbotCore.geminiModels(model)[0];
+    const aiTitleEl = document.getElementById('retranscribeAiStatusTitle');
+    const aiSubEl = document.getElementById('retranscribeAiStatusSub');
+    if (aiTitleEl) {
+        aiTitleEl.textContent = `Frontier AI: ${model}`;
+    }
+    if (aiSubEl) {
+        aiSubEl.textContent = key ? '✓ Custom Gemini API Key Active (High Precision)' : '⚡ Standard / Server AI Engine (Add Key for Pro Limits)';
+    }
+
+    const prog = document.getElementById('retranscribeProgressArea');
+    if (prog) prog.classList.add('hidden');
+
+    openModal('retranscribeModal');
+}
+window.engbotScanRetranscribe = engbotScanRetranscribe;
+
+function executeRetranscribeRescan() {
+    if (!activeRetranscribeBook) return;
+    const bId = activeRetranscribeBook.id;
+    const bTitle = activeRetranscribeBook.title;
+    closeModal('retranscribeModal');
+    if (window.LuminaScanner && typeof window.LuminaScanner.open === 'function') {
+        window.LuminaScanner.open({ appendTo: bId, title: bTitle });
+    }
+}
+window.executeRetranscribeRescan = executeRetranscribeRescan;
+
+async function executeRetranscribeRepair() {
+    if (!activeRetranscribeBook) return;
+    const book = activeRetranscribeBook;
+    const prog = document.getElementById('retranscribeProgressArea');
+    const statusText = document.getElementById('retranscribeStatusText');
+    const pctText = document.getElementById('retranscribePctText');
+    const bar = document.getElementById('retranscribeProgressBar');
+    const btnRepair = document.getElementById('btnAiRepairText');
+    const btnRescan = document.getElementById('btnRescanCamera');
+
+    if (prog) prog.classList.remove('hidden');
+    if (btnRepair) btnRepair.classList.add('pointer-events-none', 'opacity-50');
+    if (btnRescan) btnRescan.classList.add('pointer-events-none', 'opacity-50');
+
+    let cloudJob = null;
+    try {
+        const total = (book.chapters || []).length;
+        const isKa = detectTextLang((book.chapters || []).map(c => c.text || '').join(' ')) === 'ka';
+
+        if (window.LuminaStore && window.LuminaStore.createJob) {
+            try {
+                cloudJob = await window.LuminaStore.createJob(book.id, 'parse', total, `Retranscribing & repairing "${book.title}"`);
+            } catch (e) {}
+        }
+
+        for (let i = 0; i < total; i++) {
+            const chap = book.chapters[i];
+            if (statusText) statusText.textContent = `Repairing Section ${i + 1} of ${total}…`;
+            const pct = Math.min(99, Math.round((i / total) * 100));
+            if (pctText) pctText.textContent = `${pct}%`;
+            if (bar) bar.style.width = `${pct}%`;
+
+            let repaired = await repairTextLinguisticAI(chap.text, isKa ? 'ka' : 'en');
+            if (!repaired || !repaired.trim()) throw new Error(`Section ${i + 1}: no valid repair returned`);
+            if (repaired.trim() !== chap.text.trim()) {
+                chap.repair_proposal = { text: repaired.trim(), source: chap.text, status: 'needs_review', createdAt: new Date().toISOString() };
+            }
+
+            if (cloudJob) {
+                try {
+                    await cloudJob.update(i + 1, total, 'running', `Repaired section ${i + 1} of ${total}`);
+                } catch (e) {}
+            }
+        }
+
+        book.extra = Object.assign({}, book.extra, {
+            last_retranscribed: new Date().toISOString(),
+            retranscribe_engine: 'ai-linguistic-repair'
+        });
+
+        await saveBookToDB(book);
+        if (cloudJob) {
+            try {
+                await cloudJob.update(total, total, 'done', `Repair proposals saved for review: "${book.title}"`);
+            } catch (e) {}
+        }
+
+        if (typeof renderDigitalShelf === 'function') await renderDigitalShelf();
+        if (typeof renderScanShelf === 'function') await renderScanShelf();
+        if (currentBook && String(currentBook.id) === String(book.id)) {
+            await selectBook(book.id, false);
+        }
+
+        if (typeof showToast === 'function') {
+            showToast(`Repair proposals saved for “${book.title}”. Original text retained.`, 'success');
+        }
+        if (prog) prog.classList.add('hidden');
+        closeModal('retranscribeModal');
+        await window.reviewRepairProposals(book);
+    } catch (err) {
+        if (cloudJob) await cloudJob.update(0, book.chapters.length, 'failed', err.message);
+        console.error('Retranscribe repair failed:', err);
+        if (typeof showToast === 'function') {
+            showToast('Repair failed: ' + (err.message || 'unknown error'), 'error');
+        } else {
+            alert('Repair encountered an error: ' + (err.message || 'unknown error'));
+        }
+    } finally {
+        if (btnRepair) btnRepair.classList.remove('pointer-events-none', 'opacity-50');
+        if (btnRescan) btnRescan.classList.remove('pointer-events-none', 'opacity-50');
+    }
+}
+window.executeRetranscribeRepair = executeRetranscribeRepair;
+
+async function repairTextLinguisticAI(text, lang) {
+    const outputs = [];
+    for (const chunk of EngbotCore.splitText(text, 6000)) {
+        if (!chunk.trim()) { outputs.push(chunk); continue; }
+        const repaired = await repairTextLinguisticAIChunk(chunk, lang);
+        if (!EngbotCore.repairIsAcceptable(chunk, repaired)) throw new Error('Repair needs review: source coverage changed. Original retained.');
+        outputs.push(repaired.trim() + (chunk.match(/\s+$/)?.[0] || ''));
+    }
+    return outputs.join('').trim();
+}
+
+async function repairTextLinguisticAIChunk(text, lang) {
+    if (!text || !text.trim()) return text;
+
+    // Step 1: In-house rule-based cleaning & syllable repair
+    let cleaned = EngbotCore.cleanVerbatim(text);
+
+    // Step 2: Try AI reconstruction if Gemini, OpenRouter, or /api/ai is available
+    const geminiKey = (localStorage.getItem('geminiApiKey') || geminiApiKey || '').trim();
+    const isKa = lang === 'ka' || lang === 'kat' || (text.match(/[\u10A0-\u10FF]/g) || []).length > 20;
+
+    const prompt = `Proofread this ${isKa ? 'Georgian' : 'English'} OCR passage conservatively.
+Correct only clear recognition errors supported by the supplied text. Preserve wording, names, numbers, negations, operators, historical spelling and Georgian Mtavruli capitals.
+Do not reconstruct missing words from context, paraphrase, modernize, summarize, or omit text. Leave uncertain spans unchanged.
+Return the FULL corrected passage, plain text only. Your proposal will be reviewed against the original.
+Text to restore:
+${cleaned}`;
+
+    let prefModel = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.5-flash';
+    prefModel = EngbotCore.geminiModels(prefModel)[0];
+    const modelsToTry = EngbotCore.geminiModels(prefModel);
+
+    if (geminiKey) {
+        for (const model of modelsToTry) {
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`, {
+                    method: 'POST',
+                    signal: AbortSignal.timeout(45000),
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            temperature: 0.1,
+                            maxOutputTokens: 8192
+                        }
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
+                    const parts = data.candidates?.[0]?.content?.parts;
+                    let out = (parts && Array.isArray(parts) ? parts.map(p => p.text || '').join('') : '').trim();
+                    out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
+                    if (out.length > 20) return out;
+                } else if (res.status === 429) {
+                    console.warn(`[repair] Gemini ${model} rate-limited, trying fallback model...`);
+                    continue;
+                }
+            } catch (e) {
+                console.warn(`[repair] direct gemini call failed for ${model}:`, e);
+            }
+        }
+    }
+
+    const orKey = (localStorage.getItem('openRouterApiKey') || openRouterApiKey || '').trim();
+    if (orKey) {
+        try {
+            const orModel = localStorage.getItem('openRouterModel') || openRouterModel || 'openrouter/free';
+            const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                    signal: AbortSignal.timeout(45000),
+                headers: {
+                    'Authorization': `Bearer ${orKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': location.origin,
+                    'X-Title': 'Lumina Audio'
+                },
+                body: JSON.stringify({
+                    model: orModel,
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.1,
+                    max_tokens: 8192
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
+                let out = (data.choices?.[0]?.message?.content || '').trim();
+                out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
+                if (out.length > 20) return out;
+            }
+        } catch (e) {
+            console.warn('[repair] openrouter call failed:', e);
+        }
+    }
+
+    // Groq fallback for repair
+    if (groqApiKey) {
+        try {
+            const groqModel = localStorage.getItem('groqSelectedModel') || GROQ_MODELS[0];
+            const res = await fetch(GROQ_API_URL, {
+                method: 'POST',
+                    signal: AbortSignal.timeout(45000),
+                headers: { 'Authorization': `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: groqModel,
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.1,
+                    max_tokens: 8192,
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
+                let out = (data.choices?.[0]?.message?.content || '').trim();
+                out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
+                if (out.length > 20) return out;
+            }
+        } catch (e) {
+            console.warn('[repair] groq call failed:', e);
+        }
+    }
+
+    // Custom provider fallback for repair
+    {
+        const cpOut = await callCustomProviderText(prompt, { temperature: 0.1, maxTokens: 8192 });
+        if (cpOut && cpOut.length > 20) {
+            return cpOut.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
+        }
+    }
+
+    try {
+        const res = await fetch('/api/ai', {
+            method: 'POST',
+                    signal: AbortSignal.timeout(45000),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, temperature: 0.1, maxTokens: 8192 })
+        });
+        if (res.ok) {
+            const data = await res.json();
+        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
+            let out = (data.text || data.choices?.[0]?.message?.content || '').trim();
+            out = out.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
+            if (out.length > 20) return out;
+        }
+    } catch (e) {
+        // Fallback to local cleaned text
+    }
+
+    return null;
+}
+
+function cleanOcrGarbage(text, lang) {
+    let t = String(text || '');
+    if (!t) return t;
+
+    const isKa = lang === 'ka' || lang === 'kat' || (text.match(/[\u10A0-\u10FF]/g) || []).length > 20;
+
+    // Remove standalone stray symbols surrounded by whitespace
+    t = t.replace(/(?:^|\s)[=+|/_#%*~<>]{1,3}(?=\s|$)/g, ' ');
+    // Remove repeated OCR loops (e.g. IIIIIIII, =====, -----)
+    t = t.replace(/([A-Za-z0-9=+_\-|])\1{4,}/g, ' ');
+    // Remove multiple commas or dots
+    t = t.replace(/,{2,}/g, ',').replace(/\.{3,}/g, '…');
+
+    if (isKa) {
+        // Collapse repeated Georgian vowels/consonants
+        t = t.replace(/([ა-ჰ])\1{3,}/g, '$1$1');
+        // Clean single letter runs (e.g. ს ს ს -> ს)
+        t = t.replace(/(?:^|\s)([ა-ჰ])(?:\s+\1){2,}(?=\s|$)/g, ' ');
+        // Merge common Georgian words split by spaces (დ ა -> და, ა რ -> არ, თ ქ ვ ა -> თქვა)
+        const common = ['და', 'არ', 'კი', 'რა', 'ეს', 'ის', 'თუ', 'მე', 'მის', 'მას', 'რომ', 'თქვა', 'იყო', 'მერე', 'როცა', 'ხოლო'];
+        for (const w of common) {
+            const spaced = w.split('').join('\\s+');
+            t = t.replace(new RegExp(`(?:^|\\s)${spaced}(?=\\s|$)`, 'g'), ' ' + w + ' ');
+        }
+        if (typeof window.applyKaRuleEngine === 'function') {
+            t = window.applyKaRuleEngine(t);
+        }
+    }
+
+    return t.replace(/[ \t]{2,}/g, ' ').trim();
+}
 
 async function engbotScanRename(bookId) {
     const books = await getAllBooks();

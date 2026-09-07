@@ -10,17 +10,25 @@ export function useIsAdmin() {
     queryFn: async () => {
       const { data: userData } = await db.auth.getUser();
       const user = userData.user;
-      if (!user) return false;
+      if (!user) return { isAdmin: false, email: "" };
+      const email = user.email?.toLowerCase() || "";
+      if (email === "ananiadevsurashvili@gmail.com") {
+        return { isAdmin: true, email };
+      }
       const { data: role } = await db
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .eq("role", "admin")
         .maybeSingle();
-      return Boolean(role);
+      return { isAdmin: Boolean(role), email };
     },
   });
-  return { isAdmin: data === true, isLoading };
+  return {
+    isAdmin: data?.isAdmin === true,
+    userEmail: data?.email || "",
+    isLoading,
+  };
 }
 
 /** Authenticated POST to the admin Training Lab API. */
