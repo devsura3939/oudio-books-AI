@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.48.2';
-const ENGINE_VERSION = 'v1.48.2 (Bilingual translation and source integrity)';
+const APP_VERSION = 'v1.49.0';
+const ENGINE_VERSION = 'v1.49.0 (Bilingual translation and source integrity)';
 
 let db = null;
 let currentBook = null;
@@ -2560,6 +2560,7 @@ async function deleteBookFromAllLocalDBs(id, title) {
 }
 
 async function saveBookToDB(book) {
+    invalidateStudioLibrary();
     if (!book) return;
     const uid = getCurrentUserId();
     if (!book.user_id && uid !== 'guest') {
@@ -2747,7 +2748,13 @@ async function recoverAllLocalBooks() {
     return recoveredBooks;
 }
 
+let studioLibraryCache;
+function invalidateStudioLibrary() { studioLibraryCache?.invalidate(); }
 async function getAllBooks() {
+    if (!studioLibraryCache) studioLibraryCache = window.EngbotUI.createLibraryCache(getCurrentUserId, readAllStudioBooks);
+    return studioLibraryCache.read();
+}
+async function readAllStudioBooks() {
     let cloudBooks = [];
     let localBooks = [];
 
@@ -2837,6 +2844,7 @@ async function loadBooks() {
 }
 
 async function deleteBookFromDB(id, title, slug) {
+    invalidateStudioLibrary();
     // 1. Record permanent deletion tombstone
     markBookAsDeleted(id, title, slug);
 
@@ -2851,10 +2859,12 @@ async function deleteBookFromDB(id, title, slug) {
 
     // 3. Purge across all local and legacy IndexedDB databases
     await deleteBookFromAllLocalDBs(id, title);
+    invalidateStudioLibrary();
     return true;
 }
 
 function saveBookToLocalDB(book) {
+    invalidateStudioLibrary();
     if (!book) return Promise.resolve();
     const uid = getCurrentUserId();
     if (!book.user_id && uid !== 'guest') {
@@ -2863,7 +2873,7 @@ function saveBookToLocalDB(book) {
     return new Promise((resolve, reject) => {
         const tx = db.transaction('books', 'readwrite');
         tx.objectStore('books').put(book);
-        tx.oncomplete = () => resolve();
+        tx.oncomplete = () => { invalidateStudioLibrary(); resolve(); };
         tx.onerror = (e) => reject(e);
     });
 }
@@ -3538,14 +3548,16 @@ function closeToCDrawer() {
 function openMobileNav() {
     const drawer = document.getElementById('mobileNavDrawer');
     if (drawer) {
+        drawer.inert = false;
         drawer.classList.add('active');
         document.body.classList.add('modal-open');
+        drawer.querySelector('[aria-label="Close menu"]')?.focus();
     }
 }
 
 function closeMobileNav() {
     const drawer = document.getElementById('mobileNavDrawer');
-    if (drawer) drawer.classList.remove('active');
+    if (drawer) { drawer.classList.remove('active'); drawer.inert = true; }
     if (!document.querySelector('.modal-overlay.active')) {
         document.body.classList.remove('modal-open');
     }
@@ -3723,29 +3735,14 @@ function updateAuthUI() {
                         </div>
                         <div class="truncate">
                             <p class="text-xs font-semibold text-white truncate">${name}</p>
-                            <p class="text-[10px] text-primary-fixed">${isAdmin ? '👑 Owner Admin' : 'PRO Studio'}</p>
+                            <p class="text-[10px] text-primary-fixed">${isAdmin ? 'Administrator' : 'Personal library'}</p>
                         </div>
                     </div>
                     <button onclick="logout()" class="p-1.5 text-on-surface-variant hover:text-error transition" title="Sign Out">
                         <span class="material-symbols-outlined text-base">logout</span>
                     </button>
                 </div>
-                ${isAdmin ? `
-                    <div class="mt-2 p-2 rounded-xl bg-primary-container/10 border border-primary-container/30 text-[10px] font-mono text-primary-fixed">
-                        <div class="flex items-center justify-between font-bold">
-                            <span>👑 Admin Status</span>
-                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-primary-container/20">ACTIVE</span>
-                        </div>
-                        <div class="mt-1 pt-1 border-t border-white/10 space-y-0.5 text-[10px]">
-                            <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">${APP_VERSION}</span></p>
-                            <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">${ENGINE_VERSION}</span></p>
-                        </div>
-                    </div>
-                ` : `
-                    <div class="mt-2 px-2 text-[10px] text-on-surface-variant font-mono">
-                        App ${APP_VERSION} • Engine ${ENGINE_VERSION}
-                    </div>
-                `}
+
             `;
         }
     } else {
@@ -9342,6 +9339,7 @@ async function exportCurrentBookPDF() {
         exportBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm align-middle">progress_activity</span> Generating Book PDF…';
     }
 
+    await window.EngbotUI.nextPaint();
     let html = '';
     try {
         const container = document.createElement('div');
@@ -9626,6 +9624,7 @@ async function handleFileUpload(file) {
     DOM.uploadStatusText.textContent = isPdf ? "Extracting text from PDF..." : "Reading document text...";
     DOM.uploadProgressBar.style.width = '15%';
     DOM.uploadProgressPct.textContent = '15%';
+    await window.EngbotUI.nextPaint();
 
     try {
         let totalPages = 1;
@@ -9644,6 +9643,7 @@ async function handleFileUpload(file) {
             const pageTexts = [];
 
             for (let i = 1; i <= totalPages; i++) {
+                if (i % 4 === 0) await window.EngbotUI.nextPaint();
                 const page = await pdf.getPage(i);
                 const content = await page.getTextContent();
                 pageTexts.push({ index: i, text: pdfPageLines(content) });
@@ -10267,73 +10267,63 @@ function escapeHtml(s) {
         .replace(/'/g, '&#39;');
 }
 
-async function renderDigitalShelf(filterText = '') {
+let shelfRenderRevision = 0;
+async function renderDigitalShelf(filterText = document.getElementById('searchInput')?.value || document.getElementById('mobileShelfSearch')?.value || '') {
+    const revision = ++shelfRenderRevision;
     const books = await getAllBooks();
-    DOM.booksGrid.innerHTML = '';
-
-    const filtered = filterText
-        ? books.filter(b => b.title.toLowerCase().includes(filterText.toLowerCase()))
-        : books;
-
-    if (DOM.shelfMetaText) {
-        DOM.shelfMetaText.textContent = `${books.length} Audiobooks in your personal library`;
-    }
-
-    if (filtered.length === 0) {
-        DOM.booksGrid.innerHTML = `
-            <div class="col-span-full py-16 text-center glass-panel rounded-2xl">
-                <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2">library_books</span>
-                <p class="text-white font-semibold">No audiobooks found</p>
-                <p class="text-xs text-on-surface-variant mt-1">Upload a PDF to get started</p>
-            </div>
-        `;
-        try { await renderScanShelf(); } catch (e) { /* scanner shelf is optional */ }
-        return;
-    }
-
-    filtered.forEach(book => {
-        const isSelected = currentBook && String(currentBook.id) === String(book.id);
-        const hasGeorgian = bookHasGeorgian(book);
-        const stats = getBookStats(book);
-
-        const div = document.createElement('div');
-        div.className = 'group relative cursor-pointer';
-        div.onclick = () => selectBook(book.id, true);
-
-        const coverSrc = (book.coverUrl && typeof book.coverUrl === 'string' && book.coverUrl.trim().length > 5 && !book.coverUrl.includes('undefined'))
-            ? book.coverUrl
-            : (typeof generateDynamicStudioCover === 'function' ? generateDynamicStudioCover(book.title || 'Audiobook') : '');
-
-        div.innerHTML = `
-            <div class="aspect-[2/3] rounded-2xl overflow-hidden mb-2 relative glass-card p-1.5 ${isSelected ? 'border-primary-container ring-2 ring-primary-container/30 shadow-[0_0_25px_rgba(0,240,255,0.25)]' : 'border border-white/5'}">
-                <img src="${coverSrc}" class="w-full h-full object-cover rounded-xl group-hover:scale-[1.03] transition-transform duration-500 bg-surface-container">
-                
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center rounded-2xl gap-3">
-                    <div class="flex items-center gap-3">
-                        <button onclick="event.stopPropagation(); selectBook('${book.id}', true);" class="w-12 h-12 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,240,255,0.4)] transform hover:scale-110 transition-transform" title="Listen Now">
-                            <span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
-                        </button>
-                        <button onclick="event.stopPropagation(); selectBook('${book.id}', false); openCurrentBookInReader();" class="w-10 h-10 bg-white/20 backdrop-blur-md text-white border border-white/30 rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 hover:bg-white/30 transition-all" title="Moon Reader">
-                            <span class="material-symbols-outlined text-lg">menu_book</span>
-                        </button>
-                    </div>
-                </div>
-
-                <button onclick="deleteBook(event, '${book.id}')" class="absolute top-2 left-2 w-8 h-8 bg-black/60 backdrop-blur-md text-white/80 hover:text-error hover:bg-black/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-10" title="Delete Book">
-                    <span class="material-symbols-outlined text-[15px]">delete</span>
-                </button>
-
-                ${book.isTranslatedEdition ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold text-[10px] font-extrabold text-black shadow-lg flex items-center gap-1"><span>🇬🇪</span><span>ქართულად</span></div>' : hasGeorgian ? '<div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold/90 text-[10px] font-bold text-black shadow-lg">🇬🇪 KA</div>' : ''}
-                ${book.progressPct > 0 ? `<div class="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-full h-1 overflow-hidden"><div class="h-full bg-primary-container" style="width: ${book.progressPct}%"></div></div>` : ''}
-            </div>
-            <h4 class="font-bold text-white text-xs sm:text-sm truncate group-hover:text-primary-fixed transition-colors">${escapeHtml(book.title)}</h4>
-            <div class="flex justify-between items-center mt-0.5">
-                <p class="text-[10px] sm:text-[11px] text-on-surface-variant truncate">${stats.chaptersCount} Ch • ${stats.totalFormattedTime}</p>
-            </div>
-        `;
-        DOM.booksGrid.appendChild(div);
+    if (revision !== shelfRenderRevision || !DOM.booksGrid) return;
+    const query = filterText.trim().toLocaleLowerCase();
+    const language = document.querySelector('[data-shelf-language][aria-pressed="true"]')?.dataset.shelfLanguage || 'all';
+    const filtered = books.filter(book => {
+        const lang = book.lang || book.language || 'en';
+        return (language === 'all' || lang === language || (language === 'ka' && bookHasGeorgian(book)))
+            && (!query || `${window.EngbotUI.displayTitle(book.title)} ${book.author || ''}`.toLocaleLowerCase().includes(query));
     });
-    try { await renderScanShelf(); } catch (e) { /* scanner shelf is optional */ }
+    if (DOM.shelfMetaText) DOM.shelfMetaText.textContent = query || language !== 'all' ? `${filtered.length} of ${books.length} books` : `${books.length} books in your library`;
+    const fragment = document.createDocumentFragment();
+    for (const book of filtered) {
+        const title = window.EngbotUI.displayTitle(book.title);
+        const stats = getBookStats(book);
+        const card = document.createElement('article');
+        card.className = 'studio-book' + (String(currentBook?.id) === String(book.id) ? ' is-selected' : '');
+        const cover = book.coverUrl && !book.coverUrl.includes('undefined') ? book.coverUrl : generateDynamicStudioCover(title);
+        const lang = book.lang === 'ka' || bookHasGeorgian(book) ? 'KA' : 'EN';
+        card.innerHTML = `
+            <div class="studio-book-cover">
+                <img src="${escapeHtml(cover)}" alt="${escapeHtml(title)} cover" loading="lazy" decoding="async">
+                <button type="button" class="studio-book-open" aria-label="Open ${escapeHtml(title)}"></button>
+                <button type="button" class="studio-delete" aria-label="Delete ${escapeHtml(title)}" title="Delete book"><span class="material-symbols-outlined" aria-hidden="true">delete</span></button>
+                <div class="studio-book-actions">
+                    <button type="button" data-action="listen" aria-label="Listen to ${escapeHtml(title)}"><span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>Listen</button>
+                    <button type="button" data-action="read" aria-label="Read ${escapeHtml(title)}"><span class="material-symbols-outlined" aria-hidden="true">menu_book</span>Read</button>
+                </div>
+            </div>
+            <h4 title="${escapeHtml(book.title)}">${escapeHtml(title)}</h4>
+            <div class="studio-book-meta"><span>${stats.chaptersCount} chapters · ${stats.totalFormattedTime}</span><span class="studio-language">${lang}</span></div>`;
+        const open = async (button, listen = false, read = false) => {
+            try {
+                await window.EngbotUI.run('book-' + book.id, 'Opening your book…', async () => {
+                    await selectBook(book.id, listen);
+                    if (read && String(currentBook?.id) === String(book.id)) openCurrentBookInReader();
+                }, button);
+            } catch (error) { showToast(error.message || 'Could not open this book.', 'error'); }
+        };
+        card.querySelector('.studio-book-open').onclick = e => open(e.currentTarget, false, true);
+        card.querySelector('img').addEventListener('error', e => {
+            e.currentTarget.src = generateDynamicStudioCover(title);
+        }, { once: true });
+        card.querySelector('[data-action="listen"]').onclick = e => open(e.currentTarget, true);
+        card.querySelector('[data-action="read"]').onclick = e => open(e.currentTarget, false, true);
+        card.querySelector('.studio-delete').onclick = e => deleteBook(e, book.id);
+        fragment.appendChild(card);
+    }
+    if (!filtered.length) {
+        const empty = document.createElement('div');
+        empty.className = 'col-span-full py-12 text-center';
+        empty.textContent = query ? 'No books match your search.' : language !== 'all' ? 'No books in this language yet.' : 'Your next story starts here. Add a book or explore Discover.';
+        fragment.appendChild(empty);
+    }
+    DOM.booksGrid.replaceChildren(fragment);
 }
 
 function renderDiscoverClassics() {
@@ -10370,8 +10360,11 @@ function renderDiscoverClassics() {
     });
 }
 
+let bookSelectionRevision = 0;
 async function selectBook(bookId, autoPlayFirst = false) {
+    const selection = ++bookSelectionRevision;
     const books = await getAllBooks();
+    if (selection !== bookSelectionRevision) return;
     currentBook = books.find(b => String(b.id) === String(bookId));
     if (!currentBook) return;
 
@@ -10400,13 +10393,14 @@ async function selectBook(bookId, autoPlayFirst = false) {
     } else {
         currentLang = 'en';
     }
+    if (selection !== bookSelectionRevision) return;
     updateLangToggleUI();
 
     const stats = getBookStats(currentBook);
 
     // Update Hero UI
     DOM.heroCover.src = currentBook.coverUrl;
-    DOM.heroTitle.textContent = currentBook.title;
+    DOM.heroTitle.textContent = window.EngbotUI.displayTitle(currentBook.title);
 
     const hasKa = bookHasGeorgian(currentBook);
     if (DOM.heroGeorgianBadge) {
@@ -10514,7 +10508,7 @@ async function deleteBook(e, bookId) {
 
 function renderChaptersList() {
     if (!currentBook || !DOM.chaptersList) return;
-    DOM.chaptersList.innerHTML = '';
+    const fragment = document.createDocumentFragment();
 
     currentBook.chapters.forEach((chap, idx) => {
         const isCurrent = String(currentPlayingChapterId) === String(chap.id);
@@ -10551,8 +10545,9 @@ function renderChaptersList() {
                 </button>
             </div>
         `;
-        DOM.chaptersList.appendChild(div);
+        fragment.appendChild(div);
     });
+    DOM.chaptersList.replaceChildren(fragment);
 }
 
 function formatTime(sec) {
@@ -10607,11 +10602,7 @@ function setupEventListeners() {
         });
     }
 
-    if (DOM.searchInput) {
-        DOM.searchInput.addEventListener('input', (e) => {
-            renderDigitalShelf(e.target.value);
-        });
-    }
+
 
     if (DOM.btnPlayerPlayPause) DOM.btnPlayerPlayPause.addEventListener('click', togglePlayPause);
     
