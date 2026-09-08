@@ -113,6 +113,7 @@ function context() {
         isTranslatingWholeBook:false, cancelTranslationFlag:false, translationRequestController:null,
         geminiModel:'gemini-2.5-pro',geminiPasses:3,openRouterModel:'',customProviderModel:'',usingCloud:false,
         detectTextLang:core.detectLanguage,assessTranslation:core.assessTranslation,
+        setTranslationStage(){},translationFailure(){},appendChunkLog(){},updateChunkRate(){},updateMiniDock(){},
         openModal(){}, closeModal(){},buildChapterQueue(){},updateChapterQueueStatus(){},showToast(){},renderChaptersList(){},renderDigitalShelf(){},
         document:{getElementById:()=>null},
         saveBookToDB:async b=>ctx.saved.push(structuredClone(b)),
@@ -238,7 +239,7 @@ test('Full long repair retains every chunk; shortened output rejected',async()=>
     await assert.rejects(ctx.repairTextLinguisticAI(original,'en'));
 });
 test('Required review failures do not silently return the draft',async()=>{
-    const ctx=vm.createContext({aiTranslationAvailable:()=>true,geminiPasses:3,geminiDraftTranslate:async()=> 'A draft',geminiCritiqueTranslation:async()=>null});
+    const ctx=vm.createContext({EngbotCore:core,window:{},setTranslationStage(){},translationFailure(){},assessTranslation:()=>({ok:true}),aiTranslationAvailable:()=>true,geminiPasses:3,geminiDraftTranslate:async()=> 'A draft',geminiCritiqueTranslation:async()=>null});
     vm.runInContext(section('async function translateWithGeminiAI(', '// Budget pipeline'),ctx);
     assert.equal(await ctx.translateWithGeminiAI('source','en'),null);
     ctx.geminiPasses=1;assert.equal(await ctx.translateWithGeminiAI('source','en'),'A draft');

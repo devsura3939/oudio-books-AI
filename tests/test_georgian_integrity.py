@@ -295,23 +295,23 @@ for base_dir, label in [(os.path.join(REPO_DIR, "static"), "root static/"),
 # Version 1.47.4 across all entry points, cache busters, and early controller
 with open(os.path.join(REPO_DIR, "index.html"), "r", encoding="utf-8") as f:
     root_html = f.read()
-assert "v=1.49.0" in root_html, "FAIL: index.html missing current engine cache buster"
-assert "v1.49.0" in root_html, "FAIL: index.html missing version text"
+assert "v=1.49.1" in root_html, "FAIL: index.html missing current engine cache buster"
+assert "v1.49.1" in root_html, "FAIL: index.html missing version text"
 assert "Early Auth Gate Controller" in root_html, "FAIL: index.html missing Early Auth Gate Controller"
 assert "gateBtnForgot" in root_html, "FAIL: index.html missing gateBtnForgot ID"
 assert "gateBtnQuickFillAdmin" in root_html, "FAIL: index.html missing gateBtnQuickFillAdmin ID"
-# Groq model select must only have valid Groq model IDs (no OpenRouter model IDs)
-assert "openai/gpt-oss-120b" not in root_html, "FAIL: index.html has invalid OpenRouter model ID in Groq select"
-assert "qwen/qwen3.8-27b" not in root_html, "FAIL: index.html has invalid OpenRouter model ID in Groq select"
-assert "llama-3.3-70b-versatile" in root_html, "FAIL: index.html missing llama-3.3-70b-versatile in Groq select"
+# Groq model IDs verified against its live catalog on 2026-09-08.
+assert "openai/gpt-oss-120b" in root_html, "FAIL: index.html has missing verified Groq model"
+assert "qwen/qwen3.8-27b" in root_html, "FAIL: index.html has missing verified Groq model"
+assert "llama-3.3-70b-versatile" not in root_html, "FAIL: index.html retired Llama model in Groq select"
 
 with open(os.path.join(REPO_DIR, "lovable-app", "public", "studio", "index.html"), "r", encoding="utf-8") as f:
     studio_html = f.read()
-assert "v=1.49.0" in studio_html, "FAIL: studio/index.html missing version cache buster"
-assert "v1.49.0" in studio_html, "FAIL: studio/index.html missing version text"
+assert "v=1.49.1" in studio_html, "FAIL: studio/index.html missing version cache buster"
+assert "v1.49.1" in studio_html, "FAIL: studio/index.html missing version text"
 
 assert "Early Auth Gate Controller" in studio_html, "FAIL: studio/index.html missing Early Auth Gate Controller"
-assert "openai/gpt-oss-120b" not in studio_html, "FAIL: studio/index.html has invalid OpenRouter model ID in Groq select"
+assert "openai/gpt-oss-120b" in studio_html, "FAIL: studio/index.html has missing verified Groq model"
 
 with open(STATIC_APP, "r", encoding="utf-8") as f:
     current_app_content = f.read()
@@ -326,10 +326,10 @@ for path_name, content in [("static/app.js", current_app_content), ("studio/stat
     assert "restoreAccountSettingsForCurrentUser" in content, f"FAIL: restoreAccountSettingsForCurrentUser missing from {path_name}"
     assert "getCurrentAccountSettings" in content, f"FAIL: getCurrentAccountSettings missing from {path_name}"
     assert "resolveAndPreserveAllAiKeys" in content, f"FAIL: resolveAndPreserveAllAiKeys missing from {path_name}"
-    assert "v1.49.0" in content, f"FAIL: version missing from {path_name}"
+    assert "v1.49.1" in content, f"FAIL: version missing from {path_name}"
     # provider fixes
     assert "let groqSelectedModel" in content, f"FAIL: groqSelectedModel not declared as module-level variable in {path_name}"
-    assert "llama3-70b-8192" in content, f"FAIL: llama3-70b-8192 missing from GROQ_MODELS in {path_name}"
+    assert "openai/gpt-oss-120b" in content, f"FAIL: GPT OSS 120B missing from GROQ_MODELS in {path_name}"
     assert "mixtral-8x7b-32768" not in content, f"FAIL: deprecated mixtral-8x7b-32768 still in GROQ_MODELS in {path_name}"
     assert "candidates?.[0]?.content?.parts?.[0]?.text" in content, f"FAIL: Gemini response shape missing from callCustomProviderText in {path_name}"
 
@@ -425,7 +425,7 @@ for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), 
     assert "KA_SYNTACTIC_POLYPERSONAL_ENGINE" in ling_text, f"FAIL: KA_SYNTACTIC_POLYPERSONAL_ENGINE missing from {path_name}"
     assert "KA-123" in ling_text, f"FAIL: KA-123 tag missing from {path_name}"
     assert "synthesizeGeorgianMorphology" in ling_text, f"FAIL: synthesizeGeorgianMorphology missing from {path_name}"
-    assert "1.50.0" in ling_text or "1.49.0" in ling_text, f"FAIL: Georgian knowledge version missing from {path_name}"
+    assert "1.50.0" in ling_text or "1.49.1" in ling_text, f"FAIL: Georgian knowledge version missing from {path_name}"
 
 for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
     with open(path, "r", encoding="utf-8") as f:
@@ -597,7 +597,7 @@ for path_name, path in [("index.html", INDEX_HTML), ("studio/index.html", STUDIO
     assert html_text.count("https://github.com/devsura3939/oudio-books-AI") >= 5, \
         f"FAIL: Primary GitHub repository link missing or insufficient in {path_name}"
     assert 'href="/auth"' not in html_text, f"FAIL: Broken absolute /auth link found in {path_name}"
-    assert "v1.49.0" in html_text, f"FAIL: Version v1.49.0 not reflected in {path_name}"
+    assert "v1.49.1" in html_text, f"FAIL: Version v1.49.1 not reflected in {path_name}"
 
 for path_name, path in [("static/supabase-store.js", STATIC_SUPABASE), ("studio/static/supabase-store.js", STUDIO_SUPABASE)]:
     with open(path, "r", encoding="utf-8") as f:

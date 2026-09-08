@@ -5128,6 +5128,22 @@ function getKaCompactRules() {
     return [KA_SYNTAX, KA_CONTRASTIVE_PATTERNS, KA_EXPERIENCER_FRAMES_COMPREHENSIVE, KA_PROPER_NOUN_TRANSLITERATION, KA_REAL_DATA_CORPUS_EXEMPLARS, KA_GEORGIAN_PRO_STYLE_GUIDE, KA_SYNTACTIC_POLYPERSONAL_ENGINE, KA_GEORGIAN_PRO_DISCOURSE_ENGINE, KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
 }
 
+// Retrieve a bounded set of complete rule paragraphs for each source segment.
+// Keep the full knowledge base available to the training and offline engines.
+function getKaTaskRules(source = '') {
+    const blocks = [KA_CASE_SYSTEM, KA_MORPHOLOGY];
+    if (/\b(?:not|never|no|cannot|don't|didn't)\b|არ |ვერ |ნუ /i.test(source)) blocks.push(KA_NEGATION);
+    if (/\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/.test(source)) blocks.push(KA_PROPER_NOUN_TRANSLITERATION);
+    blocks.push(KA_DEFECTS, KA_PUNCTUATION, KA_SYNTAX);
+    const selected = [];
+    let size = 0;
+    for (const block of blocks) for (const paragraph of block.trim().split(/\n\s*\n/)) {
+        if (size + paragraph.length + 2 > 6000) continue;
+        selected.push(paragraph); size += paragraph.length + 2;
+    }
+    return selected.join('\n\n');
+}
+
 
 // Focused set for QA repair passes (small, defect-driven).
 function getKaRepairRules() {
@@ -9413,6 +9429,7 @@ if (typeof module !== 'undefined' && module.exports) {
         translateOfflineEnToKa,
         getKaKnowledgeBase,
         getKaCompactRules,
+        getKaTaskRules,
         getKaRepairRules,
         validateGeorgianTranslation,
         correctGeorgianMorphology,
