@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
-const files = ['index.html', ...['app.js', 'scanner.js', 'georgian-linguistics.js', 'engine-pack.js', 'supabase-store.js', 'engine-core.js', 'job-store.js', 'repair-review.js', 'training-client.js', 'styles.css'].map(name => `static/${name}`)];
+const files = ['index.html', ...['app.js', 'scanner.js', 'georgian-linguistics.js', 'engine-pack.js', 'supabase-store.js', 'engine-core.js', 'job-store.js', 'repair-review.js', 'training-client.js', 'studio-ui.js', 'studio-ui.css', 'styles.css'].map(name => `static/${name}`)];
 let failed = false;
 for (const file of files) {
     const source = await readFile(path.join(root, file));

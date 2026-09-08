@@ -35,9 +35,10 @@ t('EXIF orientation handled in blobToBitmap', scannerJs.includes('imageOrientati
 
 // 3. Check ocr.ts prompt enhancements
 const ocrTs = fs.readFileSync(path.join(__dirname, 'lovable-app', 'src', 'routes', 'api', 'ocr.ts'), 'utf8');
-t('Publication-Grade Contextual Deduction in BASE_RULES', ocrTs.includes('Contextual Deduction') || ocrTs.includes('Blurry & Degraded Photo Recovery'));
-t('Hyphenated compound words preserved in ocr.ts', ocrTs.includes('hyphenated compound words'));
-t('Georgian visually close letters distinguished', (ocrTs.includes('შ') && ocrTs.includes('წ') && ocrTs.includes('ჭ')) && (ocrTs.includes('ვ') && ocrTs.includes('პ') && ocrTs.includes('კ')));
+// Source-faithful OCR replaced contextual reconstruction in v1.48.1.
+t('Unreadable OCR is marked for review instead of invented', ocrTs.includes('[[UNCLEAR]]') && ocrTs.includes('Do not translate, modernize, summarize, paraphrase or reconstruct missing words'));
+t('Original spelling and compound words preserved', ocrTs.includes('Preserve original spelling, punctuation, names and compound words'));
+t('Historical Georgian and meaningful symbols preserved', ocrTs.includes('Preserve Mkhedruli, Mtavruli capitals and historical letters as printed') && ocrTs.includes('Do not rewrite grammar or remove meaningful symbols'));
 
 console.log(`Results: ${pass} passed, ${fail} failed.`);
 if (fail > 0) process.exit(1);
