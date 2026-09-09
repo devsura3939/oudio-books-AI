@@ -2016,7 +2016,7 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                     <button onclick="minimizeTranslationPanel()" title="Minimize (translation continues in background)" class="p-2 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition" aria-label="Minimize">
                         <span class="material-symbols-outlined">remove</span>
                     </button>
-                    <button onclick="cancelWholeBookTranslation()" title="Stop translation" class="p-2 rounded-full text-error/80 hover:text-error hover:bg-error/10 transition" aria-label="Stop">
+                    <button id="wbDismissIcon" onclick="cancelWholeBookTranslation()" title="Stop translation" class="p-2 rounded-full text-error/80 hover:text-error hover:bg-error/10 transition" aria-label="Stop">
                         <span class="material-symbols-outlined">stop_circle</span>
                     </button>
                 </div>
@@ -2071,7 +2071,7 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
             </div>
 
             <button id="wbRetryButton" hidden onclick="startWholeBookTranslation(true)" class="studio-primary w-full">Retry from last accepted segment</button>
-            <button onclick="cancelWholeBookTranslation()" class="w-full py-2.5 rounded-xl bg-error/15 hover:bg-error/25 text-error text-xs font-semibold border border-error/30 transition">
+            <button id="wbDismissButton" onclick="cancelWholeBookTranslation()" class="w-full py-2.5 rounded-xl bg-error/15 hover:bg-error/25 text-error text-xs font-semibold border border-error/30 transition">
                 Stop Translation
             </button>
         </div>

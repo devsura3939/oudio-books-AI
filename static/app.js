@@ -6656,7 +6656,7 @@ ${text}${ctxBefore}${ctxAfter}`;
 // Stage 2 — structured critique (MQM-inspired). Separate call, separate
 // persona: the reviewer must actively hunt for errors, not rubber-stamp.
 // Returns a machine-readable error list; empty list = approved.
-async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
+async function geminiCritiqueTranslation(sourceText, translation, targetLang, previousRevision = null) {
     const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
 
     // Georgian reviewer gets the defect catalog + compact grammar rules so it
@@ -6665,7 +6665,7 @@ async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
     const kaReviewerRules = targetLang === 'ka' && typeof getKaCompactRules === 'function'
         ? (typeof getKaTaskRules === 'function' ? getKaTaskRules(sourceText) : getKaCompactRules()) : '';
     const kaChecklist = kaReviewerRules
-        ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===\n${kaReviewerRules}\n=== END CHECKLIST ===\nAny violation of the checklist is at least a "major" grammar error.` : '';
+        ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===\n${kaReviewerRules}\n=== END CHECKLIST ===\nTreat the checklist as guidance, not an unconditional veto. Confirm each defect against the source and actual construction. Optional style preferences are minor; reserve major/critical for demonstrated grammar or meaning defects.` : '';
 
     const systemPrompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer.${kaChecklist}`;
 
@@ -6673,12 +6673,16 @@ async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
 
 Check, in order of severity:
 1. Accuracy: omissions, additions, reversed meaning, lost negation, changed names/numbers/units.
-2. Grammar & morphology: ${langName} case endings, verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment & screeves: Series I (present/imperfect/future) requires Nominative subject and Dative direct object. Series II (aorist/optative) requires Ergative subject (-მა/-მ) for transitive verbs and Nominative direct object (e.g. უფლისწულმა ვარდი დაინახა; NEVER nominative subject *უფლისწული დაინახა). Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Postposition syncopation (კუმშვა/კვეცა): locatives (-ში, -ზე, -დან, -კენ, -თვის) drop nominative -ი (ქალაქში, წიგნში) and syncopate internal stem vowels (წყალი->წყლიდან, მგელი->მგლის, ქვეყანა->ქვეყანაში). Negation: არ (declarative), ვერ (failed ability), ნუ (prohibitive — NEVER არ for commands/imperatives like *არ წახვიდე -> ნუ წახვალ), one negator per clause. Experiencer verbs (სჭირდება, უყვარს, ეშინია, ახსოვს, სტკივა, შია, ცივა, უნდა) MUST have Dative experiencer, never Nominative (*ის საჭიროებს / *ის არის მშიერი / *ის გრძნობს ტკივილს).' : ''}
+2. Grammar & morphology: ${langName} case endings, verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment & screeves: Series I (present/imperfect/future) requires Nominative subject and Dative direct object. Series II (aorist/optative) requires Ergative subject (-მა/-მ) for transitive verbs and Nominative direct object (e.g. უფლისწულმა ვარდი დაინახა; NEVER nominative subject *უფლისწული დაინახა). Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Postposition syncopation (კუმშვა/კვეცა): locatives (-ში, -ზე, -დან, -კენ, -თვის) drop nominative -ი (ქალაქში, წიგნში) and syncopate internal stem vowels (წყალი->წყლიდან, მგელი->მგლის, ქვეყანა->ქვეყანაში). Negation: არ (neutral negation), ვერ (inability), ნუ (prohibitive). არ + optative can also express a negative command (არ წახვიდე). Georgian negative concord is valid: negative pronoun/determiner + verbal არ, e.g. არავინ არ მოვიდა, არავითარი უბედურება არ ახლავს. Never flag these solely as double negation. Assess semantic polarity in context, not the number of negative words. Experiencer verbs (სჭირდება, უყვარს, ეშინია, ახსოვს, სტკივა, შია, ცივა, უნდა) MUST have Dative experiencer, never Nominative (*ის საჭიროებს / *ის არის მშიერი / *ის გრძნობს ტკივილს).' : ''}
 3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart). Foreign names: missing nominative -ი on consonant-ending names (e.g. *პიტერ instead of პიტერი) or unadapted Latin clusters.' : ''}
 4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: bureaucratic Soviet calques (განხორციელება, ადგილი ჰქონდა, წარმოადგენს, მოცემულ მომენტში), reflexive pronoun violation (NEVER allow „მისი“ when referring back to the clause subject — must be „თავისი“ / „თავის“), numeral plural calque (NEVER use plural nouns after cardinals: ხუთი წიგნი, not *ხუთი წიგნები; ოცი კაცი, not *ოცი კაცები), hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb), robotic stacked "რომელიც" clauses (convert to pre-nominal participles), English passive calques (convert to active aorist).' : ''}
 5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before . , ; : punctuation, no foreign sentence marks (।, ฯ, ۔), exactly one terminal mark per sentence, no doubled punctuation.' : ''}
 
-Be demanding: an accurate but stilted translation still gets flagged under style. If the translation is genuinely publication-ready, return an empty error list. Never invent problems.
+Severity must reflect an actual defect: critical changes meaning; major demonstrates a grammatical or semantic failure; minor covers awkwardness, register and optional stylistic alternatives. Do not label a phrase major merely because another phrasing is more natural. Identify the exact source/translation span and explain the grammatical relation or meaning that fails. Valid word order, pronoun emphasis and negative concord are not defects by themselves.
+
+When revision history is supplied, check the correction in the COMPLETE sentence. Do not reverse a previous correction merely by evaluating an isolated verb or phrase. If the earlier advice was wrong, explain why in context and propose a coherent clause-level repair. In a purpose/complement clause, consider the governing expression before changing verb mood or tense. An earlier reviewer can be wrong; do not approve a real error just because it followed their advice.
+
+If no demonstrated blocking defect remains, keep optional suggestions minor. Return an empty error list when no real defect exists. Never invent problems.
 
 Answer as JSON:
 {"errors": [{"severity": "critical|major|minor", "type": "accuracy|terminology|grammar|style|tts", "issue": "...", "fix": "concrete instruction"}], "verdict": "approved|needs_revision"}
@@ -6687,7 +6691,7 @@ SOURCE:
 ${sourceText}
 
 TRANSLATION:
-${translation}`;
+${translation}${previousRevision ? `\n\nPREVIOUS REVISION (context only, not an authority):\n${JSON.stringify(previousRevision)}` : ''}`;
 
     const data = await callGeminiJSON(prompt, { temperature: 0.1, maxTokens: 4096, systemPrompt, validateResponse: data => EngbotCore.reviewDecision(data).valid });
     if (!data || !Array.isArray(data.errors)) return null;
@@ -6724,7 +6728,7 @@ DEFECTS TO FIX:
 ${errorList}`;
 
     const data = await callGeminiJSON(prompt, { temperature: 0.15, maxTokens: Math.min(8192, Math.max(4096, sourceText.length * 2)), systemPrompt, validateResponse: data => assessTranslation(sourceText, extractTranslation(data?.revised_translation || data?.translation), targetLang).ok });
-    const revised = extractTranslation(data?.revised_translation);
+    const revised = extractTranslation(data?.revised_translation || data?.translation);
     return revised || null;
 }
 
@@ -6761,7 +6765,7 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
             return null;
         }
         setTranslationStage('Final review');
-        const audit = EngbotCore.reviewDecision(await geminiCritiqueTranslation(text, revised, targetLang));
+        const audit = EngbotCore.reviewDecision(await geminiCritiqueTranslation(text, revised, targetLang, { previousTranslation: candidate, requestedCorrections: issues }));
         if (!audit.valid) { translationFailure('Final review', window.EngbotProviders?.getFailure()?.message || 'The reviewer did not return a valid final assessment. Retry this segment.'); return null; }
         if (!audit.blocking.length) return revised;
         candidate = revised;
@@ -6952,7 +6956,7 @@ let lastTranslationFailure = '';
 function setTranslationStage(stage) {
     translationStage = stage;
     const el = document.getElementById('wbEngineStatus');
-    if (el) el.textContent = stage + '…';
+    if (el) el.textContent = stage === 'Complete' ? stage : stage + '…';
 }
 function translationFailure(stage, message) {
     lastTranslationFailure = stage + ': ' + message;
@@ -7924,6 +7928,7 @@ async function runWholeBookTranslation(resume = false) {
     let job, cloudJob;
     activeTranslationBook = targetBook;
     isTranslatingWholeBook = true;
+    updateTranslationControls(true);
     cancelTranslationFlag = false;
     translationRequestController = new AbortController();
     translationPanelMinimized = false;
@@ -8069,20 +8074,38 @@ async function runWholeBookTranslation(resume = false) {
         activeTranslationBook = null;
         translationRequestController = null;
         isTranslatingWholeBook = false;
+        updateTranslationControls(false);
         renderChaptersList();
         renderDigitalShelf();
     }
 }
 
+function updateTranslationControls(running) {
+    const button = document.getElementById('wbDismissButton');
+    if (button) button.textContent = running ? 'Stop Translation' : 'Close';
+    const icon = document.getElementById('wbDismissIcon');
+    if (icon) {
+        icon.title = running ? 'Stop translation' : 'Close translation details';
+        icon.setAttribute('aria-label', running ? 'Stop' : 'Close');
+        const glyph = icon.querySelector('span');
+        if (glyph) glyph.textContent = running ? 'stop_circle' : 'close';
+    }
+    const dock = document.getElementById('translationMiniDock');
+    if (dock) dock.title = running ? 'Translation in progress — click to reopen' : 'Translation details — click to reopen';
+}
+
 function cancelWholeBookTranslation() {
-    cancelTranslationFlag = true;
-    translationRequestController?.abort();
+    const wasRunning = isTranslatingWholeBook;
+    if (wasRunning) {
+        cancelTranslationFlag = true;
+        translationRequestController?.abort();
+    }
     // Keep the running guard until the in-flight operation settles.
     closeModal('wholeBookTranslateModal');
     const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
-    if (dock) dock.classList.add('hidden');
+    if (dock) { dock.classList.add('hidden'); dock.style.display = 'none'; }
     translationPanelMinimized = false;
-    showToast('Pausing translation. Accepted segments are retained for retry.', 'info');
+    if (wasRunning) showToast('Pausing translation. Accepted segments are retained for retry.', 'info');
 }
 
 

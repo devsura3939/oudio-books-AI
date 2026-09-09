@@ -6,6 +6,18 @@ function pipeline(review){const failures=[];const ctx=vm.createContext({window:{
 test('Minor reviewer suggestions do not block a usable translation',async()=>{const ctx=pipeline({verdict:'needs_revision',errors:[{severity:'minor'}]});assert.equal(await ctx.translateWithGeminiAI('source','ka'),'draft');});
 test('Unresolved accuracy errors block publication even at the two-pass setting',async()=>{for(const passes of [2,3]){const ctx=pipeline({verdict:'needs_revision',errors:[{severity:'major'}]});ctx.geminiPasses=passes;assert.equal(await ctx.translateWithGeminiAI('source','ka'),null);assert.match(ctx.failures[0],/issues remain/);}});
 test('A corrected translation passes final review',async()=>{const ctx=pipeline(null);let calls=0;ctx.geminiCritiqueTranslation=async()=>++calls===1?{verdict:'needs_revision',errors:[{severity:'critical'}]}:{verdict:'approved',errors:[]};assert.equal(await ctx.translateWithGeminiAI('source','ka'),'revision');assert.equal(calls,2);});
+test('Final review receives the previous draft and requested repair to prevent context-free reversals',async()=>{
+ const ctx=pipeline(null);const histories=[];const issue={severity:'major',issue:'The governing clause requires optative mood.',fix:'Repair the complete clause.'};
+ ctx.geminiCritiqueTranslation=async(_s,_t,_l,history)=>{histories.push(history);return history?{verdict:'approved',errors:[]}:{verdict:'needs_revision',errors:[issue]};};
+ assert.equal(await ctx.translateWithGeminiAI('source','ka'),'revision');
+ assert.equal(histories[0],undefined);assert.equal(histories[1].previousTranslation,'draft');assert.equal(histories[1].requestedCorrections[0],issue);
+});
+
+test('Refinement extracts the same alternate response field that its validator accepts',async()=>{
+ const ctx=vm.createContext({assessTranslation:()=>({ok:true}),extractTranslation:v=>v,callGeminiJSON:async(_prompt,options)=>{const result={translation:'valid revised text'};assert.ok(options.validateResponse(result));return result;}});
+ vm.runInContext(section('async function geminiRefineTranslation(','// Full pipeline'),ctx);
+ assert.equal(await ctx.geminiRefineTranslation('source','draft',[],'en'),'valid revised text');
+});
 test('Malformed and contradictory reviews fail closed',()=>{for(const review of [null,{verdict:'approved'},{verdict:'needs_revision',errors:[]},{verdict:'approved',errors:[{}]}])assert.equal(core.reviewDecision(review).valid,false);});
 test('Provider failures give actionable, non-secret status and reset after success',async()=>{for(const [status,expected] of [[401,/API key/],[402,/credits/],[429,/quota/],[503,/temporarily/]]){await runtime.request('https://api.groq.com/test',{headers:{Authorization:'secret'}},{fetchImpl:async()=>new Response('',{status})});assert.match(runtime.getFailure().message,expected);assert.ok(!JSON.stringify(runtime.getFailure()).includes('secret'));}await runtime.request('https://api.groq.com/test',{}, {fetchImpl:async()=>new Response('{}')});assert.equal(runtime.getFailure(),null);});
 test('Slow provider requests time out and stop waiting',async()=>{await assert.rejects(runtime.request('https://api.groq.com/test',{}, {timeoutMs:10,fetchImpl:(_u,{signal})=>new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(signal.reason)))}));assert.equal(runtime.getFailure().code,'timeout');});
@@ -31,5 +43,41 @@ test('Per-segment Georgian guidance is bounded while the full corpus remains ava
  for(const source of ['A story about a book.','John Smith did not return home.']){
   const guidance=ka.getKaTaskRules(source);assert.ok(guidance.length>1000&&guidance.length<=6000);
   assert.ok(ka.getKaCompactRules().length>40000);
+ }
+});
+
+test('Georgian negative concord and coordinated negatives survive grammar QA unchanged',()=>{
+ for(const text of ['არავითარი უბედურება არ ახლავს.','არავინ არ მოვიდა.','არ ჭამს და არ სვამს.']){
+  assert.equal(ka.correctGeorgianMorphology(text),text);
+  assert.deepEqual(ka.validateGeorgianTranslation(text).filter(issue=>/neg/.test(issue.rule)),[]);
+ }
+});
+
+test('Negative fragments never receive a guessed verbal negator',()=>{
+ for(const text of ['არავითარი პრობლემა.','არაფერი ახალი.']){
+  assert.equal(ka.correctGeorgianMorphology(text),text);
+  assert.deepEqual(ka.validateGeorgianTranslation(text).filter(issue=>/neg/.test(issue.rule)),[]);
+ }
+});
+
+test('Closing completed translation details neither cancels work nor reports a false pause',()=>{
+ for(const running of [false,true]){
+  let aborted=0,toasts=0,closed=0;const dock={classList:{add(){}},style:{}};
+  const ctx=vm.createContext({isTranslatingWholeBook:running,cancelTranslationFlag:false,translationRequestController:{abort:()=>aborted++},translationPanelMinimized:true,DOM:{translationMiniDock:dock},closeModal:()=>closed++,showToast:()=>toasts++});
+  vm.runInContext(section('function cancelWholeBookTranslation()','// ══════════════════════════════════════════════════════════════════════════'),ctx);
+  ctx.cancelWholeBookTranslation();assert.equal(closed,1);assert.equal(aborted,Number(running));assert.equal(toasts,Number(running));assert.equal(ctx.cancelTranslationFlag,running);assert.equal(dock.style.display,'none');
+ }
+});
+
+test('The actual reviewer receives negative concord guidance without a one-negator veto',async()=>{
+ let captured;
+ const ctx=vm.createContext({EngbotCore:core,getKaCompactRules:ka.getKaCompactRules,getKaTaskRules:ka.getKaTaskRules,callGeminiJSON:async(prompt,options)=>{captured=prompt+options.systemPrompt;return {verdict:'approved',errors:[]};}});
+ vm.runInContext(section('async function geminiCritiqueTranslation(','\nasync function '),ctx);
+ await ctx.geminiCritiqueTranslation('The journey was without danger.','არავითარი საფრთხე არ არსებობდა.','ka');
+ assert.match(captured,/negative concord is valid/i);
+ assert.doesNotMatch(captured,/one negator per clause|NEVER არ for commands|არავინ არ მოვიდა is wrong|Any violation.*at least a/);
+ for(const rules of [ka.getKaTaskRules('A peaceful journey.'),ka.getKaCompactRules(),ka.getKaRepairRules()]){
+  assert.match(rules,/negative concord is valid/i);
+  assert.doesNotMatch(rules,/Double negation.*UNGRAMMATICAL|არავინ არ მოვიდა is wrong/);
  }
 });
