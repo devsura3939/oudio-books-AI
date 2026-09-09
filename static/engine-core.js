@@ -61,6 +61,28 @@
         if (rest) chunks.push(rest);
         return chunks;
     }
+    function naturalSentences(text) {
+        const input = String(text || '');
+        if (!input.trim()) return [];
+        const protectedDots = new Set();
+        // Mark original offsets instead of replacing punctuation with sentinel text.
+        const abbreviations = /\b(?:Mr|Mrs|Ms|Dr|Prof|Gen|Col|Capt|Lt|Sr|Jr|St|Rev|Hon|No|Vol|Ch|pp?)\.|\b(?:e\.g\.|i\.e\.|vs\.)|(?<!\p{L})(?:ე\.ი\.|ე\.წ\.|ა\.შ\.|სხვ\.)/giu;
+        for (const match of input.matchAll(abbreviations)) {
+            for (let i = 0; i < match[0].length; i++) if (match[0][i] === '.') protectedDots.add(match.index + i);
+        }
+        const parts = []; let start = 0;
+        for (let i = 0; i < input.length; i++) {
+            if (!/[.!?…჻]/u.test(input[i]) || protectedDots.has(i)) continue;
+            if (input[i] === '.' && /\d/.test(input[i - 1] || '') && /\d/.test(input[i + 1] || '')) continue;
+            let end = i + 1;
+            while (/[.!?…჻"'”’»“\])}]/u.test(input[end] || '\0')) end++;
+            if (end < input.length && !/\s/u.test(input[end])) continue;
+            while (/\s/u.test(input[end] || '\0')) end++;
+            parts.push(input.slice(start, end)); start = end; i = end - 1;
+        }
+        if (start < input.length) parts.push(input.slice(start));
+        return parts;
+    }
     function cleanVerbatim(text) {
         return String(text || '').replace(/\r\n?/g, '\n').replace(/\u0000/g, '').trim();
     }
@@ -116,5 +138,5 @@
             ? Math.round(declaredSeconds) : Math.round(words / 140 * 60);
         return { words, seconds };
     }
-    return { normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, cleanVerbatim, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats, reviewDecision, bookSourceLanguage };
+    return { normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, naturalSentences, cleanVerbatim, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats, reviewDecision, bookSourceLanguage };
 });

@@ -14,6 +14,8 @@
   const CACHE_KEY = "engbot_pack_v1";
   const CACHE_TTL = 10 * 60 * 1000;
   const packs = Object.create(null); // language -> { items, prompt, version }
+  const loadRevision = Object.create(null);
+  const compiled = new WeakMap();
 
   function readCache() {
     try {
@@ -58,14 +60,19 @@
     if (text.length > 200000) return text;
     let out = text;
     const literalType = kind === "transcribe" ? "ocr_fix" : "glossary";
-    for (const item of pack.items) {
+    let rules = compiled.get(pack.items);
+    if (!rules) {
+      rules = pack.items.map(item => ({ ...item, re: safeRegex(item.pattern || '', item.type === 'glossary' || item.type === 'ocr_fix') }));
+      compiled.set(pack.items, rules);
+    }
+    for (const item of rules) {
       if (item.type !== literalType) continue;
-      const re = safeRegex(item.pattern, true);
+      const re = item.re;
       if (re) out = out.replace(re, () => item.replacement);
     }
-    for (const item of pack.items) {
+    for (const item of rules) {
       if (item.type !== "autofix") continue;
-      const re = safeRegex(item.pattern, false);
+      const re = item.re;
       if (re) out = out.replace(re, item.replacement);
     }
     return out;
@@ -96,11 +103,13 @@
 
   async function load(lang) {
     const language = lang || "ka";
+    const revision = loadRevision[language] = (loadRevision[language] || 0) + 1;
 
     // 1. Try fetching directly from Supabase Cloud (works on GitHub Pages & mobile!)
     if (window.LuminaStore && window.LuminaStore.fetchActiveEnginePack) {
       try {
         const cloudPack = await window.LuminaStore.fetchActiveEnginePack(language);
+        if (loadRevision[language] !== revision) return packs[language] || null;
         if (cloudPack && Array.isArray(cloudPack.items)) {
           packs[language] = { items: cloudPack.items, prompt: buildPrompt(cloudPack.items), version: cloudPack.version || 0 };
           writeCache();
@@ -117,6 +126,7 @@
       });
       if (!res.ok) return null;
       const data = await res.json();
+      if (loadRevision[language] !== revision) return packs[language] || null;
       packs[language] = { items: data.items || [], prompt: data.prompt || "", version: data.version || 0 };
       writeCache();
       return packs[language];

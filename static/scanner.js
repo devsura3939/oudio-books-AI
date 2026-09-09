@@ -1142,10 +1142,18 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
     return worker;
   }
 
+  let localOcrQueue = Promise.resolve();
   async function ocrLocal(blob, lang) {
-    const worker = await tessWorkerFor(lang);
-    const { data } = await worker.recognize(blob);
-    return { text: data.text || "", confidence: typeof data.confidence === "number" ? data.confidence : 0 };
+    // Two neural lanes may fail over together. Creation, language changes and recognition must all serialize.
+    const job = localOcrQueue.then(async () => {
+      if (state.cancel) throw new Error('Scan stopped.');
+      const worker = await tessWorkerFor(lang);
+      const { data } = await worker.recognize(blob);
+      if (state.cancel) throw new Error('Scan stopped.');
+      return { text: data.text || "", confidence: typeof data.confidence === "number" ? data.confidence : 0 };
+    });
+    localOcrQueue = job.catch(() => {});
+    return job;
   }
 
   // ── Run ────────────────────────────────────────────────────────────────────
@@ -1654,10 +1662,11 @@ ${text.slice(0, 10000)}`;
       }
 
       const best = attempts.sort((a, b) => b.score - a.score)[0] || { text: "", engine: "" };
+      if (state.cancel) { page.status = 'pending'; page._base = null; return; }
       // The raw recognition is the source of truth; editorial changes require review.
       page.text = window.EngbotCore.cleanVerbatim(best.text === '[[NO_TEXT]]' ? '' : best.text);
       page.rawText = page.text;
-      const trainedLang = lang === 'kat' ? 'ka' : lang === 'eng' ? 'en' : (/[ა-ჰ]/.test(page.text) ? 'ka' : 'en');
+      const trainedLang = lang === 'kat' ? 'ka' : lang === 'eng' ? 'en' : window.EngbotCore.detectLanguage(page.text);
       page.trainedSuggestion = window.EngbotPack?.apply(page.rawText, trainedLang, 'transcribe') || page.rawText;
       page.engine = best.engine;
       page.quality = Math.round((best.score || 0) * 100);
@@ -1697,7 +1706,7 @@ ${text.slice(0, 10000)}`;
     if (!t) return 0;
     const letters = (t.match(/\p{L}/gu) || []).length;
     if (letters < 8) return 0.05;
-    const ka = (t.match(/[\u10A0-\u10FF]/g) || []).length;
+    const ka = (t.match(/\p{Script=Georgian}/gu) || []).length;
     const latin = (t.match(/[A-Za-z]/g) || []).length;
     const expected = lang === "kat" ? ka : lang === "eng" ? latin : Math.max(ka, latin);
     let score = expected / letters; // right-script ratio
@@ -1713,10 +1722,10 @@ ${text.slice(0, 10000)}`;
 
     // Georgian word validity gate: every valid Georgian word must have vowels (ა, ე, ი, ო, უ)
     if (ka > 10) {
-      const kaWords = words.filter(w => /[\u10A0-\u10FF]/.test(w));
+      const kaWords = words.filter(w => /\p{Script=Georgian}/u.test(w));
       let validKaWords = 0;
       for (const w of kaWords) {
-        if (w.length < 2 || /[აეიოუ]/.test(w)) {
+        if (w.length < 2 || /[აეიოუᲐᲔᲘᲝᲣႠႤႨႭႳⴀⴄⴈⴍⴓ]/u.test(w)) {
           validKaWords++;
         }
       }

@@ -23,7 +23,19 @@
         const version = active.data.engine_versions;
         const state = { versionId: active.data.version_id, items: version.items, cases: benchmark.data };
         const result = window.EngbotTrainer.evaluate(state.items, state.cases);
-        el('trainerSummary').textContent = `Pack ${version.version} · ${state.items.length} rules · ${result.passed}/${result.total} exact benchmark matches`;
+        if (el('trainerLanguage').value === language) {
+            el('trainerSummary').textContent = `Pack ${version.version} · ${state.items.length} rules · ${result.passed}/${result.total} exact benchmark matches`;
+            const list = el('trainerFailures');
+            if (list) {
+                list.replaceChildren();
+                for (const failure of result.failures.slice(0, 8)) {
+                    const row = document.createElement('p');
+                    row.textContent = `${failure.kind === 'translate' ? 'Translation' : 'OCR'}: ${failure.source.slice(0, 180)} → ${failure.expected.slice(0, 180)}`;
+                    list.appendChild(row);
+                }
+                if (!result.failures.length) list.textContent = 'All current examples pass. Add verified examples to test new material.';
+            }
+        }
         return state;
     }
     async function refresh() {
@@ -55,10 +67,10 @@
         if (!response.ok) throw new Error(`Provider request failed (${response.status}). Run stopped; active rules are retained.`);
         const data = await response.json();
         const reason = isGemini ? data.candidates?.[0]?.finishReason : isOllama ? (data.done === true ? data.done_reason : null) : data.choices?.[0]?.finish_reason;
-        if (!['STOP', 'stop'].includes(reason)) throw new Error('Provider did not finish a complete proposal. No truncated rules were accepted.');
+        if (!['STOP', 'stop'].includes(reason)) throw Object.assign(new Error('Provider did not finish a complete proposal. No truncated rules were accepted.'), { proposalInvalid: ['length', 'MAX_TOKENS'].includes(reason) });
         const text = isGemini ? data.candidates[0].content?.parts?.map(p => p.text || '').join('') : isOllama ? (data.message?.content || data.response) : data.choices[0].message?.content;
         try { return JSON.parse(String(text).replace(/^```(?:json)?\s*|\s*```$/g, '')); }
-        catch { throw new Error('Provider returned invalid JSON. Active rules are retained.'); }
+        catch { throw Object.assign(new Error('Provider returned invalid JSON. Active rules are retained.'), { proposalInvalid: true }); }
     }
     async function run() {
         if (controller) return;

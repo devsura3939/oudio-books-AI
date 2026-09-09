@@ -25,7 +25,8 @@
         const t = terminal(text);
         // Additional inter-sentence gap, beyond the voice's own punctuation pause.
         const gap = /\n\s*\n\s*$/.test(String(text)) ? 340
-            : /(?:\.{3}|…)$/.test(t) ? 280 : /[?!]$/.test(t) ? 180 : 130;
+            : /(?:\.{3}|…)$/.test(t) ? 280 : /[?!]$/.test(t) ? 180 : /[.჻]$/.test(t) ? 130
+                : /[;:]$/.test(t) ? 90 : /[,—–]$/.test(t) ? 55 : 25;
         return Math.round(gap / Math.max(0.5, Math.min(2, Number(speed) || 1)));
     }
     function chunks(text, limit = 200) {
