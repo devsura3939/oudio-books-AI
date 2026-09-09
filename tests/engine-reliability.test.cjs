@@ -119,6 +119,12 @@ function context() {
         saveBookToDB:async b=>ctx.saved.push(structuredClone(b)),
         getAllBooks:async()=>[],saved:[],
     });
+    const naturalStart = source.indexOf('function splitIntoNaturalSentences(');
+    const naturalEnd = source.indexOf('document.addEventListener', naturalStart);
+    vm.runInContext(source.slice(naturalStart, naturalEnd), ctx);
+    const buildStart = source.indexOf('function buildTranslationChunks(');
+    const buildEnd = source.indexOf('async function startWholeBookTranslation(', buildStart);
+    vm.runInContext(source.slice(buildStart, buildEnd), ctx);
     vm.runInContext(section("const TJOB_PREFIX =", 'function findResumableTranslationJob('), ctx);
     vm.runInContext(section('async function startWholeBookTranslation(', '// ══════════════════════════════════════════════════════════════════════════\n// ██ LOCK-SCREEN'),ctx);
     vm.runInContext(section('async function saveTranslatedBookEdition(', 'window.saveTranslatedBookEdition'),ctx);
@@ -167,13 +173,26 @@ test('Failure in middle of a chapter resumes only missing chunks and publishes o
     assert.equal([...ctx.checkpoints.values()][0].chapters['1'].outputs.filter(Boolean).length,1);
     assert.equal(ctx.currentBook.chapters[0].text_ka,undefined);
     assert.equal(ctx.saved.filter(b=>b.isTranslatedEdition).length,0);
-    const remaining=core.splitText(ctx.currentBook.chapters[0].text,1800).length-1;
+    const remaining=ctx.buildTranslationChunks(ctx.currentBook.chapters[0].text,1800).chunks.length-1;
     calls=0;ctx.translateChunkAI=async text=>{calls++;return output(text);};
     await ctx.startWholeBookTranslation(true);
     assert.equal(calls,remaining);
     assert.equal(ctx.checkpoints.size,0);
     assert.equal(ctx.saved.filter(b=>b.isTranslatedEdition).length,1);
     assert.equal(ctx.DOM.wbProgressPct.textContent,'100%');
+});
+
+test('Whole-book chunking keeps long sentences together and records a chunking-version checkpoint',async()=>{
+ const ctx=context();
+ const sourceText=('A sentence before the boundary. '.repeat(70))+'The best thing you can do for that friend is to get over the wall and keep motating. The next sentence continues the paragraph.';
+ ctx.currentBook.chapters[0].text=sourceText;
+ const chunks=ctx.buildTranslationChunks(sourceText,1800).chunks;
+ assert.ok(chunks.length>1);
+ assert.ok(chunks.some(chunk=>chunk.includes('keep motating')));
+ assert.ok(!chunks.some(chunk=>chunk.trim()==='wall and keep motating. The'));
+ ctx.translateChunkAI=async text=>'ქართული თარგმანი ამ მონაკვეთისთვის. '.repeat(Math.ceil(text.length / 45));
+ await ctx.startWholeBookTranslation();
+ assert.equal(ctx.saved.filter(book=>book.isTranslatedEdition).length,1);
 });
 test('Georgian source creates an English edition',async()=>{
     const ctx=context();ctx.currentBook.lang='ka';ctx.currentBook.chapters[0].text='ეს არის ქართული ტექსტი წიგნის შესახებ.';
