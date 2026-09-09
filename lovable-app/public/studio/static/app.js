@@ -10595,36 +10595,13 @@ async function renderDigitalShelf(filterText = document.getElementById('searchIn
 
 function renderDiscoverClassics() {
     if (!DOM.discoverGrid) return;
-    DOM.discoverGrid.innerHTML = '';
-
-    DISCOVER_CLASSICS.forEach(book => {
-        const stats = getBookStats(book);
-        const div = document.createElement('div');
-        div.className = 'group relative cursor-pointer glass-card p-4 rounded-2xl flex flex-col justify-between';
-        div.onclick = async () => {
-            await saveBookToDB(book);
-            await renderDigitalShelf();
-            selectBook(book.id, true);
-            navigate('library');
-        };
-
-        div.innerHTML = `
-            <div>
-                <div class="aspect-[16/10] sm:aspect-[2/3] rounded-xl overflow-hidden mb-3.5 relative">
-                    <img src="${book.coverUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                    <div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-georgian-gold text-[10px] font-bold text-black shadow">🇬🇪 Ready</div>
-                </div>
-                <h4 class="font-bold text-white text-base truncate">${escapeHtml(book.title)}</h4>
-                <p class="text-xs text-primary-fixed mt-0.5">${escapeHtml(book.author)}</p>
-                <p class="text-xs text-on-surface-variant mt-1">${stats.chaptersCount} Chapters • ${stats.totalWords.toLocaleString()} Words • ~${stats.totalFormattedTime}</p>
-            </div>
-            <button class="mt-4 w-full py-2.5 rounded-xl bg-white/5 group-hover:bg-primary-container group-hover:text-on-primary-container text-white text-xs font-semibold flex items-center justify-center gap-2 transition">
-                <span class="material-symbols-outlined text-base">add_to_photos</span>
-                Add to My Audiobooks
-            </button>
-        `;
-        DOM.discoverGrid.appendChild(div);
-    });
+    DOM.discoverGrid.innerHTML = `
+        <div class="col-span-full glass-card rounded-2xl p-8 md:p-12 text-center">
+            <span class="material-symbols-outlined text-4xl text-primary-fixed-dim">library_add</span>
+            <h3 class="mt-3 text-lg font-bold text-white">Your private library is upload-first</h3>
+            <p class="mx-auto mt-2 max-w-lg text-sm text-on-surface-variant">Only PDFs you upload, books you scan, and completed translated editions appear on your shelf. Nothing is seeded automatically.</p>
+            <button type="button" onclick="openModal('uploadModal')" class="mt-5 rounded-xl bg-primary-container px-5 py-3 text-sm font-bold text-on-primary-container">Upload a PDF</button>
+        </div>`;
 }
 
 let bookSelectionRevision = 0;
