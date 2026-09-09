@@ -3799,7 +3799,7 @@ function openTrainingLab() {
 window.getTrainingProviderConfig = function (provider) {
     const configs = {
         gemini: { key: geminiApiKey, model: EngbotCore.geminiModels(geminiModel)[0] },
-        groq: { key: groqApiKey, model: groqSelectedModel || GROQ_MODELS[0], url: GROQ_API_URL },
+        groq: { key: groqApiKey, model: GROQ_MODELS.includes(groqSelectedModel) ? groqSelectedModel : GROQ_MODELS[0], url: GROQ_API_URL },
         mistral: { key: mistralApiKey, model: MISTRAL_MODELS[0], url: MISTRAL_API_URL },
         openrouter: { key: openRouterApiKey, model: openRouterModel || OPENROUTER_FREE_MODELS[0], url: 'https://openrouter.ai/api/v1/chat/completions' },
         custom: { key: customProviderKey, model: customProviderModel, url: normalizeCustomProviderUrl(customProviderUrl) },
@@ -8642,7 +8642,7 @@ function speakStandardSentence(text, lang) {
             if (myToken === currentSpeechToken && isPlaying && !isPaused) {
                 speakCurrentSentence();
             }
-        }, 180);
+        }, window.EngbotNarration.pauseMs(text, currentGlobalSpeed));
     };
 
     utter.onerror = (e) => {
