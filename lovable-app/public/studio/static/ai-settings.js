@@ -4,7 +4,7 @@
     let controller;
     const providers = [
         { id: 'gemini', key: 'geminiApiKeyInput', select: 'geminiModelSelect', url: 'https://generativelanguage.googleapis.com/v1beta/models', header: 'x-goog-api-key' },
-        { id: 'openrouter', key: 'openRouterApiKeyInput', select: 'openRouterModelSelect', url: 'https://openrouter.ai/api/v1/models', auto: 'Auto — rotate free models' },
+        { id: 'openrouter', key: 'openRouterApiKeyInput', select: 'openRouterModelSelect', url: 'https://openrouter.ai/api/v1/models/user', auto: 'Auto — rotate free models' },
         { id: 'groq', key: 'groqApiKeyInput', select: 'groqModelSelect', url: 'https://api.groq.com/openai/v1/models', auto: 'Auto — use fallback models' },
         { id: 'mistral', key: 'mistralApiKeyInput', select: 'mistralModelSelect', url: 'https://api.mistral.ai/v1/models' },
         { id: 'custom', key: 'customProviderKeyInput', select: 'customProviderModelSelect' },
