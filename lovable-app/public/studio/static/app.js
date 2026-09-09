@@ -8,7 +8,7 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.49.5';
+const APP_VERSION = 'v1.50.0';
 const ENGINE_VERSION = 'v1.49.2 (Deterministic baseline with optional AI correction)';
 
 let db = null;
@@ -5446,9 +5446,10 @@ async function openReader(bookId, chapterId, lang = 'en') {
 
     readerActive = true;
     DOM.readerView.className = `reader-theme-${readerTheme} active`;
+    DOM.readerView.dataset.readerLang = readerLang;
     document.body.style.overflow = 'hidden';
 
-    DOM.readerBookTitle.textContent = readerBook.title;
+    DOM.readerBookTitle.textContent = window.EngbotUI?.displayTitle(readerBook.title) || readerBook.title;
     updateReaderLangUI();
     // Measured pagination needs the reader box to have a real size first.
     requestAnimationFrame(() => {
@@ -5509,6 +5510,7 @@ function toggleReaderLanguage() {
 
     readerLang = newLang;
     currentLang = newLang;
+    if (DOM.readerView) DOM.readerView.dataset.readerLang = readerLang;
     updateReaderLangUI();
     updateLangToggleUI();
 
@@ -5660,22 +5662,35 @@ function measurePages(sentences) {
         const isDual = readerMode === 'dual' && window.innerWidth >= 900;
         const style = getComputedStyle(container);
         const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+        const spreadStyle = getComputedStyle(spread);
+        const spreadGap = parseFloat(spreadStyle.columnGap || spreadStyle.gap) || 20;
+        // Read the effective page card padding instead of duplicating CSS
+        // breakpoints here. This keeps measured pagination aligned with the
+        // responsive reader theme and safe-area overrides.
+        const cardProbe = document.createElement('div');
+        cardProbe.className = 'book-page-card';
+        cardProbe.style.cssText = 'position:absolute;left:-99999px;top:0;width:100px;height:100px;visibility:hidden;pointer-events:none;';
+        document.body.appendChild(cardProbe);
+        const cardStyle = getComputedStyle(cardProbe);
+        const cardPadX = (parseFloat(cardStyle.paddingLeft) || 0) + (parseFloat(cardStyle.paddingRight) || 0);
+        const cardPadY = (parseFloat(cardStyle.paddingTop) || 0) + (parseFloat(cardStyle.paddingBottom) || 0);
+        cardProbe.remove();
         let boxW = (container.clientWidth - padX);
-        if (isDual) boxW = (boxW - 20) / 2;
+        if (isDual) boxW = (boxW - spreadGap) / 2;
         boxW = Math.min(boxW, isDual ? 860 : 1720);
 
         const vw = window.innerWidth;
-        const cardPadX = vw <= 400 ? 20 : vw <= 640 ? 28 : vw <= 900 ? 40 : vw <= 1200 ? 56 : 72;
-        const cardPadY = vw <= 400 ? 24 : vw <= 640 ? 28 : vw <= 900 ? 36 : vw <= 1200 ? 44 : 52;
-        const innerW = Math.max(160, boxW - cardPadX);
+        const measuredPadX = cardPadX || (vw <= 640 ? 28 : 72);
+        const measuredPadY = cardPadY || (vw <= 640 ? 28 : 52);
+        const innerW = Math.max(160, boxW - measuredPadX);
 
         const spreadH = spread.clientHeight || (window.innerHeight - (vw <= 640 ? 110 : vw <= 900 ? 116 : 124));
         const footerReserve = 34;
         const headerReserve = vw <= 640 ? 66 : 74;
         const safety = 8;
 
-        const page1MaxH = Math.max(220, spreadH - cardPadY - footerReserve - headerReserve - safety);
-        const pageOtherMaxH = Math.max(260, spreadH - cardPadY - footerReserve - safety);
+        const page1MaxH = Math.max(220, spreadH - measuredPadY - footerReserve - headerReserve - safety);
+        const pageOtherMaxH = Math.max(260, spreadH - measuredPadY - footerReserve - safety);
 
         const probe = document.createElement('div');
         probe.className = `${readerFontFamily} space-y-3.5`;
@@ -5759,6 +5774,7 @@ window.repaginateKeepingPosition = repaginateKeepingPosition;
 
 function scheduleRepaginate() {
     clearTimeout(readerRepaginateTimer);
+    if (!readerActive || !readerBook || readerMode === 'scroll') return;
     readerRepaginateTimer = setTimeout(repaginateKeepingPosition, 180);
 }
 
@@ -6010,27 +6026,6 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
 }
 
 // ── Page Steppers ──────────────────────────────────────────────────────────
-// ── Responsive re-pagination ────────────────────────────────────────────────
-// Re-flow pages when the viewport changes (resize / device rotation) so the
-// text always fits the current screen. Debounced to avoid thrashing during
-// continuous resize drags.
-let readerResizeTimer = null;
-let lastReaderVw = window.innerWidth;
-window.addEventListener('resize', () => {
-    if (!readerActive || !readerBook) return;
-    const vw = window.innerWidth;
-    if (vw === lastReaderVw) return;
-    lastReaderVw = vw;
-    clearTimeout(readerResizeTimer);
-    readerResizeTimer = setTimeout(() => {
-        if (!readerActive || !readerBook) return;
-        if (readerMode === 'scroll') return; // scroll mode flows naturally
-        paginateChapter();
-        renderCurrentPage();
-    }, 180);
-});
-
-// ── Page Steppers ──────────────────────────────────────────────────────────
 function readerNextPage() {
     if (!readerBook) return;
     currentTurnDir = 'next';
@@ -6277,6 +6272,7 @@ function setReaderTheme(theme) {
     readerTheme = theme;
     localStorage.setItem('lumina_reader_theme', theme);
     DOM.readerView.className = `reader-theme-${theme} active`;
+    DOM.readerView.dataset.readerLang = readerLang;
 }
 
 function changeReaderFontSize(delta) {
@@ -10826,7 +10822,7 @@ async function selectBook(bookId, autoPlayFirst = false) {
     }
 
     DOM.chaptersContainer.classList.remove('hidden');
-    DOM.activeBookTitle.textContent = currentBook.title;
+    DOM.activeBookTitle.textContent = window.EngbotUI?.displayTitle(currentBook.title) || currentBook.title;
     if (DOM.activeBookMetaDetail) {
         DOM.activeBookMetaDetail.textContent = `${stats.chaptersCount} Chapters • ${stats.totalWords.toLocaleString()} Words • ~${stats.totalFormattedTime} listening time`;
     }
