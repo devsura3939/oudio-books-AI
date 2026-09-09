@@ -3,7 +3,7 @@
 // ==========================================================================
 // 1. Rock-Solid, Non-Skipping Speech Engine (Desktop & Mobile)
 // 2. Fully Synchronized Moon+ Reader (Pages, Spreads & Continuous Scroll)
-// 3. Multi-Chapter Pre-Loaded Classics with Full Georgian Translations
+// 3. User-owned books only; no pre-loaded or demo shelf entries
 // 4. Zero-Overflow Responsive Touch Controls for Mobile & Desktop
 // ==========================================================================
 
@@ -2106,95 +2106,17 @@ function transliterateGeorgianToPhonetic(kaText) {
     return out;
 }
 
-// ── Rich Pre-Bundled Classic Masterworks with Full Chapters ────────────────
-const DISCOVER_CLASSICS = [
-    {
-        id: 'classic_art_of_war',
-        title: 'The Art of War',
-        author: 'Sun Tzu',
-        coverUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=600&q=80',
-        chapters: [
-            {
-                id: 1,
-                title: 'Chapter 1: Laying Plans',
-                text: "The art of war is of vital importance to the State. It is a matter of life and death, a road either to safety or to ruin. Hence it is a subject of inquiry which can on no account be neglected. The art of war, then, is governed by five constant factors, to be taken into account in one's deliberations, when seeking to determine the conditions obtaining in the field. These are: The Moral Law; Heaven; Earth; The Commander; Method and Discipline. The Moral Law causes the people to be in complete accord with their ruler, so that they will follow him regardless of their lives, undismayed by any danger. Heaven signifies night and day, cold and heat, times and the seasons. Earth comprises distances, great and small; danger and security; open ground and narrow passes; the chances of life and death. The Commander stands for the virtues of wisdom, sincerely, benevolence, courage and strictness. By method and discipline are to be understood the marshaling of the army in its proper subdivisions, the graduations of rank among the officers, the maintenance of roads by which supplies may reach the army, and the control of military expenditure. These five heads should be familiar to every general: he who knows them will be victorious; he who knows them not will fail. Therefore, in your deliberations, when seeking to determine the military conditions, let them be made the basis of a comparison. Which of the two sovereigns is imbued with the Moral law? Which of the two generals has most ability? With whom lie the advantages derived from Heaven and Earth? On which side is discipline most rigorously enforced? Which army is stronger? On which side are officers and men more highly trained? In which army is there the greater constancy both in reward and punishment? By means of these seven considerations I can forecast victory or defeat.",
-                text_ka: "ომის ხელოვნებას სასიცოცხლო მნიშვნელობა აქვს სახელმწიფოსთვის. ეს გახლავთ სიცოცხლისა და სიკვდილის საკითხი, გზა გადარჩენისკენ ან წარწყმედისკენ. ამიტომაც, იგი კვლევის ისეთი საგანია, რომლის უგულებელყოფა არავითარ შემთხვევაში არ შეიძლება. ომის ხელოვნება იმართება ხუთი მუდმივი საწყისით, რომლებიც საგულდაგულოდ უნდა შეფასდეს ბრძოლის ველზე არსებული ვითარების განსაზღვრისას. ესენია: ზნეობრივი კანონი, ცა, მიწა, მხედართმთავარი, წესი და დისციპლინა. ზნეობრივი კანონი ხალხს მმართველთან სრულ ერთსულოვნებას შთააგონებს, რათა ისინი მას სიცოცხლის დაუზოგავად გაჰყვნენ და ყოველგვარ საფრთხეს გაბედულად შეეგებონ. ცა განასახიერებს დღესა და ღამეს, სიცივესა და სიცხეს, დროთა ცვალებადობასა და წელიწადის დროებს. მიწა მოიცავს მანძილებს — შორსა და ახლოს; საფრთხესა და სიმშვიდეს; გაშლილ ველებსა და ვიწრო ხეობებს; სიცოცხლისა და სიკვდილის შესაძლებლობებს. მხედართმთავარი თავის თავში აერთიანებს სიბრძნის, ერთგულების, კეთილგანწყობის, სიმამაცისა და სიმკაცრის სათნოებებს. წესსა და დისციპლინაში იგულისხმება ლაშქრის სათანადო დანაყოფებად განლაგება, ოფიცერთა ჩინების თანმიმდევრობა, მომარაგების გზების მოწესრიგება და სამხედრო ხარჯების მართვა. ეს ხუთი ძირითადი საწყისი ყოველი სარდლისთვის ზედმიწევნით ცნობილი უნდა იყოს: ვინც მათ ფლობს, გაიმარჯვებს, ხოლო ვინც ვერ ჩასწვდომია — დამარცხდება. ამგვარად, სამხედრო მდგომარეობის შეფასებისას, სწორედ ეს საწყისები დაუდეთ საფუძვლად ურთიერთშედარებას. ორი მმართველიდან რომელია ზნეობრივი კანონით აღსავსე? რომელი მხედართმთავარი გამოირჩევა უპირატესი ნიჭითა და ოსტატობით? ვის მხარესაა ცისა და მიწისგან ბოძებული უპირატესობანი? რომელ ბანაკში აღსრულდება დისციპლინა ყველაზე მკაცრად? რომელი ლაშქარია უფრო ძლიერი? სად არიან ოფიცრები და მეომრები უკეთ გაწვრთნილნი? რომელ არმიაშია უდიდესი სამართლიანობა და თანმიმდევრულობა როგორც ჯილდოს, ისე სასჯელის მიგებისას? სწორედ ამ შვიდი განსჯის საფუძველზე შემიძლია წინასწარ განვჭვრიტო გამარჯვება ან მარცხი.",
-                word_count: 260,
-                estimated_duration_sec: 95
-            },
-            {
-                id: 2,
-                title: 'Chapter 2: Waging War',
-                text: "Sun Tzu said: In the operations of war, where there are in the field a thousand swift chariots, as many heavy chariots, and a hundred thousand mail-clad soldiers, with provisions enough to carry them a thousand li, the expenditure at home and at the front, including entertainment of guests, small items such as glue and paint, and sums spent on chariots and armor, will reach the total of a thousand ounces of silver per day. Such is the cost of raising an army of 100,000 men. When you engage in actual fighting, if victory is long in coming, then men's weapons will grow dull and their ardor will be damped. If you lay siege to a town, you will exhaust your strength. Again, if the campaign is protracted, the resources of the State will not be equal to the strain. Now, when your weapons are dulled, your ardor damped, your strength exhausted and your treasure spent, other chieftains will spring up to take advantage of your extremity. Then no man, however wise, will be able to avert the consequences that must ensue. Thus, though we have heard of stupid haste in war, cleverness has never been seen associated with long delays. In war, then, let your great object be victory, not lengthy campaigns.",
-                text_ka: "სუნ ძიმ ბრძანა: საომარ მოქმედებებში, როდესაც ბრძოლის ველზე ათასი სწრაფი საომარი ეტლი, ათასი მძიმე ეტლი და ასი ათასი ჯავშნოსანი მეომარი გყავს, ათასი ლის მანძილზე საკმარისი საგზლით, ხარჯები ზურგსა და ფრონტზე — სტუმართა მიღების, ისეთი წვრილმანების, როგორიცაა წებო და საღებავი, ასევე ეტლებისა და აბჯრის შესაკეთებლად — დღეში ათას უნცია ვერცხლს მიაღწევს. ასეთია ასიათასიანი ლაშქრის გამოყვანის ფასი. როდესაც რეალურ ბრძოლაში ებმებით, თუ გამარჯვება აგვიანებს, მეომართა იარაღი დაბლაგვდება და მათი შემართება დაცხრება. თუ ციხე-ქალაქს შემოადგებით ალყით, ძალ-ღონეს ამოწურავთ. ხოლო თუ ლაშქრობა გაჭიანურდა, სახელმწიფოს რესურსები ვეღარ გაუძლებს ამ სიმძიმეს. როდესაც თქვენი იარაღი დაბლაგვდება, შემართება განელდება, ძალები ამოიწურება და ხაზინა დაცარიელდება, მეზობელი მმართველები წამოდგებიან, რათა თქვენი გაჭირვებით ისარგებლონ. მაშინ ვერავინ, რაოდენ ბრძენიც არ უნდა იყოს, ვეღარ აიცილებს გარდაუვალ შედეგებს. ამიტომ, მართალია გვსმენია ომში უგუნური სისწრაფის შესახებ, მაგრამ სიბრძნე გაჭიანურებულ ომებთან დაკავშირებული არასოდეს გვინახავს. მაშასადამე, ომში თქვენი უპირველესი მიზანი იყოს გამარჯვება და არა ხანგრძლივი ლაშქრობა.",
-                word_count: 240,
-                estimated_duration_sec: 85
-            },
-            {
-                id: 3,
-                title: 'Chapter 3: Attack by Stratagem',
-                text: "In the practical art of war, the best thing of all is to take the enemy's country whole and intact; to shatter and destroy it is not so good. So, too, it is better to recapture an army entire than to destroy it. Hence to fight and conquer in all your battles is not supreme excellence; supreme excellence consists in breaking the enemy's resistance without fighting. Thus the highest form of generalship is to balk the enemy's plans; the next best is to prevent the junction of the enemy's forces; the next in order is to attack the enemy's army in the field; and the worst policy of all is to besiege walled cities. If you know the enemy and know yourself, you need not fear the result of a hundred battles. If you know yourself but not the enemy, for every victory gained you will also suffer a defeat. If you know neither the enemy nor yourself, you will succumb in every battle.",
-                text_ka: "ომის პრაქტიკულ ხელოვნებაში უპირველესი და საუკეთესოა მტრის ქვეყნის მთლიანად და ხელუხლებლად დამორჩილება; მისი დანგრევა და განადგურება ნაკლებად სასურველია. ასევე, უმჯობესია მტრის ლაშქრის მთლიანად ჩაგდება ხელში, ვიდრე მისი მოსპობა. ამდენად, ყველა ბრძოლაში შებმა და გამარჯვება არ გახლავთ უმაღლესი ოსტატობა; უმაღლესი სრულყოფილება იმაში მდგომარეობს, რომ მტრის წინააღმდეგობა უბრძოლველად გატეხო. ამიტომ, სარდლობის უმაღლესი მწვერვალია მტრის გეგმების ჩაშლა; მომდევნო საუკეთესო გზაა მტრის ძალთა გაერთიანების აღკვეთა; შემდეგ მოდის მტრის არმიაზე იერიშის მიტანა გაშლილ ველზე; ხოლო ყველაზე უარესი გზა გალავნიანი ქალაქების ალყაში მოქცევაა. თუ იცნობ მტერს და იცნობ საკუთარ თავს, ასი ბრძოლის შედეგის წინაშეც კი შიში არ გაგეკარება. თუ საკუთარ თავს იცნობ, ხოლო მტერს არა, ყოველი მოპოვებული გამარჯვებისთვის მარცხსაც იწვნევ. ხოლო თუ არც მტერს იცნობ და არც საკუთარ თავს, ყოველ ბრძოლაში გარდაუვალი მარცხი გელის.",
-                word_count: 175,
-                estimated_duration_sec: 65
-            },
-            {
-                id: 4,
-                title: 'Chapter 4: Tactical Dispositions',
-                text: "Sun Tzu said: The good fighters of old first put themselves beyond the possibility of defeat, and then waited for an opportunity of defeating the enemy. To secure ourselves against defeat lies in our own hands, but the opportunity of defeating the enemy is provided by the enemy himself. Thus the good fighter is able to secure himself against defeat, but cannot make certain of defeating the enemy. Hence the saying: One may know how to conquer without being able to do it. Security against defeat implies defensive tactics; ability to defeat the enemy means taking the offensive. Standing on the defensive indicates insufficient strength; attacking, a superabundance of strength.",
-                text_ka: "სუნ ძიმ ბრძანა: ძველი დროის გამოცდილი მეომრები ჯერ საკუთარ თავს აქცევდნენ დაუმარცხებელ მდგომარეობაში, შემდეგ კი მოთმინებით ელოდნენ მტრის დამარცხების ხელსაყრელ ჟამს. საკუთარი თავის დაცვა მარცხისგან ჩვენს ხელთაა, ხოლო მტრის დამარცხების შესაძლებლობას თავად მოწინააღმდეგე გვაძლევს. ამგვარად, უებრო მეომარს ძალუძს დაიცვას თავი მარცხისგან, თუმცა ვერ ექნება სრული თავდაჯერებულობა, რომ მტერს დაამარცხებს. აქედან მომდინარეობს გამონათქვამი: შეიძლება იცოდე, როგორ გაიმარჯვო, მაგრამ ვერ შეძლო ამის აღსრულება. მარცხისგან დაზღვევა თავდაცვით ტაქტიკას გულისხმობს, ხოლო მტრის დამარცხების შესაძლებლობა — შეტევაზე გადასვლას. თავდაცვაზე დგომა ძალთა სიმცირეზე მიანიშნებს, ხოლო შეტევა — ძალების სიჭარბეზე.",
-                word_count: 120,
-                estimated_duration_sec: 45
-            },
-            {
-                id: 5,
-                title: 'Chapter 5: Energy and Direct Force',
-                text: "The control of a large force is the same principle as the control of a few men: it is merely a question of dividing up their numbers. Fighting with a large army under your command is nowise different from fighting with a small one: it is merely a question of instituting signs and signals. In all fighting, the direct method may be used for joining battle, but indirect methods will be needed in order to secure victory. In battle there are not more than two methods of attack: the direct and the indirect; yet these two in combination give rise to an endless series of maneuvers.",
-                text_ka: "დიდი ძალის მართვა იმავე პრინციპს ემყარება, რასაც მცირერიცხოვანი რაზმის გაძღოლა: ეს მხოლოდ მათი რიცხოვნობის სწორი დანაწილების საკითხია. დიდი არმიით ბრძოლა არაფრით განსხვავდება მცირე რაზმით შებმისგან: ეს მხოლოდ ნიშნებისა და სიგნალების დაწესების საქმეა. ყოველგვარ ბრძოლაში პირდაპირი მეთოდი გამოიყენება შესაბმელად, ხოლო გამარჯვების მოსაპოვებლად ირიბი ხერხებია საჭირო. ბრძოლისას იერიშის მხოლოდ ორი მეთოდი არსებობს: პირდაპირი და ირიბი; თუმცა მათი შერწყმა მანევრების უსასრულო მრავალფეროვნებას ბადებს.",
-                word_count: 110,
-                estimated_duration_sec: 40
-            }
-        ],
-        translatedLangs: ['ka'],
-        dateAdded: new Date().toISOString(),
-        progressPct: 0
-    },
-    {
-        id: 'classic_meditations',
-        title: 'Meditations',
-        author: 'Marcus Aurelius',
-        coverUrl: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=600&q=80',
-        chapters: [
-            {
-                id: 1,
-                title: 'Book 1: Debts and Lessons',
-                text: "From my grandfather Verus I learned good morals and the government of my temper. From the reputation and remembrance of my father, modesty and a manly character. From my mother, piety and beneficence, and abstinence, not only from evil deeds, but even from evil thoughts; and further, simplicity in my way of living, far removed from the habits of the rich. When you wake up in the morning, tell yourself: The people I deal with today will be meddling, ungrateful, arrogant, dishonest, jealous, and surly. They are like this because they cannot distinguish good from evil. But I have seen the beauty of good, and the ugliness of evil, and have recognized that the wrongdoer has a nature related to my own.",
-                text_ka: "ჩემი პაპა ვერუსისგან შევიმეცნე კეთილი ზნეობა და საკუთარი გულისწყრომის დაოკება. მამაჩემის ხსოვნისა და კეთილი სახელისგან — თავმდაბლობა და ვაჟკაცური ხასიათი. დედაჩემისგან — ღვთისმოსაობა, გულმოწყალება და თავშეკავება არა მხოლოდ ავი საქმეებისგან, არამედ ბოროტი ზრახვებისგანაც; და კიდევ, ცხოვრების უბრალო წესი, შორს მდგარი მდიდრულ ჩვევათაგან. როდესაც დილით გაიღვიძებ, უთხარი საკუთარ თავს: ადამიანები, ვისთანაც დღეს შეხვედრა მომიწევს, იქნებიან აბეზრები, უმადურები, ქედმაღლები, მზაკვარნი, შურიანები და უჟმურნი. ისინი ასეთები იმიტომ არიან, რომ ვერ ასხვავებენ სიკეთეს ბოროტებისგან. მაგრამ მე შევიცანი სიკეთის მშვენიერება და ბოროტების სიმახინჯე, და გავაცნობიერე, რომ შემცოდეს ჩემთან მონათესავე ბუნება აქვს.",
-                word_count: 155,
-                estimated_duration_sec: 55
-            },
-            {
-                id: 2,
-                title: 'Book 2: The Inner Citadel',
-                text: "Remember how long you have been putting this off, how many times the gods have granted you a period of grace of which you have made no use. It is high time now that you understood the universe of which you are a part, and the Ruler of that universe by whose emanation you subsist; that there is a limit set to your time, which will shortly pass away, and you with it, and will not return. Every hour focus your mind attentively on the performance of the task in hand, with dignity, human sympathy, benevolence and freedom, and rid yourself of all other thoughts.",
-                text_ka: "გახსოვდეს, რამდენ ხანს დებდი ამას სამომავლოდ, რამდენჯერ მოგმადლეს ღმერთებმა წყალობის ჟამი, რომელიც არ გამოგიყენებია. უკვე დროა შეიცნო სამყარო, რომლის ნაწილიც ხარ, და ამ სამყაროს განმგებელი, რომლის გამოსხივებითაც ცოცხლობ; რომ შენს დროს საზღვარი აქვს დადებული, რომელიც მალე გაივლის, შენც თან გაგიყოლებს და აღარასოდეს დაბრუნდება. ყოველ საათს მთელი გულისყური მიაპყარი ხელთ არსებული საქმის პირნათლად შესრულებას — ღირსებით, ადამიანური თანაგრძნობით, კეთილშობილებითა და თავისუფლებით, და გაითავისუფლე გონება ყველა სხვა ზედმეტი ფიქრისგან.",
-                word_count: 105,
-                estimated_duration_sec: 42
-            },
-            {
-                id: 3,
-                title: 'Book 3: Harmony and Reason',
-                text: "We ought to observe also that even the things which follow after the things which are produced according to nature contain something pleasing and attractive. For instance, when bread is baked some parts are split open, and these crevices, though in a manner contrary to the art of the baker, look well and in a peculiar way excite the desire for eating. Do not waste the remainder of your life in thoughts about others, when you do not refer your thoughts to some object of common utility.",
-                text_ka: "ჩვენ ასევე უნდა დავაკვირდეთ, რომ ბუნების თანახმად წარმოქმნილ საგანთა თანმდევი მოვლენებიც კი შეიცავს რაღაც სასიამოვნოსა და მიმზიდველს. მაგალითად, როდესაც პური ცხვება, მისი ზოგიერთი ნაწილი იბზარება; და ეს ნაპრალები, თუმცა კი თითქოს ეწინააღმდეგება მცხობელის ხელოვნებას, მაინც მშვენივრად გამოიყურება და თავისებურად აღძრავს ჭამის მადას. ნუ გაფლანგავთ თქვენი ცხოვრების დარჩენილ ნაწილს სხვებზე ფიქრში, თუკი თქვენი ზრახვები საერთო საზოგადო სიკეთისკენ არ არის მიმართული.",
-                word_count: 90,
-                estimated_duration_sec: 35
-            }
-        ],
-        translatedLangs: ['ka'],
-        dateAdded: new Date().toISOString(),
-        progressPct: 0
-    }
-];
+// ── User-owned library contract ───────────────────────────────────────────
+// Built-in/demo books are intentionally absent. The shelf may contain only
+// uploaded PDFs, scanned books, or editions created from a user's own book.
+const DISCOVER_CLASSICS = Object.freeze([]);
+// IDs used by older releases. Keep this tombstone list even though the
+// catalog is gone, so an existing browser cannot resurrect those rows.
+const LEGACY_DEMO_BOOKS = Object.freeze([
+    { id: 'classic_art_of_war', title: 'The Art of War' },
+    { id: 'classic_meditations', title: 'Meditations' },
+    { id: 'classic_frankenstein', title: 'Frankenstein' }
+]);
 
 // ── DOM Cache ──────────────────────────────────────────────────────────────
 let DOM = {};
@@ -2562,7 +2484,7 @@ function isDemoBook(book) {
 }
 
 async function purgeLegacyDemoBooks() {
-    const legacy = Array.isArray(DISCOVER_CLASSICS) ? DISCOVER_CLASSICS : [];
+    const legacy = LEGACY_DEMO_BOOKS;
     await Promise.all(legacy.map(book => deleteBookFromAllLocalDBs(book.id, book.title).catch(() => {})));
     if (usingCloud && window.LuminaStore && typeof window.LuminaStore.removeDemoBooks === 'function') {
         try { await window.LuminaStore.removeDemoBooks(); } catch (e) {
@@ -10728,7 +10650,7 @@ async function renderDigitalShelf(filterText = document.getElementById('searchIn
     if (!filtered.length) {
         const empty = document.createElement('div');
         empty.className = 'col-span-full py-12 text-center';
-        empty.textContent = query ? 'No books match your search.' : language !== 'all' ? 'No books in this language yet.' : 'Your next story starts here. Add a book or explore Discover.';
+        empty.textContent = query ? 'No books match your search.' : language !== 'all' ? 'No books in this language yet.' : 'Your library is empty. Upload a PDF or scan a book to begin.';
         fragment.appendChild(empty);
     }
     DOM.booksGrid.replaceChildren(fragment);
