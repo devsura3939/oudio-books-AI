@@ -574,6 +574,8 @@ for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", 
     # 2. Seeder & Recovery Immunity against resurrection
     assert "isBookDeleted(b)" in app_text, f"FAIL: seedDefaultBooks must check isBookDeleted in {path_name}"
     assert "isBookDeleted(book)" in app_text, f"FAIL: recoverAllLocalBooks must check isBookDeleted in {path_name}"
+    assert "const DISCOVER_CLASSICS = Object.freeze([])" in app_text, f"FAIL: embedded demo catalog still present in {path_name}"
+    assert "const LEGACY_DEMO_BOOKS" in app_text, f"FAIL: legacy demo cleanup tombstones missing in {path_name}"
 
     # 3. Fast Library Load & Zero Popups on Login
     assert "openAccountCabinet();" not in app_text[app_text.find("async function login("):app_text.find("async function register(")], \
