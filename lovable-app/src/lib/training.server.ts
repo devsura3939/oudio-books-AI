@@ -35,7 +35,9 @@ export function bearer(request: Request) {
 }
 
 /** Verify the caller is the signed-in admin. Returns the user id, or null. */
-export async function requireAdmin(request: Request): Promise<{ userId: string; email: string } | null> {
+export async function requireAdmin(
+  request: Request,
+): Promise<{ userId: string; email: string } | null> {
   const token = bearer(request);
   if (!token) return null;
   const sb = admin();
@@ -92,7 +94,8 @@ export async function loadActivePack(language: string): Promise<ActivePack> {
     .select("version_id, enabled")
     .eq("language", language)
     .maybeSingle();
-  if (!active?.version_id) return { versionId: null, version: 0, items: [], score: null, enabled: true };
+  if (!active?.version_id)
+    return { versionId: null, version: 0, items: [], score: null, enabled: true };
   const { data: version } = await sb
     .from("engine_versions")
     .select("id, version, items, score")
@@ -200,7 +203,19 @@ export async function applyProposal(opts: {
     };
   }
 
-  const candidate = [...pack.items, ...fresh].slice(-PACK_LIMITS.maxItems);
+  if (pack.items.length + fresh.length > PACK_LIMITS.maxItems) {
+    return {
+      accepted: false,
+      reason: "Pack capacity reached; existing rules were preserved.",
+      before,
+      after: before,
+      rejectedItems,
+      versionId: pack.versionId,
+      version: pack.version,
+      itemCount: pack.items.length,
+    };
+  }
+  const candidate = [...pack.items, ...fresh];
   const after = evaluatePack(candidate, cases);
   const verdict = cases.length
     ? isImprovement(before, after)

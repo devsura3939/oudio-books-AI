@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.50.0';
-const ENGINE_VERSION = 'v1.49.2 (Deterministic baseline with optional AI correction)';
+const APP_VERSION = 'v1.50.1';
+const ENGINE_VERSION = 'v1.50.1 (Georgian narration and measured language training)';
 
 let db = null;
 let currentBook = null;
@@ -1698,29 +1698,8 @@ function verbalizeGeorgianTextForTTS(text) {
     // 6.5 Latin names and proper nouns in Georgian text -> phonetic Mkhedruli
     out = transliterateLatinInGeorgian(out);
 
-    // 7. Dialogue & Punctuation cadence
-    // Strip line-initial dialogue dashes so spoken lines do not begin with an acoustic comma click
-    out = out.replace(/(^|[\r\n]+)\s*[—–-]\s*/g, '$1');
-
-    // Convert quotation marks into conversational breath pauses
-    out = out
-        .replace(/(:\s*)?[„"“]/g, ', ')
-        .replace(/[”"»]/g, ', ')
-        .replace(/\s+[—–-](\s|$)/g, ', $1')
-        .replace(/\s*[—–]\s*/g, ', ')
-        .replace(/([ა-ჰ]+)-([ა-ჰ]+)/g, '$1 $2')
-        .replace(/;/g, ', ')
-        .replace(/:/g, ', ')
-        .replace(/^[,\s]+/, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    // 8. Natural breath pause before Georgian conjunctions
-    out = out.replace(/([^,.;:!?])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|როდესაც|რომელიც|რომ|სანამ|ვიდრე)(?![\u10A0-\u10FF])/g, '$1, $2');
-
-    // 9. Interrogative & Question Mark Acoustic Prosody
-    out = out.replace(/\s*\?\s*/g, '? ');
-    out = out.replace(/\s*!\s*/g, '! ');
+    // Preserve punctuation and compounds for the native Georgian voice.
+    out = window.EngbotNarration.normalize(out);
 
     // 10. Terminology and name phonetic pronunciation tuning for Edge-TTS
     out = out
@@ -1852,95 +1831,22 @@ function verbalizeEnglishTextForTTS(text) {
     out = out.replace(/€(\d+[\d,]*)\b/g, '$1 euros');
     out = out.replace(/(\b\d+)\s*%/g, '$1 percent');
 
-    // 8. Natural dialogue quotes & punctuation cadence
-    out = out
-        .replace(/(:\s*)?[“"«]/g, ', ')
-        .replace(/[”"»]/g, ', ')
-        .replace(/\s*[—–]\s*/g, ', ')
-        .replace(/\s*(\.{3}|…)\s*/g, '... ')
-        .replace(/^[,\s]+/, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    out = window.EngbotNarration.normalize(out);
 
     return out;
 }
 
 // ── Unified Sentence-Type & Emotion Detection ──────────────────────────────
-function detectSentenceType(text, lang = 'en') {
-    const t = String(text || '').trim();
-    if (!t) return 'statement';
-
-    // Question: rising acoustic inflection
-    if (/[?]\s*$/.test(t)) return 'question';
-    if (lang === 'ka') {
-        if (/^(ვინ|რა|სად|როდის|როგორ|რატომ|რამდენი|რომელ|ხომ|განა|ნუთუ)(?![\u10A0-\u10FF])/i.test(t)) return 'question';
-    } else {
-        if (/^(who|what|where|when|why|how|which|whose|whom|did|do|does|can|could|would|should|is|are|was|were|will|shall|have|has|had|am|aren't|isn't|wasn't|weren't|don't|doesn't|didn't|can't|couldn't|won't)\b/i.test(t)) {
-            return 'question';
-        }
-    }
-
-    // Exclamation: emphatic energy
-    if (/[!]\s*$/.test(t)) return 'exclamation';
-
-    // Suspense / reflective storytelling: deliberate tempo & contemplative breath
-    if (/(\.{3}|…|[—–])/.test(t) && t.split(/\s+/).length >= 4) return 'suspense';
-
-    // Dialogue: direct spoken character line
-    if (/^["“„«][^"”“»]{2,}["””»]/.test(t) || /^[—–-]\s*\S/.test(t) || /["“„«]/.test(t)) return 'dialogue';
-
-    // Short punchy phrase
-    if (t.split(/\s+/).filter(Boolean).length <= 3) return 'short';
-
-    return 'statement';
+function detectSentenceType(text) {
+    return window.EngbotNarration.sentenceType(text);
 }
 
-// Apply sentence-type-specific prosody to Georgian verbalized text
-function applyGeorgianProsody(text, sentenceType) {
-    let out = text;
-    switch (sentenceType) {
-        case 'question':
-            if (!/[?]$/.test(out.trim())) out = out.replace(/[.!]?$/, '?');
-            break;
-        case 'exclamation':
-            if (!/[!]$/.test(out.trim())) out = out.replace(/[.?]?$/, '!');
-            break;
-        case 'dialogue':
-            if (!/^[,\s]/.test(out)) out = ', ' + out;
-            break;
-        case 'suspense':
-            if (!/(\.{3}|…)\s*$/.test(out.trim())) out = out.replace(/[.]?$/, '...');
-            break;
-        case 'short':
-            break;
-        default:
-            break;
-    }
-    return out;
+function applyGeorgianProsody(text) {
+    return window.EngbotNarration.normalize(text);
 }
 
-// Apply sentence-type-specific prosody to English verbalized text
-function applyEnglishProsody(text, sentenceType) {
-    let out = text;
-    switch (sentenceType) {
-        case 'question':
-            if (!/[?]$/.test(out.trim())) out = out.replace(/[.!]?$/, '?');
-            break;
-        case 'exclamation':
-            if (!/[!]$/.test(out.trim())) out = out.replace(/[.?]?$/, '!');
-            break;
-        case 'dialogue':
-            if (!/^[,\s]/.test(out)) out = ', ' + out;
-            break;
-        case 'suspense':
-            if (!/(\.{3}|…)\s*$/.test(out.trim())) out = out.replace(/[.]?$/, '...');
-            break;
-        case 'short':
-            break;
-        default:
-            break;
-    }
-    return out;
+function applyEnglishProsody(text) {
+    return window.EngbotNarration.normalize(text);
 }
 
 // ── Advanced Georgian Grammar & Literary Refinement Engine ─────────────────
@@ -3882,11 +3788,26 @@ function openTrainingLabModal() {
     initTrainingLabUI();
     if (typeof closeAccountCabinet === 'function') closeAccountCabinet();
     openModal('trainingLabModal');
+    void window.EngbotTrainingStudio?.refresh();
 }
 
 function openTrainingLab() {
     openTrainingLabModal();
 }
+
+// Training uses one explicitly selected saved provider, independently of book jobs.
+window.getTrainingProviderConfig = function (provider) {
+    const configs = {
+        gemini: { key: geminiApiKey, model: EngbotCore.geminiModels(geminiModel)[0] },
+        groq: { key: groqApiKey, model: groqSelectedModel || GROQ_MODELS[0], url: GROQ_API_URL },
+        mistral: { key: mistralApiKey, model: MISTRAL_MODELS[0], url: MISTRAL_API_URL },
+        openrouter: { key: openRouterApiKey, model: openRouterModel || OPENROUTER_FREE_MODELS[0], url: 'https://openrouter.ai/api/v1/chat/completions' },
+        custom: { key: customProviderKey, model: customProviderModel, url: normalizeCustomProviderUrl(customProviderUrl) },
+    };
+    const config = configs[provider];
+    if (!config?.model || (provider !== 'custom' && !config.key) || (provider === 'custom' && !customProviderUrl)) throw new Error('Configure this provider in AI settings first.');
+    return { ...config, provider };
+};
 
 let trainingKeyBusy = false;
 let trainingIssuedKey = null;
@@ -3913,7 +3834,7 @@ function initTrainingLabUI() {
     if (status) status.textContent = _isStaticHost ? 'Server required' : record?.legacy ? 'Previous key unverified' : record ? 'Created on server' : 'No registered key';
     const message = document.getElementById('trainingKeyMessage');
     if (message) message.textContent = _isStaticHost
-        ? 'Training requires the server-hosted app. Your books and translation tools remain available here.'
+        ? 'The in-app trainer above works through your admin cloud session. External automation keys require the server-hosted training API.'
         : record?.legacy ? 'Previous saved key retained. Its registration is unknown; the training server must validate it before use.'
         : record ? `Saved ${record.language === 'en' ? 'English' : 'Georgian'} key. Its current permissions are checked by the training server when used.`
         : 'Generate a key registered by the training server. Earlier locally generated keys have not been verified.';
@@ -6656,7 +6577,7 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
 - Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
 === END ENGLISH RULES ===` : '';
 
-    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang) || '');
+    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang, text) || '');
     const titleFidelityBlock = getTitleFidelityBlock(text, targetLang);
     const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Your translations read like the book was originally written in ${targetLangName} — the register of a respected literary publishing house, not a machine.${kaBlock}${enStyleGuide}${titleFidelityBlock}${glossaryBlock}`;
 
@@ -6866,7 +6787,7 @@ async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', 
 - Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
 === END ENGLISH RULES ===` : '';
 
-    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang) || '');
+    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang, text) || '');
     const titleFidelityBlock = getTitleFidelityBlock(text, targetLang);
     const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Translate faithfully, preserving literary register and character voice.${kaBlock}${enStyleGuide}${titleFidelityBlock}${glossaryBlock}`;
 
@@ -8602,36 +8523,45 @@ let currentSpeechToken = 0;
 // next sentence — so the rolling prefetch window survives sentence transitions.
 let narrationGeneration = 0;
 
+function pauseFailedNarration(token) {
+    if (token !== currentSpeechToken || !isPlaying || isPaused) return;
+    isPaused = true;
+    isSpeakingLock = false;
+    updatePlayerUIState(false);
+    showToast('Voice playback is unavailable. Your place is saved; press Play to retry this sentence or choose another voice.', 'error');
+}
+
 function playUltimateFallbackTTS(text, lang, token) {
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.slice(0, 200))}`;
-    const audio = new Audio(url);
-    currentElevenAudio = audio;
-    audio.playbackRate = currentGlobalSpeed;
+    const chunks = window.EngbotNarration.chunks(text, 200);
+    let index = 0;
+    const playChunk = () => {
+        if (token !== currentSpeechToken || !isPlaying || isPaused) return;
+        if (index >= chunks.length) {
+            currentSentenceIndex++;
+            speakCurrentSentence();
+            return;
+        }
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(chunks[index])}`;
+        const audio = new Audio(url);
+        currentElevenAudio = audio;
+        audio.playbackRate = currentGlobalSpeed;
+        audio.onended = () => { index++; playChunk(); };
+        audio.onerror = () => pauseFailedNarration(token);
+        audio.play().catch(() => pauseFailedNarration(token));
+    };
     startBackgroundKeepAlive();
     requestScreenWakeLock();
     updateMediaSession();
-    audio.onended = () => {
-        if (token !== currentSpeechToken || !isPlaying || isPaused) return;
-        currentSentenceIndex++;
-        speakCurrentSentence();
-    };
-    audio.onerror = () => {
-        if (token !== currentSpeechToken || !isPlaying || isPaused) return;
-        currentSentenceIndex++;
-        speakCurrentSentence();
-    };
-    audio.play().catch(e => {
-        if (token !== currentSpeechToken) return;
-        currentSentenceIndex++;
-        speakCurrentSentence();
-    });
+    playChunk();
 }
 
 function speakStandardSentence(text, lang) {
-    if (!('speechSynthesis' in window)) return;
-
     stopCurrentSpeechAudio();
     const myToken = currentSpeechToken;
+    if (!('speechSynthesis' in window)) {
+        playUltimateFallbackTTS(lang === 'ka' ? verbalizeGeorgianTextForTTS(text) : verbalizeEnglishTextForTTS(text), lang, myToken);
+        return;
+    }
 
     if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
@@ -8641,7 +8571,7 @@ function speakStandardSentence(text, lang) {
     const voices = window.speechSynthesis.getVoices();
 
     if (lang === 'ka') {
-        const normalized = normalizeGeorgian(text);
+        const normalized = verbalizeGeorgianTextForTTS(text);
         const nativeKaVoice = voices.find(v => v.lang.startsWith('ka') || v.name.toLowerCase().includes('georgian'));
 
         if (nativeKaVoice) {
@@ -8653,7 +8583,7 @@ function speakStandardSentence(text, lang) {
             return;
         }
     } else {
-        utter.text = text;
+        utter.text = verbalizeEnglishTextForTTS(text);
         const matched = voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI);
         if (matched) {
             utter.voice = matched;
@@ -8719,14 +8649,7 @@ function speakStandardSentence(text, lang) {
         isSpeakingLock = false;
         if (e.error === 'canceled' || e.error === 'interrupted' || myToken !== currentSpeechToken) return;
         console.warn('SpeechSynthesis error:', e.error);
-        if (isPlaying && !isPaused) {
-            setTimeout(() => {
-                if (myToken === currentSpeechToken && isPlaying && !isPaused) {
-                    currentSentenceIndex++;
-                    speakCurrentSentence();
-                }
-            }, 300);
-        }
+        pauseFailedNarration(myToken);
     };
 
     startBackgroundKeepAlive();
@@ -8907,14 +8830,7 @@ async function speakGatewayNeural(text, lang) {
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            // Organic human breathing pause between sentences
-            let breathDelay = 220; // baseline human breath
-            const trimmed = String(text || '').trim();
-            if (/[?!]$/.test(trimmed)) {
-                breathDelay = 320; // reflective hesitation after question/exclamation
-            } else if (/(\.{3}|…)$/.test(trimmed)) {
-                breathDelay = 420; // contemplative storytelling pause
-            }
+            const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
             setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
                 currentSentenceIndex++;
@@ -8923,8 +8839,7 @@ async function speakGatewayNeural(text, lang) {
         };
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
-            currentSentenceIndex++;
-            speakCurrentSentence();
+            speakStandardSentence(text, lang);
         };
 
         await currentElevenAudio.play();
@@ -8967,7 +8882,7 @@ async function fetchNeuralSpeechAudioUrl(text, voiceId, ratePct = 0, pitchHz = 0
 
     if (lang === 'ka') {
         const typeRate = { question: 0, exclamation: 3, dialogue: -2, suspense: -4, short: 2, statement: 0 }[sentenceType] ?? 0;
-        const typePitch = { question: 3, exclamation: 3, dialogue: -2, suspense: -2, short: 1, statement: 0 }[sentenceType] ?? 0;
+        const typePitch = 0; // Georgian phrase intonation belongs to the native voice.
         effectiveRate = Math.max(-50, Math.min(50, ratePct + typeRate));
         effectivePitch = Math.max(-20, Math.min(20, pitchHz + typePitch));
         spoken = applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), sentenceType);
@@ -9092,14 +9007,7 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            // Organic human breathing pause between sentences
-            let breathDelay = 220; // baseline human breath
-            const trimmed = String(text || '').trim();
-            if (/[?!]$/.test(trimmed)) {
-                breathDelay = 320; // reflective hesitation after question/exclamation
-            } else if (/(\.{3}|…)$/.test(trimmed)) {
-                breathDelay = 420; // contemplative storytelling pause
-            }
+            const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
             setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
                 currentSentenceIndex++;
@@ -9110,8 +9018,7 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
             console.error("Neural Audio Error, falling back to standard");
-            currentSentenceIndex++;
-            speakCurrentSentence();
+            speakStandardSentence(text, lang);
         };
 
         await currentElevenAudio.play();
@@ -9217,14 +9124,7 @@ async function speakElevenLabsSentence(text, lang = null) {
         audio.onended = () => {
             URL.revokeObjectURL(audioUrl);
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            // Organic human breathing pause between sentences
-            let breathDelay = 220;
-            const trimmed = String(textToRead || '').trim();
-            if (/[?!]$/.test(trimmed)) {
-                breathDelay = 320;
-            } else if (/(\.{3}|…)$/.test(trimmed)) {
-                breathDelay = 420;
-            }
+            const breathDelay = window.EngbotNarration.pauseMs(textToRead, currentGlobalSpeed);
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
                 if (myToken === currentSpeechToken && isPlaying && !isPaused) {

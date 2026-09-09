@@ -64,12 +64,14 @@ export function validateItem(raw: unknown, language: string): ValidationResult {
   if (!["glossary", "autofix", "qa_rule", "prompt_block", "ocr_fix"].includes(type)) {
     return { ok: false, reason: `unsupported item type "${type}"` };
   }
-  if (!ALLOWED_LANGUAGES.has(language)) return { ok: false, reason: `unsupported language "${language}"` };
+  if (!ALLOWED_LANGUAGES.has(language))
+    return { ok: false, reason: `unsupported language "${language}"` };
 
   if (type === "prompt_block") {
     const text = String(item["text"] ?? item["replacement"] ?? "").trim();
     if (text.length < 8) return { ok: false, reason: "prompt_block text is too short" };
-    if (text.length > PACK_LIMITS.maxPromptBlockLength) return { ok: false, reason: "prompt_block text is too long" };
+    if (text.length > PACK_LIMITS.maxPromptBlockLength)
+      return { ok: false, reason: "prompt_block text is too long" };
     if (/<script|javascript:|function\s*\(|=>|process\.env|import\s|require\(/i.test(text)) {
       return { ok: false, reason: "prompt_block may not contain code" };
     }
@@ -79,8 +81,10 @@ export function validateItem(raw: unknown, language: string): ValidationResult {
   const pattern = String(item["pattern"] ?? "").trim();
   const replacement = String(item["replacement"] ?? "");
   if (!pattern) return { ok: false, reason: "pattern is required" };
-  if (pattern.length > PACK_LIMITS.maxPatternLength) return { ok: false, reason: "pattern is too long" };
-  if (replacement.length > PACK_LIMITS.maxReplacementLength) return { ok: false, reason: "replacement is too long" };
+  if (pattern.length > PACK_LIMITS.maxPatternLength)
+    return { ok: false, reason: "pattern is too long" };
+  if (replacement.length > PACK_LIMITS.maxReplacementLength)
+    return { ok: false, reason: "replacement is too long" };
 
   if (type === "qa_rule" && replacement.trim().length < 3) {
     return { ok: false, reason: "qa_rule needs a warning message in `replacement`" };
@@ -105,7 +109,11 @@ export function validateItem(raw: unknown, language: string): ValidationResult {
   return { ok: true };
 }
 
-export function normaliseItem(raw: Record<string, unknown>, language: string, meta: { session_id?: string | null; model?: string | null } = {}): PackItem {
+export function normaliseItem(
+  raw: Record<string, unknown>,
+  language: string,
+  meta: { session_id?: string | null; model?: string | null } = {},
+): PackItem {
   const type = String(raw["type"]) as PackItemType;
   return {
     id: crypto.randomUUID(),
@@ -113,9 +121,13 @@ export function normaliseItem(raw: Record<string, unknown>, language: string, me
     language,
     pattern: String(raw["pattern"] ?? "").trim(),
     replacement: String(raw["replacement"] ?? "").trim(),
-    text: type === "prompt_block" ? String(raw["text"] ?? raw["replacement"] ?? "").trim() : undefined,
+    text:
+      type === "prompt_block" ? String(raw["text"] ?? raw["replacement"] ?? "").trim() : undefined,
     note: raw["note"] ? String(raw["note"]).slice(0, 400) : undefined,
-    severity: raw["severity"] === "error" || raw["severity"] === "info" ? (raw["severity"] as "error" | "info") : "warn",
+    severity:
+      raw["severity"] === "error" || raw["severity"] === "info"
+        ? (raw["severity"] as "error" | "info")
+        : "warn",
     created_at: new Date().toISOString(),
     session_id: meta.session_id ?? null,
     model: meta.model ?? null,
@@ -142,15 +154,23 @@ function escapeLiteral(value: string) {
  * Apply a pack's deterministic rules to text. `kind` selects which item types run:
  * translation post-editing (glossary + autofix) or OCR/transcription (ocr_fix + autofix).
  */
-export function applyPack(text: string, items: PackItem[], kind: "translate" | "transcribe" = "translate"): string {
+export function applyPack(
+  text: string,
+  items: PackItem[],
+  kind: "translate" | "transcribe" = "translate",
+): string {
   if (!text || !items.length) return text;
   if (text.length > PACK_LIMITS.maxTextForRules) return text;
   let out = text;
 
-  const literal = items.filter((i) => (kind === "transcribe" ? i.type === "ocr_fix" : i.type === "glossary"));
+  const literal = items.filter((i) =>
+    kind === "transcribe" ? i.type === "ocr_fix" : i.type === "glossary",
+  );
   for (const item of literal) {
-    const re = safeRegex(`(?<![\\p{L}\\p{N}])${escapeLiteral(item.pattern)}(?![\\p{L}\\p{N}])`) ?? safeRegex(escapeLiteral(item.pattern));
-    if (re) out = out.replace(re, item.replacement);
+    const re =
+      safeRegex(`(?<![\\p{L}\\p{N}])${escapeLiteral(item.pattern)}(?![\\p{L}\\p{N}])`) ??
+      safeRegex(escapeLiteral(item.pattern));
+    if (re) out = out.replace(re, () => item.replacement);
   }
   for (const item of items.filter((i) => i.type === "autofix")) {
     const re = safeRegex(item.pattern);
@@ -186,16 +206,22 @@ export function runQaRules(text: string, items: PackItem[]): QaFinding[] {
 }
 
 export function promptAddendum(items: PackItem[]): string {
-  const blocks = items.filter((i) => i.type === "prompt_block" && i.text).map((i) => i.text!.trim());
+  const blocks = items
+    .filter((i) => i.type === "prompt_block" && i.text)
+    .map((i) => i.text!.trim());
   const glossary = items.filter((i) => i.type === "glossary");
   const parts: string[] = [];
   if (glossary.length) {
     parts.push(
       "TRAINED GLOSSARY (always prefer these renderings):\n" +
-        glossary.slice(0, 800).map((g) => `- ${g.pattern} → ${g.replacement}${g.note ? ` (${g.note})` : ""}`).join("\n"),
+        glossary
+          .slice(0, 800)
+          .map((g) => `- ${g.pattern} → ${g.replacement}${g.note ? ` (${g.note})` : ""}`)
+          .join("\n"),
     );
   }
-  if (blocks.length) parts.push("TRAINED GUIDANCE:\n" + blocks.slice(0, PACK_LIMITS.maxPromptBlocks).join("\n\n"));
+  if (blocks.length)
+    parts.push("TRAINED GUIDANCE:\n" + blocks.slice(0, PACK_LIMITS.maxPromptBlocks).join("\n\n"));
   return parts.join("\n\n");
 }
 
@@ -213,7 +239,7 @@ export interface EvalResult {
   score: number; // 0..100
   passed: number;
   total: number;
-  failures: { id: string; got: string; expected: string }[];
+  failures: { id: string; kind: string; source: string; got: string; expected: string }[];
   qaFalsePositives: number;
   caseResults: { id: string; score: number; passed: boolean }[];
 }
@@ -226,21 +252,23 @@ function normalise(text: string) {
 function similarity(a: string, b: string) {
   if (a === b) return 1;
   if (!a.length || !b.length) return 0;
-  const max = Math.max(a.length, b.length);
-  let same = 0;
-  const bChars = new Map<string, number>();
-  for (const ch of b) bChars.set(ch, (bChars.get(ch) ?? 0) + 1);
-  for (const ch of a) {
-    const left = bChars.get(ch) ?? 0;
-    if (left > 0) {
-      same += 1;
-      bChars.set(ch, left - 1);
-    }
+  // Ordered token edit distance. A bag of letters overrates reordered words.
+  const left = a.normalize("NFC").match(/\p{L}+|\p{N}+|[^\s\p{L}\p{N}]/gu) || [];
+  const right = b.normalize("NFC").match(/\p{L}+|\p{N}+|[^\s\p{L}\p{N}]/gu) || [];
+  // Bound worst-case work for oversized external benchmark cases.
+  if (left.length * right.length > 1_000_000) return 0;
+  let row = Array.from({ length: right.length + 1 }, (_, i) => i);
+  for (let i = 0; i < left.length; i++) {
+    const next = [i + 1];
+    for (let j = 0; j < right.length; j++)
+      next[j + 1] = Math.min(
+        next[j]! + 1,
+        row[j + 1]! + 1,
+        row[j]! + (left[i] === right[j] ? 0 : 1),
+      );
+    row = next;
   }
-  const bag = same / max;
-  let prefix = 0;
-  while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix += 1;
-  return Math.min(1, bag * 0.7 + (prefix / max) * 0.3);
+  return 1 - row[right.length]! / Math.max(left.length, right.length, 1);
 }
 
 /** Replay the whole benchmark with a pack applied. Pure, deterministic, no LLM. */
@@ -260,7 +288,14 @@ export function evaluatePack(items: PackItem[], cases: BenchmarkCase[]): EvalRes
     weighted += sim * w;
     weight += w;
     if (got === expected) passed += 1;
-    else failures.push({ id: testCase.id, got: got.slice(0, 300), expected: expected.slice(0, 300) });
+    else
+      failures.push({
+        id: testCase.id,
+        kind: testCase.kind,
+        source: testCase.source.slice(0, 4000),
+        got: got.slice(0, 4000),
+        expected: expected.slice(0, 4000),
+      });
   }
 
   // A QA rule that fires on a known-good expected output is a false positive.
@@ -282,13 +317,20 @@ export function evaluatePack(items: PackItem[], cases: BenchmarkCase[]): EvalRes
 }
 
 /** Was the candidate an improvement with no regression? */
-export function isImprovement(before: EvalResult, after: EvalResult): { ok: boolean; reason: string } {
+export function isImprovement(
+  before: EvalResult,
+  after: EvalResult,
+): { ok: boolean; reason: string } {
   if (!before.caseResults?.length || !after.caseResults?.length || before.total !== after.total) {
     return { ok: false, reason: "rejected: full results from the same benchmark are required" };
   }
-  const old = new Map(before.caseResults.map(c => [c.id, c]));
-  const next = new Map(after.caseResults.map(c => [c.id, c]));
-  if (old.size !== before.total || next.size !== after.total || [...old.keys()].some(id => !next.has(id))) {
+  const old = new Map(before.caseResults.map((c) => [c.id, c]));
+  const next = new Map(after.caseResults.map((c) => [c.id, c]));
+  if (
+    old.size !== before.total ||
+    next.size !== after.total ||
+    [...old.keys()].some((id) => !next.has(id))
+  ) {
     return { ok: false, reason: "rejected: benchmark case IDs differ or are duplicated" };
   }
   for (const [id, prior] of old) {
@@ -301,13 +343,22 @@ export function isImprovement(before: EvalResult, after: EvalResult): { ok: bool
     return { ok: false, reason: "rejected: a QA rule fires on known-good text (false positive)" };
   }
   if (after.passed < before.passed) {
-    return { ok: false, reason: `rejected: ${before.passed - after.passed} benchmark case(s) that passed now fail` };
+    return {
+      ok: false,
+      reason: `rejected: ${before.passed - after.passed} benchmark case(s) that passed now fail`,
+    };
   }
   if (after.score < before.score - 0.0001) {
-    return { ok: false, reason: `rejected: benchmark score dropped (${before.score} → ${after.score})` };
+    return {
+      ok: false,
+      reason: `rejected: benchmark score dropped (${before.score} → ${after.score})`,
+    };
   }
   if (after.score <= before.score + 0.0001 && after.passed === before.passed) {
     return { ok: false, reason: "rejected: no measurable improvement on the benchmark" };
   }
-  return { ok: true, reason: `accepted: score ${before.score} → ${after.score}, ${before.passed}/${before.total} → ${after.passed}/${after.total} exact` };
+  return {
+    ok: true,
+    reason: `accepted: score ${before.score} → ${after.score}, ${before.passed}/${before.total} → ${after.passed}/${after.total} exact`,
+  };
 }

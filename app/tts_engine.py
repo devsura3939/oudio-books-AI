@@ -153,7 +153,7 @@ async def get_available_voices() -> List[TTSVoice]:
                 name=sname,
                 gender="Female" if "Female" in tag or "Aria" in sname or "Sonia" in sname else "Male",
                 locale=sname.rsplit("-", 1)[0] if "-" in sname else "en-US",
-                language="en",
+                language=sname.split("-")[0],
                 friendly_name=f"{sname} - {tag}"
             ))
         return fallback
@@ -203,16 +203,18 @@ async def synthesize_text_to_file(
                     volume=volume
                 )
                 
+                chunk_bytes = 0
                 async for chunk_data in communicate.stream():
                     if chunk_data["type"] == "audio":
                         outfile.write(chunk_data["data"])
+                        chunk_bytes += len(chunk_data["data"])
+                if not chunk_bytes:
+                    raise RuntimeError(f"Voice returned no audio for chunk {idx + 1}; chapter was not published")
                 
                 await asyncio.sleep(0.01)
         
         if temp_path.exists():
-            if output_path.exists():
-                output_path.unlink()
-            temp_path.rename(output_path)
+            temp_path.replace(output_path)
             
         if progress_callback:
             progress_callback(100.0, "Audiobook chapter ready!")
