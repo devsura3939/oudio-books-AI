@@ -1,4 +1,10 @@
-# Provider reliability — v1.49.5
+# Provider reliability — v1.50.0
+
+## Studio and Moon Reader polish
+
+- Added responsive shell and reader layout refinements for desktop, tablet, and mobile safe areas, including a stable editorial text measure and Georgian-specific no-hyphenation handling.
+- Reduced reader resize work and removed duplicate pagination listeners so long reading sessions do less layout work while preserving page-mode reflow.
+- Added contained, lazy-friendly shelf/chapter rendering and cheaper transitions to keep large libraries responsive without changing translation, scanning, transcription, or TTS behavior.
 
 Translation could stall because a 42,595-character Georgian guide was repeated for each segment, provider catalogs contained unavailable models, and minor reviewer suggestions rejected otherwise usable output. Actual requests also encountered Gemini quota limits, Groq token limits, and custom/OpenRouter timeouts.
 

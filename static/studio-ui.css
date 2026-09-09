@@ -1,8 +1,8 @@
 /* Studio workspace: one hierarchy, readable covers, restrained motion. */
-:root { --studio-bg:#101418; --studio-panel:#181e24; --studio-line:#2b343e; --studio-muted:#a0adb9; --studio-accent:#7cdbc8; --studio-rail:224px; }
-body { background:var(--studio-bg)!important; background-image:none!important; color:#edf2f6; }
+:root { --studio-bg:#101418; --studio-panel:#181e24; --studio-line:#2b343e; --studio-muted:#a0adb9; --studio-accent:#7cdbc8; --studio-rail:224px; color-scheme:dark; }
+body { background:var(--studio-bg)!important; background-image:none!important; color:#edf2f6; min-height:100svh; overscroll-behavior-x:none; text-rendering:optimizeLegibility; }
 #appMainContainer { min-width:0; }
-#studioSidebar { width:var(--studio-rail); padding:28px 16px 18px; background:#12181e!important; border-right:1px solid var(--studio-line); backdrop-filter:none!important; box-shadow:none!important; overflow-y:auto; }
+#studioSidebar { width:var(--studio-rail); padding:28px 16px 18px; background:linear-gradient(180deg,#141c22 0%,#10161b 100%)!important; border-right:1px solid var(--studio-line); backdrop-filter:none!important; box-shadow:10px 0 32px #0002!important; overflow-y:auto; contain:layout paint; }
 #studioSidebar > div:first-child { margin-bottom:28px; padding:0 8px; }
 #studioSidebar > div:first-child > div:first-child { box-shadow:none; background:#24493f; }
 #studioSidebar h1 span { display:none; }
@@ -17,7 +17,7 @@ body { background:var(--studio-bg)!important; background-image:none!important; c
 #userNavSection { padding-top:16px; }
 #userNavSection > div:first-child { border:0; background:transparent; }
 #userNavSection > div:not(:first-child),#adminVersionPill,#adminVersionPillMobile,#mobileAdminCard { display:none!important; }
-#studioTopbar { left:var(--studio-rail); right:0; width:auto; height:76px; padding:16px 36px; gap:24px; background:rgba(16,20,24,.97)!important; border-bottom:1px solid var(--studio-line); box-shadow:none!important; backdrop-filter:none!important; }
+#studioTopbar { left:var(--studio-rail); right:0; width:auto; height:76px; padding:16px 36px; gap:24px; background:rgba(16,20,24,.92)!important; border-bottom:1px solid var(--studio-line); box-shadow:0 8px 26px #0003!important; backdrop-filter:blur(16px)!important; -webkit-backdrop-filter:blur(16px)!important; }
 #studioTopbar > div:first-child { min-width:180px; max-width:520px; flex:1; }
 #studioTopbar > div:last-child { flex:none; gap:12px; }
 #studioTopbar > div:last-child > a,#studioTopbar > div:last-child > button[title="Open Moon+ Reader view"] { display:none; }
@@ -25,15 +25,17 @@ body { background:var(--studio-bg)!important; background-image:none!important; c
 #studioTopbar input:focus,#mobileShelfSearch:focus { border-color:var(--studio-accent)!important; }
 #studioTopbar button { min-height:42px; border-radius:10px; box-shadow:none; }
 #topVoiceBadge { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#studioMain { margin:0 0 0 var(--studio-rail)!important; width:calc(100% - var(--studio-rail)); max-width:none!important; padding:112px clamp(24px,3vw,56px) 150px; min-width:0; }
+#studioMain { margin:0 0 0 var(--studio-rail)!important; width:calc(100% - var(--studio-rail)); max-width:none!important; padding:112px clamp(24px,3vw,56px) 150px; min-width:0; contain:paint; }
 #view-library { max-width:1380px; margin:auto; }
 .workspace-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
 .workspace-heading h2 { font-size:30px; letter-spacing:-1px; font-weight:650; line-height:1.2; }
 .workspace-heading p { color:var(--studio-muted); font-size:13px; margin-top:7px; }
 .workspace-heading .workspace-icon { width:44px; height:44px; border:1px solid var(--studio-line); border-radius:12px; display:grid; place-items:center; color:var(--studio-accent); }
-#heroSection { display:flex; flex-direction:row; gap:28px; padding:26px; background:linear-gradient(115deg,#1d2f30,#1b232b 70%)!important; border:1px solid #334548; border-radius:18px; box-shadow:none!important; backdrop-filter:none!important; overflow:hidden; min-height:216px; }
+#heroSection { display:flex; flex-direction:row; gap:28px; padding:26px; background:linear-gradient(115deg,#1d3534 0%,#1b252d 56%,#202532 100%)!important; border:1px solid #40545a; border-radius:20px; box-shadow:0 18px 50px #0003!important; backdrop-filter:none!important; overflow:hidden; min-height:216px; position:relative; isolation:isolate; }
+#heroSection::before { content:""; position:absolute; inset:-35% auto auto 35%; width:420px; height:260px; border-radius:50%; background:radial-gradient(circle,#7cdbc82b 0%,transparent 70%); pointer-events:none; z-index:-1; }
+#heroSection::after { content:""; position:absolute; inset:0; background:linear-gradient(115deg,transparent 0 46%,#ffffff05 68%,transparent 100%); pointer-events:none; z-index:-1; }
 #heroPlayBtn { position:relative; width:120px; height:166px; flex:none; cursor:pointer; border-radius:8px; overflow:visible; background:none; border:0; padding:0; box-shadow:0 8px 20px #0004; }
-#heroCover { display:block; width:100%; height:100%; object-fit:cover; border-radius:8px; }
+#heroCover { display:block; width:100%; height:100%; object-fit:cover; border-radius:10px; box-shadow:0 12px 26px #0006; }
 .hero-play { position:absolute; bottom:8px; right:8px; border-radius:50%; width:38px; height:38px; display:grid; place-items:center; background:var(--studio-accent); color:#153a30; box-shadow:0 3px 14px #0005; }
 .hero-copy { min-width:0; flex:1; }
 .hero-eyebrow { color:var(--studio-accent); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.7px; margin-bottom:10px; }
@@ -53,13 +55,13 @@ body { background:var(--studio-bg)!important; background-image:none!important; c
 .shelf-filters button { min-height:36px; border-radius:7px; padding:6px 12px; font-size:12px; color:var(--studio-muted); }
 .shelf-filters button[aria-pressed="true"] { background:#303d44; color:#f1f8f6; }
 #mobileShelfSearch { display:none; }
-#booksGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(154px,1fr)); gap:26px 22px; align-items:start; }
-.studio-book { min-width:0; position:relative; animation:studio-enter .25s ease-out both; }
-.studio-book-cover { position:relative; aspect-ratio:3/4; width:100%; border-radius:10px; overflow:hidden; background:#202a33; border:1px solid #ffffff0b; }
+#booksGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(154px,1fr)); gap:30px 22px; align-items:start; contain:layout; }
+.studio-book { min-width:0; position:relative; animation:studio-enter .25s ease-out both; content-visibility:auto; contain:layout paint; contain-intrinsic-size:280px 340px; }
+.studio-book-cover { position:relative; aspect-ratio:2/3; width:100%; border-radius:12px; overflow:hidden; background:#202a33; border:1px solid #ffffff12; box-shadow:0 8px 22px #0003; }
 .studio-book-cover img { width:100%; height:100%; object-fit:cover; transition:transform .22s ease; }
 .studio-book-open { position:absolute; inset:0; z-index:1; width:100%; border-radius:10px; }
 .studio-book-open:focus-visible { outline-offset:-4px!important; }
-.studio-book:hover img { transform:scale(1.025); }
+.studio-book:hover img { transform:scale(1.035); }
 .studio-book h4 { font-size:13px; font-weight:600; line-height:1.5; margin:10px 0 3px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .studio-book-meta { display:flex; justify-content:space-between; gap:4px; color:var(--studio-muted); font-size:11px; }
 .studio-language { color:#aacbc4; font-size:10px; letter-spacing:.6px; }
@@ -74,9 +76,10 @@ body { background:var(--studio-bg)!important; background-image:none!important; c
 #chaptersContainer { margin-top:36px; padding:22px; background:#171e25; box-shadow:none!important; backdrop-filter:none!important; border-color:var(--studio-line); }
 #chaptersList { display:grid; grid-template-columns:minmax(0,1fr); gap:6px; }
 #chaptersList > div,#chaptersList > div > div { min-width:0; max-width:100%; }
-#chaptersList > div { border-radius:10px; background:transparent; border:1px solid #ffffff08; padding:12px!important; box-shadow:none; backdrop-filter:none; content-visibility:auto; contain-intrinsic-size:auto 72px; }
+#chaptersList > div { border-radius:12px; background:transparent; border:1px solid #ffffff08; padding:12px!important; box-shadow:none; backdrop-filter:none; content-visibility:auto; contain:layout paint; contain-intrinsic-size:auto 72px; transition:background-color .18s ease,border-color .18s ease; }
+#chaptersList > div:hover { background:#ffffff05; border-color:#7cdbc82e; }
 #chaptersList button { min-height:40px; }
-#playerDock { left:calc(var(--studio-rail) + (100% - var(--studio-rail))/2); width:calc(100% - var(--studio-rail) - 48px); bottom:18px; max-width:1040px; background:#202a32f5!important; border:1px solid #42525d; border-radius:16px; box-shadow:0 8px 35px #0005!important; backdrop-filter:blur(12px)!important; }
+#playerDock { left:calc(var(--studio-rail) + (100% - var(--studio-rail))/2); width:calc(100% - var(--studio-rail) - 48px); bottom:18px; max-width:1040px; background:#202a32f2!important; border:1px solid #52636d; border-radius:18px; box-shadow:0 14px 40px #0007!important; backdrop-filter:blur(16px)!important; -webkit-backdrop-filter:blur(16px)!important; }
 .modal-overlay { background:#060b12b8!important; backdrop-filter:none!important; transition:opacity .18s ease,visibility .18s ease!important; }
 .modal-content { background:#19212b!important; border:1px solid #37434f!important; border-radius:18px!important; box-shadow:0 20px 70px #0008!important; backdrop-filter:none!important; -webkit-backdrop-filter:none!important; transition:transform .2s ease,opacity .2s ease!important; }
 .modal-content input,.modal-content select,.modal-content textarea { min-width:0; max-width:100%; }
@@ -138,4 +141,48 @@ button[aria-busy="true"] { cursor:progress; opacity:.7; }
   #appMainContainer > header > div:nth-child(2) { flex:1; margin-left:10px; }
   .studio-book-actions button { min-height:44px; }
   #mobileNavDrawer .drawer-content > div:last-child button:last-child { background:var(--studio-accent)!important; color:#12372e!important; box-shadow:none!important; }
+}
+
+/* Reader polish: keep the page measure editorial, controls reachable, and
+   compositing cheap during long reading and narration sessions. */
+#readerView { height:100dvh!important; min-height:100svh; contain:layout paint; }
+#readerTopToolbar,
+#readerBottomToolbar { min-height:52px; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+#readerScrollContainer { scrollbar-gutter:stable; overscroll-behavior-y:contain; touch-action:pan-y; scrollbar-color:#6f817f transparent; }
+.book-page-spread { max-width:min(1440px,96vw)!important; gap:clamp(12px,1.6vw,24px)!important; contain:layout paint; }
+.book-page-card { padding:clamp(22px,2.8vw,44px)!important; border-radius:16px!important; contain:layout paint; }
+.book-page-card .book-page-text-flow > div { width:min(100%,70ch); margin-inline:auto; }
+.book-prose { text-align:start!important; text-justify:auto!important; line-height:1.85; }
+#readerView[data-reader-lang="ka"] .book-prose { hyphens:none; letter-spacing:0; }
+#readerBottomToolbar > div:first-child { min-height:44px; }
+
+@media(max-width:767px) {
+    #heroSection { box-shadow:0 12px 30px #0004!important; }
+    #appMainContainer > nav[class~="md:hidden"] { backdrop-filter:blur(14px)!important; -webkit-backdrop-filter:blur(14px)!important; }
+    #appMainContainer > nav[class~="md:hidden"] button { min-width:52px; min-height:44px; border-radius:12px; }
+    #readerTopToolbar { padding-top:max(8px,env(safe-area-inset-top))!important; }
+    #readerBottomToolbar { padding-bottom:max(10px,env(safe-area-inset-bottom))!important; }
+    .book-page-spread { max-width:100%!important; }
+    .book-page-card { padding:18px 16px!important; border-radius:12px!important; }
+    .book-page-card .book-page-text-flow > div { width:100%; }
+    .book-prose { line-height:1.78; }
+}
+@media(max-width:640px) {
+    #readerTopToolbar > div:last-child button[title="Batch Translate Whole Book"] { display:none; }
+    #readerTopToolbar > div:last-child { gap:3px; }
+    #readerTopToolbar .reader-btn { min-height:40px; }
+}
+@media(max-width:380px) {
+    #studioMain { padding-inline:12px; }
+    #booksGrid { gap:20px 10px; }
+    .studio-book h4 { font-size:12px; }
+    .studio-book-meta { font-size:9px; }
+    #readerTopToolbar { padding-inline:8px!important; }
+    #readerTopToolbar > div:first-child { max-width:46%; }
+    #readerTopToolbar > div:last-child button[title="TTS & Audio Settings"] { display:none; }
+}
+
+@media(prefers-reduced-motion:reduce) {
+    *,*::before,*::after { animation-duration:.01ms!important; animation-iteration-count:1!important; scroll-behavior:auto!important; transition-duration:.01ms!important; }
+    #readerView { transition:none!important; }
 }
