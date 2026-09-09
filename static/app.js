@@ -6656,7 +6656,24 @@ ${text}${ctxBefore}${ctxAfter}`;
 // Stage 2 — structured critique (MQM-inspired). Separate call, separate
 // persona: the reviewer must actively hunt for errors, not rubber-stamp.
 // Returns a machine-readable error list; empty list = approved.
-async function geminiCritiqueTranslation(sourceText, translation, targetLang, previousRevision = null) {
+function normalizeSourceQualityReview(review) {
+    if (!review || !Array.isArray(review.errors)) return review;
+    const errors = review.errors.map(error => {
+        if (!error || typeof error !== 'object') return error;
+        const detail = `${error.issue || ''} ${error.fix || ''}`;
+        // The source is authoritative. Unusual slang, coined words, and valid
+        // fragments must not become a whole-book blocker just because a model
+        // does not recognize them. Only downgrade a source-quality complaint
+        // when it does not also demonstrate a lost/reversed meaning.
+        const sourceComplaint = /\b(?:source|original)\b/i.test(detail)
+            && /\b(?:typo|typos|typo-ridden|misspell|misspelling|garbled|unreadable|ocr|unknown word|unusual word|fragment)\b/i.test(detail)
+            && !/\b(?:omiss|lost|revers|mistranslat|fails? to (?:translate|capture)|wrong meaning)\b/i.test(detail);
+        return sourceComplaint && error.severity !== 'minor' ? {...error, severity: 'minor'} : error;
+    });
+    return {...review, errors};
+}
+
+async function geminiCritiqueTranslation(sourceText, translation, targetLang, previousRevision = null, contextBefore = '', contextAfter = '') {
     const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
 
     // Georgian reviewer gets the defect catalog + compact grammar rules so it
@@ -6667,6 +6684,7 @@ async function geminiCritiqueTranslation(sourceText, translation, targetLang, pr
     const kaChecklist = kaReviewerRules
         ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===\n${kaReviewerRules}\n=== END CHECKLIST ===\nTreat the checklist as guidance, not an unconditional veto. Confirm each defect against the source and actual construction. Optional style preferences are minor; reserve major/critical for demonstrated grammar or meaning defects.` : '';
 
+    const sourceContext = `${contextBefore ? `\n\nPRECEDING SOURCE CONTEXT (read for coherence; do not review or translate it):\n${contextBefore.slice(-900)}` : ''}${contextAfter ? `\n\nFOLLOWING SOURCE CONTEXT (read for coherence; do not review or translate it):\n${contextAfter.slice(0, 900)}` : ''}`;
     const systemPrompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer.${kaChecklist}`;
 
     const prompt = `Compare the SOURCE against the TRANSLATION (${langName}) and find every real defect.
@@ -6682,20 +6700,22 @@ Severity must reflect an actual defect: critical changes meaning; major demonstr
 
 When revision history is supplied, check the correction in the COMPLETE sentence. Do not reverse a previous correction merely by evaluating an isolated verb or phrase. If the earlier advice was wrong, explain why in context and propose a coherent clause-level repair. In a purpose/complement clause, consider the governing expression before changing verb mood or tense. An earlier reviewer can be wrong; do not approve a real error just because it followed their advice.
 
+SOURCE FIDELITY: The supplied source is authoritative, including unusual slang, coined words, military jargon, proper names, and intentional fragments. Do not report an unfamiliar source word as a typo or OCR error merely because it is rare or looks nonstandard. Use the surrounding source context to infer its meaning, and judge whether the translation preserves that meaning. A source-quality observation is never a blocking translation error unless the translation demonstrably omits, reverses, or invents meaning.
+
 If no demonstrated blocking defect remains, keep optional suggestions minor. Return an empty error list when no real defect exists. Never invent problems.
 
 Answer as JSON:
 {"errors": [{"severity": "critical|major|minor", "type": "accuracy|terminology|grammar|style|tts", "issue": "...", "fix": "concrete instruction"}], "verdict": "approved|needs_revision"}
 
 SOURCE:
-${sourceText}
+${sourceText}${sourceContext}
 
 TRANSLATION:
 ${translation}${previousRevision ? `\n\nPREVIOUS REVISION (context only, not an authority):\n${JSON.stringify(previousRevision)}` : ''}`;
 
     const data = await callGeminiJSON(prompt, { temperature: 0.1, maxTokens: 4096, systemPrompt, validateResponse: data => EngbotCore.reviewDecision(data).valid });
     if (!data || !Array.isArray(data.errors)) return null;
-    return data;
+    return normalizeSourceQualityReview(data);
 }
 
 // Stage 3 — targeted refinement. The revision sees ONLY the confirmed error
@@ -6746,7 +6766,7 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
     if (geminiPasses < 2) return draft;
 
     setTranslationStage('Reviewing');
-    const critique = await geminiCritiqueTranslation(text, draft, targetLang);
+    const critique = await geminiCritiqueTranslation(text, draft, targetLang, undefined, contextBefore, contextAfter);
     const review = EngbotCore.reviewDecision(critique);
     if (!review.valid) { translationFailure('Review', window.EngbotProviders?.getFailure()?.message || 'The reviewer did not return a valid assessment. Your source is unchanged.'); return null; }
 
@@ -6765,7 +6785,7 @@ async function translateWithGeminiAI(text, targetLang, contextBefore = '', conte
             return null;
         }
         setTranslationStage('Final review');
-        const audit = EngbotCore.reviewDecision(await geminiCritiqueTranslation(text, revised, targetLang, { previousTranslation: candidate, requestedCorrections: issues }));
+        const audit = EngbotCore.reviewDecision(await geminiCritiqueTranslation(text, revised, targetLang, { previousTranslation: candidate, requestedCorrections: issues }, contextBefore, contextAfter));
         if (!audit.valid) { translationFailure('Final review', window.EngbotProviders?.getFailure()?.message || 'The reviewer did not return a valid final assessment. Retry this segment.'); return null; }
         if (!audit.blocking.length) return revised;
         candidate = revised;
@@ -7976,7 +7996,7 @@ async function runWholeBookTranslation(resume = false) {
         if (window.LuminaStore?.createJob && usingCloud) {
             cloudJob = await window.LuminaStore.createJob(targetBook.id, 'parse', job.totalChapters, `Translating to ${targetName}`);
         }
-        const config = JSON.stringify({targetLang, geminiModel, geminiPasses, openRouterModel, customProviderModel,
+        const config = JSON.stringify({targetLang, chunking:'sentence-v2', geminiModel, geminiPasses, openRouterModel, customProviderModel,
             glossary: targetBook.glossary || [], pack: window.EngbotPack?.version(targetLang) || 0});
         let completed = 0;
         for (let index = 0; index < targetBook.chapters.length; index++) {
@@ -7984,10 +8004,10 @@ async function runWholeBookTranslation(resume = false) {
             if (cancelTranslationFlag) break;
             const chapter = targetBook.chapters[index];
             const source = chapter.text || '';
-            const chunks = EngbotCore.splitText(source, 1800).filter(t => t.trim());
+            const chunks = buildTranslationChunks(source, 1800).chunks;
             const key = String(chapter.id ?? index);
             let checkpoint = job.chapters[key];
-            if (!checkpoint || checkpoint.source !== source || checkpoint.config !== config) {
+            if (!checkpoint || checkpoint.source !== source || checkpoint.config !== config || checkpoint.outputs?.length !== chunks.length) {
                 checkpoint = job.chapters[key] = { source, config, outputs: new Array(chunks.length).fill(null) };
             }
             job.chapterIdx = index;

@@ -72,7 +72,7 @@ test('Closing completed translation details neither cancels work nor reports a f
 test('The actual reviewer receives negative concord guidance without a one-negator veto',async()=>{
  let captured;
  const ctx=vm.createContext({EngbotCore:core,getKaCompactRules:ka.getKaCompactRules,getKaTaskRules:ka.getKaTaskRules,callGeminiJSON:async(prompt,options)=>{captured=prompt+options.systemPrompt;return {verdict:'approved',errors:[]};}});
- vm.runInContext(section('async function geminiCritiqueTranslation(','\nasync function '),ctx);
+ vm.runInContext(section('function normalizeSourceQualityReview(','async function geminiRefineTranslation('),ctx);
  await ctx.geminiCritiqueTranslation('The journey was without danger.','არავითარი საფრთხე არ არსებობდა.','ka');
  assert.match(captured,/negative concord is valid/i);
  assert.doesNotMatch(captured,/one negator per clause|NEVER არ for commands|არავინ არ მოვიდა is wrong|Any violation.*at least a/);
@@ -80,4 +80,25 @@ test('The actual reviewer receives negative concord guidance without a one-negat
   assert.match(rules,/negative concord is valid/i);
   assert.doesNotMatch(rules,/Double negation.*UNGRAMMATICAL|არავინ არ მოვიდა is wrong/);
  }
+});
+
+test('Source-side unusual wording cannot block a translation',()=>{
+ const ctx=vm.createContext({});
+ vm.runInContext(section('function normalizeSourceQualityReview(','async function geminiCritiqueTranslation('),ctx);
+ const sourceComplaint={verdict:'needs_revision',errors:[{severity:'major',type:'grammar',issue:"The source text 'wall and keep motating. The' appears to be a typo-ridden fragment.",fix:'The source likely means moving.'}]};
+ const normalized=ctx.normalizeSourceQualityReview(sourceComplaint);
+ assert.equal(normalized.errors[0].severity,'minor');
+ assert.equal(core.reviewDecision(normalized).blocking.length,0);
+ const realTranslation={verdict:'needs_revision',errors:[{severity:'major',type:'grammar',issue:'The translation reverses the source meaning.',fix:'Restore the negation.'}]};
+ assert.equal(ctx.normalizeSourceQualityReview(realTranslation).errors[0].severity,'major');
+});
+
+test('Reviewer receives surrounding source context for boundary fragments',async()=>{
+ let captured='';
+ const ctx=vm.createContext({EngbotCore:core,getKaCompactRules:ka.getKaCompactRules,getKaTaskRules:ka.getKaTaskRules,callGeminiJSON:async(prompt)=>{captured=prompt;return {verdict:'approved',errors:[]};}});
+ vm.runInContext(section('function normalizeSourceQualityReview(','async function geminiRefineTranslation('),ctx);
+ await ctx.geminiCritiqueTranslation('wall and keep motating. The','კედელს გადაახტი და განაგრძე.','ka',null,'before sentence','after sentence');
+ assert.match(captured,/PRECEDING SOURCE CONTEXT/);
+ assert.match(captured,/FOLLOWING SOURCE CONTEXT/);
+ assert.match(captured,/keep motating/);
 });
