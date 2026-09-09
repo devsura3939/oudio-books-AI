@@ -1472,6 +1472,7 @@ function transliterateLatinWordToGeorgian(word) {
         'kant': 'კანტი', 'hegel': 'ჰეგელი', 'schopenhauer': 'შოპენჰაუერი', 'freud': 'ფროიდი',
         'jung': 'იუნგი', 'darwin': 'დარვინი', 'newton': 'ნიუტონი', 'einstein': 'აინშტაინი',
         'hemingway': 'ჰემინგუეი', 'orwell': 'ორუელი', 'dickens': 'დიკენსი', 'austen': 'ოსტინი',
+        'erwin': 'ერვინ', 'rommel': 'რომელი',
         'chekhov': 'ჩეხოვი', 'sun': 'სუნ', 'tzu': 'ძი',
         // Common English & Literary Names
         'john': 'ჯონ', 'james': 'ჯეიმს', 'george': 'ჯორჯ', 'william': 'უილიამ', 'charles': 'ჩარლზ',
@@ -6592,6 +6593,34 @@ function getBookGlossaryBlock(book = null) {
     return `\n\n=== BOOK GLOSSARY (MANDATORY CHARACTER NAMES & TERMS) ===\nUse these exact translations consistently across all chapters:\n${lines}\n=== END BOOK GLOSSARY ===`;
 }
 
+// Keep capitalized source names visible to every translation tier. The list is
+// deliberately conservative: sentence starters and ordinary title words are
+// excluded, while uncommon capitalized words remain available to the model as
+// entity hints rather than being silently translated as common vocabulary.
+const SOURCE_NAME_STOPWORDS = new Set([
+    'a', 'an', 'and', 'as', 'at', 'by', 'chapter', 'copyright', 'for', 'from',
+    'he', 'her', 'his', 'i', 'in', 'into', 'is', 'it', 'its', 'killing', 'of',
+    'on', 'or', 'part', 'section', 'she', 'the', 'their', 'this', 'to', 'was',
+    'we', 'were', 'what', 'when', 'where', 'which', 'who', 'with', 'you'
+]);
+
+function getSourceNamedEntityHints(text) {
+    const words = String(text || '').match(/\b[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]{2,}\b/g) || [];
+    return [...new Set(words.filter(word => !SOURCE_NAME_STOPWORDS.has(word.toLowerCase())))].slice(0, 24);
+}
+
+function getTitleFidelityBlock(text, targetLang) {
+    const source = String(text || '');
+    const hints = getSourceNamedEntityHints(source);
+    const names = hints.length ? `\nSource proper-name hints: ${hints.join(', ')}.` : '';
+    if (targetLang !== 'ka') {
+        return `${names}\nPreserve every source proper name and book/work title. Do not translate a person's surname as an ordinary English word.`;
+    }
+    return `${names}\n=== TITLE AND PROPER-NAME FIDELITY ===
+Keep names as names and use their standard Georgian transliteration, with the needed Georgian case ending. Do not turn a name into a common noun, pronoun, or imperative verb. For a title shaped like “Killing Rommel”, use a nominal action construction such as “რომელის მოკვლა” (or an equally correct full Georgian equivalent), never an imperative such as “მოკალიე რომელი”. Preserve the complete surname even when it resembles a Georgian word.
+=== END TITLE AND PROPER-NAME FIDELITY ===`;
+}
+
 // Stage 1 — literary draft translation. Receives neighbouring sentences as
 // context so pronouns, tense and terminology stay coherent across chunk
 // boundaries (the draft never sees a sentence in isolation).
@@ -6619,7 +6648,8 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
 === END ENGLISH RULES ===` : '';
 
     const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang) || '');
-    const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Your translations read like the book was originally written in ${targetLangName} — the register of a respected literary publishing house, not a machine.${kaBlock}${enStyleGuide}${glossaryBlock}`;
+    const titleFidelityBlock = getTitleFidelityBlock(text, targetLang);
+    const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Your translations read like the book was originally written in ${targetLangName} — the register of a respected literary publishing house, not a machine.${kaBlock}${enStyleGuide}${titleFidelityBlock}${glossaryBlock}`;
 
     const prompt = `Process:
 1. Identify tone, narrative voice and register of the passage (ironic, formal, dramatic, intimate...).
@@ -6685,7 +6715,8 @@ async function geminiCritiqueTranslation(sourceText, translation, targetLang, pr
         ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===\n${kaReviewerRules}\n=== END CHECKLIST ===\nTreat the checklist as guidance, not an unconditional veto. Confirm each defect against the source and actual construction. Optional style preferences are minor; reserve major/critical for demonstrated grammar or meaning defects.` : '';
 
     const sourceContext = `${contextBefore ? `\n\nPRECEDING SOURCE CONTEXT (read for coherence; do not review or translate it):\n${contextBefore.slice(-900)}` : ''}${contextAfter ? `\n\nFOLLOWING SOURCE CONTEXT (read for coherence; do not review or translate it):\n${contextAfter.slice(0, 900)}` : ''}`;
-    const systemPrompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer.${kaChecklist}`;
+    const titleFidelityBlock = getTitleFidelityBlock(sourceText, targetLang);
+    const systemPrompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer.${kaChecklist}${titleFidelityBlock}`;
 
     const prompt = `Compare the SOURCE against the TRANSLATION (${langName}) and find every real defect.
 
@@ -6727,7 +6758,8 @@ async function geminiRefineTranslation(sourceText, translation, errors, targetLa
         .map((e, i) => `${i + 1}. [${e.severity || 'major'}/${e.type || 'style'}] ${e.issue}\n   → ${e.fix || 'fix it'}`)
         .join('\n');
 
-    const systemPrompt = `You are a master literary editor. Produce the complete REVISED translation in ${langName} with every defect corrected.`;
+    const titleFidelityBlock = getTitleFidelityBlock(sourceText, targetLang);
+    const systemPrompt = `You are a master literary editor. Produce the complete REVISED translation in ${langName} with every defect corrected. Preserve all proper names and title meaning; never repair a name by replacing it with a common word.${titleFidelityBlock}`;
 
     const prompt = `Rules:
 1. Fix every listed error cleanly.
@@ -6826,7 +6858,8 @@ async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', 
 === END ENGLISH RULES ===` : '';
 
     const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang) || '');
-    const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Translate faithfully, preserving literary register and character voice.${kaBlock}${enStyleGuide}${glossaryBlock}`;
+    const titleFidelityBlock = getTitleFidelityBlock(text, targetLang);
+    const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Translate faithfully, preserving literary register and character voice.${kaBlock}${enStyleGuide}${titleFidelityBlock}${glossaryBlock}`;
 
     const prompt = `Translate the passage below, then audit and correct your own translation BEFORE answering.
 
@@ -8022,8 +8055,14 @@ async function runWholeBookTranslation(resume = false) {
                 window.EngbotProviders?.reset();
                 if (DOM.wbLiveOriginal) DOM.wbLiveOriginal.textContent = chunks[i];
                 if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = `Translating segment ${i + 1} / ${chunks.length}…`;
-                // Do not silently replace reviewed LLM translation with dictionary drafts.
-                const output = await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true);
+                // The smart router keeps the in-house engine as a real
+                // fallback when an LLM draft or review fails. Whole-book jobs
+                // must never stop solely because an optional reviewer rejects
+                // a candidate; the deterministic tier still has to pass the
+                // same script and completeness gate before it is committed.
+                const output = typeof translateChunkSmart === 'function'
+                    ? await translateChunkSmart(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '')
+                    : await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true);
                 if (cancelTranslationFlag) break; // Late provider responses cannot commit after stop.
                 checkOwner();
                 if (!assessTranslation(chunks[i], output, targetLang).ok) {

@@ -14,7 +14,7 @@ test('Final review receives the previous draft and requested repair to prevent c
 });
 
 test('Refinement extracts the same alternate response field that its validator accepts',async()=>{
- const ctx=vm.createContext({assessTranslation:()=>({ok:true}),extractTranslation:v=>v,callGeminiJSON:async(_prompt,options)=>{const result={translation:'valid revised text'};assert.ok(options.validateResponse(result));return result;}});
+ const ctx=vm.createContext({assessTranslation:()=>({ok:true}),extractTranslation:v=>v,getTitleFidelityBlock:()=>'',callGeminiJSON:async(_prompt,options)=>{const result={translation:'valid revised text'};assert.ok(options.validateResponse(result));return result;}});
  vm.runInContext(section('async function geminiRefineTranslation(','// Full pipeline'),ctx);
  assert.equal(await ctx.geminiRefineTranslation('source','draft',[],'en'),'valid revised text');
 });
@@ -39,6 +39,10 @@ test('A malformed review falls through to the next configured provider',async()=
  assert.equal(result.verdict,'approved');assert.deepEqual(calls,['Gemini','Groq']);
 });
 const ka=require('../static/georgian-linguistics.js');
+test('Offline Georgian engine keeps a proper-name title nominal and complete',()=>{
+ assert.match(ka.translateOfflineEnToKa('Killing Rommel'),/რომელის მოკვლა/);
+ assert.doesNotMatch(ka.translateOfflineEnToKa('Killing Rommel'),/მოკალიე/);
+});
 test('Per-segment Georgian guidance is bounded while the full corpus remains available',()=>{
  for(const source of ['A story about a book.','John Smith did not return home.']){
   const guidance=ka.getKaTaskRules(source);assert.ok(guidance.length>1000&&guidance.length<=6000);
@@ -72,7 +76,7 @@ test('Closing completed translation details neither cancels work nor reports a f
 test('The actual reviewer receives negative concord guidance without a one-negator veto',async()=>{
  let captured;
  const ctx=vm.createContext({EngbotCore:core,getKaCompactRules:ka.getKaCompactRules,getKaTaskRules:ka.getKaTaskRules,callGeminiJSON:async(prompt,options)=>{captured=prompt+options.systemPrompt;return {verdict:'approved',errors:[]};}});
- vm.runInContext(section('function normalizeSourceQualityReview(','async function geminiRefineTranslation('),ctx);
+ vm.runInContext(section('function getBookGlossaryBlock(','async function geminiRefineTranslation('),ctx);
  await ctx.geminiCritiqueTranslation('The journey was without danger.','არავითარი საფრთხე არ არსებობდა.','ka');
  assert.match(captured,/negative concord is valid/i);
  assert.doesNotMatch(captured,/one negator per clause|NEVER არ for commands|არავინ არ მოვიდა is wrong|Any violation.*at least a/);
@@ -96,9 +100,20 @@ test('Source-side unusual wording cannot block a translation',()=>{
 test('Reviewer receives surrounding source context for boundary fragments',async()=>{
  let captured='';
  const ctx=vm.createContext({EngbotCore:core,getKaCompactRules:ka.getKaCompactRules,getKaTaskRules:ka.getKaTaskRules,callGeminiJSON:async(prompt)=>{captured=prompt;return {verdict:'approved',errors:[]};}});
- vm.runInContext(section('function normalizeSourceQualityReview(','async function geminiRefineTranslation('),ctx);
+ vm.runInContext(section('function getBookGlossaryBlock(','async function geminiRefineTranslation('),ctx);
  await ctx.geminiCritiqueTranslation('wall and keep motating. The','კედელს გადაახტი და განაგრძე.','ka',null,'before sentence','after sentence');
  assert.match(captured,/PRECEDING SOURCE CONTEXT/);
  assert.match(captured,/FOLLOWING SOURCE CONTEXT/);
  assert.match(captured,/keep motating/);
+});
+
+test('Reviewer prompt locks title proper names instead of accepting an imperative mistranslation',async()=>{
+ let captured='';
+ const ctx=vm.createContext({EngbotCore:core,callGeminiJSON:async(prompt,options)=>{captured=prompt+(options?.systemPrompt||'');return {verdict:'approved',errors:[]};}});
+ vm.runInContext(section('function getBookGlossaryBlock(','async function geminiRefineTranslation('),ctx);
+ await ctx.geminiCritiqueTranslation('Killing Rommel','მოკალიე რომელი','ka');
+ assert.match(captured,/Source proper-name hints: Rommel/);
+ assert.match(captured,/Killing Rommel/);
+ assert.match(captured,/nominal action construction/i);
+ assert.match(captured,/imperative/i);
 });
