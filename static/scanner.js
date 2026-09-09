@@ -655,6 +655,8 @@
           </summary>
           ${p.warning ? `<p class="mt-1 text-[10px] text-error">${escapeHtml(p.warning)}</p>` : ""}
           <textarea data-page="${p.id}" oninput="LuminaScanner.editPage('${p.id}', this.value)" class="mt-2 w-full h-32 glass-input rounded-lg p-2 text-[12px] text-white outline-none leading-relaxed">${escapeHtml(p.text)}</textarea>
+          ${p.trainedSuggestion && p.trainedSuggestion !== p.text ? `<div class="mt-2 text-xs"><p class="text-on-surface-variant">Trained OCR suggestion · compare with the image</p><p class="whitespace-pre-wrap">${escapeHtml(p.trainedSuggestion)}</p><button onclick="LuminaScanner.acceptSuggestion('${p.id}')" class="py-3 text-primary-fixed">Apply suggestion</button></div>` : ''}
+          ${p.rawText && p.rawText !== p.text ? `<details class="mt-2 text-xs"><summary>Original recognition</summary><p class="whitespace-pre-wrap">${escapeHtml(p.rawText)}</p></details>` : ''}
           <button onclick="LuminaScanner.retryPage('${p.id}')" class="mt-1 text-[11px] text-primary-fixed font-bold">Re-scan this page</button>
 
         </details>`,
@@ -1494,7 +1496,7 @@ ${text.slice(0, 10000)}`;
   function offlineLinguisticPass(text, lang) {
     if (!text || typeof text !== "string") return text || "";
     const isKa = lang === "kat" || lang === "ka" || (text.match(/[\u10A0-\u10FF]/g) || []).length > 8;
-    if (!isKa) return text;
+    if (!isKa) return window.EngbotPack ? window.EngbotPack.apply(text, 'en', 'transcribe') : text;
 
     let t = offlineSpellCheckKa(text);
 
@@ -1592,24 +1594,8 @@ ${text.slice(0, 10000)}`;
       }
     }
 
-    // 5. Hook into active trained rule pack if available in storage or window
-    try {
-      const storedPack = (typeof localStorage !== "undefined" && (localStorage.getItem("active_pack_ka") || localStorage.getItem("active_training_pack_ka")));
-      if (storedPack) {
-        const packObj = JSON.parse(storedPack);
-        const packItems = Array.isArray(packObj.items) ? packObj.items : (Array.isArray(packObj) ? packObj : []);
-        for (const it of packItems) {
-          if ((it.type === "ocr_fix" || it.type === "autofix") && it.pattern && it.replacement) {
-            try {
-              const pat = it.pattern;
-              const rep = it.replacement;
-              const rx = new RegExp(pat.startsWith("(?") ? pat : `(?<![\\u10A0-\\u10FF])${pat.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}(?![ა-ჰ])`, "g");
-              t = t.replace(rx, rep);
-            } catch (_) {}
-          }
-        }
-      }
-    } catch (_) {}
+    // Use the same active pack as translation; never stale editor-only caches.
+    if (window.EngbotPack) t = window.EngbotPack.apply(t, 'ka', 'transcribe');
 
     t = t.replace(/[ \t]{2,}/g, " ").trim();
     return t;
@@ -1671,6 +1657,8 @@ ${text.slice(0, 10000)}`;
       // The raw recognition is the source of truth; editorial changes require review.
       page.text = window.EngbotCore.cleanVerbatim(best.text === '[[NO_TEXT]]' ? '' : best.text);
       page.rawText = page.text;
+      const trainedLang = lang === 'kat' ? 'ka' : lang === 'eng' ? 'en' : (/[ა-ჰ]/.test(page.text) ? 'ka' : 'en');
+      page.trainedSuggestion = window.EngbotPack?.apply(page.rawText, trainedLang, 'transcribe') || page.rawText;
       page.engine = best.engine;
       page.quality = Math.round((best.score || 0) * 100);
       page.warning = page.text.includes("[[UNCLEAR]]") ? "Unclear text: inspect the image and correct before saving." : qualityWarning(page, best.score);
@@ -1930,6 +1918,11 @@ ${text.slice(0, 10000)}`;
     renderReview();
   }
 
+  function acceptSuggestion(id) {
+    const page = state.pages.find(p => p.id === id);
+    if (page?.trainedSuggestion) { page.text = page.trainedSuggestion; renderReview(); }
+  }
+
   function editPage(id, value) {
     const page = state.pages.find((p) => p.id === id);
     if (page) page.text = value;
@@ -2141,6 +2134,7 @@ ${text.slice(0, 10000)}`;
     stopScan,
     retryPage,
     editPage,
+    acceptSuggestion,
     saveBook,
     promptVisionKey,
   };

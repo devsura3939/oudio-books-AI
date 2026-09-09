@@ -512,36 +512,10 @@ def verbalize_georgian_for_tts(text: str) -> str:
     # 11. Transliterate Latin Words to Mkhedruli
     out = transliterate_latin_in_georgian(out)
 
-    # 12. Dialogue dashes & click removal
-    # Strip line-initial dialogue dashes so spoken lines do not begin with an acoustic click
-    out = re.sub(r"(^|[\r\n]+)\s*[—–-]\s*", r"\1", out)
-
-    # Convert dialogue quotation marks and colons into conversational commas / breath pauses
-    out = re.sub(r"(:\s*)?[„\"“]", ", ", out)
-    out = re.sub(r"[”\"»]", ", ", out)
-    out = re.sub(r"\s+[—–-](\s|$)", r", \1", out)
-    out = re.sub(r"\s*[—–]\s*", ", ", out)
-    out = re.sub(rf"([{KA_CHARS}]+)-([{KA_CHARS}]+)", r"\1 \2", out)
-    out = re.sub(r";", ", ", out)
-    out = re.sub(r":", ", ", out)
-    out = re.sub(r"^[,\s]+", "", out)
-    out = re.sub(r"\s+", " ", out).strip()
-
-    # 13. Natural breath pause before Georgian conjunctions and relative clauses
-    conjunctions = (
-        "მაგრამ|თუმცა|თუმცაღა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|რაკიღა|რამდენადაც|"
-        "როდესაც|როგორც კი|რომელიც|რომელსაც|რომელშიც|რომელზეც|რომლის|რომლითაც|რომელთა|რომელთაც|რომელთათვის|რომ|სანამ|ვიდრე|"
-        "თუნდ|თუნდაც|ვინძლო|ვითარცა|მხოლოდოდენ|რამეთუ"
-    )
-    out = re.sub(
-        rf"([^,.;:!?])\s+({conjunctions}){KA_SUFFIX}",
-        r"\1, \2",
-        out
-    )
-
-    # 14. Interrogative & Exclamation cadence
-    out = re.sub(r"\s*\?\s*", "? ", out)
-    out = re.sub(r"\s*!\s*", "! ", out)
+    # Preserve source punctuation, dialogue marks and compound words. Native
+    # Georgian voices supply phrase intonation; a conjunction alone does not
+    # justify inserting a comma or a question mark.
+    out = re.sub(r"[ \t]+", " ", out).strip()
 
     # 15. Known Edge-TTS pronunciation tuning
     out = re.sub(rf"{KA_PREFIX}სუნ\s+ცუ{KA_SUFFIX}", "სუნ ძი", out, flags=re.IGNORECASE)

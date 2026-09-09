@@ -384,7 +384,7 @@ def apply_pack(text: str, items: List[Dict[str, Any]], kind: str = "translate") 
             # Unicode-aware word boundaries
             esc = re.escape(pat)
             safe_re = re.compile(rf"(?<![\w\u10A0-\u10FF]){esc}(?![\w\u10A0-\u10FF])")
-            out = safe_re.sub(rep, out)
+            out = safe_re.sub(lambda _match: rep, out)
 
     # 2. Autofixes (safe regex replacements)
     for item in items:
@@ -428,31 +428,22 @@ def run_qa_rules(text: str, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]
 
 
 def character_similarity(a: str, b: str) -> float:
-    """Deterministic character bag & prefix similarity metric (0..1)."""
+    """Ordered token edit similarity; reordered words are not equivalent."""
     if a == b:
         return 1.0
     if not a or not b:
         return 0.0
-
-    max_len = max(len(a), len(b))
-    b_counts: Dict[str, int] = {}
-    for ch in b:
-        b_counts[ch] = b_counts.get(ch, 0) + 1
-
-    same = 0
-    for ch in a:
-        if b_counts.get(ch, 0) > 0:
-            same += 1
-            b_counts[ch] -= 1
-
-    bag = same / max_len
-
-    prefix = 0
-    min_len = min(len(a), len(b))
-    while prefix < min_len and a[prefix] == b[prefix]:
-        prefix += 1
-
-    return min(1.0, bag * 0.7 + (prefix / max_len) * 0.3)
+    left = re.findall(r"[^\W\d_]+|\d+|[^\w\s]|_", a, re.UNICODE)
+    right = re.findall(r"[^\W\d_]+|\d+|[^\w\s]|_", b, re.UNICODE)
+    if len(left) * len(right) > 1_000_000:
+        return 0.0
+    row = list(range(len(right) + 1))
+    for i, token in enumerate(left):
+        new = [i + 1]
+        for j, other in enumerate(right):
+            new.append(min(new[j] + 1, row[j + 1] + 1, row[j] + (token != other)))
+        row = new
+    return 1 - row[-1] / max(len(left), len(right), 1)
 
 
 def evaluate_pack(items: List[Dict[str, Any]], cases: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -491,8 +482,10 @@ def evaluate_pack(items: List[Dict[str, Any]], cases: List[Dict[str, Any]]) -> D
         else:
             failures.append({
                 "id": c.get("id"),
-                "got": got[:300],
-                "expected": expected[:300]
+                "kind": kind,
+                "source": source[:4000],
+                "got": got[:4000],
+                "expected": expected[:4000]
             })
 
     qa_false_positives = 0

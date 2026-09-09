@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.50.0';
-const ENGINE_VERSION = 'v1.49.2 (Deterministic baseline with optional AI correction)';
+const APP_VERSION = 'v1.50.1';
+const ENGINE_VERSION = 'v1.50.1 (Georgian narration and measured language training)';
 
 let db = null;
 let currentBook = null;
@@ -261,69 +261,9 @@ function parseAndMergeApiKeys(rawText) {
     if (!rawText || typeof rawText !== 'string') {
         return { detected: {}, count: 0 };
     }
-    const detected = {};
-
-    // 1. Try parsing JSON
-    const trimmed = rawText.trim();
-    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-        try {
-            const parsed = JSON.parse(trimmed);
-            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                for (const [k, v] of Object.entries(parsed)) {
-                    if (typeof v !== 'string') continue;
-                    const cleanV = sanitizeApiKey(v);
-                    const kLow = k.toLowerCase();
-                    if (kLow.includes('gemini')) detected.gemini = cleanV;
-                    else if (kLow.includes('openrouter') || kLow.includes('open_router')) detected.openrouter = cleanV;
-                    else if (kLow.includes('groq')) detected.groq = cleanV;
-                    else if (kLow.includes('eleven') || kLow.includes('xi-api')) detected.elevenlabs = cleanV;
-                    else if (kLow.includes('mistral')) detected.mistral = cleanV;
-                    else if (kLow.includes('openai') || kLow.includes('custom')) detected.custom = cleanV;
-                    else {
-                        const prov = detectApiKeyProvider(cleanV);
-                        if (prov) detected[prov] = cleanV;
-                    }
-                }
-            }
-        } catch (e) {}
-    }
-
-    // 2. Line by line parsing (.env variables or tokens)
-    const lines = rawText.split(/[\r\n]+/);
-    for (const line of lines) {
-        const lineS = line.trim();
-        if (!lineS || lineS.startsWith('#')) continue;
-
-        if (lineS.includes('=') || lineS.includes(':')) {
-            const parts = lineS.split(/[:=]/);
-            if (parts.length >= 2) {
-                const propName = parts[0].trim().toLowerCase();
-                const val = parts.slice(1).join('=').trim();
-                const cleanV = sanitizeApiKey(val);
-                if (cleanV) {
-                    if (propName.includes('gemini')) { detected.gemini = cleanV; continue; }
-                    if (propName.includes('openrouter') || propName.includes('open_router')) { detected.openrouter = cleanV; continue; }
-                    if (propName.includes('groq')) { detected.groq = cleanV; continue; }
-                    if (propName.includes('eleven') || propName.includes('xi-api')) { detected.elevenlabs = cleanV; continue; }
-                    if (propName.includes('mistral')) { detected.mistral = cleanV; continue; }
-                    if (propName.includes('openai') || propName.includes('custom')) { detected.custom = cleanV; continue; }
-                    const prov = detectApiKeyProvider(cleanV);
-                    if (prov) { detected[prov] = cleanV; continue; }
-                }
-            }
-        }
-
-        // Split line by whitespace / comma / semicolon tokens
-        const tokens = lineS.split(/[\s,;]+/);
-        for (const tok of tokens) {
-            const cleanTok = sanitizeApiKey(tok);
-            if (!cleanTok) continue;
-            const prov = detectApiKeyProvider(cleanTok);
-            if (prov && !detected[prov]) {
-                detected[prov] = cleanTok;
-            }
-        }
-    }
+    const { detected, customUrl: suppliedUrl, customModel: suppliedModel } = window.EngbotModelDiscovery.parseKeyBundle(rawText, detectApiKeyProvider);
+    if (suppliedUrl) customProviderUrl = suppliedUrl;
+    if (suppliedModel) customProviderModel = suppliedModel;
 
     // Apply detected keys into live state and localStorage
     if (detected.gemini) {
@@ -364,6 +304,8 @@ function parseAndMergeApiKeys(rawText) {
     }
     if (detected.custom) {
         customProviderKey = detected.custom;
+        if (!suppliedUrl) customProviderUrl = document.getElementById('customProviderUrlInput')?.value.trim() || customProviderUrl;
+        if (!suppliedModel) customProviderModel = document.getElementById('customProviderModelInput')?.value.trim() || customProviderModel;
         if (!customProviderUrl) customProviderUrl = 'https://api.openai.com/v1/chat/completions';
         if (!customProviderModel) customProviderModel = 'gpt-4o-mini';
         localStorage.setItem('customProviderKey', detected.custom);
@@ -435,7 +377,7 @@ function handleSmartKeyMerge() {
     if (res.detected.mistral) labels.push('Mistral (Fallback #2)');
     if (res.detected.custom) labels.push('Custom / OpenAI Provider');
 
-    const msg = `⚡ Configured & connected ${res.count} provider${res.count > 1 ? 's' : ''}: ${labels.join(', ')}`;
+    const msg = `Saved ${res.count} provider key${res.count > 1 ? 's' : ''}: ${labels.join(', ')}. Choose a model below, then Save AI Settings to sync.`;
     if (feedback) {
         feedback.innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> ${escapeHtml(msg)}</span>`;
     }
@@ -444,7 +386,7 @@ function handleSmartKeyMerge() {
 
     syncSettingsToDOMInputs();
     renderAiKeyStatusPanel();
-    setTimeout(probeAiKeyStatus, 50);
+    void discoverAiModels({ force: true });
 }
 window.handleSmartKeyMerge = handleSmartKeyMerge;
 
@@ -495,6 +437,8 @@ function setupKeyInputAutoRouting() {
         el.dataset.autoRoutingAttached = 'true';
 
         const checkAndRoute = () => {
+            // A custom gateway may accept keys with another provider's prefix.
+            if (item.provider === 'custom') return;
             const raw = el.value;
             if (!raw || raw.length < 16) return;
             const detected = detectApiKeyProvider(raw);
@@ -1001,13 +945,12 @@ let groqApiKey = (_initialAcc && _initialAcc.groqApiKey)
     || localStorage.getItem('lumina_saved_groq_key')
     || '';
 // groqSelectedModel is a first-class module variable (account-scoped settings restore writes it here)
-let groqSelectedModel = (_initialAcc && _initialAcc.groqSelectedModel)
-    || localStorage.getItem('groqSelectedModel')
-    || '';
+let groqSelectedModel = _initialAcc?.groqSelectedModel ?? localStorage.getItem('groqSelectedModel') ?? '';
 let mistralApiKey = (_initialAcc && _initialAcc.mistralApiKey)
     || localStorage.getItem('mistralApiKey')
     || localStorage.getItem('lumina_saved_mistral_key')
     || '';
+let mistralSelectedModel = _initialAcc?.mistralSelectedModel || localStorage.getItem('mistralSelectedModel') || 'mistral-small-latest';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 // Text models verified against the provider catalog; retired Llama IDs are omitted.
@@ -1249,10 +1192,8 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
 async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!groqApiKey) return null;
     // Read from module-level variable (kept in sync with account settings), fallback to localStorage.
-    // IMPORTANT: only use selected model if it's a known Groq model ID — prevents OpenRouter
-    // model IDs (e.g. 'openai/gpt-oss-120b') from being sent to api.groq.com and getting blacklisted.
-    const rawSelected = (groqSelectedModel || localStorage.getItem('groqSelectedModel') || '').trim();
-    const selected = GROQ_MODELS.includes(rawSelected) ? rawSelected : '';
+    // Discovered model IDs are valid preferences even when absent from bundled fallbacks.
+    const selected = (groqSelectedModel || '').trim();
     const models = selected ? [selected, ...GROQ_MODELS.filter(m => m !== selected)] : GROQ_MODELS;
     // CRITICAL: Groq models have a strict max output token limit (8192 or 4096).
     // Passing > 8192 (e.g. 16384 from whole-book batch) causes an immediate HTTP 400 rejection from api.groq.com.
@@ -1263,7 +1204,8 @@ async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192, syste
 async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!mistralApiKey) return null;
     if (Date.now() < mistralCorsBlockedUntil) return null; // CORS parked — fail fast to the next tier
-    const result = await callOpenAICompatibleJSON(MISTRAL_API_URL, MISTRAL_MODELS, mistralModelCooldown, MISTRAL_MODEL_COOLDOWN_MS, mistralApiKey, prompt, { temperature, maxTokens, providerLabel: 'Mistral', systemPrompt });
+    const models = [...new Set([mistralSelectedModel, ...MISTRAL_MODELS].filter(Boolean))];
+    const result = await callOpenAICompatibleJSON(MISTRAL_API_URL, models, mistralModelCooldown, MISTRAL_MODEL_COOLDOWN_MS, mistralApiKey, prompt, { temperature, maxTokens, providerLabel: 'Mistral', systemPrompt });
     if (result) {
         mistralCorsFailures = 0; // healthy again
     } else {
@@ -1698,29 +1640,8 @@ function verbalizeGeorgianTextForTTS(text) {
     // 6.5 Latin names and proper nouns in Georgian text -> phonetic Mkhedruli
     out = transliterateLatinInGeorgian(out);
 
-    // 7. Dialogue & Punctuation cadence
-    // Strip line-initial dialogue dashes so spoken lines do not begin with an acoustic comma click
-    out = out.replace(/(^|[\r\n]+)\s*[—–-]\s*/g, '$1');
-
-    // Convert quotation marks into conversational breath pauses
-    out = out
-        .replace(/(:\s*)?[„"“]/g, ', ')
-        .replace(/[”"»]/g, ', ')
-        .replace(/\s+[—–-](\s|$)/g, ', $1')
-        .replace(/\s*[—–]\s*/g, ', ')
-        .replace(/([ა-ჰ]+)-([ა-ჰ]+)/g, '$1 $2')
-        .replace(/;/g, ', ')
-        .replace(/:/g, ', ')
-        .replace(/^[,\s]+/, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    // 8. Natural breath pause before Georgian conjunctions
-    out = out.replace(/([^,.;:!?])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|როდესაც|რომელიც|რომ|სანამ|ვიდრე)(?![\u10A0-\u10FF])/g, '$1, $2');
-
-    // 9. Interrogative & Question Mark Acoustic Prosody
-    out = out.replace(/\s*\?\s*/g, '? ');
-    out = out.replace(/\s*!\s*/g, '! ');
+    // Preserve punctuation and compounds for the native Georgian voice.
+    out = window.EngbotNarration.normalize(out);
 
     // 10. Terminology and name phonetic pronunciation tuning for Edge-TTS
     out = out
@@ -1852,95 +1773,22 @@ function verbalizeEnglishTextForTTS(text) {
     out = out.replace(/€(\d+[\d,]*)\b/g, '$1 euros');
     out = out.replace(/(\b\d+)\s*%/g, '$1 percent');
 
-    // 8. Natural dialogue quotes & punctuation cadence
-    out = out
-        .replace(/(:\s*)?[“"«]/g, ', ')
-        .replace(/[”"»]/g, ', ')
-        .replace(/\s*[—–]\s*/g, ', ')
-        .replace(/\s*(\.{3}|…)\s*/g, '... ')
-        .replace(/^[,\s]+/, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    out = window.EngbotNarration.normalize(out);
 
     return out;
 }
 
 // ── Unified Sentence-Type & Emotion Detection ──────────────────────────────
-function detectSentenceType(text, lang = 'en') {
-    const t = String(text || '').trim();
-    if (!t) return 'statement';
-
-    // Question: rising acoustic inflection
-    if (/[?]\s*$/.test(t)) return 'question';
-    if (lang === 'ka') {
-        if (/^(ვინ|რა|სად|როდის|როგორ|რატომ|რამდენი|რომელ|ხომ|განა|ნუთუ)(?![\u10A0-\u10FF])/i.test(t)) return 'question';
-    } else {
-        if (/^(who|what|where|when|why|how|which|whose|whom|did|do|does|can|could|would|should|is|are|was|were|will|shall|have|has|had|am|aren't|isn't|wasn't|weren't|don't|doesn't|didn't|can't|couldn't|won't)\b/i.test(t)) {
-            return 'question';
-        }
-    }
-
-    // Exclamation: emphatic energy
-    if (/[!]\s*$/.test(t)) return 'exclamation';
-
-    // Suspense / reflective storytelling: deliberate tempo & contemplative breath
-    if (/(\.{3}|…|[—–])/.test(t) && t.split(/\s+/).length >= 4) return 'suspense';
-
-    // Dialogue: direct spoken character line
-    if (/^["“„«][^"”“»]{2,}["””»]/.test(t) || /^[—–-]\s*\S/.test(t) || /["“„«]/.test(t)) return 'dialogue';
-
-    // Short punchy phrase
-    if (t.split(/\s+/).filter(Boolean).length <= 3) return 'short';
-
-    return 'statement';
+function detectSentenceType(text) {
+    return window.EngbotNarration.sentenceType(text);
 }
 
-// Apply sentence-type-specific prosody to Georgian verbalized text
-function applyGeorgianProsody(text, sentenceType) {
-    let out = text;
-    switch (sentenceType) {
-        case 'question':
-            if (!/[?]$/.test(out.trim())) out = out.replace(/[.!]?$/, '?');
-            break;
-        case 'exclamation':
-            if (!/[!]$/.test(out.trim())) out = out.replace(/[.?]?$/, '!');
-            break;
-        case 'dialogue':
-            if (!/^[,\s]/.test(out)) out = ', ' + out;
-            break;
-        case 'suspense':
-            if (!/(\.{3}|…)\s*$/.test(out.trim())) out = out.replace(/[.]?$/, '...');
-            break;
-        case 'short':
-            break;
-        default:
-            break;
-    }
-    return out;
+function applyGeorgianProsody(text) {
+    return window.EngbotNarration.normalize(text);
 }
 
-// Apply sentence-type-specific prosody to English verbalized text
-function applyEnglishProsody(text, sentenceType) {
-    let out = text;
-    switch (sentenceType) {
-        case 'question':
-            if (!/[?]$/.test(out.trim())) out = out.replace(/[.!]?$/, '?');
-            break;
-        case 'exclamation':
-            if (!/[!]$/.test(out.trim())) out = out.replace(/[.?]?$/, '!');
-            break;
-        case 'dialogue':
-            if (!/^[,\s]/.test(out)) out = ', ' + out;
-            break;
-        case 'suspense':
-            if (!/(\.{3}|…)\s*$/.test(out.trim())) out = out.replace(/[.]?$/, '...');
-            break;
-        case 'short':
-            break;
-        default:
-            break;
-    }
-    return out;
+function applyEnglishProsody(text) {
+    return window.EngbotNarration.normalize(text);
 }
 
 // ── Advanced Georgian Grammar & Literary Refinement Engine ─────────────────
@@ -3035,9 +2883,10 @@ function getCurrentAccountSettings() {
         geminiModel: (typeof geminiModel !== 'undefined' && geminiModel) ? geminiModel : (local.geminiModel || localStorage.getItem('geminiModel') || 'gemini-2.5-flash'),
         geminiPasses: (typeof geminiPasses !== 'undefined' && [1, 2, 3].includes(geminiPasses)) ? geminiPasses : (local.geminiPasses || parseInt(localStorage.getItem('geminiPasses') || '3', 10) || 3),
         openRouterApiKey: (typeof openRouterApiKey !== 'undefined' && openRouterApiKey && openRouterApiKey !== OPENROUTER_DEFAULT_KEY) ? openRouterApiKey : (local.openRouterApiKey || localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || ''),
-        openRouterModel: (typeof openRouterModel !== 'undefined' && openRouterModel) ? openRouterModel : (local.openRouterModel || localStorage.getItem('openRouterModel') || ''),
+        openRouterModel,
         groqApiKey: (typeof groqApiKey !== 'undefined' && groqApiKey) ? groqApiKey : (local.groqApiKey || localStorage.getItem('groqApiKey') || localStorage.getItem('lumina_saved_groq_key') || ''),
-        groqSelectedModel: (typeof groqSelectedModel !== 'undefined' && groqSelectedModel) ? groqSelectedModel : (local.groqSelectedModel || localStorage.getItem('groqSelectedModel') || ''),
+        groqSelectedModel,
+        mistralSelectedModel,
         mistralApiKey: (typeof mistralApiKey !== 'undefined' && mistralApiKey) ? mistralApiKey : (local.mistralApiKey || localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || ''),
         customProviderUrl: (typeof customProviderUrl !== 'undefined' && customProviderUrl) ? customProviderUrl : (local.customProviderUrl || localStorage.getItem('customProviderUrl') || localStorage.getItem('lumina_saved_custom_url') || ''),
         customProviderModel: (typeof customProviderModel !== 'undefined' && customProviderModel) ? customProviderModel : (local.customProviderModel || localStorage.getItem('customProviderModel') || localStorage.getItem('lumina_saved_custom_model') || ''),
@@ -3087,7 +2936,7 @@ function syncSettingsToDOMInputs() {
     if (orBadge) orBadge.classList.toggle('hidden', !effOR);
 
     const orModelSelect = document.getElementById('openRouterModelSelect');
-    if (orModelSelect && openRouterModel) {
+    if (orModelSelect) {
         let found = false;
         for (let i = 0; i < orModelSelect.options.length; i++) {
             if (orModelSelect.options[i].value === openRouterModel) {
@@ -3111,25 +2960,20 @@ function syncSettingsToDOMInputs() {
     if (groqBadge) groqBadge.classList.toggle('hidden', !effGroq);
 
     const groqModelSelect = document.getElementById('groqModelSelect');
-    // Use module-level groqSelectedModel (synced with account settings), fallback to localStorage.
-    const groqSaved = (groqSelectedModel || localStorage.getItem('groqSelectedModel') || '').trim();
-    if (groqModelSelect && groqSaved) {
-        if (GROQ_MODELS.includes(groqSaved)) {
-            let found = false;
-            for (let i = 0; i < groqModelSelect.options.length; i++) {
-                if (groqModelSelect.options[i].value === groqSaved) { found = true; break; }
-            }
-            if (!found) {
-                const opt = document.createElement('option');
-                opt.value = groqSaved;
-                opt.textContent = groqSaved;
-                groqModelSelect.appendChild(opt);
-            }
-            groqModelSelect.value = groqSaved;
-        } else {
-            groqModelSelect.value = '';
+    // An empty selection is an intentional Auto preference.
+    const groqSaved = (groqSelectedModel || '').trim();
+    if (groqModelSelect) {
+        if (![...groqModelSelect.options].some(option => option.value === groqSaved)) {
+            const opt = document.createElement('option');
+            opt.value = groqSaved;
+            opt.textContent = groqSaved || 'Auto';
+            groqModelSelect.appendChild(opt);
         }
+        groqModelSelect.value = groqSaved;
     }
+
+    window.EngbotAiSettings?.setSelected('mistralModelSelect', mistralSelectedModel);
+    window.EngbotAiSettings?.setSelected('customProviderModelSelect', customProviderModel);
 
     const mistralKeyInput = document.getElementById('mistralApiKeyInput');
     const effMistral = mistralApiKey || localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || '';
@@ -3206,7 +3050,7 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
     }
     if (settings.openRouterModel !== undefined) {
         openRouterModel = String(settings.openRouterModel || '');
-        if (saveToLegacyStorage && openRouterModel) {
+        if (saveToLegacyStorage) {
             localStorage.setItem('openRouterModel', openRouterModel);
         }
     }
@@ -3227,10 +3071,8 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
     }
     if (settings.groqSelectedModel !== undefined) {
         const gm = String(settings.groqSelectedModel || '');
-        if (gm) {
-            groqSelectedModel = gm;
-            if (saveToLegacyStorage) localStorage.setItem('groqSelectedModel', gm);
-        }
+        groqSelectedModel = gm;
+        if (saveToLegacyStorage) localStorage.setItem('groqSelectedModel', gm);
     }
     if (settings.mistralApiKey !== undefined) {
         const inMistral = String(settings.mistralApiKey || '').trim();
@@ -3245,6 +3087,10 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
         } else if (!mistralApiKey) {
             mistralApiKey = localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || '';
         }
+    }
+    if (settings.mistralSelectedModel !== undefined) {
+        mistralSelectedModel = String(settings.mistralSelectedModel || 'mistral-small-latest');
+        if (saveToLegacyStorage) localStorage.setItem('mistralSelectedModel', mistralSelectedModel);
     }
     if (settings.customProviderUrl !== undefined || settings.customProviderModel !== undefined || settings.customProviderKey !== undefined) {
         const inCpUrl = String(settings.customProviderUrl || '').trim();
@@ -3327,7 +3173,7 @@ async function restoreAccountSettingsForCurrentUser() {
             if (cloudSettings && typeof cloudSettings === 'object' && Object.keys(cloudSettings).length > 0) {
                 const merged = Object.assign({}, localSettings || {});
                 for (const k in cloudSettings) {
-                    if (cloudSettings[k] !== undefined && cloudSettings[k] !== '') {
+                    if (cloudSettings[k] !== undefined && (cloudSettings[k] !== '' || ['openRouterModel', 'groqSelectedModel'].includes(k))) {
                         merged[k] = cloudSettings[k];
                     }
                 }
@@ -3373,7 +3219,7 @@ function openModal(modalId) {
         if (modalId === 'aiSettingsModal') {
             syncSettingsToDOMInputs();
             renderAiKeyStatusPanel();
-            probeAiKeyStatus();
+            void discoverAiModels();
         }
         if (modalId === 'trainingLabModal') {
             if (typeof initTrainingLabUI === 'function') initTrainingLabUI();
@@ -3384,6 +3230,7 @@ function openModal(modalId) {
 }
 
 function closeModal(modalId) {
+    if (modalId === 'aiSettingsModal') window.EngbotAiSettings?.hideSecrets();
     const modal = document.getElementById(modalId);
     if (modal) {
         if (modalId === 'authModal') {
@@ -3447,10 +3294,8 @@ function saveGeminiSettings() {
         openRouterApiKey = orKey;
     }
 
-    if (orModel) {
-        localStorage.setItem('openRouterModel', orModel);
-        openRouterModel = orModel;
-    }
+    localStorage.setItem('openRouterModel', orModel);
+    openRouterModel = orModel;
 
     if (groqKey) {
         setGroqApiKey(groqKey);
@@ -3458,7 +3303,9 @@ function saveGeminiSettings() {
     }
     // Update module-level groqSelectedModel so callGroqJSON sees the new value immediately
     groqSelectedModel = groqSelectedModelVal;
-    if (groqSelectedModelVal) localStorage.setItem('groqSelectedModel', groqSelectedModelVal);
+    localStorage.setItem('groqSelectedModel', groqSelectedModelVal);
+    mistralSelectedModel = document.getElementById('mistralModelSelect')?.value || mistralSelectedModel;
+    localStorage.setItem('mistralSelectedModel', mistralSelectedModel);
 
     if (mistralKey) {
         setMistralApiKey(mistralKey);
@@ -3520,9 +3367,12 @@ function saveGeminiSettings() {
         window.LuminaStore.saveAccountSettings(accountSettings).then((res) => {
             if (res && res.success) {
                 console.info('[AccountSettings] Synced AI settings with Supabase account for', email);
+            } else {
+                showToast('AI settings saved on this device. Cloud sync failed; save again when connected.');
             }
         }).catch(err => {
             console.warn('[AccountSettings] Cloud sync warning:', err);
+            showToast('AI settings saved on this device. Cloud sync failed; save again when connected.');
         });
     }
 
@@ -3543,7 +3393,7 @@ function saveGeminiSettings() {
 
     // Run non-blocking live probe in background
     renderAiKeyStatusPanel();
-    setTimeout(probeAiKeyStatus, 100);
+    // Catalog discovery is read-only; saving does not spend generation tokens.
     closeModal('aiSettingsModal');
 }
 
@@ -3882,11 +3732,26 @@ function openTrainingLabModal() {
     initTrainingLabUI();
     if (typeof closeAccountCabinet === 'function') closeAccountCabinet();
     openModal('trainingLabModal');
+    void window.EngbotTrainingStudio?.refresh();
 }
 
 function openTrainingLab() {
     openTrainingLabModal();
 }
+
+// Training uses one explicitly selected saved provider, independently of book jobs.
+window.getTrainingProviderConfig = function (provider) {
+    const configs = {
+        gemini: { key: geminiApiKey, model: EngbotCore.geminiModels(geminiModel)[0] },
+        groq: { key: groqApiKey, model: groqSelectedModel || GROQ_MODELS[0], url: GROQ_API_URL },
+        mistral: { key: mistralApiKey, model: mistralSelectedModel, url: MISTRAL_API_URL },
+        openrouter: { key: openRouterApiKey, model: openRouterModel || OPENROUTER_FREE_MODELS[0], url: 'https://openrouter.ai/api/v1/chat/completions' },
+        custom: { key: customProviderKey, model: customProviderModel, url: normalizeCustomProviderUrl(customProviderUrl) },
+    };
+    const config = configs[provider];
+    if (!config?.model || (provider !== 'custom' && !config.key) || (provider === 'custom' && !customProviderUrl)) throw new Error('Configure this provider in AI settings first.');
+    return { ...config, provider };
+};
 
 let trainingKeyBusy = false;
 let trainingIssuedKey = null;
@@ -3913,7 +3778,7 @@ function initTrainingLabUI() {
     if (status) status.textContent = _isStaticHost ? 'Server required' : record?.legacy ? 'Previous key unverified' : record ? 'Created on server' : 'No registered key';
     const message = document.getElementById('trainingKeyMessage');
     if (message) message.textContent = _isStaticHost
-        ? 'Training requires the server-hosted app. Your books and translation tools remain available here.'
+        ? 'The in-app trainer above works through your admin cloud session. External automation keys require the server-hosted training API.'
         : record?.legacy ? 'Previous saved key retained. Its registration is unknown; the training server must validate it before use.'
         : record ? `Saved ${record.language === 'en' ? 'English' : 'Georgian'} key. Its current permissions are checked by the training server when used.`
         : 'Generate a key registered by the training server. Earlier locally generated keys have not been verified.';
@@ -6656,7 +6521,7 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
 - Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
 === END ENGLISH RULES ===` : '';
 
-    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang) || '');
+    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang, text) || '');
     const titleFidelityBlock = getTitleFidelityBlock(text, targetLang);
     const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Your translations read like the book was originally written in ${targetLangName} — the register of a respected literary publishing house, not a machine.${kaBlock}${enStyleGuide}${titleFidelityBlock}${glossaryBlock}`;
 
@@ -6866,7 +6731,7 @@ async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', 
 - Direct speech: use standard English punctuation ("Hello," he said) with appropriate quotation marks.
 === END ENGLISH RULES ===` : '';
 
-    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang) || '');
+    const glossaryBlock = getBookGlossaryBlock() + '\n' + (window.EngbotPack?.promptAddendum(targetLang, text) || '');
     const titleFidelityBlock = getTitleFidelityBlock(text, targetLang);
     const systemPrompt = `You are an elite literary translator (${srcLangName} → ${targetLangName}). Translate faithfully, preserving literary register and character voice.${kaBlock}${enStyleGuide}${titleFidelityBlock}${glossaryBlock}`;
 
@@ -8602,36 +8467,45 @@ let currentSpeechToken = 0;
 // next sentence — so the rolling prefetch window survives sentence transitions.
 let narrationGeneration = 0;
 
+function pauseFailedNarration(token) {
+    if (token !== currentSpeechToken || !isPlaying || isPaused) return;
+    isPaused = true;
+    isSpeakingLock = false;
+    updatePlayerUIState(false);
+    showToast('Voice playback is unavailable. Your place is saved; press Play to retry this sentence or choose another voice.', 'error');
+}
+
 function playUltimateFallbackTTS(text, lang, token) {
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.slice(0, 200))}`;
-    const audio = new Audio(url);
-    currentElevenAudio = audio;
-    audio.playbackRate = currentGlobalSpeed;
+    const chunks = window.EngbotNarration.chunks(text, 200);
+    let index = 0;
+    const playChunk = () => {
+        if (token !== currentSpeechToken || !isPlaying || isPaused) return;
+        if (index >= chunks.length) {
+            currentSentenceIndex++;
+            speakCurrentSentence();
+            return;
+        }
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(chunks[index])}`;
+        const audio = new Audio(url);
+        currentElevenAudio = audio;
+        audio.playbackRate = currentGlobalSpeed;
+        audio.onended = () => { index++; playChunk(); };
+        audio.onerror = () => pauseFailedNarration(token);
+        audio.play().catch(() => pauseFailedNarration(token));
+    };
     startBackgroundKeepAlive();
     requestScreenWakeLock();
     updateMediaSession();
-    audio.onended = () => {
-        if (token !== currentSpeechToken || !isPlaying || isPaused) return;
-        currentSentenceIndex++;
-        speakCurrentSentence();
-    };
-    audio.onerror = () => {
-        if (token !== currentSpeechToken || !isPlaying || isPaused) return;
-        currentSentenceIndex++;
-        speakCurrentSentence();
-    };
-    audio.play().catch(e => {
-        if (token !== currentSpeechToken) return;
-        currentSentenceIndex++;
-        speakCurrentSentence();
-    });
+    playChunk();
 }
 
 function speakStandardSentence(text, lang) {
-    if (!('speechSynthesis' in window)) return;
-
     stopCurrentSpeechAudio();
     const myToken = currentSpeechToken;
+    if (!('speechSynthesis' in window)) {
+        playUltimateFallbackTTS(lang === 'ka' ? verbalizeGeorgianTextForTTS(text) : verbalizeEnglishTextForTTS(text), lang, myToken);
+        return;
+    }
 
     if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
@@ -8641,7 +8515,7 @@ function speakStandardSentence(text, lang) {
     const voices = window.speechSynthesis.getVoices();
 
     if (lang === 'ka') {
-        const normalized = normalizeGeorgian(text);
+        const normalized = verbalizeGeorgianTextForTTS(text);
         const nativeKaVoice = voices.find(v => v.lang.startsWith('ka') || v.name.toLowerCase().includes('georgian'));
 
         if (nativeKaVoice) {
@@ -8653,7 +8527,7 @@ function speakStandardSentence(text, lang) {
             return;
         }
     } else {
-        utter.text = text;
+        utter.text = verbalizeEnglishTextForTTS(text);
         const matched = voices.find(v => (v.voiceURI && v.voiceURI === selectedVoiceURI) || v.name === selectedVoiceURI);
         if (matched) {
             utter.voice = matched;
@@ -8712,21 +8586,14 @@ function speakStandardSentence(text, lang) {
             if (myToken === currentSpeechToken && isPlaying && !isPaused) {
                 speakCurrentSentence();
             }
-        }, 180);
+        }, window.EngbotNarration.pauseMs(text, currentGlobalSpeed));
     };
 
     utter.onerror = (e) => {
         isSpeakingLock = false;
         if (e.error === 'canceled' || e.error === 'interrupted' || myToken !== currentSpeechToken) return;
         console.warn('SpeechSynthesis error:', e.error);
-        if (isPlaying && !isPaused) {
-            setTimeout(() => {
-                if (myToken === currentSpeechToken && isPlaying && !isPaused) {
-                    currentSentenceIndex++;
-                    speakCurrentSentence();
-                }
-            }, 300);
-        }
+        pauseFailedNarration(myToken);
     };
 
     startBackgroundKeepAlive();
@@ -8907,14 +8774,7 @@ async function speakGatewayNeural(text, lang) {
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            // Organic human breathing pause between sentences
-            let breathDelay = 220; // baseline human breath
-            const trimmed = String(text || '').trim();
-            if (/[?!]$/.test(trimmed)) {
-                breathDelay = 320; // reflective hesitation after question/exclamation
-            } else if (/(\.{3}|…)$/.test(trimmed)) {
-                breathDelay = 420; // contemplative storytelling pause
-            }
+            const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
             setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
                 currentSentenceIndex++;
@@ -8923,8 +8783,7 @@ async function speakGatewayNeural(text, lang) {
         };
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
-            currentSentenceIndex++;
-            speakCurrentSentence();
+            speakStandardSentence(text, lang);
         };
 
         await currentElevenAudio.play();
@@ -8967,7 +8826,7 @@ async function fetchNeuralSpeechAudioUrl(text, voiceId, ratePct = 0, pitchHz = 0
 
     if (lang === 'ka') {
         const typeRate = { question: 0, exclamation: 3, dialogue: -2, suspense: -4, short: 2, statement: 0 }[sentenceType] ?? 0;
-        const typePitch = { question: 3, exclamation: 3, dialogue: -2, suspense: -2, short: 1, statement: 0 }[sentenceType] ?? 0;
+        const typePitch = 0; // Georgian phrase intonation belongs to the native voice.
         effectiveRate = Math.max(-50, Math.min(50, ratePct + typeRate));
         effectivePitch = Math.max(-20, Math.min(20, pitchHz + typePitch));
         spoken = applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), sentenceType);
@@ -9092,14 +8951,7 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            // Organic human breathing pause between sentences
-            let breathDelay = 220; // baseline human breath
-            const trimmed = String(text || '').trim();
-            if (/[?!]$/.test(trimmed)) {
-                breathDelay = 320; // reflective hesitation after question/exclamation
-            } else if (/(\.{3}|…)$/.test(trimmed)) {
-                breathDelay = 420; // contemplative storytelling pause
-            }
+            const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
             setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
                 currentSentenceIndex++;
@@ -9110,8 +8962,7 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
             console.error("Neural Audio Error, falling back to standard");
-            currentSentenceIndex++;
-            speakCurrentSentence();
+            speakStandardSentence(text, lang);
         };
 
         await currentElevenAudio.play();
@@ -9217,14 +9068,7 @@ async function speakElevenLabsSentence(text, lang = null) {
         audio.onended = () => {
             URL.revokeObjectURL(audioUrl);
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            // Organic human breathing pause between sentences
-            let breathDelay = 220;
-            const trimmed = String(textToRead || '').trim();
-            if (/[?!]$/.test(trimmed)) {
-                breathDelay = 320;
-            } else if (/(\.{3}|…)$/.test(trimmed)) {
-                breathDelay = 420;
-            }
+            const breathDelay = window.EngbotNarration.pauseMs(textToRead, currentGlobalSpeed);
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
                 if (myToken === currentSpeechToken && isPlaying && !isPaused) {

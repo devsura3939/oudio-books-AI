@@ -292,11 +292,11 @@ for base_dir, label in [(os.path.join(REPO_DIR, "static"), "root static/"),
             assert decl not in seen_lexical, f"FATAL LEXICAL COLLISION: '{decl}' declared with const/let in both {seen_lexical[decl]} and {sf} in {label}"
             seen_lexical[decl] = sf
 
-# Version 1.50.0 across all entry points, cache busters, and early controller
+# Version 1.50.1 across all entry points, cache busters, and early controller
 with open(os.path.join(REPO_DIR, "index.html"), "r", encoding="utf-8") as f:
     root_html = f.read()
-assert "v=1.50.0" in root_html, "FAIL: index.html missing current engine cache buster"
-assert "v1.50.0" in root_html, "FAIL: index.html missing version text"
+assert "v=1.50.1" in root_html, "FAIL: index.html missing current engine cache buster"
+assert "v1.50.1" in root_html, "FAIL: index.html missing version text"
 assert "Early Auth Gate Controller" in root_html, "FAIL: index.html missing Early Auth Gate Controller"
 assert "gateBtnForgot" in root_html, "FAIL: index.html missing gateBtnForgot ID"
 assert "gateBtnQuickFillAdmin" in root_html, "FAIL: index.html missing gateBtnQuickFillAdmin ID"
@@ -307,8 +307,8 @@ assert "llama-3.3-70b-versatile" not in root_html, "FAIL: index.html retired Lla
 
 with open(os.path.join(REPO_DIR, "lovable-app", "public", "studio", "index.html"), "r", encoding="utf-8") as f:
     studio_html = f.read()
-assert "v=1.50.0" in studio_html, "FAIL: studio/index.html missing version cache buster"
-assert "v1.50.0" in studio_html, "FAIL: studio/index.html missing version text"
+assert "v=1.50.1" in studio_html, "FAIL: studio/index.html missing version cache buster"
+assert "v1.50.1" in studio_html, "FAIL: studio/index.html missing version text"
 
 assert "Early Auth Gate Controller" in studio_html, "FAIL: studio/index.html missing Early Auth Gate Controller"
 assert "openai/gpt-oss-120b" in studio_html, "FAIL: studio/index.html has missing verified Groq model"
@@ -326,7 +326,7 @@ for path_name, content in [("static/app.js", current_app_content), ("studio/stat
     assert "restoreAccountSettingsForCurrentUser" in content, f"FAIL: restoreAccountSettingsForCurrentUser missing from {path_name}"
     assert "getCurrentAccountSettings" in content, f"FAIL: getCurrentAccountSettings missing from {path_name}"
     assert "resolveAndPreserveAllAiKeys" in content, f"FAIL: resolveAndPreserveAllAiKeys missing from {path_name}"
-    assert "const APP_VERSION = 'v1.50.0'" in content, f"FAIL: current app version missing from {path_name}"
+    assert "const APP_VERSION = 'v1.50.1'" in content, f"FAIL: current app version missing from {path_name}"
     # provider fixes
     assert "let groqSelectedModel" in content, f"FAIL: groqSelectedModel not declared as module-level variable in {path_name}"
     assert "openai/gpt-oss-120b" in content, f"FAIL: GPT OSS 120B missing from GROQ_MODELS in {path_name}"
@@ -338,7 +338,7 @@ with open(STATIC_STORE, "r", encoding="utf-8") as f:
 assert "saveAccountSettings" in store_code, "FAIL: saveAccountSettings missing from supabase-store.js"
 assert "fetchAccountSettings" in store_code, "FAIL: fetchAccountSettings missing from supabase-store.js"
 
-print("  [PASS] 0 top-level lexical collisions across all scripts, early controller & v1.50.0 AI key resilience verified")
+print("  [PASS] 0 top-level lexical collisions across all scripts, early controller & v1.50.1 AI key resilience verified")
 
 # ----------------------------------------------------------------------------
 # 19. Contrastive Grammar, Proper Noun Transliteration, & Scanner Vision OCR
@@ -462,7 +462,7 @@ for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), 
     assert "REFLEXIVE PRONOUN INVIOLABILITY" in geo_text, f"FAIL: REFLEXIVE PRONOUN INVIOLABILITY missing from {path_name}"
     assert "VIGESIMAL NUMERAL CONCORD" in geo_text, f"FAIL: VIGESIMAL NUMERAL CONCORD missing from {path_name}"
     assert "თავისი" in geo_text, f"FAIL: თავისი missing from {path_name}"
-    assert "1.50.0" in geo_text, f"FAIL: Version 1.50.0 missing from {path_name}"
+    assert "GEORGIAN_KNOWLEDGE_VERSION" in geo_text, f"FAIL: Knowledge version missing from {path_name}"
 
 for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
     with open(path, "r", encoding="utf-8") as f:
@@ -599,7 +599,7 @@ for path_name, path in [("index.html", INDEX_HTML), ("studio/index.html", STUDIO
     assert html_text.count("https://github.com/devsura3939/oudio-books-AI") >= 5, \
         f"FAIL: Primary GitHub repository link missing or insufficient in {path_name}"
     assert 'href="/auth"' not in html_text, f"FAIL: Broken absolute /auth link found in {path_name}"
-    assert "v1.50.0" in html_text, f"FAIL: Version v1.50.0 not reflected in {path_name}"
+    assert "v1.50.1" in html_text, f"FAIL: Version v1.50.1 not reflected in {path_name}"
 
 for path_name, path in [("static/supabase-store.js", STATIC_SUPABASE), ("studio/static/supabase-store.js", STUDIO_SUPABASE)]:
     with open(path, "r", encoding="utf-8") as f:

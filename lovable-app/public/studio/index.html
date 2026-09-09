@@ -655,13 +655,13 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="static/styles.css?v=1.50.0">
-    <link rel="stylesheet" href="static/studio-ui.css?v=1.50.0">
+    <link rel="stylesheet" href="static/styles.css?v=1.50.1&settings=2">
+    <link rel="stylesheet" href="static/studio-ui.css?v=1.50.1">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
 
-    <!-- ════════════════ Early Auth Gate Controller (v1.50.0) ════════════════ -->
+    <!-- ════════════════ Early Auth Gate Controller (v1.50.1) ════════════════ -->
     <script>
     (function() {
         // Proactively clear bloated translation jobs and stale caches to prevent QuotaExceededError
@@ -857,7 +857,7 @@
                 <div>
                     <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center justify-center gap-2">
                         <span>EngBot Studio</span>
-                        <span class="text-primary-container text-[11px] font-mono px-2 py-0.5 rounded-full bg-primary-container/15 border border-primary-container/30">v1.50.0</span>
+                        <span class="text-primary-container text-[11px] font-mono px-2 py-0.5 rounded-full bg-primary-container/15 border border-primary-container/30">v1.50.1</span>
                     </h1>
                     <p class="text-xs sm:text-sm text-on-surface-variant mt-1" id="gateSubtitle">
                         Sign in to access your personal audiobooks, scanned books, and studio workspace
@@ -1008,7 +1008,7 @@
         </div>
     </div>
 
-    <!-- Direct Touch and Click Event Attacher for Auth Gate (v1.50.0) -->
+    <!-- Direct Touch and Click Event Attacher for Auth Gate (v1.50.1) -->
     <script>
     (function() {
         function bindGateTouchEvents() {
@@ -1048,9 +1048,9 @@
         </button>
         <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
-            <span class="font-label-caps font-bold tracking-tight text-white">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">v1.50.0</span></span>
+            <span class="font-label-caps font-bold tracking-tight text-white">EngBot <span class="text-primary-container text-[10px] px-1 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">v1.50.1</span></span>
             <div id="adminVersionPillMobile" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)]">
-                <span>👑</span><span>v1.50.0</span>
+                <span>👑</span><span>v1.50.1</span>
             </div>
         </div>
         <div class="flex items-center gap-0.5 -mr-2">
@@ -1098,8 +1098,8 @@
                 </div>
                 <p class="text-white text-[10px] truncate mt-0.5 font-sans" id="mobileAdminEmail"></p>
                 <div class="mt-1 pt-1 border-t border-white/10 space-y-0.5">
-                    <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">v1.50.0</span></p>
-                    <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">v1.50.0 (Lumina-PermanentDelete+FastLib+PrimaryGitHub)</span></p>
+                    <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">v1.50.1</span></p>
+                    <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">v1.50.1 (Georgian narration and measured training)</span></p>
                 </div>
             </div>
 
@@ -1241,9 +1241,9 @@
             <div id="adminVersionPill" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-primary-container/20 border border-primary-container/40 text-[11px] font-mono text-primary-fixed font-bold shadow-[0_0_15px_rgba(0,240,255,0.2)]">
                 <span>👑 Admin</span>
                 <span class="opacity-40">•</span>
-                <span>App v1.50.0</span>
+                <span>App v1.50.1</span>
                 <span class="opacity-40">•</span>
-                <span>Engine v1.50.0</span>
+                <span>Engine v1.50.1</span>
             </div>
 
             <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/12 text-xs font-semibold text-white transition shadow-sm" title="View Project on GitHub">
@@ -1715,7 +1715,7 @@
             <!-- Footer info -->
             <div class="pt-2 text-center text-[10px] text-on-surface-variant/70 border-t border-white/10 flex items-center justify-between px-1">
                 <span>EngBot Audiobooks AI</span>
-                <span class="font-mono">v1.50.0 Multi-Domain</span>
+                <span class="font-mono">v1.50.1 Multi-Domain</span>
             </div>
         </div>
     </div>
@@ -1732,15 +1732,40 @@
                     <div>
                         <div class="flex items-center gap-2">
                             <h3 class="font-bold text-lg text-white">AI Training Lab & LLM Engine</h3>
-                            <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">v1.50.0 LIVE</span>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">v1.50.1 LIVE</span>
                         </div>
-                        <p class="text-xs text-on-surface-variant">Train translation, grammar & OCR rules with external LLMs (Claude, GPT-4o, Gemini, DeepSeek)</p>
+                        <p class="text-xs text-on-surface-variant">Measured language improvements · Georgian and English</p>
                     </div>
                 </div>
                 <button type="button" onclick="closeModal('trainingLabModal')" class="p-2 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-white transition" aria-label="Close training modal">
                     <span class="material-symbols-outlined text-xl">close</span>
                 </button>
             </div>
+
+            <section class="training-workbench" aria-label="Language improvement workbench">
+                <h4>Language improvement workbench</h4>
+                <p id="trainerSummary" role="status">Loading active engine…</p>
+                <p>Improve translation and OCR correction rules using your saved AI provider. Each proposal must pass existing examples and an independent cloud check. Native Georgian narration preserves the author's punctuation.</p>
+                <div class="training-controls">
+                    <label>Language<select id="trainerLanguage" onchange="EngbotTrainingStudio.refresh()"><option value="ka">ქართული · Georgian</option><option value="en">English</option></select></label>
+                    <label>Saved provider<select id="trainerProvider"><option value="gemini">Gemini</option><option value="custom">Custom / local model</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="mistral">Mistral</option></select></label>
+                    <label>Budget<select id="trainerIterations"><option value="1">1 iteration</option><option value="3">Up to 3 iterations</option><option value="5">Up to 5 iterations</option></select></label>
+                </div>
+                <label class="training-research"><input id="trainerResearch" type="checkbox"> Consult language sources on the web each iteration</label>
+                <label>Research topic<input id="trainerQuery" maxlength="100" placeholder="e.g. ქართული ენის გრამატიკა"></label>
+                <p>Research retrieves up to two Wikipedia extracts in the selected language. References inform proposals; they never become verified answers automatically. Runs stop after two unsuccessful proposals. Keep this tab open while training.</p>
+                <div class="training-actions"><button id="trainerRun" onclick="EngbotTrainingStudio.run()">Run improvement cycle</button><button id="trainerStop" onclick="EngbotTrainingStudio.stop()" disabled>Stop</button><button onclick="EngbotTrainingStudio.refresh()">Refresh engine</button></div>
+                <p id="trainerProgress" role="status" aria-live="polite">Ready</p>
+                <div id="trainerLog" role="log" aria-live="polite" class="training-log"></div>
+                <details><summary>Add a verified example</summary>
+                    <p>Use a short OCR mistake or translation post-editing example and its checked correction. Add unchanged correct examples too, to protect valid wording. These examples are shared by the admin language engine, not stored in anyone's book library.</p>
+                    <label>Task<select id="trainerKind"><option value="transcribe">OCR / transcription correction</option><option value="translate">Translation post-editing</option></select></label>
+                    <label>Input<textarea id="trainerSource" maxlength="4000" rows="3"></textarea></label>
+                    <label>Verified expected text<textarea id="trainerExpected" maxlength="4000" rows="3"></textarea></label>
+                    <label>Source URL or verification note<input id="trainerReference" maxlength="300"></label>
+                    <button id="trainerAddCase" onclick="EngbotTrainingStudio.addCase()">Save verified example</button>
+                </details>
+            </section>
 
             <!-- API Key Generation & Management Card -->
             <div class="p-5 rounded-2xl bg-gradient-to-r from-white/[0.04] to-primary-container/10 border border-white/12 space-y-4">
@@ -2118,7 +2143,7 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <div>
                             <h3 class="text-sm font-bold text-white flex items-center gap-2">
                                 Smart Auto-Connect &amp; Key Merge
-                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary-fixed/20 text-primary-fixed font-semibold">Auto-Configures All Models</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary-fixed/20 text-primary-fixed font-semibold">Discover available models</span>
                             </h3>
                             <p class="text-[11px] text-on-surface-variant mt-0.5">
                                 Paste any API key (Gemini, Groq, OpenRouter, ElevenLabs) or paste multiple keys, <code class="text-primary-fixed">.env</code> lines, or JSON. The engine auto-identifies each provider, sanitizes quotes/whitespace, and connects everything automatically.
@@ -2135,6 +2160,10 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                                 <span class="material-symbols-outlined text-sm">auto_fix_high</span>
                                 Auto-Detect &amp; Connect
                             </button>
+                            <button type="button" onclick="discoverAiModels({ force: true })" class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white transition flex items-center gap-1.5 cursor-pointer" title="Refresh available models for saved provider keys">
+                                <span class="material-symbols-outlined text-sm">refresh</span>
+                                Refresh models
+                            </button>
                             <button type="button" onclick="document.getElementById('smartKeyMergeInput').value=''; document.getElementById('smartKeyMergeFeedback').innerHTML='';" class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-on-surface-variant transition cursor-pointer">
                                 Clear
                             </button>
@@ -2150,7 +2179,10 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <span>Gemini API Key (Frontier Reasoning)</span>
                         <span id="geminiSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                     </label>
-                    <input type="password" id="geminiApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="AIzaSy...">
+                    <div class="secret-field">
+                        <input type="password" id="geminiApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="AIzaSy..." autocomplete="off">
+                        <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('geminiApiKeyInput', this)" aria-label="Show Gemini API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                    </div>
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Google Gemini API key. Powers frontier deep reasoning, scanner glitch correction, and missing symbol & word recovery. Key: aistudio.google.com/apikey.
                     </p>
@@ -2174,7 +2206,10 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <span>OpenRouter API Key (Main Engine)</span>
                         <span id="openRouterSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                     </label>
-                    <input type="password" id="openRouterApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-or-v1-...">
+                    <div class="secret-field">
+                        <input type="password" id="openRouterApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-or-v1-..." autocomplete="off">
+                        <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('openRouterApiKeyInput', this)" aria-label="Show OpenRouter API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                    </div>
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Primary engine — free models on OpenRouter. A default key is built in; your own (openrouter.ai/keys) replaces it.
                     </p>
@@ -2195,7 +2230,10 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <span>Groq API Key (Fallback #1)</span>
                         <span id="groqSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                     </label>
-                    <input type="password" id="groqApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="gsk_...">
+                    <div class="secret-field">
+                        <input type="password" id="groqApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="gsk_..." autocomplete="off">
+                        <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('groqApiKeyInput', this)" aria-label="Show Groq API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                    </div>
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         First fallback when OpenRouter is rate-limited. Free tier ~500K tokens/day — enough for a whole book. Key: console.groq.com/keys.
                     </p>
@@ -2216,10 +2254,17 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <span>Mistral API Key (Fallback #2)</span>
                         <span id="mistralSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                     </label>
-                    <input type="password" id="mistralApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="...">
+                    <div class="secret-field">
+                        <input type="password" id="mistralApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="..." autocomplete="off">
+                        <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('mistralApiKeyInput', this)" aria-label="Show Mistral API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                    </div>
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Second fallback (~1B free tokens/month). If CORS blocks browser calls it's skipped automatically. Key: console.mistral.ai.
                     </p>
+                    <label for="mistralModelSelect" class="block text-xs text-on-surface-variant mt-3 mb-1">Mistral model</label>
+                    <select id="mistralModelSelect" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none">
+                        <option value="mistral-small-latest">mistral-small-latest</option>
+                    </select>
                 </div>
 
                 <div>
@@ -2227,7 +2272,10 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <span>ElevenLabs API Key (Neural Voice Studio)</span>
                         <span id="elevenLabsSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                     </label>
-                    <input type="password" id="elevenLabsAiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="32-character hex key (e.g. 1a2b3c...)">
+                    <div class="secret-field">
+                        <input type="password" id="elevenLabsAiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="32-character hex key (e.g. 1a2b3c...)" autocomplete="off">
+                        <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('elevenLabsAiKeyInput', this)" aria-label="Show ElevenLabs API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                    </div>
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         High-fidelity emotional speech in Georgian &amp; English. Auto-syncs with Voice modal and activates ElevenLabs mode. Key: elevenlabs.io.
                     </p>
@@ -2242,14 +2290,25 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                     </div>
                     <div>
                         <label class="block text-xs text-on-surface-variant mb-1">Model Name</label>
-                        <input type="text" id="customProviderModelInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo">
+                        <div class="space-y-2">
+                            <select id="customProviderModelSelect" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none appearance-none" onchange="syncCustomProviderModelFromSelect()" aria-label="Discovered custom provider models">
+                                <option value="">Discover models after connecting</option>
+                            </select>
+                            <details class="text-xs text-on-surface-variant">
+                                <summary class="cursor-pointer py-2">Enter a model ID manually</summary>
+                                <input type="text" id="customProviderModelInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="For example, llama3.1:8b" aria-label="Manual custom model ID" onchange="EngbotAiSettings.setSelected('customProviderModelSelect', this.value.trim())">
+                            </details>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs text-on-surface-variant mb-1 flex items-center justify-between">
                             <span>API Key (leave blank if not required)</span>
                             <span id="customSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                         </label>
-                        <input type="password" id="customProviderKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-...">
+                        <div class="secret-field">
+                            <input type="password" id="customProviderKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-..." autocomplete="off">
+                            <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('customProviderKeyInput', this)" aria-label="Show custom provider API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                        </div>
                     </div>
                 </div>
 
@@ -2621,17 +2680,22 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
     <!-- Continuous Silent Audio Loop: keeps OS audio hardware pipeline awake for lock-screen & background narration -->
     <audio id="backgroundKeepAliveAudio" preload="auto" loop playsinline webkit-playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA" style="display:none;"></audio>
 
-    <script src="static/supabase-store.js?v=1.50.0"></script>
-    <script src="static/engine-core.js?v=1.50.0"></script>
-    <script src="static/provider-runtime.js?v=1.50.0"></script>
-    <script src="static/studio-ui.js?v=1.50.0"></script>
-    <script src="static/training-client.js?v=1.50.0"></script>
-    <script src="static/job-store.js?v=1.50.0"></script>
-            <script src="static/app.js?v=1.50.0"></script>
-    <script src="static/repair-review.js?v=1.50.0"></script>
-    <script src="static/georgian-linguistics.js?v=1.50.0"></script>
-    <script src="static/engine-pack.js?v=1.50.0"></script>
-    <script src="static/scanner.js?v=1.50.0"></script>
+    <script src="static/supabase-store.js?v=1.50.1"></script>
+    <script src="static/engine-core.js?v=1.50.1"></script>
+    <script src="static/provider-runtime.js?v=1.50.1"></script>
+    <script src="static/studio-ui.js?v=1.50.1"></script>
+    <script src="static/training-client.js?v=1.50.1"></script>
+    <script src="static/job-store.js?v=1.50.1"></script>
+            <script src="static/training-runner.js?v=1.50.1"></script>
+    <script src="static/training-studio.js?v=1.50.1"></script>
+    <script src="static/narration.js?v=1.50.1"></script>
+    <script src="static/model-discovery.js?v=1.50.2"></script>
+    <script src="static/ai-settings.js?v=1.50.2"></script>
+    <script src="static/app.js?v=1.50.1&settings=2"></script>
+    <script src="static/repair-review.js?v=1.50.1"></script>
+    <script src="static/georgian-linguistics.js?v=1.50.1"></script>
+    <script src="static/engine-pack.js?v=1.50.1"></script>
+    <script src="static/scanner.js?v=1.50.1"></script>
 
 
 <div id="studioActionStatus" role="status" aria-live="polite" hidden></div>

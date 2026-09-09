@@ -61,7 +61,7 @@
     for (const item of pack.items) {
       if (item.type !== literalType) continue;
       const re = safeRegex(item.pattern, true);
-      if (re) out = out.replace(re, item.replacement);
+      if (re) out = out.replace(re, () => item.replacement);
     }
     for (const item of pack.items) {
       if (item.type !== "autofix") continue;
@@ -71,15 +71,15 @@
     return out;
   }
 
-  function buildPrompt(items) {
-    const glossary = items.filter(i => i.type === 'glossary').slice(0, 800).map(i => `- ${i.pattern} → ${i.replacement}`);
-    const blocks = items.filter(i => i.type === 'prompt_block' && i.text).slice(0, 20).map(i => i.text);
-    return [glossary.length ? 'TRAINED GLOSSARY:\n' + glossary.join('\n') : '', ...blocks].filter(Boolean).join('\n\n');
+  function buildPrompt(items, source = '') {
+    const glossary = items.filter(i => i.type === 'glossary' && (!source || source.includes(i.pattern))).slice(0, 30).map(i => `- ${i.pattern} → ${i.replacement}`);
+    const blocks = items.filter(i => i.type === 'prompt_block' && i.text).slice(0, 4).map(i => i.text.slice(0, 600));
+    return [glossary.length ? 'TRAINED GLOSSARY:\n' + glossary.join('\n') : '', ...blocks].filter(Boolean).join('\n\n').slice(0, 3200);
   }
 
-  function promptAddendum(lang) {
+  function promptAddendum(lang, source = '') {
     const pack = packs[lang || "ka"];
-    return (pack && pack.prompt) || "";
+    return pack ? buildPrompt(pack.items || [], source) : "";
   }
 
   function qaFindings(text, lang) {
@@ -113,6 +113,7 @@
     try {
       const res = await fetch("/api/engine-pack?language=" + encodeURIComponent(language), {
         headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) return null;
       const data = await res.json();
@@ -145,6 +146,19 @@
   }, 250);
   wrap();
 
+  window.addEventListener('engbot:pack-updated', event => { void load(event.detail?.language || 'ka'); });
+  window.addEventListener('focus', () => { void load('ka'); void load('en'); });
+  let subscriptionAttempts = 0;
+  const subscriptionTimer = setInterval(() => {
+    const client = window.LuminaStore?.getClient?.();
+    if (!client) { if (++subscriptionAttempts >= 60) clearInterval(subscriptionTimer); return; }
+    clearInterval(subscriptionTimer);
+    client.channel('active-language-packs').on('postgres_changes', { event: '*', schema: 'public', table: 'engine_active' }, payload => {
+      const language = payload.new?.language || payload.old?.language;
+      if (language) void load(language);
+    }).subscribe();
+    client.auth.onAuthStateChange(() => { setTimeout(() => { void load('ka'); void load('en'); }, 0); });
+  }, 1000);
   void load("ka");
   void load("en");
 })();

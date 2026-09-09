@@ -950,10 +950,10 @@
       var targetLang = lang || "ka";
       var res = await c
         .from("engine_active")
-        .select("language,version_id,engine_versions(version,items)")
+        .select("language,version_id,enabled,engine_versions(version,items)")
         .eq("language", targetLang)
-        .eq("enabled", true)
-        .maybeSingle();
+        .maybeSingle().abortSignal(AbortSignal.timeout(8000));
+      if (!res.error && res.data?.enabled === false) return { version: 0, items: [] };
       if (!res.error && res.data && res.data.engine_versions) {
         var v = res.data.engine_versions;
         return {
