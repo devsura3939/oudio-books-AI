@@ -16,6 +16,16 @@ try:
 except ImportError:
     sr = None
 
+try:
+    from pydub import AudioSegment
+except ImportError:
+    AudioSegment = None
+
+try:
+    import pytesseract
+except ImportError:
+    pytesseract = None
+
 from PIL import Image
 from app.text_integrity import clean_verbatim, normalize_language, detect_language, vision_prompt
 from app.image_processor import enhance_page_image, image_to_jpeg_bytes, score_image_sharpness
@@ -44,7 +54,7 @@ def transcribe_audio_bytes(
     # Tier 1: Gemini 2.5 Flash Multimodal Audio Transcription
     if genai is not None and effective_key:
         try:
-            client = genai.Client(api_key=effective_key)
+            client = genai.Client(api_key=effective_key, http_options={"timeout": 12000})
             instruction = (
                 "You are an expert transcriber. Transcribe this audio recording verbatim in its original spoken language. "
                 "Preserve exact wording, sentence boundaries, punctuation, and capitalization. "
@@ -85,9 +95,28 @@ def transcribe_audio_bytes(
     if sr is not None and lang != "auto":
         try:
             r = sr.Recognizer()
+            r.operation_timeout = 10
             # SpeechRecognition requires WAV or AIFF format for AudioFile
-            if audio_bytes[:4] in (b'RIFF', b'fLaC', b'FORM'):
-                with sr.AudioFile(io.BytesIO(audio_bytes)) as source:
+            speech_bytes = audio_bytes
+            if speech_bytes[:4] not in (b'RIFF', b'fLaC', b'FORM') and AudioSegment is not None:
+                try:
+                    source_format = {
+                        "audio/mpeg": "mp3",
+                        "audio/mp3": "mp3",
+                        "audio/ogg": "ogg",
+                        "audio/webm": "webm",
+                        "audio/mp4": "mp4",
+                        "audio/m4a": "mp4",
+                        "audio/aac": "aac",
+                    }.get((mime_type or "").split(";")[0].strip().lower(), "mp3")
+                    converted = AudioSegment.from_file(io.BytesIO(audio_bytes), format=source_format)
+                    wav = io.BytesIO()
+                    converted.export(wav, format="wav")
+                    speech_bytes = wav.getvalue()
+                except Exception as conversion_error:
+                    print(f"[transcription_engine] local audio conversion skipped: {conversion_error}")
+            if speech_bytes[:4] in (b'RIFF', b'fLaC', b'FORM'):
+                with sr.AudioFile(io.BytesIO(speech_bytes)) as source:
                     audio_data = r.record(source)
                 target_speech_lang = "ka-GE" if lang == "ka" else "en-US"
                 text = r.recognize_google(audio_data, language=target_speech_lang)
@@ -180,7 +209,7 @@ def transcribe_image_bytes(
     engine_name = "gemini-2.5-flash"
     if genai is not None and effective_key:
         try:
-            client = genai.Client(api_key=effective_key)
+            client = genai.Client(api_key=effective_key, http_options={"timeout": 12000})
             clean_mime = processed_mime.split(";")[0].strip() if processed_mime else "image/jpeg"
             if clean_mime not in ("image/jpeg", "image/jpg", "image/png", "image/webp"):
                 clean_mime = "image/jpeg"
@@ -217,7 +246,7 @@ def transcribe_image_bytes(
                 ],
                 "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192}
             }
-            resp = httpx.post(url, json=payload, timeout=30.0)
+            resp = httpx.post(url, json=payload, timeout=12.0)
             if resp.status_code == 200:
                 data = resp.json()
                 cand = data.get("candidates", [])
@@ -225,6 +254,18 @@ def transcribe_image_bytes(
                     result_text = cand[0]["content"]["parts"][0].get("text", "").strip()
         except Exception as e:
             print(f"[transcription_engine] HTTP Gemini vision fallback failed: {e}")
+
+    # Tier 2: local Tesseract is an optional zero-key backend fallback. The
+    # browser scanner has the same path; this keeps server-side OCR useful
+    # when a vision token is expired or unavailable.
+    if not result_text and pytesseract is not None:
+        try:
+            image = Image.open(io.BytesIO(processed_bytes))
+            tess_lang = "kat" if lang == "ka" else "eng" if lang == "en" else "eng"
+            result_text = pytesseract.image_to_string(image, lang=tess_lang).strip()
+            engine_name = "tesseract-local"
+        except Exception as e:
+            print(f"[transcription_engine] local Tesseract fallback unavailable: {e}")
 
     if not result_text:
         return {

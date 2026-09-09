@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.49.4';
-const ENGINE_VERSION = 'v1.49.1 (Bilingual translation and source integrity)';
+const APP_VERSION = 'v1.49.5';
+const ENGINE_VERSION = 'v1.49.2 (Deterministic baseline with optional AI correction)';
 
 let db = null;
 let currentBook = null;
@@ -7097,18 +7097,31 @@ const translationEngineStats = { ai: 0, rules: 0, raw: 0, failed: 0, gemini: 0, 
 let translationEngineStatusEl = null;
 let translationStage = '';
 let lastTranslationFailure = '';
+let lastTranslationEngine = 'rules';
+let optionalAiRequestActive = false;
+let optionalAiDisabledUntil = 0;
+let optionalAiCorrectionsUsed = 0;
+let OPTIONAL_AI_TIMEOUT_MS = 14_000;
+const OPTIONAL_AI_FAILURE_COOLDOWN_MS = 45_000;
+const OPTIONAL_AI_REVIEW_COOLDOWN_MS = 8_000;
+const OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB = 48;
 function setTranslationStage(stage) {
     translationStage = stage;
     const el = document.getElementById('wbEngineStatus');
     if (el) el.textContent = stage === 'Complete' ? stage : stage + '…';
 }
 function translationFailure(stage, message) {
+    // A timed-out optional correction may finish after the deterministic
+    // result has already been accepted. Never let that late response put the
+    // progress panel back into a blocking provider state.
+    if (!optionalAiRequestActive && translationStage === 'Deterministic engine') return;
     lastTranslationFailure = stage + ': ' + message;
     const el = document.getElementById('wbEngineStatus');
     if (el) el.textContent = lastTranslationFailure;
 }
 window.addEventListener('engbot-provider-status', event => {
     if (!isTranslatingWholeBook) return;
+    if (!optionalAiRequestActive && translationStage === 'Deterministic engine') return;
     const el = document.getElementById('wbEngineStatus');
     const info = event.detail;
     if (el) el.textContent = info.phase === 'failed' ? info.message : `${translationStage || 'Connecting'} · ${info.provider}${info.phase === 'requesting' ? '…' : ' responded'}`;
@@ -7151,6 +7164,7 @@ function renderTranslationEngineStatus() {
 }
 
 function recordEngineUse(engine) {
+    lastTranslationEngine = engine;
     if (engine in translationEngineStats) translationEngineStats[engine]++;
     renderTranslationEngineStatus();
 }
@@ -7304,9 +7318,11 @@ async function probeAiKeyStatus() {
 // translate+self-audit call, refine only on flagged defects — designed for
 // whole-book runs where 3-4 calls per chunk would exhaust free quotas and
 // silently degrade everything to machine translation.
-// Quality is the default now: the original full pipeline is what produced the
-// Georgian quality you had. 'budget' stays available as an explicit choice.
-let translationBudgetMode = localStorage.getItem('translationBudgetMode') || 'quality';
+// The hybrid budget path is the safe default for long books: the deterministic
+// engine produces the accepted baseline and one optional AI correction is
+// spent only on difficult chunks. Users can still opt into the full review
+// pipeline from the studio controls when they have provider capacity.
+let translationBudgetMode = localStorage.getItem('translationBudgetMode') || 'budget';
 
 
 function setTranslationBudgetMode(mode) {
@@ -7759,9 +7775,120 @@ async function translateChunkLocal(clean, targetLang) {
     return null;
 }
 
+// The local tier is the source of truth for bulk work. It may use the small
+// server translator, Google/MyMemory, or the bundled Georgian rule engine,
+// but it always returns before an optional provider correction is considered.
+async function deterministicTranslateChunk(clean, targetLang) {
+    const local = await translateChunkLocal(clean, targetLang);
+    if (local && assessTranslation(clean, local, targetLang).ok) return local;
+
+    // Keep the bundled zero-key Georgian engine as the last deterministic
+    // path. This is deliberately separate from translateChunkLocal so a
+    // provider outage cannot make the whole router appear unavailable.
+    if (targetLang === 'ka' && (typeof translateOfflineEnToKa === 'function' || typeof window !== 'undefined' && typeof window.translateOfflineEnToKa === 'function')) {
+        try {
+            const fn = typeof translateOfflineEnToKa === 'function' ? translateOfflineEnToKa : window.translateOfflineEnToKa;
+            const synFn = typeof synthesizeGeorgianMorphology === 'function'
+                ? synthesizeGeorgianMorphology
+                : (typeof window !== 'undefined' && typeof window.synthesizeGeorgianMorphology === 'function' ? window.synthesizeGeorgianMorphology : null);
+            const raw = fn(clean);
+            const offline = applyKaRuleEngine(synFn ? synFn(raw) : raw);
+            if (offline && assessTranslation(clean, offline, targetLang).ok) {
+                recordEngineUse('rules');
+                return offline;
+            }
+        } catch (error) {
+            console.warn('[Engine] bundled deterministic fallback failed:', error);
+        }
+    }
+    return null;
+}
+
+function noteOptionalAiFallback(reason, cooldownMs = OPTIONAL_AI_FAILURE_COOLDOWN_MS) {
+    optionalAiDisabledUntil = Math.max(optionalAiDisabledUntil, Date.now() + cooldownMs);
+    const detail = String(reason || 'provider unavailable').replace(/\s+/g, ' ').trim().slice(0, 180);
+    lastTranslationFailure = `AI correction skipped: ${detail || 'provider unavailable'}. Deterministic engine continued.`;
+    setTranslationStage('Deterministic engine');
+}
+
+async function runOptionalAiCall(fn, timeoutMs = OPTIONAL_AI_TIMEOUT_MS) {
+    optionalAiRequestActive = true;
+    const request = Promise.resolve().then(fn).catch(error => {
+        console.warn('[Engine] optional AI call failed:', error && error.message ? error.message : error);
+        return null;
+    });
+    let timedOut = false;
+    let timer;
+    const timeout = new Promise(resolve => { timer = setTimeout(() => {
+        timedOut = true;
+        resolve(null);
+    }, timeoutMs); });
+    try {
+        const result = await Promise.race([request, timeout]);
+        if (!result && timedOut) noteOptionalAiFallback('provider timed out');
+        return result;
+    } finally {
+        clearTimeout(timer);
+        optionalAiRequestActive = false;
+    }
+}
+
+function shouldUseOptionalAi(clean, targetLang, baseline, complexity) {
+    if (!aiTranslationAvailable() || Date.now() < optionalAiDisabledUntil) return false;
+    if (optionalAiCorrectionsUsed >= OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB) return false;
+    // Long, rare-vocabulary, quoted or structurally dense chunks are where a
+    // correction pass changes the result. Easy chunks stay entirely local so a
+    // free-tier key is not spent on work the deterministic engine already did.
+    if (complexity >= 35) return true;
+    if (targetLang === 'ka' && typeof validateGeorgianTranslation === 'function') {
+        try {
+            return validateGeorgianTranslation(baseline || '').some(issue => issue && issue.severity === 'blocking');
+        } catch (error) { /* non-fatal */ }
+    }
+    return false;
+}
+
+async function runOptionalAiCorrection(clean, targetLang, contextBefore, contextAfter, deep) {
+    if (optionalAiCorrectionsUsed >= OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB) return null;
+    optionalAiCorrectionsUsed++;
+    optionalAiRequestActive = true;
+    setTranslationStage('AI correction');
+    const providerPromise = Promise.resolve()
+        .then(() => translateChunkAI(clean, targetLang, contextBefore, contextAfter, deep))
+        .catch(error => {
+            if (error && error.name === 'AbortError') return null;
+            console.warn('[Engine] optional AI correction failed:', error && error.message ? error.message : error);
+            return null;
+        });
+    let timedOut = false;
+    let timer;
+    const timeout = new Promise(resolve => { timer = setTimeout(() => {
+        timedOut = true;
+        resolve(null);
+    }, OPTIONAL_AI_TIMEOUT_MS); });
+    try {
+        const result = await Promise.race([providerPromise, timeout]);
+        if (result) {
+            optionalAiRequestActive = false;
+            setTranslationStage('AI corrected');
+            return result;
+        }
+        const providerFailure = window.EngbotProviders?.getFailure()?.message || lastTranslationFailure || 'provider returned no usable correction';
+        noteOptionalAiFallback(timedOut ? 'provider correction timed out' : providerFailure, timedOut ? OPTIONAL_AI_FAILURE_COOLDOWN_MS : OPTIONAL_AI_REVIEW_COOLDOWN_MS);
+        return null;
+    } finally {
+        clearTimeout(timer);
+        // The provider promise is intentionally allowed to settle in the
+        // background; its late status events are ignored after this flag flips.
+        optionalAiRequestActive = false;
+    }
+}
+
 // Tier A: AI pipeline with literary prompt and Georgian mastery rules.
 async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, deep = true) {
-    const pipeline = translateWithGeminiAI;
+    const pipeline = translationBudgetMode === 'budget' || !deep
+        ? translateWithGeminiAIBatch
+        : translateWithGeminiAI;
     const aiRes = await pipeline(clean, targetLang, contextBefore, contextAfter);
     if (aiRes) {
         const refined = aiRes;
@@ -7776,8 +7903,10 @@ async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, 
     return null;
 }
 
-// Tier router. Tier A whenever a quality engine is reachable (user key OR gateway);
-// Tier B (rule engine, no LLM) when no engine is reachable or Tier A fails.
+// Tier router. The deterministic engine always runs first and supplies the
+// accepted baseline. Tier A is an optional correction pass for difficult
+// chunks; provider failure, quota exhaustion, malformed review, or timeout
+// simply leaves the baseline in place and never pauses the book.
 async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', contextAfter = '') {
     if (!text || !text.trim()) return '';
     const clean = text.trim();
@@ -7785,28 +7914,36 @@ async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', 
     const complex = score > SMART_ROUTE_EASY_THRESHOLD;
     if (complex) smartRoutingStats.complex++; else smartRoutingStats.easy++;
 
-    if (aiTranslationAvailable()) {
-        const aiRes = await translateChunkAI(clean, targetLang, contextBefore, contextAfter, complex);
-        if (aiRes) return aiRes;
+    let baseline = null;
+    try {
+        baseline = await deterministicTranslateChunk(clean, targetLang);
+    } catch (error) {
+        console.warn('[Engine] deterministic translation failed:', error && error.message ? error.message : error);
     }
 
-    // Fallback: rule engine
-    const local = await translateChunkLocal(clean, targetLang);
-    if (local) return local;
+    // A valid deterministic result is publishable on its own. Spend AI only
+    // when the chunk is complex enough to benefit and only while the bounded
+    // optional correction budget is still healthy.
+    if (baseline && shouldUseOptionalAi(clean, targetLang, baseline, score)) {
+        const aiRes = await runOptionalAiCorrection(clean, targetLang, contextBefore, contextAfter, complex);
+        if (aiRes && assessTranslation(clean, aiRes, targetLang).ok) {
+            return aiRes;
+        }
+        setTranslationStage('Deterministic engine');
+        return baseline;
+    }
 
-    // Direct offline rule engine fallback if translateChunkLocal failed
-    if (targetLang === 'ka' && (typeof translateOfflineEnToKa === 'function' || typeof window !== 'undefined' && typeof window.translateOfflineEnToKa === 'function')) {
-        try {
-            const fn = typeof translateOfflineEnToKa === 'function' ? translateOfflineEnToKa : window.translateOfflineEnToKa;
-            const synFn = typeof synthesizeGeorgianMorphology === 'function' ? synthesizeGeorgianMorphology : (typeof window !== 'undefined' && typeof window.synthesizeGeorgianMorphology === 'function' ? window.synthesizeGeorgianMorphology : null);
-            const raw = fn(clean);
-            const off = applyKaRuleEngine(synFn ? synFn(raw) : raw);
-            const assess = assessTranslation(clean, off, targetLang);
-            if (assess.ok) {
-                recordEngineUse('rules');
-                return off;
-            }
-        } catch (e) { /* non-fatal */ }
+    if (baseline) {
+        setTranslationStage('Deterministic engine');
+        return baseline;
+    }
+
+    // If the deterministic endpoints are unavailable, allow one bounded AI
+    // attempt as an emergency completion path. This preserves the invariant
+    // that a provider can help but is never required for normal progress.
+    if (aiTranslationAvailable()) {
+        const aiRes = await runOptionalAiCorrection(clean, targetLang, contextBefore, contextAfter, complex);
+        if (aiRes && assessTranslation(clean, aiRes, targetLang).ok) return aiRes;
     }
     return null;
 }
@@ -7831,7 +7968,7 @@ async function translateSingleSentence(text, targetLang = 'ka') {
     // Try MyMemory
     try {
         const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 10000);
+        const tid = setTimeout(() => ctrl.abort(), 6000);
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.slice(0, 480))}&langpair=${srcLang}|${targetLang}`;
         const res = await fetch(url, { signal: ctrl.signal });
         clearTimeout(tid);
@@ -7852,7 +7989,7 @@ async function translateSingleSentence(text, targetLang = 'ka') {
     // Direct Google GTX minimal fallback
     try {
         const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 10000);
+        const tid = setTimeout(() => ctrl.abort(), 6000);
         const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(clean)}`;
         const gRes = await fetch(gUrl, { signal: ctrl.signal });
         clearTimeout(tid);
@@ -8077,6 +8214,10 @@ async function runWholeBookTranslation(resume = false) {
     translationRequestController = new AbortController();
     translationPanelMinimized = false;
     lastTranslationFailure = '';
+    lastTranslationEngine = 'rules';
+    optionalAiRequestActive = false;
+    optionalAiDisabledUntil = 0;
+    optionalAiCorrectionsUsed = 0;
     window.EngbotProviders?.reset();
     setTranslationStage('Preparing');
     if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `Preparing ${targetName} translation · ${targetBook.chapters.length} chapters`;
@@ -8106,7 +8247,10 @@ async function runWholeBookTranslation(resume = false) {
         if (typeof aiTranslationAvailable === 'function' && aiTranslationAvailable() && !job.glossaryChecked && !targetBook.glossary?.length) {
             const sample = targetBook.chapters.slice(0, 2).map(c => c.text || '').join('\n\n').slice(0, 3000);
             if (sample.length > 80) {
-                const data = await callGeminiJSON(`Extract up to 20 names and recurring terms from this book opening. Return English and Georgian equivalents as JSON: {"glossary":[{"en":"English term","ka":"ქართული შესატყვისი"}]}. Preserve names consistently; do not invent entries.\n${sample}`, {temperature:0.1,maxTokens:2048});
+                // Glossary extraction improves consistency but is optional. A
+                // dead provider must never delay the first chapter, so it has
+                // the same short deadline as a correction pass.
+                const data = await runOptionalAiCall(() => callGeminiJSON(`Extract up to 20 names and recurring terms from this book opening. Return English and Georgian equivalents as JSON: {"glossary":[{"en":"English term","ka":"ქართული შესატყვისი"}]}. Preserve names consistently; do not invent entries.\n${sample}`, {temperature:0.1,maxTokens:2048}), 8_000);
                 translationRequestController?.signal.throwIfAborted();
                 checkOwner();
                 if (Array.isArray(data?.glossary)) {
@@ -8161,7 +8305,7 @@ async function runWholeBookTranslation(resume = false) {
                 }
                 checkpoint.outputs[i] = output;
                 await saveTranslationJob(job);
-                appendChunkLog(i + 1, 'ai', output.slice(0, 100));
+                appendChunkLog(i + 1, lastTranslationEngine === 'ai' ? 'ai' : 'local', output.slice(0, 100));
                 updateChunkRate();
                 if (DOM.wbCharCounter) DOM.wbCharCounter.textContent = `${Object.values(job.chapters).reduce((n, c) => n + c.outputs.reduce((sum, t) => sum + (t?.length || 0), 0), 0).toLocaleString()} characters accepted`;
                 if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = output;
@@ -8757,7 +8901,7 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: spoken.slice(0, 3800), preset }),
-        });
+        }, { timeoutMs: 14_000, provider: 'Lumina TTS gateway' });
         if (res.status === 404 || res.status === 401 || res.status === 403 || res.status === 402) {
             gatewayTTSAvailable = false;
             console.warn('[Lumina TTS] gateway unavailable (' + res.status + ') — using browser/HF engines.');
@@ -8931,7 +9075,8 @@ async function fetchNeuralSpeechAudioUrl(text, voiceId, ratePct = 0, pitchHz = 0
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     data: [spoken, voiceId, effectiveRate, effectivePitch]
-                })
+                }),
+                signal: AbortSignal.timeout(10_000)
             });
 
             if (!res.ok) continue;
@@ -9102,7 +9247,7 @@ const elevenSpeechBuffer = window.EngbotProviders.createSpeechBuffer(async (payl
         method:'POST', signal,
         headers:{'xi-api-key':sanitizeApiKey(elevenLabsApiKey),'Content-Type':'application/json','Accept':'audio/mpeg'},
         body:JSON.stringify(payload.body)
-    }, {timeoutMs:45000});
+    }, {timeoutMs:18000, provider:'ElevenLabs'});
     if (!res.ok) throw new Error(window.EngbotProviders.getFailure()?.message || `ElevenLabs HTTP ${res.status}`);
     const blob = await res.blob();
     if (!blob.type.startsWith('audio/') || blob.size < 64) throw new Error('ElevenLabs returned no playable audio.');

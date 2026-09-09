@@ -205,6 +205,54 @@ test('Whole-book translation uses the smart engine fallback after an LLM review 
  assert.equal(smartCalls,ctx.buildTranslationChunks(ctx.currentBook.chapters[0].text,1800).chunks.length);
  assert.equal(ctx.saved.filter(book=>book.isTranslatedEdition).length,1);
 });
+test('Smart routing commits the deterministic baseline before optional AI correction', async()=>{
+    const start=source.indexOf('const EASY_WORDS');
+    const rulesEnd=source.indexOf('// ── Tier B:',start);
+    const routerStart=source.indexOf('async function deterministicTranslateChunk');
+    const end=source.indexOf('async function translateChunkContextually',routerStart);
+    const order=[];
+    const ctx=vm.createContext({
+        window:{EngbotProviders:{getFailure:()=>null}}, console:silent, Date, setTimeout, clearTimeout,
+        document:{getElementById:()=>null}, validateGeorgianTranslation:()=>[],
+        assessTranslation:core.assessTranslation, aiTranslationAvailable:()=>true,
+        setTranslationStage(){}, recordEngineUse(){}, lastTranslationFailure:'',
+        translateChunkLocal:async()=>{order.push('local');return 'ქართული თარგმანი '.repeat(180);},
+        translateWithGeminiAIBatch:async()=>{order.push('ai');return 'ქართული შესწორებული თარგმანი '.repeat(180);},
+        translationBudgetMode:'budget', optionalAiCorrectionsUsed:0, optionalAiRequestActive:false,
+        optionalAiDisabledUntil:0, OPTIONAL_AI_TIMEOUT_MS:100, OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB:48,
+        OPTIONAL_AI_FAILURE_COOLDOWN_MS:45000, OPTIONAL_AI_REVIEW_COOLDOWN_MS:8000
+    });
+    vm.runInContext(source.slice(start,rulesEnd),ctx);
+    vm.runInContext(source.slice(routerStart,end),ctx);
+    const text='A difficult literary passage with unusual vocabulary. '.repeat(50);
+    const result=await ctx.translateChunkSmart(text,'ka');
+    assert.equal(order[0],'local');
+    assert.equal(order[1],'ai');
+    assert.match(result,/შესწორებული/);
+});
+test('A hanging optional provider returns the deterministic result within its deadline', async()=>{
+    const start=source.indexOf('const EASY_WORDS');
+    const rulesEnd=source.indexOf('// ── Tier B:',start);
+    const routerStart=source.indexOf('async function deterministicTranslateChunk');
+    const end=source.indexOf('async function translateChunkContextually',routerStart);
+    const ctx=vm.createContext({
+        window:{EngbotProviders:{getFailure:()=>({message:'OpenRouter timed out'})}}, console:silent, Date, setTimeout, clearTimeout,
+        document:{getElementById:()=>null}, validateGeorgianTranslation:()=>[],
+        assessTranslation:core.assessTranslation, aiTranslationAvailable:()=>true,
+        setTranslationStage(){}, recordEngineUse(){}, lastTranslationFailure:'',
+        translateChunkLocal:async()=> 'ქართული თარგმანი '.repeat(180),
+        translateWithGeminiAIBatch:async()=>new Promise(()=>{}), translationBudgetMode:'budget', optionalAiCorrectionsUsed:0,
+        optionalAiRequestActive:false, optionalAiDisabledUntil:0, OPTIONAL_AI_TIMEOUT_MS:100, OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB:48,
+        OPTIONAL_AI_FAILURE_COOLDOWN_MS:45000, OPTIONAL_AI_REVIEW_COOLDOWN_MS:8000
+    });
+    vm.runInContext(source.slice(start,rulesEnd),ctx);
+    vm.runInContext(source.slice(routerStart,end),ctx);
+    vm.runInContext('OPTIONAL_AI_TIMEOUT_MS=25',ctx);
+    const began=Date.now();
+    const result=await ctx.translateChunkSmart('A difficult literary passage with unusual vocabulary. '.repeat(50),'ka');
+    assert.ok(Date.now()-began<500,'optional AI exceeded its deadline');
+    assert.match(result,/ქართული თარგმანი/);
+});
 test('Georgian source creates an English edition',async()=>{
     const ctx=context();ctx.currentBook.lang='ka';ctx.currentBook.chapters[0].text='ეს არის ქართული ტექსტი წიგნის შესახებ.';
     ctx.translateChunkAI=async(_text,lang)=>{assert.equal(lang,'en');return 'This is Georgian text about a book.';};

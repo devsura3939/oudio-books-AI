@@ -326,7 +326,7 @@ for path_name, content in [("static/app.js", current_app_content), ("studio/stat
     assert "restoreAccountSettingsForCurrentUser" in content, f"FAIL: restoreAccountSettingsForCurrentUser missing from {path_name}"
     assert "getCurrentAccountSettings" in content, f"FAIL: getCurrentAccountSettings missing from {path_name}"
     assert "resolveAndPreserveAllAiKeys" in content, f"FAIL: resolveAndPreserveAllAiKeys missing from {path_name}"
-    assert "v1.49.1" in content, f"FAIL: version missing from {path_name}"
+    assert "const APP_VERSION = 'v1.49.5'" in content, f"FAIL: current app version missing from {path_name}"
     # provider fixes
     assert "let groqSelectedModel" in content, f"FAIL: groqSelectedModel not declared as module-level variable in {path_name}"
     assert "openai/gpt-oss-120b" in content, f"FAIL: GPT OSS 120B missing from GROQ_MODELS in {path_name}"
