@@ -978,7 +978,9 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
 
       const res = await window.EngbotProviders.request("/api/ocr", {
         method: "POST",
-              signal: AbortSignal.timeout(45000),
+              // Vision is an enhancement. Keep its deadline short so an
+              // expired gateway key immediately falls through to local OCR.
+              signal: AbortSignal.timeout(15000),
         headers,
         body: JSON.stringify({ image: dataUrl, lang, hint: hint || undefined }),
       });
@@ -987,6 +989,10 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
         const data = await res.json();
         if (!window.EngbotCore.providerOutputComplete(data)) throw new Error('OCR response incomplete; retry this page');
         return { text: data.text || "", engine: data.engine || "neural-gateway" };
+      }
+      if ([401, 402, 403, 429].includes(res.status)) {
+        state.tier0 = false;
+        state.neuralRetryAt = Date.now() + (res.status === 429 ? 60_000 : 5 * 60_000);
       }
       console.warn(`[scanner] /api/ocr responded with status ${res.status}`);
     } catch (err) {
@@ -1009,7 +1015,7 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
             {
               method: "POST",
-              signal: AbortSignal.timeout(45000),
+              signal: AbortSignal.timeout(15000),
               headers: {
                 "Content-Type": "application/json",
                 "x-goog-api-key": geminiKey
@@ -1038,8 +1044,10 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
             text = text.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
             state.tier0 = true;
             return { text, engine: model };
-          } else if (gRes.status === 429) {
-            console.warn(`[scanner] Gemini vision ${model} rate-limited, trying fallback...`);
+          } else if ([401, 402, 403, 429].includes(gRes.status)) {
+            state.tier0 = false;
+            state.neuralRetryAt = Date.now() + (gRes.status === 429 ? 60_000 : 5 * 60_000);
+            console.warn(`[scanner] Gemini vision ${model} unavailable (${gRes.status}), using local OCR...`);
             continue;
           }
         } catch (err) {
@@ -1055,7 +1063,7 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
         const orModel = localStorage.getItem("openRouterModel") || "openrouter/free";
         const orRes = await window.EngbotProviders.request("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
-              signal: AbortSignal.timeout(45000),
+              signal: AbortSignal.timeout(15000),
           headers: {
             Authorization: `Bearer ${openRouterKey}`,
             "Content-Type": "application/json"
@@ -1081,6 +1089,10 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
           text = text.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
           state.tier0 = true;
           return { text, engine: "openrouter-vision" };
+        }
+        if ([401, 402, 403, 429].includes(orRes.status)) {
+          state.tier0 = false;
+          state.neuralRetryAt = Date.now() + (orRes.status === 429 ? 60_000 : 5 * 60_000);
         }
       } catch (err) {
         console.warn("[scanner] direct client openrouter call failed", err);
@@ -1628,9 +1640,20 @@ ${text.slice(0, 10000)}`;
       const first = attempts[0];
       const isBlurry = (page._sharpness || 999) < 140;
       const shaky = isBlurry || (page._exposure || 128) < 70 || (page._exposure || 128) > 215;
-      if (first.score < 0.65 || shaky) {
+      // A neural response is not automatically a good response. When it is
+      // empty or low-confidence, run the local recogniser as a second opinion
+      // before spending another provider request on a recovery image.
+      if (!first || first.score < 0.65 || shaky) {
         try {
-          const recoveryVariant = isBlurry && first.score < 0.55 ? "super_res" : "binary";
+          const local = await ocrLocal(enhanced.blob, lang);
+          attempts.push({ text: local.text, engine: "offline", score: scoreText(local.text, lang) * (0.35 + local.confidence / 300) });
+        } catch (err) {
+          console.warn("[scanner] local OCR baseline failed:", err && err.message);
+        }
+      }
+      if (!first || first.score < 0.65 || shaky) {
+        try {
+          const recoveryVariant = isBlurry && (first?.score || 0) < 0.55 ? "super_res" : "binary";
           const recovery = await preprocess(page, recoveryVariant);
           if (canUseNeuralOCR()) {
             const res = await withRetry(() => ocrGateway(recovery.dataUrl, lang, ocrHint(page, lang)));
@@ -1859,15 +1882,15 @@ ${text.slice(0, 10000)}`;
   }
 
   async function withRetry(fn) {
-    let delay = 900;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    let delay = 450;
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
         return await fn();
       } catch (err) {
         const s = err && err.status;
         // Only 429 / 5xx are retryable; everything else repeats identically.
         if (s !== 429 && !(s >= 500 && s < 600)) throw err;
-        if (attempt === 2) throw err;
+        if (attempt === 1) throw err;
         await new Promise((r) => setTimeout(r, delay + Math.random() * 400));
         delay *= 2;
       }

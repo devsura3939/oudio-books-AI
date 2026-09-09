@@ -397,7 +397,10 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
         src = detect_language(text)
     if src == tgt:
         return {"translated": text, "engine": "identity", "success": True}
-    effective_key = api_key or os.environ.get("GEMINI_API_KEY")
+    # Providers are correction layers, never the source of truth. Keep the
+    # key for the bounded correction pass below, but run deterministic tiers
+    # first so quota exhaustion cannot stop a valid translation.
+    correction_key = api_key or os.environ.get("GEMINI_API_KEY")
 
     # Split into paragraphs to maintain narrative structure
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
@@ -412,44 +415,7 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
     for chunk_index, p in enumerate(chunks):
         p_trans = None
 
-        # Tier 0: Frontier AI Literary Translation (Gemini 2.5 Flash)
-        if genai is not None and effective_key:
-            try:
-                client = genai.Client(api_key=effective_key, http_options={"timeout": 20000})
-                if tgt == "ka":
-                    sys_instruction = (
-                        "You are an acclaimed Georgian literary translator. Translate this text faithfully into authentic, elegant Georgian. "
-                        "Rules: "
-                        "1. Use authentic Mkhedruli script with proper punctuation and quotation marks („...“). "
-                        "2. Observe Georgian morphosyntax: Ergative case (-მა/-მ) for transitive verbs in Series II Aorist; "
-                        "Dative case (-ს) for inverted experiencer verbs (მას უნდა, მას უყვარს, მას ახსოვს, მას სჭირდება); "
-                        "stem vowel syncopation and truncation (კუმშვა/კვეცა: წყლიდან, მგლის, ქვეყანაში). "
-                        "3. Natural pro-drop: do NOT mechanically repeat overt pronouns (მან, ის, მას) in every sentence. "
-                        "4. Coreference: use თავისი/თავის for reflexive subject reference, and მისი/მის only for external referents. "
-                        "5. Anti-calque: replace bureaucratic passive phrases with active synthetic Georgian verbs (გადაწყვიტა instead of მიიღო გადაწყვეტილება, მოხდა instead of ადგილი ჰქონდა, გაიღიმა instead of გააკეთა ღიმილი). "
-                        "6. Prohibitive negation: use ნუ with imperative verbs (ნუ გეშინია, ნუ ტირი). "
-                        "Output ONLY the translated Georgian text without commentary."
-                    )
-                else:
-                    sys_instruction = (
-                        "You are an acclaimed literary translator. Translate this text faithfully into natural, fluent, and expressive English. "
-                        "Preserve literary voice, idioms, and emotional nuance. "
-                        "Output ONLY the translated English text without commentary."
-                    )
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=p,
-                    config=dict(system_instruction=sys_instruction, temperature=0.2)
-                )
-                reason = getattr(response.candidates[0], "finish_reason", None) if response and response.candidates else None
-                if response and response.text and str(getattr(reason, "value", reason)).upper() == "STOP":
-                    p_trans = response.text.strip()
-                    engine_used = "gemini-2.5-flash"
-            except Exception as e:
-                print(f"[translation_engine] Tier 0 Gemini translation failed: {e}")
-
-        if p_trans and not translation_is_valid(p, p_trans, tgt):
-            p_trans = None
+        # Deterministic tiers below intentionally run before any provider.
 
         # Tier 1: Direct Google translation; availability is not guaranteed.
         if not p_trans:
@@ -494,6 +460,39 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
 
         if p_trans and not translation_is_valid(p, p_trans, tgt):
             p_trans = None
+
+        # Tier 3: optional literary correction. It runs only for substantial
+        # or structurally dense chunks and is accepted only when the corrected
+        # text passes the same script/completeness gate. Provider errors,
+        # timeouts, and rejected candidates keep the deterministic baseline.
+        complex_chunk = len(p) >= 800 or len(p.split()) >= 120 or len(re.findall(r'[;:—–…]', p)) >= 3
+        if p_trans and correction_key and genai is not None and complex_chunk:
+            try:
+                client = genai.Client(api_key=correction_key, http_options={"timeout": 12000})
+                correction_instruction = (
+                    "You are a Georgian literary copy editor. Correct only demonstrated omissions, "
+                    "meaning errors, unnatural calques, or Georgian case/verb mistakes. Preserve every "
+                    "name, number, paragraph, and sentence. Use Mkhedruli, native SOV order, Georgian "
+                    "quotation marks, and natural literary prose. Output only the corrected translation."
+                    if tgt == "ka" else
+                    "You are an English literary copy editor. Correct only demonstrated omissions, "
+                    "meaning errors, unnatural calques, or tense/agreement mistakes. Preserve every name, "
+                    "number, paragraph, and sentence. Output only the corrected translation."
+                )
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=(
+                        f"SOURCE ({src}):\n{p}\n\nDETERMINISTIC TRANSLATION ({tgt}):\n{p_trans}\n\n"
+                        "Return the corrected translation only. If it is already correct, repeat it unchanged."
+                    ),
+                    config=dict(system_instruction=correction_instruction, temperature=0.1)
+                )
+                candidate = response.text.strip() if response and getattr(response, "text", None) else ""
+                if candidate and translation_is_valid(p, candidate, tgt):
+                    p_trans = candidate
+                    engine_used = "deterministic+gemini-correction"
+            except Exception as e:
+                print(f"[translation_engine] Optional Gemini correction skipped: {e}")
 
         # Keep offline suggestions available, but never publish a word-substitution
         # draft or the original source as a completed translation.
