@@ -212,7 +212,7 @@ test('Smart routing commits the deterministic baseline before optional AI correc
     const end=source.indexOf('async function translateChunkContextually',routerStart);
     const order=[];
     const ctx=vm.createContext({
-        window:{EngbotProviders:{getFailure:()=>null}}, console:silent, Date, setTimeout, clearTimeout,
+        window:{EngbotProviders:{getFailure:()=>null}}, console:silent, Date, setTimeout, clearTimeout, AbortController, AbortSignal,
         document:{getElementById:()=>null}, validateGeorgianTranslation:()=>[],
         assessTranslation:core.assessTranslation, aiTranslationAvailable:()=>true,
         setTranslationStage(){}, recordEngineUse(){}, lastTranslationFailure:'',
@@ -236,7 +236,7 @@ test('A hanging optional provider returns the deterministic result within its de
     const routerStart=source.indexOf('async function deterministicTranslateChunk');
     const end=source.indexOf('async function translateChunkContextually',routerStart);
     const ctx=vm.createContext({
-        window:{EngbotProviders:{getFailure:()=>({message:'OpenRouter timed out'})}}, console:silent, Date, setTimeout, clearTimeout,
+        window:{EngbotProviders:{getFailure:()=>({message:'OpenRouter timed out'})}}, console:silent, Date, setTimeout, clearTimeout, AbortController, AbortSignal,
         document:{getElementById:()=>null}, validateGeorgianTranslation:()=>[],
         assessTranslation:core.assessTranslation, aiTranslationAvailable:()=>true,
         setTranslationStage(){}, recordEngineUse(){}, lastTranslationFailure:'',
