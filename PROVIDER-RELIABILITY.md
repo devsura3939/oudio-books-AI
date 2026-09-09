@@ -1,4 +1,4 @@
-# Provider reliability — v1.49.3
+# Provider reliability — v1.49.4
 
 Translation could stall because a 42,595-character Georgian guide was repeated for each segment, provider catalogs contained unavailable models, and minor reviewer suggestions rejected otherwise usable output. Actual requests also encountered Gemini quota limits, Groq token limits, and custom/OpenRouter timeouts.
 
@@ -14,6 +14,7 @@ Translation could stall because a 42,595-character Georgian guide was repeated f
 - Correct contradictory Georgian negative-concord guidance found by a real Frankenstein browser run. Remove token-count rules that guessed missing negation or treated coordinated predicates as one clause. Preserve negative fragments without injecting a particle. See [Vamling and Kobaidze's Georgian grammar](https://www.georgian.se/kartuli/GeoGrammar/12Clauses/02Compcl.html), negation section.
 - Give final review the previous draft and requested correction. A captured provider trace alternated between two opposite verb-mood corrections; the reviewer now assesses the governing clause and distinguishes actual defects from optional style changes. Blocking errors still prevent publication. Extract the same alternate revision field accepted by response validation.
 - Keep whole-book translation on sentence-aware chunks with neighbouring source context. The previous character splitter could isolate an intentional source phrase such as “keep motating” into `wall and keep motating. The`, after which the reviewer treated the unusual slang as an OCR error and blocked the chapter. The reviewer now treats the source as authoritative, downgrades source-only quality observations to minor, and invalidates checkpoints created with the old chunking strategy.
+- Treat Supabase as the account-owned library source of truth. Startup no longer seeds classics into user shelves; legacy `classic_*` rows are purged, local records are filtered by the authenticated `user_id`, source PDFs are stored under the owner's private path, and completed translated editions receive their own language-specific row. `supabase-store.js` subscribes to account-scoped `books`, `chapters`, and audio changes with a bounded polling recovery path so other devices see additions, translations, transcription updates, and deletions without a manual reload.
 - Route whole-book chunks through the smart engine so an LLM review disagreement cannot terminate a job before the deterministic Georgian engine gets a quality-gated attempt. Protect capitalized names and title grammar in the LLM prompts, and teach the offline tier that “Killing Rommel” is the nominal title “რომელის მოკვლა”, never the imperative “მოკალიე რომელი”.
 
 ## Validation

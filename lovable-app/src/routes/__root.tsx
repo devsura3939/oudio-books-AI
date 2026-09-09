@@ -139,6 +139,37 @@ function RootComponent() {
     return () => data.subscription.unsubscribe();
   }, [router, queryClient]);
 
+  useEffect(() => {
+    let channel: ReturnType<typeof db.channel> | null = null;
+    let cancelled = false;
+
+    void db.auth.getUser().then(({ data }) => {
+      const userId = data.user?.id;
+      if (cancelled || !userId) return;
+      channel = db
+        .channel(`engbot-library-${userId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "books", filter: `user_id=eq.${userId}` },
+          () => void queryClient.invalidateQueries({ queryKey: ["books"] }),
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "chapters", filter: `user_id=eq.${userId}` },
+          () => {
+            void queryClient.invalidateQueries({ queryKey: ["books"] });
+            void queryClient.invalidateQueries({ queryKey: ["chapter"] });
+          },
+        )
+        .subscribe();
+    });
+
+    return () => {
+      cancelled = true;
+      if (channel) void db.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster />
