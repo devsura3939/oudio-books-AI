@@ -9011,6 +9011,24 @@ function translateOfflineEnToKa(text) {
 
         // 3. Core literary lexicon mappings
         const phraseMap = [
+            // Work titles with a proper-name object need a nominal action in
+            // Georgian. Without this guard the fallback can turn “Killing
+            // Rommel” into the imperative “მოკალიე რომელი”, which is both a
+            // semantic error and a misleading reviewer trigger.
+            [/\b(?:the\s+)?killing\s+of\s+([A-Z][A-Za-z'’-]+)\b/gi, (m, name) => {
+                const transliterated = typeof transliterateLatinWordToGeorgian === 'function'
+                    ? transliterateLatinWordToGeorgian(name)
+                    : (name.toLowerCase() === 'rommel' ? 'რომელი' : name);
+                const stem = transliterated.endsWith('ი') ? transliterated.slice(0, -1) : transliterated;
+                return `${stem}ის მოკვლა`;
+            }],
+            [/\bkilling\s+([A-Z][A-Za-z'’-]+)\b/gi, (m, name) => {
+                const transliterated = typeof transliterateLatinWordToGeorgian === 'function'
+                    ? transliterateLatinWordToGeorgian(name)
+                    : (name.toLowerCase() === 'rommel' ? 'რომელი' : name);
+                const stem = transliterated.endsWith('ი') ? transliterated.slice(0, -1) : transliterated;
+                return `${stem}ის მოკვლა`;
+            }],
             // Character titles & entities
             [/\bthe\s+little\s+prince\b/gi, 'პატარა უფლისწული'],
             [/\blittle\s+prince\b/gi, 'პატარა უფლისწული'],

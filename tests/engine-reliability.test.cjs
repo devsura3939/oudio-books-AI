@@ -194,6 +194,17 @@ test('Whole-book chunking keeps long sentences together and records a chunking-v
  await ctx.startWholeBookTranslation();
  assert.equal(ctx.saved.filter(book=>book.isTranslatedEdition).length,1);
 });
+
+test('Whole-book translation uses the smart engine fallback after an LLM review failure',async()=>{
+ const ctx=context(); let smartCalls=0, aiCalls=0;
+ const output=text=>'ქართული თარგმანი ამ მონაკვეთისთვის. '.repeat(Math.ceil(text.length / 45));
+ ctx.translateChunkAI=async()=>{ aiCalls++; return null; };
+ ctx.translateChunkSmart=async text=>{ smartCalls++; return output(text); };
+ await ctx.startWholeBookTranslation();
+ assert.equal(aiCalls,0);
+ assert.equal(smartCalls,ctx.buildTranslationChunks(ctx.currentBook.chapters[0].text,1800).chunks.length);
+ assert.equal(ctx.saved.filter(book=>book.isTranslatedEdition).length,1);
+});
 test('Georgian source creates an English edition',async()=>{
     const ctx=context();ctx.currentBook.lang='ka';ctx.currentBook.chapters[0].text='ეს არის ქართული ტექსტი წიგნის შესახებ.';
     ctx.translateChunkAI=async(_text,lang)=>{assert.equal(lang,'en');return 'This is Georgian text about a book.';};
