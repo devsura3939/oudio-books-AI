@@ -261,69 +261,9 @@ function parseAndMergeApiKeys(rawText) {
     if (!rawText || typeof rawText !== 'string') {
         return { detected: {}, count: 0 };
     }
-    const detected = {};
-
-    // 1. Try parsing JSON
-    const trimmed = rawText.trim();
-    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-        try {
-            const parsed = JSON.parse(trimmed);
-            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                for (const [k, v] of Object.entries(parsed)) {
-                    if (typeof v !== 'string') continue;
-                    const cleanV = sanitizeApiKey(v);
-                    const kLow = k.toLowerCase();
-                    if (kLow.includes('gemini')) detected.gemini = cleanV;
-                    else if (kLow.includes('openrouter') || kLow.includes('open_router')) detected.openrouter = cleanV;
-                    else if (kLow.includes('groq')) detected.groq = cleanV;
-                    else if (kLow.includes('eleven') || kLow.includes('xi-api')) detected.elevenlabs = cleanV;
-                    else if (kLow.includes('mistral')) detected.mistral = cleanV;
-                    else if (kLow.includes('openai') || kLow.includes('custom')) detected.custom = cleanV;
-                    else {
-                        const prov = detectApiKeyProvider(cleanV);
-                        if (prov) detected[prov] = cleanV;
-                    }
-                }
-            }
-        } catch (e) {}
-    }
-
-    // 2. Line by line parsing (.env variables or tokens)
-    const lines = rawText.split(/[\r\n]+/);
-    for (const line of lines) {
-        const lineS = line.trim();
-        if (!lineS || lineS.startsWith('#')) continue;
-
-        if (lineS.includes('=') || lineS.includes(':')) {
-            const parts = lineS.split(/[:=]/);
-            if (parts.length >= 2) {
-                const propName = parts[0].trim().toLowerCase();
-                const val = parts.slice(1).join('=').trim();
-                const cleanV = sanitizeApiKey(val);
-                if (cleanV) {
-                    if (propName.includes('gemini')) { detected.gemini = cleanV; continue; }
-                    if (propName.includes('openrouter') || propName.includes('open_router')) { detected.openrouter = cleanV; continue; }
-                    if (propName.includes('groq')) { detected.groq = cleanV; continue; }
-                    if (propName.includes('eleven') || propName.includes('xi-api')) { detected.elevenlabs = cleanV; continue; }
-                    if (propName.includes('mistral')) { detected.mistral = cleanV; continue; }
-                    if (propName.includes('openai') || propName.includes('custom')) { detected.custom = cleanV; continue; }
-                    const prov = detectApiKeyProvider(cleanV);
-                    if (prov) { detected[prov] = cleanV; continue; }
-                }
-            }
-        }
-
-        // Split line by whitespace / comma / semicolon tokens
-        const tokens = lineS.split(/[\s,;]+/);
-        for (const tok of tokens) {
-            const cleanTok = sanitizeApiKey(tok);
-            if (!cleanTok) continue;
-            const prov = detectApiKeyProvider(cleanTok);
-            if (prov && !detected[prov]) {
-                detected[prov] = cleanTok;
-            }
-        }
-    }
+    const { detected, customUrl: suppliedUrl, customModel: suppliedModel } = window.EngbotModelDiscovery.parseKeyBundle(rawText, detectApiKeyProvider);
+    if (suppliedUrl) customProviderUrl = suppliedUrl;
+    if (suppliedModel) customProviderModel = suppliedModel;
 
     // Apply detected keys into live state and localStorage
     if (detected.gemini) {
@@ -364,6 +304,8 @@ function parseAndMergeApiKeys(rawText) {
     }
     if (detected.custom) {
         customProviderKey = detected.custom;
+        if (!suppliedUrl) customProviderUrl = document.getElementById('customProviderUrlInput')?.value.trim() || customProviderUrl;
+        if (!suppliedModel) customProviderModel = document.getElementById('customProviderModelInput')?.value.trim() || customProviderModel;
         if (!customProviderUrl) customProviderUrl = 'https://api.openai.com/v1/chat/completions';
         if (!customProviderModel) customProviderModel = 'gpt-4o-mini';
         localStorage.setItem('customProviderKey', detected.custom);
@@ -435,7 +377,7 @@ function handleSmartKeyMerge() {
     if (res.detected.mistral) labels.push('Mistral (Fallback #2)');
     if (res.detected.custom) labels.push('Custom / OpenAI Provider');
 
-    const msg = `⚡ Configured & connected ${res.count} provider${res.count > 1 ? 's' : ''}: ${labels.join(', ')}`;
+    const msg = `Saved ${res.count} provider key${res.count > 1 ? 's' : ''}: ${labels.join(', ')}. Choose a model below, then Save AI Settings to sync.`;
     if (feedback) {
         feedback.innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> ${escapeHtml(msg)}</span>`;
     }
@@ -444,7 +386,7 @@ function handleSmartKeyMerge() {
 
     syncSettingsToDOMInputs();
     renderAiKeyStatusPanel();
-    setTimeout(probeAiKeyStatus, 50);
+    void discoverAiModels({ force: true });
 }
 window.handleSmartKeyMerge = handleSmartKeyMerge;
 
@@ -495,6 +437,8 @@ function setupKeyInputAutoRouting() {
         el.dataset.autoRoutingAttached = 'true';
 
         const checkAndRoute = () => {
+            // A custom gateway may accept keys with another provider's prefix.
+            if (item.provider === 'custom') return;
             const raw = el.value;
             if (!raw || raw.length < 16) return;
             const detected = detectApiKeyProvider(raw);
@@ -1001,13 +945,12 @@ let groqApiKey = (_initialAcc && _initialAcc.groqApiKey)
     || localStorage.getItem('lumina_saved_groq_key')
     || '';
 // groqSelectedModel is a first-class module variable (account-scoped settings restore writes it here)
-let groqSelectedModel = (_initialAcc && _initialAcc.groqSelectedModel)
-    || localStorage.getItem('groqSelectedModel')
-    || '';
+let groqSelectedModel = _initialAcc?.groqSelectedModel ?? localStorage.getItem('groqSelectedModel') ?? '';
 let mistralApiKey = (_initialAcc && _initialAcc.mistralApiKey)
     || localStorage.getItem('mistralApiKey')
     || localStorage.getItem('lumina_saved_mistral_key')
     || '';
+let mistralSelectedModel = _initialAcc?.mistralSelectedModel || localStorage.getItem('mistralSelectedModel') || 'mistral-small-latest';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 // Text models verified against the provider catalog; retired Llama IDs are omitted.
@@ -1249,10 +1192,8 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
 async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!groqApiKey) return null;
     // Read from module-level variable (kept in sync with account settings), fallback to localStorage.
-    // IMPORTANT: only use selected model if it's a known Groq model ID — prevents OpenRouter
-    // model IDs (e.g. 'openai/gpt-oss-120b') from being sent to api.groq.com and getting blacklisted.
-    const rawSelected = (groqSelectedModel || localStorage.getItem('groqSelectedModel') || '').trim();
-    const selected = GROQ_MODELS.includes(rawSelected) ? rawSelected : '';
+    // Discovered model IDs are valid preferences even when absent from bundled fallbacks.
+    const selected = (groqSelectedModel || '').trim();
     const models = selected ? [selected, ...GROQ_MODELS.filter(m => m !== selected)] : GROQ_MODELS;
     // CRITICAL: Groq models have a strict max output token limit (8192 or 4096).
     // Passing > 8192 (e.g. 16384 from whole-book batch) causes an immediate HTTP 400 rejection from api.groq.com.
@@ -1263,7 +1204,8 @@ async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192, syste
 async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
     if (!mistralApiKey) return null;
     if (Date.now() < mistralCorsBlockedUntil) return null; // CORS parked — fail fast to the next tier
-    const result = await callOpenAICompatibleJSON(MISTRAL_API_URL, MISTRAL_MODELS, mistralModelCooldown, MISTRAL_MODEL_COOLDOWN_MS, mistralApiKey, prompt, { temperature, maxTokens, providerLabel: 'Mistral', systemPrompt });
+    const models = [...new Set([mistralSelectedModel, ...MISTRAL_MODELS].filter(Boolean))];
+    const result = await callOpenAICompatibleJSON(MISTRAL_API_URL, models, mistralModelCooldown, MISTRAL_MODEL_COOLDOWN_MS, mistralApiKey, prompt, { temperature, maxTokens, providerLabel: 'Mistral', systemPrompt });
     if (result) {
         mistralCorsFailures = 0; // healthy again
     } else {
@@ -2941,9 +2883,10 @@ function getCurrentAccountSettings() {
         geminiModel: (typeof geminiModel !== 'undefined' && geminiModel) ? geminiModel : (local.geminiModel || localStorage.getItem('geminiModel') || 'gemini-2.5-flash'),
         geminiPasses: (typeof geminiPasses !== 'undefined' && [1, 2, 3].includes(geminiPasses)) ? geminiPasses : (local.geminiPasses || parseInt(localStorage.getItem('geminiPasses') || '3', 10) || 3),
         openRouterApiKey: (typeof openRouterApiKey !== 'undefined' && openRouterApiKey && openRouterApiKey !== OPENROUTER_DEFAULT_KEY) ? openRouterApiKey : (local.openRouterApiKey || localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || ''),
-        openRouterModel: (typeof openRouterModel !== 'undefined' && openRouterModel) ? openRouterModel : (local.openRouterModel || localStorage.getItem('openRouterModel') || ''),
+        openRouterModel,
         groqApiKey: (typeof groqApiKey !== 'undefined' && groqApiKey) ? groqApiKey : (local.groqApiKey || localStorage.getItem('groqApiKey') || localStorage.getItem('lumina_saved_groq_key') || ''),
-        groqSelectedModel: (typeof groqSelectedModel !== 'undefined' && groqSelectedModel) ? groqSelectedModel : (local.groqSelectedModel || localStorage.getItem('groqSelectedModel') || ''),
+        groqSelectedModel,
+        mistralSelectedModel,
         mistralApiKey: (typeof mistralApiKey !== 'undefined' && mistralApiKey) ? mistralApiKey : (local.mistralApiKey || localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || ''),
         customProviderUrl: (typeof customProviderUrl !== 'undefined' && customProviderUrl) ? customProviderUrl : (local.customProviderUrl || localStorage.getItem('customProviderUrl') || localStorage.getItem('lumina_saved_custom_url') || ''),
         customProviderModel: (typeof customProviderModel !== 'undefined' && customProviderModel) ? customProviderModel : (local.customProviderModel || localStorage.getItem('customProviderModel') || localStorage.getItem('lumina_saved_custom_model') || ''),
@@ -2993,7 +2936,7 @@ function syncSettingsToDOMInputs() {
     if (orBadge) orBadge.classList.toggle('hidden', !effOR);
 
     const orModelSelect = document.getElementById('openRouterModelSelect');
-    if (orModelSelect && openRouterModel) {
+    if (orModelSelect) {
         let found = false;
         for (let i = 0; i < orModelSelect.options.length; i++) {
             if (orModelSelect.options[i].value === openRouterModel) {
@@ -3017,25 +2960,20 @@ function syncSettingsToDOMInputs() {
     if (groqBadge) groqBadge.classList.toggle('hidden', !effGroq);
 
     const groqModelSelect = document.getElementById('groqModelSelect');
-    // Use module-level groqSelectedModel (synced with account settings), fallback to localStorage.
-    const groqSaved = (groqSelectedModel || localStorage.getItem('groqSelectedModel') || '').trim();
-    if (groqModelSelect && groqSaved) {
-        if (GROQ_MODELS.includes(groqSaved)) {
-            let found = false;
-            for (let i = 0; i < groqModelSelect.options.length; i++) {
-                if (groqModelSelect.options[i].value === groqSaved) { found = true; break; }
-            }
-            if (!found) {
-                const opt = document.createElement('option');
-                opt.value = groqSaved;
-                opt.textContent = groqSaved;
-                groqModelSelect.appendChild(opt);
-            }
-            groqModelSelect.value = groqSaved;
-        } else {
-            groqModelSelect.value = '';
+    // An empty selection is an intentional Auto preference.
+    const groqSaved = (groqSelectedModel || '').trim();
+    if (groqModelSelect) {
+        if (![...groqModelSelect.options].some(option => option.value === groqSaved)) {
+            const opt = document.createElement('option');
+            opt.value = groqSaved;
+            opt.textContent = groqSaved || 'Auto';
+            groqModelSelect.appendChild(opt);
         }
+        groqModelSelect.value = groqSaved;
     }
+
+    window.EngbotAiSettings?.setSelected('mistralModelSelect', mistralSelectedModel);
+    window.EngbotAiSettings?.setSelected('customProviderModelSelect', customProviderModel);
 
     const mistralKeyInput = document.getElementById('mistralApiKeyInput');
     const effMistral = mistralApiKey || localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || '';
@@ -3112,7 +3050,7 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
     }
     if (settings.openRouterModel !== undefined) {
         openRouterModel = String(settings.openRouterModel || '');
-        if (saveToLegacyStorage && openRouterModel) {
+        if (saveToLegacyStorage) {
             localStorage.setItem('openRouterModel', openRouterModel);
         }
     }
@@ -3133,10 +3071,8 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
     }
     if (settings.groqSelectedModel !== undefined) {
         const gm = String(settings.groqSelectedModel || '');
-        if (gm) {
-            groqSelectedModel = gm;
-            if (saveToLegacyStorage) localStorage.setItem('groqSelectedModel', gm);
-        }
+        groqSelectedModel = gm;
+        if (saveToLegacyStorage) localStorage.setItem('groqSelectedModel', gm);
     }
     if (settings.mistralApiKey !== undefined) {
         const inMistral = String(settings.mistralApiKey || '').trim();
@@ -3151,6 +3087,10 @@ function applyAccountSettings(settings, saveToLegacyStorage = true) {
         } else if (!mistralApiKey) {
             mistralApiKey = localStorage.getItem('mistralApiKey') || localStorage.getItem('lumina_saved_mistral_key') || '';
         }
+    }
+    if (settings.mistralSelectedModel !== undefined) {
+        mistralSelectedModel = String(settings.mistralSelectedModel || 'mistral-small-latest');
+        if (saveToLegacyStorage) localStorage.setItem('mistralSelectedModel', mistralSelectedModel);
     }
     if (settings.customProviderUrl !== undefined || settings.customProviderModel !== undefined || settings.customProviderKey !== undefined) {
         const inCpUrl = String(settings.customProviderUrl || '').trim();
@@ -3233,7 +3173,7 @@ async function restoreAccountSettingsForCurrentUser() {
             if (cloudSettings && typeof cloudSettings === 'object' && Object.keys(cloudSettings).length > 0) {
                 const merged = Object.assign({}, localSettings || {});
                 for (const k in cloudSettings) {
-                    if (cloudSettings[k] !== undefined && cloudSettings[k] !== '') {
+                    if (cloudSettings[k] !== undefined && (cloudSettings[k] !== '' || ['openRouterModel', 'groqSelectedModel'].includes(k))) {
                         merged[k] = cloudSettings[k];
                     }
                 }
@@ -3279,7 +3219,7 @@ function openModal(modalId) {
         if (modalId === 'aiSettingsModal') {
             syncSettingsToDOMInputs();
             renderAiKeyStatusPanel();
-            probeAiKeyStatus();
+            void discoverAiModels();
         }
         if (modalId === 'trainingLabModal') {
             if (typeof initTrainingLabUI === 'function') initTrainingLabUI();
@@ -3290,6 +3230,7 @@ function openModal(modalId) {
 }
 
 function closeModal(modalId) {
+    if (modalId === 'aiSettingsModal') window.EngbotAiSettings?.hideSecrets();
     const modal = document.getElementById(modalId);
     if (modal) {
         if (modalId === 'authModal') {
@@ -3353,10 +3294,8 @@ function saveGeminiSettings() {
         openRouterApiKey = orKey;
     }
 
-    if (orModel) {
-        localStorage.setItem('openRouterModel', orModel);
-        openRouterModel = orModel;
-    }
+    localStorage.setItem('openRouterModel', orModel);
+    openRouterModel = orModel;
 
     if (groqKey) {
         setGroqApiKey(groqKey);
@@ -3364,7 +3303,9 @@ function saveGeminiSettings() {
     }
     // Update module-level groqSelectedModel so callGroqJSON sees the new value immediately
     groqSelectedModel = groqSelectedModelVal;
-    if (groqSelectedModelVal) localStorage.setItem('groqSelectedModel', groqSelectedModelVal);
+    localStorage.setItem('groqSelectedModel', groqSelectedModelVal);
+    mistralSelectedModel = document.getElementById('mistralModelSelect')?.value || mistralSelectedModel;
+    localStorage.setItem('mistralSelectedModel', mistralSelectedModel);
 
     if (mistralKey) {
         setMistralApiKey(mistralKey);
@@ -3426,9 +3367,12 @@ function saveGeminiSettings() {
         window.LuminaStore.saveAccountSettings(accountSettings).then((res) => {
             if (res && res.success) {
                 console.info('[AccountSettings] Synced AI settings with Supabase account for', email);
+            } else {
+                showToast('AI settings saved on this device. Cloud sync failed; save again when connected.');
             }
         }).catch(err => {
             console.warn('[AccountSettings] Cloud sync warning:', err);
+            showToast('AI settings saved on this device. Cloud sync failed; save again when connected.');
         });
     }
 
@@ -3449,7 +3393,7 @@ function saveGeminiSettings() {
 
     // Run non-blocking live probe in background
     renderAiKeyStatusPanel();
-    setTimeout(probeAiKeyStatus, 100);
+    // Catalog discovery is read-only; saving does not spend generation tokens.
     closeModal('aiSettingsModal');
 }
 
@@ -3799,8 +3743,8 @@ function openTrainingLab() {
 window.getTrainingProviderConfig = function (provider) {
     const configs = {
         gemini: { key: geminiApiKey, model: EngbotCore.geminiModels(geminiModel)[0] },
-        groq: { key: groqApiKey, model: GROQ_MODELS.includes(groqSelectedModel) ? groqSelectedModel : GROQ_MODELS[0], url: GROQ_API_URL },
-        mistral: { key: mistralApiKey, model: MISTRAL_MODELS[0], url: MISTRAL_API_URL },
+        groq: { key: groqApiKey, model: groqSelectedModel || GROQ_MODELS[0], url: GROQ_API_URL },
+        mistral: { key: mistralApiKey, model: mistralSelectedModel, url: MISTRAL_API_URL },
         openrouter: { key: openRouterApiKey, model: openRouterModel || OPENROUTER_FREE_MODELS[0], url: 'https://openrouter.ai/api/v1/chat/completions' },
         custom: { key: customProviderKey, model: customProviderModel, url: normalizeCustomProviderUrl(customProviderUrl) },
     };

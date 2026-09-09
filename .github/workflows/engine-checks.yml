@@ -16,6 +16,6 @@ jobs:
           python-version: '3.11'
       - run: node scripts/sync-studio.mjs --check
       - run: node --check static/app.js && node --check static/scanner.js && node --check static/repair-review.js
-      - run: node --experimental-strip-types --test tests/engine-reliability.test.cjs tests/training-gate.test.mjs tests/studio-ui.test.cjs tests/provider-runtime.test.cjs tests/narration-training.test.cjs
+      - run: node --experimental-strip-types --test tests/engine-reliability.test.cjs tests/training-gate.test.mjs tests/studio-ui.test.cjs tests/provider-runtime.test.cjs tests/narration-training.test.cjs tests/ai-settings.test.cjs
       - run: python -m pip install -r requirements.txt pytest
       - run: python -m pytest tests/test_engine_reliability.py tests/test_narration_fidelity.py -q

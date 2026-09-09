@@ -655,7 +655,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="static/styles.css?v=1.50.1">
+    <link rel="stylesheet" href="static/styles.css?v=1.50.1&settings=2">
     <link rel="stylesheet" href="static/studio-ui.css?v=1.50.1">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
@@ -2143,7 +2143,7 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <div>
                             <h3 class="text-sm font-bold text-white flex items-center gap-2">
                                 Smart Auto-Connect &amp; Key Merge
-                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary-fixed/20 text-primary-fixed font-semibold">Auto-Configures All Models</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary-fixed/20 text-primary-fixed font-semibold">Discover available models</span>
                             </h3>
                             <p class="text-[11px] text-on-surface-variant mt-0.5">
                                 Paste any API key (Gemini, Groq, OpenRouter, ElevenLabs) or paste multiple keys, <code class="text-primary-fixed">.env</code> lines, or JSON. The engine auto-identifies each provider, sanitizes quotes/whitespace, and connects everything automatically.
@@ -2160,6 +2160,10 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                                 <span class="material-symbols-outlined text-sm">auto_fix_high</span>
                                 Auto-Detect &amp; Connect
                             </button>
+                            <button type="button" onclick="discoverAiModels({ force: true })" class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white transition flex items-center gap-1.5 cursor-pointer" title="Refresh available models for saved provider keys">
+                                <span class="material-symbols-outlined text-sm">refresh</span>
+                                Refresh models
+                            </button>
                             <button type="button" onclick="document.getElementById('smartKeyMergeInput').value=''; document.getElementById('smartKeyMergeFeedback').innerHTML='';" class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-on-surface-variant transition cursor-pointer">
                                 Clear
                             </button>
@@ -2175,7 +2179,10 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <span>Gemini API Key (Frontier Reasoning)</span>
                         <span id="geminiSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                     </label>
-                    <input type="password" id="geminiApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="AIzaSy...">
+                    <div class="secret-field">
+                        <input type="password" id="geminiApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="AIzaSy..." autocomplete="off">
+                        <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('geminiApiKeyInput', this)" aria-label="Show Gemini API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                    </div>
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Google Gemini API key. Powers frontier deep reasoning, scanner glitch correction, and missing symbol & word recovery. Key: aistudio.google.com/apikey.
                     </p>
@@ -2199,7 +2206,10 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <span>OpenRouter API Key (Main Engine)</span>
                         <span id="openRouterSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                     </label>
-                    <input type="password" id="openRouterApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-or-v1-...">
+                    <div class="secret-field">
+                        <input type="password" id="openRouterApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-or-v1-..." autocomplete="off">
+                        <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('openRouterApiKeyInput', this)" aria-label="Show OpenRouter API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                    </div>
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Primary engine — free models on OpenRouter. A default key is built in; your own (openrouter.ai/keys) replaces it.
                     </p>
@@ -2220,7 +2230,10 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <span>Groq API Key (Fallback #1)</span>
                         <span id="groqSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                     </label>
-                    <input type="password" id="groqApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="gsk_...">
+                    <div class="secret-field">
+                        <input type="password" id="groqApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="gsk_..." autocomplete="off">
+                        <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('groqApiKeyInput', this)" aria-label="Show Groq API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                    </div>
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         First fallback when OpenRouter is rate-limited. Free tier ~500K tokens/day — enough for a whole book. Key: console.groq.com/keys.
                     </p>
@@ -2241,10 +2254,17 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <span>Mistral API Key (Fallback #2)</span>
                         <span id="mistralSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                     </label>
-                    <input type="password" id="mistralApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="...">
+                    <div class="secret-field">
+                        <input type="password" id="mistralApiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="..." autocomplete="off">
+                        <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('mistralApiKeyInput', this)" aria-label="Show Mistral API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                    </div>
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         Second fallback (~1B free tokens/month). If CORS blocks browser calls it's skipped automatically. Key: console.mistral.ai.
                     </p>
+                    <label for="mistralModelSelect" class="block text-xs text-on-surface-variant mt-3 mb-1">Mistral model</label>
+                    <select id="mistralModelSelect" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none">
+                        <option value="mistral-small-latest">mistral-small-latest</option>
+                    </select>
                 </div>
 
                 <div>
@@ -2252,7 +2272,10 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         <span>ElevenLabs API Key (Neural Voice Studio)</span>
                         <span id="elevenLabsSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                     </label>
-                    <input type="password" id="elevenLabsAiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="32-character hex key (e.g. 1a2b3c...)">
+                    <div class="secret-field">
+                        <input type="password" id="elevenLabsAiKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="32-character hex key (e.g. 1a2b3c...)" autocomplete="off">
+                        <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('elevenLabsAiKeyInput', this)" aria-label="Show ElevenLabs API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                    </div>
                     <p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
                         High-fidelity emotional speech in Georgian &amp; English. Auto-syncs with Voice modal and activates ElevenLabs mode. Key: elevenlabs.io.
                     </p>
@@ -2267,14 +2290,25 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                     </div>
                     <div>
                         <label class="block text-xs text-on-surface-variant mb-1">Model Name</label>
-                        <input type="text" id="customProviderModelInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo">
+                        <div class="space-y-2">
+                            <select id="customProviderModelSelect" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none appearance-none" onchange="syncCustomProviderModelFromSelect()" aria-label="Discovered custom provider models">
+                                <option value="">Discover models after connecting</option>
+                            </select>
+                            <details class="text-xs text-on-surface-variant">
+                                <summary class="cursor-pointer py-2">Enter a model ID manually</summary>
+                                <input type="text" id="customProviderModelInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="For example, llama3.1:8b" aria-label="Manual custom model ID" onchange="EngbotAiSettings.setSelected('customProviderModelSelect', this.value.trim())">
+                            </details>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs text-on-surface-variant mb-1 flex items-center justify-between">
                             <span>API Key (leave blank if not required)</span>
                             <span id="customSavedBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold hidden">● Saved &amp; Active</span>
                         </label>
-                        <input type="password" id="customProviderKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-...">
+                        <div class="secret-field">
+                            <input type="password" id="customProviderKeyInput" class="w-full glass-input rounded-xl px-4 py-3 text-sm focus:outline-none" placeholder="sk-..." autocomplete="off">
+                            <button type="button" class="secret-toggle" onclick="toggleSecretVisibility('customProviderKeyInput', this)" aria-label="Show custom provider API key" title="Show or hide key"><span class="material-symbols-outlined text-base">visibility</span></button>
+                        </div>
                     </div>
                 </div>
 
@@ -2655,7 +2689,9 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
             <script src="static/training-runner.js?v=1.50.1"></script>
     <script src="static/training-studio.js?v=1.50.1"></script>
     <script src="static/narration.js?v=1.50.1"></script>
-    <script src="static/app.js?v=1.50.1"></script>
+    <script src="static/model-discovery.js?v=1.50.2"></script>
+    <script src="static/ai-settings.js?v=1.50.2"></script>
+    <script src="static/app.js?v=1.50.1&settings=2"></script>
     <script src="static/repair-review.js?v=1.50.1"></script>
     <script src="static/georgian-linguistics.js?v=1.50.1"></script>
     <script src="static/engine-pack.js?v=1.50.1"></script>

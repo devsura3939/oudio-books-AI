@@ -599,3 +599,11 @@ select optgroup {
 }
 
 
+/* Saved-key controls stay usable on narrow screens and with keyboard navigation. */
+.secret-field { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+.secret-field input { flex: 1; min-width: 0; width: 0; }
+.secret-toggle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; min-height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.05); color: inherit; cursor: pointer; }
+.secret-toggle:hover { background: rgba(255,255,255,.12); }
+.secret-toggle:focus-visible { outline: 2px solid #7fdad0; outline-offset: 3px; }
+.model-discovery-status { font-size: 11px; line-height: 1.5; margin-top: 8px; color: #bac9cc; overflow-wrap: anywhere; }
+#aiSettingsModal select { appearance: auto; }
