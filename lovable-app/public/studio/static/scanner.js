@@ -31,6 +31,7 @@
     stream: null,
     running: false,
     cancel: false,
+    neuralRetryAt: 0,
     tier0: null, // null = unknown, true/false once probed
     structure: null, // detected cover / title / author after a scan
     appendTo: null,  // book id when adding pages to an existing scanned book
@@ -963,17 +964,19 @@ Output plain text only, or [[NO_TEXT]] for an empty page.
 ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
   }
 
+  function canUseNeuralOCR() { return state.tier0 !== false || Date.now() >= state.neuralRetryAt; }
+
   async function ocrGateway(dataUrl, lang, hint) {
     const geminiKey = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("geminiApiKey") || "") : (localStorage.getItem("geminiApiKey") || "").trim());
     const openRouterKey = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("openRouterApiKey") || "") : (localStorage.getItem("openRouterApiKey") || "").trim());
 
     // 1. Try server-side endpoint first (/api/ocr)
-    try {
+    if (!location.hostname.endsWith('.github.io')) try {
       const headers = { "Content-Type": "application/json" };
       if (geminiKey) headers["X-Gemini-Key"] = geminiKey;
       if (openRouterKey) headers["X-OpenRouter-Key"] = openRouterKey;
 
-      const res = await fetch("/api/ocr", {
+      const res = await window.EngbotProviders.request("/api/ocr", {
         method: "POST",
               signal: AbortSignal.timeout(45000),
         headers,
@@ -1002,7 +1005,7 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
           const base64Data = match ? match[2] : dataUrl;
           const promptRules = getVisionPrompt(lang, hint);
 
-          const gRes = await fetch(
+          const gRes = await window.EngbotProviders.request(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
             {
               method: "POST",
@@ -1030,7 +1033,7 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
           if (gRes.ok) {
             const gData = await gRes.json();
         if (!window.EngbotCore.providerOutputComplete(gData)) throw new Error('OCR response incomplete; retry this page');
-            let text = (gData.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+            let text = (gData.candidates?.[0]?.content?.parts?.filter(p => !p.thought).map(p => p.text || "").join("") ?? "").trim();
             if (text === "[[NO_TEXT]]") text = "";
             text = text.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
             state.tier0 = true;
@@ -1050,7 +1053,7 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
       try {
         const promptRules = getVisionPrompt(lang, hint);
         const orModel = localStorage.getItem("openRouterModel") || "openrouter/free";
-        const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const orRes = await window.EngbotProviders.request("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
               signal: AbortSignal.timeout(45000),
           headers: {
@@ -1085,7 +1088,8 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
     }
 
     state.tier0 = false;
-    throw new Error("No neural vision provider available");
+    state.neuralRetryAt = Date.now() + 30000;
+    throw new Error(window.EngbotProviders.getFailure()?.message || "No AI vision provider available. Configure a key in AI settings.");
   }
 
   // ── Tier 1: tesseract.js in the browser ────────────────────────────────────
@@ -1607,7 +1611,7 @@ ${text.slice(0, 10000)}`;
 
       // Pass 1 — enhanced greyscale, the best input for clean-ish photos.
       const enhanced = await preprocess(page, "enhanced");
-      if (state.tier0 !== false) {
+      if (canUseNeuralOCR()) {
         try {
           const res = await withRetry(() => ocrGateway(enhanced.dataUrl, lang, ocrHint(page, lang)));
           attempts.push({ text: res.text, engine: res.engine || "neural", score: scoreText(res.text, lang) });
@@ -1628,7 +1632,7 @@ ${text.slice(0, 10000)}`;
         try {
           const recoveryVariant = isBlurry && first.score < 0.55 ? "super_res" : "binary";
           const recovery = await preprocess(page, recoveryVariant);
-          if (state.tier0 !== false) {
+          if (canUseNeuralOCR()) {
             const res = await withRetry(() => ocrGateway(recovery.dataUrl, lang, ocrHint(page, lang)));
             attempts.push({ text: res.text, engine: `${res.engine || "neural"}+${recoveryVariant}`, score: scoreText(res.text, lang) });
           } else {

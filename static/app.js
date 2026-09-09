@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.49.0';
-const ENGINE_VERSION = 'v1.49.0 (Bilingual translation and source integrity)';
+const APP_VERSION = 'v1.49.1';
+const ENGINE_VERSION = 'v1.49.1 (Bilingual translation and source integrity)';
 
 let db = null;
 let currentBook = null;
@@ -215,6 +215,9 @@ function sanitizeApiKey(rawKey) {
     k = k.replace(/[;,]+$/, '').trim();
     // Strip wrapping quotes again if nested inside assignment
     k = k.replace(/^["'`]+|["'`]+$/g, '').trim();
+    // Recover one recognizable token from a pasted label without guessing among multiple keys.
+    const tokens = [...new Set(k.match(/(?:AIza[\w-]{30,}|gsk_[\w-]{20,}|sk-or-v1-[\w-]{16,}|sk_[\w-]{20,})/g) || [])];
+    if (tokens.length === 1) return tokens[0];
     return k;
 }
 window.sanitizeApiKey = sanitizeApiKey;
@@ -759,13 +762,10 @@ const OPENROUTER_DEFAULT_KEY = ''; // removed: the previously hardcoded key was 
 const OPENROUTER_FREE_MODELS = [
     'openrouter/free',
     'google/gemma-4-31b-it:free',
-    'z-ai/glm-5.2:free',
-    'minimax/minimax-m3:free',
-    'minimax/minimax-m2.7:free',
     'nvidia/nemotron-3-super-120b-a12b:free',
     'nvidia/nemotron-3-ultra-550b-a55b:free',
 ];
-let openRouterApiKey = (_initialAcc && _initialAcc.openRouterApiKey && _initialAcc.openRouterApiKey !== OPENROUTER_DEFAULT_KEY)
+let openRouterApiKey = (_initialAcc?.openRouterApiKey !== OPENROUTER_DEFAULT_KEY ? _initialAcc?.openRouterApiKey : '')
     || localStorage.getItem('openRouterApiKey')
     || localStorage.getItem('lumina_saved_openrouter_key')
     || OPENROUTER_DEFAULT_KEY;
@@ -830,7 +830,7 @@ async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 81
         const tid = setTimeout(() => controller.abort(), 5000); // 5s max
         const payload = { prompt, temperature, maxTokens };
         if (systemPrompt) payload.systemPrompt = systemPrompt;
-        const res = await fetch('/api/ai', {
+        const res = await window.EngbotProviders.request('/api/ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -875,7 +875,8 @@ function aiTranslationAvailable() {
 // knowledge base (~12k chars) with core morphology, verbs, defects, decision table,
 // punctuation, wordbank, preverbs, and case system; preventing prompt blowout,
 // 429 quota traps, and 20-minute stalls.
-function getKaRulesForPrompt() {
+function getKaRulesForPrompt(source = '') {
+    if (typeof getKaTaskRules === 'function') return getKaTaskRules(source) + kaTrainedAddendum();
     if (typeof getKaCompactRules === 'function') {
         return getKaCompactRules() + kaTrainedAddendum();
     }
@@ -919,7 +920,7 @@ async function callOpenRouterJSON(prompt, { temperature = 0.2, maxTokens = 8192,
             const messages = systemPrompt
                 ? [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }]
                 : [{ role: 'user', content: prompt }];
-            const response = await fetch(OPENROUTER_API_URL, {
+            const response = await window.EngbotProviders.request(OPENROUTER_API_URL, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${openRouterApiKey}`,
@@ -1009,12 +1010,11 @@ let mistralApiKey = (_initialAcc && _initialAcc.mistralApiKey)
     || '';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-// Current Groq production catalog: ultra-fast Llama 3.3 70B & Llama 3.1 8B.
+// Text models verified against the provider catalog; retired Llama IDs are omitted.
 const GROQ_MODELS = [
-    'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant',
-    'llama3-70b-8192',
-    'gemma2-9b-it',
+    'openai/gpt-oss-120b',
+    'qwen/qwen3.8-27b',
+    'openai/gpt-oss-20b',
 ];
 const GROQ_MODEL_COOLDOWN_MS = 60_000;
 const groqModelCooldown = {}; // model -> earliest ms it may be retried
@@ -1101,7 +1101,7 @@ async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8
             max_tokens: safeTokens,
         });
 
-        const res = await fetch(endpoint, {
+        const res = await window.EngbotProviders.request(endpoint, {
             method: 'POST',
             headers,
             body,
@@ -1190,11 +1190,11 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
                 temperature,
                 max_tokens: maxTokens,
             };
-            if (model.includes('deepseek-r1') || model.includes('o1-')) {
+            if (model.includes('deepseek-r1') || model.includes('o1-') || model.includes('gpt-oss')) {
                 payload.reasoning_effort = 'low';
             }
 
-            const response = await fetch(baseUrl, {
+            const response = await window.EngbotProviders.request(baseUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
@@ -1222,7 +1222,7 @@ async function callOpenAICompatibleJSON(baseUrl, models, cooldownMap, cooldownMs
             }
 
             const data = await response.json();
-        if (!EngbotCore.providerOutputComplete(data)) throw new Error('Provider output is incomplete');
+        if (!EngbotCore.providerOutputComplete(data)) { window.EngbotProviders.fail(providerLabel, 'incomplete'); cooldownMap[model] = Date.now() + cooldownMs; continue; }
             const text = data?.choices?.[0]?.message?.content;
             if (!text) {
                 cooldownMap[model] = Date.now() + cooldownMs;
@@ -1256,8 +1256,8 @@ async function callGroqJSON(prompt, { temperature = 0.2, maxTokens = 8192, syste
     const models = selected ? [selected, ...GROQ_MODELS.filter(m => m !== selected)] : GROQ_MODELS;
     // CRITICAL: Groq models have a strict max output token limit (8192 or 4096).
     // Passing > 8192 (e.g. 16384 from whole-book batch) causes an immediate HTTP 400 rejection from api.groq.com.
-    const safeTokens = Math.min(maxTokens || 4096, 8192);
-    return callOpenAICompatibleJSON(GROQ_API_URL, models, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, groqApiKey.trim(), prompt, { temperature, maxTokens: safeTokens, providerLabel: 'Groq', systemPrompt });
+    const safeTokens = Math.min(maxTokens || 4096, 4096);
+    return callOpenAICompatibleJSON(GROQ_API_URL, models, groqModelCooldown, GROQ_MODEL_COOLDOWN_MS, sanitizeApiKey(groqApiKey), prompt, { temperature, maxTokens: safeTokens, providerLabel: 'Groq', systemPrompt });
 }
 
 async function callMistralJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null } = {}) {
@@ -6383,29 +6383,30 @@ function readerForwardSentence() {
 // Each tier is skipped when its key is absent, in cooldown, or blocked,
 // so a whole-book batch keeps running on AI quality even when one or two
 // providers exhaust their free quota mid-run. Returns parsed JSON or null.
-async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null } = {}) {
+async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null, validateResponse = () => true } = {}) {
     const jobSignal = translationRequestController?.signal;
     jobSignal?.throwIfAborted();
     // Tier 1: Gemini (user's direct Google AI Studio key: 2.0 Flash / 1.5 Pro / 1.5 Flash)
     if (geminiApiKey) {
         const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries, systemPrompt });
         jobSignal?.throwIfAborted();
-        if (res !== null) return res;
+        if (res !== null && validateResponse(res)) return res;
         console.warn('Gemini direct tier failed — trying Groq fallback.');
     }
     // Tier 2: Groq (free, ~500K tokens/day, ultra-fast)
     if (groqApiKey) {
         const res = await callGroqJSON(prompt, { temperature, maxTokens, systemPrompt });
         jobSignal?.throwIfAborted();
-        if (res !== null) return res;
+        if (res !== null && validateResponse(res)) return res;
         console.warn('Groq tier failed — trying Custom Provider.');
     }
     // Tier 3: Custom provider (user-configured OpenAI-compatible or local endpoint)
     if (customProviderUrl) {
         const txt = await callCustomProviderText(prompt, { temperature, maxTokens, systemPrompt });
+        jobSignal?.throwIfAborted();
         if (txt) {
             const parsed = parseModelJSON(txt);
-            if (parsed) return parsed;
+            if (parsed && validateResponse(parsed)) return parsed;
 
         }
         console.warn('Custom provider failed — trying OpenRouter.');
@@ -6414,20 +6415,20 @@ async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, ret
     if (openRouterApiKey) {
         const res = await callOpenRouterJSON(prompt, { temperature, maxTokens, systemPrompt });
         jobSignal?.throwIfAborted();
-        if (res !== null) return res;
+        if (res !== null && validateResponse(res)) return res;
         console.warn('OpenRouter tier failed — trying Mistral.');
     }
     // Tier 5: Mistral (free experiment plan)
     if (mistralApiKey) {
         const res = await callMistralJSON(prompt, { temperature, maxTokens, systemPrompt });
         jobSignal?.throwIfAborted();
-        if (res !== null) return res;
+        if (res !== null && validateResponse(res)) return res;
     }
     // Tier 6: Server gateway (only if available, e.g. local backend)
     if (luminaGatewayAvailable) {
         const res = await callLuminaGatewayJSON(prompt, { temperature, maxTokens, systemPrompt });
         jobSignal?.throwIfAborted();
-        if (res !== null) return res;
+        if (res !== null && validateResponse(res)) return res;
     }
     return null;
 }
@@ -6466,7 +6467,7 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
                 if (systemPrompt) {
                     requestPayload.systemInstruction = { parts: [{ text: systemPrompt }] };
                 }
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`, {
+                const response = await window.EngbotProviders.request(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -6503,14 +6504,15 @@ async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 819
                 }
 
                 const data = await response.json();
-                if (data?.candidates?.[0]?.finishReason !== 'STOP') continue;
+                if (data?.candidates?.[0]?.finishReason !== 'STOP') { window.EngbotProviders.fail('Gemini', 'incomplete'); continue; }
                 const parts = data?.candidates?.[0]?.content?.parts;
-                const text = parts && Array.isArray(parts) ? parts.map(p => p.text || '').join('').trim() : '';
-                if (!text) break;
+                const text = parts && Array.isArray(parts) ? parts.filter(p => !p.thought).map(p => p.text || '').join('').trim() : '';
+                if (!text) { window.EngbotProviders.fail('Gemini', 'invalid'); break; }
                 const parsed = parseModelJSON(text);
                 if (parsed) return parsed;
 
                 console.warn('Gemini returned unparseable JSON');
+                window.EngbotProviders.fail('Gemini', 'invalid');
                 break;
             } catch (e) {
         jobSignal?.throwIfAborted();
@@ -6603,7 +6605,7 @@ async function geminiDraftTranslate(text, targetLang, contextBefore = '', contex
     // Georgian-native quality: inject the research-derived linguistic
     // knowledge base (morphology, screeves, syntax, defect list, authentic
     // style exemplars from classic and modern Georgian prose).
-    const kaKnowledge = targetLang === 'ka' ? getKaRulesForPrompt() : '';
+    const kaKnowledge = targetLang === 'ka' ? getKaRulesForPrompt(text) : '';
     const kaBlock = kaKnowledge
         ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===\n${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
 
@@ -6646,7 +6648,7 @@ Answer as JSON: {"translation": "..."} — the ${targetLangName} translation ONL
 ${srcLangName} source text:
 ${text}${ctxBefore}${ctxAfter}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.25, systemPrompt });
+    const data = await callGeminiJSON(prompt, { temperature: 0.25, maxTokens: Math.min(8192, Math.max(4096, text.length * 2)), systemPrompt, validateResponse: data => assessTranslation(text, extractTranslation(data?.translation), targetLang).ok });
     const translation = extractTranslation(data?.translation);
     return translation || null;
 }
@@ -6654,16 +6656,16 @@ ${text}${ctxBefore}${ctxAfter}`;
 // Stage 2 — structured critique (MQM-inspired). Separate call, separate
 // persona: the reviewer must actively hunt for errors, not rubber-stamp.
 // Returns a machine-readable error list; empty list = approved.
-async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
+async function geminiCritiqueTranslation(sourceText, translation, targetLang, previousRevision = null) {
     const langName = targetLang === 'ka' ? 'Georgian' : targetLang;
 
     // Georgian reviewer gets the defect catalog + compact grammar rules so it
     // hunts for the exact errors LLMs actually make (ergativity, screeves,
     // agreement, postpositions, punctuation calques).
     const kaReviewerRules = targetLang === 'ka' && typeof getKaCompactRules === 'function'
-        ? getKaCompactRules() : '';
+        ? (typeof getKaTaskRules === 'function' ? getKaTaskRules(sourceText) : getKaCompactRules()) : '';
     const kaChecklist = kaReviewerRules
-        ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===\n${kaReviewerRules}\n=== END CHECKLIST ===\nAny violation of the checklist is at least a "major" grammar error.` : '';
+        ? `\n\n=== GEORGIAN GRAMMAR CHECKLIST (check every sentence against this) ===\n${kaReviewerRules}\n=== END CHECKLIST ===\nTreat the checklist as guidance, not an unconditional veto. Confirm each defect against the source and actual construction. Optional style preferences are minor; reserve major/critical for demonstrated grammar or meaning defects.` : '';
 
     const systemPrompt = `You are a strict ${langName} copy editor and MQM-certified translation reviewer.${kaChecklist}`;
 
@@ -6671,12 +6673,16 @@ async function geminiCritiqueTranslation(sourceText, translation, targetLang) {
 
 Check, in order of severity:
 1. Accuracy: omissions, additions, reversed meaning, lost negation, changed names/numbers/units.
-2. Grammar & morphology: ${langName} case endings, verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment & screeves: Series I (present/imperfect/future) requires Nominative subject and Dative direct object. Series II (aorist/optative) requires Ergative subject (-მა/-მ) for transitive verbs and Nominative direct object (e.g. უფლისწულმა ვარდი დაინახა; NEVER nominative subject *უფლისწული დაინახა). Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Postposition syncopation (კუმშვა/კვეცა): locatives (-ში, -ზე, -დან, -კენ, -თვის) drop nominative -ი (ქალაქში, წიგნში) and syncopate internal stem vowels (წყალი->წყლიდან, მგელი->მგლის, ქვეყანა->ქვეყანაში). Negation: არ (declarative), ვერ (failed ability), ნუ (prohibitive — NEVER არ for commands/imperatives like *არ წახვიდე -> ნუ წახვალ), one negator per clause. Experiencer verbs (სჭირდება, უყვარს, ეშინია, ახსოვს, სტკივა, შია, ცივა, უნდა) MUST have Dative experiencer, never Nominative (*ის საჭიროებს / *ის არის მშიერი / *ის გრძნობს ტკივილს).' : ''}
+2. Grammar & morphology: ${langName} case endings, verb conjugation/screeves, agreement, postpositions.${targetLang === 'ka' ? '\n   Georgian series alignment & screeves: Series I (present/imperfect/future) requires Nominative subject and Dative direct object. Series II (aorist/optative) requires Ergative subject (-მა/-მ) for transitive verbs and Nominative direct object (e.g. უფლისწულმა ვარდი დაინახა; NEVER nominative subject *უფლისწული დაინახა). Series III (perfect/evidential, -ულა/-ია/-ებია endings) INVERTS cases — subject is DATIVE, never -მა. Postposition syncopation (კუმშვა/კვეცა): locatives (-ში, -ზე, -დან, -კენ, -თვის) drop nominative -ი (ქალაქში, წიგნში) and syncopate internal stem vowels (წყალი->წყლიდან, მგელი->მგლის, ქვეყანა->ქვეყანაში). Negation: არ (neutral negation), ვერ (inability), ნუ (prohibitive). არ + optative can also express a negative command (არ წახვიდე). Georgian negative concord is valid: negative pronoun/determiner + verbal არ, e.g. არავინ არ მოვიდა, არავითარი უბედურება არ ახლავს. Never flag these solely as double negation. Assess semantic polarity in context, not the number of negative words. Experiencer verbs (სჭირდება, უყვარს, ეშინია, ახსოვს, სტკივა, შია, ცივა, უნდა) MUST have Dative experiencer, never Nominative (*ის საჭიროებს / *ის არის მშიერი / *ის გრძნობს ტკივილს).' : ''}
 3. Terminology: terms inconsistent with a literary ${langName} register; calques that read as translationese.${targetLang === 'ka' ? '\n   Georgian false friends are ALWAYS terminology errors: მიტინიგი (rally, not meeting), აქტუალური (topical, not actual), სიმპათიური (pretty, not compassionate), პრეზერვატივი (condom, not preservative), ანეკდოტი (joke, not anecdote), ფაბრიკა (factory, not fabric), ბალონი (tire, not balloon), ნოველა (novella, not novel), სპექტაკლი (play, not spectacle), ინტელიგენტი (intellectual, not smart). Foreign names: missing nominative -ი on consonant-ending names (e.g. *პიტერ instead of პიტერი) or unadapted Latin clusters.' : ''}
 4. Style: unnatural phrasing, robotic word order, over-explicit pronouns, broken idiom.${targetLang === 'ka' ? '\n   Georgian style defects seen in production: bureaucratic Soviet calques (განხორციელება, ადგილი ჰქონდა, წარმოადგენს, მოცემულ მომენტში), reflexive pronoun violation (NEVER allow „მისი“ when referring back to the clause subject — must be „თავისი“ / „თავის“), numeral plural calque (NEVER use plural nouns after cardinals: ხუთი წიგნი, not *ხუთი წიგნები; ოცი კაცი, not *ოცი კაცები), hyphen " - " used as a dash (must be "—"), semicolons stacking parallel clauses (prefer და-chaining), "ეს არის X" copula calque (prefer ეს X-ა/-აა), SVO "have" calque (აქვს must stay clause-final: X-ს Y აქვს), over-explicit subject pronouns (მე/ის before a conjugated verb), robotic stacked "რომელიც" clauses (convert to pre-nominal participles), English passive calques (convert to active aorist).' : ''}
 5. TTS-readiness: punctuation that would break narration (missing terminal marks, stray symbols, straight quotes instead of „…“).${targetLang === 'ka' ? '\n   Also check: no space before . , ; : punctuation, no foreign sentence marks (।, ฯ, ۔), exactly one terminal mark per sentence, no doubled punctuation.' : ''}
 
-Be demanding: an accurate but stilted translation still gets flagged under style. If the translation is genuinely publication-ready, return an empty error list. Never invent problems.
+Severity must reflect an actual defect: critical changes meaning; major demonstrates a grammatical or semantic failure; minor covers awkwardness, register and optional stylistic alternatives. Do not label a phrase major merely because another phrasing is more natural. Identify the exact source/translation span and explain the grammatical relation or meaning that fails. Valid word order, pronoun emphasis and negative concord are not defects by themselves.
+
+When revision history is supplied, check the correction in the COMPLETE sentence. Do not reverse a previous correction merely by evaluating an isolated verb or phrase. If the earlier advice was wrong, explain why in context and propose a coherent clause-level repair. In a purpose/complement clause, consider the governing expression before changing verb mood or tense. An earlier reviewer can be wrong; do not approve a real error just because it followed their advice.
+
+If no demonstrated blocking defect remains, keep optional suggestions minor. Return an empty error list when no real defect exists. Never invent problems.
 
 Answer as JSON:
 {"errors": [{"severity": "critical|major|minor", "type": "accuracy|terminology|grammar|style|tts", "issue": "...", "fix": "concrete instruction"}], "verdict": "approved|needs_revision"}
@@ -6685,9 +6691,9 @@ SOURCE:
 ${sourceText}
 
 TRANSLATION:
-${translation}`;
+${translation}${previousRevision ? `\n\nPREVIOUS REVISION (context only, not an authority):\n${JSON.stringify(previousRevision)}` : ''}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.1, systemPrompt });
+    const data = await callGeminiJSON(prompt, { temperature: 0.1, maxTokens: 4096, systemPrompt, validateResponse: data => EngbotCore.reviewDecision(data).valid });
     if (!data || !Array.isArray(data.errors)) return null;
     return data;
 }
@@ -6721,8 +6727,8 @@ ${translation}
 DEFECTS TO FIX:
 ${errorList}`;
 
-    const data = await callGeminiJSON(prompt, { temperature: 0.15, systemPrompt });
-    const revised = extractTranslation(data?.revised_translation);
+    const data = await callGeminiJSON(prompt, { temperature: 0.15, maxTokens: Math.min(8192, Math.max(4096, sourceText.length * 2)), systemPrompt, validateResponse: data => assessTranslation(sourceText, extractTranslation(data?.revised_translation || data?.translation), targetLang).ok });
+    const revised = extractTranslation(data?.revised_translation || data?.translation);
     return revised || null;
 }
 
@@ -6732,41 +6738,43 @@ ${errorList}`;
 //   3 → draft + critique + refine + final QA (verify the revision, keep the
 //       better of the two — a bad refinement can never make things worse)
 async function translateWithGeminiAI(text, targetLang, contextBefore = '', contextAfter = '') {
-    if (!aiTranslationAvailable()) return null;
+    if (!aiTranslationAvailable()) { translationFailure('Setup', 'Configure an AI provider in AI settings before translating.'); return null; }
 
+    setTranslationStage('Drafting');
     const draft = await geminiDraftTranslate(text, targetLang, contextBefore, contextAfter);
-    if (!draft) return null;
+    if (!draft || !assessTranslation(text,draft,targetLang).ok) { translationFailure('Draft', window.EngbotProviders?.getFailure()?.message || 'The provider returned an empty, incomplete, or wrong-language draft.'); return null; }
     if (geminiPasses < 2) return draft;
 
+    setTranslationStage('Reviewing');
     const critique = await geminiCritiqueTranslation(text, draft, targetLang);
-    if (!critique) return null; // Review is required by the selected mode.
+    const review = EngbotCore.reviewDecision(critique);
+    if (!review.valid) { translationFailure('Review', window.EngbotProviders?.getFailure()?.message || 'The reviewer did not return a valid assessment. Your source is unchanged.'); return null; }
 
-    const blocking = critique.errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major' || e.severity === 'blocking'));
-    if (critique.verdict === 'approved' && blocking.length === 0) {
+    const blocking = review.blocking;
+    if (blocking.length === 0) {
         return draft;
     }
 
-    if (geminiPasses < 3) {
-        const quick = await geminiRefineTranslation(text, draft, blocking, targetLang);
-        if (!quick || !assessTranslation(text, quick, targetLang).ok) return null;
-        const result = quick;
-        return result;
+    let candidate = draft;
+    let issues = blocking;
+    for (let attempt = 0; attempt < 2; attempt++) {
+        setTranslationStage(attempt ? 'Correcting remaining issues' : 'Refining');
+        const revised = await geminiRefineTranslation(text, candidate, issues, targetLang);
+        if (!revised || !assessTranslation(text, revised, targetLang).ok) {
+            translationFailure('Refinement', window.EngbotProviders?.getFailure()?.message || 'The revision failed completeness or language checks. Retry this segment.');
+            return null;
+        }
+        setTranslationStage('Final review');
+        const audit = EngbotCore.reviewDecision(await geminiCritiqueTranslation(text, revised, targetLang, { previousTranslation: candidate, requestedCorrections: issues }));
+        if (!audit.valid) { translationFailure('Final review', window.EngbotProviders?.getFailure()?.message || 'The reviewer did not return a valid final assessment. Retry this segment.'); return null; }
+        if (!audit.blocking.length) return revised;
+        candidate = revised;
+        issues = audit.blocking;
     }
+    const detail = String(issues[0]?.issue || '').slice(0, 180);
+    translationFailure('Final review', `${issues.length} accuracy or language issues remain.${detail ? ' ' + detail : ''} Retry or review this segment.`);
+    return null;
 
-    const revised = await geminiRefineTranslation(text, draft, blocking, targetLang);
-    if (!revised || !assessTranslation(text, revised, targetLang).ok) return null;
-
-    // Final QA: re-review the revision; keep it only if it is genuinely
-    // better than the draft — a bad refinement can never make things worse.
-    const revisedAudit = await geminiCritiqueTranslation(text, revised, targetLang);
-    if (!revisedAudit) return null;
-    const revisedBlocking = revisedAudit
-        ? revisedAudit.errors.filter(e => e && (e.severity === 'critical' || e.severity === 'major' || e.severity === 'blocking')).length
-        : blocking.length;
-    if (revisedBlocking === 0 && revisedAudit?.verdict === 'approved') {
-        return revised;
-    }
-    return null; // Blocking defects remain unresolved.
 }
 
 // Budget pipeline for whole-book jobs. Whole books translate ~120k+ chars in
@@ -6784,7 +6792,7 @@ async function translateWithGeminiAIBatch(text, targetLang, contextBefore = '', 
     const ctxBefore = contextBefore ? `\n\n[PRECEDING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextBefore.slice(-600)}` : '';
     const ctxAfter = contextAfter ? `\n\n[FOLLOWING CONTEXT — for coherence only, do NOT translate or include it]:\n${contextAfter.slice(0, 600)}` : '';
 
-    const kaKnowledge = targetLang === 'ka' ? getKaRulesForPrompt() : '';
+    const kaKnowledge = targetLang === 'ka' ? getKaRulesForPrompt(text) : '';
     const kaBlock = kaKnowledge
         ? `\n\n=== GEORGIAN LANGUAGE MASTERY RULES (mandatory) ===\n${kaKnowledge}\n=== END GEORGIAN RULES ===\nApply these rules absolutely. A translation that violates them is a failed translation.` : '';
 
@@ -6943,6 +6951,24 @@ async function applyGeorgianQaGate(text) {
 const translationEngineStats = { ai: 0, rules: 0, raw: 0, failed: 0, gemini: 0, google: 0, mymemory: 0 };
 
 let translationEngineStatusEl = null;
+let translationStage = '';
+let lastTranslationFailure = '';
+function setTranslationStage(stage) {
+    translationStage = stage;
+    const el = document.getElementById('wbEngineStatus');
+    if (el) el.textContent = stage === 'Complete' ? stage : stage + '…';
+}
+function translationFailure(stage, message) {
+    lastTranslationFailure = stage + ': ' + message;
+    const el = document.getElementById('wbEngineStatus');
+    if (el) el.textContent = lastTranslationFailure;
+}
+window.addEventListener('engbot-provider-status', event => {
+    if (!isTranslatingWholeBook) return;
+    const el = document.getElementById('wbEngineStatus');
+    const info = event.detail;
+    if (el) el.textContent = info.phase === 'failed' ? info.message : `${translationStage || 'Connecting'} · ${info.provider}${info.phase === 'requesting' ? '…' : ' responded'}`;
+});
 
 function setTranslationEngineStatusEl(el) {
     translationEngineStatusEl = el;
@@ -7895,16 +7921,34 @@ async function runWholeBookTranslation(resume = false) {
     const targetBook = currentBook;
     const ownerId = getCurrentUserId();
     const checkOwner = () => { if (getCurrentUserId() !== ownerId) throw new Error('Account changed; sign in to the original account to resume'); };
-    const sourceLang = EngbotCore.normalizeLanguage(targetBook.lang || targetBook.language) === 'ka' ? 'ka' : detectTextLang(targetBook.chapters.map(c => c.text || '').join(' ').slice(0, 6000));
+    const sourceLang = EngbotCore.bookSourceLanguage(targetBook);
     const targetLang = sourceLang === 'ka' ? 'en' : 'ka';
     const field = 'text_' + targetLang;
     const targetName = targetLang === 'ka' ? 'Georgian' : 'English';
     let job, cloudJob;
     activeTranslationBook = targetBook;
     isTranslatingWholeBook = true;
+    updateTranslationControls(true);
     cancelTranslationFlag = false;
     translationRequestController = new AbortController();
     translationPanelMinimized = false;
+    lastTranslationFailure = '';
+    window.EngbotProviders?.reset();
+    setTranslationStage('Preparing');
+    if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `Preparing ${targetName} translation · ${targetBook.chapters.length} chapters`;
+    if (DOM.wbSentenceCounter) DOM.wbSentenceCounter.textContent = 'Preparing source segments…';
+    if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '0%';
+    if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '0%';
+    const retryButton = document.getElementById('wbRetryButton');
+    if (retryButton) { retryButton.hidden = true; retryButton.onclick = async () => {
+        if (getCurrentUserId() !== ownerId) { showToast('Sign in to the original account to resume this book.', 'error'); return; }
+        await selectBook(targetBook.id);
+        if (String(currentBook?.id) === String(targetBook.id)) return startWholeBookTranslation(true);
+    }; }
+    translationChunkTimestamps = [];
+    if (DOM.wbChunkLog) DOM.wbChunkLog.textContent = '';
+    if (DOM.wbChunkRate) DOM.wbChunkRate.textContent = '0 chunks/min';
+    if (DOM.wbCharCounter) DOM.wbCharCounter.textContent = '0 characters accepted';
     openModal('wholeBookTranslateModal');
     try {
         const saved = await loadTranslationJob(targetBook.id);
@@ -7952,7 +7996,10 @@ async function runWholeBookTranslation(resume = false) {
             if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `${targetName}: chapter ${index + 1} / ${job.totalChapters}`;
             for (let i = 0; i < chunks.length; i++) {
                 if (cancelTranslationFlag) break;
+                if (DOM.wbSentenceCounter) DOM.wbSentenceCounter.textContent = `Accepted segments: ${checkpoint.outputs.filter(Boolean).length} / ${chunks.length}`;
                 if (checkpoint.outputs[i] && assessTranslation(chunks[i], checkpoint.outputs[i], targetLang).ok) continue;
+                lastTranslationFailure = '';
+                window.EngbotProviders?.reset();
                 if (DOM.wbLiveOriginal) DOM.wbLiveOriginal.textContent = chunks[i];
                 if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = `Translating segment ${i + 1} / ${chunks.length}…`;
                 // Do not silently replace reviewed LLM translation with dictionary drafts.
@@ -7960,15 +8007,19 @@ async function runWholeBookTranslation(resume = false) {
                 if (cancelTranslationFlag) break; // Late provider responses cannot commit after stop.
                 checkOwner();
                 if (!assessTranslation(chunks[i], output, targetLang).ok) {
-                    throw new Error(`Chapter ${index + 1}, segment ${i + 1} needs retry or review. Check your AI provider.`);
+                    throw new Error(`Chapter ${index + 1}, segment ${i + 1}. ${lastTranslationFailure || window.EngbotProviders?.getFailure()?.message || 'The result failed translation quality checks. Retry this segment.'}`);
                 }
                 checkpoint.outputs[i] = output;
                 await saveTranslationJob(job);
+                appendChunkLog(i + 1, 'ai', output.slice(0, 100));
+                updateChunkRate();
+                if (DOM.wbCharCounter) DOM.wbCharCounter.textContent = `${Object.values(job.chapters).reduce((n, c) => n + c.outputs.reduce((sum, t) => sum + (t?.length || 0), 0), 0).toLocaleString()} characters accepted`;
                 if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = output;
                 const pct = Math.min(99, Math.round(((index + checkpoint.outputs.filter(Boolean).length / Math.max(1, chunks.length)) / job.totalChapters) * 100));
                 if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
                 if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
                 if (DOM.wbSentenceCounter) DOM.wbSentenceCounter.textContent = `Accepted segments: ${checkpoint.outputs.filter(Boolean).length} / ${chunks.length}`;
+                updateMiniDock();
             }
             if (cancelTranslationFlag) break;
             if (checkpoint.outputs.length !== chunks.length || checkpoint.outputs.some(t => !t)) throw new Error('Incomplete chapter');
@@ -8002,6 +8053,8 @@ async function runWholeBookTranslation(resume = false) {
         if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `${targetName} translation complete`;
         if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '100%';
         if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
+        setTranslationStage('Complete');
+        updateMiniDock();
         showToast(`${targetName} edition saved.`, 'success');
     } catch (error) {
         if (job) {
@@ -8011,26 +8064,48 @@ async function runWholeBookTranslation(resume = false) {
         }
         if (cloudJob) { try { await cloudJob.update(job.chapterIdx || 0, job.totalChapters, 'failed', error.message); } catch (e) {} }
         if (cancelTranslationFlag) return;
+        translationFailure('Paused', error.message);
         if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `Incomplete: ${error.message}`;
+        if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = 'Paused at the last accepted segment. Your source and completed translations are retained.';
+        const retryButton = document.getElementById('wbRetryButton');
+        if (retryButton) retryButton.hidden = false;
         showToast(`Translation incomplete: ${error.message} Press Translate to retry.`, 'error');
     } finally {
         activeTranslationBook = null;
         translationRequestController = null;
         isTranslatingWholeBook = false;
+        updateTranslationControls(false);
         renderChaptersList();
         renderDigitalShelf();
     }
 }
 
+function updateTranslationControls(running) {
+    const button = document.getElementById('wbDismissButton');
+    if (button) button.textContent = running ? 'Stop Translation' : 'Close';
+    const icon = document.getElementById('wbDismissIcon');
+    if (icon) {
+        icon.title = running ? 'Stop translation' : 'Close translation details';
+        icon.setAttribute('aria-label', running ? 'Stop' : 'Close');
+        const glyph = icon.querySelector('span');
+        if (glyph) glyph.textContent = running ? 'stop_circle' : 'close';
+    }
+    const dock = document.getElementById('translationMiniDock');
+    if (dock) dock.title = running ? 'Translation in progress — click to reopen' : 'Translation details — click to reopen';
+}
+
 function cancelWholeBookTranslation() {
-    cancelTranslationFlag = true;
-    translationRequestController?.abort();
+    const wasRunning = isTranslatingWholeBook;
+    if (wasRunning) {
+        cancelTranslationFlag = true;
+        translationRequestController?.abort();
+    }
     // Keep the running guard until the in-flight operation settles.
     closeModal('wholeBookTranslateModal');
     const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
-    if (dock) dock.classList.add('hidden');
+    if (dock) { dock.classList.add('hidden'); dock.style.display = 'none'; }
     translationPanelMinimized = false;
-    showToast('Pausing translation. Accepted segments are retained for retry.', 'info');
+    if (wasRunning) showToast('Pausing translation. Accepted segments are retained for retry.', 'info');
 }
 
 
@@ -8492,7 +8567,7 @@ function prefetchCacheTake(index) {
 // down — both meant "press play, hear nothing". /api/tts returns a real audio
 // file from the Lovable AI Gateway, which plays everywhere. A 404 (static
 // hosting) disables the tier and the original engines take over untouched.
-let gatewayTTSAvailable = true;
+let gatewayTTSAvailable = !_isStaticHost;
 const gatewayTTSCache = new Map(); // `${preset}|${text}` -> blob url
 
 function gatewayPresetForLang(lang) {
@@ -8505,6 +8580,7 @@ function gatewayPresetForLang(lang) {
  * chapter. The audio playing right now finishes normally.
  */
 function clearNarrationBuffers() {
+    elevenSpeechBuffer.clear();
     georgianAudioPrefetchCache.forEach(a => {
         try { a.pause(); a.src = ''; } catch (e) {}
     });
@@ -8527,7 +8603,7 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null) {
     if (gatewayTTSCache.has(key)) return gatewayTTSCache.get(key);
 
     try {
-        const res = await fetch('/api/tts', {
+        const res = await window.EngbotProviders.request('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: spoken.slice(0, 3800), preset }),
@@ -8871,6 +8947,38 @@ function elevenLabsVoiceSettings(modelId, sentenceType) {
     return { stability: 0.35, similarity_boost: 0.85, style: sentenceType === 'exclamation' ? 0.45 : 0.25, use_speaker_boost: true };
 }
 
+const elevenSpeechBuffer = window.EngbotProviders.createSpeechBuffer(async (payload, signal) => {
+    const res = await window.EngbotProviders.request(`https://api.elevenlabs.io/v1/text-to-speech/${payload.voiceId}`, {
+        method:'POST', signal,
+        headers:{'xi-api-key':sanitizeApiKey(elevenLabsApiKey),'Content-Type':'application/json','Accept':'audio/mpeg'},
+        body:JSON.stringify(payload.body)
+    }, {timeoutMs:45000});
+    if (!res.ok) throw new Error(window.EngbotProviders.getFailure()?.message || `ElevenLabs HTTP ${res.status}`);
+    const blob = await res.blob();
+    if (!blob.type.startsWith('audio/') || blob.size < 64) throw new Error('ElevenLabs returned no playable audio.');
+    return blob;
+});
+
+function elevenSpeechPayload(text, lang, index) {
+    const isKa = lang === 'ka';
+    const voiceId = isKa ? (elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb') : (elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
+    const modelId = isKa ? 'eleven_v3' : (elevenLabsModelId || 'eleven_multilingual_v2');
+    const spoken = isKa ? verbalizeGeorgianTextForTTS(text) : verbalizeEnglishTextForTTS(text);
+    // Preserve the narrator's natural delivery; don't force every dialogue into a whisper.
+    const body = {text:spoken, model_id:modelId, voice_settings:elevenLabsVoiceSettings(modelId,detectSentenceType(spoken))};
+    if (modelId !== 'eleven_multilingual_v2') body.language_code = lang;
+    if (modelId !== 'eleven_v3') {
+        if (index > 0) body.previous_text = String(sentenceQueue[index-1] || '').slice(-500);
+        if (index + 1 < sentenceQueue.length) body.next_text = String(sentenceQueue[index+1] || '').slice(0,500);
+    }
+    return {voiceId,body};
+}
+
+function getElevenSpeechBlob(text,lang,index) {
+    const payload = elevenSpeechPayload(text,lang,index);
+    return elevenSpeechBuffer.get(JSON.stringify(payload),payload);
+}
+
 async function speakElevenLabsSentence(text, lang = null) {
     stopCurrentSpeechAudio(true); // keep the prefetch window warm
     const myToken = currentSpeechToken;
@@ -8879,32 +8987,13 @@ async function speakElevenLabsSentence(text, lang = null) {
     try {
         const actualLang = lang || currentLang || 'en';
         const isKa = (actualLang === 'ka');
-        const voiceId = isKa ? (elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb') : (elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
-        const modelId = isKa ? 'eleven_v3' : (elevenLabsModelId || 'eleven_multilingual_v2');
         const textToRead = isKa ? verbalizeGeorgianTextForTTS(text) : verbalizeEnglishTextForTTS(text);
-        const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
-
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'xi-api-key': elevenLabsApiKey,
-                'Content-Type': 'application/json',
-                'Accept': 'audio/mpeg'
-            },
-            body: JSON.stringify({
-                text: elevenLabsExpressiveText(textToRead, modelId),
-                model_id: modelId,
-                voice_settings: elevenLabsVoiceSettings(modelId, detectSentenceType(textToRead))
-            })
-        });
-
-        if (!res.ok) throw new Error(`ElevenLabs API status ${res.status}`);
-
-        const blob = await res.blob();
+        const blob = await getElevenSpeechBlob(text,actualLang,currentSentenceIndex);
         if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
 
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
+        audio._engbotObjectUrl = audioUrl;
         currentElevenAudio = audio;
         audio.playbackRate = currentGlobalSpeed;
 
@@ -8913,6 +9002,7 @@ async function speakElevenLabsSentence(text, lang = null) {
         updateMediaSession();
 
         audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             // Organic human breathing pause between sentences
             let breathDelay = 220;
@@ -8942,10 +9032,17 @@ async function speakElevenLabsSentence(text, lang = null) {
         };
 
         await audio.play();
+        if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+        // Bounded lookahead hides synthesis latency while the current sentence plays.
+        for (let ahead=1; ahead<=2; ahead++) {
+            const index=currentSentenceIndex+ahead;
+            if (index<sentenceQueue.length) getElevenSpeechBlob(sentenceQueue[index],actualLang,index).catch(()=>{});
+        }
 
     } catch (err) {
         if (myToken !== currentSpeechToken) return;
         console.warn('[ElevenLabs] Fetch/synthesis failed — falling back to neural TTS:', err && err.message);
+        showToast(err.message + ' Trying the alternate narrator.', 'error');
         const actualLang = lang || currentLang || 'en';
         if (gatewayTTSAvailable) {
             speakGatewayNeural(text, actualLang);
@@ -8958,7 +9055,7 @@ async function speakElevenLabsSentence(text, lang = null) {
 function stopCurrentSpeechAudio(keepBuffers = false) {
     currentSpeechToken++; // Invalidate any running asynchronous audio fetches
     // Prefetches survive a sentence advance but not a real stop/seek.
-    if (!keepBuffers) narrationGeneration++;
+    if (!keepBuffers) { narrationGeneration++; elevenSpeechBuffer.clear(); }
 
     if (utteranceTimeout) {
         clearTimeout(utteranceTimeout);
@@ -8966,6 +9063,7 @@ function stopCurrentSpeechAudio(keepBuffers = false) {
     }
     if (currentElevenAudio) {
         try {
+            if (currentElevenAudio._engbotObjectUrl) URL.revokeObjectURL(currentElevenAudio._engbotObjectUrl);
             currentElevenAudio.pause();
             currentElevenAudio.onended = null;
             currentElevenAudio.onerror = null;
@@ -10373,10 +10471,10 @@ async function selectBook(bookId, autoPlayFirst = false) {
         (c && typeof c.text_ka === 'string' && /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(c.text_ka)) ||
         (c && typeof c.text === 'string' && /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(c.text))
     );
-    const isGeorgian = currentBook.lang === 'ka' || currentBook.originalLang === 'ka' || currentBook.isTranslatedEdition || hasGeorgianText;
+    const sourceLang = EngbotCore.bookSourceLanguage(currentBook);
+    const isGeorgian = sourceLang === 'ka';
 
     if (isGeorgian) {
-        currentBook.lang = 'ka';
         currentLang = 'ka';
         if (!currentBook.translatedLangs.includes('ka')) currentBook.translatedLangs.push('ka');
         // Heal chapters missing text_ka
@@ -10406,7 +10504,7 @@ async function selectBook(bookId, autoPlayFirst = false) {
     if (DOM.heroGeorgianBadge) {
         if (hasKa) {
             DOM.heroGeorgianBadge.classList.remove('hidden');
-            if (currentBook.lang === 'ka' && !currentBook.isTranslatedEdition) {
+            if (sourceLang === 'ka') {
                 DOM.heroGeorgianBadge.textContent = '🇬🇪 ქართული გამოცემა (Georgian Edition)';
             } else {
                 DOM.heroGeorgianBadge.textContent = '🇬🇪 Georgian Translated';
@@ -10417,7 +10515,7 @@ async function selectBook(bookId, autoPlayFirst = false) {
     }
 
     if (DOM.btnTranslateWholeBookText) {
-        if (currentBook.lang === 'ka' && !currentBook.isTranslatedEdition) {
+        if (sourceLang === 'ka') {
             DOM.btnTranslateWholeBookText.textContent = "Translate Book (English)";
         } else {
             DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Book (Georgian)";

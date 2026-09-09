@@ -86,7 +86,22 @@
     function geminiModels(selected) {
         const preferred = String(selected || '').trim();
         const retired = /^gemini-(?:1\.5|2\.0)(?:-|$)/.test(preferred);
-        return [...new Set([!preferred || retired ? 'gemini-2.5-flash' : preferred, 'gemini-2.5-flash', 'gemini-2.5-pro'])];
+        return [...new Set([!preferred || retired ? 'gemini-2.5-flash' : preferred, 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-pro'])];
+    }
+    function bookSourceLanguage(book) {
+        const sample = (book?.chapters || []).map(c => c.text || '').join(' ').slice(0, 6000);
+        const detected = detectLanguage(sample);
+        return detected === 'auto' ? normalizeLanguage(book?.originalLang || book?.lang || book?.language) : detected;
+    }
+    function reviewDecision(review) {
+        if (!review || !Array.isArray(review.errors) || !['approved','needs_revision'].includes(review.verdict)) return {valid:false,blocking:[],minor:[]};
+        const blocking=[],minor=[];
+        for (const error of review.errors) {
+            if (!error || !['minor','major','critical','blocking'].includes(error.severity)) return {valid:false,blocking:[],minor:[]};
+            (error.severity==='minor'?minor:blocking).push(error);
+        }
+        // Minor stylistic suggestions do not invalidate an otherwise reviewed translation.
+        return {valid:review.verdict==='approved'||review.errors.length>0,blocking,minor};
     }
     function providerOutputComplete(data) {
         const reason = data?.candidates?.[0]?.finishReason || data?.choices?.[0]?.finish_reason || data?.finish_reason;
@@ -101,5 +116,5 @@
             ? Math.round(declaredSeconds) : Math.round(words / 140 * 60);
         return { words, seconds };
     }
-    return { normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, cleanVerbatim, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats };
+    return { normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, cleanVerbatim, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats, reviewDecision, bookSourceLanguage };
 });

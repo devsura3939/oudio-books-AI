@@ -503,7 +503,7 @@ TOP 24 EN→GEORGIAN TRANSLATION DEFECTS TO AVOID:
 12. Capitalized sentence starts: Word → word (Georgian has no capitals).
 13. Calqued idiom: "It's raining cats and dogs" → *წვიმს კატები და ძაღლები. Native: ძალიან ძლიერი წვიმაა / უროსავით წვიმს.
 14. "to have" with nominative: *ის ჰქონდა. Native: მას ჰქონდა (dative experiencer).
-15. Russian-style double negation: არავინ არაფერი არ... — ungrammatical in Georgian; use არავინ არაფერს ამბობს.
+15. Georgian negative concord is valid: არავინ არ მოვიდა. Do not remove verbal არ merely because a negative pronoun or determiner already occurs in the clause.
 16. "said" with wrong verb: თქვა vs უთხრა (თქვა = said [words], უთხრა = said to [someone]).
 17. Comma before და: Native Georgian omits it.
 18. Lost preverb: *წაიკითხე for aorist. Native: წაიკითხა.
@@ -831,10 +831,10 @@ GEORGIAN NEGATION — FOUR MARKERS, NEVER MIXED UP:
 • არ = standard declarative negation (present/future/imperfect): არ ვიცი, არ მოვა.
 • არა = standalone "no" (answer word), or negates non-verb words: არა, ეს არასწორია.
 • ვერ = "cannot / fails to" (ability/achievement failure): ვერ ვიპოვე "I couldn't find it", ვერ მოვა "he won't make it".
-• ნუ = prohibitive (negative imperative ONLY): ნუ მიდის, ნუ აკეთებ this. NEVER არ for commands.
-• One negator per clause. Double negation (არ...ვერ / არავინ...არაფერი არ) is UNGRAMMATICAL.
-• Negative pronouns already carry negation: არავინ "nobody", არაფერი "nothing", არასდროს "never".
-  With a verb they take არ once: არავინ არ მოვიდა is wrong; native: არავინ არ მოსულა → prefer არავინ მოსულა (pro-drop negation) or single არ.
+• ნუ = prohibitive: ნუ აკეთებ. Negative commands may also use არ + optative, e.g. არ წახვიდე; preserve the intended mood.
+• NEGATIVE CONCORD IS VALID: არავინ არ მოვიდა (nobody came), არაფერი არ უთქვამს (said nothing), არავითარი საფრთხე არ არსებობს (there is no danger).
+• Do not flag negative pronoun/determiner + verbal არ as an ungrammatical double negative or remove it. Negative-concord words and verbal particles can express a SINGLE semantic negation.
+• Single and multiple negation depend on construction and word order; do not mechanically add არ to every negative pronoun, heading or fragment. Check meaning and syntax, not a count of negative words.
 • ვერ + aorist = failed attempt: ვერ გავაკეთე "I failed to do it". არ + aorist = didn't do it (choice/not).
 • ნუთუ = rhetorical "surely not / don't tell me": ნუთუ არ იცი? "Don't you know?"`;
 
@@ -2259,14 +2259,15 @@ AORIST NUANCE (critical for narrative prose):
 English "he didn't come" is ambiguous between these; pick არ by default and
 ვერ only when the source signals inability (couldn't, failed to, was unable).
 
-DOUBLE NEGATION (obligatory, not redundancy):
+NEGATIVE CONCORD (valid, not redundancy):
 Georgian negates the SENTENCE and then also negates the indefinite pronoun:
 • nobody → არავინ ... არ: არავინ არ მოვიდა (lit. "nobody not came").
 • never → არასოდეს ... არ: არასდროს არ მივიწყებდა.
 • nothing → არაფერი ... არ: არაფერი არ ვთქვი.
 • nowhere → არსად ... არ; no one's → არც ერთი ... არ.
-The არ before the verb is REQUIRED even though არავინ etc. are already
-negative. Omitting it (არავინ მოვიდა) is substandard.
+These are valid constructions, not an English-style double-negative error.
+Single negation is also possible depending on construction and word order.
+Do not automatically insert a particle into a negative phrase or fragment.
 
 NEGATIVE CONCORD WORDS:
 ვეღარ (no longer could), აღარ (no longer/not anymore), ვერც კი (not even),
@@ -5128,6 +5129,23 @@ function getKaCompactRules() {
     return [KA_SYNTAX, KA_CONTRASTIVE_PATTERNS, KA_EXPERIENCER_FRAMES_COMPREHENSIVE, KA_PROPER_NOUN_TRANSLITERATION, KA_REAL_DATA_CORPUS_EXEMPLARS, KA_GEORGIAN_PRO_STYLE_GUIDE, KA_SYNTACTIC_POLYPERSONAL_ENGINE, KA_GEORGIAN_PRO_DISCOURSE_ENGINE, KA_MORPHOLOGY, KA_VERBS, KA_DEFECTS, KA_DECISION_TABLE, KA_PUNCTUATION, KA_WORDBANK, KA_PREVERBS, KA_CASE_SYSTEM, KA_NEGATION, KA_SPEECH_VERBS].join('\n');
 }
 
+// Retrieve a bounded set of complete rule paragraphs for each source segment.
+// Keep the full knowledge base available to the training and offline engines.
+function getKaTaskRules(source = '') {
+    // Always include polarity guidance: a translation may use a negative
+    // construction even when the source expresses it lexically (e.g. "without").
+    const blocks = [KA_NEGATION, KA_CASE_SYSTEM, KA_MORPHOLOGY];
+    if (/\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/.test(source)) blocks.push(KA_PROPER_NOUN_TRANSLITERATION);
+    blocks.push(KA_DEFECTS, KA_PUNCTUATION, KA_SYNTAX);
+    const selected = [];
+    let size = 0;
+    for (const block of blocks) for (const paragraph of block.trim().split(/\n\s*\n/)) {
+        if (size + paragraph.length + 2 > 6000) continue;
+        selected.push(paragraph); size += paragraph.length + 2;
+    }
+    return selected.join('\n\n');
+}
+
 
 // Focused set for QA repair passes (small, defect-driven).
 function getKaRepairRules() {
@@ -5205,15 +5223,8 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'neg_digit', message: 'Negation word directly followed by a digit — corrupted draft fragment, remove the stray token and rebuild the clause.' });
     }
 
-    // 3.12 Two negators inside a single clause
-    const clauseList = text.split(/[.!?…,;:—()]+/);
-    for (const cl of clauseList) {
-        const negs = (cl.match(/(^|\s)(არ|ვერ|არა|ნუ)(\s|$)/g) || []).length;
-        if (negs >= 2) {
-            issues.push({ rule: 'double_neg_clause', message: `Two negation words in one clause ("${cl.trim().slice(0, 45)}") — keep exactly one negator and rebuild the clause.` });
-            break;
-        }
-    }
+    // 3.12 Retired: punctuation alone cannot identify clause boundaries.
+    // Coordinated predicates and negative concord may contain multiple negators.
 
     // 3.13 Lowercase Latin fragments inside Georgian text
     const latinFrag = text.match(/(^|\s)[a-z]{3,}(\s|$|[.,!?])/);
@@ -5740,18 +5751,8 @@ function validateGeorgianTranslation(text) {
         issues.push({ rule: 'comparative_untranslated', message: `"${m44[0]}" — untranslated English comparison word. Map: "-er than" → Y-ზე + adjective (suffix on the compared noun, adjective unchanged); "more" → უფრო; "less" → ნაკლებად; "than" → ვიდრე (conjunction) or -ზე; "the -est" → ყველაზე; better/worse → უკეთესი/უარესი; best → საუკეთესო.` });
     }
 
-    // 3.76 Double negation defect: არავინ/არაფერი/არასოდეს/არსად + verb
-    //      WITHOUT the obligatory second არ — Georgian requires negative
-    //      concord (არავინ არ მოვიდა), unlike English.
-    const araSpanRe = /(?<![\u10A0-\u10FF])(?:არავინ|არავითარი|არაფერი|არასოდეს|არასდროს|არსად)(?![\u10A0-\u10FF])([^.!?]{0,60})/g;
-    let m45;
-    while ((m45 = araSpanRe.exec(text)) !== null) {
-        const spanTail = m45[1] || '';
-        const hasNeg = /(?<![\u10A0-\u10FF])(?:არ|ვერ|ნუ|ვეღარ|აღარ)(?![\u10A0-\u10FF])/.test(spanTail);
-        if (!hasNeg) {
-            issues.push({ rule: 'negation_double_missing', message: `"${(m45[0] || '').trim()}" — indefinite negative (არავინ/არაფერი/არასოდეს/არსად) requires DOUBLE negation: არავინ არ მოვიდა. The არ before the verb is obligatory in Georgian.` });
-        }
-    }
+    // 3.76 Retired: a negative word does not prove a missing verbal particle.
+    // Preserve fragments and valid single-negation constructions for contextual review.
 
     // 3.77 Concessive calque: English "despite/although/however/still"
     //      surviving untranslated, or the defective მიუხედავად რომ form
@@ -6918,26 +6919,8 @@ function correctGeorgianMorphology(text) {
 
     // ── v1.15.0 additions ──
 
-    // 4.62 Double-negation repair: არავინ/არაფერი/არასოდეს/არსად + verb
-    //      without the obligatory second არ → insert არ immediately before
-    //      the conjugated verb. Conservative span-scan like QA 3.76.
-    const negFixRe = /(?<![\u10A0-\u10FF])(არავინ|არავითარი|არაფერი|არასოდეს|არასდროს|არსად)(?![\u10A0-\u10FF])([^.!?]{0,80})/g;
-    out = out.replace(negFixRe, (m, pron, tail) => {
-        if (/(?<![\u10A0-\u10FF])(?:არ|ვერ|ნუ|ვეღარ|აღარ)(?![\u10A0-\u10FF])/.test(tail)) return m;
-        // Insert არ before the LAST Georgian word in the tail (the verb slot)
-        const words = tail.split(/(\s+)/);
-        let lastGeorgianIdx = -1;
-        for (let i = words.length - 1; i >= 0; i--) {
-            if (/^[\u10A0-\u10FF]{2,}/.test(words[i])) { lastGeorgianIdx = i; break; }
-        }
-        if (lastGeorgianIdx === -1) return m;
-        // Avoid inserting არ into a non-verb trailing word (e.g. a noun):
-        // only fix when the tail has exactly one Georgian word (S V order)
-        const georgianWordCount = words.filter(w => /^[\u10A0-\u10FF]{2,}/.test(w)).length;
-        if (georgianWordCount !== 1) return m;
-        words[lastGeorgianIdx] = 'არ ' + words[lastGeorgianIdx];
-        return pron + words.join('');
-    });
+    // 4.62 Retired: the last Georgian word is not necessarily a verb.
+    // Never inject a polarity-changing particle from a token-count heuristic.
 
     // 4.63 Untranslated English concessives → Georgian carriers
     //      (deterministic single-word mappings; "despite" needs a noun so it
@@ -9413,6 +9396,7 @@ if (typeof module !== 'undefined' && module.exports) {
         translateOfflineEnToKa,
         getKaKnowledgeBase,
         getKaCompactRules,
+        getKaTaskRules,
         getKaRepairRules,
         validateGeorgianTranslation,
         correctGeorgianMorphology,
