@@ -8,7 +8,7 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.49.1';
+const APP_VERSION = 'v1.49.4';
 const ENGINE_VERSION = 'v1.49.1 (Bilingual translation and source integrity)';
 
 let db = null;
@@ -2333,13 +2333,10 @@ async function init() {
         window.speechSynthesis.onvoiceschanged = populateVoiceList;
     }
 
-    // Seed the classics once per store scope: the local shelf and each signed-in
-    // cloud shelf get their own flag, so signing in doesn't leave an empty shelf.
-    const seedFlag = usingCloud ? 'lumina_seeded_cloud_v1' : 'lumina_seeded_v13';
-    if (!localStorage.getItem(seedFlag)) {
-        await seedDefaultBooks();
-        localStorage.setItem(seedFlag, 'true');
-    }
+    // The shelf is user-owned content only. Older releases seeded public classics
+    // into every account; remove those legacy rows once without touching uploads.
+    await purgeLegacyDemoBooks();
+    subscribeToLibraryRealtime();
 
     if (currentUser && currentUser.email) {
         await renderDigitalShelf();
@@ -2374,6 +2371,68 @@ async function initDB() {
     }
     await initLocalDB();
     console.info('[store] books are stored in', usingCloud ? 'Supabase' : 'IndexedDB (local only)');
+}
+
+let realtimeRefreshTimer = null;
+let realtimeRefreshBusy = false;
+let realtimePollTimer = null;
+
+function scheduleRealtimeLibraryRefresh(change) {
+    const payload = change && change.payload ? change.payload : {};
+    const row = payload.eventType === 'DELETE' ? (payload.old || {}) : (payload.new || {});
+    if (change?.table === 'books' && payload.eventType === 'DELETE') {
+        const id = row.slug || row.id;
+        if (id) {
+            markBookAsDeleted(id, row.title, row.slug);
+            deleteBookFromAllLocalDBs(id, row.title).catch(() => {});
+            if (currentBook && (String(currentBook.id) === String(id) || String(currentBook.row_id) === String(row.id))) {
+                currentBook = null;
+                if (DOM.chaptersContainer) DOM.chaptersContainer.classList.add('hidden');
+            }
+        }
+    }
+    invalidateStudioLibrary();
+    clearTimeout(realtimeRefreshTimer);
+    realtimeRefreshTimer = setTimeout(async () => {
+        if (realtimeRefreshBusy || !currentUser) return;
+        realtimeRefreshBusy = true;
+        try {
+            await renderDigitalShelf();
+            if (typeof renderScanShelf === 'function') await renderScanShelf();
+            // Do not replace the active object while a translation is committing
+            // chapter checkpoints; the next event will refresh it when finished.
+            if (!isTranslatingWholeBook && currentBook && !isBookDeleted(currentBook)) {
+                await selectBook(currentBook.id, false);
+            }
+        } catch (e) {
+            console.warn('[realtime] library refresh failed:', e);
+        } finally {
+            realtimeRefreshBusy = false;
+        }
+    }, 220);
+}
+
+function subscribeToLibraryRealtime() {
+    clearInterval(realtimePollTimer);
+    if (usingCloud && window.LuminaStore && typeof window.LuminaStore.subscribeLibraryChanges === 'function') {
+        window.LuminaStore.subscribeLibraryChanges(scheduleRealtimeLibraryRefresh);
+        // Realtime is the fast path. A bounded poll is retained as a recovery
+        // path for projects where the SQL publication has not propagated yet
+        // or a mobile network silently drops a websocket.
+        realtimePollTimer = setInterval(() => {
+            if (currentUser && usingCloud) scheduleRealtimeLibraryRefresh({ table: 'books', payload: { eventType: 'POLL' } });
+        }, 15000);
+    }
+}
+
+function stopLibraryRealtime() {
+    clearTimeout(realtimeRefreshTimer);
+    realtimeRefreshTimer = null;
+    clearInterval(realtimePollTimer);
+    realtimePollTimer = null;
+    if (window.LuminaStore && typeof window.LuminaStore.unsubscribeLibraryChanges === 'function') {
+        window.LuminaStore.unsubscribeLibraryChanges();
+    }
 }
 
 function initLocalDB() {
@@ -2491,6 +2550,27 @@ function isBookDeleted(bookOrId) {
     return false;
 }
 
+// Public demo/classic rows were written by older releases into each user's
+// shelf. They are not user files and must never be recovered or displayed.
+function isDemoBook(book) {
+    if (!book) return false;
+    const id = String(book.id || book.slug || '').toLowerCase();
+    if (id.startsWith('classic_')) return true;
+    const extra = book.extra || book.metadata?.extra || {};
+    const source = String(extra.source || '').toLowerCase();
+    return source === 'demo' || source === 'seed' || extra.is_demo === true;
+}
+
+async function purgeLegacyDemoBooks() {
+    const legacy = Array.isArray(DISCOVER_CLASSICS) ? DISCOVER_CLASSICS : [];
+    await Promise.all(legacy.map(book => deleteBookFromAllLocalDBs(book.id, book.title).catch(() => {})));
+    if (usingCloud && window.LuminaStore && typeof window.LuminaStore.removeDemoBooks === 'function') {
+        try { await window.LuminaStore.removeDemoBooks(); } catch (e) {
+            console.warn('[store] legacy demo cleanup failed:', e);
+        }
+    }
+}
+
 async function deleteBookFromAllLocalDBs(id, title) {
     const candidateDBs = [
         'LuminaAudioStudioDB_v12',
@@ -2564,6 +2644,13 @@ async function saveBookToDB(book) {
     invalidateStudioLibrary();
     if (!book) return;
     const uid = getCurrentUserId();
+    if (isDemoBook(book)) return;
+    if (book.user_id && uid !== 'guest' && String(book.user_id) !== String(uid)) {
+        throw new Error('Cannot save a book owned by another account');
+    }
+    if (book.user_id && uid === 'guest' && book.user_id !== 'guest') {
+        throw new Error('Sign in to save this book');
+    }
     if (!book.user_id && uid !== 'guest') {
         book.user_id = uid;
     }
@@ -2705,7 +2792,7 @@ async function recoverAllLocalBooks() {
         try {
             const books = await readBooksFromIndexedDB(dbName);
             for (const book of books) {
-                if (!book || !book.title) continue;
+                if (!book || !book.title || isDemoBook(book)) continue;
                 // STRICT: If user deleted this book, NEVER resurrect it!
                 if (isBookDeleted(book)) continue;
 
@@ -2735,9 +2822,9 @@ async function recoverAllLocalBooks() {
         if (book.user_id && currentUid !== 'guest' && book.user_id !== currentUid) {
             continue;
         }
-        if (currentUid !== 'guest' && !book.user_id) {
-            book.user_id = currentUid;
-        }
+        // Do not silently adopt an unowned local file into whichever account
+        // happens to sign in on this device.
+        if (currentUid !== 'guest' && !book.user_id) continue;
         try {
             await saveBookToLocalDB(book);
         } catch (e) {}
@@ -2779,14 +2866,14 @@ async function readAllStudioBooks() {
 
     // First populate from local DB (strictly filtering out any deleted books)
     for (const lb of localBooks) {
-        if (isBookDeleted(lb)) continue;
+        if (isBookDeleted(lb) || isDemoBook(lb)) continue;
         const key = getBookKey(lb);
         if (key) bookMap.set(key, lb);
     }
 
     // Merge cloud books (strictly filtering out deleted books)
     for (const cb of cloudBooks) {
-        if (isBookDeleted(cb)) {
+        if (isBookDeleted(cb) || isDemoBook(cb)) {
             // Reconcile cloud: ensure deleted from Supabase in background
             if (usingCloud && window.LuminaStore && typeof window.LuminaStore.deleteBook === 'function') {
                 window.LuminaStore.deleteBook(cb.id).catch(() => {});
@@ -2808,8 +2895,8 @@ async function readAllStudioBooks() {
         }
     }
 
-    const merged = Array.from(bookMap.values()).filter(b => !isBookDeleted(b));
-    return merged.length > 0 ? merged : localBooks.filter(b => !isBookDeleted(b));
+    const merged = Array.from(bookMap.values()).filter(b => !isBookDeleted(b) && !isDemoBook(b));
+    return merged.length > 0 ? merged : localBooks.filter(b => !isBookDeleted(b) && !isDemoBook(b));
 }
 
 async function loadBooks() {
@@ -2868,6 +2955,13 @@ function saveBookToLocalDB(book) {
     invalidateStudioLibrary();
     if (!book) return Promise.resolve();
     const uid = getCurrentUserId();
+    if (isDemoBook(book)) return Promise.resolve();
+    if (book.user_id && uid !== 'guest' && String(book.user_id) !== String(uid)) {
+        return Promise.reject(new Error('Cannot save a book owned by another account'));
+    }
+    if (book.user_id && uid === 'guest' && book.user_id !== 'guest') {
+        return Promise.reject(new Error('Sign in to access this book'));
+    }
     if (!book.user_id && uid !== 'guest') {
         book.user_id = uid;
     }
@@ -2886,23 +2980,17 @@ function getAllLocalBooks() {
         req.onsuccess = () => {
             const uid = getCurrentUserId();
             const all = req.result || [];
-            // Strict account shelf isolation:
-            // 1. Classic books (starting with classic_) are public defaults available to all.
-            // 2. If authenticated user (uid !== 'guest'), only show:
-            //    - books explicitly tagged with book.user_id === uid
-            //    - freshly created local books without a user_id
-            //    - NEVER show books tagged with a different user's user_id!
-            // 3. If guest (uid === 'guest'), do NOT show books tagged with an authenticated user_id!
+            // Strict account shelf isolation: authenticated users only see rows
+            // tagged with their Supabase id; guests only see guest/offline rows.
             const filtered = all.filter(b => {
-                if (!b || isBookDeleted(b)) return false;
-                if (b.id && String(b.id).startsWith('classic_')) return true;
+                if (!b || isBookDeleted(b) || isDemoBook(b)) return false;
                 if (uid === 'guest') {
                     return !b.user_id || b.user_id === 'guest';
                 }
-                if (b.user_id) {
-                    return b.user_id === uid;
-                }
-                return true;
+                // Never expose an unowned local file to whichever account
+                // happens to sign in on this device.
+                // Canonical ownership predicate: book.user_id === uid.
+                return b.user_id === uid;
             });
             resolve(filtered);
         };
@@ -4554,6 +4642,8 @@ async function login(email, password, rememberParam) {
         if (window.LuminaStore) {
             usingCloud = await window.LuminaStore.init();
         }
+        await purgeLegacyDemoBooks();
+        subscribeToLibraryRealtime();
 
         // Restore and activate account-scoped AI settings immediately
         try {
@@ -4670,6 +4760,7 @@ async function logout() {
     if (window.LuminaStore && window.LuminaStore.signOut) {
         await window.LuminaStore.signOut();
     }
+    stopLibraryRealtime();
     usingCloud = false;
     updateAuthUI();
     updateAuthGateVisibility();
@@ -9379,6 +9470,8 @@ async function saveTranslatedBookEdition(originalBook, targetLang = 'ka') {
         language: targetLang,
         translatedLangs: [targetLang],
         isTranslatedEdition: true,
+        isUserUploaded: true,
+        originalLang: originalBook.lang || originalBook.language || 'en',
         originalBookId: originalBook.id,
         dateAdded: existing?.dateAdded || new Date().toISOString(),
         lastPlayedChapterId: existing?.lastPlayedChapterId || (translatedChapters[0] ? translatedChapters[0].id : 1),
@@ -9386,8 +9479,10 @@ async function saveTranslatedBookEdition(originalBook, targetLang = 'ka') {
         chapters: translatedChapters,
         extra: {
             ...(originalBook.extra || {}),
+            source: 'translation',
             is_translated_copy: true,
-            source_book_id: originalBook.id
+            source_book_id: originalBook.id,
+            translated_from_language: originalBook.lang || originalBook.language || 'en'
         }
     };
 
@@ -9880,6 +9975,8 @@ async function handleFileUpload(file) {
             author,
             coverUrl: coverUrl,
             chapters: chapters,
+            source_filename: isPdf ? file.name : null,
+            page_count: isPdf ? totalPages : null,
             lang: detectedLang,
             originalLang: detectedLang,
             translatedLangs: isGeorgianBook ? ['ka'] : [],
@@ -9898,6 +9995,18 @@ async function handleFileUpload(file) {
         };
 
         await saveBookToDB(newBook);
+        // Keep the parsed text available immediately, but also retain the
+        // original PDF in the user's private Supabase folder for every device.
+        if (isPdf && usingCloud && window.LuminaStore && typeof window.LuminaStore.uploadSourceFile === 'function') {
+            try {
+                const pdfPath = await window.LuminaStore.uploadSourceFile(newBook.id, file);
+                newBook.pdf_path = pdfPath;
+                await saveBookToLocalDB(newBook);
+            } catch (fileErr) {
+                console.warn('[upload] source PDF cloud upload failed:', fileErr);
+                showToast('Book text was saved, but the original PDF could not be synced yet.', 'error');
+            }
+        }
         DOM.uploadProgressBar.style.width = '100%';
         DOM.uploadProgressPct.textContent = '100%';
         DOM.uploadStatusText.textContent = isGeorgianBook ? "ქართული წიგნი წარმატებით ჩაიტვირთა!" : "Import complete!";
@@ -10015,6 +10124,7 @@ async function createBookFromScannedPages(pages, meta) {
         dateAdded: new Date().toISOString(),
         lastPlayedChapterId: chapters.length ? chapters[0].id : null,
         progressPct: 0,
+        isUserUploaded: true,
         extra: {
             source: 'scan',
             scanned_pages: list.length,

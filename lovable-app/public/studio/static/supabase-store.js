@@ -46,6 +46,7 @@
 
   var client = null;
   var userId = null;
+  var libraryChannel = null;
 
   function sdk() {
     // The UMD bundle publishes `window.supabase` (the module namespace).
@@ -150,6 +151,49 @@
     return ensureClient();
   }
 
+  function unsubscribeLibraryChanges() {
+    if (!libraryChannel || !client) {
+      libraryChannel = null;
+      return;
+    }
+    try { client.removeChannel(libraryChannel); } catch (e) {}
+    libraryChannel = null;
+  }
+
+  /**
+   * Subscribe to the authenticated user's library mutations. The database RLS
+   * policies remain the authority; the filter only reduces unnecessary events
+   * delivered to this tab. The callback receives the table and raw payload so
+   * the studio can remove deleted books from its offline mirror immediately.
+   */
+  function subscribeLibraryChanges(onChange) {
+    unsubscribeLibraryChanges();
+    if (!isReady() || !client || typeof client.channel !== "function") return false;
+
+    var callback = typeof onChange === "function" ? onChange : function () {};
+    var safeUserId = String(userId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safeUserId) return false;
+    var channel = client.channel("lumina-library-" + safeUserId);
+    ["books", "chapters", "audio_segments"].forEach(function (table) {
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: table, filter: "user_id=eq." + userId },
+        function (payload) {
+          try { callback({ table: table, payload: payload }); } catch (e) {
+            console.warn("[LuminaStore] realtime callback error:", e);
+          }
+        },
+      );
+    });
+    libraryChannel = channel;
+    channel.subscribe(function (status) {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        console.warn("[LuminaStore] library realtime status:", status);
+      }
+    });
+    return true;
+  }
+
   /**
    * Resolve the signed-in user.
    * @returns {Promise<boolean>} true when Supabase can be used.
@@ -178,6 +222,7 @@
     } catch (e) {}
 
     if (!hasActiveSession) {
+      unsubscribeLibraryChanges();
       userId = null;
       return false;
     }
@@ -429,6 +474,7 @@
     if (c) {
       try { await c.auth.signOut(); } catch (e) {}
     }
+    unsubscribeLibraryChanges();
     userId = null;
     try {
       sessionStorage.removeItem("lumina_auth_user");
@@ -492,6 +538,9 @@
       row_id: bookRow.id,
       title: bookRow.title,
       author: bookRow.author || "Unknown author",
+      source_filename: bookRow.source_filename || null,
+      pdf_path: bookRow.pdf_path || null,
+      page_count: bookRow.page_count || null,
       // Older saves left the column at its English default; retain explicit studio metadata.
       language: flattenedExtra.lang || flattenedExtra.language || bookRow.language || "en",
       lang: flattenedExtra.lang || flattenedExtra.language || bookRow.language || "en",
@@ -533,6 +582,9 @@
       title: book.title || "Untitled",
       author: book.author || null,
       language: book.lang || book.language || "en",
+      source_filename: book.source_filename || (book.extra && book.extra.source_filename) || null,
+      pdf_path: book.pdf_path || (book.extra && book.extra.pdf_path) || null,
+      page_count: Number(book.page_count || (book.extra && book.extra.page_count) || 0) || null,
       cover_url: book.coverUrl || null,
       total_chapters: (book.chapters || []).length,
       status: "ready",
@@ -726,6 +778,54 @@
     return true;
   }
 
+  /** Upload the original PDF into the owner's private folder. */
+  async function uploadSourceFile(studioId, file) {
+    if (!isReady() || !file) return null;
+    var sid = String(studioId);
+    var path = userId + "/" + sid + ".pdf";
+    try {
+      var upload = await client.storage.from("book-pdfs").upload(path, file, {
+        upsert: true,
+        contentType: "application/pdf",
+      });
+      if (upload.error) throw upload.error;
+      var update = await client.from("books")
+        .update({ pdf_path: path, source_filename: file.name || null, status: "ready" })
+        .eq("user_id", userId)
+        .eq("slug", sid);
+      if (update.error) throw update.error;
+      return path;
+    } catch (err) {
+      console.warn("[LuminaStore] source file upload warning:", err);
+      throw err;
+    }
+  }
+
+  /** Remove legacy seeded/demo rows for this owner without touching uploads. */
+  async function removeDemoBooks() {
+    if (!isReady()) return 0;
+    try {
+      var res = await client.from("books")
+        .select("id,slug,title,metadata")
+        .eq("user_id", userId);
+      if (res.error) throw res.error;
+      var rows = (res.data || []).filter(function (row) {
+        var meta = row.metadata || {};
+        var extra = meta.extra || {};
+        return String(row.slug || "").indexOf("classic_") === 0 ||
+          String(extra.source || "").toLowerCase() === "demo" ||
+          String(extra.source || "").toLowerCase() === "seed";
+      });
+      for (var i = 0; i < rows.length; i++) {
+        await deleteBook(rows[i].slug || rows[i].id);
+      }
+      return rows.length;
+    } catch (err) {
+      console.warn("[LuminaStore] demo cleanup warning:", err);
+      return 0;
+    }
+  }
+
   /**
    * Lightweight progress updater: updates only book metadata without touching chapters.
    * Prevents database lockups, high latency, and chapter thrashing during playback.
@@ -888,6 +988,10 @@
     updateProgress: updateProgress,
     uploadScanImage: uploadScanImage,
     uploadChapterAudio: uploadChapterAudio,
+    uploadSourceFile: uploadSourceFile,
+    removeDemoBooks: removeDemoBooks,
+    subscribeLibraryChanges: subscribeLibraryChanges,
+    unsubscribeLibraryChanges: unsubscribeLibraryChanges,
     createJob: createJob,
     fetchActiveEnginePack: fetchActiveEnginePack,
   };
