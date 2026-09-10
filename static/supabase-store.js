@@ -256,11 +256,10 @@
     var c = ensureClient();
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     var cleanEmail = String(email || "").trim();
-    var isOwner = cleanEmail.toLowerCase() === "ananiadevsurashvili@gmail.com";
     try {
       var res = await c.auth.signInWithPassword({
         email: cleanEmail,
-        password: password || (isOwner ? "anania39" : "")
+        password: password || ""
       });
       if (!res.error && res.data && res.data.user) {
         userId = res.data.user.id;
@@ -271,7 +270,7 @@
         purgeStorageQuotaPressure();
         res = await c.auth.signInWithPassword({
           email: cleanEmail,
-          password: password || (isOwner ? "anania39" : "")
+          password: password || ""
         });
         if (!res.error && res.data && res.data.user) {
           userId = res.data.user.id;
@@ -286,7 +285,7 @@
         try {
           var retryRes = await c.auth.signInWithPassword({
             email: cleanEmail,
-            password: password || (isOwner ? "anania39" : "")
+            password: password || ""
           });
           if (!retryRes.error && retryRes.data && retryRes.data.user) {
             userId = retryRes.data.user.id;
@@ -305,7 +304,7 @@
     var c = ensureClient();
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     var cleanEmail = String(email || "").trim();
-    var redirectUrl = window.location.origin + window.location.pathname;
+    var redirectUrl = authRedirectUrl();
     try {
       var res = await c.auth.signUp({
         email: cleanEmail,
@@ -313,7 +312,7 @@
         options: { emailRedirectTo: redirectUrl }
       });
       if (!res.error && res.data && res.data.user) {
-        userId = res.data.user.id;
+        if (res.data.session) userId = res.data.user.id;
         return { success: true, user: res.data.user, session: res.data.session };
       }
       return { success: false, error: res.error };
@@ -362,18 +361,7 @@
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     var cleanEmail = String(email || "").trim().toLowerCase();
 
-    // 1. Requirement: Check if mail exists in registered user list
-    var exists = await checkUserExists(cleanEmail);
-    if (exists === false) {
-      return {
-        success: false,
-        error: { message: "No registered account found with email " + cleanEmail + ". Please check your spelling or create an account." }
-      };
-    }
-
-    var callbackUrl = (typeof window !== "undefined" && window.location && window.location.href)
-      ? window.location.href.split("?")[0].split("#")[0]
-      : "https://devsura3939.github.io/oudio-books-AI/";
+    var callbackUrl = authRedirectUrl("recovery");
     try {
       var res = await c.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: callbackUrl,
@@ -389,6 +377,9 @@
     var c = ensureClient();
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     try {
+      if (!recoveryUserId) throw new Error("Open a valid recovery email link before changing your password.");
+      var verified = await c.auth.getUser();
+      if (verified.error || verified.data?.user?.id !== recoveryUserId) throw new Error("Your recovery session expired. Request a new link.");
       var res = await c.auth.updateUser({ password: newPassword });
       if (res.error) throw res.error;
       return { success: true, user: res.data.user };
@@ -426,47 +417,80 @@
     return null;
   }
 
-  async function handleRecoverySession() {
+  function authRedirectUrl(type) {
+    var url = new URL(window.location.href);
+    url.search = "";
+    url.hash = "";
+    if (type) url.searchParams.set("type", type);
+    return url.href;
+  }
+
+  async function resendConfirmation(email) {
     var c = ensureClient();
-    if (!c || typeof window === "undefined") return null;
+    if (!c) return { success: false, error: { message: "Authentication service unavailable." } };
     try {
-      var hashStr = (window.location.hash || "").replace(/^#/, "");
-      var searchStr = (window.location.search || "").replace(/^\?/, "");
-      var hashParams = new URLSearchParams(hashStr);
-      var searchParams = new URLSearchParams(searchStr);
+      var res = await c.auth.resend({ type: "signup", email: String(email || "").trim(),
+        options: { emailRedirectTo: authRedirectUrl() } });
+      return { success: !res.error, error: res.error };
+    } catch (error) { return { success: false, error: error }; }
+  }
 
-      var code = searchParams.get("code") || hashParams.get("code");
-      var accessToken = hashParams.get("access_token") || searchParams.get("access_token");
-      var refreshToken = hashParams.get("refresh_token") || searchParams.get("refresh_token");
+  var callbackPromise = null;
+  var recoveryUserId = null;
+  function clearAuthCallback() {
+    recoveryUserId = null;
+    callbackPromise = null;
+    try { sessionStorage.removeItem("engbot_recovery_user"); } catch (e) {}
+    var url = new URL(window.location.href);
+    ["code", "token_hash", "type", "access_token", "refresh_token", "error", "error_code", "error_description"].forEach(function (key) { url.searchParams.delete(key); });
+    url.hash = "";
+    window.history.replaceState(null, "", url.pathname + url.search);
+  }
 
-      if (code) {
-        var resCode = await c.auth.exchangeCodeForSession(code);
-        if (resCode.data && resCode.data.user) {
-          userId = resCode.data.user.id;
-          return { success: true, user: resCode.data.user };
+  function handleRecoverySession() {
+    // One exchange per link, even if auth UI rerenders during SDK initialization.
+    if (callbackPromise) return callbackPromise;
+    callbackPromise = (async function () {
+      var c = ensureClient();
+      if (!c) return { success: false, error: { message: "Authentication service unavailable. Reload to retry." } };
+      var hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      var query = new URLSearchParams(window.location.search);
+      var param = function (key) { return query.get(key) || hash.get(key); };
+      var type = param("type");
+      try {
+        if (param("error") || param("error_code") || param("error_description")) {
+          throw new Error("This email link has expired or was already used. Request a new link.");
         }
-      }
-
-      if (accessToken && refreshToken) {
-        var resSession = await c.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken
-        });
-        if (resSession.data && resSession.data.user) {
-          userId = resSession.data.user.id;
-          return { success: true, user: resSession.data.user };
+        var result;
+        if (param("code")) {
+          result = await c.auth.exchangeCodeForSession(param("code"));
+        } else if (param("token_hash") && ["signup", "email", "recovery", "invite", "email_change"].includes(type)) {
+          result = await c.auth.verifyOtp({ token_hash: param("token_hash"), type: type });
+        } else if (param("access_token") && param("refresh_token")) {
+          result = await c.auth.setSession({ access_token: param("access_token"), refresh_token: param("refresh_token") });
+        } else {
+          var pending = sessionStorage.getItem("engbot_recovery_user");
+          if (type !== "recovery" || !pending) throw new Error("This link is incomplete. Request a new email link.");
+          result = await c.auth.getUser();
+          if (result.data?.user?.id !== pending) throw new Error("Your reset session expired. Request a new recovery link.");
         }
+        if (result.error) throw result.error;
+        var user = result.data?.user;
+        if (!user) throw new Error("This link is invalid or expired. Request a new email link.");
+        userId = user.id;
+        if (type === "recovery" || result.data?.redirectType === "recovery") {
+          type = "recovery";
+          recoveryUserId = user.id;
+          sessionStorage.setItem("engbot_recovery_user", user.id);
+        }
+        // Remove credentials immediately; retain only recovery mode for safe refresh.
+        window.history.replaceState(null, "", window.location.pathname + (type === "recovery" ? "?type=recovery" : ""));
+        return { success: true, user: user, type: type };
+      } catch (error) {
+        return { success: false, type: type, error: error };
       }
-
-      var userRes = await c.auth.getUser();
-      if (userRes.data && userRes.data.user) {
-        userId = userRes.data.user.id;
-        return { success: true, user: userRes.data.user };
-      }
-    } catch (e) {
-      console.warn("[supabase-store] handleRecoverySession failed:", e);
-    }
-    return null;
+    })();
+    return callbackPromise;
   }
 
   async function signOut() {
@@ -981,6 +1005,8 @@
     checkUserExists: checkUserExists,
     updatePassword: updatePassword,
     handleRecoverySession: handleRecoverySession,
+    resendConfirmation: resendConfirmation,
+    clearAuthCallback: clearAuthCallback,
     saveAccountSettings: saveAccountSettings,
     fetchAccountSettings: fetchAccountSettings,
     getAllBooks: getAllBooks,

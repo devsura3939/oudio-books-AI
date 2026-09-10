@@ -633,3 +633,17 @@ select optgroup {
 .reading-bookmark button:last-child { width:auto; font-size:12px; }
 .reading-bookmark-button { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; border-radius:10px; flex-shrink:0; }
 .reading-resume-anchor { background: #71cbb94d; border-radius:3px; box-shadow:0 2px #318c79; }
+
+/* Auth screens stay usable with mobile keyboards and password managers. */
+[data-admin-build][hidden] { display:none !important; }
+#authGateScreen { height:100dvh; align-items:safe center; }
+#authGateScreen input:not([type=checkbox]) { font-size:16px; min-height:48px; }
+#authGateScreen button { min-height:44px; }
+#authGateScreen button:disabled { opacity:.55; cursor:wait; }
+#authGateScreen :focus-visible { outline:2px solid #7bd8c8; outline-offset:3px; }
+.auth-password-field { position:relative; }
+.auth-password-field input { padding-right:68px; }
+.auth-password-field button { position:absolute; right:8px; top:2px; padding:0 8px; font-size:12px; color:#99ddd4; }
+#gateSubtitle { line-height:1.6; }
+
+#authGateScreen button[type=submit] { background:#7bd8c8; color:#082c29; box-shadow:none; }

@@ -24,6 +24,36 @@ export const Route = createFileRoute("/auth/callback")({
   component: AuthCallback,
 });
 
+// React can remount effects while a one-time email code is being consumed.
+const callbackExchanges = new Map<string, Promise<string | null>>();
+function exchangeEmailLink(href: string): Promise<string | null> {
+  const existing = callbackExchanges.get(href);
+  if (existing) return existing;
+  const exchange = (async () => {
+    const url = new URL(href);
+    const hash = new URLSearchParams(url.hash.slice(1));
+    const param = (key: string) => url.searchParams.get(key) ?? hash.get(key);
+    if (param("error") || param("error_description")) throw new Error("This email link expired or was already used. Request a new link.");
+    const type = param("type");
+    let error;
+    if (param("code")) {
+      ({ error } = await db.auth.exchangeCodeForSession(param("code")!));
+    } else if (param("access_token") && param("refresh_token")) {
+      ({ error } = await db.auth.setSession({ access_token: param("access_token")!, refresh_token: param("refresh_token")! }));
+    } else if (param("token_hash") && (type === "signup" || type === "email" || type === "recovery" || type === "invite" || type === "email_change")) {
+      ({ error } = await db.auth.verifyOtp({ token_hash: param("token_hash")!, type }));
+    } else {
+      throw new Error("This email link is incomplete. Request a new link.");
+    }
+    if (error) throw error;
+    const { data, error: userError } = await db.auth.getUser();
+    if (userError || !data.user) throw new Error("This link is invalid or expired. Request a new link.");
+    return type;
+  })();
+  callbackExchanges.set(href, exchange);
+  return exchange;
+}
+
 function AuthCallback() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -33,63 +63,19 @@ function AuthCallback() {
     let cancelled = false;
 
     async function finish() {
-      const url = new URL(window.location.href);
-      const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
-
-      // Check for errors first
-      const linkError =
-        url.searchParams.get("error_description") ?? hash.get("error_description");
-      if (linkError) {
-        if (!cancelled) setError(decodeURIComponent(linkError));
-        return;
-      }
-
-      // Detect the type of link - recovery means password reset
-      const linkType =
-        url.searchParams.get("type") ?? hash.get("type");
-
-      // PKCE / code flow (Supabase default)
-      const code = url.searchParams.get("code");
-      if (code) {
-        if (!cancelled) setStatus("Exchanging confirmation code...");
-        const { error: exchangeError } = await db.auth.exchangeCodeForSession(code);
-        if (exchangeError && !cancelled) {
-          setError(exchangeError.message);
-          return;
-        }
-      }
-
-      // Older implicit flow: tokens arrive in the URL hash
-      const accessToken = hash.get("access_token");
-      const refreshToken = hash.get("refresh_token");
-      if (accessToken && refreshToken) {
-        if (!cancelled) setStatus("Setting up your session...");
-        const { error: sessionError } = await db.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        if (sessionError && !cancelled) {
-          setError(sessionError.message);
-          return;
-        }
-      }
-
-      // Verify the session was established
-      const { data } = await db.auth.getUser();
-      if (cancelled) return;
-
-      if (data.user) {
-        // Password recovery link - go to auth page to set new password
-        if (linkType === "recovery") {
-          setStatus("Redirecting to set your new password...");
+      try {
+        const type = await exchangeEmailLink(window.location.href);
+        if (cancelled) return;
+        window.history.replaceState(null, "", window.location.pathname);
+        if (type === "recovery") {
+          setStatus("Opening password recovery...");
           navigate({ to: "/auth", search: { type: "recovery" }, replace: true });
-          return;
+        } else {
+          setStatus("Email confirmed. Opening sign in...");
+          navigate({ to: "/auth", search: { confirmed: "true" }, replace: true });
         }
-        // Email confirmation or magic link - redirect to log in page after success as requested
-        setStatus("Account confirmed! Redirecting to sign in...");
-        navigate({ to: "/auth", search: { confirmed: "true" }, replace: true });
-      } else {
-        setError("This link is invalid or has already been used. Please request a new one.");
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Could not verify this email link.");
       }
     }
 
