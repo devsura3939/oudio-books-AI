@@ -231,7 +231,7 @@ input[type="range"]::-moz-range-thumb {
     visibility: hidden;
     position: fixed;
     inset: 0;
-    z-index: 50;
+    z-index: 130;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -267,6 +267,15 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .modal-overlay.active { visibility: visible; }
+/* Settings always sit above the reader, including its fixed toolbar. */
+#readerThemeModal button, #readerThemeModal select { min-height: 44px; }
+#readerThemeModal .modal-content { max-height: calc(100dvh - 24px); }
+#readerView[data-eye-comfort="true"]::after {
+    content: ''; position: absolute; inset: 0; background: rgba(239, 169, 76, .11);
+    pointer-events: none; z-index: 80;
+}
+#readerView .font-georgian-serif { font-family: 'Noto Serif Georgian', Georgia, serif; }
+#readerView .font-georgian-sans { font-family: 'Noto Sans Georgian', Arial, sans-serif; }
 
 .modal-content::-webkit-scrollbar {
     width: 4px;

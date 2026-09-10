@@ -6,12 +6,14 @@
     const textFor = (chapter, language) => chapter['text_' + language] || chapter.text || '';
     function followAudio() {
         if (readerActive && isPlaying && !isUserManuallyNavigating && readerBook?.id === currentBook?.id && String(readerChapterId) === String(currentPlayingChapterId)) {
-            readerAnchor = { book: readerBook.id, chapter: readerChapterId, page: readerCurrentPage, index: currentSentenceIndex };
+            readerAnchor = { book: readerBook.id, chapter: readerChapterId, page: readerCurrentPage, index: currentSentenceIndex, scrollLocked: readerMode === 'scroll' };
         }
     }
     function readIndex() {
         if (isPlaying && !isUserManuallyNavigating && String(currentPlayingChapterId) === String(readerChapterId)) return currentSentenceIndex;
         if (readerMode === 'scroll') {
+            if (readerAnchor?.book === readerBook?.id && String(readerAnchor.chapter) === String(readerChapterId)
+                && (readerAnchor.scrollLocked || Math.abs(DOM.readerScrollContainer.scrollTop - readerAnchor.scrollTop) < 2)) return readerAnchor.index;
             const top = DOM.readerScrollContainer.getBoundingClientRect().top;
             const spans = DOM.readerScrollContainer.querySelectorAll('.reader-sentence');
             for (const span of spans) if (span.getBoundingClientRect().bottom > top + 12) return Number(span.id.replace('rsentence_', '')) || 0;
@@ -105,11 +107,18 @@
         renderCurrentPage();
         const anchor = document.getElementById('rsentence_' + idx);
         if (anchor) { anchor.classList.add('reading-resume-anchor'); anchor.setAttribute('title', 'Your saved place'); }
-        if (readerMode === 'scroll') document.getElementById('rsentence_' + idx)?.scrollIntoView({ block: 'start' });
+        if (readerMode === 'scroll') {
+            document.getElementById('rsentence_' + idx)?.scrollIntoView({ block: 'start', behavior: 'instant' });
+            readerAnchor.scrollTop = DOM.readerScrollContainer.scrollTop;
+            readerAnchor.scrollLocked = true;
+        }
         restorePending = false;
         capture('read', true);
     }
     let scrollTimer;
+    function releaseScrollAnchor() { if (readerAnchor) { readerAnchor.scrollLocked = false; readerAnchor.scrollTop = undefined; } }
+    for (const event of ['wheel', 'touchmove', 'pointerdown']) document.getElementById('readerScrollContainer')?.addEventListener(event, releaseScrollAnchor, { passive: true });
+    document.addEventListener('keydown', e => { if (readerActive && readerMode === 'scroll' && ['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(e.key)) releaseScrollAnchor(); });
     document.getElementById('readerScrollContainer')?.addEventListener('scroll', () => {
         clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { if (readerActive && readerMode === 'scroll' && !restorePending) capture('read'); }, 400);
     }, { passive: true });
@@ -117,5 +126,5 @@
     window.addEventListener('pagehide', () => { capture(undefined, true); store.flush(); });
     window.addEventListener('online', () => store.flush());
     window.addEventListener('focus', () => store.flush());
-    window.EngbotReadingUI = { choose, capture, bookmark, restore, readIndex, followAudio, store };
+    window.EngbotReadingUI = { choose, capture, bookmark, restore, readIndex, followAudio, releaseScrollAnchor, store };
 })();

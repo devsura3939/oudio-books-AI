@@ -3,6 +3,21 @@ const assert = require('node:assert/strict');
 const reading = require('../static/reading-state.js');
 const structure = require('../static/book-structure.js');
 const fs = require('node:fs'), vm = require('node:vm');
+const core = require('../static/engine-core.js');
+test('Reading typography preserves real words, footnotes, short blanks and paragraphs', () => {
+  const source='A book. I read it [12].\n\nქართული ტექსტი , შემდეგი წინადადება.\n\nName: _____\nvariable_name';
+  assert.equal(core.readingText(source),'A book. I read it [12].\n\nქართული ტექსტი, შემდეგი წინადადება.\n\nName: _____\nvariable_name');
+  assert.equal(core.readingText('Heading\n______________________________ Text follows.\n______________________________\nბოლო აბზაცი.'),'Heading\n\nText follows.\n\nბოლო აბზაცი.');
+});
+test('Headings localize by language and old prose-fragment titles become stable numbered sections', () => {
+  assert.equal(core.chapterTitle({id:6,title:'foreword against a deadline , knowing that no matter how (part 4)'},'ka'),'განყოფილება 6');
+  assert.equal(core.chapterTitle({id:11,title:'dedication. The professional does not fall for this. Her (part 1)'},'ka'),'განყოფილება 11');
+  assert.equal(core.chapterTitle({title:'FOREWORD'},'ka'),'წინასიტყვაობა');
+  assert.equal(core.chapterTitle({title:'Page 17'},'ka'),'გვერდი 17');
+  assert.equal(core.chapterTitle({title:'A new beginning',title_ka:'ახალი დასაწყისი'},'ka'),'ახალი დასაწყისი');
+  assert.equal(core.chapterTitle({title:'A new beginning',title_ka:'ახალი დასაწყისი'},'en'),'A new beginning');
+  assert.equal(structure.heading('წიგნი არის ძალიან საინტერესო'),false);
+});
 test('Positions reopen the exact sentence across layouts, and re-anchor after text edits', () => {
   const chapter={id:3,text:'First sentence. Second sentence. Third sentence.'};
   const sentences=['First sentence.','Second sentence.','Third sentence.'];
@@ -11,6 +26,8 @@ test('Positions reopen the exact sentence across layouts, and re-anchor after te
   assert.equal(reading.resolve(saved,{...chapter,text:'New. '+chapter.text},'en',['New.',...sentences]),2);
   assert.equal(reading.resolve(saved,chapter,'ka',sentences),0);
   assert.equal(reading.resolve(saved,{id:4,text:chapter.text},'en',sentences),0);
+  const stableSource=reading.position({id:3,text:'Heading _________________________ First. Second.'},'en',['Heading _________________________ First.','Second.'],1,'read');
+  assert.equal(reading.resolve(stableSource,{id:3,text:'Heading _________________________ First. Second.'},'en',['Heading','First.','Second.']),2);
 });
 test('Independent bookmarks merge without resurrecting removed entries or overwriting pending newer positions', () => {
   const local={a:{slot:'a',value:{sentence:8},observed_at:'2026-09-10T10:00:00Z',pending:true}};
@@ -95,4 +112,18 @@ test('Stopping synchronized audio preserves its sentence after reader repaginati
   assert.equal(ctx.window.EngbotReadingUI.readIndex(),14);
   ctx.readerCurrentPage=3;ctx.readerPages.push([{globalIndex:19}]);
   assert.equal(ctx.window.EngbotReadingUI.readIndex(),19);
+});
+test('Scroll restore keeps the exact sentence when a previous sentence shares its first line', () => {
+  const chapter={id:1,text:'First. Second.'};
+  const scroller={scrollTop:90,getBoundingClientRect:()=>({top:0}),querySelectorAll:()=>[{id:'rsentence_0',getBoundingClientRect:()=>({bottom:30})}]};
+  const ctx={EngbotReading:{...reading,create:()=>({})},localStorage:{},getCurrentUserId:()=>null,
+    window:{addEventListener:()=>{}},document:{getElementById:()=>null,addEventListener:()=>{}},DOM:{readerScrollContainer:scroller},
+    readerActive:true,isPlaying:false,isUserManuallyNavigating:false,readerMode:'scroll',readerBook:{id:'book',chapters:[chapter]},
+    readerChapterId:1,readerLang:'en',readerSentenceToPageMap:{0:0,1:0},readerCurrentPage:1,
+    renderCurrentPage:()=>{},prepareChapterSentences:()=>['First.','Second.']};
+  vm.createContext(ctx);vm.runInContext(fs.readFileSync('static/reading-ui.js','utf8'),ctx);
+  ctx.window.EngbotReadingUI.restore(reading.position(chapter,'en',['First.','Second.'],1,'read'));
+  assert.equal(ctx.window.EngbotReadingUI.readIndex(),1);
+  scroller.scrollTop=150;assert.equal(ctx.window.EngbotReadingUI.readIndex(),1);
+  ctx.window.EngbotReadingUI.releaseScrollAnchor();assert.equal(ctx.window.EngbotReadingUI.readIndex(),0);
 });
