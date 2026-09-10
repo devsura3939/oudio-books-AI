@@ -36,7 +36,8 @@ function create(): SupabaseClient {
       storage: browser ? window.localStorage : undefined,
       persistSession: browser,
       autoRefreshToken: browser,
-      detectSessionInUrl: browser,
+      // The callback route owns its code/token exchange; avoid competing SDK exchanges.
+      detectSessionInUrl: browser && window.location.pathname !== "/auth/callback",
     },
   });
 }

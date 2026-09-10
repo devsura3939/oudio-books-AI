@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.51.1';
-const ENGINE_VERSION = 'v1.51.1 (Reader comfort and bilingual document layout)';
+const APP_VERSION = 'v1.51.2';
+const ENGINE_VERSION = 'v1.51.2 (Email confirmation and account recovery)';
 
 let db = null;
 let currentBook = null;
@@ -28,6 +28,10 @@ let utteranceTimeout = null;
 let secondsElapsed = 0;
 let timerInterval = null;
 let currentUser = null;
+let verifiedAuthUserId = null;
+let authCallbackStarted = false;
+let authCallbackResult = null;
+let recoveryReady = false;
 // Strict Authorization Guard: Lock out dashboard immediately if not authenticated
 (function() {
     try {
@@ -199,7 +203,7 @@ function getCachedAccountSettings(email) {
     return null;
 }
 
-// ── Universal AI Keys Resilience, Sanitization & Auto-Classifier (v1.51.1) ───
+// ── Universal AI Keys Resilience, Sanitization & Auto-Classifier (v1.51.2) ───
 function sanitizeApiKey(rawKey) {
     if (!rawKey || typeof rawKey !== 'string') return '';
     let k = rawKey.trim();
@@ -531,7 +535,7 @@ function setupKeyInputAutoRouting() {
 }
 window.setupKeyInputAutoRouting = setupKeyInputAutoRouting;
 
-// ── Universal AI Keys Resilience & Auto-Healing Layer (v1.51.1) ────────────
+// ── Universal AI Keys Resilience & Auto-Healing Layer (v1.51.2) ────────────
 // Guarantee: User API keys NEVER get lost across reloads, builds, logouts,
 // or account switches. Scans memory, dedicated storage, backup slots, and all
 // account objects to find and heal active keys across all storage layers.
@@ -3508,11 +3512,21 @@ function checkAuthState() {
     }
     updateAuthUI();
     updateAuthGateVisibility();
+    const expectedId = currentUser?.id;
+    if (expectedId && window.LuminaStore?.getClient()) {
+        window.LuminaStore.getClient().auth.getUser().then(({ data, error }) => {
+            if (!error && currentUser?.id === expectedId && data.user?.id === expectedId) {
+                verifiedAuthUserId = expectedId;
+                updateAuthUI();
+            }
+        }).catch(() => {});
+    }
 }
 
 function updateAuthUI() {
     const emailClean = (currentUser?.email || '').trim().toLowerCase();
-    const isAdmin = !!(emailClean === 'ananiadevsurashvili@gmail.com' || currentUser?.role === 'admin');
+    const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
+    document.querySelectorAll('[data-admin-build]').forEach(el => { el.hidden = !isAdmin; });
 
     // 1. Desktop Top Bar Pill
     const pill = document.getElementById('adminVersionPill');
@@ -3630,9 +3644,6 @@ function updateAuthUI() {
                         <p class="text-xs text-on-surface-variant">Authorization Required</p>
                     </div>
                 </button>
-                <div class="mt-2 px-2 text-[10px] text-on-surface-variant/60 font-mono">
-                    EngBot App ${APP_VERSION}
-                </div>
             `;
         }
     }
@@ -3890,6 +3901,11 @@ function updateAuthGateVisibility() {
     const gateScreen = document.getElementById('authGateScreen');
     const appContainer = document.getElementById('appMainContainer');
 
+    if (authCallbackResult) {
+        if (appContainer) appContainer.classList.add('hidden');
+        if (gateScreen) gateScreen.classList.remove('hidden');
+        return;
+    }
     const explicitlyLoggedOut = localStorage.getItem('lumina_explicitly_logged_out') === 'true';
     const isLoggedIn = Boolean(currentUser && currentUser.email) && !explicitlyLoggedOut;
     const hash = (window.location.hash || '').toLowerCase();
@@ -3900,21 +3916,49 @@ function updateAuthGateVisibility() {
     const wantsRegister = hash.includes('register') || hash.includes('signup');
     const wantsForgot = hash.includes('forgot');
 
-    // 1. Password Recovery Flow
-    if (isRecovery) {
+    const params = new URLSearchParams(window.location.search);
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const hasEmailLink = isRecovery || ['code', 'token_hash', 'access_token', 'error', 'error_code', 'error_description'].some(key => params.has(key) || fragment.has(key));
+    if (hasEmailLink && !authCallbackStarted) {
+        authCallbackStarted = true;
+        recoveryReady = false;
+        currentUser = null;
+        verifiedAuthUserId = null;
+        sessionStorage.removeItem('lumina_auth_user');
+        localStorage.removeItem('lumina_auth_user');
         if (appContainer) appContainer.classList.add('hidden');
         if (gateScreen) gateScreen.classList.remove('hidden');
-        switchGateMode('reset');
-        if (window.LuminaStore && window.LuminaStore.handleRecoverySession) {
-            window.LuminaStore.handleRecoverySession().then(res => {
-                if (res?.user?.email) {
-                    const badge = document.getElementById('gateResetEmailBadge');
-                    if (badge) badge.textContent = res.user.email;
-                }
-            }).catch(e => console.warn('Recovery session check error:', e));
-        }
+        switchGateMode(isRecovery ? 'reset' : 'signin');
+        const submit = document.getElementById('btnGateSetNewPassword');
+        if (submit) submit.disabled = true;
+        setGateSuccess('Checking your email link…');
+        (async () => {
+            const res = await window.LuminaStore?.handleRecoverySession();
+            if (!res?.success) {
+                window.LuminaStore?.clearAuthCallback();
+                switchGateMode(isRecovery ? 'forgot' : 'signin');
+                setGateError(res?.error?.message || 'Could not verify this link. Request a new email link.');
+                authCallbackResult = 'error';
+                return;
+            }
+            if (res.type === 'recovery') {
+                recoveryReady = true;
+                switchGateMode('reset');
+                const badge = document.getElementById('gateResetEmailBadge');
+                if (badge) badge.textContent = res.user.email;
+                if (submit) submit.disabled = false;
+            } else {
+                switchGateMode('signin');
+                const email = document.getElementById('gateEmail');
+                if (email) email.value = res.user.email;
+                setGateSuccess('Email confirmed. Sign in to open your library.');
+                authCallbackResult = 'confirmed';
+            }
+            updateAuthUI();
+        })().catch(() => setGateError('Could not verify the email link. Reload to retry.'));
         return;
     }
+    if (hasEmailLink && authCallbackStarted) return;
 
     // 2. STRICT ENFORCEMENT: Unauthenticated users are completely LOCKED OUT of dashboard.
     // There is NO guest mode and NO entering the dashboard without logging in or registering.
@@ -3951,6 +3995,13 @@ function updateAuthGateVisibility() {
 }
 
 function switchGateMode(mode) {
+    authCallbackResult = null;
+    if (recoveryReady && mode !== 'reset') {
+        recoveryReady = false;
+        window.LuminaStore?.clearAuthCallback();
+    }
+    const resend = document.getElementById('gateResendConfirmation');
+    if (resend) resend.classList.toggle('hidden', mode !== 'signin' && mode !== 'register');
     const signInForm = document.getElementById('gateSignInForm');
     const registerForm = document.getElementById('gateRegisterForm');
     const forgotForm = document.getElementById('gateForgotForm');
@@ -4013,25 +4064,8 @@ function switchGateMode(mode) {
         if (tabRegister) {
             tabRegister.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all';
         }
-        if (subtitle) subtitle.textContent = 'Sign in to access your personal audiobooks, scanned books, and studio workspace';
+        if (subtitle) subtitle.textContent = 'Your books, ready to read and listen.';
     }
-}
-
-function fillAdminCredentials() {
-    const emailInput = document.getElementById('gateEmail');
-    const pwdInput = document.getElementById('gatePassword');
-    if (emailInput) {
-        emailInput.value = 'ananiadevsurashvili@gmail.com';
-        emailInput.classList.add('ring-2', 'ring-primary-container');
-    }
-    if (pwdInput) {
-        pwdInput.value = 'anania39';
-        pwdInput.classList.add('ring-2', 'ring-primary-container');
-    }
-    setTimeout(() => {
-        if (emailInput) emailInput.classList.remove('ring-2', 'ring-primary-container');
-        if (pwdInput) pwdInput.classList.remove('ring-2', 'ring-primary-container');
-    }, 1500);
 }
 
 function setGateError(msg) {
@@ -4065,8 +4099,9 @@ function setGateSuccess(msg) {
 }
 
 async function handleGateSignIn() {
+    if (document.getElementById('btnGateSignIn')?.disabled) return;
     const email = (document.getElementById('gateEmail')?.value || '').trim();
-    const password = (document.getElementById('gatePassword')?.value || '').trim();
+    const password = (document.getElementById('gatePassword')?.value || '');
     const rememberMe = Boolean(document.getElementById('gateRememberMe')?.checked);
     const btn = document.getElementById('btnGateSignIn');
     const origHtml = btn ? btn.innerHTML : '';
@@ -4104,8 +4139,9 @@ async function handleGateSignIn() {
 }
 
 async function handleGateRegister() {
+    if (document.getElementById('btnGateRegister')?.disabled) return;
     const email = (document.getElementById('gateRegEmail')?.value || '').trim();
-    const password = (document.getElementById('gateRegPassword')?.value || '').trim();
+    const password = (document.getElementById('gateRegPassword')?.value || '');
     const rememberMe = Boolean(document.getElementById('gateRegRememberMe')?.checked);
     const btn = document.getElementById('btnGateRegister');
     const origHtml = btn ? btn.innerHTML : '';
@@ -4138,7 +4174,33 @@ async function handleGateRegister() {
     }
 }
 
+async function resendGateConfirmation() {
+    const btn = document.getElementById('gateResendConfirmation');
+    if (btn?.disabled) return;
+    const registering = !document.getElementById('gateRegisterForm')?.classList.contains('hidden');
+    const input = document.getElementById(registering ? 'gateRegEmail' : 'gateEmail');
+    if (!input?.value || !input.checkValidity()) { setGateError('Enter your email address first.'); input?.focus(); return; }
+    if (btn) btn.disabled = true;
+    try {
+        const res = await window.LuminaStore?.resendConfirmation(input.value);
+        if (!res?.success) throw new Error(res?.error?.message || 'Could not request a confirmation email.');
+        setGateSuccess('Confirmation email requested. Check your inbox and spam folder before trying again.');
+    } catch (error) { setGateError(error.message); }
+    finally { if (btn) btn.disabled = false; }
+}
+
+function toggleGatePassword(id, button) {
+    const input = document.getElementById(id);
+    if (!input) return;
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    button.textContent = show ? 'Hide' : 'Show';
+    button.setAttribute('aria-label', (show ? 'Hide' : 'Show') + ' password');
+    button.setAttribute('aria-pressed', String(show));
+}
+
 async function handleGateForgot() {
+    if (document.getElementById('btnGateForgot')?.disabled) return;
     const email = (document.getElementById('gateForgotEmail')?.value || '').trim();
     const btn = document.getElementById('btnGateForgot');
     const origHtml = btn ? btn.innerHTML : '';
@@ -4162,7 +4224,7 @@ async function handleGateForgot() {
             );
             const res = await Promise.race([window.LuminaStore.resetPassword(email), timeoutPromise]);
             if (res.success) {
-                setGateSuccess('Password recovery email sent! Check your inbox for the reset link.');
+                setGateSuccess('If an account exists for this email, a recovery link has been requested. Check your inbox and spam folder.');
             } else {
                 setGateError(res.error?.message || 'Could not send recovery link.');
             }
@@ -4180,8 +4242,10 @@ async function handleGateForgot() {
 }
 
 async function handleGateSetNewPassword() {
-    const newPassword = (document.getElementById('gateNewPassword')?.value || '').trim();
-    const confirmPassword = (document.getElementById('gateConfirmNewPassword')?.value || '').trim();
+    if (document.getElementById('btnGateSetNewPassword')?.disabled) return;
+    if (!recoveryReady) { setGateError('Open a valid recovery link from your email first.'); return; }
+    const newPassword = (document.getElementById('gateNewPassword')?.value || '');
+    const confirmPassword = (document.getElementById('gateConfirmNewPassword')?.value || '');
     const btn = document.getElementById('btnGateSetNewPassword');
     const origHtml = btn ? btn.innerHTML : '';
 
@@ -4211,9 +4275,12 @@ async function handleGateSetNewPassword() {
             throw new Error(res.error?.message || 'Failed to update password.');
         }
 
+        window.LuminaStore.clearAuthCallback();
+        recoveryReady = false;
         localStorage.removeItem('lumina_explicitly_logged_out');
         const updatedUser = res.user;
-        const email = updatedUser?.email || currentUser?.email || 'User';
+        verifiedAuthUserId = updatedUser.id;
+        const email = updatedUser.email;
         const isAdmin = email.toLowerCase() === 'ananiadevsurashvili@gmail.com';
 
         currentUser = {
@@ -4226,7 +4293,11 @@ async function handleGateSetNewPassword() {
         try { sessionStorage.setItem('lumina_auth_user', JSON.stringify(currentUser)); } catch (e) {}
         localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
         localStorage.setItem('lumina_remember_me', 'true');
-        try { restoreAccountSettingsForCurrentUser(); } catch (e) {}
+        usingCloud = await window.LuminaStore.init();
+        subscribeToLibraryRealtime();
+        currentBook = null;
+        currentPlayingChapterId = null;
+        try { await restoreAccountSettingsForCurrentUser(); } catch (e) {}
 
         if (window.parent && window.parent !== window) {
             try {
@@ -4314,7 +4385,7 @@ async function sendPasswordReset() {
             );
             const res = await Promise.race([window.LuminaStore.resetPassword(email), timeoutPromise]);
             if (res.success) {
-                setAuthSuccess('Password recovery email sent! Check your inbox for the reset link.');
+                setAuthSuccess('If an account exists for this email, a recovery link has been requested. Check your inbox and spam folder.');
             } else {
                 setAuthError(res.error?.message || 'Could not send reset email. Please try again.');
             }
@@ -4338,7 +4409,7 @@ async function login(email, password, rememberParam) {
         return;
     }
     const isAdmin = email.toLowerCase() === 'ananiadevsurashvili@gmail.com';
-    const pwd = password ? password.trim() : (isAdmin ? 'anania39' : '');
+    const pwd = password || '';
 
     if (!pwd) {
         setAuthError('Please enter your password.');
@@ -4406,6 +4477,12 @@ async function login(email, password, rememberParam) {
             }
         }
 
+        if (!cloudConnected || !supabaseUser) {
+            setAuthError('Authentication service unavailable. Please try again.');
+            return;
+        }
+        authCallbackResult = null;
+        verifiedAuthUserId = supabaseUser.id;
         currentUser = {
             email: email,
             id: supabaseUser ? supabaseUser.id : (isAdmin ? '2b4b9033-8527-4e51-b2c8-9a72f5a47412' : 'usr_' + Date.now()),
@@ -4506,7 +4583,12 @@ async function register(email, password, rememberParam) {
             );
             const res = await Promise.race([window.LuminaStore.signUp(email, password), timeoutPromise]);
             if (res.success) {
-                setAuthSuccess('Account created! Signing you in...');
+                if (!res.session) {
+                    const loginEmail = document.getElementById('gateEmail');
+                    if (loginEmail) loginEmail.value = email;
+                    setAuthSuccess('Check your email to confirm your account, then sign in. If you already have an account, use Sign In or Forgot password.');
+                    return;
+                }
                 await login(email, password, rememberMe);
                 return;
             } else {
@@ -4514,8 +4596,7 @@ async function register(email, password, rememberParam) {
                 return;
             }
         }
-        // Offline fallback
-        await login(email, password, rememberMe);
+        setAuthError('Authentication service unavailable. Please try again.');
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -4525,6 +4606,9 @@ async function register(email, password, rememberParam) {
 }
 
 async function logout() {
+    verifiedAuthUserId = null;
+    recoveryReady = false;
+    window.LuminaStore?.clearAuthCallback();
     // Stop playback and close reader to prevent audio or text from leaking into next user session
     try { stopSpeech(); } catch (e) {}
     try {
@@ -4575,7 +4659,6 @@ window.logout = logout;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.switchGateMode = switchGateMode;
-window.fillAdminCredentials = fillAdminCredentials;
 window.setGateError = setGateError;
 window.setGateSuccess = setGateSuccess;
 window.handleGateSignIn = handleGateSignIn;
