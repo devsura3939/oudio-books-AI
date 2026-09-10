@@ -11,7 +11,7 @@
         if (!t || t.length > 100 || /\.{2,}|….*\d+\s*$/.test(t)) return false;
         return /^(chapter|part|book|section|volume)\s+(\d+|[ivxlcdm]+|one|two|three|four|five|six|seven|eight|nine|ten)(?!\p{L})/iu.test(t)
             || /^(prologue|epilogue|introduction|preface|foreword|afterword|appendix|conclusion|contents|table of contents|dedication|acknowledgements?)\s*[:—–-]?\s*$/iu.test(t)
-            || /^(თავი|ნაწილი|წიგნი|კარი)\s+(\d+|[ivxlcdm]+|[ა-ჰ]+)(?!\p{L})/u.test(lower)
+            || /^(თავი|ნაწილი|წიგნი|კარი)\s+(\d+|[ivxlcdm]+|[ა-ჰ]|პირველი|მეორე|მესამე|მეოთხე|მეხუთე|მეექვსე|მეშვიდე|მერვე|მეცხრე|მეათე|მეთერთმეტე|მეთორმეტე|მეცამეტე|მეთოთხმეტე|მეთხუთმეტე|მეთექვსმეტე|მეჩვიდმეტე|მეთვრამეტე|მეცხრამეტე|მეოცე)(?!\p{L})/u.test(lower)
             || /^(პირველი|მეორე|მესამე|მეოთხე|მეხუთე|მეექვსე|მეშვიდე|მერვე|მეცხრე|მეათე)\s+თავი/u.test(lower)
             || /^(შესავალი|წინასიტყვაობა|ბოლოსიტყვაობა|დასკვნა|დანართი|პროლოგი|ეპილოგი|სარჩევი|მიძღვნა)\s*[:—–-]?\s*$/u.test(lower);
     }

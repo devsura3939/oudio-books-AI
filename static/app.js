@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.51.0';
-const ENGINE_VERSION = 'v1.51.0 (Saved places, document structure and local OCR)';
+const APP_VERSION = 'v1.51.1';
+const ENGINE_VERSION = 'v1.51.1 (Reader comfort and bilingual document layout)';
 
 let db = null;
 let currentBook = null;
@@ -199,7 +199,7 @@ function getCachedAccountSettings(email) {
     return null;
 }
 
-// ── Universal AI Keys Resilience, Sanitization & Auto-Classifier (v1.51.0) ───
+// ── Universal AI Keys Resilience, Sanitization & Auto-Classifier (v1.51.1) ───
 function sanitizeApiKey(rawKey) {
     if (!rawKey || typeof rawKey !== 'string') return '';
     let k = rawKey.trim();
@@ -531,7 +531,7 @@ function setupKeyInputAutoRouting() {
 }
 window.setupKeyInputAutoRouting = setupKeyInputAutoRouting;
 
-// ── Universal AI Keys Resilience & Auto-Healing Layer (v1.51.0) ────────────
+// ── Universal AI Keys Resilience & Auto-Healing Layer (v1.51.1) ────────────
 // Guarantee: User API keys NEVER get lost across reloads, builds, logouts,
 // or account switches. Scans memory, dedicated storage, backup slots, and all
 // account objects to find and heal active keys across all storage layers.
@@ -3224,8 +3224,17 @@ function openModal(modalId) {
         if (modalId === 'trainingLabModal') {
             if (typeof initTrainingLabUI === 'function') initTrainingLabUI();
         }
+        modal._returnFocus = document.activeElement;
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        if (modalId === 'readerThemeModal') {
+            document.getElementById('readerFontFamilySelect').value = readerFontFamily;
+            document.getElementById('readerComfortToggle').checked = localStorage.getItem('lumina_reader_comfort') === 'true';
+            if (DOM.readerModalFontSizeText) DOM.readerModalFontSizeText.textContent = `${readerFontSize}px`;
+        }
         modal.classList.add('active');
         document.body.classList.add('modal-open');
+        modal.querySelector('button, input, select')?.focus();
     }
 }
 
@@ -3239,6 +3248,7 @@ function closeModal(modalId) {
             if (typeof setAuthSuccess === 'function') setAuthSuccess('');
         }
         modal.classList.remove('active');
+        modal._returnFocus?.focus?.();
     }
     if (!document.querySelector('.modal-overlay.active')) {
         document.body.classList.remove('modal-open');
@@ -3440,7 +3450,7 @@ function renderToCDrawerList() {
 
         btn.innerHTML = `
             <div class="overflow-hidden">
-                <p class="text-xs truncate">${idx + 1}. ${escapeHtml(chap.title)}</p>
+                <p class="text-xs truncate">${idx + 1}. ${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</p>
                 <p class="text-[10px] text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(EngbotCore.chapterStats(chap).seconds)}</p>
             </div>
             ${hasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-georgian-gold/20 text-georgian-gold font-bold">🇬🇪</span>' : ''}
@@ -5242,6 +5252,7 @@ async function openReader(bookId, chapterId, lang = 'en', savedPosition = null) 
     readerActive = true;
     DOM.readerView.className = `reader-theme-${readerTheme} active`;
     DOM.readerView.dataset.readerLang = readerLang;
+    DOM.readerView.dataset.eyeComfort = localStorage.getItem('lumina_reader_comfort') === 'true' ? 'true' : 'false';
     document.body.style.overflow = 'hidden';
 
     DOM.readerBookTitle.textContent = window.EngbotUI?.displayTitle(readerBook.title) || readerBook.title;
@@ -5334,21 +5345,7 @@ let currentTurnDir = 'next';
 
 // ── Reader Typography & Sentence Preparation ──────────────────────────────
 function cleanReaderTypography(text) {
-    if (!text) return '';
-    let out = String(text);
-    // 1. Strip bracketed footnote reference numbers: [4], [5], [12], etc.
-    out = out.replace(/\[\d+\]/g, '');
-    // 2. Fix spaces before standard punctuation: "მიიღო ." -> "მიიღო."
-    out = out.replace(/\s+([.,;:!?])/g, '$1');
-    // 3. Fix dialogue colon dash: " : - " -> ": — "
-    out = out.replace(/:\s*-\s*/g, ': — ');
-    // 4. Normalize em-dashes and surrounding spacing
-    out = out.replace(/\s*[—–]\s*/g, ' — ');
-    // 5. Normalize multiple spaces / tabs within lines
-    out = out.replace(/[ \t\f]+/g, ' ');
-    // 6. Rejoin detached drop-cap / initial letter from OCR artifacts: "ჰ ეკატომბა" -> "ჰეკატომბა"
-    out = out.replace(/^([ა-ჰa-zA-Z])\s+([ა-ჰa-zA-Z]{2,})/g, '$1$2');
-    return out.trim();
+    return EngbotCore.readingText(text);
 }
 
 function prepareChapterSentences(rawText) {
@@ -5360,8 +5357,7 @@ function prepareChapterSentences(rawText) {
         // Flat text without clear paragraph breaks
         const rawSents = splitIntoNaturalSentences(cleaned).map(x => x.trim()).filter(Boolean);
         rawSents.forEach((sText, idx) => {
-            // Group sentences every ~5 sentences into natural paragraphs if completely unformatted
-            const isParaBreak = (idx > 0 && idx % 5 === 0) || (idx === rawSents.length - 1);
+            const isParaBreak = idx === rawSents.length - 1;
             allSentences.push({ text: sText, globalIndex: idx, isParaBreak });
         });
     } else {
@@ -5558,14 +5554,17 @@ function measurePages(sentences) {
 // Re-paginate on rotate / resize / font change while keeping the reader on the
 // same sentence instead of jumping back to page 1.
 let readerRepaginateTimer = null;
-function repaginateKeepingPosition() {
+function repaginateKeepingPosition(explicitIndex) {
     if (!readerActive || !readerBook) return;
     const anchorPage = readerPages[readerCurrentPage - 1] || [];
-    const anchorIndex = anchorPage.length ? anchorPage[0].globalIndex : 0;
+    const anchorIndex = explicitIndex ?? window.EngbotReadingUI?.readIndex() ?? (anchorPage.length ? anchorPage[0].globalIndex : 0);
+    const chapter = readerBook.chapters.find(c => String(c.id) === String(readerChapterId));
+    const saved = window.EngbotReading?.position(chapter, readerLang, prepareChapterSentences(chapter['text_' + readerLang] || chapter.text), anchorIndex, 'read');
     paginateChapter();
     const target = readerSentenceToPageMap[anchorIndex];
     readerCurrentPage = Math.max(1, Math.min((typeof target === 'number' ? target : 0) + 1, readerPages.length));
     renderCurrentPage();
+    if (saved) window.EngbotReadingUI.restore(saved);
 }
 window.repaginateKeepingPosition = repaginateKeepingPosition;
 
@@ -5658,7 +5657,7 @@ function renderCurrentPage() {
     const chap = readerBook.chapters.find(c => String(c.id) === String(readerChapterId));
     if (!chap) return;
 
-    DOM.readerChapterTitle.textContent = chap.title;
+    DOM.readerChapterTitle.textContent = EngbotCore.chapterTitle(chap, readerLang);
     const totalPages = readerPages.length;
 
     DOM.readerPageSpread.classList.remove('page-flip-anim', 'page-turn-next', 'page-turn-prev');
@@ -5679,8 +5678,8 @@ function renderCurrentPage() {
         html = `
             <div class="book-page-card w-full max-w-4xl mx-auto">
                 <header class="mb-6 text-center border-b border-black/10 dark:border-white/10 pb-4 select-none">
-                    <span class="text-xs font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${readerBook.title} ✦</span>
-                    <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold mt-1 mb-2 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${escapeHtml(chap.title)}</h1>
+                    <span class="text-xs font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${escapeHtml(window.EngbotUI.displayTitle(readerBook.title))} ✦</span>
+                    <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold mt-1 mb-2 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</h1>
                     <div class="flex items-center justify-center gap-3 text-xs opacity-75">
                         <span>${chap.word_count} words</span>
                         <span>•</span>
@@ -5696,7 +5695,7 @@ function renderCurrentPage() {
 
         readerPages.forEach(p => {
             p.forEach(item => {
-                pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${item.text}</span> `);
+                pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${escapeHtml(item.text)}</span> `);
                 if (item.isParaBreak) {
                     const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
                     html += `<p class="book-prose indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
@@ -5714,7 +5713,7 @@ function renderCurrentPage() {
                 </div>
                 <footer class="mt-10 pt-6 border-t border-black/10 dark:border-white/10 text-center opacity-60 text-xs select-none">
                     <p>── ❦ ──</p>
-                    <p class="mt-1">End of ${escapeHtml(chap.title)}</p>
+                    <p class="mt-1">End of ${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</p>
                 </footer>
             </div>
         `;
@@ -5736,7 +5735,7 @@ function renderCurrentPage() {
                 <div class="book-page-card book-spine-right hidden md:flex items-center justify-center text-center opacity-30 select-none">
                     <div>
                         <span class="text-4xl">❦</span>
-                        <p class="text-xs font-serif-book mt-3">End of ${escapeHtml(chap.title)}</p>
+                        <p class="text-xs font-serif-book mt-3">End of ${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</p>
                     </div>
                 </div>
             `;
@@ -5785,8 +5784,8 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
     if (isFirstPage) {
         cardHtml += `
             <header class="mb-4 text-center border-b border-black/10 dark:border-white/10 pb-2.5 select-none">
-                <span class="text-[10px] sm:text-[11px] font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${readerBook.title} ✦</span>
-                <h2 class="text-lg sm:text-2xl font-extrabold mt-1 mb-1 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${escapeHtml(chap.title)}</h2>
+                <span class="text-[10px] sm:text-[11px] font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${escapeHtml(window.EngbotUI.displayTitle(readerBook.title))} ✦</span>
+                <h2 class="text-lg sm:text-2xl font-extrabold mt-1 mb-1 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</h2>
                 <div class="mt-1 text-xs opacity-60">── ❖ ──</div>
             </header>
         `;
@@ -5798,7 +5797,7 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
     let isFirstParagraph = isFirstPage;
 
     sentences.forEach((item, idx) => {
-        pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${item.text}</span> `);
+        pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${escapeHtml(item.text)}</span> `);
 
         if (item.isParaBreak || idx === sentences.length - 1) {
             const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
@@ -5817,7 +5816,7 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
     cardHtml += `
         <div class="mt-4 pt-2.5 border-t border-black/10 dark:border-white/10 flex justify-between items-center text-[10px] sm:text-[11px] opacity-70 select-none font-mono">
             <span>Page ${pageNumber} of ${totalPages}</span>
-            <span class="truncate max-w-[140px]">${escapeHtml(chap.title)}</span>
+            <span class="truncate max-w-[140px]">${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</span>
         </div>
     </div>`;
 
@@ -6068,10 +6067,15 @@ function highlightReaderSentence(sentenceIdx, forceSync = false) {
 }
 
 function setReaderTheme(theme) {
+    if (!['sepia', 'mocha', 'dark', 'light', 'forest', 'oled'].includes(theme)) return;
     readerTheme = theme;
     localStorage.setItem('lumina_reader_theme', theme);
-    DOM.readerView.className = `reader-theme-${theme} active`;
+    DOM.readerView.className = `reader-theme-${theme}${readerActive ? ' active' : ''}`;
     DOM.readerView.dataset.readerLang = readerLang;
+}
+function setReaderEyeComfort(enabled) {
+    localStorage.setItem('lumina_reader_comfort', String(!!enabled));
+    DOM.readerView.dataset.eyeComfort = enabled ? 'true' : 'false';
 }
 
 function changeReaderFontSize(delta) {
@@ -6083,16 +6087,18 @@ function changeReaderFontSize(delta) {
 }
 
 function changeReaderFontFamily(fontClass) {
+    if (!['font-serif-book', 'font-georgian-serif', 'font-georgian-sans', 'font-body-md'].includes(fontClass)) return;
     readerFontFamily = fontClass;
     localStorage.setItem('lumina_reader_fontfamily', fontClass);
     repaginateKeepingPosition();
 }
 
 function setReaderMode(mode) {
+    if (!['single', 'dual', 'scroll'].includes(mode)) return;
+    const anchor = window.EngbotReadingUI?.readIndex();
     readerMode = mode;
     localStorage.setItem('lumina_reader_mode', mode);
-    paginateChapter();
-    renderCurrentPage();
+    repaginateKeepingPosition(anchor);
     closeModal('readerThemeModal');
 }
 
@@ -6136,6 +6142,14 @@ function toggleReaderFullscreen() {
 // ── Full Keyboard & Touch Gestures Matrix ──────────────────────────────────
 function setupKeyboardAndTouchControls() {
     window.addEventListener('keydown', (e) => {
+        const topModal = [...document.querySelectorAll('.modal-overlay.active')].at(-1);
+        if (topModal && e.key === 'Tab') {
+            const controls = [...topModal.querySelectorAll('button, input, select, textarea, a[href], [tabindex="0"]')].filter(el => !el.disabled && el.getClientRects().length);
+            const first = controls[0], last = controls.at(-1);
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+            return;
+        }
         // ESC closes the topmost open modal or mobile nav drawer
         if (e.key === 'Escape') {
             const openDrawer = document.getElementById('mobileNavDrawer');
@@ -6144,7 +6158,7 @@ function setupKeyboardAndTouchControls() {
                 e.preventDefault();
                 return;
             }
-            const openModalEl = document.querySelector('.modal-overlay.active');
+            const openModalEl = topModal;
             if (openModalEl) {
                 if (openModalEl.id === 'wholeBookTranslateModal') {
                     minimizeTranslationPanel();
@@ -6155,7 +6169,7 @@ function setupKeyboardAndTouchControls() {
                 return;
             }
         }
-        if (!readerActive) return;
+        if (!readerActive || document.querySelector('.modal-overlay.active, dialog[open]')) return;
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
         switch (e.key) {
@@ -7238,7 +7252,7 @@ function buildChapterQueue(book = null) {
         const row = document.createElement('div');
         row.dataset.chapterIdx = idx;
         const hasKa = false; // Checkpoints are validated against source and settings during resume.
-        row.innerHTML = `<span class="ch-status-icon">${hasKa ? '✅' : '⏳'}</span><span class="ch-title">${escapeHtml(chap.title)}</span><span class="ch-pct">${hasKa ? '100%' : '—'}</span>`;
+        row.innerHTML = `<span class="ch-status-icon">${hasKa ? '✅' : '⏳'}</span><span class="ch-title">${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</span><span class="ch-pct">${hasKa ? '100%' : '—'}</span>`;
         DOM.wbChapterQueue.appendChild(row);
     });
 }
@@ -7723,16 +7737,6 @@ function buildTranslationChunks(chapterText, targetCharLimit = 1800, maxSentence
         .filter(Boolean);
 
     let paragraphs = rawParagraphs.length > 0 ? rawParagraphs : [chapterText.trim()];
-    if (paragraphs.length <= 1 && chapterText.includes('\n')) {
-        const lineParagraphs = chapterText
-            .split(/\n+/)
-            .map(p => p.trim())
-            .filter(Boolean);
-        if (lineParagraphs.length > 1) {
-            paragraphs = lineParagraphs;
-        }
-    }
-
     const chunks = [];
     const chunkSentenceCounts = [];
 
@@ -7887,7 +7891,7 @@ async function runWholeBookTranslation(resume = false) {
         if (window.LuminaStore?.createJob && usingCloud) {
             cloudJob = await window.LuminaStore.createJob(targetBook.id, 'parse', job.totalChapters, `Translating to ${targetName}`);
         }
-        const config = JSON.stringify({targetLang, chunking:'sentence-v3', transport:'complete-utf8-v1', geminiModel, geminiPasses, openRouterModel, customProviderModel,
+        const config = JSON.stringify({targetLang, chunking:'sentence-v3', transport:'complete-utf8-v1', layout:'paragraphs-v2', geminiModel, geminiPasses, openRouterModel, customProviderModel,
             glossary: targetBook.glossary || [], pack: window.EngbotPack?.version(targetLang) || 0});
         let completed = 0;
         for (let index = 0; index < targetBook.chapters.length; index++) {
@@ -7895,7 +7899,7 @@ async function runWholeBookTranslation(resume = false) {
             if (cancelTranslationFlag) break;
             const chapter = targetBook.chapters[index];
             const source = chapter.text || '';
-            const chunks = buildTranslationChunks(source, 1800).chunks;
+            const chunks = buildTranslationChunks(EngbotCore.readingText(source), 1800).chunks;
             const key = String(chapter.id ?? index);
             let checkpoint = job.chapters[key];
             if (!checkpoint || checkpoint.source !== source || checkpoint.config !== config || checkpoint.outputs?.length !== chunks.length) {
@@ -7940,7 +7944,9 @@ async function runWholeBookTranslation(resume = false) {
             }
             if (cancelTranslationFlag) break;
             if (checkpoint.outputs.length !== chunks.length || checkpoint.outputs.some(t => !t)) throw new Error('Incomplete chapter');
-            const translated = checkpoint.outputs.join('\n\n');
+            const translated = EngbotCore.readingText(checkpoint.outputs.join('\n\n'));
+            chapter['title_' + targetLang] = await translateChapterHeading(chapter, targetLang, translationRequestController?.signal);
+            checkOwner();
             chapter.translation_history ||= [];
             if (chapter[field] && chapter[field] !== translated) chapter.translation_history.push({language:targetLang, text:chapter[field], savedAt:new Date().toISOString()});
             chapter[field] = translated;
@@ -9038,7 +9044,7 @@ async function playChapterAudio(chapId, startSentenceIdx, forceReload = false) {
     DOM.playerDock.classList.add('translate-y-0', 'opacity-100');
 
     DOM.dockCover.src = currentBook.coverUrl;
-    DOM.dockTitle.textContent = chap.title;
+    DOM.dockTitle.textContent = EngbotCore.chapterTitle(chap, currentLang);
     DOM.dockSubtitle.textContent = currentBook.title;
     if (DOM.playerTotalTime) DOM.playerTotalTime.textContent = formatTime(EngbotCore.chapterStats(chap).seconds);
 
@@ -9188,6 +9194,25 @@ function notifyNeedsTranslation() {
 }
 
 // ── Dedicated Translated Book Persistence ──────────────────────────────────
+const headingTranslations = new Map();
+async function translateChapterHeading(chapter, targetLang, signal) {
+    const source = EngbotCore.headingSource(chapter.source_title || chapter.title, chapter.id);
+    const existing = chapter['title_' + targetLang];
+    if (existing && chapter.title_translation_source === source) return existing;
+    const local = EngbotCore.localizedHeading(source, targetLang);
+    if (local) { chapter.title_translation_source = source; return local; }
+    if (EngbotCore.detectLanguage(source) === targetLang) { chapter.title_translation_source = source; return source; }
+    const key = JSON.stringify([source, targetLang]);
+    let translated = headingTranslations.get(key);
+    if (!translated) translated = await translationMachine().translate(source, detectTextLang(source), targetLang, signal);
+    signal?.throwIfAborted();
+    if (!EngbotCore.assessTranslation(source, translated, targetLang).ok) throw new Error('The chapter heading could not be translated. Completed text is saved; retry to finish the heading.');
+    translated = EngbotCore.readingText(translated);
+    headingTranslations.set(key, translated);
+    if (headingTranslations.size > 250) headingTranslations.delete(headingTranslations.keys().next().value);
+    chapter.title_translation_source = source;
+    return translated;
+}
 // When a book is translated, we create a dedicated sibling edition on the shelf
 // so the user can see and open it separately, with its own Georgian text,
 // instant Moon Reader loading, and Georgian voice listening.
@@ -9205,15 +9230,20 @@ async function saveTranslatedBookEdition(originalBook, targetLang = 'ka') {
     }
     const existing = all.find(b => String(b.id) === String(translatedId));
 
-    const cleanBaseTitle = (originalBook.title || 'Untitled').replace(/\s*\(ქართულად\)\s*$/, '').trim();
+    const cleanBaseTitle = window.EngbotUI.displayTitle(originalBook.title || 'Untitled').replace(/\s*\(ქართულად\)\s*$/, '').trim();
     const translatedTitle = `${cleanBaseTitle} (${targetLang === 'ka' ? 'ქართულად' : 'English'})`;
 
     const translatedChapters = (originalBook.chapters || []).map((chap, idx) => {
         const textKa = chap[field] || '';
         const words = textKa ? textKa.split(/\s+/).filter(Boolean).length : 0;
         return {
+            firstPage: chap.firstPage,
+            lastPage: chap.lastPage,
+            structure_method: chap.structure_method,
             id: chap.id || (idx + 1),
-            title: chap.title || `თავი ${idx + 1}`,
+            title: EngbotCore.chapterTitle(chap, targetLang) || `${targetLang === 'ka' ? 'თავი' : 'Chapter'} ${idx + 1}`,
+            source_title: chap.source_title || chap.title,
+            ['title_' + targetLang]: chap['title_' + targetLang],
             text: textKa, // Primary text IS the Georgian translation
             [field]: textKa,
             word_count: words,
@@ -9239,6 +9269,8 @@ async function saveTranslatedBookEdition(originalBook, targetLang = 'ka') {
         chapters: translatedChapters,
         extra: {
             ...(originalBook.extra || {}),
+            lang: targetLang,
+            language: targetLang,
             source: 'translation',
             is_translated_copy: true,
             source_book_id: originalBook.id,
@@ -9398,7 +9430,7 @@ async function exportCurrentBookPDF() {
                 <div style="display: flex; flex-direction: column; gap: 14px;">
             `;
             currentBook.chapters.forEach((chap, idx) => {
-                const title = chap.title || (isKa ? `თავი ${idx + 1}` : `Chapter ${idx + 1}`);
+                const title = EngbotCore.chapterTitle(chap, isKa ? 'ka' : 'en') || (isKa ? `თავი ${idx + 1}` : `Chapter ${idx + 1}`);
                 html += `
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding-bottom: 5px; font-size: 11pt;">
                         <span style="font-weight: 600;">${idx + 1}. ${escapeHtml(title)}</span>
@@ -9411,7 +9443,7 @@ async function exportCurrentBookPDF() {
 
         // 3. Chapters
         currentBook.chapters.forEach((chap, idx) => {
-            const title = chap.title || (isKa ? `თავი ${idx + 1}` : `Chapter ${idx + 1}`);
+            const title = EngbotCore.chapterTitle(chap, isKa ? 'ka' : 'en') || (isKa ? `თავი ${idx + 1}` : `Chapter ${idx + 1}`);
             const content = (isKa && chap.text_ka) ? chap.text_ka : (chap.text || '');
             const paragraphs = content.split(/\n\s*\n|\r\n\s*\r\n/).map(p => p.trim()).filter(Boolean);
 
@@ -10447,7 +10479,7 @@ function renderChaptersList() {
                 </div>
                 <div class="overflow-hidden">
                     <h4 class="font-semibold text-white text-xs sm:text-base truncate flex items-center gap-2">
-                        ${escapeHtml(chap.title)}
+                        ${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}
                         ${chapHasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 font-bold">🇬🇪</span>' : ''}
                         ${isCurrentlyTranslating ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold animate-pulse">⏳ Translating</span>' : ''}
                     </h4>

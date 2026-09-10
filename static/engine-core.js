@@ -86,6 +86,40 @@
     function cleanVerbatim(text) {
         return String(text || '').replace(/\r\n?/g, '\n').replace(/\u0000/g, '').trim();
     }
+    // Layout-only cleanup: keep words, footnotes, identifiers and meaningful short blanks.
+    // Long PDF drawing rules become paragraph boundaries, never spoken underscores.
+    function readingText(text) {
+        return cleanVerbatim(text)
+            .replace(/(?<!\S)_{12,}(?!\S)/gu, '\n\n')
+            .replace(/^[ \t]*[─━—-]{5,}[ \t]*$/gmu, '\n')
+            .replace(/[ \t]+([.,;:!?])/g, '$1')
+            .replace(/[ \t]+/g, ' ')
+            .replace(/\n[ \t]+/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+    function headingSource(title, chapterId) {
+        const source = String(title || '').trim();
+        // Retire titles invented by the old fixed-length importer, without regrouping chapter IDs.
+        const fragment = source.match(/^(foreword|dedication)[.\s]+.{30,}\(part\s+(\d+)\)$/i);
+        return fragment ? `Section ${chapterId || fragment[2]}` : source;
+    }
+    function localizedHeading(title, language) {
+        const text = headingSource(title);
+        const names = { opening:'შესავალი ნაწილი', foreword:'წინასიტყვაობა', preface:'წინასიტყვაობა', introduction:'შესავალი', prologue:'პროლოგი', epilogue:'ეპილოგი', afterword:'ბოლოსიტყვაობა', conclusion:'დასკვნა', dedication:'მიძღვნა', contents:'სარჩევი', 'table of contents':'სარჩევი', appendix:'დანართი', acknowledgments:'მადლობა', acknowledgements:'მადლობა' };
+        if (language === 'en') {
+            const match = Object.entries(names).find(([, ka]) => ka === text);
+            return match ? match[0][0].toUpperCase() + match[0].slice(1) : null;
+        }
+        if (language !== 'ka') return null;
+        const part = text.match(/^(.*?)\s*\(part\s+(\d+)\)$/i);
+        if (part) { const base = localizedHeading(part[1], language); return base ? `${base} · ნაწილი ${part[2]}` : null; }
+        if (names[text.toLowerCase()]) return names[text.toLowerCase()];
+        const numbered = text.match(/^(chapter|part|book|section|volume|pages|page)\s+([\dIVXLCDM]+(?:[–-]\d+)?)\s*$/i);
+        return numbered ? `${{chapter:'თავი',part:'ნაწილი',book:'წიგნი',section:'განყოფილება',volume:'ტომი',pages:'გვერდები',page:'გვერდი'}[numbered[1].toLowerCase()]} ${numbered[2]}` : null;
+    }
+    function chapterTitle(chapter, language) {
+        const source = headingSource(chapter.title, chapter.id);
+        return chapter['title_' + language] || localizedHeading(source, language) || source;
+    }
     function repairIsAcceptable(source, candidate) {
         if (typeof candidate !== 'string' || !candidate.trim()) return false;
         if (/```|<\/?(?:think|tool_call)\b/i.test(candidate)) return false;
@@ -138,5 +172,5 @@
             ? Math.round(declaredSeconds) : Math.round(words / 140 * 60);
         return { words, seconds };
     }
-    return { normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, naturalSentences, cleanVerbatim, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats, reviewDecision, bookSourceLanguage };
+    return { normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, naturalSentences, cleanVerbatim, readingText, headingSource, localizedHeading, chapterTitle, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats, reviewDecision, bookSourceLanguage };
 });

@@ -102,7 +102,7 @@ function context() {
     const metadata = new Map();
     const ctx = vm.createContext({EngbotCore: core, console: silent, AbortController, AbortSignal,
         DOM: {wbProgressPct: {textContent: '0%'},wbProgressBar:{style:{}}},
-        window: {EngbotJobStore: {
+        window: {EngbotUI:{displayTitle:t=>t}, EngbotJobStore: {
             get: async k => structuredClone(checkpoints.get(k)),
             put: async (k,v) => checkpoints.set(k, structuredClone(v)),
             remove: async k => checkpoints.delete(k),
@@ -113,6 +113,7 @@ function context() {
         isTranslatingWholeBook:false, cancelTranslationFlag:false, translationRequestController:null,
         geminiModel:'gemini-2.5-pro',geminiPasses:3,openRouterModel:'',customProviderModel:'',usingCloud:false,
         detectTextLang:core.detectLanguage,assessTranslation:core.assessTranslation,
+        translationMachine:()=>({translate:async(_s,_from,to)=>to==='ka'?'პირველი':'First'}),
         setTranslationStage(){},translationFailure(){},appendChunkLog(){},updateChunkRate(){},updateMiniDock(){},
         openModal(){}, closeModal(){},buildChapterQueue(){},updateChapterQueueStatus(){},showToast(){},renderChaptersList(){},renderDigitalShelf(){},
         document:{getElementById:()=>null},
@@ -128,6 +129,7 @@ function context() {
     vm.runInContext(section("const TJOB_PREFIX =", 'function findResumableTranslationJob('), ctx);
     vm.runInContext(section('async function startWholeBookTranslation(', '// ══════════════════════════════════════════════════════════════════════════\n// ██ LOCK-SCREEN'),ctx);
     vm.runInContext(section('async function saveTranslatedBookEdition(', 'window.saveTranslatedBookEdition'),ctx);
+    vm.runInContext(section('const headingTranslations =', '// When a book is translated,'),ctx);
     ctx.checkpoints=checkpoints;
     return ctx;
 }
@@ -285,6 +287,27 @@ test('Edition cannot fall back to untranslated source',async()=>{
     const ctx=context();ctx.currentBook.chapters[0].text_ka='partial';
     await assert.rejects(ctx.saveTranslatedBookEdition(ctx.currentBook,'ka'));
     assert.equal(ctx.saved.length,0);
+});
+test('Translated editions include translated headings and preserve source headings and page ranges',async()=>{
+    const ctx=context();const chapter=ctx.currentBook.chapters[0];
+    chapter.title='FOREWORD';chapter.firstPage=2;chapter.lastPage=5;
+    ctx.translateChunkAI=async text=>'ქართული თარგმანი ამ მონაკვეთისთვის. '.repeat(Math.ceil(text.length/45));
+    await ctx.startWholeBookTranslation();
+    const edition=ctx.saved.find(b=>b.isTranslatedEdition);
+    assert.equal(edition.chapters[0].title,'წინასიტყვაობა');
+    assert.equal(edition.chapters[0].source_title,'FOREWORD');
+    assert.equal(edition.chapters[0].lastPage,5);
+    assert.equal(edition.extra.lang,'ka');
+    assert.equal(edition.extra.language,'ka');
+});
+test('A heading retry reuses completed body translation instead of translating it again',async()=>{
+    const ctx=context();ctx.currentBook.chapters[0].text='This paragraph must not be translated twice.';
+    let bodyCalls=0;ctx.translateChunkAI=async()=>{bodyCalls++;return 'ეს აბზაცი ორჯერ არ უნდა ითარგმნოს.';};
+    ctx.translationMachine=()=>({translate:async()=>null});
+    await ctx.startWholeBookTranslation();assert.equal(ctx.saved.filter(b=>b.isTranslatedEdition).length,0);
+    ctx.translationMachine=()=>({translate:async()=> 'პირველი'});
+    await ctx.startWholeBookTranslation(true);
+    assert.equal(bodyCalls,1);assert.equal(ctx.saved.filter(b=>b.isTranslatedEdition).length,1);
 });
 test('Account switch preserves checkpoint under original owner and stops book writes',async()=>{
     const ctx=context();

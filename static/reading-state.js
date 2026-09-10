@@ -12,8 +12,15 @@
     }
     function resolve(saved, chapter, language, sentences) {
         if (!saved || String(saved.chapterId) !== String(chapter.id) || saved.language !== language) return 0;
-        if (saved.fingerprint === hash(chapter['text_' + language] || chapter.text || '')) return Math.max(0, Math.min(saved.sentence || 0, sentences.length - 1));
-        const matches = sentences.map((s, i) => (s.text || s).startsWith(saved.anchor || '\0') ? i : -1).filter(i => i >= 0);
+        const normalize = text => String(text || '').replace(/(?<!\S)_{12,}(?!\S)/gu, ' ').replace(/\s+/gu, ' ').trim();
+        const anchor = normalize(saved.anchor);
+        const index = Math.max(0, Math.min(saved.sentence || 0, sentences.length - 1));
+        // A layout-engine update can change sentence boundaries without changing raw book text.
+        if (saved.fingerprint === hash(chapter['text_' + language] || chapter.text || '') && (!anchor || normalize(sentences[index]?.text || sentences[index]).startsWith(anchor))) return index;
+        const matches = sentences.map((s, i) => {
+            const text = normalize(s.text || s);
+            return anchor && text && (text.startsWith(anchor) || anchor.startsWith(text)) ? i : -1;
+        }).filter(i => i >= 0);
         return matches.sort((a, b) => Math.abs(a - saved.sentence) - Math.abs(b - saved.sentence))[0] ?? 0;
     }
     function merge(local, remote) {
