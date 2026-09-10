@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.50.2';
-const ENGINE_VERSION = 'v1.50.2 (Georgian narration and measured language training)';
+const APP_VERSION = 'v1.51.0';
+const ENGINE_VERSION = 'v1.51.0 (Saved places, document structure and local OCR)';
 
 let db = null;
 let currentBook = null;
@@ -5172,7 +5172,7 @@ function openCurrentBookInReader() {
     openReader(currentBook.id, chapId, targetLang);
 }
 
-async function openReader(bookId, chapterId, lang = 'en') {
+async function openReader(bookId, chapterId, lang = 'en', savedPosition = null) {
     isUserManuallyNavigating = false;
     let books = null;
     if (currentBook && String(currentBook.id) === String(bookId)) {
@@ -5194,7 +5194,15 @@ async function openReader(bookId, chapterId, lang = 'en') {
             return;
         }
     }
+    if (currentBook && String(currentBook.id) !== String(readerBook.id)) stopSpeech();
     currentBook = readerBook;
+    const openingBook = readerBook;
+    const openingOwner = getCurrentUserId();
+    if (!savedPosition && window.EngbotReadingUI && !(isPlaying && String(currentPlayingChapterId) === String(chapterId))) {
+        savedPosition = await window.EngbotReadingUI.choose(readerBook, 'read', chapterId, lang);
+        if (!savedPosition || String(readerBook?.id) !== String(openingBook.id) || getCurrentUserId() !== openingOwner) return;
+        chapterId = savedPosition.chapterId;
+    }
 
     readerChapterId = chapterId !== undefined ? chapterId : (readerBook.chapters[0] ? readerBook.chapters[0].id : 1);
     readerLang = lang;
@@ -5248,10 +5256,12 @@ async function openReader(bookId, chapterId, lang = 'en') {
         }
         renderCurrentPage();
         initReaderGestures();
+        if (savedPosition) window.EngbotReadingUI?.restore(savedPosition);
     });
 }
 
 function closeReader() {
+    window.EngbotReadingUI?.capture('read', true);
     readerActive = false;
     DOM.readerView.classList.remove('active');
     document.body.style.overflow = 'auto';
@@ -5642,6 +5652,8 @@ function initReaderGestures() {
 window.initReaderGestures = initReaderGestures;
 
 function renderCurrentPage() {
+    window.EngbotReadingUI?.followAudio();
+    if (readerActive) requestAnimationFrame(() => window.EngbotReadingUI?.capture('read'));
     if (!readerBook || !DOM.readerPageSpread) return;
     const chap = readerBook.chapters.find(c => String(c.id) === String(readerChapterId));
     if (!chap) return;
@@ -6222,7 +6234,7 @@ function playPrevChapter() {
     if (!currentBook) return;
     const curIdx = currentBook.chapters.findIndex(c => String(c.id) === String(currentPlayingChapterId));
     if (curIdx > 0) {
-        playChapterAudio(currentBook.chapters[curIdx - 1].id);
+        playChapterAudio(currentBook.chapters[curIdx - 1].id, 0, true);
     }
 }
 
@@ -6230,7 +6242,7 @@ function playNextChapter() {
     if (!currentBook) return;
     const curIdx = currentBook.chapters.findIndex(c => String(c.id) === String(currentPlayingChapterId));
     if (curIdx >= 0 && curIdx < currentBook.chapters.length - 1) {
-        playChapterAudio(currentBook.chapters[curIdx + 1].id);
+        playChapterAudio(currentBook.chapters[curIdx + 1].id, 0, true);
     }
 }
 
@@ -8220,6 +8232,7 @@ window.initMediaSessionHandlers = initMediaSessionHandlers;
 // ══════════════════════════════════════════════════════════════════════════
 
 async function speakCurrentSentence() {
+    window.EngbotReadingUI?.capture('listen');
     if (!isPlaying || isPaused) return;
 
     if (currentSentenceIndex >= sentenceQueue.length) {
@@ -8975,8 +8988,19 @@ function stopCurrentSpeechAudio(keepBuffers = false) {
 }
 
 // ── Playback Controls ───────────────────────────────────────────────────────
-function playChapterAudio(chapId, startSentenceIdx = 0, forceReload = false) {
+async function playChapterAudio(chapId, startSentenceIdx, forceReload = false) {
     if (!currentBook) return;
+    if (startSentenceIdx === undefined && !forceReload && !isPlaying && window.EngbotReadingUI) {
+        const book = currentBook;
+        const owner = getCurrentUserId();
+        const saved = await window.EngbotReadingUI.choose(book, 'listen', chapId, currentLang);
+        if (!saved || String(currentBook?.id) !== String(book.id) || getCurrentUserId() !== owner) return;
+        chapId = saved.chapterId;
+        const chapter = currentBook.chapters.find(c => String(c.id) === String(chapId));
+        if (!chapter) return;
+        startSentenceIdx = window.EngbotReading.resolve(saved, chapter, currentLang, prepareChapterSentences(chapter['text_' + currentLang] || chapter.text || ''));
+    }
+    if (startSentenceIdx === undefined) startSentenceIdx = isPlaying && String(chapId) === String(currentPlayingChapterId) ? currentSentenceIndex : 0;
     const chap = currentBook.chapters.find(c => String(c.id) === String(chapId));
     if (!chap) return;
 
@@ -9042,7 +9066,7 @@ function togglePlayPause() {
     if (readerActive && readerBook) {
         // If reader is open and audio is stopped or on a different chapter, start reading from current page
         if (!isPlaying || String(currentPlayingChapterId) !== String(readerChapterId)) {
-            const startIdx = (readerPages[readerCurrentPage - 1]?.[0]?.globalIndex) || 0;
+            const startIdx = window.EngbotReadingUI?.readIndex() ?? (readerPages[readerCurrentPage - 1]?.[0]?.globalIndex || 0);
             currentLang = readerLang;
             updateLangToggleUI();
             playChapterAudio(readerChapterId, startIdx, true);
@@ -9102,6 +9126,7 @@ function updatePlayerUIState(speaking) {
 }
 
 function stopSpeech() {
+    window.EngbotReadingUI?.capture('listen', true);
     if (typeof flushBookProgressImmediate === 'function' && currentBook) {
         flushBookProgressImmediate(currentBook);
     }
@@ -9622,6 +9647,7 @@ async function handleFileUpload(file) {
         let isGeorgianBook = false;
         let coverUrl = null;
         let chapters = [];
+        let importSummary = null;
 
         if (isPdf) {
             const arrayBuffer = await file.arrayBuffer();
@@ -9633,7 +9659,22 @@ async function handleFileUpload(file) {
                 if (i % 4 === 0) await window.EngbotUI.nextPaint();
                 const page = await pdf.getPage(i);
                 const content = await page.getTextContent();
-                pageTexts.push({ index: i, text: pdfPageLines(content) });
+                let pageText = pdfPageLines(content);
+                let ocr = null;
+                if (window.EngbotBookStructure.needsOcr(pageText)) {
+                    DOM.uploadStatusText.textContent = `Recognizing printed text · page ${i} of ${totalPages}…`;
+                    const base = page.getViewport({ scale: 1 });
+                    const viewport = page.getViewport({ scale: Math.min(3, 2400 / Math.max(base.width, base.height)) });
+                    const canvas = document.createElement('canvas'); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+                    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    try { ocr = await window.LuminaScanner.transcribeBlob(blob, 'auto'); }
+                    catch (error) { throw new Error(`Page ${i} needs review: ${error.message}`); }
+                    if (ocr.text.trim()) pageText = ocr.text;
+                    canvas.width = canvas.height = 0;
+                }
+                pageTexts.push({ index: i, text: pageText, ocr: ocr?.engine || null });
+                page.cleanup();
 
                 const pct = 15 + Math.round((i / totalPages) * 45);
                 DOM.uploadProgressBar.style.width = `${pct}%`;
@@ -9658,7 +9699,9 @@ async function handleFileUpload(file) {
             isGeorgianBook = kaCount > 25 && (kaCount >= enCount * 0.25 || kaCount > 100);
             detectedLang = isGeorgianBook ? 'ka' : 'en';
 
-            const structure = detectBookStructure(pageTexts, { isKa: isGeorgianBook });
+            const outline = await window.EngbotBookStructure.outline(pdf);
+            const structure = detectBookStructure(pageTexts, { isKa: isGeorgianBook, outline });
+            importSummary = { method: structure.method, emptyPages: structure.emptyPages, ocrPages: pageTexts.filter(p => p.ocr).map(p => p.index) };
             title = usableMeta(info.Title)
                 || structure.title
                 || title;
@@ -9671,6 +9714,7 @@ async function handleFileUpload(file) {
             chapters = structure.chapters.length
                 ? structure.chapters
                 : splitIntoChapters(pageTexts.map(p => p.text).join('\n\n'), isGeorgianBook);
+            await pdf.destroy();
         } else {
             // Text or Markdown document
             const fullText = await file.text();
@@ -9684,7 +9728,7 @@ async function handleFileUpload(file) {
             detectedLang = isGeorgianBook ? 'ka' : 'en';
             author = isGeorgianBook ? 'ქართული ტექსტი' : 'Text Document';
 
-            chapters = splitIntoChapters(fullText, isGeorgianBook);
+            chapters = detectBookStructure([{ index: 1, text: fullText }], { isKa: isGeorgianBook, skipCover: true }).chapters;
             coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
         }
 
@@ -9725,7 +9769,8 @@ async function handleFileUpload(file) {
                 detected_title: title,
                 detected_author: author,
                 detected_sections: chapters.length,
-                detected_lang: detectedLang
+                detected_lang: detectedLang,
+                import_structure: importSummary
             }
         };
 
@@ -9777,19 +9822,7 @@ async function handleFileUpload(file) {
  * makes chapter/title headings detectable (a flat join destroys them).
  */
 function pdfPageLines(content) {
-    const rows = [];
-    (content.items || []).forEach(item => {
-        if (!item || typeof item.str !== 'string') return;
-        const y = item.transform ? Math.round(item.transform[5]) : 0;
-        const row = rows.find(r => Math.abs(r.y - y) <= 3);
-        if (row) row.parts.push(item.str);
-        else rows.push({ y, parts: [item.str] });
-    });
-    return rows
-        .sort((a, b) => b.y - a.y)
-        .map(r => r.parts.join(' ').replace(/\s+/g, ' ').trim())
-        .filter(Boolean)
-        .join('\n');
+    return window.EngbotBookStructure.pageLines(content);
 }
 
 /** Renders a PDF page to a JPEG data URL so it can be used as the book cover. */
@@ -9820,8 +9853,8 @@ async function renderPdfPageAsCover(pdf, pageNumber) {
 // TTS and Georgian translation engine work with no special cases. Chapters
 // follow page boundaries so the book still reads page by page.
 async function createBookFromScannedPages(pages, meta) {
-    const list = (pages || []).filter(p => p && p.text && p.text.trim());
-    if (!list.length) throw new Error('No recognised page text');
+    const list = (pages || []).filter(p => p && typeof p.text === 'string');
+    if (!list.some(p => p.text.trim())) throw new Error('No recognised page text');
 
     const sampleKa = (list.slice(0, 15).map(p => p.text).join(' ').match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
     const isKa = (meta && meta.lang) === 'ka' || sampleKa > 25;
@@ -9863,6 +9896,7 @@ async function createBookFromScannedPages(pages, meta) {
         extra: {
             source: 'scan',
             scanned_pages: list.length,
+            page_count: list.length,
             scan_lang: isKa ? 'ka' : 'en',
             scan_engines: Array.from(new Set(list.map(p => p.engine).filter(Boolean))),
             cover_page: structure.coverIndex || null,
@@ -9886,8 +9920,8 @@ window.createBookFromScannedPages = createBookFromScannedPages;
  * become their own sections instead of one blob at the end.
  */
 async function appendScannedPagesToBook(bookId, pages, meta) {
-    const list = (pages || []).filter(p => p && p.text && p.text.trim());
-    if (!list.length) throw new Error('No recognised page text');
+    const list = (pages || []).filter(p => p && typeof p.text === 'string');
+    if (!list.some(p => p.text.trim())) throw new Error('No recognised page text');
 
     const books = await getAllBooks();
     const book = books.find(b => String(b.id) === String(bookId));
@@ -9913,6 +9947,7 @@ async function appendScannedPagesToBook(bookId, pages, meta) {
     book.extra = Object.assign({}, book.extra, {
         source: 'scan',
         scanned_pages: existingPages + list.length,
+        page_count: existingPages + list.length,
         scan_engines: Array.from(new Set(((book.extra && book.extra.scan_engines) || []).concat(list.map(p => p.engine).filter(Boolean)))),
         detected_sections: book.chapters.length,
         last_pages_added: new Date().toISOString()
@@ -10004,75 +10039,13 @@ function detectTitleAndAuthor(text) {
  * Turn recognised pages into a structured book.
  * `pages` is [{ index, text }] — pages from a scan, or per-page PDF text.
  */
-function detectBookStructure(pages, opts) {
-    const list = (pages || []).filter(p => p && typeof p.text === 'string');
-    if (!list.length) return { coverIndex: null, title: null, author: null, chapters: [] };
-
-    let isKa = opts && typeof opts.isKa === 'boolean' ? opts.isKa : undefined;
-    if (isKa === undefined) {
-        const sample = list.slice(0, 20).map(p => p.text).join(' ');
-        const ka = (sample.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
-        const en = (sample.match(/[A-Za-z]/g) || []).length;
-        isKa = ka > 25 && (ka >= en * 0.25 || ka > 100);
-    }
-
-    // 1. Cover: only the first two pages can be one.
-    let coverIndex = null;
-    // When appending to an existing book there is no cover among the new pages.
-    for (const page of (opts && opts.skipCover ? [] : list.slice(0, 2))) {
-        if (looksLikeCoverPage(page.text)) { coverIndex = page.index; break; }
-    }
-
-    const cover = coverIndex ? list.find(p => p.index === coverIndex) : null;
-    const detected = detectTitleAndAuthor(cover ? cover.text : list[0].text.split('\n').slice(0, 8).join('\n'));
-
-    // 2. Chapters: split at detected headings, page boundaries preserved.
-    const body = list.filter(p => p.index !== coverIndex);
-    const found = [];
-    let current = null;
-    const push = () => { if (current && current.text.trim()) found.push(current); };
-
-    body.forEach(page => {
-        const lines = page.text.split('\n');
-        lines.forEach(line => {
-            const heading = detectHeadingLine(line);
-            if (heading) {
-                push();
-                current = { title: heading, text: '', firstPage: page.index, lastPage: page.index };
-                return;
-            }
-            if (!current) current = { title: isKa ? 'შესავალი ნაწილი' : 'Opening', text: '', firstPage: page.index, lastPage: page.index };
-            current.text += (current.text ? '\n' : '') + line;
-            current.lastPage = page.index;
-        });
-    });
-    push();
-
-    let sections = found.filter(c => c.text.split(/\s+/).filter(Boolean).length > 25);
-    if (sections.length < 2) sections = bucketPages(body, isKa);
-
-    // 3. Very long chapters are parted so narration and translation stay snappy.
-    const MAX_WORDS = 1800;
-    const chapters = [];
-    sections.forEach(section => {
-        const words = section.text.trim().split(/\s+/).filter(Boolean);
-        const partCount = Math.max(1, Math.ceil(words.length / MAX_WORDS));
-        for (let p = 0; p < partCount; p++) {
-            const slice = words.slice(p * MAX_WORDS, (p + 1) * MAX_WORDS);
-            if (!slice.length) continue;
-            const text = slice.join(' ');
-            chapters.push({
-                id: chapters.length + 1,
-                title: partCount > 1 ? (isKa ? `${section.title} (ნაწილი ${p + 1})` : `${section.title} (part ${p + 1})`) : section.title,
-                text,
-                text_ka: isKa ? text : null,
-                word_count: slice.length,
-                estimated_duration_sec: Math.round((slice.length / 140) * 60)
-            });
-        }
-    });
-
-    return { coverIndex, title: detected.title, author: detected.author, chapters };
+function detectBookStructure(pages, opts = {}) {
+    const list = (pages || []).filter(p => p && typeof p.text === 'string').map((p, i) => ({ ...p, index: p.index ?? i + 1 }));
+    const isKa = opts.isKa ?? EngbotCore.detectLanguage(list.slice(0, 20).map(p => p.text).join(' ')) === 'ka';
+    const result = window.EngbotBookStructure.structure(list, { ...opts, isKa });
+    const cover = !opts.skipCover && list.slice(0, 2).find(p => looksLikeCoverPage(p.text) && !p.text.split('\n').some(window.EngbotBookStructure.heading));
+    const detected = detectTitleAndAuthor(cover?.text || list[0]?.text || '');
+    return { ...result, coverIndex: cover?.index || null, title: detected.title, author: detected.author };
 }
 
 /** Fallback when a book has no detectable headings: read it page by page. */
@@ -10308,6 +10281,7 @@ function renderDiscoverClassics() {
 
 let bookSelectionRevision = 0;
 async function selectBook(bookId, autoPlayFirst = false) {
+    if (currentBook && String(currentBook.id) !== String(bookId)) { window.EngbotReadingUI?.capture(undefined, true); stopSpeech(); }
     const selection = ++bookSelectionRevision;
     const books = await getAllBooks();
     if (selection !== bookSelectionRevision) return;
@@ -10443,6 +10417,7 @@ async function deleteBook(e, bookId) {
 
     // 3. Purge across all databases and Supabase
     await deleteBookFromDB(bookId, bookTitle, bookSlug);
+    window.EngbotReadingUI?.store.forget(bookId);
 
     // 4. Update digital shelf immediately
     await renderDigitalShelf();

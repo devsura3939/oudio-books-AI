@@ -536,6 +536,7 @@
     return Object.assign({}, flattenedExtra, {
       id: bookRow.slug || bookRow.id,
       row_id: bookRow.id,
+      user_id: bookRow.user_id,
       title: bookRow.title,
       author: bookRow.author || "Unknown author",
       source_filename: bookRow.source_filename || null,

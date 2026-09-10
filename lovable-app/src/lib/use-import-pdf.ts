@@ -42,6 +42,7 @@ export function useImportPdf(options?: { onImported?: (book: Book) => void }) {
           cover_url: parsed.coverImage,
           source_filename: file.name,
           page_count: parsed.pageCount,
+          language: parsed.language,
           total_chapters: parsed.chapters.length,
           status: "parsing",
         })
@@ -58,6 +59,7 @@ export function useImportPdf(options?: { onImported?: (book: Book) => void }) {
         title: chapter.title.slice(0, 200),
         text_content: chapter.text,
         word_count: chapter.wordCount,
+        metadata: { extra: { firstPage: chapter.firstPage, lastPage: chapter.lastPage } },
       }));
       const { error: chapterError } = await db.from("chapters").insert(rows);
       if (chapterError) throw chapterError;

@@ -5,12 +5,9 @@
    import lands on: same chapters, same Moon Reader, same TTS, same Georgian
    translation engine. Nothing else in the studio is touched.
 
-   Recognition tiers (auto, with fallback):
-     Tier 0  POST /api/ocr        → Lovable AI Gateway vision (highest quality,
-                                    Georgian-aware, transcription only)
-     Tier 1  tesseract.js (eng|kat, tessdata_best) fully in the browser — used
-             when Tier 0 is unavailable (static hosting / 404 / 401-403) or a
-             page fails there.
+   Recognition starts with local eng/kat OCR, checking line coverage and
+   alternate page layouts. Optional vision reviews difficult pages; the
+   original recognition remains available for manual review.
 
    Public API:  window.LuminaScanner.open()
    ════════════════════════════════════════════════════════════════════════════ */
@@ -95,14 +92,14 @@
   function visionStatusPill() {
     const hasGemini = !!(localStorage.getItem("geminiApiKey") || "").trim();
     const hasOR = !!(localStorage.getItem("openRouterApiKey") || "").trim();
-    const active = hasGemini ? "Google Gemini 2.0 Flash" : hasOR ? "OpenRouter Vision" : "AI Gateway Vision";
+    const active = hasGemini ? "Gemini assistance configured" : hasOR ? "OpenRouter assistance configured" : "Optional AI assistance";
     return `
       <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
         <div class="flex items-center gap-2 overflow-hidden">
           <span class="material-symbols-outlined text-base ${hasGemini || hasOR ? 'text-primary-fixed' : 'text-on-surface-variant'}">neurology</span>
           <div class="truncate">
-            <span class="text-white font-medium text-[11px] block truncate">Vision Engine: ${active}</span>
-            <span class="text-[10px] text-on-surface-variant">${hasGemini || hasOR ? '99%+ Neural OCR Active' : 'Plug in free Gemini key for 99%+ accuracy'}</span>
+            <span class="text-white font-medium text-[11px] block truncate">Local Georgian &amp; English OCR</span>
+            <span class="text-[10px] text-on-surface-variant">${active} · review difficult pages</span>
           </div>
         </div>
         <button onclick="LuminaScanner.promptVisionKey()" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] font-bold text-white transition flex-shrink-0">Key</button>
@@ -111,7 +108,7 @@
 
   function promptVisionKey() {
     const current = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("geminiApiKey") || "") : (localStorage.getItem("geminiApiKey") || "").trim());
-    const input = prompt("Enter Google Gemini API Key (1,500 free requests/day for 99%+ book recognition):\nGet one free in 10 seconds at: aistudio.google.com/app/apikey", current);
+    const input = prompt("Enter a Gemini API key for optional help with difficult pages:\nManage keys at aistudio.google.com/app/apikey", current);
     if (input === null) return;
     const clean = typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(input) : input.trim();
     if (clean) {
@@ -126,7 +123,7 @@
         localStorage.setItem("geminiApiKey", clean);
         localStorage.setItem("lumina_saved_gemini_key", clean);
         state.tier0 = true;
-        alert("Gemini Neural Vision key saved & sanitized! Book scanning will now use high-precision Gemini 2.0 Flash.");
+        alert("Gemini key saved. Local OCR will use optional vision assistance for difficult pages.");
       }
     } else {
       localStorage.removeItem("geminiApiKey");
@@ -188,7 +185,7 @@
             ${langPicker()}
             ${visionStatusPill()}
           </div>
-          <p class="text-[11px] text-on-surface-variant leading-relaxed pt-1">Neural vision with contextual deduction transcribes full literary prose, reconstructing faint ink and curved margins faithfully.</p>
+          <p class="text-[11px] text-on-surface-variant leading-relaxed pt-1">Recognize Georgian and English pages locally. Compare uncertain text with the image before saving.</p>
         </div>`;
     } else if (view === "camera") {
       el.innerHTML =
@@ -676,6 +673,11 @@
     const { w, h } = base;
     const gray = Uint8ClampedArray.from(base.gray); // work on a copy
 
+    if (variant === 'original') {
+      const canvas = grayToCanvas(gray, w, h, 1);
+      return { dataUrl: canvas.toDataURL('image/png'), blob: await new Promise(resolve => canvas.toBlob(resolve, 'image/png')) };
+    }
+
     flattenIllumination(gray, w, h);
     stretchContrast(gray);
     const isBlurry = (page._sharpness || 999) < 140;
@@ -748,12 +750,24 @@
 
     page._sharpness = laplacianVariance(gray, w, h);
     page._exposure = meanOf(gray);
+    page._textLineCount = textLineBands(gray, w, h);
     // Upscaling tactics: photos that are small, cropped, or blurry (< 180 variance)
     // OCR significantly better when upscaled 2x or 3x with high-quality smoothing.
     const isBlurry = page._sharpness < 180;
     const maxDim = Math.max(w, h);
     const upscale = maxDim < 1400 ? 3 : (maxDim < 2600 || isBlurry) ? 2 : 1;
     return { gray, w, h, upscale };
+  }
+
+  function textLineBands(gray, w, h) {
+    let bands = 0, start = -1, lastInk = -1;
+    for (let y = 0; y < h; y++) {
+      let ink = 0;
+      for (let x = 0; x < w; x++) if (gray[y * w + x] < 120) ink++;
+      if (ink >= Math.max(5, w * 0.006) && ink < w * 0.85) { if (start < 0) start = y; lastInk = y; }
+      if ((y - lastInk > 4 || y === h - 1) && start >= 0) { if (lastInk - start >= 3) bands++; start = -1; }
+    }
+    return bands;
   }
 
   function toGray(img, w, h) {
@@ -1136,18 +1150,19 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
       langPath: TESS_LANGS,
       gzip: true,
     });
-    await worker.setParameters({ preserve_interword_spaces: "1" });
+    await worker.setParameters({ preserve_interword_spaces: "1", tessedit_pageseg_mode: '3' });
     state.tessWorker = worker;
     state.tessLang = target;
     return worker;
   }
 
   let localOcrQueue = Promise.resolve();
-  async function ocrLocal(blob, lang) {
+  async function ocrLocal(blob, lang, segmentation = '3') {
     // Two neural lanes may fail over together. Creation, language changes and recognition must all serialize.
     const job = localOcrQueue.then(async () => {
       if (state.cancel) throw new Error('Scan stopped.');
       const worker = await tessWorkerFor(lang);
+      await worker.setParameters({ tessedit_pageseg_mode: segmentation });
       const { data } = await worker.recognize(blob);
       if (state.cancel) throw new Error('Scan stopped.');
       return { text: data.text || "", confidence: typeof data.confidence === "number" ? data.confidence : 0 };
@@ -1609,59 +1624,50 @@ ${text.slice(0, 10000)}`;
     return t;
   }
 
-  async function scanOnePage(page) {
+  async function scanOnePage(page, requestedLanguage = state.lang) {
     page.status = "working";
     try {
-      const lang = state.lang;
+      const lang = requestedLanguage;
       const attempts = [];
 
-      // Pass 1 — enhanced greyscale, the best input for clean-ish photos.
-      const enhanced = await preprocess(page, "enhanced");
-      if (canUseNeuralOCR()) {
-        try {
-          const res = await withRetry(() => ocrGateway(enhanced.dataUrl, lang, ocrHint(page, lang)));
-          attempts.push({ text: res.text, engine: res.engine || "neural", score: scoreText(res.text, lang) });
-        } catch (err) {
-          console.warn("[scanner] tier 0 failed, falling back:", err && err.message);
-        }
-      }
-      if (!attempts.length) {
-        const r = await ocrLocal(enhanced.blob, lang);
-        attempts.push({ text: r.text, engine: "offline", score: scoreText(r.text, lang) * (0.35 + r.confidence / 300) });
-      }
-
-      // Pass 2 — when first pass looks weak, blurry, or low light.
+      // Local OCR is the baseline. Paid vision is a bounded second opinion on difficult pages.
+      const enhanced = await preprocess(page, "original");
+      const coverage = text => Math.min(1, String(text).split('\n').filter(line => line.trim()).length / Math.max(1, page._textLineCount || 1));
+      const localScore = result => scoreText(result.text, lang) * (0.5 + Math.max(0, Math.min(100, result.confidence)) / 200) * coverage(result.text);
+      try {
+        const local = await ocrLocal(enhanced.blob, lang);
+        attempts.push({ text: local.text, engine: "offline", score: localScore(local), confidence: local.confidence });
+      } catch (err) { if (state.cancel) throw err; }
       const first = attempts[0];
-      const isBlurry = (page._sharpness || 999) < 140;
-      const shaky = isBlurry || (page._exposure || 128) < 70 || (page._exposure || 128) > 215;
-      // A neural response is not automatically a good response. When it is
-      // empty or low-confidence, run the local recogniser as a second opinion
-      // before spending another provider request on a recovery image.
-      if (!first || first.score < 0.65 || shaky) {
+      const isBlurry = (page._sharpness ?? 999) < 140;
+      if (!first || first.score < 0.8) {
         try {
-          const local = await ocrLocal(enhanced.blob, lang);
-          attempts.push({ text: local.text, engine: "offline", score: scoreText(local.text, lang) * (0.35 + local.confidence / 300) });
-        } catch (err) {
-          console.warn("[scanner] local OCR baseline failed:", err && err.message);
-        }
+          const local = await ocrLocal(enhanced.blob, lang, '6');
+          attempts.push({ text: local.text, engine: 'offline+text-block', score: localScore(local), confidence: local.confidence });
+        } catch (err) { if (state.cancel) throw err; }
       }
-      if (!first || first.score < 0.65 || shaky) {
+      if (!attempts.some(a => a.score >= 0.8)) {
         try {
-          const recoveryVariant = isBlurry && (first?.score || 0) < 0.55 ? "super_res" : "binary";
-          const recovery = await preprocess(page, recoveryVariant);
-          if (canUseNeuralOCR()) {
-            const res = await withRetry(() => ocrGateway(recovery.dataUrl, lang, ocrHint(page, lang)));
-            attempts.push({ text: res.text, engine: `${res.engine || "neural"}+${recoveryVariant}`, score: scoreText(res.text, lang) });
-          } else {
-            const r = await ocrLocal(recovery.blob, lang);
-            attempts.push({ text: r.text, engine: `offline+${recoveryVariant}`, score: scoreText(r.text, lang) * (0.35 + r.confidence / 300) });
+          const variant = isBlurry && (first?.score || 0) < 0.55 ? "super_res" : "binary";
+          const recovery = await preprocess(page, variant);
+          const local = await ocrLocal(recovery.blob, lang);
+          attempts.push({ text: local.text, engine: "offline+" + variant, score: localScore(local), confidence: local.confidence });
+        } catch (err) { if (state.cancel) throw err; }
+      }
+      const localBest = [...attempts].sort((a, b) => b.score - a.score)[0];
+      if ((!localBest || localBest.score < 0.8) && canUseNeuralOCR() && !state.cancel) {
+        try {
+          const res = await ocrGateway(enhanced.dataUrl, lang, ocrHint(page, lang));
+          const score = scoreText(res.text, lang) * coverage(res.text);
+          // A much shorter response is not a valid correction of visible recognized text.
+          if (!localBest?.text || res.text.length >= localBest.text.length * 0.8) {
+            attempts.push({ text: res.text, engine: res.engine || "neural", score });
           }
-        } catch (err) {
-          console.warn("[scanner] recovery pass failed:", err && err.message);
-        }
+        } catch (err) { console.warn("[scanner] optional vision unavailable; local text retained."); }
       }
 
-      const best = attempts.sort((a, b) => b.score - a.score)[0] || { text: "", engine: "" };
+      if (!attempts.length) throw new Error('Text recognition is unavailable. Retry this page when the OCR engine is ready.');
+      const best = attempts.sort((a, b) => b.score - a.score)[0];
       if (state.cancel) { page.status = 'pending'; page._base = null; return; }
       // The raw recognition is the source of truth; editorial changes require review.
       page.text = window.EngbotCore.cleanVerbatim(best.text === '[[NO_TEXT]]' ? '' : best.text);
@@ -1920,21 +1926,22 @@ ${text.slice(0, 10000)}`;
   }
 
   async function retryPage(id) {
+    if (state.running) return;
     const page = state.pages.find((p) => p.id === id);
     if (!page) return;
-    page.text = "";
-    await scanOnePage(page);
+    state.running = true; state.cancel = false;
+    try { await scanOnePage(page); } finally { state.running = false; }
     renderReview();
   }
 
   function acceptSuggestion(id) {
     const page = state.pages.find(p => p.id === id);
-    if (page?.trainedSuggestion) { page.text = page.trainedSuggestion; renderReview(); }
+    if (page?.trainedSuggestion) { page.text = page.trainedSuggestion; page.status = 'done'; page.reviewed = true; renderReview(); }
   }
 
   function editPage(id, value) {
     const page = state.pages.find((p) => p.id === id);
-    if (page) page.text = value;
+    if (page) { page.text = value; page.status = value.trim() ? 'done' : 'empty'; page.reviewed = true; }
   }
 
   // ── Text post-processing ───────────────────────────────────────────────────
@@ -2032,11 +2039,14 @@ ${text.slice(0, 10000)}`;
 
   // ── Save into the shelf ────────────────────────────────────────────────────
   async function saveBook() {
+    if (state.running) return;
+    const unfinished = state.pages.map((p, i) => !['done', 'empty'].includes(p.status) ? i + 1 : null).filter(Boolean);
+    if (unfinished.length) { alert('Review or retry pages ' + unfinished.join(', ') + ' before saving. No pages will be silently skipped.'); return; }
     const btn = document.getElementById("scanSaveBtn");
     const title = (document.getElementById("scanTitle") || {}).value || "Scanned book";
     const author = (document.getElementById("scanAuthor") || {}).value || "";
-    const pages = state.pages.filter((p) => p.text && p.text.trim());
-    if (!pages.length) {
+    const pages = state.pages;
+    if (!pages.some(p => p.text && p.text.trim())) {
       alert("No recognised text to save yet.");
       return;
     }
@@ -2119,7 +2129,20 @@ ${text.slice(0, 10000)}`;
     if (!state.orderNote) alert("Not enough printed page numbers were recognised to re-order these pages.");
   }
 
+  async function transcribeBlob(blob, lang = 'auto') {
+    if (state.running) throw new Error('Finish the current scan before importing another document.');
+    state.running = true; state.cancel = false;
+    const page = { id: 'pdf-ocr', blob, url: URL.createObjectURL(blob), rotation: 0, text: '', status: 'pending' };
+    try {
+      await scanOnePage(page, lang);
+      if (state.cancel || page.status === 'pending') throw new Error('Page recognition was cancelled. No partial book was saved.');
+      if (page.status === 'error' || (page.status === 'unreadable' && /\p{L}/u.test(page.text || ''))) throw new Error(page.error || 'Page needs a clearer scan or manual review.');
+      return { text: page.text || '', quality: page.quality, engine: page.engine };
+    } finally { URL.revokeObjectURL(page.url); state.running = false; }
+  }
+
   const scannerApi = {
+    transcribeBlob,
     reorderByPageNumbers,
     _autoOrder: autoOrderPages,
     _repairText: repairText,

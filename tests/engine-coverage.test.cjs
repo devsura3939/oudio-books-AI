@@ -169,7 +169,7 @@ test('Two neural scan failures serialize local OCR and cancelled queued pages ne
     const scanner = fs.readFileSync('static/scanner.js', 'utf8'); let active = 0, maxActive = 0;
     const ctx = { state: { cancel: false }, tessWorkerFor: async () => {
         active++; maxActive = Math.max(maxActive, active); await tick();
-        return { recognize: async blob => { await tick(); active--; return { data: { text: blob, confidence: 99 } }; } };
+        return { setParameters: async () => {}, recognize: async blob => { await tick(); active--; return { data: { text: blob, confidence: 99 } }; } };
     } };
     vm.createContext(ctx);
     vm.runInContext(scanner.slice(scanner.indexOf('  let localOcrQueue'), scanner.indexOf('  // ── Run')), ctx);
