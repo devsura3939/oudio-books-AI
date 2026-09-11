@@ -33,7 +33,7 @@ test('Translation direction follows source text, not the language of an existing
 });
 
 test('A malformed review falls through to the next configured provider',async()=>{
- const calls=[];const ctx=vm.createContext({translationRequestController:null,console:{warn(){}},geminiApiKey:'fixture',groqApiKey:'fixture',customProviderUrl:'',openRouterApiKey:'',mistralApiKey:'',luminaGatewayAvailable:false,callGeminiJSONDirect:async()=>{calls.push('Gemini');return {translation:'not a review'};},callGroqJSON:async()=>{calls.push('Groq');return {verdict:'approved',errors:[]};}});
+ const calls=[];const ctx=vm.createContext({window:{},translationRequestController:null,console:{warn(){}},geminiApiKey:'fixture',groqApiKey:'fixture',customProviderUrl:'',openRouterApiKey:'',mistralApiKey:'',luminaGatewayAvailable:false,callGeminiJSONDirect:async()=>{calls.push('Gemini');return {translation:'not a review'};},callGroqJSON:async()=>{calls.push('Groq');return {verdict:'approved',errors:[]};}});
  vm.runInContext(section('async function callGeminiJSON(','async function callGeminiJSONDirect('),ctx);
  const result=await ctx.callGeminiJSON('Review',{validateResponse:data=>core.reviewDecision(data).valid});
  assert.equal(result.verdict,'approved');assert.deepEqual(calls,['Gemini','Groq']);

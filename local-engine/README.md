@@ -6,6 +6,18 @@ Free online machine translation still runs first. Paid LLM editing is optional a
 
 ## Setup
 
+### Use an existing LM Studio model
+
+In **AI settings → LM Studio · Local AI backup**, enter your server URL (normally `http://localhost:1234/v1`) and its API token if authentication is enabled. Enable CORS in LM Studio's server settings. Choose **Detect models**, select a text model from the dropdown, enable **Use as automatic AI backup**, and choose **Save local model** or the main **Save AI Settings** button. A saved token can be revealed with the eye button.
+
+The app discovers `/v1/models` and sends requests to `/v1/chat/completions` using your selected model. Detection lists models exposed by the server; LM Studio may load a downloaded model on first use if just-in-time loading is enabled. It does not download models or change your server settings. This connection is separate from the custom paid provider and the specialized Georgian translator below, and is saved per account on this browser/device.
+
+The shared AI translation/review funnel tries configured cloud providers first, allowing up to 12 seconds when local backup is enabled, then gives LM Studio its own 90-second deadline. A disconnected server cools down for one minute. Cancelled, truncated, malformed, or quality-rejected responses are not accepted. Existing valid machine translations survive a failed editing attempt. Text repair can also use LM Studio; this connection does not add speech synthesis or image vision capabilities to a text-only model.
+
+Keep the server running. GitHub Pages cannot access another computer through `localhost`; mobile clients need a reachable HTTPS endpoint. Follow [LM Studio's server settings](https://lmstudio.ai/docs/developer/core/server/settings) for CORS and [authentication](https://lmstudio.ai/docs/developer/core/authentication). Georgian quality depends on the selected model and is not implied by successful model detection.
+
+### Use the specialized Georgian translator
+
 From the repository root, using Python 3.11 or later:
 
 ```powershell
