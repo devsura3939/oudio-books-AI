@@ -655,13 +655,13 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="static/styles.css?v=1.52.0&settings=2">
-    <link rel="stylesheet" href="static/studio-ui.css?v=1.52.0">
+    <link rel="stylesheet" href="static/styles.css?v=1.52.1&settings=2">
+    <link rel="stylesheet" href="static/studio-ui.css?v=1.52.1">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
 
-    <!-- ════════════════ Early Auth Gate Controller (v1.52.0) ════════════════ -->
+    <!-- ════════════════ Early Auth Gate Controller (v1.52.1) ════════════════ -->
     <script>
     (function() {
         // Proactively clear bloated translation jobs and stale caches to prevent QuotaExceededError
@@ -1008,7 +1008,7 @@
             <span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
             <span class="font-label-caps font-bold tracking-tight text-white">EngBot</span>
             <div id="adminVersionPillMobile" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)]">
-                <span>👑</span><span>v1.52.0</span>
+                <span>👑</span><span>v1.52.1</span>
             </div>
         </div>
         <div class="flex items-center gap-0.5 -mr-2">
@@ -1056,8 +1056,8 @@
                 </div>
                 <p class="text-white text-[10px] truncate mt-0.5 font-sans" id="mobileAdminEmail"></p>
                 <div class="mt-1 pt-1 border-t border-white/10 space-y-0.5">
-                    <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">v1.52.0</span></p>
-                    <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">v1.52.0 (Source-faithful translation and local Georgian model)</span></p>
+                    <p><span class="text-on-surface-variant">App:</span> <span class="text-white font-bold">v1.52.1</span></p>
+                    <p><span class="text-on-surface-variant">Engine:</span> <span class="text-white font-bold">v1.52.1 (LM Studio model discovery and backup)</span></p>
                 </div>
             </div>
 
@@ -1199,9 +1199,9 @@
             <div id="adminVersionPill" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-primary-container/20 border border-primary-container/40 text-[11px] font-mono text-primary-fixed font-bold shadow-[0_0_15px_rgba(0,240,255,0.2)]">
                 <span>👑 Admin</span>
                 <span class="opacity-40">•</span>
-                <span>App v1.52.0</span>
+                <span>App v1.52.1</span>
                 <span class="opacity-40">•</span>
-                <span>Engine v1.52.0</span>
+                <span>Engine v1.52.1</span>
             </div>
 
             <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/12 text-xs font-semibold text-white transition shadow-sm" title="View Project on GitHub">
@@ -1675,7 +1675,7 @@
             <!-- Footer info -->
             <div class="pt-2 text-center text-[10px] text-on-surface-variant/70 border-t border-white/10 flex items-center justify-between px-1">
                 <span>EngBot Audiobooks AI</span>
-                <span data-admin-build hidden class="font-mono">v1.52.0 Multi-Domain</span>
+                <span data-admin-build hidden class="font-mono">v1.52.1 Multi-Domain</span>
             </div>
         </div>
     </div>
@@ -1692,7 +1692,7 @@
                     <div>
                         <div class="flex items-center gap-2">
                             <h3 class="font-bold text-lg text-white">AI Training Lab & LLM Engine</h3>
-                            <span data-admin-build hidden class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">v1.52.0 LIVE</span>
+                            <span data-admin-build hidden class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">v1.52.1 LIVE</span>
                         </div>
                         <p class="text-xs text-on-surface-variant">Measured language improvements · Georgian and English</p>
                     </div>
@@ -2299,6 +2299,28 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
             </div>
 
             <div class="glass-panel rounded-2xl p-4 mt-4 space-y-3">
+                <h3 class="text-sm font-semibold">LM Studio · Local AI backup</h3>
+                <p class="text-xs text-on-surface-variant">Use a model on your computer when other AI providers cannot respond. Your paid-provider settings stay available.</p>
+                <label class="block text-xs" for="lmStudioUrl">LM Studio server address</label>
+                <input id="lmStudioUrl" type="url" value="http://localhost:1234/v1" class="w-full glass-input rounded-xl px-4 py-3 text-sm" autocomplete="off">
+                <label class="block text-xs" for="lmStudioToken">API token · optional unless authentication is enabled</label>
+                <div class="secret-field">
+                    <input id="lmStudioToken" type="password" class="w-full glass-input rounded-xl px-4 py-3 text-sm" autocomplete="off">
+                    <button id="lmStudioTokenToggle" type="button" class="secret-toggle" onclick="toggleSecretVisibility('lmStudioToken', this)" aria-label="Show LM Studio token"><span class="material-symbols-outlined text-base">visibility</span></button>
+                </div>
+                <button id="lmStudioDetect" type="button" onclick="EngbotLmStudio.detectFromUI()" class="px-4 py-3 rounded-xl bg-white/10 text-sm font-semibold">Detect models</button>
+                <label class="block text-xs" for="lmStudioModel">Available text model</label>
+                <select id="lmStudioModel" class="w-full min-w-0 glass-input rounded-xl px-4 py-3 text-sm" aria-label="LM Studio model"><option value="">Detect models to choose one</option></select>
+                <label class="flex gap-3 items-center text-sm py-2"><input id="lmStudioEnabled" type="checkbox" class="w-5 h-5">Use as automatic AI backup</label>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="EngbotLmStudio.saveFromUI()" class="px-4 py-3 rounded-xl bg-primary-container text-on-primary-container font-bold text-sm">Save local model</button>
+                    <button type="button" onclick="EngbotLmStudio.disconnect()" class="px-4 py-3 rounded-xl bg-white/5 text-sm">Disconnect</button>
+                </div>
+                <p id="lmStudioStatus" role="status" aria-live="polite" class="text-xs text-on-surface-variant">Start LM Studio’s server and enable CORS, then detect models.</p>
+                <p class="text-xs text-on-surface-variant">Saved for this account on this device. Keep LM Studio running. On a phone, localhost refers to the phone; use a reachable HTTPS address for your computer. Model language quality varies. <a href="https://lmstudio.ai/docs/developer/core/server/settings" target="_blank" rel="noopener" class="underline">LM Studio setup</a></p>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-4 mt-4 space-y-3">
                 <h3 class="text-sm font-semibold">Translation without API credits</h3>
                 <p class="text-xs text-on-surface-variant">Connect the English-to-Georgian translation server. It runs on your computer or your own server; the browser stays responsive. Translations can still need review.</p>
                 <label class="block text-xs" for="localTranslationEndpoint">Server address</label>
@@ -2668,27 +2690,28 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
     <!-- Continuous Silent Audio Loop: keeps OS audio hardware pipeline awake for lock-screen & background narration -->
     <audio id="backgroundKeepAliveAudio" preload="auto" loop playsinline webkit-playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA" style="display:none;"></audio>
 
-    <script src="static/supabase-store.js?v=1.52.0"></script>
-    <script src="static/engine-core.js?v=1.52.0"></script>
-    <script src="static/provider-runtime.js?v=1.52.0"></script>
-    <script src="static/studio-ui.js?v=1.52.0"></script>
-    <script src="static/training-client.js?v=1.52.0"></script>
-    <script src="static/job-store.js?v=1.52.0"></script>
-            <script src="static/training-runner.js?v=1.52.0"></script>
-    <script src="static/training-studio.js?v=1.52.0"></script>
-    <script src="static/narration.js?v=1.52.0"></script>
-    <script src="static/model-discovery.js?v=1.52.0"></script>
-    <script src="static/ai-settings.js?v=1.52.0"></script>
-    <script src="static/local-translation.js?v=1.52.0"></script>
-    <script src="static/translation-machine.js?v=1.52.0"></script>
-    <script src="static/book-structure.js?v=1.52.0"></script>
-    <script src="static/app.js?v=1.52.0&release=3"></script>
-    <script src="static/reading-state.js?v=1.52.0&release=3"></script>
-    <script src="static/reading-ui.js?v=1.52.0&release=3"></script>
-    <script src="static/repair-review.js?v=1.52.0"></script>
-    <script src="static/georgian-linguistics.js?v=1.52.0"></script>
-    <script src="static/engine-pack.js?v=1.52.0"></script>
-    <script src="static/scanner.js?v=1.52.0"></script>
+    <script src="static/supabase-store.js?v=1.52.1"></script>
+    <script src="static/engine-core.js?v=1.52.1"></script>
+    <script src="static/provider-runtime.js?v=1.52.1"></script>
+    <script src="static/studio-ui.js?v=1.52.1"></script>
+    <script src="static/training-client.js?v=1.52.1"></script>
+    <script src="static/job-store.js?v=1.52.1"></script>
+            <script src="static/training-runner.js?v=1.52.1"></script>
+    <script src="static/training-studio.js?v=1.52.1"></script>
+    <script src="static/narration.js?v=1.52.1"></script>
+    <script src="static/model-discovery.js?v=1.52.1"></script>
+    <script src="static/ai-settings.js?v=1.52.1"></script>
+    <script src="static/lm-studio.js?v=1.52.1"></script>
+    <script src="static/local-translation.js?v=1.52.1"></script>
+    <script src="static/translation-machine.js?v=1.52.1"></script>
+    <script src="static/book-structure.js?v=1.52.1"></script>
+    <script src="static/app.js?v=1.52.1&release=3"></script>
+    <script src="static/reading-state.js?v=1.52.1&release=3"></script>
+    <script src="static/reading-ui.js?v=1.52.1&release=3"></script>
+    <script src="static/repair-review.js?v=1.52.1"></script>
+    <script src="static/georgian-linguistics.js?v=1.52.1"></script>
+    <script src="static/engine-pack.js?v=1.52.1"></script>
+    <script src="static/scanner.js?v=1.52.1"></script>
 
 
 <div id="studioActionStatus" role="status" aria-live="polite" hidden></div>

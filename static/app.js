@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.52.0';
-const ENGINE_VERSION = 'v1.52.0 (Source-faithful translation and local Georgian model)';
+const APP_VERSION = 'v1.52.1';
+const ENGINE_VERSION = 'v1.52.1 (LM Studio model discovery and backup)';
 
 let db = null;
 let currentBook = null;
@@ -816,7 +816,7 @@ async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 81
 // status panel reported "Machine translation (LOW QUALITY)".
 function aiTranslationAvailable() {
     return luminaGatewayAvailable || !!geminiApiKey || !!groqApiKey || !!mistralApiKey || !!openRouterApiKey
-        || !!(customProviderUrl && customProviderModel);
+        || !!(customProviderUrl && customProviderModel) || !!window.EngbotLmStudio?.enabled();
 }
 
 // Georgian rule block for prompts. Quality mode ships the compact research
@@ -3223,6 +3223,7 @@ function openModal(modalId) {
         if (modalId === 'aiSettingsModal') {
             syncSettingsToDOMInputs();
             window.EngbotLocalTranslation?.fillSettings();
+            window.EngbotLmStudio?.fillSettings();
             renderAiKeyStatusPanel();
             void discoverAiModels();
         }
@@ -3261,6 +3262,7 @@ function closeModal(modalId) {
 }
 
 function saveGeminiSettings() {
+    if (window.EngbotLmStudio?.saveFromUI() === false) return;
     if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
 
     const keyInput = document.getElementById('geminiApiKeyInput');
@@ -6369,6 +6371,15 @@ function readerForwardSentence() {
 // so a whole-book batch keeps running on AI quality even when one or two
 // providers exhaust their free quota mid-run. Returns parsed JSON or null.
 async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null, validateResponse = () => true, signal } = {}) {
+    const opts = {temperature, maxTokens, retries, systemPrompt, validateResponse, signal: signal || translationRequestController?.signal};
+    if (!window.EngbotLmStudio?.enabled()) return callCloudJSON(prompt, opts);
+    return window.EngbotLmStudio.withFallback(
+        cloudSignal => callCloudJSON(prompt, {...opts, signal: cloudSignal}),
+        prompt, {...opts, parse: parseModelJSON}
+    );
+}
+
+async function callCloudJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null, validateResponse = () => true, signal } = {}) {
     const jobSignal = signal || translationRequestController?.signal;
     jobSignal?.throwIfAborted();
     // Tier 1: Gemini (user's direct Google AI Studio key: 2.0 Flash / 1.5 Pro / 1.5 Flash)
@@ -7637,7 +7648,7 @@ async function runOptionalAiCorrection(clean, targetLang, contextBefore, context
     const timeout = new Promise(resolve => { timer = setTimeout(() => {
         timedOut = true;
         resolve(null);
-    }, OPTIONAL_AI_TIMEOUT_MS); });
+    }, window.EngbotLmStudio?.enabled() ? 105000 : OPTIONAL_AI_TIMEOUT_MS); });
     try {
         const result = await Promise.race([providerPromise, timeout]);
         if (result) {
@@ -11119,6 +11130,9 @@ ${cleaned}`;
             return cpOut.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
         }
     }
+
+    const lmRepair = await window.EngbotLmStudio?.text(prompt, {temperature: 0.1, maxTokens: 4096});
+    if (lmRepair && lmRepair.length > 20) return lmRepair.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
 
     try {
         const res = await fetch('/api/ai', {
