@@ -22,3 +22,8 @@ node_modules/
 dist/
 .pytest_cache/
 .wrangler/
+
+local-engine/model-cache/
+
+local-engine/tools/
+local-engine/ui-check.png

@@ -1,0 +1,40 @@
+{
+  "model": "Helsinki-NLP/opus-mt-synthetic-en-ka",
+  "cases": [
+    {
+      "source": "The only entrance to the estate was a small door in the west wall.",
+      "sourceLanguage": "en",
+      "targetLanguage": "ka",
+      "translation": "ქონების ერთადერთი შესვლა დასავლეთის კედელში მცირე კარი იყო.",
+      "seconds": 9.72
+    },
+    {
+      "source": "Her report never exceeded one hundred words.",
+      "sourceLanguage": "en",
+      "targetLanguage": "ka",
+      "translation": "მისი ანგარიში არასდროს გადააჭარბა ას სიტყვას.",
+      "seconds": 0.22
+    },
+    {
+      "source": "He did not open the door because he was afraid.",
+      "sourceLanguage": "en",
+      "targetLanguage": "ka",
+      "translation": "მან კარი არ გახსნა, რადგან შიშობდა.",
+      "seconds": 0.27
+    },
+    {
+      "source": "She put her book on the table and waited for her brother.",
+      "sourceLanguage": "en",
+      "targetLanguage": "ka",
+      "translation": "მან თავისი წიგნი მაგიდაზე დადო და თავის ძმას დაელოდა.",
+      "seconds": 0.33
+    },
+    {
+      "source": "David bought three books, but he did not read the second one.",
+      "sourceLanguage": "en",
+      "targetLanguage": "ka",
+      "translation": "დევიდმა სამი წიგნი იყიდა, მაგრამ მეორე წიგნი არ წაიკითხა.",
+      "seconds": 0.36
+    }
+  ]
+}

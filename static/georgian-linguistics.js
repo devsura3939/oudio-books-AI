@@ -9355,15 +9355,8 @@ function translateOfflineEnToKa(text) {
             try { p = window.refineGeorgianGrammar(p); } catch (e) { /* ignore */ }
         }
 
-        // 6. Transliterate any remaining stray Latin words
-        p = p.replace(/\b[A-Za-z]+(?:'[A-Za-z]+)?\b/g, (m) => {
-            if (typeof transliterateLatinWordToGeorgian === 'function') {
-                return transliterateLatinWordToGeorgian(m);
-            } else if (typeof window !== 'undefined' && typeof window.transliterateLatinWordToGeorgian === 'function') {
-                return window.transliterateLatinWordToGeorgian(m);
-            }
-            return m;
-        });
+        // Unknown prose is not a translation. Keep Latin text visible in this
+        // suggestion-only helper instead of disguising it with Georgian letters.
 
         // 7. Format authentic Georgian quotes & dashes
         p = p.replace(/(^|[\s(\[])["“]([^\s"”])/g, '$1„$2');

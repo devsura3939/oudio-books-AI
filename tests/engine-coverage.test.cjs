@@ -83,13 +83,12 @@ test('Sentence segmentation preserves wrapped lines, punctuation, compounds, dec
     assert.ok(narration.pauseMs('წიგნი და') < narration.pauseMs('წიგნი,') && narration.pauseMs('წიგნი,') < narration.pauseMs('წიგნი.'));
 });
 
-test('English machine drafts receive the trained post-editor, and invalid edits retain the baseline', () => {
-    const ctx = { window: { EngbotPack: { apply: () => 'correct English' } }, assessTranslation: (_, text) => ({ ok: text !== 'bad edit' }) };
+test('Automatic cleanup preserves source-sensitive English wording', () => {
+    const ctx = { EngbotCore:core, window: { EngbotPack: { apply: () => {throw Error('Use explicit review for grammar substitutions');} } }, assessTranslation: (_, text) => ({ ok: text !== 'bad edit' }) };
     vm.createContext(ctx);
     vm.runInContext(source.slice(source.indexOf('function finishMachineTranslation('), source.indexOf('async function translateChunkLocal(')), ctx);
-    assert.equal(ctx.finishMachineTranslation('ქართული', 'English', 'en'), 'correct English');
-    ctx.window.EngbotPack.apply = () => 'bad edit';
-    assert.equal(ctx.finishMachineTranslation('ქართული', 'English', 'en'), 'English');
+    assert.equal(ctx.finishMachineTranslation('ქართული', 'He gave her his book.', 'en'), 'He gave her his book.');
+    assert.equal(ctx.finishMachineTranslation('ქართული', 'bad edit', 'en'), null);
 });
 
 test('Reader chunks keep every word and cap long unpunctuated narration clauses', () => {
@@ -102,10 +101,10 @@ test('Reader chunks keep every word and cap long unpunctuated narration clauses'
 });
 
 test('Final Georgian cleanup retains paragraph breaks even when a rule normalizes whitespace', () => {
-    const ctx = { applyKaRuleEngine: text => text.replace(/\s+/g, ' ').trim(), assessTranslation: () => ok };
+    const ctx = { EngbotCore:core, applyKaRuleEngine: () => {throw Error('Context-free grammar must not run');}, assessTranslation: () => ok };
     vm.createContext(ctx);
     vm.runInContext(source.slice(source.indexOf('function finishMachineTranslation('), source.indexOf('async function translateChunkLocal(')), ctx);
-    assert.equal(ctx.finishMachineTranslation('first\n\nsecond', 'პირველი\nსტრიქონი.\n\nმეორე.', 'ka'), 'პირველი სტრიქონი.\n\nმეორე.');
+    assert.equal(ctx.finishMachineTranslation('first\n\nsecond', 'პირველი\nსტრიქონი.\n\nმეორე.', 'ka'), 'პირველი\nსტრიქონი.\n\nმეორე.');
 });
 
 test('An expired optional correction aborts the provider chain without cancelling the book', async () => {

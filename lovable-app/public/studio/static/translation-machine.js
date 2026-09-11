@@ -43,7 +43,8 @@
             signal?.throwIfAborted();
             if ((cooldown.get(provider) || 0) > Date.now()) return null;
             try {
-                const response = await fetchImpl(url, { ...options, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000) });
+                const timeout = provider === 'server' ? 180000 : 8000;
+                const response = await fetchImpl(url, { ...options, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout) });
                 if (!response.ok) {
                     if ([401, 402, 403, 404, 429].includes(response.status) || response.status >= 500) cooldown.set(provider, Date.now() + (response.status === 429 ? 60000 : 30000));
                     return null;
@@ -98,9 +99,13 @@
                 return valid(part, text, targetLang) ? text : null;
             }, signal);
             if (memory) { const result = accept(memory, 'mymemory'); if (result) return result; }
-            const fallback = await offline(source, sourceLang, targetLang);
+            // Optional self-hosted model failures must still allow emergency AI
+            // handling in the caller. Never treat a dictionary as a translator.
+            let fallback = null;
+            try { fallback = await offline(source, sourceLang, targetLang, signal); }
+            catch (_) { signal?.throwIfAborted(); }
             signal?.throwIfAborted();
-            // Do not cache post-edited dictionary output across rule pack updates.
+            // The connected model can be replaced independently of the app.
             if (valid(source, fallback, targetLang)) { onEngine('offline'); return fallback; }
             return null;
         }

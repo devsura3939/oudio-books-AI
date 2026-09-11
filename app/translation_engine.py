@@ -415,7 +415,15 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
     for chunk_index, p in enumerate(chunks):
         p_trans = None
 
-        # Deterministic tiers below intentionally run before any provider.
+        # Installing the optional model is explicit. When configured, it can
+        # complete translation without network access or an API subscription.
+        if os.environ.get('ENGBOT_LOCAL_MODEL_DIR'):
+            try:
+                from app.local_neural import translate_local
+                p_trans = translate_local(p, src, tgt)
+                engine_used = 'opus-en-ka'
+            except (RuntimeError, ValueError, ImportError, BlockingIOError):
+                p_trans = None
 
         # Tier 1: Direct Google translation; availability is not guaranteed.
         if not p_trans:
@@ -506,24 +514,9 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
                 "suggestion": suggestion if suggestion != p else "", "needs_review": True,
             }
 
-        if tgt == "ka":
-            p_trans = synthesize_georgian_morphology(p_trans)
-            p_trans = clean_georgian_morphology(p_trans)
-            if load_active_pack is not None and apply_pack is not None:
-                try:
-                    active_pack = load_active_pack("ka")
-                    if active_pack.get("enabled", True):
-                        p_trans = apply_pack(p_trans, active_pack.get("items", []), kind="translate")
-                except Exception as e:
-                    print(f"[translation_engine] active pack translate post-edit warning: {e}")
-        elif tgt == "en":
-            if load_active_pack is not None and apply_pack is not None:
-                try:
-                    active_pack = load_active_pack("en")
-                    if active_pack.get("enabled", True):
-                        p_trans = apply_pack(p_trans, active_pack.get("items", []), kind="translate")
-                except Exception:
-                    pass
+        # Target-only grammar rules cannot resolve the source's meaning. Preserve
+        # the neural draft here; rule packs remain available in explicit repair.
+        p_trans = p_trans.replace("\r\n", "\n").strip()
 
         if not translation_is_valid(p, p_trans, tgt):
             return {"translated": "", "engine": engine_used, "success": False,
