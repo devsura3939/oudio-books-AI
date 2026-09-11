@@ -1,6 +1,7 @@
 """Source-preserving primitives shared by transcription and narration."""
 import re
 import unicodedata
+from itertools import groupby
 
 
 def normalize_language(value):
@@ -19,6 +20,16 @@ def clean_verbatim(text):
     return text.replace("\r\n", "\n").replace("\r", "\n").replace("\x00", "").strip()
 
 
+def transliteration_leak(source, candidate):
+    pairs = {"the": ["თე", "თუ"], "of": ["ოფ", "ოვ"], "to": ["ტო"], "in": ["ინ"], "and": ["ანდ"],
+             "was": ["ვას", "ვაზ", "ვოს"], "were": ["ვერე"], "with": ["ვით"], "her": ["ჰერ"], "by": ["ბი", "ბაი"],
+             "on": ["ონ"], "from": ["ფრომ"], "this": ["თის"], "that": ["თათ"], "is": ["ის"], "it": ["იტ"]}
+    src = re.findall(r"[a-z]+", source.lower())
+    out = re.findall(r"[ა-ჰ]+", candidate.lower())
+    counts = [min(src.count(word), sum(out.count(v) for v in variants)) for word, variants in pairs.items()]
+    return sum(n > 0 for n in counts) >= 3 and sum(counts) >= 4 and sum(counts) / max(1, len(out)) >= 0.16
+
+
 def translation_is_valid(source, candidate, target):
     """Reject obvious incomplete/wrong-script results, not a semantic quality score."""
     if not isinstance(candidate, str) or not candidate.strip():
@@ -26,6 +37,12 @@ def translation_is_valid(source, candidate, target):
     if re.search(r"```|</?(?:think|tool_call)\b", candidate, re.I):
         return False
     source, candidate = source.strip(), candidate.strip()
+    if target == "ka" and detect_language(source) == "en" and transliteration_leak(source, candidate):
+        return False
+    def longest_run(text):
+        return max((sum(1 for _ in group) for _, group in groupby(re.findall(r"[^\W\d_]+", text.lower()))), default=0)
+    if longest_run(candidate) >= 4 and longest_run(candidate) > longest_run(source):
+        return False
     names = [unicodedata.name(c, "") for c in candidate if c.isalpha()]
     if not names:
         return candidate == source and not any(c.isalpha() for c in source)

@@ -25,6 +25,29 @@
         if (!counts.total) return 'auto';
         return counts.ka > counts.en ? 'ka' : counts.en ? 'en' : 'auto';
     }
+    // Detect English function words disguised as Georgian. Names and legitimate
+    // Georgian words alone are insufficient evidence: require source overlap,
+    // three different function words, and substantial output contamination.
+    function transliterationLeak(source, output) {
+        const pairs = {the:['თე','თუ'], of:['ოფ','ოვ'], to:['ტო'], in:['ინ'], and:['ანდ'],
+            was:['ვას','ვაზ','ვოს'], were:['ვერე'], with:['ვით'], her:['ჰერ'], by:['ბი','ბაი'],
+            on:['ონ'], from:['ფრომ'], this:['თის'], that:['თათ'], is:['ის'], it:['იტ']};
+        const sourceWords = String(source).toLowerCase().match(/[a-z]+/g) || [];
+        const outWords = String(output).toLowerCase().match(/[\p{Script=Georgian}]+/gu) || [];
+        let hits = 0, kinds = 0;
+        for (const [english, variants] of Object.entries(pairs)) {
+            const sourceCount = sourceWords.filter(word => word === english).length;
+            const count = Math.min(sourceCount, outWords.filter(word => variants.includes(word)).length);
+            if (count) { hits += count; kinds++; }
+        }
+        return kinds >= 3 && hits >= 4 && hits / Math.max(1, outWords.length) >= 0.16;
+    }
+    function longestWordRun(text) {
+        const words = String(text).toLowerCase().match(/\p{L}+/gu) || [];
+        let longest = 0, run = 0, previous = '';
+        for (const word of words) { run = word === previous ? run + 1 : 1; previous = word; longest = Math.max(longest, run); }
+        return longest;
+    }
     function assessTranslation(source, output, language) {
         if (typeof output !== 'string' || !output.trim()) return { ok: false, reason: 'empty_output' };
         const src = String(source || '').trim(), out = output.trim();
@@ -32,7 +55,10 @@
         if (/```|<\/?(?:think|tool_call)\b|^\s*\{\s*"(?:translation|translated|text|output|chunk)"\s*:/i.test(out)) {
             return { ok: false, reason: 'model_markup_leak' };
         }
+        if (target === 'ka' && detectLanguage(src) === 'en' && transliterationLeak(src, out)) return { ok: false, reason: 'transliterated_english' };
+        if (longestWordRun(out) >= 4 && longestWordRun(out) > longestWordRun(src)) return { ok: false, reason: 'repeated_word_loop' };
         const counts = scriptCounts(out);
+        if (!counts.total && scriptCounts(src).total) return { ok:false, reason:'missing_text' };
         if (target !== 'auto' && counts.total && counts[target] / counts.total < 0.6) {
             return { ok: false, reason: 'wrong_script_ratio' };
         }
@@ -172,5 +198,5 @@
             ? Math.round(declaredSeconds) : Math.round(words / 140 * 60);
         return { words, seconds };
     }
-    return { normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, naturalSentences, cleanVerbatim, readingText, headingSource, localizedHeading, chapterTitle, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats, reviewDecision, bookSourceLanguage };
+    return { transliterationLeak, normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, naturalSentences, cleanVerbatim, readingText, headingSource, localizedHeading, chapterTitle, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats, reviewDecision, bookSourceLanguage };
 });

@@ -1,0 +1,4 @@
+torch==2.13.0
+transformers==5.5.4
+sentencepiece==0.2.2
+# Install the repository requirements.txt for FastAPI, httpx and uvicorn.

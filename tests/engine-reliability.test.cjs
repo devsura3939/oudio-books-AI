@@ -219,7 +219,7 @@ test('Smart routing commits the deterministic baseline before optional AI correc
         assessTranslation:core.assessTranslation, aiTranslationAvailable:()=>true,
         setTranslationStage(){}, recordEngineUse(){}, lastTranslationFailure:'',
         translateChunkLocal:async()=>{order.push('local');return 'ქართული თარგმანი '.repeat(180);},
-        translateWithGeminiAIBatch:async()=>{order.push('ai');return 'ქართული შესწორებული თარგმანი '.repeat(180);},
+        callGeminiJSON:async()=>{order.push('ai');return {translation:'ქართული შესწორებული თარგმანი '.repeat(180)};}, extractTranslation:v=>v,
         translationBudgetMode:'budget', optionalAiCorrectionsUsed:0, optionalAiRequestActive:false,
         optionalAiDisabledUntil:0, OPTIONAL_AI_TIMEOUT_MS:100, OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB:48,
         OPTIONAL_AI_FAILURE_COOLDOWN_MS:45000, OPTIONAL_AI_REVIEW_COOLDOWN_MS:8000
@@ -243,7 +243,7 @@ test('A hanging optional provider returns the deterministic result within its de
         assessTranslation:core.assessTranslation, aiTranslationAvailable:()=>true,
         setTranslationStage(){}, recordEngineUse(){}, lastTranslationFailure:'',
         translateChunkLocal:async()=> 'ქართული თარგმანი '.repeat(180),
-        translateWithGeminiAIBatch:async()=>new Promise(()=>{}), translationBudgetMode:'budget', optionalAiCorrectionsUsed:0,
+        callGeminiJSON:async()=>new Promise(()=>{}), extractTranslation:v=>v, translationBudgetMode:'budget', optionalAiCorrectionsUsed:0,
         optionalAiRequestActive:false, optionalAiDisabledUntil:0, OPTIONAL_AI_TIMEOUT_MS:100, OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB:48,
         OPTIONAL_AI_FAILURE_COOLDOWN_MS:45000, OPTIONAL_AI_REVIEW_COOLDOWN_MS:8000
     });

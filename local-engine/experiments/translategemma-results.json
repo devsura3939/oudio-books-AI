@@ -1,0 +1,54 @@
+{
+  "model": "engbot-translategemma",
+  "cases": [
+    {
+      "source": "The only entrance to the estate was a small door in the west wall.",
+      "sourceLanguage": "en",
+      "targetLanguage": "ka",
+      "translation": "მხოლოდ შესასვლელი იყო დასავლულ კედელში არსებული მცირი კარი.",
+      "seconds": 4.42
+    },
+    {
+      "source": "Her report never exceeded one hundred words.",
+      "sourceLanguage": "en",
+      "targetLanguage": "ka",
+      "translation": "ისი მიუახლოვდებოდა, რომ მისი ანგარიში არ dépasseდა 100 სიტყვას.",
+      "seconds": 4.67
+    },
+    {
+      "source": "He did not open the door because he was afraid.",
+      "sourceLanguage": "en",
+      "targetLanguage": "ka",
+      "translation": "ისი არ გახსნა, რადგან φοხი იყო.",
+      "seconds": 3.31
+    },
+    {
+      "source": "She put her book on the table and waited for her brother.",
+      "sourceLanguage": "en",
+      "targetLanguage": "ka",
+      "translation": "მადა წააწყო წიგული მაგიდასთან და ელოდებოდა ძმას.",
+      "seconds": 4.22
+    },
+    {
+      "source": "David bought three books, but he did not read the second one.",
+      "sourceLanguage": "en",
+      "targetLanguage": "ka",
+      "translation": "დავიდმა შეიძინა სამი წიგნი, თუმცა მეორე წიგნს არ წაუკითხა.",
+      "seconds": 5.12
+    },
+    {
+      "source": "მან კარი არ გააღო, რადგან ეშინოდა.",
+      "sourceLanguage": "ka",
+      "targetLanguage": "en",
+      "translation": "He didn't open the door because he was afraid.",
+      "seconds": 3.22
+    },
+    {
+      "source": "მან წიგნი მაგიდაზე დადო და ძმას დაელოდა.",
+      "sourceLanguage": "ka",
+      "targetLanguage": "en",
+      "translation": "He placed the book on the table and waited for his brother.",
+      "seconds": 3.45
+    }
+  ]
+}
