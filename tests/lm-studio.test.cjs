@@ -1,7 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), vm = require('node:vm');
-const {create, endpoint, modelList} = require('../static/lm-studio.js');
+const {create, endpoint, modelList, modelProfiles} = require('../static/lm-studio.js');
 function fixture(fetchImpl, extra = {}) {
     const values = new Map(); let user = 'alice';
     const storage = {getItem:k=>values.get(k), setItem:(k,v)=>values.set(k,v), removeItem:k=>values.delete(k)};
@@ -83,4 +83,31 @@ test('Application provider funnel invokes LM Studio after failed paid providers'
     const ctx=vm.createContext({window:{EngbotLmStudio:client},parseModelJSON:JSON.parse,translationRequestController:null,console:{warn(){}},geminiApiKey:'fixture',groqApiKey:'',customProviderUrl:'',openRouterApiKey:'',mistralApiKey:'',luminaGatewayAvailable:false,callGeminiJSONDirect:async()=>null});
     vm.runInContext(source.slice(source.indexOf('async function callGeminiJSON('),source.indexOf('async function callGeminiJSONDirect(')),ctx);
     assert.equal((await ctx.callGeminiJSON('source',{validateResponse:r=>Boolean(r.translation)})).translation,'ქართული ტექსტი');
+});
+test('Loaded instance context overrides advertised maximum; unloaded model remains conservative',()=>{
+    const profiles=modelProfiles({models:[{key:'27b',max_context_length:262144,loaded_instances:[{id:'my-alias',config:{context_length:16384}}]}]});
+    assert.equal(profiles['my-alias'].context,16384);assert.equal(profiles['27b'].context,4096);
+});
+test('Oversized prompts are refused without sending truncated input or starting inference',async()=>{
+    let inference=0;
+    const {client}=fixture(async url=>{if(url.endsWith('/models'))return models();inference++;return response();});await connect(client);
+    assert.equal(await client.text('ტექსტი'.repeat(4000)),null);assert.equal(inference,0);
+});
+test('Advertised reasoning controls use native focused generation without chat storage or tools',async()=>{
+    let payload;
+    const f=fixture(async(url,opts)=>{
+        if(url.includes('/api/v1/models'))return new Response(JSON.stringify({models:[{key:'local-model',capabilities:{reasoning:{allowed_options:['off','on']}},loaded_instances:[{id:'local-model',config:{context_length:8192}}]}]}));
+        if(url.endsWith('/models'))return models();
+        assert.ok(url.endsWith('/api/v1/chat'));payload=JSON.parse(opts.body);
+        return new Response(JSON.stringify({output:[{type:'message',content:'{"translation":"ქართული ტექსტი"}'}],stats:{total_output_tokens:20}}));
+    });
+    await connect(f.client);assert.ok(await f.client.json('source',{parse:JSON.parse}));
+    assert.equal(payload.reasoning,'off');assert.equal(payload.store,false);assert.deepEqual(payload.integrations,[]);
+});
+test('Native output at its token limit cannot be accepted as complete',async()=>{
+    const f=fixture(async(url,opts)=>{
+        if(url.includes('/api/v1/models'))return new Response(JSON.stringify({models:[{key:'local-model',capabilities:{reasoning:{allowed_options:['off']}},loaded_instances:[]}]}));
+        if(url.endsWith('/models'))return models();
+        return new Response(JSON.stringify({output:[{type:'message',content:'{"translation":"cut"}'}],stats:{total_output_tokens:JSON.parse(opts.body).max_output_tokens}}));
+    });await connect(f.client);assert.equal(await f.client.json('source',{parse:JSON.parse}),null);
 });

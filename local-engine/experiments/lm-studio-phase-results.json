@@ -1,0 +1,62 @@
+{
+  "model": "qwen3.8-27b-uncensored-aggressive",
+  "testedAt": "2026-09-12",
+  "scope": "Four original English-to-Georgian samples; not a whole-book or literary-quality certification. Longer prose still contains awkward Georgian. Machine baselines used existing network translation; local editing used LM Studio on this workstation.",
+  "status": "complete",
+  "profile": {
+    "context": 16384,
+    "loaded": true,
+    "reasoning": [
+      "off",
+      "on"
+    ]
+  },
+  "cases": [
+    {
+      "source": "He did not open the door because he was afraid.",
+      "output": "მას კარი არ გაუღია, რადგან ეშინოდა.",
+      "seconds": 5.344800000000279
+    },
+    {
+      "source": "Nino bought 3 books, but she had read only 2 of them.",
+      "output": "ნინომ 3 წიგნი იყიდა, მაგრამ მათგან მხოლოდ 2 წაიკითხა.",
+      "seconds": 5.7715
+    },
+    {
+      "source": "Her report never exceeded one hundred words.",
+      "output": "მისი ანგარიში არასოდეს აღემატებოდა ას სიტყვას.",
+      "seconds": 5.6245
+    },
+    {
+      "source": "When the clock struck 9, someone knocked twice. Nino waited. She had learned that a familiar voice was not always a reason to trust the person behind the door. Instead of turning the key, she asked a question only her brother could answer.",
+      "output": "როცა საათმა 9 დაარტყა, ვინმემ ორჯერ დააკაკუნა. ნინომ დაილოდა. მან გაიგო, რომ ნაცნობი ხმა ყოველთვის არ იყო მიზეზი, რის გამოც კარს მიღმა მყოფს ენდობოდი. გასაღების ბრუნვის ნაცვლად, ისე დასვა კითხვა, რომელსაც მხოლოდ მისი ძმა შეეძლო პასუხის გაცემა.",
+      "seconds": 12.367799999999814
+    }
+  ],
+  "stages": [
+    "Machine translation",
+    "LM Studio · edit",
+    "LM Studio · review",
+    "Translation checks complete",
+    "Machine translation",
+    "LM Studio · edit",
+    "LM Studio · review",
+    "Translation checks complete",
+    "Machine translation",
+    "LM Studio · edit",
+    "LM Studio · review",
+    "Translation checks complete",
+    "Machine translation",
+    "LM Studio · edit",
+    "LM Studio · review",
+    "Translation checks complete"
+  ],
+  "stats": {
+    "segments": 4,
+    "difficultSegments": 4,
+    "localCalls": 8,
+    "cloudCalls": 48,
+    "reservedCloudTokens": 180000
+  },
+  "paidCallsDuringTest": 0
+}
