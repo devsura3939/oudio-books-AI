@@ -149,6 +149,20 @@ test('Hard chunk cap and exact coverage including unbroken text and surrogate pa
         assert.ok(chunks.every(c=>c.length<=1800&&!/[\uD800-\uDBFF]$/.test(c)));
     }
 });
+
+test('Local editing chunks retain source paragraph boundaries when reassembled',()=>{
+    const ctx=context();
+    const original='A short opening.\n\n'+('She opened the door. ').repeat(35).trim()+'\n\nThe end.';
+    for (const keepParagraphs of [false,true]) {
+        const result=ctx.buildTranslationChunks(original,300,16,keepParagraphs);
+        assert.ok(result.chunks.every(c=>c.length<=300));
+        assert.equal(result.chunks.map((text,i)=>result.separators[i]+text).join(''),original);
+        if (keepParagraphs) assert.ok(result.chunks.every(c=>!c.includes('\n\n')));
+    }
+    const unbroken='ა'.repeat(1000);
+    const result=ctx.buildTranslationChunks(unbroken,300,16,true);
+    assert.equal(result.chunks.map((text,i)=>result.separators[i]+text).join(''),unbroken);
+});
 test('Truncated JSON is rejected',()=>{
     const ctx=vm.createContext({});
     vm.runInContext(section('function parseModelJSON(', '// Extract a clean Georgian translation'),ctx);

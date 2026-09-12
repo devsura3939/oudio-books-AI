@@ -15,8 +15,23 @@
         const rows = Array.isArray(data?.data) ? data.data : [];
         return [...new Set(rows.filter(row => row && typeof row.id === 'string' && !/embedding|rerank|whisper|tts/i.test(row.id)).map(row => row.id.trim()).filter(Boolean))];
     }
+    function modelProfiles(data) {
+        const profiles = {};
+        for (const row of data?.models || []) {
+            if (row.type === 'embedding') continue;
+            const reasoning = row.capabilities?.reasoning?.allowed_options || [];
+            for (const instance of row.loaded_instances || []) {
+                const context = Number(instance.config?.context_length);
+                if (instance.id && Number.isFinite(context) && context >= 1024) profiles[instance.id] = {context: Math.min(context, 131072), loaded: true, reasoning};
+            }
+            // Advertised maximum context is not the context actually allocated by JIT.
+            if (row.key && !profiles[row.key]) profiles[row.key] = {context: 4096, loaded: false, reasoning};
+        }
+        return profiles;
+    }
+    const estimateTokens = value => Math.ceil(new TextEncoder().encode(String(value || '')).length / 2);
     function create({storage, fetchImpl, owner, document, now = Date.now, cloudTimeoutMs = 12000, requestTimeoutMs = 90000}) {
-        let detected = null, discovery = null, active = null, cooldown = null;
+        let detected = null, discovery = null, active = null, cooldown = null, runtimeProfile = null;
         const field = id => document?.getElementById(id);
         const accountKey = () => owner() ? 'engbot_lm_studio:' + owner() : null;
         const status = text => { if (field('lmStudioStatus')) field('lmStudioStatus').textContent = text; };
@@ -39,7 +54,7 @@
             const eye = field('lmStudioTokenToggle'); if (eye) { eye.setAttribute('aria-label', 'Show LM Studio token'); eye.querySelector('span').textContent = 'visibility'; }
             field('lmStudioEnabled').checked = Boolean(saved?.enabled);
             options(saved?.models || (saved?.model ? [saved.model] : []), saved?.model);
-            status(saved ? 'Saved on this device. ' + (saved.enabled ? 'Automatic backup enabled.' : 'Backup disabled.') : 'Start LM Studio’s server and enable CORS, then detect models.');
+            status(saved ? 'Saved on this device. ' + (saved.enabled ? 'Translation phases and backup enabled.' : 'Backup disabled.') : 'Start LM Studio’s server and enable CORS, then detect models.');
         }
         async function detect(url, token = '') {
             const account = accountKey(); if (!account) throw Error('Sign in before connecting LM Studio.');
@@ -52,7 +67,14 @@
                 const models = modelList(await response.json()); signal.throwIfAborted();
                 if (account !== accountKey()) throw Error('Account changed. Detect models again.');
                 if (!models.length) throw Error('No text models found. Download or load a chat model in LM Studio.');
-                detected = {account, url: normalized, token, models};
+                let profiles = {};
+                try {
+                    const native = await fetchImpl(normalized.replace(/\/v1$/, '/api/v1/models'), {headers: headers(token), signal: AbortSignal.any([signal, AbortSignal.timeout(3000)])});
+                    if (native.ok) profiles = modelProfiles(await native.json());
+                } catch { /* OpenAI-compatible proxies may omit the native metadata API. */ }
+                signal.throwIfAborted();
+                if (account !== accountKey()) throw Error('Account changed. Detect models again.');
+                detected = {account, url: normalized, token, models, profiles};
                 return models;
             } finally { if (discovery === controller) discovery = null; }
         }
@@ -76,9 +98,10 @@
             const catalog = detected?.account === account && detected.url === next.url && detected.token === next.token ? detected.models
                 : previous?.url === next.url && previous.token === next.token ? previous.models : null;
             if (!catalog?.includes(next.model)) throw Error('Detect models for this connection and choose a model before saving.');
-            active?.abort(); cooldown = null;
-            storage.setItem(account, JSON.stringify({url: next.url, token: next.token, model: next.model, models: catalog, enabled: Boolean(next.enabled)}));
-            status(next.enabled ? 'Saved. LM Studio will back up unavailable paid models.' : 'Saved. Automatic backup is disabled.');
+            active?.abort(); cooldown = null; runtimeProfile = null;
+            const profiles = detected?.account === account && detected.url === next.url && detected.token === next.token ? detected.profiles : previous?.profiles || {};
+            storage.setItem(account, JSON.stringify({url: next.url, token: next.token, model: next.model, models: catalog, profiles, enabled: Boolean(next.enabled)}));
+            status(next.enabled ? 'Saved. LM Studio will edit translations and back up unavailable AI providers.' : 'Saved. Automatic backup is disabled.');
         }
         function saveFromUI() {
             if (!field('lmStudioUrl')) return true;
@@ -89,18 +112,49 @@
         }
         function disconnect() { discovery?.abort(); active?.abort(); detected = null; cooldown = null; const key = accountKey(); if (key) storage.removeItem(key); fillSettings(); status('LM Studio disconnected.'); }
         const enabled = () => Boolean(settings()?.enabled && settings()?.model);
-        async function text(prompt, {systemPrompt, temperature = 0.1, maxTokens = 4096, signal: parent} = {}) {
+        function profile() {
+            const saved = settings();
+            return runtimeProfile?.account === accountKey() && runtimeProfile.model === saved?.model ? runtimeProfile.profile : saved?.profiles?.[saved?.model] || {context: 4096, loaded: false};
+        }
+        async function prepare(parent) {
+            const saved = settings(), account = accountKey(); if (!saved?.enabled) return;
+            runtimeProfile = {account, model:saved.model, profile:{context:4096,loaded:false}};
+            try {
+                const response = await fetchImpl(endpoint(saved.url).replace(/\/v1$/, '/api/v1/models'), {headers: headers(saved.token), signal: AbortSignal.any([AbortSignal.timeout(3000), ...(parent ? [parent] : [])])});
+                const profiles = response.ok ? modelProfiles(await response.json()) : {};
+                if (account === accountKey()) runtimeProfile = {account, model: saved.model, profile: profiles[saved.model] || {context:4096, loaded:false}};
+            } catch { parent?.throwIfAborted(); }
+        }
+        const available = () => enabled() && !active && !(cooldown?.account === accountKey() && cooldown.until > now());
+        async function text(prompt, {systemPrompt, temperature = 0.1, maxTokens = 4096, signal: parent, timeoutMs = requestTimeoutMs} = {}) {
             parent?.throwIfAborted();
             const saved = settings(), account = accountKey();
             if (!saved?.enabled || active || (cooldown?.account === account && cooldown.until > now())) return null;
+            const inputTokens = estimateTokens(prompt) + estimateTokens(systemPrompt) + 128;
+            const outputTokens = Math.min(maxTokens, 8192, profile().context - inputTokens - 256);
+            if (outputTokens < Math.min(maxTokens, 256)) { status('Local model context is too small for this request. Preserving the accepted draft.'); return null; }
             const controller = new AbortController(); active = controller;
-            const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(requestTimeoutMs), ...(parent ? [parent] : [])]);
+            const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(Math.max(1, Math.min(timeoutMs, requestTimeoutMs))), ...(parent ? [parent] : [])]);
             status('LM Studio backup is working…');
             try {
-                const response = await fetchImpl(endpoint(saved.url) + '/chat/completions', {method: 'POST', headers: headers(saved.token), signal, body: JSON.stringify({model: saved.model, messages: [...(systemPrompt ? [{role: 'system', content: systemPrompt}] : []), {role: 'user', content: prompt}], temperature, max_tokens: Math.min(maxTokens, 4096), stream: false})});
+                // Use the documented native control only when the model advertises it.
+                // Focused editing does not need an unbounded hidden reasoning preamble.
+                const native = profile().reasoning?.includes('off');
+                const url = native ? endpoint(saved.url).replace(/\/v1$/, '/api/v1/chat') : endpoint(saved.url) + '/chat/completions';
+                const payload = native
+                    ? {model:saved.model,input:prompt,system_prompt:systemPrompt || '',temperature,max_output_tokens:outputTokens,reasoning:'off',store:false,stream:false,integrations:[]}
+                    : {model:saved.model,messages:[...(systemPrompt ? [{role:'system',content:systemPrompt}] : []),{role:'user',content:prompt}],temperature,max_tokens:outputTokens,stream:false};
+                const response = await fetchImpl(url, {method:'POST',headers:headers(saved.token),signal,body:JSON.stringify(payload)});
                 if (!response.ok) throw Error('LM Studio unavailable (HTTP ' + response.status + ').');
                 const data = await response.json(); signal.throwIfAborted();
                 if (account !== accountKey()) return null;
+                if (native) {
+                    const output = data?.output, count = data?.stats?.total_output_tokens;
+                    if (!Array.isArray(output) || output.some(item => !['message','reasoning'].includes(item.type)) || !Number.isFinite(count) || count >= outputTokens) throw Error('LM Studio returned incomplete output.');
+                    const messages = output.filter(item => item.type === 'message');
+                    if (messages.length !== 1 || typeof messages[0].content !== 'string' || !messages[0].content.trim()) throw Error('LM Studio returned no complete translation.');
+                    status('LM Studio responded.'); return messages[0].content.trim();
+                }
                 const choice = data?.choices?.[0];
                 if (!['stop', 'eos', 'end_turn'].includes(choice?.finish_reason) || typeof choice?.message?.content !== 'string' || !choice.message.content.trim()) throw Error('LM Studio returned incomplete output. Try a model with a larger context window.');
                 status('LM Studio backup responded.'); return choice.message.content.trim();
@@ -128,7 +182,7 @@
             } finally { clearTimeout(timer); controller.abort(); }
             return json(prompt, opts);
         }
-        return {settings, enabled, fillSettings, detect, detectFromUI, save, saveFromUI, disconnect, text, json, withFallback};
+        return {settings, enabled, available, profile, prepare, fillSettings, detect, detectFromUI, save, saveFromUI, disconnect, text, json, withFallback};
     }
-    return {create, endpoint, modelList};
+    return {create, endpoint, modelList, modelProfiles, estimateTokens};
 });
