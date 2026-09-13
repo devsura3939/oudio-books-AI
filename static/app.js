@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.53.0';
-const ENGINE_VERSION = 'v1.53.0 (Source-aware translation phases)';
+const APP_VERSION = 'v1.53.1';
+const ENGINE_VERSION = 'v1.53.1 (Incremental library synchronization)';
 
 let db = null;
 let currentBook = null;
@@ -2194,7 +2194,7 @@ function subscribeToLibraryRealtime() {
         // path for projects where the SQL publication has not propagated yet
         // or a mobile network silently drops a websocket.
         realtimePollTimer = setInterval(() => {
-            if (currentUser && usingCloud) scheduleRealtimeLibraryRefresh({ table: 'books', payload: { eventType: 'POLL' } });
+            if (currentUser && usingCloud && document.visibilityState !== 'hidden') scheduleRealtimeLibraryRefresh({ table: 'books', payload: { eventType: 'POLL' } });
         }, 15000);
     }
 }
@@ -8260,6 +8260,9 @@ window.releaseScreenWakeLock = releaseScreenWakeLock;
 
 // Re-acquire wake lock if page becomes visible while playing
 document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentUser && usingCloud) {
+        scheduleRealtimeLibraryRefresh({table:'books',payload:{eventType:'POLL'}});
+    }
     if (document.visibilityState === 'visible' && isPlaying && !isPaused) {
         requestScreenWakeLock();
     }

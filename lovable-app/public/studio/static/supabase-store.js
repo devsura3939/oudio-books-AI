@@ -47,6 +47,7 @@
   var client = null;
   var userId = null;
   var libraryChannel = null;
+  var incrementalLibrary = null;
 
   function sdk() {
     // The UMD bundle publishes `window.supabase` (the module namespace).
@@ -500,6 +501,7 @@
     }
     unsubscribeLibraryChanges();
     userId = null;
+    if (incrementalLibrary) incrementalLibrary.clear();
     try {
       sessionStorage.removeItem("lumina_auth_user");
       sessionStorage.clear();
@@ -657,6 +659,29 @@
   /** Every book owned by the signed-in user, in studio shape. */
   async function getAllBooks() {
     if (!isReady()) return [];
+    if (window.EngbotLibrarySync) {
+      if (!incrementalLibrary) incrementalLibrary = window.EngbotLibrarySync.create({
+        owner: function () {return userId;},
+        load: async function (table, columns, ids, ownerId) {
+          var records = [];
+          // Paginate both manifests and content: PostgREST's row cap must never
+          // make later chapters or books appear deleted or absent.
+          for (var offset = 0; ; offset += 500) {
+            var query = client.from(table).select(columns).eq('user_id',ownerId).order('id').range(offset,offset+499);
+            if (ids) query = query.in('id',ids);
+            var page = await query;
+            if (page.error) throw page.error;
+            records.push.apply(records,page.data || []);
+            if (!page.data || page.data.length < 500) return records;
+          }
+        },
+      });
+      var snapshot = await incrementalLibrary.read();
+      var indexed = {};
+      snapshot.chapters.forEach(function (chapter) {(indexed[chapter.book_id] ||= []).push(chapter);});
+      return snapshot.books.sort(function(a,b) {return String(a.created_at).localeCompare(String(b.created_at));})
+        .map(function(book) {return toStudioBook(book,indexed[book.id] || []);});
+    }
     var books = await client
       .from("books")
       .select("*")
