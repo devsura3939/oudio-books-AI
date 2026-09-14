@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.53.1';
-const ENGINE_VERSION = 'v1.53.1 (Incremental library synchronization)';
+const APP_VERSION = 'v1.53.2';
+const ENGINE_VERSION = 'v1.53.2 (Compact account synchronization)';
 
 let db = null;
 let currentBook = null;
@@ -2149,9 +2149,11 @@ async function initDB() {
 
 let realtimeRefreshTimer = null;
 let realtimeRefreshBusy = false;
+let realtimeRefreshRequested = false;
 let realtimePollTimer = null;
 
 function scheduleRealtimeLibraryRefresh(change) {
+    realtimeRefreshRequested = true;
     const payload = change && change.payload ? change.payload : {};
     const row = payload.eventType === 'DELETE' ? (payload.old || {}) : (payload.new || {});
     if (change?.table === 'books' && payload.eventType === 'DELETE') {
@@ -2170,6 +2172,7 @@ function scheduleRealtimeLibraryRefresh(change) {
     realtimeRefreshTimer = setTimeout(async () => {
         if (realtimeRefreshBusy || !currentUser) return;
         realtimeRefreshBusy = true;
+        realtimeRefreshRequested = false;
         try {
             await renderDigitalShelf();
             if (typeof renderScanShelf === 'function') await renderScanShelf();
@@ -2182,6 +2185,7 @@ function scheduleRealtimeLibraryRefresh(change) {
             console.warn('[realtime] library refresh failed:', e);
         } finally {
             realtimeRefreshBusy = false;
+            if (realtimeRefreshRequested && currentUser) scheduleRealtimeLibraryRefresh();
         }
     }, 220);
 }
@@ -2195,11 +2199,12 @@ function subscribeToLibraryRealtime() {
         // or a mobile network silently drops a websocket.
         realtimePollTimer = setInterval(() => {
             if (currentUser && usingCloud && document.visibilityState !== 'hidden') scheduleRealtimeLibraryRefresh({ table: 'books', payload: { eventType: 'POLL' } });
-        }, 15000);
+        }, 60000);
     }
 }
 
 function stopLibraryRealtime() {
+    realtimeRefreshRequested = false;
     clearTimeout(realtimeRefreshTimer);
     realtimeRefreshTimer = null;
     clearInterval(realtimePollTimer);
