@@ -48,6 +48,24 @@
   var userId = null;
   var libraryChannel = null;
   var incrementalLibrary = null;
+  var revisionSupported = true;
+  var saveQueue = Promise.resolve();
+  var libraryChangeCallback = null;
+  var channelGeneration = 0;
+
+  async function libraryRevision(ownerId) {
+    if (!revisionSupported) return null;
+    var result = await client.rpc('get_library_revision');
+    if (result.error) {
+      // Old deployments retain manifest reconciliation until SQL is installed.
+      if (result.error.code === 'PGRST202' || result.error.code === '42883') {
+        revisionSupported = false;
+        return null;
+      }
+      throw result.error;
+    }
+    return ownerId === userId ? String(result.data) : null;
+  }
 
   function sdk() {
     // The UMD bundle publishes `window.supabase` (the module namespace).
@@ -153,6 +171,8 @@
   }
 
   function unsubscribeLibraryChanges() {
+    channelGeneration++;
+    libraryChangeCallback = null;
     if (!libraryChannel || !client) {
       libraryChannel = null;
       return;
@@ -167,19 +187,26 @@
    * delivered to this tab. The callback receives the table and raw payload so
    * the studio can remove deleted books from its offline mirror immediately.
    */
-  function subscribeLibraryChanges(onChange) {
+  async function subscribeLibraryChanges(onChange) {
     unsubscribeLibraryChanges();
+    var subscriptionGeneration = channelGeneration;
     if (!isReady() || !client || typeof client.channel !== "function") return false;
 
     var callback = typeof onChange === "function" ? onChange : function () {};
+    libraryChangeCallback = callback;
     var safeUserId = String(userId || "").replace(/[^a-zA-Z0-9_-]/g, "");
     if (!safeUserId) return false;
+    var compact = false;
+    try {compact = await libraryRevision(userId) !== null;} catch (e) {}
+    if (safeUserId !== userId || subscriptionGeneration !== channelGeneration) return false;
     var channel = client.channel("lumina-library-" + safeUserId);
-    ["books", "chapters", "audio_segments"].forEach(function (table) {
+    (compact ? ['library_revisions'] : ["books", "chapters", "audio_segments"]).forEach(function (table) {
       channel.on(
         "postgres_changes",
         { event: "*", schema: "public", table: table, filter: "user_id=eq." + userId },
         function (payload) {
+          if (subscriptionGeneration !== channelGeneration) return;
+          if (incrementalLibrary) incrementalLibrary.invalidate();
           try { callback({ table: table, payload: payload }); } catch (e) {
             console.warn("[LuminaStore] realtime callback error:", e);
           }
@@ -188,6 +215,11 @@
     });
     libraryChannel = channel;
     channel.subscribe(function (status) {
+      if (subscriptionGeneration !== channelGeneration) return;
+      if (status === 'SUBSCRIBED') {
+        if (incrementalLibrary) incrementalLibrary.invalidate();
+        callback({table:'library_revisions',payload:{eventType:'RECONNECT'}});
+      }
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
         console.warn("[LuminaStore] library realtime status:", status);
       }
@@ -584,7 +616,10 @@
 
   // ── studio object → rows ─────────────────────────────────────────────────
   function bookRowFrom(book) {
-    var extra = {};
+    var extra = Object.assign({}, book.extra || {});
+    delete extra.extra;
+    delete extra.updated_at;
+    delete extra.user_id;
     Object.keys(book).forEach(function (k) {
       if (
         [
@@ -598,6 +633,9 @@
           "dateAdded",
           "lastPlayedChapterId",
           "progressPct",
+          "updated_at",
+          "user_id",
+          "extra",
         ].indexOf(k) === -1
       ) {
         extra[k] = book[k];
@@ -645,7 +683,6 @@
         title: chapter.title || "Chapter " + (index + 1),
         text_content: chapter.text || "",
         word_count: chapter.word_count || wordCount(chapter.text),
-        status: "pending",
         metadata: {
           studio_id: chapter.id ?? index + 1,
           text_ka: chapter.text_ka || null,
@@ -662,6 +699,7 @@
     if (window.EngbotLibrarySync) {
       if (!incrementalLibrary) incrementalLibrary = window.EngbotLibrarySync.create({
         owner: function () {return userId;},
+        getRevision: libraryRevision,
         load: async function (table, columns, ids, ownerId) {
           var records = [];
           // Paginate both manifests and content: PostgREST's row cap must never
@@ -677,6 +715,9 @@
         },
       });
       var snapshot = await incrementalLibrary.read();
+      incrementalLibrary.takeDeletedBooks().forEach(function(book) {
+        if (libraryChangeCallback) libraryChangeCallback({table:'books',payload:{eventType:'DELETE',old:book}});
+      });
       var indexed = {};
       snapshot.chapters.forEach(function (chapter) {(indexed[chapter.book_id] ||= []).push(chapter);});
       return snapshot.books.sort(function(a,b) {return String(a.created_at).localeCompare(String(b.created_at));})
@@ -712,42 +753,68 @@
   }
 
   /**
-   * Upsert a whole studio book (book row + all chapter rows).
-   * Chapters are replaced wholesale — the studio always hands us the full array,
-   * and this keeps translations/edits from drifting between the two stores.
+   * Save only changed content. Serialize saves so older in-flight checkpoints
+   * cannot finish after newer ones. Keep server-owned synthesis state intact.
    */
   async function saveBook(book) {
     if (!isReady()) return false;
-    var row = bookRowFrom(book);
-
-    var existing = await client
-      .from("books")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("slug", row.slug)
-      .maybeSingle();
-    if (existing.error) throw existing.error;
-
-    var bookRowId;
-    if (existing.data) {
-      bookRowId = existing.data.id;
-      var upd = await client.from("books").update(row).eq("id", bookRowId);
-      if (upd.error) throw upd.error;
-    } else {
-      var ins = await client.from("books").insert(row).select("id").single();
-      if (ins.error) throw ins.error;
-      bookRowId = ins.data.id;
-    }
-
-    var chapterRows = chapterRowsFrom(book, bookRowId);
-    if (chapterRows.length) {
-      var cins = await client.from("chapters").upsert(chapterRows, { onConflict: "book_id,chapter_index" });
-      if (cins.error) throw cins.error;
-    }
-    // Remove only obsolete trailing chapters after replacements have been saved.
-    var removed = await client.from("chapters").delete().eq("book_id", bookRowId).gte("chapter_index", chapterRows.length);
-    if (removed.error) throw removed.error;
-    return true;
+    var ownerId = userId;
+    var frozenBook = structuredClone(book);
+    var row = bookRowFrom(frozenBook);
+    var run = saveQueue.catch(function () {}).then(async function () {
+      function checkOwner() {if (ownerId !== userId || !isReady()) throw new Error('Account changed during save');}
+      checkOwner();
+      if (!incrementalLibrary) await getAllBooks();
+      checkOwner();
+      var snapshot = incrementalLibrary ? await incrementalLibrary.read() : null;
+      checkOwner();
+      var existing;
+      if (snapshot) existing = snapshot.books.find(function (b) {return b.slug === row.slug;});
+      else {
+        var found = await client.from('books').select('*').eq('user_id',ownerId).eq('slug',row.slug).maybeSingle();
+        if (found.error) throw found.error;
+        existing = found.data;
+      }
+      checkOwner();
+      var bookRowId;
+      try {
+        if (existing) {
+          bookRowId = existing.id;
+          if (!window.EngbotLibrarySync || window.EngbotLibrarySync.changedRows([row],[existing],'slug').length) {
+            var upd = await client.from('books').update(row).eq('id',bookRowId).eq('user_id',ownerId);
+            if (upd.error) throw upd.error;
+          }
+        } else {
+          var ins = await client.from('books').insert(row).select('id').single();
+          if (ins.error) throw ins.error;
+          bookRowId = ins.data.id;
+        }
+        checkOwner();
+        var chapters = chapterRowsFrom(frozenBook,bookRowId);
+        var previous = snapshot ? snapshot.chapters.filter(function(c){return c.book_id===bookRowId;}) : [];
+        var changed = window.EngbotLibrarySync ? window.EngbotLibrarySync.changedRows(chapters,previous,'chapter_index') : chapters;
+        changed = changed.map(function(chapter) {
+          var old = previous.find(function(c){return c.chapter_index===chapter.chapter_index;});
+          if (old && (old.text_content!==chapter.text_content || (old.metadata?.text_ka || null)!==chapter.metadata.text_ka)) {
+            return Object.assign({},chapter,{status:'pending'});
+          }
+          return chapter;
+        });
+        for (var start=0;start<changed.length;start+=50) {
+          checkOwner();
+          var saved = await client.from('chapters').upsert(changed.slice(start,start+50),{onConflict:'book_id,chapter_index'});
+          if (saved.error) throw saved.error;
+        }
+        checkOwner();
+        if (!snapshot || previous.some(function(c){return c.chapter_index>=chapters.length;})) {
+          var removed = await client.from('chapters').delete().eq('book_id',bookRowId).eq('user_id',ownerId).gte('chapter_index',chapters.length);
+          if (removed.error) throw removed.error;
+        }
+        return true;
+      } finally {if(incrementalLibrary)incrementalLibrary.invalidate();}
+    });
+    saveQueue = run;
+    return run;
   }
 
   /**

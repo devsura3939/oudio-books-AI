@@ -6,10 +6,14 @@
     'use strict';
     // Keep authoritative content in the database. Poll only compact revisions,
     // then fetch changed rows. A full reconnect still reconciles all deletions.
-    function create({owner, load}) {
+    function create({owner, load, getRevision}) {
         let account = null, generation = 0, pending = null;
+        let savedRevision = null, dirty = true;
+        let deletedBooks = [];
         let saved = {books:new Map(),chapters:new Map()};
-        function clear() {generation++;account=null;pending=null;saved={books:new Map(),chapters:new Map()};}
+        function clear() {generation++;account=null;pending=null;savedRevision=null;dirty=true;deletedBooks=[];saved={books:new Map(),chapters:new Map()};}
+        function invalidate() {dirty=true;savedRevision=null;}
+        function snapshot() {return structuredClone({books:[...saved.books.values()],chapters:[...saved.chapters.values()]});}
         async function read() {
             const user = owner();
             if (account !== user) {clear();account=user;}
@@ -17,6 +21,11 @@
             if (pending) return pending;
             const revision = generation;
             const task = (async () => {
+                const serverRevision = getRevision ? await getRevision(user) : null;
+                if (owner() !== user || generation !== revision) return {books:[],chapters:[]};
+                if (!dirty && serverRevision !== null && serverRevision === savedRevision) return snapshot();
+                // Clear before I/O, so an event during the read keeps the cache dirty.
+                dirty = false;
                 const next = {};
                 for (const table of ['books','chapters']) {
                     const manifest = await load(table,'id,updated_at',null,user);
@@ -35,14 +44,29 @@
                     }
                 }
                 if (owner() !== user || generation !== revision) return {books:[],chapters:[]};
+                deletedBooks.push(...[...saved.books.values()].filter(row=>!next.books.has(row.id)));
                 saved = next;
+                savedRevision = dirty ? null : serverRevision;
                 // Consumers can edit studio objects without mutating revision caches.
-                return structuredClone({books:[...saved.books.values()],chapters:[...saved.chapters.values()]});
+                return snapshot();
             })();
             pending = task;
-            try {return await task;} finally {if(pending===task)pending=null;}
+            try {return await task;} catch(error) {invalidate();throw error;} finally {if(pending===task)pending=null;}
         }
-        return {read,clear};
+        return {read,clear,invalidate,takeDeletedBooks:()=>deletedBooks.splice(0)};
     }
-    return {create};
+    function canonical(value) {
+        if (Array.isArray(value)) return value.map(canonical);
+        if (value && typeof value==='object') return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
+        return value;
+    }
+    // Compare only fields the caller owns; retain server-owned status/timestamps.
+    function changedRows(desired, existing, key) {
+        const indexed=new Map(existing.map(row=>[row[key],row]));
+        return desired.filter(row=>{
+            const old=indexed.get(row[key]);
+            return !old || Object.keys(row).some(k=>JSON.stringify(canonical(row[k]))!==JSON.stringify(canonical(old[k])));
+        });
+    }
+    return {create,changedRows};
 });
