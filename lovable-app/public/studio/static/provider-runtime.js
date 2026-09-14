@@ -42,6 +42,25 @@
             throw error;
         }finally{clearTimeout(timer);}
     }
+    async function firstValid(providers,{signal,validate=()=>true,timeoutMs=12000}={}) {
+        for (const provider of providers) {
+            signal?.throwIfAborted();
+            const controller=new AbortController();
+            const attempt=signal?AbortSignal.any([signal,controller.signal]):controller.signal;
+            let timer,abort;
+            try {
+                const result=await Promise.race([
+                    Promise.resolve().then(()=>{attempt.throwIfAborted();return provider.run(attempt);}).catch(()=>null),
+                    new Promise(resolve=>{timer=setTimeout(()=>{fail(provider.name,'timeout');controller.abort();resolve(null);},provider.timeoutMs || timeoutMs);}),
+                    new Promise(resolve=>{abort=()=>resolve(null);attempt.addEventListener('abort',abort,{once:true});}),
+                ]);
+                signal?.throwIfAborted();
+                if(result!==null && result!==undefined && validate(result))return result;
+                if(result!==null && result!==undefined)fail(provider.name,'invalid');
+            } finally {clearTimeout(timer);attempt.removeEventListener('abort',abort);controller.abort();}
+        }
+        return null;
+    }
     function createSpeechBuffer(synthesize,limit=6){
         const entries=new Map();
         return {
@@ -58,5 +77,5 @@
             get size(){return entries.size;}
         };
     }
-    return {request,fail,messageFor,createSpeechBuffer,getFailure:()=>lastFailure,reset:()=>{lastFailure=null;}};
+    return {request,firstValid,fail,messageFor,createSpeechBuffer,getFailure:()=>lastFailure,reset:()=>{lastFailure=null;}};
 });

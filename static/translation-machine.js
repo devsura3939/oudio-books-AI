@@ -39,19 +39,23 @@
         const cooldown = new Map();
         const cache = new Map();
         let cacheChars = 0;
+        const failures = new Map();
+        function failure(provider,reason) {failures.set(provider,reason);}
         async function request(provider, url, options, signal) {
             signal?.throwIfAborted();
-            if ((cooldown.get(provider) || 0) > Date.now()) return null;
+            if ((cooldown.get(provider) || 0) > Date.now()) {failure(provider,'temporarily paused after an earlier failure');return null;}
             try {
                 const timeout = provider === 'server' ? 180000 : 8000;
                 const response = await fetchImpl(url, { ...options, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout) });
                 if (!response.ok) {
+                    failure(provider,response.status===429?'rate limited':`HTTP ${response.status}`);
                     if ([401, 402, 403, 404, 429].includes(response.status) || response.status >= 500) cooldown.set(provider, Date.now() + (response.status === 429 ? 60000 : 30000));
                     return null;
                 }
                 return await response.json();
             } catch (_) {
                 signal?.throwIfAborted();
+                failure(provider,'network error or timeout');
                 cooldown.set(provider, Date.now() + 30000);
                 return null;
             }
@@ -62,7 +66,7 @@
             const cached = cache.get(key);
             if (cached && Date.now() - cached.at < 600000) { onEngine('cache'); return cached.text; }
             const accept = (text, engine) => {
-                if (!valid(source, text, targetLang)) return null;
+                if (!valid(source, text, targetLang)) {failure(engine,`quality check: ${assess(source,text,targetLang).reason || 'invalid output'}`);return null;}
                 signal?.throwIfAborted();
                 const previous = cache.get(key);
                 if (previous) cacheChars -= previous.size;
@@ -87,16 +91,18 @@
                 const text = rows.map(row => typeof row?.[0] === 'string' ? row[0] : '').join('');
                 const returnedSource = rows.every(row => typeof row?.[1] === 'string') ? rows.map(row => row[1]).join('') : null;
                 const covered = returnedSource === null || returnedSource.replace(/\s/g, '') === source.replace(/\s/g, '');
+                if (!covered) failure('google','incomplete source coverage');
                 const result = covered && accept(text, 'google'); if (result) return result;
             }
             const memory = await complete(source, 480, async part => {
                 const query = new URLSearchParams({ q: part, langpair: `${sourceLang}|${targetLang}` });
                 const data = await request('mymemory', `https://api.mymemory.translated.net/get?${query}`, {}, signal);
                 if (data?.quotaFinished || Number(data?.responseStatus) === 429) cooldown.set('mymemory', Date.now() + 60000);
-                if (Number(data?.responseStatus) !== 200 || data?.quotaFinished) return null;
+                if (Number(data?.responseStatus) !== 200 || data?.quotaFinished) {if(data)failure('mymemory',data.quotaFinished?'quota exhausted':`service status ${data.responseStatus}`);return null;}
                 const text = data?.responseData?.translatedText;
                 if (/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(text || '')) return null;
-                return valid(part, text, targetLang) ? text : null;
+                if (!valid(part,text,targetLang)) {failure('mymemory',`quality check: ${assess(part,text,targetLang).reason || 'invalid output'}`);return null;}
+                return text;
             }, signal);
             if (memory) { const result = accept(memory, 'mymemory'); if (result) return result; }
             // Optional self-hosted model failures must still allow emergency AI
@@ -110,6 +116,7 @@
             return null;
         }
         async function translate(text, sourceLang, targetLang, signal) {
+            failures.clear();
             signal?.throwIfAborted();
             if (!String(text || '').trim()) return '';
             if (sourceLang === targetLang) return text;
@@ -122,7 +129,7 @@
             }
             return outputs.join('');
         }
-        return { translate, clear: () => { cache.clear(); cacheChars = 0; cooldown.clear(); } };
+        return { translate, failures:()=>Array.from(failures,([provider,reason])=>({provider,reason})), clear: () => { cache.clear(); cacheChars = 0; cooldown.clear(); failures.clear(); } };
     }
     return { partition, complete, create };
 });

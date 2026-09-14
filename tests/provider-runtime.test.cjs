@@ -33,10 +33,26 @@ test('Translation direction follows source text, not the language of an existing
 });
 
 test('A malformed review falls through to the next configured provider',async()=>{
- const calls=[];const ctx=vm.createContext({window:{},translationRequestController:null,console:{warn(){}},geminiApiKey:'fixture',groqApiKey:'fixture',customProviderUrl:'',openRouterApiKey:'',mistralApiKey:'',luminaGatewayAvailable:false,callGeminiJSONDirect:async()=>{calls.push('Gemini');return {translation:'not a review'};},callGroqJSON:async()=>{calls.push('Groq');return {verdict:'approved',errors:[]};}});
+ const calls=[];const ctx=vm.createContext({window:{EngbotProviders:runtime},translationRequestController:null,console:{warn(){}},geminiApiKey:'fixture',groqApiKey:'fixture',customProviderUrl:'',openRouterApiKey:'',mistralApiKey:'',luminaGatewayAvailable:false,callGeminiJSONDirect:async()=>{calls.push('Gemini');return {translation:'not a review'};},callGroqJSON:async()=>{calls.push('Groq');return {verdict:'approved',errors:[]};}});
  vm.runInContext(section('async function callGeminiJSON(','async function callGeminiJSONDirect('),ctx);
  const result=await ctx.callGeminiJSON('Review',{validateResponse:data=>core.reviewDecision(data).valid});
  assert.equal(result.verdict,'approved');assert.deepEqual(calls,['Gemini','Groq']);
+});
+
+test('A stalled provider cannot starve a healthy later translation provider',async()=>{
+ const calls=[];let stopped=false;
+ const value=await runtime.firstValid([
+  {name:'slow',run:signal=>new Promise(resolve=>{calls.push('slow');signal.addEventListener('abort',()=>{stopped=true;resolve({translation:'late'});});})},
+  {name:'working',run:async()=>{calls.push('working');return {translation:'ქართული ტექსტი'};}}
+ ],{timeoutMs:10,validate:r=>r.translation==='ქართული ტექსტი'});
+ assert.equal(value.translation,'ქართული ტექსტი');assert.equal(stopped,true);assert.deepEqual(calls,['slow','working']);
+});
+
+test('Stopping translation cancels the active attempt without starting a fallback',async()=>{
+ const controller=new AbortController();let started,late=false;
+ const ready=new Promise(r=>started=r);
+ const task=runtime.firstValid([{name:'first',run:()=>{started();return new Promise(()=>{});}},{name:'later',run:async()=>{late=true;}}],{signal:controller.signal,timeoutMs:1000});
+ const rejected=assert.rejects(task,{name:'AbortError'});await ready;controller.abort();await rejected;assert.equal(late,false);
 });
 const ka=require('../static/georgian-linguistics.js');
 test('Offline Georgian engine keeps a proper-name title nominal and complete',()=>{
@@ -116,4 +132,22 @@ test('Reviewer prompt locks title proper names instead of accepting an imperativ
  assert.match(captured,/Killing Rommel/);
  assert.match(captured,/nominal action construction/i);
  assert.match(captured,/imperative/i);
+});
+
+function customContext(url,finish='stop'){
+ let body;
+ const ctx=vm.createContext({URL,AbortSignal,AbortController,setTimeout,clearTimeout,EngbotCore:core,translationRequestController:null,customProviderUrl:url,customProviderModel:'test-model',customProviderKey:'fixture',normalizeCustomProviderUrl:u=>u+'/chat/completions',console:{warn(){}},window:{EngbotProviders:{fail(){},request:async(_u,init)=>{body=JSON.parse(init.body);return {ok:true,text:async()=>JSON.stringify({choices:[{finish_reason:finish,message:{content:'{"translation":"ქართული ტექსტი"}'}}]})};}}}});
+ vm.runInContext(section('async function callCustomProviderText(','function setGroqApiKey('),ctx);
+ return {ctx,body:()=>body};
+}
+test('Merge gateway reserves final answer capacity and bounds thinking without changing other endpoints',async()=>{
+ const merge=customContext('https://api-gateway.merge.dev/v1');
+ assert.ok(await merge.ctx.callCustomProviderText('Translate',{maxTokens:2550}));
+ assert.deepEqual(merge.body().thinking,{type:'enabled',budget_tokens:1024});assert.equal(merge.body().max_tokens,3574);
+ const local=customContext('http://localhost:1234/v1');await local.ctx.callCustomProviderText('Translate',{maxTokens:2550});
+ assert.equal(local.body().thinking,undefined);assert.equal(local.body().max_tokens,2550);
+});
+test('Custom providers cannot pass token-truncated JSON off as a complete translation',async()=>{
+ const {ctx}=customContext('https://api-gateway.merge.dev/v1','length');
+ assert.equal(await ctx.callCustomProviderText('Translate'),null);
 });
