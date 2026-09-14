@@ -700,6 +700,7 @@
       if (!incrementalLibrary) incrementalLibrary = window.EngbotLibrarySync.create({
         owner: function () {return userId;},
         getRevision: libraryRevision,
+        storage: window.EngbotLibrarySync.persistentStorage ? window.EngbotLibrarySync.persistentStorage(URL_) : null,
         load: async function (table, columns, ids, ownerId) {
           var records = [];
           // Paginate both manifests and content: PostgREST's row cap must never
@@ -1070,7 +1071,7 @@
         .select("language,version_id,enabled,engine_versions(version,items)")
         .eq("language", targetLang)
         .maybeSingle().abortSignal(AbortSignal.timeout(8000));
-      if (!res.error && res.data?.enabled === false) return { version: 0, items: [] };
+      if (!res.error && (!res.data || res.data.enabled === false)) return { version: 0, items: [] };
       if (!res.error && res.data && res.data.engine_versions) {
         var v = res.data.engine_versions;
         return {
