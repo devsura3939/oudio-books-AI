@@ -8,6 +8,10 @@ The client subscribes to compact account revisions, checks only that revision du
 
 Saves compare owned fields and write changed chapters only, in bounded batches. No-change saves do not rewrite books or chapters. Checkpoints are serialized and account switches reject pending work. Synthesis state is retained for metadata-only edits; changed narration content becomes pending. Failed writes do not advance the cache.
 
+Version 1.53.3 persists authoritative library snapshots in IndexedDB, scoped by Supabase project and account. Reopening the app first validates the server revision: unchanged libraries reuse local chapter content; changed libraries fetch manifests and changed rows only, including deletion reconciliation across reloads. Corrupt, unavailable or quota-limited caches fall back to cloud reads. A failed revision request never labels cached content as current. This reduces repeat downloads without moving or rewriting originals. The first visit on a new device still loads the full library.
+
+An absent or disabled active training pack is treated as an empty additive pack. It no longer falls through to a nonexistent local-server route when the cloud query succeeds; built-in linguistic rules remain enabled.
+
 ## Sites preparation
 
 Private Site: `appgprj_6aa723b85ae4819188d23c70d147b995` (`engbot-reader`).

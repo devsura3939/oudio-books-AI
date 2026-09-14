@@ -8,7 +8,7 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.53.2';
+const APP_VERSION = 'v1.53.3';
 const ENGINE_VERSION = 'v1.53.2 (Compact account synchronization)';
 
 let db = null;
