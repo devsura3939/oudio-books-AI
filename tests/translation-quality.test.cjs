@@ -27,6 +27,13 @@ test('Disconnected neural fallback never publishes source text or an invented tr
  assert.equal(await engine.translate('She opened the door and waited.','en','ka'),null);
 });
 
+test('Rate limiting and untranslated output have distinct actionable diagnostics',async()=>{
+ const source='She opened the door and waited.';
+ const engine=machine.create({assess:core.assessTranslation,fetchImpl:async url=>String(url).includes('google')?new Response('',{status:429}):Response.json({responseStatus:200,responseData:{translatedText:source}})});
+ assert.equal(await engine.translate(source,'en','ka'),null);
+ assert.deepEqual(engine.failures(),[{provider:'google',reason:'rate limited'},{provider:'mymemory',reason:'quality check: wrong_script_ratio'}]);
+});
+
 test('Optional AI receives the actual draft and bounded context in one editing request',async()=>{
  const source=fs.readFileSync('static/app.js','utf8');let calls=0;
  const original='He did not open the door because he was afraid.',draft='მას ეშინოდა და ამიტომ კარი არ გააღო.';

@@ -28,6 +28,12 @@ test('No baseline can be recovered with a local draft and review without paid cr
     const {engine,calls}=setup({machine:async()=>null,cloudAvailable:()=>false});
     assert.equal(await engine.translate(source,'ka'),edited);assert.deepEqual(calls,['local','review']);
 });
+
+test('Missing machine baseline gives provider recovery its own deadline',async()=>{
+ const {engine}=setup({machine:async()=>null,localAvailable:()=>false,cloudTimeoutMs:5,recoveryTimeoutMs:100,
+  cloud:async()=>{await new Promise(r=>setTimeout(r,20));return {translation:edited};}});
+ assert.equal(await engine.translate(source,'ka'),edited);
+});
 test('Quality sampling escalates only every twelfth difficult segment',async()=>{
     const {engine,calls}=setup();for(let i=0;i<13;i++) await engine.translate(source,'ka',{mode:'quality'});
     assert.equal(calls.filter(c=>c==='cloud').length,1);
@@ -92,4 +98,28 @@ test('Prompts preserve full source and draft while bounding reference context',(
     const prompt=phases.promptFor('edit',{source,draft:baseline,target:'ka',before:'b'.repeat(10000),after:'a'.repeat(10000),glossary:'g'.repeat(10000)});
     assert.ok(prompt.includes(source));assert.ok(prompt.includes(baseline));assert.ok(prompt.length<3000);
     assert.equal(phases.segmentLimit(16384),1400);assert.ok(phases.segmentLimit(4096)<500);
+});
+
+test('Numbered paragraphs preserve structure through paid recovery after machine failure',async()=>{
+ const text='He opened the door.\n\nShe stayed home.';
+ const paragraphs=[{id:0,text:'მან კარი გააღო.'},{id:1,text:'ის სახლში დარჩა.'}];
+ const {engine}=setup({machine:async()=>null,localAvailable:()=>false,cloud:async(prompt,opts)=>{
+  assert.match(prompt,/exactly one item/);const value={paragraphs};assert.equal(opts.validateResponse(value),true);return value;
+ }});
+ assert.equal(await engine.translate(text,'ka'),paragraphs.map(p=>p.text).join('\n\n'));
+});
+
+test('Numbered outputs reject missing, duplicate, reordered, empty and split paragraphs',()=>{
+ const text='One.\n\nTwo.';
+ for(const paragraphs of [ [{id:0,text:'ერთი.'}], [{id:0,text:'ერთი.'},{id:0,text:'ორი.'}], [{id:1,text:'ორი.'},{id:0,text:'ერთი.'}], [{id:0,text:''},{id:1,text:'ორი.'}], [{id:0,text:'ერთი.\n\nმეტი.'},{id:1,text:'ორი.'}] ]) {
+  assert.equal(phases.normalizeOutput(text,{paragraphs}),null);
+ }
+ assert.equal(phases.normalizeOutput(text,{translation:'ერთი.\n\nორი.'}).translation,'ერთი.\n\nორი.');
+});
+
+test('Optional editing caps do not strand a book when cloud is the only working translator',async()=>{
+ const {engine}=setup({machine:async()=>null,localAvailable:()=>false});
+ engine.reset({cloudCalls:48,reservedCloudTokens:180000});
+ assert.equal(await engine.translate(source,'ka'),edited);
+ assert.equal(engine.snapshot().cloudCalls,49);
 });

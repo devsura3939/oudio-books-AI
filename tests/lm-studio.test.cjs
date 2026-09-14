@@ -80,7 +80,7 @@ test('Cancellation and account changes cannot return stale local output',async()
 test('Application provider funnel invokes LM Studio after failed paid providers',async()=>{
     const source=fs.readFileSync('static/app.js','utf8');
     const {client}=fixture(async url=>url.endsWith('/models')?models():response());await connect(client);
-    const ctx=vm.createContext({window:{EngbotLmStudio:client},parseModelJSON:JSON.parse,translationRequestController:null,console:{warn(){}},geminiApiKey:'fixture',groqApiKey:'',customProviderUrl:'',openRouterApiKey:'',mistralApiKey:'',luminaGatewayAvailable:false,callGeminiJSONDirect:async()=>null});
+    const ctx=vm.createContext({window:{EngbotLmStudio:client,EngbotProviders:require('../static/provider-runtime.js')},parseModelJSON:JSON.parse,translationRequestController:null,console:{warn(){}},geminiApiKey:'fixture',groqApiKey:'',customProviderUrl:'',openRouterApiKey:'',mistralApiKey:'',luminaGatewayAvailable:false,callGeminiJSONDirect:async()=>null});
     vm.runInContext(source.slice(source.indexOf('async function callGeminiJSON('),source.indexOf('async function callGeminiJSONDirect(')),ctx);
     assert.equal((await ctx.callGeminiJSON('source',{validateResponse:r=>Boolean(r.translation)})).translation,'ქართული ტექსტი');
 });

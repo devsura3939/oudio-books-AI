@@ -8,8 +8,8 @@
 // ==========================================================================
 
 // ── Application State ──────────────────────────────────────────────────────
-const APP_VERSION = 'v1.53.3';
-const ENGINE_VERSION = 'v1.53.2 (Compact account synchronization)';
+const APP_VERSION = 'v1.53.4';
+const ENGINE_VERSION = 'v1.53.4 (Reliable translation recovery)';
 
 let db = null;
 let currentBook = null;
@@ -764,7 +764,7 @@ const OPENROUTER_CALL_MAX_ATTEMPTS = 4;
 const _isStaticHost = (() => {
     try {
         const h = location.hostname;
-        return h.endsWith('.github.io') || h.endsWith('.pages.dev') || h.endsWith('.netlify.app');
+        return h.endsWith('.github.io') || h.endsWith('.pages.dev') || h.endsWith('.netlify.app') || h.endsWith('.chatgpt.site');
     } catch (e) { return false; }
 })();
 let luminaGatewayAvailable = !_isStaticHost;
@@ -1024,9 +1024,10 @@ async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8
     const jobSignal = signal || translationRequestController?.signal;
     jobSignal?.throwIfAborted();
     if (!customProviderUrl) return null;
+    let tid;
     try {
         const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 30000); // 30s max
+        tid = setTimeout(() => ctrl.abort(), 30000); // 30s max
 
         const headers = { 'Content-Type': 'application/json' };
         if (customProviderKey && customProviderKey.trim()) {
@@ -1036,7 +1037,9 @@ async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8
         const endpoint = normalizeCustomProviderUrl(customProviderUrl);
         const effectiveModel = (customProviderModel || 'default').trim();
         // Safe maxTokens limit to avoid context length overflow on local/custom models
-        const safeTokens = Math.min(maxTokens || 4096, 4096);
+        const mergeGateway = new URL(endpoint).hostname === 'api-gateway.merge.dev';
+        // Thinking and visible output share a budget on this gateway. Reserve both.
+        const safeTokens = mergeGateway ? Math.min(8192, Math.max(3072, (maxTokens || 4096) + 1024)) : Math.min(maxTokens || 4096, 4096);
 
         const messages = systemPrompt
             ? [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }]
@@ -1046,6 +1049,7 @@ async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8
             messages,
             temperature,
             max_tokens: safeTokens,
+            ...(mergeGateway ? {thinking:{type:'enabled',budget_tokens:1024}} : {}),
         });
 
         const res = await window.EngbotProviders.request(endpoint, {
@@ -1053,8 +1057,7 @@ async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8
             headers,
             body,
             signal: jobSignal ? AbortSignal.any([ctrl.signal, jobSignal]) : ctrl.signal,
-        });
-        clearTimeout(tid);
+        }, {provider:'Custom provider'});
 
         if (!res.ok) {
             const errText = await res.text().catch(() => '');
@@ -1074,12 +1077,16 @@ async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8
             return null;
         }
 
+        if (!EngbotCore.providerOutputComplete(data)) {
+            window.EngbotProviders.fail('custom', 'incomplete');
+            return null;
+        }
         // Shape 1: OpenAI-compatible
         let text = (data?.choices?.[0]?.message?.content || '').trim();
         // Shape 2: Ollama chat / generate
         if (!text) text = (data?.message?.content || data?.response || '').trim();
         // Shape 3: Gemini REST API
-        if (!text) text = (data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '').trim();
+        if (!text) text = (data?.candidates?.[0]?.content?.parts?.filter(p => !p.thought).map(p => p.text || '').join('') || '').trim();
         // Shape 4: generic text / output wrappers
         if (!text) text = (data?.text || data?.output || data?.result || '').trim();
 
@@ -1092,6 +1099,8 @@ async function callCustomProviderText(prompt, { temperature = 0.1, maxTokens = 8
             console.warn('[CustomProvider] call failed:', e?.message || e);
         }
         return null;
+    } finally {
+        clearTimeout(tid);
     }
 }
 
@@ -6387,51 +6396,20 @@ async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, ret
 async function callCloudJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null, validateResponse = () => true, signal } = {}) {
     const jobSignal = signal || translationRequestController?.signal;
     jobSignal?.throwIfAborted();
-    // Tier 1: Gemini (user's direct Google AI Studio key: 2.0 Flash / 1.5 Pro / 1.5 Flash)
-    if (geminiApiKey) {
-        const res = await callGeminiJSONDirect(prompt, { temperature, maxTokens, retries, systemPrompt, signal: jobSignal });
-        jobSignal?.throwIfAborted();
-        if (res !== null && validateResponse(res)) return res;
-        console.warn('Gemini direct tier failed — trying Groq fallback.');
-    }
-    // Tier 2: Groq (free, ~500K tokens/day, ultra-fast)
-    if (groqApiKey) {
-        const res = await callGroqJSON(prompt, { temperature, maxTokens, systemPrompt, signal: jobSignal });
-        jobSignal?.throwIfAborted();
-        if (res !== null && validateResponse(res)) return res;
-        console.warn('Groq tier failed — trying Custom Provider.');
-    }
-    // Tier 3: Custom provider (user-configured OpenAI-compatible or local endpoint)
-    if (customProviderUrl) {
-        const txt = await callCustomProviderText(prompt, { temperature, maxTokens, systemPrompt, signal: jobSignal });
-        jobSignal?.throwIfAborted();
-        if (txt) {
-            const parsed = parseModelJSON(txt);
-            if (parsed && validateResponse(parsed)) return parsed;
-
-        }
-        console.warn('Custom provider failed — trying OpenRouter.');
-    }
-    // Tier 4: OpenRouter free models
-    if (openRouterApiKey) {
-        const res = await callOpenRouterJSON(prompt, { temperature, maxTokens, systemPrompt, signal: jobSignal });
-        jobSignal?.throwIfAborted();
-        if (res !== null && validateResponse(res)) return res;
-        console.warn('OpenRouter tier failed — trying Mistral.');
-    }
-    // Tier 5: Mistral (free experiment plan)
-    if (mistralApiKey) {
-        const res = await callMistralJSON(prompt, { temperature, maxTokens, systemPrompt, signal: jobSignal });
-        jobSignal?.throwIfAborted();
-        if (res !== null && validateResponse(res)) return res;
-    }
-    // Tier 6: Server gateway (only if available, e.g. local backend)
-    if (luminaGatewayAvailable) {
-        const res = await callLuminaGatewayJSON(prompt, { temperature, maxTokens, systemPrompt, signal: jobSignal });
-        jobSignal?.throwIfAborted();
-        if (res !== null && validateResponse(res)) return res;
-    }
-    return null;
+    const providers = [];
+    const options = attempt => ({temperature,maxTokens,retries,systemPrompt,signal:attempt});
+    // Respect the explicitly selected custom model; isolate each provider deadline
+    // so a stalled endpoint cannot consume every fallback's opportunity.
+    if (customProviderUrl) providers.push({name:'Custom provider',timeoutMs:30000,run:async attempt=>{
+        const text=await callCustomProviderText(prompt,options(attempt));
+        return text ? parseModelJSON(text) : null;
+    }});
+    if (geminiApiKey) providers.push({name:'Gemini',run:attempt=>callGeminiJSONDirect(prompt,options(attempt))});
+    if (groqApiKey) providers.push({name:'Groq',run:attempt=>callGroqJSON(prompt,options(attempt))});
+    if (openRouterApiKey) providers.push({name:'OpenRouter',run:attempt=>callOpenRouterJSON(prompt,options(attempt))});
+    if (mistralApiKey) providers.push({name:'Mistral',run:attempt=>callMistralJSON(prompt,options(attempt))});
+    if (luminaGatewayAvailable) providers.push({name:'Server AI',run:attempt=>callLuminaGatewayJSON(prompt,options(attempt))});
+    return window.EngbotProviders.firstValid(providers,{signal:jobSignal,validate:validateResponse,timeoutMs:10000});
 }
 
 async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null, signal } = {}) {
@@ -7559,7 +7537,9 @@ async function translateChunkLocal(clean, targetLang) {
     signal?.throwIfAborted();
     if (!translated) {
         recordEngineUse('failed');
-        lastTranslationFailure = 'Translation services are unavailable. Connect a local translation server in AI settings for a no-credit fallback. Accepted text is retained.';
+        const failures = translationMachine().failures?.() || [];
+        const labels = {google:'Google Translate',mymemory:'MyMemory',server:'Translation server',offline:'Local model'};
+        lastTranslationFailure = failures.map(item => `${labels[item.provider] || item.provider}: ${item.reason}`).join('; ') || 'No translation engine returned an acceptable result.';
     }
     return finishMachineTranslation(clean, translated, targetLang);
 }
@@ -7712,11 +7692,18 @@ async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', 
     const clean = text.trim();
     const score = scoreChunkComplexity(clean);
     if (window.EngbotTranslationPhases) {
-        return getPhaseTranslator().translate(clean, targetLang, {
+        const translated = await getPhaseTranslator().translate(clean, targetLang, {
             before:contextBefore, after:contextAfter, complexity:score, mode:translationBudgetMode,
             glossary:typeof getBookGlossaryBlock === 'function' ? getBookGlossaryBlock() : '',
             signal:translationRequestController?.signal,
         });
+        if (!translated) {
+            const providerFailure = window.EngbotProviders?.getFailure()?.message;
+            if (providerFailure) lastTranslationFailure += ` AI recovery: ${providerFailure}`;
+            if (!window.EngbotLmStudio?.available() && !window.EngbotLocalTranslation?.enabled()) lastTranslationFailure += ' No local model is connected on this device.';
+            lastTranslationFailure += ' Accepted work is saved; retry resumes this segment.';
+        }
+        return translated;
     }
     const complex = score > SMART_ROUTE_EASY_THRESHOLD;
     if (complex) smartRoutingStats.complex++; else smartRoutingStats.easy++;

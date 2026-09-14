@@ -112,7 +112,7 @@ test('An expired optional correction aborts the provider chain without cancellin
     const ctx = { AbortController, AbortSignal, setTimeout, clearTimeout, console: { warn() {} },
         translationRequestController: parent, optionalAiCorrectionsUsed: 0, OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB: 48,
         OPTIONAL_AI_TIMEOUT_MS: 20, OPTIONAL_AI_FAILURE_COOLDOWN_MS: 50, OPTIONAL_AI_REVIEW_COOLDOWN_MS: 50,
-        setTranslationStage() {}, noteOptionalAiFallback() {}, window: {}, lastTranslationFailure: '',
+        setTranslationStage() {}, noteOptionalAiFallback() {}, window: {EngbotProviders:require('../static/provider-runtime.js')}, lastTranslationFailure: '', customProviderUrl:'',openRouterApiKey:'',mistralApiKey:'',luminaGatewayAvailable:false,
         geminiApiKey: 'fixture', groqApiKey: 'fixture',
         callGeminiJSONDirect: (_prompt, { signal }) => new Promise(resolve => { calls++; signal.addEventListener('abort', () => { aborted = true; resolve(null); }); }),
         callGroqJSON: () => { calls++; return {}; },
