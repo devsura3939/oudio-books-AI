@@ -501,6 +501,68 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
                     engine_used = "deterministic+gemini-correction"
             except Exception as e:
                 print(f"[translation_engine] Optional Gemini correction skipped: {e}")
+        elif p_trans and complex_chunk:
+            try:
+                import httpx
+                kona_instruction = (
+                    "შენ ხარ ქართული ენისა და ლიტერატურის რედაქტორი. გაასწორე მხოლოდ აშკარა გრამატიკული და სინტაქსური შეცდომები. "
+                    "შეინარჩუნე ყველა სახელი, ციფრი და წინადადება. გამოიტანე მხოლოდ შესწორებული ტექსტი."
+                    if tgt == "ka" else
+                    "You are an English copy editor. Correct only obvious grammar and syntax errors. "
+                    "Preserve all names, numbers, and sentences. Output only the corrected translation."
+                )
+                resp = httpx.post(
+                    "http://127.0.0.1:11434/v1/chat/completions",
+                    json={
+                        "model": "kona2-small-3.8B:latest",
+                        "messages": [
+                            {"role": "system", "content": kona_instruction},
+                            {"role": "user", "content": f"დედანი ({src}):\n{p}\n\nთარგმანი ({tgt}):\n{p_trans}\n\nგამოიტანე მხოლოდ შესწორებული თარგმანი:"}
+                        ],
+                        "temperature": 0.1,
+                        "max_tokens": 1024
+                    },
+                    timeout=20.0
+                )
+                if resp.status_code == 200:
+                    cand = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                    if cand and translation_is_valid(p, cand, tgt):
+                        p_trans = cand
+                        engine_used = f"{engine_used}+kona2-correction"
+            except Exception:
+                pass
+
+        # Tier 4: Autonomous server LLM translation via kona2-small-3.8B
+        if not p_trans:
+            try:
+                import httpx
+                trans_prompt = (
+                    "გადათარგმნე შემდეგი ინგლისური ტექსტი მაღალმხატვრულ, ბუნებრივ ქართულ ენაზე. "
+                    "დაიცავი ქართული გრამატიკის, ერგატივისა და კუმშვა-კვეცის წესები. "
+                    "გამოიტანე მხოლოდ ქართული თარგმანი, ყოველგვარი დამატებითი კომენტარის გარეშე."
+                    if tgt == "ka" else
+                    "Translate the following Georgian text into natural literary English. Output only the English translation."
+                )
+                resp = httpx.post(
+                    "http://127.0.0.1:11434/v1/chat/completions",
+                    json={
+                        "model": "kona2-small-3.8B:latest",
+                        "messages": [
+                            {"role": "system", "content": trans_prompt},
+                            {"role": "user", "content": p}
+                        ],
+                        "temperature": 0.1,
+                        "max_tokens": 1024
+                    },
+                    timeout=30.0
+                )
+                if resp.status_code == 200:
+                    cand = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                    if cand and translation_is_valid(p, cand, tgt):
+                        p_trans = cand
+                        engine_used = "kona2-small-3.8B"
+            except Exception as e:
+                print(f"[translation_engine] kona2 direct translation skipped: {e}")
 
         # Keep offline suggestions available, but never publish a word-substitution
         # draft or the original source as a completed translation.
