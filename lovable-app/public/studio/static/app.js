@@ -7531,8 +7531,10 @@ function translationMachine() {
     const owner = typeof getCurrentUserId === 'function' ? getCurrentUserId() : '';
     if (!machineTranslator || machineTranslatorOwner !== owner) {
         machineTranslatorOwner = owner;
+        const apiBase = window.LUMINA_RUNTIME_CONFIG?.API_URL || '';
+        const serverTarget = apiBase ? `${apiBase}/api/server-translate` : (!_isStaticHost ? '/api/server-translate' : false);
         machineTranslator = window.EngbotTranslationMachine.create({
-            assess: assessTranslation, server: !_isStaticHost,
+            assess: assessTranslation, server: serverTarget,
             onEngine: engine => { setTranslationStage(engine === 'offline' ? 'Local neural translation' : 'Machine translation'); recordEngineUse(engine === 'mymemory' ? 'raw' : 'rules'); },
             offline: async (source, sourceLang, targetLang, signal) => {
                 return window.EngbotLocalTranslation?.translate(source, sourceLang, targetLang, signal) || null;

@@ -78,8 +78,9 @@
                 }
                 onEngine(engine); return text;
             };
-            if (server) {
-                const data = await request('server', '/api/server-translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: source, source_lang: sourceLang, target_lang: targetLang }) }, signal);
+            const serverEndpoint = typeof server === 'string' && server ? server : (server ? '/api/server-translate' : null);
+            if (serverEndpoint) {
+                const data = await request('server', serverEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: source, source_lang: sourceLang, target_lang: targetLang }) }, signal);
                 const result = data?.success !== false && accept(data?.translated, 'server');
                 if (result) return result;
             }

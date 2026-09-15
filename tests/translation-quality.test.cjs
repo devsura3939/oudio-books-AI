@@ -34,6 +34,13 @@ test('Rate limiting and untranslated output have distinct actionable diagnostics
  assert.deepEqual(engine.failures(),[{provider:'google',reason:'rate limited'},{provider:'mymemory',reason:'quality check: wrong_script_ratio'}]);
 });
 
+test('Preserved English proper nouns, imprints and addresses pass script quality gate',()=>{
+ const source="Printed and bound in Great Britain for Coronet Books, Hodder and Stoughton, St. Paul's House, Warwick Lane, London EC4P 4AH";
+ const translation="დაბეჭდილია და აკინძულია დიდ ბრიტანეთში Coronet Books-ისთვის, Hodder and Stoughton, St. Paul's House, Warwick Lane, London EC4P 4AH";
+ const result=core.assessTranslation(source,translation,'ka');
+ assert.equal(result.ok,true);
+});
+
 test('Optional AI receives the actual draft and bounded context in one editing request',async()=>{
  const source=fs.readFileSync('static/app.js','utf8');let calls=0;
  const original='He did not open the door because he was afraid.',draft='მას ეშინოდა და ამიტომ კარი არ გააღო.';

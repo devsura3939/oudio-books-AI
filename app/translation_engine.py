@@ -415,15 +415,15 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
     for chunk_index, p in enumerate(chunks):
         p_trans = None
 
-        # Installing the optional model is explicit. When configured, it can
+        # Installing the optional model is explicit. When configured or present, it can
         # complete translation without network access or an API subscription.
-        if os.environ.get('ENGBOT_LOCAL_MODEL_DIR'):
-            try:
-                from app.local_neural import translate_local
+        try:
+            from app.local_neural import translate_local, available as local_model_available
+            if local_model_available() and src == 'en' and tgt == 'ka':
                 p_trans = translate_local(p, src, tgt)
                 engine_used = 'opus-en-ka'
-            except (RuntimeError, ValueError, ImportError, BlockingIOError):
-                p_trans = None
+        except (RuntimeError, ValueError, ImportError, BlockingIOError):
+            p_trans = None
 
         # Tier 1: Direct Google translation; availability is not guaranteed.
         if not p_trans:

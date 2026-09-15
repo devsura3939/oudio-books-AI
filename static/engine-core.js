@@ -59,8 +59,25 @@
         if (longestWordRun(out) >= 4 && longestWordRun(out) > longestWordRun(src)) return { ok: false, reason: 'repeated_word_loop' };
         const counts = scriptCounts(out);
         if (!counts.total && scriptCounts(src).total) return { ok:false, reason:'missing_text' };
-        if (target !== 'auto' && counts.total && counts[target] / counts.total < 0.6) {
-            return { ok: false, reason: 'wrong_script_ratio' };
+        if (target !== 'auto' && counts.total) {
+            let targetRatio = counts[target] / counts.total;
+            if (targetRatio < 0.6 && counts[target] > 0) {
+                const srcWords = new Set(src.toLowerCase().match(/\p{L}+/gu) || []);
+                const outTokens = out.toLowerCase().match(/\p{L}+/gu) || [];
+                let preservedChars = 0;
+                for (const word of outTokens) {
+                    if (srcWords.has(word)) {
+                        preservedChars += word.length;
+                    }
+                }
+                const nonPreserved = Math.max(counts[target], counts.total - preservedChars);
+                if (nonPreserved > 0) {
+                    targetRatio = counts[target] / nonPreserved;
+                }
+            }
+            if (targetRatio < 0.6) {
+                return { ok: false, reason: 'wrong_script_ratio' };
+            }
         }
         if (src.length >= 30 && (out.length / src.length < 0.35 || out.length / src.length > 2.8)) {
             return { ok: false, reason: 'extreme_length_ratio' };

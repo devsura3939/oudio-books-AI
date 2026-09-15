@@ -47,7 +47,16 @@ def translation_is_valid(source, candidate, target):
     if not names:
         return candidate == source and not any(c.isalpha() for c in source)
     script = "GEORGIAN" if target == "ka" else "LATIN"
-    if sum(script in name for name in names) / len(names) < 0.6:
+    target_count = sum(script in name for name in names)
+    target_ratio = target_count / len(names)
+    if target_ratio < 0.6 and target_count > 0:
+        src_words = set(re.findall(r"[^\W\d_]+", source.lower()))
+        cand_words = re.findall(r"[^\W\d_]+", candidate.lower())
+        preserved = sum(len(w) for w in cand_words if w in src_words and not any(unicodedata.name(ch, "").startswith(script) for ch in w))
+        non_preserved = max(target_count, len(names) - preserved)
+        if non_preserved > 0:
+            target_ratio = target_count / non_preserved
+    if target_ratio < 0.6:
         return False
     if len(source) >= 30 and not 0.35 <= len(candidate) / len(source) <= 2.8:
         return False

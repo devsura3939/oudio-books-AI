@@ -1,5 +1,6 @@
 from starlette.concurrency import run_in_threadpool
 import asyncio
+import httpx
 import json
 import os
 import shutil
@@ -130,6 +131,37 @@ async def server_translate(req: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.api_route("/api/v1/{path:path}", methods=["GET", "POST", "OPTIONS"])
+async def ollama_proxy(path: str, req: Request):
+    """
+    OpenAI-compatible server proxy for Ollama models on OCI.
+    Allows clients to use the server-side model (e.g., qwen2.5:3b)
+    for translation editing, transcription correction, and text review
+    without local hardware requirements or API keys.
+    """
+    if req.method == "OPTIONS":
+        return Response(status_code=204)
+    target_url = f"http://127.0.0.1:11434/v1/{path}"
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            headers = {k: v for k, v in req.headers.items() if k.lower() not in ("host", "content-length")}
+            content = await req.body()
+            response = await client.request(
+                method=req.method,
+                url=target_url,
+                headers=headers,
+                content=content,
+                params=req.query_params
+            )
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                headers={k: v for k, v in response.headers.items() if k.lower() not in ("content-encoding", "transfer-encoding", "content-length")}
+            )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Ollama server proxy error: {str(e)}")
 
 
 @app.post("/api/transcribe")
