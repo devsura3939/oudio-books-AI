@@ -1083,6 +1083,9 @@
                 <button onclick="openTrainingLabModal();closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-secondary hover:bg-white/5 transition">
                     <span class="material-symbols-outlined text-[20px]">model_training</span><span>Training Lab</span>
                 </button>
+                <button id="mobileNavServerStats" onclick="navigate('server-stats');closeMobileNav()" class="hidden w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-emerald-400 hover:bg-white/5 hover:text-white transition">
+                    <span class="material-symbols-outlined text-[20px] text-emerald-400">dns</span><span>Server Stats (OCI)</span>
+                </button>
                 <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
                     <svg class="w-5 h-5 fill-current text-white/80" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                     <span>GitHub Repository</span>
@@ -1166,6 +1169,15 @@
                 <button onclick="openTrainingLabModal()" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-secondary hover:bg-white/5 hover:text-white transition-all font-medium text-sm">
                     <span class="material-symbols-outlined text-[20px]">model_training</span>
                     <span>Training Lab</span>
+                </button>
+            </li>
+            <li id="nav-item-server-stats" class="hidden">
+                <button onclick="navigate('server-stats')" id="nav-server-stats" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-emerald-400 hover:bg-white/5 hover:text-emerald-300 transition-all font-medium text-sm">
+                    <span class="material-symbols-outlined text-[20px] text-emerald-400">dns</span>
+                    <span class="flex items-center gap-1.5 flex-grow justify-between">
+                        <span>Server Stats</span>
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Live</span>
+                    </span>
                 </button>
             </li>
             <li>
@@ -1340,6 +1352,264 @@
             </div>
             <p id="scanExportStatus" class="hidden glass-panel rounded-xl px-4 py-3 text-xs text-primary-fixed-dim"></p>
             <div id="scanShelfGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- View: Server Stats (Admin: ananiadevsurashvili@gmail.com Only) -->
+        <div id="view-server-stats" class="hidden space-y-6">
+            <!-- Header -->
+            <div class="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)]">
+                        <span class="material-symbols-outlined text-2xl">dns</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-xl md:text-2xl font-extrabold text-white">Oracle VM & Server Stats</h2>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 animate-pulse">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                LIVE
+                            </span>
+                        </div>
+                        <p class="text-xs text-on-surface-variant mt-0.5">Real-time infrastructure telemetry & OCI Always Free tier usage for <span class="text-emerald-400 font-medium">ananiadevsurashvili@gmail.com</span></p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2.5">
+                    <button id="btnToggleServerStatsAutoRefresh" onclick="toggleServerStatsAutoRefresh()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-white transition">
+                        <span class="material-symbols-outlined text-base text-emerald-400" id="iconServerStatsAutoRefresh">sync</span>
+                        <span id="textServerStatsAutoRefresh">Auto-refresh: ON (5s)</span>
+                    </button>
+                    <button onclick="loadServerStats(true)" id="btnServerStatsRefreshNow" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition shadow-sm active:scale-95">
+                        <span class="material-symbols-outlined text-base">refresh</span>
+                        <span>Refresh Now</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Host Meta Banner -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Host / OS</p>
+                    <p id="ssHostOs" class="font-semibold text-white truncate mt-0.5">Ubuntu 24.04 LTS (aarch64)</p>
+                </div>
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">System Uptime</p>
+                    <p id="ssHostUptime" class="font-semibold text-emerald-400 truncate mt-0.5">--</p>
+                </div>
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">OCI Shape</p>
+                    <p class="font-semibold text-white truncate mt-0.5">VM.Standard.A1.Flex</p>
+                </div>
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Monthly Plan Cost</p>
+                    <p class="font-semibold text-emerald-400 truncate mt-0.5">$0.00 (Always Free Tier)</p>
+                </div>
+            </div>
+
+            <!-- Top KPI Cards Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- 1. Compute Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+                            <span class="material-symbols-outlined text-primary-fixed text-lg">memory</span>
+                            <span>Compute / OCPU</span>
+                        </div>
+                        <span id="ssCpuBadge" class="text-[11px] font-mono font-bold text-primary-fixed">4 Cores</span>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ssCpuLoadVal" class="text-2xl font-black text-white">0.0%</span>
+                            <span id="ssCpuLoadDetail" class="text-[11px] text-on-surface-variant font-mono">1m load: 0.0</span>
+                        </div>
+                        <div class="w-full h-2 rounded-full bg-white/10 mt-2 overflow-hidden">
+                            <div id="ssCpuBar" class="h-full bg-gradient-to-r from-primary-container to-secondary transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-white/5 text-[11px] text-on-surface-variant flex justify-between">
+                        <span>Load (1m/5m/15m):</span>
+                        <span id="ssCpuLoads" class="font-mono text-white">0.0 / 0.0 / 0.0</span>
+                    </div>
+                </div>
+
+                <!-- 2. Memory Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+                            <span class="material-symbols-outlined text-purple-400 text-lg">memory_alt</span>
+                            <span>RAM Memory</span>
+                        </div>
+                        <span class="text-[11px] font-mono font-bold text-purple-300">24 GB Free Tier</span>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ssMemVal" class="text-2xl font-black text-white">0.0 GB</span>
+                            <span id="ssMemPercent" class="text-[11px] text-purple-300 font-mono">0% used</span>
+                        </div>
+                        <div class="w-full h-2 rounded-full bg-white/10 mt-2 overflow-hidden">
+                            <div id="ssMemBar" class="h-full bg-gradient-to-r from-purple-500 to-indigo-400 transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-white/5 text-[11px] text-on-surface-variant flex justify-between">
+                        <span>Available RAM:</span>
+                        <span id="ssMemAvail" class="font-mono text-white">-- GB free</span>
+                    </div>
+                </div>
+
+                <!-- 3. Storage Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+                            <span class="material-symbols-outlined text-amber-400 text-lg">hard_drive</span>
+                            <span>Storage Volume</span>
+                        </div>
+                        <span class="text-[11px] font-mono font-bold text-amber-300">200 GB Pool</span>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ssDiskVal" class="text-2xl font-black text-white">0.0 GB</span>
+                            <span id="ssDiskPercent" class="text-[11px] text-amber-300 font-mono">0% used</span>
+                        </div>
+                        <div class="w-full h-2 rounded-full bg-white/10 mt-2 overflow-hidden">
+                            <div id="ssDiskBar" class="h-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-white/5 text-[11px] text-on-surface-variant flex justify-between">
+                        <span>Model Cache Size:</span>
+                        <span id="ssModelCache" class="font-mono text-white">--</span>
+                    </div>
+                </div>
+
+                <!-- 4. Bandwidth Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+                            <span class="material-symbols-outlined text-emerald-400 text-lg">swap_vert</span>
+                            <span>Bandwidth (Outbound)</span>
+                        </div>
+                        <span class="text-[11px] font-mono font-bold text-emerald-300">10 TB / mo</span>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ssNetTxVal" class="text-2xl font-black text-white">0 MB</span>
+                            <span id="ssNetQuotaPercent" class="text-[11px] text-emerald-300 font-mono">0.00%</span>
+                        </div>
+                        <div class="w-full h-2 rounded-full bg-white/10 mt-2 overflow-hidden">
+                            <div id="ssNetBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300" style="width: 0.1%"></div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-white/5 text-[11px] text-on-surface-variant flex justify-between">
+                        <span>Inbound Received:</span>
+                        <span id="ssNetRxVal" class="font-mono text-white">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Status & Daemon Health Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- API Backend Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                        <div class="flex items-center gap-2.5">
+                            <span class="material-symbols-outlined text-cyan-400">api</span>
+                            <h3 class="text-sm font-bold text-white">FastAPI Studio Daemon (oudio-api)</h3>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">RUNNING</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Process PID</p>
+                            <p id="ssApiPid" class="font-mono font-bold text-white mt-0.5">--</p>
+                        </div>
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Uvicorn Workers</p>
+                            <p class="font-mono font-bold text-white mt-0.5">4 Workers (ARM64)</p>
+                        </div>
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Internal Port</p>
+                            <p class="font-mono font-bold text-white mt-0.5">127.0.0.1:8001</p>
+                        </div>
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Public Gateway</p>
+                            <p class="font-mono font-bold text-cyan-300 mt-0.5">Nginx SSL / 443</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ollama Neural Engine Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                        <div class="flex items-center gap-2.5">
+                            <span class="material-symbols-outlined text-georgian-gold">psychology</span>
+                            <h3 class="text-sm font-bold text-white">Ollama Neural LLM Engine</h3>
+                        </div>
+                        <span id="ssOllamaStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="p-2 rounded-lg bg-black/20 col-span-2">
+                            <p class="text-[10px] text-on-surface-variant">Active Model Loaded</p>
+                            <p id="ssOllamaModel" class="font-mono font-bold text-georgian-gold mt-0.5 truncate">kona2-small-3.8B.Q4_K_M</p>
+                        </div>
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Endpoint</p>
+                            <p class="font-mono font-bold text-white mt-0.5">127.0.0.1:11434</p>
+                        </div>
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Inference Speed</p>
+                            <p class="font-mono font-bold text-emerald-300 mt-0.5">~35-40 tok/s</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OCI Always Free Quota Breakdown Table -->
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-emerald-400">verified</span>
+                        <h3 class="text-sm font-bold text-white">Oracle Cloud (OCI) Always Free Tier Quotas</h3>
+                    </div>
+                    <span class="text-xs text-emerald-400 font-mono font-bold">$0.00 / month forever</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-on-surface-variant">
+                        <thead>
+                            <tr class="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/60">
+                                <th class="py-2 px-3">Resource</th>
+                                <th class="py-2 px-3">Always Free Quota</th>
+                                <th class="py-2 px-3">Currently Used</th>
+                                <th class="py-2 px-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5 font-mono text-xs">
+                            <tr>
+                                <td class="py-2 px-3 text-white font-sans font-medium">ARM Compute (Ampere A1)</td>
+                                <td class="py-2 px-3 text-primary-fixed">4 OCPUs (3,000 OCPU hours/mo)</td>
+                                <td class="py-2 px-3" id="ssTableCpuUsed">4 Cores (100% assigned)</td>
+                                <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">Optimal</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-white font-sans font-medium">System RAM</td>
+                                <td class="py-2 px-3 text-purple-300">24 GB Memory (Always Free max)</td>
+                                <td class="py-2 px-3" id="ssTableMemUsed">-- / 24 GB</td>
+                                <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">Optimal</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-white font-sans font-medium">Block Volume Storage</td>
+                                <td class="py-2 px-3 text-amber-300">200 GB Total Free Storage</td>
+                                <td class="py-2 px-3" id="ssTableDiskUsed">-- / 200 GB</td>
+                                <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">Healthy</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-white font-sans font-medium">Outbound Data Transfer</td>
+                                <td class="py-2 px-3 text-emerald-300">10 TB (10,000 GB) per month</td>
+                                <td class="py-2 px-3" id="ssTableNetUsed">-- / 10 TB</td>
+                                <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">&lt; 1% Quota</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
     </main>

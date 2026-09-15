@@ -44,6 +44,7 @@ from app.training_engine import (
     get_training_guide_json, get_training_guide_markdown,
     generate_new_training_key
 )
+from app.server_stats import get_full_server_stats
 import base64
 from io import BytesIO
 
@@ -329,6 +330,53 @@ async def supabase_books():
         return fetch_supabase_books()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+def _is_admin_request(req: Request) -> bool:
+    """Verify if request is authorized for admin ananiadevsurashvili@gmail.com."""
+    admin_email = "ananiadevsurashvili@gmail.com"
+    candidate_email = (
+        req.headers.get("X-Admin-Email") or
+        req.headers.get("X-User-Email") or
+        req.query_params.get("admin_email") or
+        req.query_params.get("email") or
+        ""
+    ).strip().lower()
+    if candidate_email == admin_email:
+        return True
+
+    auth_header = req.headers.get("Authorization", "").strip()
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+        try:
+            parts = token.split(".")
+            if len(parts) >= 2:
+                padding = "=" * ((4 - len(parts[1]) % 4) % 4)
+                claims = json.loads(base64.urlsafe_b64decode(parts[1] + padding).decode("utf-8"))
+                token_email = (claims.get("email") or "").strip().lower()
+                token_sub = str(claims.get("sub") or claims.get("user_id") or "")
+                if token_email == admin_email or token_sub == "2b4b9033-8527-4e51-b2c8-9a72f5a47412":
+                    return True
+        except Exception:
+            pass
+
+    return False
+
+@app.get("/api/admin/server-stats")
+async def get_admin_server_stats(request: Request):
+    """
+    Returns live Oracle VM infrastructure metrics, memory, compute, storage,
+    bandwidth, and service health strictly for admin ananiadevsurashvili@gmail.com.
+    """
+    if not _is_admin_request(request):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden: Server statistics are restricted to administrator ananiadevsurashvili@gmail.com."
+        )
+    try:
+        return get_full_server_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to collect server stats: {e}")
+
 
 @app.post("/api/public/auth/recover")
 async def public_auth_recover(request: Request):

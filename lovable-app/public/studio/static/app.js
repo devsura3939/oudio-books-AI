@@ -2872,7 +2872,8 @@ function navToSection(tab) {
 }
 
 function navigate(viewId) {
-    ['library', 'discover', 'scanner'].forEach(id => {
+    const views = ['library', 'discover', 'scanner', 'server-stats'];
+    views.forEach(id => {
         const view = document.getElementById(`view-${id}`);
         const nav = document.getElementById(`nav-${id}`);
         if (view) view.classList.add('hidden');
@@ -2881,6 +2882,15 @@ function navigate(viewId) {
             nav.classList.add('text-on-surface-variant');
         }
     });
+
+    if (viewId === 'server-stats') {
+        const emailClean = (currentUser?.email || '').trim().toLowerCase();
+        const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
+        if (!isAdmin) {
+            navigate('library');
+            return;
+        }
+    }
 
     const activeView = document.getElementById(`view-${viewId}`);
     const activeNav = document.getElementById(`nav-${viewId}`);
@@ -2893,6 +2903,13 @@ function navigate(viewId) {
     // Keep bottom nav tabs synchronized
     if (viewId === 'library') updateBottomNavActive('home');
     else if (viewId === 'scanner') updateBottomNavActive('scanner');
+
+    if (viewId === 'server-stats') {
+        if (typeof loadServerStats === 'function') loadServerStats();
+        if (typeof startServerStatsAutoRefresh === 'function') startServerStatsAutoRefresh();
+    } else {
+        if (typeof stopServerStatsAutoRefresh === 'function') stopServerStatsAutoRefresh();
+    }
 }
 
 function getCurrentAccountSettings() {
@@ -3598,6 +3615,32 @@ function updateAuthUI() {
         } else {
             mobileAdminCard.classList.add('hidden');
             mobileAdminCard.onclick = null;
+        }
+    }
+
+    // 3b. Server Stats Nav Item (Sidebar & Mobile)
+    const navItemServerStats = document.getElementById('nav-item-server-stats');
+    if (navItemServerStats) {
+        if (isAdmin) {
+            navItemServerStats.classList.remove('hidden');
+        } else {
+            navItemServerStats.classList.add('hidden');
+        }
+    }
+    const mobileNavServerStats = document.getElementById('mobileNavServerStats');
+    if (mobileNavServerStats) {
+        if (isAdmin) {
+            mobileNavServerStats.classList.remove('hidden');
+            mobileNavServerStats.classList.add('flex');
+        } else {
+            mobileNavServerStats.classList.add('hidden');
+            mobileNavServerStats.classList.remove('flex');
+        }
+    }
+    if (!isAdmin) {
+        const viewServerStats = document.getElementById('view-server-stats');
+        if (viewServerStats && !viewServerStats.classList.contains('hidden')) {
+            if (typeof navigate === 'function') navigate('library');
         }
     }
 
@@ -11581,6 +11624,199 @@ window.engbotScanTranslate = engbotScanTranslate;
 window.engbotScanPdf = engbotScanPdf;
 window.engbotScanRename = engbotScanRename;
 window.engbotScanMp3 = engbotScanMp3;
+
+// ── Server Stats (Admin: ananiadevsurashvili@gmail.com Only) ───────────────────
+let serverStatsTimer = null;
+let serverStatsAutoRefreshEnabled = true;
+let serverStatsFetching = false;
+
+async function loadServerStats(manual = false) {
+    const emailClean = (currentUser?.email || '').trim().toLowerCase();
+    const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
+    if (!isAdmin) return;
+
+    if (serverStatsFetching) return;
+    serverStatsFetching = true;
+
+    const refreshBtn = document.getElementById('btnServerStatsRefreshNow');
+    if (manual && refreshBtn) {
+        refreshBtn.classList.add('opacity-75', 'pointer-events-none');
+    }
+
+    try {
+        const headers = {
+            'X-Admin-Email': currentUser?.email || 'ananiadevsurashvili@gmail.com'
+        };
+        const token = currentSession?.access_token || (typeof LuminaStore !== 'undefined' && LuminaStore?.session?.access_token);
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const res = await fetch('/api/admin/server-stats', {
+            method: 'GET',
+            headers
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        renderServerStats(data);
+    } catch (err) {
+        console.warn('Failed to load server stats:', err);
+    } finally {
+        serverStatsFetching = false;
+        if (refreshBtn) {
+            refreshBtn.classList.remove('opacity-75', 'pointer-events-none');
+        }
+    }
+}
+
+function renderServerStats(data) {
+    if (!data) return;
+
+    // Host & OS
+    const elHostOs = document.getElementById('ssHostOs');
+    if (elHostOs && data.server) elHostOs.textContent = `${data.server.os} (${data.server.arch})`;
+
+    const elUptime = document.getElementById('ssHostUptime');
+    if (elUptime && data.server) elUptime.textContent = data.server.uptime_human;
+
+    // 1. Compute
+    const cpu = data.compute || {};
+    const elCpuBadge = document.getElementById('ssCpuBadge');
+    if (elCpuBadge) elCpuBadge.textContent = `${cpu.cores || 4} OCPUs (ARM)`;
+
+    const elCpuLoadVal = document.getElementById('ssCpuLoadVal');
+    if (elCpuLoadVal) elCpuLoadVal.textContent = `${cpu.utilization_percent || 0}%`;
+
+    const elCpuLoadDetail = document.getElementById('ssCpuLoadDetail');
+    if (elCpuLoadDetail && cpu.load_avg) elCpuLoadDetail.textContent = `1m load: ${cpu.load_avg['1m']}`;
+
+    const elCpuBar = document.getElementById('ssCpuBar');
+    if (elCpuBar) elCpuBar.style.width = `${Math.min(100, Math.max(2, cpu.utilization_percent || 0))}%`;
+
+    const elCpuLoads = document.getElementById('ssCpuLoads');
+    if (elCpuLoads && cpu.load_avg) elCpuLoads.textContent = `${cpu.load_avg['1m']} / ${cpu.load_avg['5m']} / ${cpu.load_avg['15m']}`;
+
+    // 2. Memory
+    const mem = data.memory || {};
+    const elMemVal = document.getElementById('ssMemVal');
+    if (elMemVal) elMemVal.textContent = `${mem.used_gb || 0} GB`;
+
+    const elMemPercent = document.getElementById('ssMemPercent');
+    if (elMemPercent) elMemPercent.textContent = `${mem.used_percent || 0}% used`;
+
+    const elMemBar = document.getElementById('ssMemBar');
+    if (elMemBar) elMemBar.style.width = `${Math.min(100, Math.max(2, mem.used_percent || 0))}%`;
+
+    const elMemAvail = document.getElementById('ssMemAvail');
+    if (elMemAvail) elMemAvail.textContent = `${mem.available_human || '--'} free`;
+
+    // 3. Storage
+    const disk = data.storage || {};
+    const elDiskVal = document.getElementById('ssDiskVal');
+    if (elDiskVal) elDiskVal.textContent = `${disk.used_gb || 0} GB`;
+
+    const elDiskPercent = document.getElementById('ssDiskPercent');
+    if (elDiskPercent) elDiskPercent.textContent = `${disk.used_percent || 0}% used`;
+
+    const elDiskBar = document.getElementById('ssDiskBar');
+    if (elDiskBar) elDiskBar.style.width = `${Math.min(100, Math.max(2, disk.used_percent || 0))}%`;
+
+    const elModelCache = document.getElementById('ssModelCache');
+    if (elModelCache) elModelCache.textContent = disk.model_cache_human || '0 B';
+
+    // 4. Bandwidth
+    const net = data.network || {};
+    const elNetTxVal = document.getElementById('ssNetTxVal');
+    if (elNetTxVal) elNetTxVal.textContent = net.tx_human || '0 B';
+
+    const elNetQuotaPercent = document.getElementById('ssNetQuotaPercent');
+    if (elNetQuotaPercent) elNetQuotaPercent.textContent = `${net.outbound_quota_percent || 0}%`;
+
+    const elNetBar = document.getElementById('ssNetBar');
+    if (elNetBar) elNetBar.style.width = `${Math.min(100, Math.max(1, (net.outbound_quota_percent || 0) * 10))}%`;
+
+    const elNetRxVal = document.getElementById('ssNetRxVal');
+    if (elNetRxVal) elNetRxVal.textContent = `${net.rx_human || '0 B'} (${(net.rx_packets || 0).toLocaleString()} pkts)`;
+
+    // Services
+    const srv = data.services || {};
+    const elApiPid = document.getElementById('ssApiPid');
+    if (elApiPid && srv.oudio_api) elApiPid.textContent = `PID ${srv.oudio_api.pid} (active)`;
+
+    const elOllamaBadge = document.getElementById('ssOllamaStatusBadge');
+    if (elOllamaBadge && srv.ollama) {
+        if (srv.ollama.status === 'active') {
+            elOllamaBadge.textContent = 'ACTIVE';
+            elOllamaBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        } else {
+            elOllamaBadge.textContent = 'STANDBY';
+            elOllamaBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30';
+        }
+    }
+
+    const elOllamaModel = document.getElementById('ssOllamaModel');
+    if (elOllamaModel && srv.ollama) {
+        elOllamaModel.textContent = srv.ollama.active_model || 'kona2-small-3.8B.Q4_K_M';
+    }
+
+    // Table rows
+    const elTblCpu = document.getElementById('ssTableCpuUsed');
+    if (elTblCpu && cpu.cores) elTblCpu.textContent = `${cpu.cores} Cores (100% OCI Allocation)`;
+
+    const elTblMem = document.getElementById('ssTableMemUsed');
+    if (elTblMem && mem.used_human) elTblMem.textContent = `${mem.used_human} / 24.0 GB (${mem.used_percent}%)`;
+
+    const elTblDisk = document.getElementById('ssTableDiskUsed');
+    if (elTblDisk && disk.used_human) elTblDisk.textContent = `${disk.used_human} / 200 GB Pool (${disk.plan_pool_used_percent}%)`;
+
+    const elTblNet = document.getElementById('ssTableNetUsed');
+    if (elTblNet && net.tx_human) elTblNet.textContent = `${net.tx_human} / 10 TB (${net.outbound_quota_percent}%)`;
+}
+
+function toggleServerStatsAutoRefresh() {
+    serverStatsAutoRefreshEnabled = !serverStatsAutoRefreshEnabled;
+    const btn = document.getElementById('textServerStatsAutoRefresh');
+    const icon = document.getElementById('iconServerStatsAutoRefresh');
+    if (serverStatsAutoRefreshEnabled) {
+        if (btn) btn.textContent = 'Auto-refresh: ON (5s)';
+        if (icon) icon.className = 'material-symbols-outlined text-base text-emerald-400 animate-spin';
+        startServerStatsAutoRefresh();
+    } else {
+        if (btn) btn.textContent = 'Auto-refresh: OFF';
+        if (icon) icon.className = 'material-symbols-outlined text-base text-on-surface-variant';
+        stopServerStatsAutoRefresh();
+    }
+}
+
+function startServerStatsAutoRefresh() {
+    stopServerStatsAutoRefresh();
+    if (!serverStatsAutoRefreshEnabled) return;
+    serverStatsTimer = setInterval(() => {
+        const view = document.getElementById('view-server-stats');
+        if (view && !view.classList.contains('hidden')) {
+            loadServerStats();
+        } else {
+            stopServerStatsAutoRefresh();
+        }
+    }, 5000);
+}
+
+function stopServerStatsAutoRefresh() {
+    if (serverStatsTimer) {
+        clearInterval(serverStatsTimer);
+        serverStatsTimer = null;
+    }
+}
+
+window.loadServerStats = loadServerStats;
+window.renderServerStats = renderServerStats;
+window.toggleServerStatsAutoRefresh = toggleServerStatsAutoRefresh;
+window.startServerStatsAutoRefresh = startServerStatsAutoRefresh;
+window.stopServerStatsAutoRefresh = stopServerStatsAutoRefresh;
 
 // The React shell asks the studio to show a specific view (Scanner page).
 window.addEventListener('message', (event) => {
