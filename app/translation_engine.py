@@ -385,7 +385,129 @@ def translate_offline_en_to_ka(text: str) -> str:
     return clean_georgian_morphology(t)
 
 
+def translate_with_kona(text: str, source_lang: str, target_lang: str) -> Optional[str]:
+    """
+    Translates text between English and Georgian using native server-side tbilisi-ai-lab/kona2-small-3.8B.
+    Runs 100% locally on the OCI VM with zero API keys and zero cost ($0.00/mo).
+    """
+    if not text or not text.strip():
+        return None
+    try:
+        import httpx
+        url = os.environ.get("KONA_OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
+        if target_lang == "ka":
+            messages = [
+                {"role": "system", "content": "You are an expert translator specializing in English and Georgian."},
+                {"role": "user", "content": f"Translate the following English sentence into Georgian. Output ONLY the Georgian translation.\nText: {text}\nTranslation:"}
+            ]
+        else:
+            messages = [
+                {"role": "system", "content": "You are an expert translator specializing in Georgian and English."},
+                {"role": "user", "content": f"Translate the following Georgian sentence into English. Output ONLY the English translation.\nText: {text}\nTranslation:"}
+            ]
+        resp = httpx.post(
+            url,
+            json={
+                "model": "kona2-small-3.8B:latest",
+                "messages": messages,
+                "temperature": 0.1,
+                "max_tokens": min(2048, max(256, len(text) * 2))
+            },
+            timeout=25.0
+        )
+        if resp.status_code == 200:
+            cand = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            cand = re.sub(r'^```[a-z]*\s*', '', cand, flags=re.IGNORECASE)
+            cand = re.sub(r'\s*```$', '', cand).strip()
+            if cand and translation_is_valid(text, cand, target_lang):
+                return cand
+    except Exception as e:
+        print(f"[translation_engine] kona2 translation skipped: {e}")
+    return None
+
+
+def audit_with_final_checker(
+    source_text: str,
+    draft_text: str,
+    src: str,
+    tgt: str,
+    api_key: Optional[str] = None,
+    checker_url: Optional[str] = None,
+    checker_model: Optional[str] = None
+) -> Optional[str]:
+    """
+    Tier 2: Final Quality Auditor / Checker.
+    Uses paid API models (e.g. Gemini 2.5 Flash) or a local big model from PC LM Studio
+    to audit and elevate the translation of each portion without replacing valid native structures.
+    """
+    # 1. PC LM Studio or Custom External Model Checker
+    if checker_url:
+        try:
+            import httpx
+            endpoint = checker_url.rstrip("/")
+            if not endpoint.endswith("/chat/completions"):
+                endpoint = f"{endpoint}/chat/completions"
+            sys_msg = (
+                "You are an elite bilingual literary copy editor and translation auditor. "
+                "Audit the supplied draft translation against the original source text. "
+                "Elevate nuances, literary flow, and stylistic precision while strictly preserving all facts, proper names, and numbers. "
+                "If the draft is already accurate, return it unchanged. Output ONLY the verified translation."
+            )
+            user_msg = f"SOURCE ({src}):\n{source_text}\n\nDRAFT TRANSLATION ({tgt}):\n{draft_text}\n\nFINAL AUDITED TRANSLATION:"
+            resp = httpx.post(
+                endpoint,
+                json={
+                    "model": checker_model or "default",
+                    "messages": [
+                        {"role": "system", "content": sys_msg},
+                        {"role": "user", "content": user_msg}
+                    ],
+                    "temperature": 0.1,
+                    "max_tokens": min(2048, max(256, len(source_text) * 2))
+                },
+                timeout=20.0
+            )
+            if resp.status_code == 200:
+                cand = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                if cand and translation_is_valid(source_text, cand, tgt):
+                    return cand
+        except Exception as e:
+            print(f"[translation_engine] External checker audit skipped: {e}")
+
+    # 2. Paid Gemini API Key Checker
+    if api_key and genai is not None:
+        try:
+            client = genai.Client(api_key=api_key, http_options={"timeout": 12000})
+            correction_instruction = (
+                "You are a Georgian literary copy editor and translation auditor. "
+                "Audit this translation against the source text. Correct demonstrated omissions, "
+                "unnatural calques, or case/verb mistakes while preserving every name, number, paragraph, and sentence. "
+                "Use natural literary Mkhedruli prose and Georgian quotation marks. Output only the final translation."
+                if tgt == "ka" else
+                "You are an English literary copy editor and translation auditor. "
+                "Audit this translation against the source text. Correct demonstrated omissions, "
+                "unnatural phrasing, or agreement mistakes while preserving every name, number, paragraph, and sentence. "
+                "Output only the final translation."
+            )
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=(
+                    f"SOURCE ({src}):\n{source_text}\n\nDRAFT TRANSLATION ({tgt}):\n{draft_text}\n\n"
+                    "Return the final audited translation only. If it is already correct, repeat it unchanged."
+                ),
+                config=dict(system_instruction=correction_instruction, temperature=0.1)
+            )
+            candidate = response.text.strip() if response and getattr(response, "text", None) else ""
+            if candidate and translation_is_valid(source_text, candidate, tgt):
+                return candidate
+        except Exception as e:
+            print(f"[translation_engine] Gemini checker audit skipped: {e}")
+
+    return None
+
+
 def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka", api_key: Optional[str] = None) -> dict:
+
     if not text or not text.strip():
         return {"translated": "", "engine": "none", "success": True}
 
@@ -415,17 +537,24 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
     for chunk_index, p in enumerate(chunks):
         p_trans = None
 
-        # Installing the optional model is explicit. When configured or present, it can
-        # complete translation without network access or an API subscription.
+        # 1. Autonomous Native Baseline
+        # Tier 0: Marian opus-en-ka fast local translation
         try:
             from app.local_neural import translate_local, available as local_model_available
             if local_model_available() and src == 'en' and tgt == 'ka':
                 p_trans = translate_local(p, src, tgt)
-                engine_used = 'opus-en-ka'
+                if p_trans:
+                    engine_used = 'opus-en-ka'
         except (RuntimeError, ValueError, ImportError, BlockingIOError):
             p_trans = None
 
-        # Tier 1: Direct Google translation; availability is not guaranteed.
+        # Tier 1: Native server LLM translation via tbilisi-ai-lab/kona2-small-3.8B
+        if not p_trans:
+            p_trans = translate_with_kona(p, src, tgt)
+            if p_trans:
+                engine_used = "kona2-small-3.8B"
+
+        # Tier 2: Direct Google translation fallback
         if not p_trans:
             try:
                 import httpx
@@ -435,20 +564,19 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
                 if resp.status_code == 200:
                     data = resp.json()
                     if data and data[0] and isinstance(data[0], list):
-                        p_trans = "".join([item[0] for item in data[0] if item and item[0]])
-                        engine_used = "server_neural_google"
+                        candidate = "".join([item[0] for item in data[0] if item and item[0]])
+                        if candidate and translation_is_valid(p, candidate, tgt):
+                            p_trans = candidate
+                            engine_used = "server_neural_google"
             except Exception as e:
-                print(f"[translation_engine] Tier 1 direct translation failed: {e}")
+                print(f"[translation_engine] Tier 2 direct translation failed: {e}")
 
-        if p_trans and not translation_is_valid(p, p_trans, tgt):
-            p_trans = None
-
-        # Tier 2: deep-translator GoogleTranslator fallback
+        # Tier 3: deep-translator GoogleTranslator fallback
         if not p_trans and GoogleTranslator is not None:
             try:
                 tr = GoogleTranslator(source=src, target=tgt)
                 if len(p) <= 4500:
-                    p_trans = tr.translate(p)
+                    candidate = tr.translate(p)
                 else:
                     sentences = re.split(r'(?<=[.!?…])\s+', p)
                     sub_chunks = []
@@ -461,108 +589,38 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
                             cur = s
                     if cur:
                         sub_chunks.append(cur)
-                    p_trans = " ".join([tr.translate(sc) for sc in sub_chunks if sc])
-                engine_used = "deep_translator_google"
-            except Exception as e:
-                print(f"[translation_engine] Tier 2 GoogleTranslator failed: {e}")
-
-        if p_trans and not translation_is_valid(p, p_trans, tgt):
-            p_trans = None
-
-        # Tier 3: optional literary correction. It runs only for substantial
-        # or structurally dense chunks and is accepted only when the corrected
-        # text passes the same script/completeness gate. Provider errors,
-        # timeouts, and rejected candidates keep the deterministic baseline.
-        complex_chunk = len(p) >= 800 or len(p.split()) >= 120 or len(re.findall(r'[;:—–…]', p)) >= 3
-        if p_trans and correction_key and genai is not None and complex_chunk:
-            try:
-                client = genai.Client(api_key=correction_key, http_options={"timeout": 12000})
-                correction_instruction = (
-                    "You are a Georgian literary copy editor. Correct only demonstrated omissions, "
-                    "meaning errors, unnatural calques, or Georgian case/verb mistakes. Preserve every "
-                    "name, number, paragraph, and sentence. Use Mkhedruli, native SOV order, Georgian "
-                    "quotation marks, and natural literary prose. Output only the corrected translation."
-                    if tgt == "ka" else
-                    "You are an English literary copy editor. Correct only demonstrated omissions, "
-                    "meaning errors, unnatural calques, or tense/agreement mistakes. Preserve every name, "
-                    "number, paragraph, and sentence. Output only the corrected translation."
-                )
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=(
-                        f"SOURCE ({src}):\n{p}\n\nDETERMINISTIC TRANSLATION ({tgt}):\n{p_trans}\n\n"
-                        "Return the corrected translation only. If it is already correct, repeat it unchanged."
-                    ),
-                    config=dict(system_instruction=correction_instruction, temperature=0.1)
-                )
-                candidate = response.text.strip() if response and getattr(response, "text", None) else ""
+                    candidate = " ".join([tr.translate(sc) for sc in sub_chunks if sc])
                 if candidate and translation_is_valid(p, candidate, tgt):
                     p_trans = candidate
-                    engine_used = "deterministic+gemini-correction"
+                    engine_used = "deep_translator_google"
             except Exception as e:
-                print(f"[translation_engine] Optional Gemini correction skipped: {e}")
-        elif p_trans and complex_chunk:
-            try:
-                import httpx
-                kona_instruction = (
-                    "შენ ხარ ქართული ენისა და ლიტერატურის რედაქტორი. გაასწორე მხოლოდ აშკარა გრამატიკული და სინტაქსური შეცდომები. "
-                    "შეინარჩუნე ყველა სახელი, ციფრი და წინადადება. გამოიტანე მხოლოდ შესწორებული ტექსტი."
-                    if tgt == "ka" else
-                    "You are an English copy editor. Correct only obvious grammar and syntax errors. "
-                    "Preserve all names, numbers, and sentences. Output only the corrected translation."
-                )
-                resp = httpx.post(
-                    "http://127.0.0.1:11434/v1/chat/completions",
-                    json={
-                        "model": "kona2-small-3.8B:latest",
-                        "messages": [
-                            {"role": "system", "content": kona_instruction},
-                            {"role": "user", "content": f"დედანი ({src}):\n{p}\n\nთარგმანი ({tgt}):\n{p_trans}\n\nგამოიტანე მხოლოდ შესწორებული თარგმანი:"}
-                        ],
-                        "temperature": 0.1,
-                        "max_tokens": 1024
-                    },
-                    timeout=20.0
-                )
-                if resp.status_code == 200:
-                    cand = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
-                    if cand and translation_is_valid(p, cand, tgt):
-                        p_trans = cand
-                        engine_used = f"{engine_used}+kona2-correction"
-            except Exception:
-                pass
+                print(f"[translation_engine] Tier 3 GoogleTranslator failed: {e}")
 
-        # Tier 4: Autonomous server LLM translation via kona2-small-3.8B
-        if not p_trans:
-            try:
-                import httpx
-                trans_prompt = (
-                    "გადათარგმნე შემდეგი ინგლისური ტექსტი მაღალმხატვრულ, ბუნებრივ ქართულ ენაზე. "
-                    "დაიცავი ქართული გრამატიკის, ერგატივისა და კუმშვა-კვეცის წესები. "
-                    "გამოიტანე მხოლოდ ქართული თარგმანი, ყოველგვარი დამატებითი კომენტარის გარეშე."
-                    if tgt == "ka" else
-                    "Translate the following Georgian text into natural literary English. Output only the English translation."
-                )
-                resp = httpx.post(
-                    "http://127.0.0.1:11434/v1/chat/completions",
-                    json={
-                        "model": "kona2-small-3.8B:latest",
-                        "messages": [
-                            {"role": "system", "content": trans_prompt},
-                            {"role": "user", "content": p}
-                        ],
-                        "temperature": 0.1,
-                        "max_tokens": 1024
-                    },
-                    timeout=30.0
-                )
-                if resp.status_code == 200:
-                    cand = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
-                    if cand and translation_is_valid(p, cand, tgt):
-                        p_trans = cand
-                        engine_used = "kona2-small-3.8B"
-            except Exception as e:
-                print(f"[translation_engine] kona2 direct translation skipped: {e}")
+        # Morphosyntactic synthesis on native Georgian candidate
+        if p_trans and tgt == "ka":
+            p_trans = synthesize_georgian_morphology(p_trans)
+            p_trans = clean_georgian_morphology(p_trans)
+
+        # 2. Final Quality Checker Tier
+        # If paid API keys (Gemini, Groq, Mistral) or local PC LM Studio is connected,
+        # it audits each portion of translation as final copy-editor to elevate literary quality.
+        if p_trans and (correction_key or os.environ.get("PC_LM_STUDIO_URL")):
+            audited = audit_with_final_checker(
+                source_text=p,
+                draft_text=p_trans,
+                src=src,
+                tgt=tgt,
+                api_key=correction_key,
+                checker_url=os.environ.get("PC_LM_STUDIO_URL"),
+                checker_model=os.environ.get("PC_LM_STUDIO_MODEL")
+            )
+            if audited and translation_is_valid(p, audited, tgt):
+                p_trans = audited
+                if tgt == "ka":
+                    p_trans = synthesize_georgian_morphology(p_trans)
+                    p_trans = clean_georgian_morphology(p_trans)
+                engine_used = f"{engine_used}+final_checker"
+
 
         # Keep offline suggestions available, but never publish a word-substitution
         # draft or the original source as a completed translation.

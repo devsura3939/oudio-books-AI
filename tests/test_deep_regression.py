@@ -64,8 +64,10 @@ class TestBackendEndpointsAndEngines(unittest.TestCase):
         self.assertIn("locale", v0)
 
     @patch('app.translation_engine.genai', None)
+    @patch('app.local_neural.available', return_value=False)
+    @patch('app.translation_engine.translate_with_kona', return_value=None)
     @patch('httpx.get')
-    def test_02_server_translate(self, provider_get):
+    def test_02_server_translate(self, provider_get, mock_kona, mock_local):
         """Exercise the route and actual translation post-editing with stable provider fixtures."""
         provider_get.side_effect = [
             Mock(status_code=200, json=lambda: [[["პატარა უფლისწულმა გადაწყვიტა დაეცვა თავისი ვარდი."]]]),

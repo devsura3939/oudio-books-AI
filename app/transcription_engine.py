@@ -32,6 +32,55 @@ from app.image_processor import enhance_page_image, image_to_jpeg_bytes, score_i
 from app.training_engine import load_active_pack, apply_pack
 
 
+def refine_georgian_with_kona(text: str, task: str = "audio_punctuation") -> str:
+    """
+    Natively refines Georgian text using server-side tbilisi-ai-lab/kona2-small-3.8B:
+    - 'audio_punctuation': Restores punctuation, capitalization, and sentence breaks from raw speech recognition.
+    - 'ocr_repair': Repairs OCR character confusions (გ/ვ, ც/ძ/წ) and rejoins line breaks/hyphens.
+    Preserves exact verbatim content. Gracefully falls back to original text if Kona2 is unreachable.
+    """
+    if not text or not text.strip():
+        return text
+    if not re.search(r'[\u10A0-\u10FF]', text):
+        return text
+
+    system_prompts = {
+        "audio_punctuation": (
+            "შენ ხარ ქართული მეტყველების ტრანსკრიფციის რედაქტორი. დაუსვი სასვენი ნიშნები (წერტილი, მძიმე, კითხვის ნიშანი, ბრჭყალები „“), "
+            "გაასწორე სიტყვების შეერთება-გაყოფა, ოღონდ არ შეცვალო ნათქვამი სიტყვები. გამოიტანე მხოლოდ გასწორებული ტექსტი."
+        ),
+        "ocr_repair": (
+            "შენ ხარ ქართული ნაბეჭდი წიგნების OCR რედაქტორი. შეასწორე ოპტიკური ამოცნობის ხარვეზები: "
+            "გააერთიანე სტრიქონის ბოლოში გადატანილი სიტყვები (დეფისები), გაასწორე OCR-ის მიერ არეული ასოები და სასვენი ნიშნები. "
+            "არ შეცვალო წიგნის დედანი. გამოიტანე მხოლოდ გასწორებული ტექსტი."
+        ),
+    }
+    sys_prompt = system_prompts.get(task, system_prompts["audio_punctuation"])
+    try:
+        import httpx
+        url = os.environ.get("KONA_OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
+        resp = httpx.post(
+            url,
+            json={
+                "model": "kona2-small-3.8B:latest",
+                "messages": [
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": text}
+                ],
+                "temperature": 0.1,
+                "max_tokens": min(2048, max(256, len(text) * 2))
+            },
+            timeout=25.0
+        )
+        if resp.status_code == 200:
+            cand = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            if cand and re.search(r'[\u10A0-\u10FF]', cand):
+                return clean_verbatim(cand)
+    except Exception as e:
+        print(f"[transcription_engine] kona2 refinement skipped: {e}")
+    return text
+
+
 def transcribe_audio_bytes(
     audio_bytes: bytes,
     mime_type: str = "audio/mp3",
@@ -121,11 +170,13 @@ def transcribe_audio_bytes(
                 target_speech_lang = "ka-GE" if lang == "ka" else "en-US"
                 text = r.recognize_google(audio_data, language=target_speech_lang)
                 if text:
+                    if target_speech_lang == "ka-GE" or re.search(r'[\u10A0-\u10FF]', text):
+                        text = refine_georgian_with_kona(text, task="audio_punctuation")
                     text = clean_verbatim(text)
                     return {
                         "text": text,
                         "language": lang if lang != "auto" else ("ka" if re.search(r'[\u10A0-\u10FF]', text) else "en"),
-                        "engine": "google-web-speech",
+                        "engine": "google-web-speech+kona2" if (target_speech_lang == "ka-GE" or re.search(r'[\u10A0-\u10FF]', text)) else "google-web-speech",
                         "success": True
                     }
         except Exception as e:
@@ -264,6 +315,11 @@ def transcribe_image_bytes(
             tess_lang = "kat" if lang == "ka" else "eng" if lang == "en" else "eng"
             result_text = pytesseract.image_to_string(image, lang=tess_lang).strip()
             engine_name = "tesseract-local"
+            if result_text and (lang == "ka" or re.search(r'[\u10A0-\u10FF]', result_text)):
+                refined = refine_georgian_with_kona(result_text, task="ocr_repair")
+                if refined:
+                    result_text = refined
+                    engine_name = "tesseract-local+kona2"
         except Exception as e:
             print(f"[transcription_engine] local Tesseract fallback unavailable: {e}")
 

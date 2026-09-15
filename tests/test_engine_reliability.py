@@ -33,7 +33,7 @@ def response(text, reason='STOP'):
 
 def test_translation_outage_never_returns_original_as_success():
     source = 'მხოლოდ გულით შეიძლება სწორად დანახვა.'
-    with patch('app.translation_engine.genai', None), patch('app.translation_engine.GoogleTranslator', None), patch('httpx.get', side_effect=TimeoutError):
+    with patch('app.translation_engine.genai', None), patch('app.translation_engine.GoogleTranslator', None), patch('app.translation_engine.translate_with_kona', return_value=None), patch('app.local_neural.available', return_value=False), patch('httpx.get', side_effect=TimeoutError):
         result = translate_text(source, 'ka-GE', 'en-US')
     assert not result['success']
     assert result['translated'] == ''
@@ -42,7 +42,7 @@ def test_translation_outage_never_returns_original_as_success():
 
 def test_translation_rejects_truncated_gemini_and_wrong_script():
     generate = NS(generate_content=lambda **kw: response('Partial output', 'MAX_TOKENS'))
-    with patch('app.translation_engine.genai', NS(Client=lambda **kw: NS(models=generate))), patch('app.translation_engine.GoogleTranslator', None), patch('httpx.get', return_value=NS(status_code=200, json=lambda: [[['ქართული ტექსტი']]])):
+    with patch('app.translation_engine.genai', NS(Client=lambda **kw: NS(models=generate))), patch('app.translation_engine.GoogleTranslator', None), patch('app.translation_engine.translate_with_kona', return_value=None), patch('app.local_neural.available', return_value=False), patch('httpx.get', return_value=NS(status_code=200, json=lambda: [[['ქართული ტექსტი']]])):
         result = translate_text('ქართული ტექსტი', 'ka', 'en', api_key='fixture-only')
     assert not result['success']
     assert result['translated'] == ''
@@ -50,12 +50,13 @@ def test_translation_rejects_truncated_gemini_and_wrong_script():
 
 def test_middle_chunk_failure_retains_partial_outputs_without_publishing_them():
     responses = iter([NS(status_code=200, json=lambda: [[['This is a complete first paragraph.']]]), NS(status_code=503)])
-    with patch('app.translation_engine.genai', None), patch('app.translation_engine.GoogleTranslator', None), patch('app.translation_engine.load_active_pack', None), patch('httpx.get', side_effect=lambda *a, **kw: next(responses)):
+    with patch('app.translation_engine.genai', None), patch('app.translation_engine.GoogleTranslator', None), patch('app.translation_engine.translate_with_kona', return_value=None), patch('app.local_neural.available', return_value=False), patch('app.translation_engine.load_active_pack', None), patch('httpx.get', side_effect=lambda *a, **kw: next(responses)):
         result = translate_text('ეს არის სრული პირველი წინადადება.\n\nეს არის მეორე წინადადება.', 'ka', 'en')
     assert not result['success']
     assert result['translated'] == ''
     assert result['failed_chunk'] == 1
     assert result['accepted_chunks'] == ['This is a complete first paragraph.']
+
 
 
 def test_same_language_translation_preserves_original_verbatim():
@@ -70,7 +71,7 @@ def test_translation_chunks_are_bounded_without_creating_extra_paragraphs():
         chunk = parse_qs(urlparse(url).query)['q'][0]
         sizes.append(len(chunk))
         return NS(status_code=200, json=lambda: [[['English text. ' * max(1, len(chunk) // 14)]]])
-    with patch('app.translation_engine.genai', None), patch('app.translation_engine.GoogleTranslator', None), patch('app.translation_engine.load_active_pack', None), patch('httpx.get', side_effect=translated):
+    with patch('app.translation_engine.genai', None), patch('app.translation_engine.GoogleTranslator', None), patch('app.translation_engine.translate_with_kona', return_value=None), patch('app.local_neural.available', return_value=False), patch('app.translation_engine.load_active_pack', None), patch('httpx.get', side_effect=translated):
         result = translate_text('ქართულიტექსტი' * 900 + '\n\n' + 'ქართულიტექსტი' * 500, 'ka', 'en')
     assert result['success']
     assert len(sizes) > 2 and max(sizes) <= 4000
