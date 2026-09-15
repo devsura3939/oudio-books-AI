@@ -437,6 +437,7 @@ def translate_with_kona(
                 "4. ANTI-CALQUES: Avoid literal English calques (use 'მოხდა' instead of 'ადგილი ჰქონდა', "
                 "'გადაწყვიტა' instead of 'მიიღო გადაწყვეტილება', 'როლი შეასრულა' instead of 'ითამაშა როლი').\n"
                 "5. PRESERVATION: Retain all names, numbers, dialogue marks, and meaning accurately.\n"
+                "6. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
                 "Output ONLY the Georgian translation."
             )
             user_parts = []
@@ -471,6 +472,8 @@ def translate_with_kona(
                 "model": "kona2-small-3.8B:latest",
                 "messages": messages,
                 "temperature": 0.1,
+                "frequency_penalty": 0.3,
+                "presence_penalty": 0.2,
                 "max_tokens": min(2048, max(256, len(text) * 2))
             },
             timeout=75.0

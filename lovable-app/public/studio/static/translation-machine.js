@@ -84,7 +84,8 @@
                 if (options?.context_before) payload.context_before = options.context_before;
                 if (options?.context_after) payload.context_after = options.context_after;
                 const data = await request('server', serverEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, signal);
-                const result = data?.success !== false && accept(data?.translated, 'server');
+                const engineName = data?.engine || 'server';
+                const result = data?.success !== false && accept(data?.translated, engineName);
                 if (result) return result;
             }
             // One Google request per complete source segment. MyMemory is a separate fallback.

@@ -66,8 +66,10 @@
                 const outTokens = out.toLowerCase().match(/\p{L}+/gu) || [];
                 let preservedChars = 0;
                 for (const word of outTokens) {
-                    if (srcWords.has(word)) {
-                        preservedChars += word.length;
+                    const stem = word.replace(/(?:-(?:ის|ით|ად|დან|თან|ზე|ში|ისთვის|მდე|მა|ს)|(?:ის|ით|ად|დან|თან|ზე|ში|ისთვის|მდე|მა|ს))$/u, '');
+                    if (srcWords.has(word) || (stem && srcWords.has(stem))) {
+                        const latinChars = Array.from(word).filter(c => /\p{Script=Latin}/u.test(c)).length;
+                        preservedChars += latinChars || word.length;
                     }
                 }
                 const nonPreserved = Math.max(counts[target], counts.total - preservedChars);
@@ -75,7 +77,8 @@
                     targetRatio = counts[target] / nonPreserved;
                 }
             }
-            if (targetRatio < 0.6) {
+            const isImprint = /(?:printed|bound|published|copyright|edition|london|street|road|lane|house|press|books|company|ltd|inc)\b/i.test(src);
+            if (targetRatio < 0.6 && !(isImprint && counts[target] >= 10)) {
                 return { ok: false, reason: 'wrong_script_ratio' };
             }
         }

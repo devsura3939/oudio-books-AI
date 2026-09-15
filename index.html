@@ -2076,10 +2076,18 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                 <span>Minimize this panel to keep reading or listening — completed chapters become available immediately. Click the floating pill to reopen.</span>
             </div>
 
+            <div id="wbAdminTelemetryCard" class="hidden p-3.5 rounded-2xl bg-gradient-to-br from-indigo-950/70 via-black/80 to-purple-950/60 border border-indigo-500/30 text-xs space-y-2"></div>
+
+            <div class="flex flex-col sm:flex-row gap-2 pt-1">
+                <button id="wbStartReadingButton" onclick="startReadingWhileTranslating()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-georgian-gold/25 to-amber-500/25 hover:from-georgian-gold/35 hover:to-amber-500/35 text-georgian-gold text-xs font-bold border border-georgian-gold/40 shadow-lg shadow-black/20 transition flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-base">auto_stories</span>
+                    <span id="wbStartReadingText">Start Reading Translated Chapters</span>
+                </button>
+                <button id="wbDismissButton" onclick="cancelWholeBookTranslation()" class="sm:w-36 py-2.5 rounded-xl bg-error/15 hover:bg-error/25 text-error text-xs font-semibold border border-error/30 transition">
+                    Stop Translation
+                </button>
+            </div>
             <button id="wbRetryButton" hidden onclick="startWholeBookTranslation(true)" class="studio-primary w-full">Retry from last accepted segment</button>
-            <button id="wbDismissButton" onclick="cancelWholeBookTranslation()" class="w-full py-2.5 rounded-xl bg-error/15 hover:bg-error/25 text-error text-xs font-semibold border border-error/30 transition">
-                Stop Translation
-            </button>
         </div>
     </div>
 

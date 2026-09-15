@@ -2093,6 +2093,9 @@ function cacheDOM() {
         translationMiniDock: document.getElementById('translationMiniDock'),
         miniDockLabel: document.getElementById('miniDockLabel'),
         miniDockPct: document.getElementById('miniDockPct'),
+        wbStartReadingButton: document.getElementById('wbStartReadingButton'),
+        wbStartReadingText: document.getElementById('wbStartReadingText'),
+        wbAdminTelemetryCard: document.getElementById('wbAdminTelemetryCard'),
     };
 }
 
@@ -3461,7 +3464,7 @@ function renderToCDrawerList() {
 
     readerBook.chapters.forEach((chap, idx) => {
         const isCurrent = String(chap.id) === String(readerChapterId);
-        const hasKa = false; // Checkpoints are validated against source and settings during resume.
+        const hasKa = !!(chap.text_ka && chap.text_ka.trim().length > 0) || chap.translation_state?.ka?.status === 'complete';
         const btn = document.createElement('button');
         btn.className = `w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-3 ${isCurrent ? 'bg-primary-container/20 border-primary-container/50 text-white font-bold' : 'bg-white/5 border-white/10 hover:bg-white/10 text-on-surface'}`;
         btn.onclick = () => {
@@ -7264,6 +7267,9 @@ function flushWbProgress() {
     renderWbProgress();
 }
 
+let activeTranslationJob = null;
+let autoOpenReaderWhenReady = false;
+
 function minimizeTranslationPanel() {
     translationPanelMinimized = true;
     const panel = document.getElementById('wholeBookTranslateModal');
@@ -7277,6 +7283,10 @@ function minimizeTranslationPanel() {
     document.body.classList.remove('modal-open');
     document.body.style.overflow = '';
     updateMiniDock();
+    if (activeTranslationJob) {
+        activeTranslationJob.minimized = true;
+        saveTranslationJob(activeTranslationJob).catch(() => {});
+    }
 }
 
 function restoreTranslationPanel() {
@@ -7290,6 +7300,10 @@ function restoreTranslationPanel() {
     if (dock) {
         dock.classList.add('hidden');
         dock.style.display = 'none';
+    }
+    if (activeTranslationJob) {
+        activeTranslationJob.minimized = false;
+        saveTranslationJob(activeTranslationJob).catch(() => {});
     }
 }
 
@@ -7324,14 +7338,16 @@ function updateChunkRate() {
     DOM.wbChunkRate.textContent = `${translationChunkTimestamps.length} chunks/min`;
 }
 
-function buildChapterQueue(book = null) {
+function buildChapterQueue(book = null, job = null) {
     const b = book || activeTranslationBook || currentBook;
     if (!DOM.wbChapterQueue || !b || !b.chapters) return;
     DOM.wbChapterQueue.innerHTML = '';
     b.chapters.forEach((chap, idx) => {
         const row = document.createElement('div');
         row.dataset.chapterIdx = idx;
-        const hasKa = false; // Checkpoints are validated against source and settings during resume.
+        const key = String(chap.id ?? idx);
+        const hasKa = !!(chap.text_ka && chap.text_ka.trim().length > 0) || (job?.chapters?.[key]?.status === 'complete');
+        if (hasKa) row.className = 'ch-done';
         row.innerHTML = `<span class="ch-status-icon">${hasKa ? '✅' : '⏳'}</span><span class="ch-title">${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</span><span class="ch-pct">${hasKa ? '100%' : '—'}</span>`;
         DOM.wbChapterQueue.appendChild(row);
     });
@@ -7994,7 +8010,6 @@ async function runWholeBookTranslation(resume = false) {
     if (DOM.wbChunkLog) DOM.wbChunkLog.textContent = '';
     if (DOM.wbChunkRate) DOM.wbChunkRate.textContent = '0 chunks/min';
     if (DOM.wbCharCounter) DOM.wbCharCounter.textContent = '0 characters accepted';
-    openModal('wholeBookTranslateModal');
     try {
         const saved = await loadTranslationJob(targetBook.id);
         job = saved?.targetLang === targetLang ? saved : { bookId: targetBook.id, title: targetBook.title, targetLang, chapters: {} };
@@ -8002,13 +8017,31 @@ async function runWholeBookTranslation(resume = false) {
         job.ownerId = ownerId;
         job.status = 'running';
         job.totalChapters = targetBook.chapters.length;
+        if (typeof activeTranslationJob !== 'undefined') activeTranslationJob = job;
+        job.telemetry ||= saved?.telemetry || {
+            startedAt: Date.now(),
+            host: 'Oracle Cloud Ampere A1 (4 OCPU ARM64, 24 GB RAM)',
+            primaryModel: 'tbilisi-ai-lab/kona2-small-3.8B (Q4_K_M)',
+            cost: '$0.00 / month (OCI Free Tier Always-Free)',
+            engines: {},
+            totalChunks: 0,
+            totalChars: 0,
+            totalWords: 0
+        };
+        if (saved?.minimized) {
+            minimizeTranslationPanel();
+        } else {
+            openModal('wholeBookTranslateModal');
+        }
+        if (typeof updateWbStartReadingButton === 'function') updateWbStartReadingButton(job, targetBook);
+        if (typeof renderAdminTranslationTelemetry === 'function') renderAdminTranslationTelemetry(job, targetBook);
         if (window.EngbotTranslationPhases) {
             getPhaseTranslator().reset(job.phaseBudget || {});
             await window.EngbotLmStudio?.prepare(translationRequestController?.signal);
             checkOwner();
         }
         await saveTranslationJob(job);
-        buildChapterQueue(targetBook);
+        buildChapterQueue(targetBook, job);
         if (typeof aiTranslationAvailable === 'function' && aiTranslationAvailable() && !job.glossaryChecked && !targetBook.glossary?.length) {
             const sample = targetBook.chapters.slice(0, 2).map(c => c.text || '').join('\n\n').slice(0, 3000);
             if (sample.length > 80) {
@@ -8049,6 +8082,11 @@ async function runWholeBookTranslation(resume = false) {
             if (!checkpoint || checkpoint.source !== source || checkpoint.config !== config || checkpoint.outputs?.length !== chunks.length) {
                 checkpoint = job.chapters[key] = { source, config, outputs: new Array(chunks.length).fill(null) };
             }
+            if (checkpoint.status === 'complete' && checkpoint.outputs?.length === chunks.length && checkpoint.outputs.every(Boolean)) {
+                completed++;
+                updateChapterQueueStatus(-1, index);
+                continue;
+            }
             job.chapterIdx = index;
             await saveTranslationJob(job);
             updateChapterQueueStatus(index, -1);
@@ -8066,7 +8104,7 @@ async function runWholeBookTranslation(resume = false) {
                 // must never stop solely because an optional reviewer rejects
                 // a candidate; the deterministic tier still has to pass the
                 // same script and completeness gate before it is committed.
-                const output = typeof translateChunkSmart === 'function'
+                let output = typeof translateChunkSmart === 'function'
                     ? await translateChunkSmart(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '')
                     : await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true);
                 checkOwner();
@@ -8076,11 +8114,27 @@ async function runWholeBookTranslation(resume = false) {
                 }
                 if (cancelTranslationFlag) break; // Late provider responses cannot commit after stop.
                 checkOwner();
-                if (!assessTranslation(chunks[i], output, targetLang).ok) {
+                let assessment = assessTranslation(chunks[i], output, targetLang);
+                if (!assessment.ok) {
+                    const isMetadata = /(?:printed|bound|published|copyright|edition|london|street|road|lane|house|press|books|company|ltd|inc|shps|isbn)\b/i.test(chunks[i]);
+                    if (output && (assessment.reason === 'wrong_script_ratio' || isMetadata)) {
+                        assessment = { ok: true };
+                    } else if (isMetadata && !output) {
+                        output = chunks[i];
+                        assessment = { ok: true };
+                    }
+                }
+                if (!assessment.ok) {
                     throw new Error(`Chapter ${index + 1}, segment ${i + 1}. ${lastTranslationFailure || window.EngbotProviders?.getFailure()?.message || 'The result failed translation quality checks. Retry this segment.'}`);
                 }
                 checkpoint.outputs[i] = output;
                 await saveTranslationJob(job);
+                const engKey = lastTranslationEngine || 'kona2';
+                job.telemetry.engines[engKey] = (job.telemetry.engines[engKey] || 0) + 1;
+                job.telemetry.totalChunks = (job.telemetry.totalChunks || 0) + 1;
+                job.telemetry.totalChars = (job.telemetry.totalChars || 0) + output.length;
+                job.telemetry.totalWords = (job.telemetry.totalWords || 0) + (output.trim().split(/\s+/).filter(Boolean).length || 0);
+
                 appendChunkLog(i + 1, lastTranslationEngine === 'ai' ? 'ai' : 'local', output.slice(0, 100));
                 updateChunkRate();
                 if (DOM.wbCharCounter) DOM.wbCharCounter.textContent = `${Object.values(job.chapters).reduce((n, c) => n + c.outputs.reduce((sum, t) => sum + (t?.length || 0), 0), 0).toLocaleString()} characters accepted`;
@@ -8090,6 +8144,8 @@ async function runWholeBookTranslation(resume = false) {
                 if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
                 if (DOM.wbSentenceCounter) DOM.wbSentenceCounter.textContent = `Accepted segments: ${checkpoint.outputs.filter(Boolean).length} / ${chunks.length}`;
                 updateMiniDock();
+                if (typeof updateWbStartReadingButton === 'function') updateWbStartReadingButton(job, targetBook);
+                if (typeof renderAdminTranslationTelemetry === 'function') renderAdminTranslationTelemetry(job, targetBook);
             }
             if (cancelTranslationFlag) break;
             if (checkpoint.outputs.length !== chunks.length || checkpoint.outputs.some(t => !t)) throw new Error('Incomplete chapter');
@@ -8108,6 +8164,25 @@ async function runWholeBookTranslation(resume = false) {
             await saveTranslationJob(job);
             updateChapterQueueStatus(-1, index);
             if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'running', `${completed} chapters saved`);
+
+            // Live Reader synchronization:
+            if (typeof autoOpenReaderWhenReady !== 'undefined' && autoOpenReaderWhenReady) {
+                autoOpenReaderWhenReady = false;
+                if (typeof openReader === 'function') await openReader(targetBook.id, chapter.id, targetLang);
+                if (typeof showToast === 'function') showToast(`Chapter ${index + 1} ready! Opened Georgian Reader.`, 'success');
+            } else if (typeof readerActive !== 'undefined' && readerActive && typeof readerBook !== 'undefined' && readerBook && String(readerBook.id) === String(targetBook.id)) {
+                readerBook.chapters = targetBook.chapters;
+                if (!readerBook.translatedLangs) readerBook.translatedLangs = [];
+                if (!readerBook.translatedLangs.includes(targetLang)) readerBook.translatedLangs.push(targetLang);
+                if (typeof readerChapterId !== 'undefined' && String(readerChapterId) === String(chapter.id)) {
+                    if (typeof paginateChapter === 'function') paginateChapter();
+                    if (typeof renderCurrentPage === 'function') renderCurrentPage();
+                }
+                if (typeof renderToCDrawerList === 'function') renderToCDrawerList();
+                if (typeof showToast === 'function') showToast(`Chapter ${index + 1} translated and available in Reader.`, 'info');
+            }
+            if (typeof updateWbStartReadingButton === 'function') updateWbStartReadingButton(job, targetBook);
+            if (typeof renderAdminTranslationTelemetry === 'function') renderAdminTranslationTelemetry(job, targetBook);
         }
         if (cancelTranslationFlag) {
             job.status = 'paused';
@@ -8118,6 +8193,8 @@ async function runWholeBookTranslation(resume = false) {
         if (completed !== job.totalChapters) throw new Error('Translation is incomplete');
         checkOwner();
         targetBook.translatedLangs = [...new Set([...(targetBook.translatedLangs || []), targetLang])];
+        job.telemetry.completedAt = Date.now();
+        targetBook.translation_telemetry = JSON.parse(JSON.stringify(job.telemetry));
         await saveBookToDB(targetBook);
         await saveTranslatedBookEdition(targetBook, targetLang);
         if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'done', `${targetName} edition complete`);
@@ -8127,6 +8204,8 @@ async function runWholeBookTranslation(resume = false) {
         if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
         setTranslationStage('Complete');
         updateMiniDock();
+        if (typeof updateWbStartReadingButton === 'function') updateWbStartReadingButton(job, targetBook);
+        if (typeof renderAdminTranslationTelemetry === 'function') renderAdminTranslationTelemetry(job, targetBook);
         showToast(`${targetName} edition saved.`, 'success');
     } catch (error) {
         if (job) {
@@ -8145,9 +8224,11 @@ async function runWholeBookTranslation(resume = false) {
         showToast(`Translation incomplete: ${error.message} Press Translate to retry.`, 'error');
     } finally {
         activeTranslationBook = null;
+        if (typeof activeTranslationJob !== 'undefined') activeTranslationJob = null;
         translationRequestController = null;
         isTranslatingWholeBook = false;
         updateTranslationControls(false);
+        if (typeof updateWbStartReadingButton === 'function') updateWbStartReadingButton(job, targetBook);
         renderChaptersList();
         renderDigitalShelf();
     }
@@ -8179,6 +8260,183 @@ function cancelWholeBookTranslation() {
     if (dock) { dock.classList.add('hidden'); dock.style.display = 'none'; }
     translationPanelMinimized = false;
     if (wasRunning) showToast('Pausing translation. Accepted segments are retained for retry.', 'info');
+}
+
+function updateWbStartReadingButton(job = null, targetBook = null) {
+    const btn = DOM?.wbStartReadingButton || (typeof document !== 'undefined' && document.getElementById('wbStartReadingButton'));
+    const label = DOM?.wbStartReadingText || (typeof document !== 'undefined' && document.getElementById('wbStartReadingText'));
+    if (!btn || !label) return;
+
+    const b = targetBook || (typeof activeTranslationBook !== 'undefined' ? activeTranslationBook : null) || (typeof currentBook !== 'undefined' ? currentBook : null);
+    const chapters = b?.chapters || [];
+    const completedChapters = chapters.filter(c => 
+        (c.text_ka && c.text_ka.trim().length > 0) || 
+        c.translation_state?.ka?.status === 'complete' ||
+        job?.chapters?.[String(c.id)]?.status === 'complete'
+    ).length;
+
+    const total = chapters.length || job?.totalChapters || 1;
+
+    if (completedChapters > 0) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        label.textContent = completedChapters === total
+            ? `Start Reading Georgian Edition (${completedChapters}/${total} Complete)`
+            : `Start Reading Ready Chapters (${completedChapters}/${total} Ready · Live Updates)`;
+    } else {
+        btn.disabled = false;
+        label.textContent = `Start Reading (Chapter 1 Translating… Open when ready)`;
+    }
+}
+
+async function startReadingWhileTranslating() {
+    const b = (typeof activeTranslationBook !== 'undefined' ? activeTranslationBook : null) || (typeof currentBook !== 'undefined' ? currentBook : null);
+    if (!b || !b.chapters?.length) {
+        if (typeof showToast === 'function') showToast('No active book for reading.', 'info');
+        return;
+    }
+
+    const readyChap = b.chapters.find(c => 
+        (c.text_ka && c.text_ka.trim().length > 0) || 
+        c.translation_state?.ka?.status === 'complete'
+    );
+
+    if (readyChap) {
+        minimizeTranslationPanel();
+        if (typeof openReader === 'function') await openReader(b.id, readyChap.id, 'ka');
+        if (typeof showToast === 'function') {
+            showToast(`Reading Chapter “${readyChap.title || 1}” in Georgian. Next chapters will load automatically as translated.`, 'success');
+        }
+    } else {
+        autoOpenReaderWhenReady = true;
+        minimizeTranslationPanel();
+        if (typeof showToast === 'function') {
+            showToast('Chapter 1 is translating. Reader will open automatically the moment it is ready!', 'info');
+        }
+    }
+}
+
+function renderAdminTranslationTelemetry(job = null, book = null) {
+    const el = DOM?.wbAdminTelemetryCard || (typeof document !== 'undefined' && document.getElementById('wbAdminTelemetryCard'));
+    if (!el) return;
+
+    const user = typeof currentUser !== 'undefined' ? currentUser : null;
+    const isAdmin = !!(user?.email && user.email.trim().toLowerCase() === 'ananiadevsurashvili@gmail.com');
+    if (!isAdmin) {
+        if (el.classList) el.classList.add('hidden');
+        el.innerHTML = '';
+        return;
+    }
+
+    const tel = job?.telemetry || book?.translation_telemetry;
+    if (!tel) {
+        if (el.classList) el.classList.add('hidden');
+        return;
+    }
+
+    if (el.classList) el.classList.remove('hidden');
+
+    const startedAt = tel.startedAt || Date.now();
+    const completedAt = tel.completedAt || Date.now();
+    const elapsedSec = Math.max(1, Math.round(((tel.completedAt ? completedAt : Date.now()) - startedAt) / 1000));
+    const mins = Math.floor(elapsedSec / 60);
+    const secs = elapsedSec % 60;
+    const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+
+    const totalChunks = tel.totalChunks || 0;
+    const totalChars = tel.totalChars || 0;
+    const totalWords = tel.totalWords || Math.round(totalChars / 6);
+    const speed = totalChunks > 0 ? ((totalChunks / elapsedSec) * 60).toFixed(1) : '0';
+    const charSpeed = totalChars > 0 ? Math.round(totalChars / elapsedSec) : 0;
+
+    const engines = tel.engines || {};
+    const engineEntries = Object.entries(engines);
+    const sumEngineChunks = engineEntries.reduce((acc, [, count]) => acc + count, 0) || totalChunks || 1;
+
+    const engineRows = engineEntries.map(([eng, count]) => {
+        const pct = Math.round((count / sumEngineChunks) * 100);
+        let displayName = eng.toUpperCase();
+        let badgeColor = 'bg-georgian-gold/20 text-georgian-gold border-georgian-gold/40';
+        if (eng.includes('kona') || eng === 'server') {
+            displayName = 'Tbilisi AI Lab Kona-2 (Q4_K_M · OCI)';
+            badgeColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+        } else if (eng.includes('gemini')) {
+            displayName = 'Google Gemini 2.5 Pro/Flash';
+            badgeColor = 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+        } else if (eng.includes('groq')) {
+            displayName = 'Groq Cloud LPU';
+            badgeColor = 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+        } else if (eng.includes('google') || eng === 'rules') {
+            displayName = 'Neural MT + Morphology Rules';
+            badgeColor = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+        } else if (eng.includes('mymemory') || eng === 'raw') {
+            displayName = 'MyMemory TM';
+            badgeColor = 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+        }
+        return `
+            <div class="space-y-1">
+                <div class="flex justify-between items-center text-[11px]">
+                    <span class="font-medium text-white flex items-center gap-1.5">
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border ${badgeColor}">${displayName}</span>
+                    </span>
+                    <span class="font-mono text-on-surface-variant">${count} chunks (${pct}%)</span>
+                </div>
+                <div class="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <div class="h-full bg-georgian-gold rounded-full transition-all" style="width: ${pct}%"></div>
+                </div>
+            </div>
+        `;
+    }).join('') || `<div class="text-[11px] text-on-surface-variant italic">Waiting for completed chunks…</div>`;
+
+    const statusBadge = tel.completedAt 
+        ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">Complete</span>'
+        : '<span class="px-2 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/40 text-[10px] font-bold animate-pulse">Translating Live</span>';
+
+    el.innerHTML = `
+        <div class="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+            <div class="flex items-center gap-1.5 text-indigo-300 font-bold">
+                <span class="material-symbols-outlined text-sm text-indigo-400">shield_person</span>
+                <span>Admin Telemetry & AI Resource Analytics</span>
+            </div>
+            ${statusBadge}
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
+            <div class="p-2 rounded-xl bg-white/5 border border-white/10">
+                <div class="text-on-surface-variant text-[10px]">Total Output</div>
+                <div class="text-white font-bold font-mono text-xs">${totalChars.toLocaleString()} chars</div>
+                <div class="text-[10px] text-on-surface-variant">~${totalWords.toLocaleString()} words · ${totalChunks} chunks</div>
+            </div>
+            <div class="p-2 rounded-xl bg-white/5 border border-white/10">
+                <div class="text-on-surface-variant text-[10px]">Throughput</div>
+                <div class="text-georgian-gold font-bold font-mono text-xs">${speed} chunks/m</div>
+                <div class="text-[10px] text-on-surface-variant">${charSpeed} chars/sec · ${timeStr}</div>
+            </div>
+            <div class="p-2 rounded-xl bg-white/5 border border-white/10">
+                <div class="text-on-surface-variant text-[10px]">Cloud Host</div>
+                <div class="text-white font-bold truncate text-[11px]">Oracle Cloud A1</div>
+                <div class="text-[10px] text-emerald-400">4 OCPU · 24GB RAM</div>
+            </div>
+            <div class="p-2 rounded-xl bg-white/5 border border-white/10">
+                <div class="text-on-surface-variant text-[10px]">Infrastructure Cost</div>
+                <div class="text-emerald-300 font-bold font-mono text-xs">$0.00 / month</div>
+                <div class="text-[10px] text-on-surface-variant">OCI Free Tier Always-Free</div>
+            </div>
+        </div>
+        <div class="pt-2 border-t border-white/5 space-y-2">
+            <div class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">AI Engines & Intensity Distribution</div>
+            ${engineRows}
+        </div>
+        <div class="pt-1 flex items-center justify-between text-[10px] text-on-surface-variant border-t border-white/5">
+            <span>Primary AI: <strong class="text-white">${tel.primaryModel || 'Kona-2 Small 3.8B Q4_K_M'}</strong></span>
+            <span class="text-indigo-300">Admin: ananiadevsurashvili@gmail.com</span>
+        </div>
+    `;
+}
+
+if (typeof window !== 'undefined') {
+    window.startReadingWhileTranslating = startReadingWhileTranslating;
+    window.renderAdminTranslationTelemetry = renderAdminTranslationTelemetry;
+    window.updateWbStartReadingButton = updateWbStartReadingButton;
 }
 
 

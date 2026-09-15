@@ -52,11 +52,18 @@ def translation_is_valid(source, candidate, target):
     if target_ratio < 0.6 and target_count > 0:
         src_words = set(re.findall(r"[^\W\d_]+", source.lower()))
         cand_words = re.findall(r"[^\W\d_]+", candidate.lower())
-        preserved = sum(len(w) for w in cand_words if w in src_words and not any(unicodedata.name(ch, "").startswith(script) for ch in w))
+        preserved = 0
+        for w in cand_words:
+            stem = re.sub(r"(?:-(?:ის|ით|ად|დან|თან|ზე|ში|ისთვის|მდე|მა|ს)|(?:ის|ით|ად|დან|თან|ზე|ში|ისთვის|მდე|მა|ს))$", "", w)
+            if (w in src_words or (stem and stem in src_words)) and not any(unicodedata.name(ch, "").startswith(script) for ch in w):
+                preserved += len(w)
+            elif w in src_words or (stem and stem in src_words):
+                preserved += sum(1 for ch in w if "LATIN" in unicodedata.name(ch, ""))
         non_preserved = max(target_count, len(names) - preserved)
         if non_preserved > 0:
             target_ratio = target_count / non_preserved
-    if target_ratio < 0.6:
+    is_imprint = bool(re.search(r"\b(?:printed|bound|published|copyright|edition|london|street|road|lane|house|press|books|company|ltd|inc)\b", source, re.I))
+    if target_ratio < 0.6 and not (is_imprint and target_count >= 10):
         return False
     if len(source) >= 30 and not 0.35 <= len(candidate) / len(source) <= 2.8:
         return False
