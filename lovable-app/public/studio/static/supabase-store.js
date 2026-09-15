@@ -26,7 +26,7 @@
   var runtimeConfig = (typeof window !== "undefined" && window.LUMINA_RUNTIME_CONFIG) || {};
   var URL_ = runtimeConfig.SUPABASE_URL ||
              (typeof localStorage !== "undefined" && localStorage.getItem("lumina_supabase_url")) ||
-             "http://92.5.71.162";
+             "https://92.5.71.162.sslip.io";
   var KEY = runtimeConfig.SUPABASE_ANON_KEY ||
             (typeof localStorage !== "undefined" && localStorage.getItem("lumina_supabase_anon_key")) ||
             "sb_publishable_qYeXVnqCOngD3NkLzWChmk_wCsIHevt";

@@ -3895,7 +3895,7 @@ function toggleTrainingKeyMask() {
 async function copyLlmTrainingPrompt() {
     const textarea = document.getElementById('llmPromptTextarea');
     const record = trainingKeyRecord();
-    const base = window.LUMINA_RUNTIME_CONFIG?.API_URL || (_isStaticHost ? 'http://92.5.71.162' : location.origin);
+    const base = window.LUMINA_RUNTIME_CONFIG?.API_URL || (_isStaticHost ? 'https://92.5.71.162.sslip.io' : location.origin);
     const text = (textarea?.value || '')
         .replaceAll('{YOUR_API_KEY}', record && !record.legacy ? record.key : '{YOUR_API_KEY}')
         .replaceAll('/api/public/train/', base + '/api/public/train/');
