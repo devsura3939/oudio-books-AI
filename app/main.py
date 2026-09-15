@@ -34,7 +34,7 @@ from app.image_processor import (
 )
 from app.translation_engine import translate_text
 from app.transcription_engine import transcribe_audio_bytes, transcribe_audio_file, transcribe_image_bytes
-from app.supabase_bridge import check_supabase_health, get_admin_session, fetch_supabase_books
+from app.supabase_bridge import check_supabase_health, get_admin_session, fetch_supabase_books, generate_recovery_link
 from app.training_engine import (
     verify_key, open_training_session, get_training_context,
     propose_training_rules, finish_training_session, load_active_pack,
@@ -285,6 +285,20 @@ async def supabase_books():
     """Fetches user books directly from Supabase Postgres."""
     try:
         return fetch_supabase_books()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/public/auth/recover")
+async def public_auth_recover(request: Request):
+    """Generates an authentic password recovery link for the specified user."""
+    try:
+        body = await request.json()
+        email = (body.get("email") or "").strip().lower()
+        if not email or "@" not in email:
+            raise HTTPException(status_code=400, detail="A valid email address is required.")
+        return generate_recovery_link(email)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

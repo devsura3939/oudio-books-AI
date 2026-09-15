@@ -3,9 +3,15 @@
 // in server secrets (EXTERNAL_SUPABASE_SECRET_KEY) and is never imported here.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export const EXTERNAL_SUPABASE_URL = "https://oakikavdnnvxzlcvsovq.supabase.co";
+export const EXTERNAL_SUPABASE_URL =
+  (typeof window !== "undefined" && ((window as any).LUMINA_RUNTIME_CONFIG?.SUPABASE_URL || localStorage.getItem("lumina_supabase_url"))) ||
+  (typeof process !== "undefined" && process.env?.EXTERNAL_SUPABASE_URL) ||
+  "https://92.5.71.162.sslip.io";
+
 export const EXTERNAL_SUPABASE_PUBLISHABLE_KEY =
-  "sb_publishable_oTAYwkdt1yebGkrlKOoijw_9fE4OUBd";
+  (typeof window !== "undefined" && ((window as any).LUMINA_RUNTIME_CONFIG?.SUPABASE_ANON_KEY || localStorage.getItem("lumina_supabase_anon_key"))) ||
+  (typeof process !== "undefined" && process.env?.EXTERNAL_SUPABASE_PUBLISHABLE_KEY) ||
+  "sb_publishable_qYeXVnqCOngD3NkLzWChmk_wCsIHevt";
 
 function isNewApiKey(value: string) {
   return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");

@@ -60,3 +60,17 @@ def fetch_supabase_books() -> List[Dict[str, Any]]:
     r = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(r, timeout=10) as resp:
         return json.loads(resp.read().decode("utf-8"))
+
+def generate_recovery_link(email: str) -> Dict[str, Any]:
+    if not SUPABASE_SECRET_KEY:
+        raise RuntimeError("Supabase admin access is not configured")
+    headers = _admin_headers()
+    body = json.dumps({"type": "recovery", "email": email.strip().lower()}).encode("utf-8")
+    r1 = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/admin/generate_link", data=body, headers=headers, method="POST")
+    with urllib.request.urlopen(r1, timeout=10) as resp1:
+        data = json.loads(resp1.read().decode("utf-8"))
+        return {
+            "success": True,
+            "action_link": data.get("action_link"),
+            "email": email.strip().lower()
+        }

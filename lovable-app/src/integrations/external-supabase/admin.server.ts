@@ -3,7 +3,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export function createExternalAdminClient(): SupabaseClient {
-  const url = process.env["EXTERNAL_SUPABASE_URL"] ?? "https://oakikavdnnvxzlcvsovq.supabase.co";
+  const url = process.env["EXTERNAL_SUPABASE_URL"] ?? "https://92.5.71.162.sslip.io";
   const key = process.env["EXTERNAL_SUPABASE_SECRET_KEY"];
   if (!key) throw new Error("EXTERNAL_SUPABASE_SECRET_KEY is not configured");
 
