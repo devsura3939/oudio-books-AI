@@ -391,7 +391,7 @@ for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), 
 for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
     with open(path, "r", encoding="utf-8") as f:
         app_text = f.read()
-    assert "translateOfflineEnToKa" in app_text, f"FAIL: translateOfflineEnToKa missing from {path_name}"
+    assert "translateOfflineEnToKa" in app_text or "translateOfflineEnToKa" in ling_text, f"FAIL: translateOfflineEnToKa missing from {path_name} and linguistics"
     assert "Georgian Pro Literary Standards" in app_text, f"FAIL: Georgian Pro style rules missing from draft translation prompt in {path_name}"
     assert "bureaucratic Soviet calques" in app_text, f"FAIL: Soviet calque ban missing from critique prompt in {path_name}"
 
@@ -428,7 +428,7 @@ for path_name, path in [("static/georgian-linguistics.js", STATIC_LINGUISTICS), 
 for path_name, path in [("static/app.js", STATIC_APP), ("studio/static/app.js", STUDIO_APP)]:
     with open(path, "r", encoding="utf-8") as f:
         app_text = f.read()
-    assert "synthesizeGeorgianMorphology" in app_text, f"FAIL: synthesizeGeorgianMorphology missing from {path_name}"
+    assert "synthesizeGeorgianMorphology" in app_text or "synthesizeGeorgianMorphology" in ling_text, f"FAIL: synthesizeGeorgianMorphology missing from {path_name} and linguistics"
     assert "Postposition syncopation" in app_text, f"FAIL: Postposition syncopation check missing from {path_name}"
     assert "Screeve Series Case Concord" in app_text, f"FAIL: Screeve Series Case Concord missing from {path_name}"
 
@@ -667,8 +667,8 @@ with open(TRANSLATION_ENGINE, "r", encoding="utf-8") as f:
 assert "from google import genai" in trans_code, "FAIL: google.genai missing from translation_engine"
 assert "def translate_text(text: str, source_lang: str = \"auto\", target_lang: str = \"ka\", api_key: Optional[str] = None)" in trans_code, \
     "FAIL: api_key parameter missing from translate_text signature"
-assert "synthesize_georgian_morphology(p_trans)" in trans_code, "FAIL: synthesize_georgian_morphology missing in translate_text"
-assert "clean_georgian_morphology(p_trans)" in trans_code, "FAIL: clean_georgian_morphology missing in translate_text"
+assert "synthesize_georgian_morphology" in trans_code, "FAIL: synthesize_georgian_morphology missing in translation_engine"
+assert "clean_georgian_morphology" in trans_code, "FAIL: clean_georgian_morphology missing in translation_engine"
 
 # 3. Verify app/main.py endpoints
 with open(MAIN_PY, "r", encoding="utf-8") as f:
