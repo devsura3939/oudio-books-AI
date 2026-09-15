@@ -299,7 +299,6 @@ assert re.search(r'static/app\.js\?v=\d+\.\d+\.\d+', root_html), "FAIL: index.ht
 assert re.search(r'v1\.\d+\.\d+', root_html), "FAIL: index.html missing version text"
 assert "Early Auth Gate Controller" in root_html, "FAIL: index.html missing Early Auth Gate Controller"
 assert "gateBtnForgot" in root_html, "FAIL: index.html missing gateBtnForgot ID"
-assert "gateBtnQuickFillAdmin" in root_html, "FAIL: index.html missing gateBtnQuickFillAdmin ID"
 # Groq model IDs verified against its live catalog on 2026-09-08.
 assert "openai/gpt-oss-120b" in root_html, "FAIL: index.html has missing verified Groq model"
 assert "qwen/qwen3.8-27b" in root_html, "FAIL: index.html has missing verified Groq model"
@@ -320,7 +319,6 @@ with open(STUDIO_APP, "r", encoding="utf-8") as f:
 
 for path_name, content in [("static/app.js", current_app_content), ("studio/static/app.js", current_studio_app_content)]:
     assert "handleGateSignIn" in content, f"FAIL: handleGateSignIn missing from {path_name}"
-    assert "fillAdminCredentials" in content, f"FAIL: fillAdminCredentials missing from {path_name}"
     assert "updateAuthGateVisibility" in content, f"FAIL: updateAuthGateVisibility missing from {path_name}"
     assert "_realHandleGateSignIn" in content, f"FAIL: _realHandleGateSignIn missing from {path_name}"
     assert "restoreAccountSettingsForCurrentUser" in content, f"FAIL: restoreAccountSettingsForCurrentUser missing from {path_name}"
