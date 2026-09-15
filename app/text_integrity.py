@@ -70,9 +70,23 @@ def split_bounded(text, limit):
     chunks = []
     while len(text) > limit:
         prefix = text[:limit]
-        end = max(prefix.rfind("\n\n") + 2, prefix.rfind(" ") + 1)
-        if end < limit / 2:
-            end = limit
+        para_idx = prefix.rfind("\n\n")
+        if para_idx != -1 and para_idx + 2 >= limit // 3:
+            end = para_idx + 2
+        else:
+            sent_matches = list(re.finditer(r'(?:[.!?…]+|[.!?…]+[”"’»„])(?=\s|\n|$)', prefix))
+            if sent_matches and sent_matches[-1].end() >= limit // 4:
+                end = sent_matches[-1].end()
+                while end < len(prefix) and prefix[end] in ' \t\r\n':
+                    end += 1
+            else:
+                clause_matches = list(re.finditer(r'[,;:—–-]\s+', prefix))
+                if clause_matches and clause_matches[-1].end() >= limit // 4:
+                    end = clause_matches[-1].end()
+                else:
+                    end = max(prefix.rfind("\n\n") + 2, prefix.rfind(" ") + 1)
+                    if end < limit // 2:
+                        end = limit
         chunks.append(text[:end])
         text = text[end:]
     if text:

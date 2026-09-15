@@ -54,6 +54,9 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])წარმოადგენს(?![ა-ჰ])', 'არის'),
         (r'(?<![\u10A0-\u10FF])მოცემულ\s+მომენტში(?![ა-ჰ])', 'ამჟამად'),
         (r'(?<![\u10A0-\u10FF])გააკეთა\s+ღიმილი(?![ა-ჰ])', 'გაიღიმა'),
+        (r'(?<![\u10A0-\u10FF])გააკეთა\s+არჩევანი(?![ა-ჰ])', 'აირჩია'),
+        (r'(?<![\u10A0-\u10FF])გააკეთა\s+განცხადება(?![ა-ჰ])', 'განაცხადა'),
+        (r'(?<![\u10A0-\u10FF])ითამაშა\s+(?:მნიშვნელოვანი|დიდი)?\s*როლი(?![ა-ჰ])', 'როლი შეასრულა'),
         (r'(?<![\u10A0-\u10FF])დიდი\s+მნიშვნელობა\s+აქვს(?![ა-ჰ])', 'სასიცოცხლო მნიშვნელობისაა'),
         (r'(?<![\u10A0-\u10FF])ნათელი\s+გახდა(?![ა-ჰ])', 'გამოჩნდა'),
         (r'(?<![\u10A0-\u10FF])აზრი\s+გამოთქვა(?![ა-ჰ])', 'თქვა'),
@@ -62,6 +65,7 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])საფუძველი\s+ჩაუყარა(?![ა-ჰ])', 'დააფუძნა'),
         (r'(?<![\u10A0-\u10FF])თვალის\s+დევნება(?![ა-ჰ])', 'ყურება'),
         (r'(?<![\u10A0-\u10FF])სარგებლობა\s+მოაქვს(?![ა-ჰ])', 'სარგებელი აქვს'),
+        (r'(?<![\u10A0-\u10FF])საქმე\s+იმაშია(?![ა-ჰ])', 'საქმე ისაა'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -385,10 +389,32 @@ def translate_offline_en_to_ka(text: str) -> str:
     return clean_georgian_morphology(t)
 
 
-def translate_with_kona(text: str, source_lang: str, target_lang: str) -> Optional[str]:
+_translation_request_context = {}
+
+
+def set_translation_request_context(before: str = "", after: str = "", checker_url: Optional[str] = None, checker_model: Optional[str] = None):
+    global _translation_request_context
+    _translation_request_context = {
+        "before": before or "",
+        "after": after or "",
+        "checker_url": checker_url,
+        "checker_model": checker_model,
+    }
+
+
+def translate_with_kona(
+    text: str,
+    source_lang: str,
+    target_lang: str,
+    context_before: str = "",
+    context_after: str = ""
+) -> Optional[str]:
     """
     Translates text between English and Georgian using native server-side tbilisi-ai-lab/kona2-small-3.8B.
     Runs 100% locally on the OCI VM with zero API keys and zero cost ($0.00/mo).
+    Enforces natural Georgian syntax (flexible SOV/OVS order, topic-comment focus),
+    transitive aorist ergative concord (-მა), experiencer dative inversion (მას უნდა/უყვარს/ახსოვს/აქვს),
+    anti-calques, and complete clause closures without truncation.
     """
     if not text or not text.strip():
         return None
@@ -396,14 +422,48 @@ def translate_with_kona(text: str, source_lang: str, target_lang: str) -> Option
         import httpx
         url = os.environ.get("KONA_OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
         if target_lang == "ka":
+            sys_msg = (
+                "You are an expert bilingual literary translator specializing in English and Georgian. "
+                "Translate into natural, authentic, elegant literary Georgian (ქართული სამწერლო ენა).\n"
+                "Strict Syntactic & Stylistic Directives:\n"
+                "1. GEORGIAN SYNTAX & SENTENCE BUILDING: Do not translate mechanically word-for-word like Google Translate. "
+                "Use natural Georgian syntax (flexible SOV/OVS order, topic-comment focus) instead of rigid English SVO.\n"
+                "2. COMPLETE SENTENCES: Ensure every sentence is grammatically complete, natural, and fully resolved. "
+                "Never stop or leave a sentence unfinished in the middle.\n"
+                "3. CASE CONCORD & MORPHOLOGY:\n"
+                "   - Transitive verbs in the Aorist screeve require Ergative subject (-მა) and Nominative object.\n"
+                "   - Experiencer verbs of perception, volition, and emotion take Dative subjects (მას უნდა, მას უყვარს, მას ახსოვს, მას აქვს).\n"
+                "   - Use proper postposition syncopation (კუმშვა/კვეცა: ქალაქში, წყლიდან, მთაზე).\n"
+                "4. ANTI-CALQUES: Avoid literal English calques (use 'მოხდა' instead of 'ადგილი ჰქონდა', "
+                "'გადაწყვიტა' instead of 'მიიღო გადაწყვეტილება', 'როლი შეასრულა' instead of 'ითამაშა როლი').\n"
+                "5. PRESERVATION: Retain all names, numbers, dialogue marks, and meaning accurately.\n"
+                "Output ONLY the Georgian translation."
+            )
+            user_parts = []
+            if context_before:
+                user_parts.append(f"[Preceding Context]: {context_before}")
+            if context_after:
+                user_parts.append(f"[Following Context]: {context_after}")
+            user_parts.append(f"Text to translate into Georgian:\n{text}\n\nTranslation:")
             messages = [
-                {"role": "system", "content": "You are an expert translator specializing in English and Georgian."},
-                {"role": "user", "content": f"Translate the following English sentence into Georgian. Output ONLY the Georgian translation.\nText: {text}\nTranslation:"}
+                {"role": "system", "content": sys_msg},
+                {"role": "user", "content": "\n\n".join(user_parts)}
             ]
         else:
+            sys_msg = (
+                "You are an expert bilingual literary translator specializing in Georgian and English. "
+                "Translate into fluent, natural, literary English with authentic phrasing and complete sentence closures. "
+                "Preserve all names, numbers, and meaning accurately. Output ONLY the English translation."
+            )
+            user_parts = []
+            if context_before:
+                user_parts.append(f"[Preceding Context]: {context_before}")
+            if context_after:
+                user_parts.append(f"[Following Context]: {context_after}")
+            user_parts.append(f"Text to translate into English:\n{text}\n\nTranslation:")
             messages = [
-                {"role": "system", "content": "You are an expert translator specializing in Georgian and English."},
-                {"role": "user", "content": f"Translate the following Georgian sentence into English. Output ONLY the English translation.\nText: {text}\nTranslation:"}
+                {"role": "system", "content": sys_msg},
+                {"role": "user", "content": "\n\n".join(user_parts)}
             ]
         resp = httpx.post(
             url,
@@ -413,7 +473,7 @@ def translate_with_kona(text: str, source_lang: str, target_lang: str) -> Option
                 "temperature": 0.1,
                 "max_tokens": min(2048, max(256, len(text) * 2))
             },
-            timeout=25.0
+            timeout=75.0
         )
         if resp.status_code == 200:
             cand = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
@@ -538,21 +598,23 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
         p_trans = None
 
         # 1. Autonomous Native Baseline
-        # Tier 0: Marian opus-en-ka fast local translation
-        try:
-            from app.local_neural import translate_local, available as local_model_available
-            if local_model_available() and src == 'en' and tgt == 'ka':
-                p_trans = translate_local(p, src, tgt)
-                if p_trans:
-                    engine_used = 'opus-en-ka'
-        except (RuntimeError, ValueError, ImportError, BlockingIOError):
-            p_trans = None
+        # Tier 0: Native server LLM translation via tbilisi-ai-lab/kona2-small-3.8B (Primary Native Model)
+        before_ctx = chunks[chunk_index - 1] if chunk_index > 0 else _translation_request_context.get("before", "")
+        after_ctx = chunks[chunk_index + 1] if chunk_index + 1 < len(chunks) else _translation_request_context.get("after", "")
+        p_trans = translate_with_kona(p, src, tgt, context_before=before_ctx, context_after=after_ctx)
+        if p_trans:
+            engine_used = "kona2-small-3.8B"
 
-        # Tier 1: Native server LLM translation via tbilisi-ai-lab/kona2-small-3.8B
+        # Tier 1: Marian opus-en-ka fast local translation fallback
         if not p_trans:
-            p_trans = translate_with_kona(p, src, tgt)
-            if p_trans:
-                engine_used = "kona2-small-3.8B"
+            try:
+                from app.local_neural import translate_local, available as local_model_available
+                if local_model_available() and src == 'en' and tgt == 'ka':
+                    p_trans = translate_local(p, src, tgt)
+                    if p_trans:
+                        engine_used = 'opus-en-ka'
+            except (RuntimeError, ValueError, ImportError, BlockingIOError):
+                p_trans = None
 
         # Tier 2: Direct Google translation fallback
         if not p_trans:
@@ -604,15 +666,17 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka"
         # 2. Final Quality Checker Tier
         # If paid API keys (Gemini, Groq, Mistral) or local PC LM Studio is connected,
         # it audits each portion of translation as final copy-editor to elevate literary quality.
-        if p_trans and (correction_key or os.environ.get("PC_LM_STUDIO_URL")):
+        active_checker_url = _translation_request_context.get("checker_url") or os.environ.get("PC_LM_STUDIO_URL")
+        active_checker_model = _translation_request_context.get("checker_model") or os.environ.get("PC_LM_STUDIO_MODEL")
+        if p_trans and (correction_key or active_checker_url):
             audited = audit_with_final_checker(
                 source_text=p,
                 draft_text=p_trans,
                 src=src,
                 tgt=tgt,
                 api_key=correction_key,
-                checker_url=os.environ.get("PC_LM_STUDIO_URL"),
-                checker_model=os.environ.get("PC_LM_STUDIO_MODEL")
+                checker_url=active_checker_url,
+                checker_model=active_checker_model
             )
             if audited and translation_is_valid(p, audited, tgt):
                 p_trans = audited

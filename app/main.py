@@ -127,10 +127,14 @@ async def server_translate(req: Request):
         api_key = body.get("api_key") or req.headers.get("x-goog-api-key")
         checker_url = body.get("checker_url")
         checker_model = body.get("checker_model")
+        context_before = body.get("context_before") or body.get("before") or ""
+        context_after = body.get("context_after") or body.get("after") or ""
         if checker_url:
             os.environ["PC_LM_STUDIO_URL"] = str(checker_url)
         if checker_model:
             os.environ["PC_LM_STUDIO_MODEL"] = str(checker_model)
+        from app.translation_engine import set_translation_request_context
+        set_translation_request_context(before=context_before, after=context_after, checker_url=checker_url, checker_model=checker_model)
         result = await run_in_threadpool(translate_text, text, source_lang=source_lang, target_lang=target_lang, api_key=api_key)
         return JSONResponse(result)
     except HTTPException:

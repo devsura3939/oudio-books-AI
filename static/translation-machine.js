@@ -61,7 +61,7 @@
             }
         }
         function valid(src, output, target) { return typeof output === 'string' && assess(src, output, target).ok; }
-        async function chunk(source, sourceLang, targetLang, signal) {
+        async function chunk(source, sourceLang, targetLang, signal, options = {}) {
             const key = JSON.stringify([sourceLang, targetLang, source]);
             const cached = cache.get(key);
             if (cached && Date.now() - cached.at < 600000) { onEngine('cache'); return cached.text; }
@@ -80,7 +80,10 @@
             };
             const serverEndpoint = typeof server === 'string' && server ? server : (server ? '/api/server-translate' : null);
             if (serverEndpoint) {
-                const data = await request('server', serverEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: source, source_lang: sourceLang, target_lang: targetLang }) }, signal);
+                const payload = { text: source, source_lang: sourceLang, target_lang: targetLang };
+                if (options?.context_before) payload.context_before = options.context_before;
+                if (options?.context_after) payload.context_after = options.context_after;
+                const data = await request('server', serverEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, signal);
                 const result = data?.success !== false && accept(data?.translated, 'server');
                 if (result) return result;
             }
@@ -116,7 +119,7 @@
             if (valid(source, fallback, targetLang)) { onEngine('offline'); return fallback; }
             return null;
         }
-        async function translate(text, sourceLang, targetLang, signal) {
+        async function translate(text, sourceLang, targetLang, signal, options = {}) {
             failures.clear();
             signal?.throwIfAborted();
             if (!String(text || '').trim()) return '';
@@ -124,7 +127,7 @@
             const outputs = [];
             for (const paragraph of String(text).split(/(\n\s*\n)/)) {
                 if (!paragraph.trim()) { outputs.push(paragraph); continue; }
-                const result = await complete(paragraph, 4500, part => chunk(part, sourceLang, targetLang, signal), signal);
+                const result = await complete(paragraph, 4500, part => chunk(part, sourceLang, targetLang, signal, options), signal);
                 if (result === null) return null;
                 outputs.push(result);
             }

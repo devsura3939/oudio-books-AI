@@ -7551,9 +7551,9 @@ function finishMachineTranslation(source, output, targetLang) {
     const refined = EngbotCore.readingText(output);
     return assessTranslation(source, refined, targetLang).ok ? refined : assessTranslation(source, output, targetLang).ok ? output : null;
 }
-async function translateChunkLocal(clean, targetLang) {
+async function translateChunkLocal(clean, targetLang, contextBefore = '', contextAfter = '') {
     const signal = translationRequestController?.signal;
-    const translated = await translationMachine().translate(clean, detectTextLang(clean), targetLang, signal);
+    const translated = await translationMachine().translate(clean, detectTextLang(clean), targetLang, signal, { context_before: contextBefore, context_after: contextAfter });
     signal?.throwIfAborted();
     if (!translated) {
         recordEngineUse('failed');
@@ -7567,8 +7567,8 @@ async function translateChunkLocal(clean, targetLang) {
 // The local tier is the source of truth for bulk work. It may use the small
 // server translator or Google/MyMemory,
 // but it always returns before an optional provider correction is considered.
-async function deterministicTranslateChunk(clean, targetLang) {
-    const local = await translateChunkLocal(clean, targetLang);
+async function deterministicTranslateChunk(clean, targetLang, contextBefore = '', contextAfter = '') {
+    const local = await translateChunkLocal(clean, targetLang, contextBefore, contextAfter);
     if (local && assessTranslation(clean, local, targetLang).ok) return local;
 
     return null;
@@ -7730,7 +7730,7 @@ async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', 
 
     let baseline = null;
     try {
-        baseline = await deterministicTranslateChunk(clean, targetLang);
+        baseline = await deterministicTranslateChunk(clean, targetLang, contextBefore, contextAfter);
     } catch (error) {
         console.warn('[Engine] deterministic translation failed:', error && error.message ? error.message : error);
     }
