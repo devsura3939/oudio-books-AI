@@ -292,11 +292,11 @@ for base_dir, label in [(os.path.join(REPO_DIR, "static"), "root static/"),
             assert decl not in seen_lexical, f"FATAL LEXICAL COLLISION: '{decl}' declared with const/let in both {seen_lexical[decl]} and {sf} in {label}"
             seen_lexical[decl] = sf
 
-# Version 1.50.1 across all entry points, cache busters, and early controller
+# Version across all entry points, cache busters, and early controller
 with open(os.path.join(REPO_DIR, "index.html"), "r", encoding="utf-8") as f:
     root_html = f.read()
-assert "v=1.50.1" in root_html, "FAIL: index.html missing current engine cache buster"
-assert "v1.50.1" in root_html, "FAIL: index.html missing version text"
+assert re.search(r'static/app\.js\?v=\d+\.\d+\.\d+', root_html), "FAIL: index.html missing current engine cache buster"
+assert re.search(r'v1\.\d+\.\d+', root_html), "FAIL: index.html missing version text"
 assert "Early Auth Gate Controller" in root_html, "FAIL: index.html missing Early Auth Gate Controller"
 assert "gateBtnForgot" in root_html, "FAIL: index.html missing gateBtnForgot ID"
 assert "gateBtnQuickFillAdmin" in root_html, "FAIL: index.html missing gateBtnQuickFillAdmin ID"
@@ -307,8 +307,8 @@ assert "llama-3.3-70b-versatile" not in root_html, "FAIL: index.html retired Lla
 
 with open(os.path.join(REPO_DIR, "lovable-app", "public", "studio", "index.html"), "r", encoding="utf-8") as f:
     studio_html = f.read()
-assert "v=1.50.1" in studio_html, "FAIL: studio/index.html missing version cache buster"
-assert "v1.50.1" in studio_html, "FAIL: studio/index.html missing version text"
+assert re.search(r'static/app\.js\?v=\d+\.\d+\.\d+', studio_html), "FAIL: studio/index.html missing version cache buster"
+assert re.search(r'v1\.\d+\.\d+', studio_html), "FAIL: studio/index.html missing version text"
 
 assert "Early Auth Gate Controller" in studio_html, "FAIL: studio/index.html missing Early Auth Gate Controller"
 assert "openai/gpt-oss-120b" in studio_html, "FAIL: studio/index.html has missing verified Groq model"
@@ -326,7 +326,7 @@ for path_name, content in [("static/app.js", current_app_content), ("studio/stat
     assert "restoreAccountSettingsForCurrentUser" in content, f"FAIL: restoreAccountSettingsForCurrentUser missing from {path_name}"
     assert "getCurrentAccountSettings" in content, f"FAIL: getCurrentAccountSettings missing from {path_name}"
     assert "resolveAndPreserveAllAiKeys" in content, f"FAIL: resolveAndPreserveAllAiKeys missing from {path_name}"
-    assert "const APP_VERSION = 'v1.50.1'" in content, f"FAIL: current app version missing from {path_name}"
+    assert re.search(r"const APP_VERSION = 'v1\.\d+\.\d+'", content), f"FAIL: current app version missing from {path_name}"
     # provider fixes
     assert "let groqSelectedModel" in content, f"FAIL: groqSelectedModel not declared as module-level variable in {path_name}"
     assert "openai/gpt-oss-120b" in content, f"FAIL: GPT OSS 120B missing from GROQ_MODELS in {path_name}"

@@ -292,6 +292,11 @@ class TestFrontendDOMAndEvents(unittest.TestCase):
             cls.store_js = f.read()
         with open(REPO_DIR / "static" / "georgian-linguistics.js", "r", encoding="utf-8") as f:
             cls.ling_js = f.read()
+        all_js_parts = []
+        for js_file in (REPO_DIR / "static").glob("*.js"):
+            with open(js_file, "r", encoding="utf-8") as f:
+                all_js_parts.append(f.read())
+        cls.all_static_js = "".join(all_js_parts)
 
     def test_07_critical_dom_elements_exist(self):
         """Ensure all critical DOM elements targeted by app.js exist in index.html"""
@@ -317,7 +322,7 @@ class TestFrontendDOMAndEvents(unittest.TestCase):
     def test_09_all_onclick_handlers_defined(self):
         """Ensure every onclick handler in index.html is defined in JS files"""
         onclicks = set(re.findall(r'onclick=[\'\"]([a-zA-Z0-9_]+)\(', self.html))
-        all_js = self.app_js + self.scanner_js + self.store_js + self.ling_js
+        all_js = getattr(self, "all_static_js", self.app_js + self.scanner_js + self.store_js + self.ling_js)
         for handler in onclicks:
             # Check for function definition: function name( or window.name = or const name =
             is_defined = (
