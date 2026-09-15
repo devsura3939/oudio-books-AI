@@ -16,9 +16,9 @@ def _load_env():
 
 _load_env()
 
-SUPABASE_URL = os.getenv("EXTERNAL_SUPABASE_URL") or os.getenv("SUPABASE_URL", "https://oakikavdnnvxzlcvsovq.supabase.co")
-SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_oTAYwkdt1yebGkrlKOoijw_9fE4OUBd")
-SUPABASE_SECRET_KEY = os.getenv("EXTERNAL_SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SECRET_KEY", "")
+SUPABASE_URL = os.getenv("EXTERNAL_SUPABASE_URL") or os.getenv("SUPABASE_URL", "http://127.0.0.1:8000")
+SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_qYeXVnqCOngD3NkLzWChmk_wCsIHevt")
+SUPABASE_SECRET_KEY = os.getenv("EXTERNAL_SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SECRET_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3ODk0NzE5NjksImV4cCI6MTk0NzE1MTk2OX0.S7Lc0540LcbGriJ982VSAtN81Ht-oBw9L9fbZdvLLH0")
 ADMIN_EMAIL = "ananiadevsurashvili@gmail.com"
 ADMIN_USER_ID = "2b4b9033-8527-4e51-b2c8-9a72f5a47412"
 
@@ -29,7 +29,7 @@ def check_supabase_health() -> Dict[str, Any]:
         headers = _admin_headers()
         r = urllib.request.Request(f"{SUPABASE_URL}/rest/v1/books?select=id&limit=1", headers=headers)
         with urllib.request.urlopen(r, timeout=8) as resp:
-            return {"status": "connected", "project": "oakikavdnnvxzlcvsovq", "http_code": resp.status}
+            return {"status": "connected", "project": "oudio-books-oci", "http_code": resp.status}
     except Exception as e:
         return {"status": "offline", "detail": str(e)}
 

@@ -26,10 +26,10 @@
   var runtimeConfig = (typeof window !== "undefined" && window.LUMINA_RUNTIME_CONFIG) || {};
   var URL_ = runtimeConfig.SUPABASE_URL ||
              (typeof localStorage !== "undefined" && localStorage.getItem("lumina_supabase_url")) ||
-             "https://oakikavdnnvxzlcvsovq.supabase.co";
+             "http://92.5.71.162";
   var KEY = runtimeConfig.SUPABASE_ANON_KEY ||
             (typeof localStorage !== "undefined" && localStorage.getItem("lumina_supabase_anon_key")) ||
-            "sb_publishable_oTAYwkdt1yebGkrlKOoijw_9fE4OUBd";
+            "sb_publishable_qYeXVnqCOngD3NkLzWChmk_wCsIHevt";
 
   // If KEY starts with sb_ (opaque string, not JWT), strip Bearer KEY from headers.
   function patchedFetch(input, init) {

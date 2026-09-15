@@ -135,7 +135,7 @@ for path_name, content in [("static/app.js", app_content), ("studio/static/app.j
     assert "უპირველეს ყოვლისა და მუდამ" in content, f"FAIL: Anti-calque rule missing from {path_name}"
     assert "მომავალში ისხამს ნაყოფს" in content, f"FAIL: Future blossoming calque fix missing from {path_name}"
     assert "მაგნიტივით" in content, f"FAIL: Magnet calque fix missing from {path_name}"
-    assert "splitLongIntoClauses(s, 16)" in content, f"FAIL: Clause split limit 16 missing from {path_name}"
+    assert "splitLongIntoClauses(sentence, 16)" in content or "splitLongIntoClauses(s, 16)" in content, f"FAIL: Clause split limit 16 missing from {path_name}"
     assert "book-prose indent-6" in content, f"FAIL: book-prose class missing from {path_name}"
 print("  [PASS] Georgian anti-calque rules and 16-word clause limits verified in app.js and studio/app.js")
 

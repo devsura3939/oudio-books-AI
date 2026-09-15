@@ -1021,6 +1021,9 @@
             <button onclick="openModal('uploadModal')" class="p-2 rounded-xl text-primary-fixed hover:bg-white/10 transition" aria-label="Upload PDF" title="Upload PDF">
                 <span class="material-symbols-outlined text-2xl">upload_file</span>
             </button>
+            <button onclick="openTrainingLabModal()" class="p-2 rounded-xl text-secondary hover:bg-white/10 transition" aria-label="Train with LLMs" title="Train with LLMs & Keys">
+                <span class="material-symbols-outlined text-2xl">model_training</span>
+            </button>
             <button id="mobileTopProfileBtn" onclick="openAccountCabinet()" class="p-2 rounded-xl text-white hover:bg-white/10 transition" aria-label="Account & Cabinet" title="Account & Cabinet">
                 <span class="material-symbols-outlined text-2xl">account_circle</span>
             </button>
@@ -1218,6 +1221,11 @@
                 <span class="material-symbols-outlined text-primary-fixed text-base">record_voice_over</span>
                 <span id="topVoiceBadge">Narrator: EngBot</span>
                 <span class="material-symbols-outlined text-sm text-on-surface-variant">expand_more</span>
+            </button>
+
+            <button id="topTrainingLabBtn" onclick="openTrainingLabModal()" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-secondary/15 hover:bg-secondary/25 border border-secondary/30 text-xs font-bold text-secondary transition shadow-sm" title="Train with LLMs & Generate API Keys">
+                <span class="material-symbols-outlined text-base">model_training</span>
+                <span>Train with LLMs</span>
             </button>
 
             <button id="topProfileBtn" onclick="openAccountCabinet()" class="p-1 rounded-full text-on-surface-variant hover:text-white transition flex items-center gap-2" title="Your Account & Cabinet">
@@ -2690,6 +2698,14 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
 
     <!-- Continuous Silent Audio Loop: keeps OS audio hardware pipeline awake for lock-screen & background narration -->
     <audio id="backgroundKeepAliveAudio" preload="auto" loop playsinline webkit-playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA" style="display:none;"></audio>
+
+    <script>
+      window.LUMINA_RUNTIME_CONFIG = Object.assign({}, window.LUMINA_RUNTIME_CONFIG, {
+        SUPABASE_URL: "http://92.5.71.162",
+        SUPABASE_ANON_KEY: "sb_publishable_qYeXVnqCOngD3NkLzWChmk_wCsIHevt",
+        API_URL: "http://92.5.71.162"
+      });
+    </script>
 
     <script src="static/library-sync.js?v=1.53.4"></script>
     <script src="static/supabase-store.js?v=1.53.4"></script>

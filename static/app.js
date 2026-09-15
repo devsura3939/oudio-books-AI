@@ -3502,8 +3502,8 @@ function checkAuthState() {
             sessionStorage.removeItem('lumina_auth_user');
         }
 
-        // 2. Only check localStorage if user explicitly opted in with "Remember me"
-        if (!currentUser && localStorage.getItem('lumina_remember_me') === 'true') {
+        // 2. Check localStorage session if available
+        if (!currentUser) {
             const saved = localStorage.getItem('lumina_auth_user');
             if (saved) {
                 try {
@@ -3517,9 +3517,6 @@ function checkAuthState() {
                     currentUser = null;
                 }
             }
-        } else if (!currentUser) {
-            // Not remembered and no active tab session: clean up any stale localStorage user
-            localStorage.removeItem('lumina_auth_user');
         }
     }
     if (currentUser && currentUser.email) {
@@ -3555,11 +3552,7 @@ function updateAuthUI() {
             pill.style.cursor = 'pointer';
             pill.title = 'Click to open AI Training Lab';
             pill.onclick = function () {
-                var target = window.location.hostname.includes('github.io')
-                    ? 'https://github.com/devsura3939/oudio-books-AI'
-                    : '/training';
-                if (target.startsWith('http')) window.open(target, '_blank');
-                else window.location.href = target;
+                openTrainingLabModal();
             };
         } else {
             pill.classList.add('hidden');
@@ -3578,11 +3571,7 @@ function updateAuthUI() {
             mobilePill.style.cursor = 'pointer';
             mobilePill.title = 'Click to open AI Training Lab';
             mobilePill.onclick = function () {
-                var target = window.location.hostname.includes('github.io')
-                    ? 'https://github.com/devsura3939/oudio-books-AI'
-                    : '/training';
-                if (target.startsWith('http')) window.open(target, '_blank');
-                else window.location.href = target;
+                openTrainingLabModal();
             };
         } else {
             mobilePill.classList.add('hidden');
@@ -3601,11 +3590,7 @@ function updateAuthUI() {
             mobileAdminCard.style.cursor = 'pointer';
             mobileAdminCard.title = 'Click to open AI Training Lab';
             mobileAdminCard.onclick = function () {
-                var target = window.location.hostname.includes('github.io')
-                    ? 'https://github.com/devsura3939/oudio-books-AI'
-                    : '/training';
-                if (target.startsWith('http')) window.open(target, '_blank');
-                else window.location.href = target;
+                openTrainingLabModal();
             };
         } else {
             mobileAdminCard.classList.add('hidden');
@@ -3721,10 +3706,38 @@ function closeAuthGate() {
     if (appContainer) appContainer.classList.remove('hidden');
 }
 
-function openAccountCabinet() {
+async function openAccountCabinet() {
     if (!currentUser || !currentUser.email) {
-        openAuthGate('signin');
-        return;
+        try {
+            const raw = sessionStorage.getItem('lumina_auth_user') || localStorage.getItem('lumina_auth_user');
+            if (raw) {
+                const u = JSON.parse(raw);
+                if (u && u.email) currentUser = u;
+            }
+        } catch (e) {}
+        if ((!currentUser || !currentUser.email) && window.LuminaStore?.getClient) {
+            try {
+                const client = window.LuminaStore.getClient();
+                if (client) {
+                    const { data } = await client.auth.getUser();
+                    if (data?.user?.email) {
+                        const u = data.user;
+                        const isAdmin = u.email.toLowerCase() === 'ananiadevsurashvili@gmail.com';
+                        currentUser = {
+                            email: u.email,
+                            id: u.id,
+                            pro: true,
+                            role: isAdmin ? 'admin' : 'user',
+                            supabaseAuth: true
+                        };
+                        try { sessionStorage.setItem('lumina_auth_user', JSON.stringify(currentUser)); } catch (e) {}
+                        localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
+                        verifiedAuthUserId = u.id;
+                        updateAuthUI();
+                    }
+                }
+            } catch (e) {}
+        }
     }
     updateCabinetUI();
     openModal('accountCabinetModal');
@@ -3744,22 +3757,21 @@ function updateCabinetUI() {
     const userEmail = (currentUser?.email || '').trim();
     const isAdmin = !!(userEmail.toLowerCase() === 'ananiadevsurashvili@gmail.com' || currentUser?.role === 'admin');
 
-    if (!currentUser || !userEmail) {
-        closeAccountCabinet();
-        openAuthGate('signin');
-        return;
-    }
-
-    if (avatar) avatar.textContent = userEmail.charAt(0).toUpperCase();
-    if (email) email.textContent = userEmail;
+    if (avatar) avatar.textContent = userEmail ? userEmail.charAt(0).toUpperCase() : '👤';
+    if (email) email.textContent = userEmail || 'Guest / Not signed in';
     if (roleBadge) {
-        roleBadge.textContent = isAdmin ? '👑 Administrator v1.47.0' : '🎧 PRO Listener';
-        roleBadge.className = isAdmin
-            ? 'px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold'
-            : 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-white';
+        if (userEmail) {
+            roleBadge.textContent = isAdmin ? '👑 Administrator v1.47.0' : '🎧 PRO Listener';
+            roleBadge.className = isAdmin
+                ? 'px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold'
+                : 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-white';
+        } else {
+            roleBadge.textContent = 'Guest Mode';
+            roleBadge.className = 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-on-surface-variant';
+        }
     }
     if (cloudBadge) {
-        cloudBadge.textContent = usingCloud ? '☁️ Supabase Cloud' : '💾 Local Storage';
+        cloudBadge.textContent = (usingCloud && userEmail) ? '☁️ Supabase Cloud (OCI)' : '💾 Local Storage';
     }
     if (btnTraining) {
         btnTraining.classList.remove('hidden');
@@ -3829,9 +3841,11 @@ async function generateTrainingApiKey() {
     if (button) button.disabled = true;
     const ownerId = getCurrentUserId();
     try {
+        const serverApiUrl = (typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL) || null;
         const record = await window.EngbotTraining.createKey({
-            staticHost: _isStaticHost,
+            staticHost: _isStaticHost && !serverApiUrl,
             language: document.getElementById('trainingKeyLanguage')?.value || 'ka',
+            apiUrl: serverApiUrl,
             getAccessToken: async () => {
                 const client = window.LuminaStore?.getClient?.();
                 if (!client) return null;
@@ -3881,14 +3895,14 @@ function toggleTrainingKeyMask() {
 async function copyLlmTrainingPrompt() {
     const textarea = document.getElementById('llmPromptTextarea');
     const record = trainingKeyRecord();
-    const base = _isStaticHost ? '{TRAINING_SERVER_URL}' : location.origin;
+    const base = window.LUMINA_RUNTIME_CONFIG?.API_URL || (_isStaticHost ? 'http://92.5.71.162' : location.origin);
     const text = (textarea?.value || '')
         .replaceAll('{YOUR_API_KEY}', record && !record.legacy ? record.key : '{YOUR_API_KEY}')
         .replaceAll('/api/public/train/', base + '/api/public/train/');
     try {
         if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
         await navigator.clipboard.writeText(text);
-        showToast(_isStaticHost ? 'Template copied. Set the training server URL and a registered key before use.' : 'Training prompt copied.', 'success');
+        showToast('Training prompt copied with API URL and key.', 'success');
     } catch (e) { showToast('Could not copy. Select and copy the template manually.', 'error'); }
 }
 
