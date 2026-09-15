@@ -23,10 +23,15 @@
 (function () {
   "use strict";
 
-  var URL_ = "https://oakikavdnnvxzlcvsovq.supabase.co";
-  var KEY = "sb_publishable_oTAYwkdt1yebGkrlKOoijw_9fE4OUBd";
+  var runtimeConfig = (typeof window !== "undefined" && window.LUMINA_RUNTIME_CONFIG) || {};
+  var URL_ = runtimeConfig.SUPABASE_URL ||
+             (typeof localStorage !== "undefined" && localStorage.getItem("lumina_supabase_url")) ||
+             "https://oakikavdnnvxzlcvsovq.supabase.co";
+  var KEY = runtimeConfig.SUPABASE_ANON_KEY ||
+            (typeof localStorage !== "undefined" && localStorage.getItem("lumina_supabase_anon_key")) ||
+            "sb_publishable_oTAYwkdt1yebGkrlKOoijw_9fE4OUBd";
 
-  // New-format sb_* keys are opaque strings, not JWTs: send them as `apikey` only.
+  // If KEY starts with sb_ (opaque string, not JWT), strip Bearer KEY from headers.
   function patchedFetch(input, init) {
     var isReq = typeof Request !== "undefined" && input instanceof Request;
     var headers = new Headers(isReq ? input.headers : undefined);
@@ -35,7 +40,9 @@
         headers.set(name, value);
       });
     }
-    if (headers.get("Authorization") === "Bearer " + KEY) headers.delete("Authorization");
+    if (headers.get("Authorization") === "Bearer " + KEY && KEY.startsWith("sb_")) {
+      headers.delete("Authorization");
+    }
     headers.set("apikey", KEY);
     var options = Object.assign({}, init, { headers: headers });
     if (isReq) {
@@ -715,7 +722,21 @@
           }
         },
       });
-      var snapshot = await incrementalLibrary.read();
+      var snapshot;
+      try {
+        snapshot = await incrementalLibrary.read();
+      } catch (readError) {
+        var storage = window.EngbotLibrarySync.persistentStorage ? window.EngbotLibrarySync.persistentStorage(URL_) : null;
+        if (storage && userId) {
+          try {
+            var cached = await storage.get(userId);
+            if (cached && Array.isArray(cached.books) && Array.isArray(cached.chapters) && cached.books.length > 0) {
+              snapshot = cached;
+            }
+          } catch (_) {}
+        }
+        if (!snapshot) throw readError;
+      }
       incrementalLibrary.takeDeletedBooks().forEach(function(book) {
         if (libraryChangeCallback) libraryChangeCallback({table:'books',payload:{eventType:'DELETE',old:book}});
       });

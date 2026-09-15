@@ -1,0 +1,15 @@
+﻿[Unit]
+Description=Lumina Audio Studio FastAPI Backend
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/oudio-books-AI
+ExecStart=/home/ubuntu/oudio-books-AI/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8001 --workers 4
+Restart=always
+RestartSec=5s
+EnvironmentFile=/home/ubuntu/oudio-books-AI/.env
+
+[Install]
+WantedBy=multi-user.target

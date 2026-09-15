@@ -1,0 +1,9 @@
+﻿#cloud-config
+package_update: true
+package_upgrade: true
+
+runcmd:
+  - git clone https://github.com/devsura3939/oudio-books-AI.git /home/ubuntu/oudio-books-AI
+  - chown -R ubuntu:ubuntu /home/ubuntu/oudio-books-AI
+  - chmod +x /home/ubuntu/oudio-books-AI/deploy/oracle/setup.sh
+  - su - ubuntu -c "bash /home/ubuntu/oudio-books-AI/deploy/oracle/setup.sh"

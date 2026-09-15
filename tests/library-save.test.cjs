@@ -17,7 +17,7 @@ function setup(){
   const storage={length:0,getItem:()=>null,setItem(){},removeItem(){}};
   const window={location:new URL('https://example.test/'),supabase:{createClient:()=>client},EngbotLibrarySync:require('../static/library-sync.js')};
   vm.runInNewContext(fs.readFileSync('static/supabase-store.js','utf8'),{window,localStorage:storage,sessionStorage:storage,console,structuredClone,URL,URLSearchParams,Headers,Request,fetch});
-  return {store:window.LuminaStore,data,writes,setFail:v=>fail=v};
+  return {store:window.LuminaStore,data,writes,setFail:v=>fail=v,window,client};
 }
 test('Store saves only edited chapters and resets synthesis only when narration content changes',async()=>{
   const h=setup();await h.store.signIn('reader@example.test','password');
@@ -39,3 +39,26 @@ test('Failed checkpoint remains retryable and shrinking a book removes only obso
   book.chapters.pop();await h.store.saveBook(book);assert.equal(h.data.chapters.length,1);
   assert.equal(h.data.chapters[0].text_content,'Hello world');
 });
+
+test('Cloud failure in getAllBooks falls back to persistent cache snapshot',async()=>{
+  const h=setup();
+  const cachedBooks=[
+    {id:'b1',slug:'b1',user_id:'owner',title:'Book 1',language:'en',created_at:'2026-01-01',updated_at:'1',metadata:{dateAdded:'2026-01-01'}},
+    {id:'b2',slug:'b2',user_id:'owner',title:'Book 2',language:'en',created_at:'2026-01-02',updated_at:'1',metadata:{dateAdded:'2026-01-02'}}
+  ];
+  const cachedChapters=[
+    {id:'c1',book_id:'b1',user_id:'owner',chapter_index:0,title:'Chap 1',text_content:'Content 1',word_count:2,metadata:{studio_id:1}}
+  ];
+  const disk=new Map([['owner',{schema:1,owner:'owner',revision:'1',books:cachedBooks,chapters:cachedChapters}]]);
+  h.window.EngbotLibrarySync.persistentStorage=()=>({
+    get:async user=>disk.get(user),
+    set:async(user,val)=>disk.set(user,val)
+  });
+  await h.store.signIn('reader@example.test','password');
+  h.client.rpc=async()=>{throw new Error('exceed_egress_quota');};
+  const books=await h.store.getAllBooks();
+  assert.equal(books.length,2);
+  assert.equal(books[0].title,'Book 1');
+  assert.equal(books[1].title,'Book 2');
+});
+

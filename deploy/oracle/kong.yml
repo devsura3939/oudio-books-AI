@@ -1,0 +1,81 @@
+﻿_format_version: "2.1"
+_transform: true
+
+services:
+  - name: auth-v1
+    url: http://auth:9999/
+    routes:
+      - name: auth-v1-all
+        paths:
+          - /auth/v1/
+        strip_path: false
+    plugins:
+      - name: cors
+
+  - name: rest-v1
+    url: http://rest:3000/
+    routes:
+      - name: rest-v1-all
+        paths:
+          - /rest/v1/
+        strip_path: true
+    plugins:
+      - name: cors
+
+  - name: realtime-v1
+    url: http://realtime:4000/socket
+    routes:
+      - name: realtime-v1-all
+        paths:
+          - /realtime/v1/
+        strip_path: true
+    plugins:
+      - name: cors
+
+  - name: storage-v1
+    url: http://storage:5000/
+    routes:
+      - name: storage-v1-all
+        paths:
+          - /storage/v1/
+        strip_path: false
+    plugins:
+      - name: cors
+
+  - name: meta
+    url: http://meta:8080/
+    routes:
+      - name: meta-all
+        paths:
+          - /pg/
+        strip_path: true
+    plugins:
+      - name: cors
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - HEAD
+        - PUT
+        - PATCH
+        - POST
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+        - apikey
+        - Range
+        - prefer
+        - x-client-info
+        - x-upsert
+      exposed_headers:
+        - Content-Range
+        - Range
+        - Preference-Applied
+      credentials: true
+      max_age: 3600
