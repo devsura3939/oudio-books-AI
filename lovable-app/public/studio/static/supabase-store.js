@@ -409,10 +409,27 @@
       var res = await c.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: callbackUrl,
       });
-      if (res.error) throw res.error;
-      return { success: true };
+      if (res && res.error) throw res.error;
+
+      var actionLink = null;
+      if (typeof window !== "undefined" && window.location && window.location.protocol && window.location.protocol.indexOf("http") === 0) {
+        try {
+          var baseApi = (window.LUMINA_RUNTIME_CONFIG && window.LUMINA_RUNTIME_CONFIG.API_URL) || "https://92.5.71.162.sslip.io";
+          var r = await fetch(baseApi + "/api/public/auth/recover", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: cleanEmail })
+          });
+          if (r && r.ok) {
+            var data = await r.json();
+            if (data && data.action_link) actionLink = data.action_link;
+          }
+        } catch (_) {}
+      }
+
+      return { success: true, action_link: actionLink };
     } catch (err) {
-      if (typeof window !== "undefined" && window.fetch) {
+      if (typeof window !== "undefined" && window.location && window.location.protocol && window.location.protocol.indexOf("http") === 0) {
         try {
           var baseApi = (window.LUMINA_RUNTIME_CONFIG && window.LUMINA_RUNTIME_CONFIG.API_URL) || "https://92.5.71.162.sslip.io";
           var r = await fetch(baseApi + "/api/public/auth/recover", {
