@@ -2877,7 +2877,7 @@ function navToSection(tab) {
 function navigate(viewId) {
     const views = ['library', 'discover', 'scanner', 'server-stats'];
     const emailClean = (currentUser?.email || '').trim().toLowerCase();
-    const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
+    const isAdmin = (emailClean === 'ananiadevsurashvili@gmail.com');
 
     // Strictly forbid non-admin users from accessing server-stats
     if (viewId === 'server-stats' && !isAdmin) {
@@ -3588,7 +3588,7 @@ function checkAuthState() {
 
 function updateAuthUI() {
     const emailClean = (currentUser?.email || '').trim().toLowerCase();
-    const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
+    const isAdmin = (emailClean === 'ananiadevsurashvili@gmail.com');
     document.querySelectorAll('[data-admin-build]').forEach(el => { el.hidden = !isAdmin; });
 
     // 1. Desktop Top Bar Pill
@@ -3656,10 +3656,14 @@ function updateAuthUI() {
 
     if (topServerStatsBtn) {
         if (isAdmin) {
+            topServerStatsBtn.hidden = false;
+            topServerStatsBtn.removeAttribute('hidden');
             topServerStatsBtn.classList.remove('hidden');
             topServerStatsBtn.classList.add('flex');
-            topServerStatsBtn.style.removeProperty('display');
+            topServerStatsBtn.style.setProperty('display', 'inline-flex', 'important');
         } else {
+            topServerStatsBtn.hidden = true;
+            topServerStatsBtn.setAttribute('hidden', '');
             topServerStatsBtn.classList.add('hidden');
             topServerStatsBtn.classList.remove('flex');
             topServerStatsBtn.style.setProperty('display', 'none', 'important');
@@ -3667,10 +3671,14 @@ function updateAuthUI() {
     }
     if (mobileTopServerStatsBtn) {
         if (isAdmin) {
+            mobileTopServerStatsBtn.hidden = false;
+            mobileTopServerStatsBtn.removeAttribute('hidden');
             mobileTopServerStatsBtn.classList.remove('hidden');
             mobileTopServerStatsBtn.classList.add('flex');
-            mobileTopServerStatsBtn.style.removeProperty('display');
+            mobileTopServerStatsBtn.style.setProperty('display', 'inline-flex', 'important');
         } else {
+            mobileTopServerStatsBtn.hidden = true;
+            mobileTopServerStatsBtn.setAttribute('hidden', '');
             mobileTopServerStatsBtn.classList.add('hidden');
             mobileTopServerStatsBtn.classList.remove('flex');
             mobileTopServerStatsBtn.style.setProperty('display', 'none', 'important');
@@ -12115,7 +12123,7 @@ function getServerStatsViewHtml() {
 
 function ensureServerStatsViewRendered() {
     const emailClean = (currentUser?.email || '').trim().toLowerCase();
-    const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
+    const isAdmin = (emailClean === 'ananiadevsurashvili@gmail.com');
     const view = document.getElementById('view-server-stats');
     if (!view) return;
     if (!isAdmin) {
@@ -12132,7 +12140,7 @@ function ensureServerStatsViewRendered() {
 
 async function loadServerStats(manual = false) {
     const emailClean = (currentUser?.email || '').trim().toLowerCase();
-    const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
+    const isAdmin = (emailClean === 'ananiadevsurashvili@gmail.com');
     if (!isAdmin) return;
 
     if (serverStatsFetching) return;
@@ -12152,7 +12160,8 @@ async function loadServerStats(manual = false) {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const res = await fetch('/api/admin/server-stats?t=' + Date.now(), {
+        const apiBase = window.LUMINA_RUNTIME_CONFIG?.API_URL || (_isStaticHost ? 'https://92.5.71.162.sslip.io' : '');
+        const res = await fetch(`${apiBase}/api/admin/server-stats?t=${Date.now()}`, {
             method: 'GET',
             headers
         });
