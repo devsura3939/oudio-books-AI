@@ -557,7 +557,7 @@ def get_active_processes(limit: int = 12) -> Dict[str, Any]:
                         name = "llama-server"
                         role = "Kona2 Georgian Neural LLM"
                         is_workload = True
-                        if cpu_pct > 5.0:
+                        if cpu_pct > 15.0:
                             is_translating = True
                             translation_info = {
                                 "pid": pid,
@@ -565,22 +565,12 @@ def get_active_processes(limit: int = 12) -> Dict[str, Any]:
                                 "mem_percent": mem_pct,
                                 "mem_human": mem_human,
                                 "engine": "Kona2 3.8B Q4_K_M (Ollama)",
-                                "description": f"Active Neural Translation: Kona2 LLM running at {cpu_pct}% CPU ({mem_human} RAM)"
+                                "description": f"Active Neural Translation: Kona2 LLM generating tokens at {cpu_pct}% CPU ({mem_human} RAM)"
                             }
-                    elif "node" in comm and "translation-quality" in args:
-                        name = "node (evaluator)"
-                        role = "Translation Quality Runner"
-                        is_workload = True
-                        if not is_translating and cpu_pct > 10.0:
-                            is_translating = True
-                            translation_info = {
-                                "pid": pid,
-                                "cpu_percent": cpu_pct,
-                                "mem_percent": mem_pct,
-                                "mem_human": mem_human,
-                                "engine": "Translation Benchmark Suite",
-                                "description": f"Translation Quality Test executing at {cpu_pct}% CPU"
-                            }
+                    elif "node" in comm and ("test" in args or "translation-quality" in args or "evaluator" in args):
+                        name = "node (test)"
+                        role = "Automated Test Suite"
+                        is_workload = False
                     elif "python" in comm and "spawn_main" in args:
                         name = "python3 (worker)"
                         role = "Multiprocessing Pipeline Worker"
@@ -636,6 +626,26 @@ def get_active_processes(limit: int = 12) -> Dict[str, Any]:
                 "is_workload": True
             }
         ]
+
+    # Check live active translation requests from FastAPI translation engine
+    try:
+        from app.translation_engine import get_active_translations_count
+        active_engine_translations = get_active_translations_count()
+    except Exception:
+        active_engine_translations = 0
+
+    if not is_translating and active_engine_translations > 0:
+        is_translating = True
+        cpu_metrics = get_cpu_metrics()
+        util_pct = cpu_metrics.get("util_percent", 0.0)
+        translation_info = {
+            "pid": os.getpid(),
+            "cpu_percent": round(util_pct, 1),
+            "mem_percent": 0.0,
+            "mem_human": "Active Request",
+            "engine": "Lumina Translation Pipeline",
+            "description": f"Active Server Translation: Processing {active_engine_translations} active user request(s)"
+        }
 
     if is_translating and translation_info:
         workload = {

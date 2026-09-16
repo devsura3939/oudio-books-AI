@@ -2,6 +2,7 @@
 import os
 import re
 import time
+import threading
 import concurrent.futures
 from typing import Optional
 from app.text_integrity import normalize_language, detect_language, split_bounded, translation_is_valid
@@ -646,7 +647,25 @@ def audit_with_final_checker(
     return None
 
 
+_ACTIVE_TRANSLATIONS_COUNT = 0
+_ACTIVE_TRANSLATIONS_LOCK = threading.Lock()
+
+def get_active_translations_count() -> int:
+    """Return count of currently ongoing translate_text operations."""
+    with _ACTIVE_TRANSLATIONS_LOCK:
+        return _ACTIVE_TRANSLATIONS_COUNT
+
 def translate_text(text: str, source_lang: str = "auto", target_lang: str = "ka", api_key: Optional[str] = None) -> dict:
+    global _ACTIVE_TRANSLATIONS_COUNT
+    with _ACTIVE_TRANSLATIONS_LOCK:
+        _ACTIVE_TRANSLATIONS_COUNT += 1
+    try:
+        return _translate_text_impl(text, source_lang=source_lang, target_lang=target_lang, api_key=api_key)
+    finally:
+        with _ACTIVE_TRANSLATIONS_LOCK:
+            _ACTIVE_TRANSLATIONS_COUNT = max(0, _ACTIVE_TRANSLATIONS_COUNT - 1)
+
+def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str = "ka", api_key: Optional[str] = None) -> dict:
 
     if not text or not text.strip():
         return {"translated": "", "engine": "none", "success": True}
