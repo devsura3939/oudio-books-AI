@@ -12255,7 +12255,12 @@ function getServerStatsViewHtml() {
 }
 
 function ensureServerStatsViewRendered() {
-    const emailClean = (currentUser?.email || '').trim().toLowerCase();
+    let emailClean = '';
+    try {
+        if (typeof currentUser !== 'undefined' && currentUser?.email) {
+            emailClean = currentUser.email.trim().toLowerCase();
+        }
+    } catch (_) {}
     const isAdmin = (emailClean === 'ananiadevsurashvili@gmail.com');
     const view = document.getElementById('view-server-stats');
     if (!view) return;
@@ -12272,7 +12277,12 @@ function ensureServerStatsViewRendered() {
 }
 
 async function loadServerStats(manual = false) {
-    const emailClean = (currentUser?.email || '').trim().toLowerCase();
+    let emailClean = '';
+    try {
+        if (typeof currentUser !== 'undefined' && currentUser?.email) {
+            emailClean = currentUser.email.trim().toLowerCase();
+        }
+    } catch (_) {}
     const isAdmin = (emailClean === 'ananiadevsurashvili@gmail.com');
     if (!isAdmin) return;
 
@@ -12286,9 +12296,17 @@ async function loadServerStats(manual = false) {
 
     try {
         const headers = {
-            'X-Admin-Email': currentUser?.email || 'ananiadevsurashvili@gmail.com'
+            'X-Admin-Email': emailClean || 'ananiadevsurashvili@gmail.com'
         };
-        const token = currentSession?.access_token || (typeof LuminaStore !== 'undefined' && LuminaStore?.session?.access_token);
+        let token = null;
+        try {
+            if (typeof LuminaStore !== 'undefined' && LuminaStore?.session?.access_token) {
+                token = LuminaStore.session.access_token;
+            } else if (typeof window !== 'undefined' && window.LuminaStore?.getClient) {
+                const client = window.LuminaStore.getClient();
+                token = client?.auth?.currentSession?.access_token;
+            }
+        } catch (_) {}
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
