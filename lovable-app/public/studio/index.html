@@ -1371,10 +1371,19 @@
                         <span id="textServerStatsAutoRefresh">Auto-refresh: ON (5s)</span>
                     </button>
                     <button onclick="loadServerStats(true)" id="btnServerStatsRefreshNow" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition shadow-sm active:scale-95">
-                        <span class="material-symbols-outlined text-base">refresh</span>
+                        <span class="material-symbols-outlined text-base" id="iconServerStatsRefreshNow">refresh</span>
                         <span>Refresh Now</span>
                     </button>
                 </div>
+            </div>
+
+            <!-- Error / Offline Notice Banner (hidden by default) -->
+            <div id="ssErrorBanner" class="hidden p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-200 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-red-400">error</span>
+                    <span id="ssErrorBannerText">Failed to connect to Oracle Cloud telemetry endpoint.</span>
+                </div>
+                <button onclick="loadServerStats(true)" class="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-100 font-semibold transition">Retry</button>
             </div>
 
             <!-- Host Meta Banner -->
@@ -1394,6 +1403,26 @@
                 <div class="p-3 rounded-xl bg-white/5 border border-white/10">
                     <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Monthly Plan Cost</p>
                     <p class="font-semibold text-emerald-400 truncate mt-0.5">$0.00 (Always Free Tier)</p>
+                </div>
+            </div>
+
+            <!-- Live Workload / Translation Status Banner -->
+            <div id="ssWorkloadBanner" class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div id="ssWorkloadIconBox" class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                        <span id="ssWorkloadIcon" class="material-symbols-outlined text-xl">psychology</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 id="ssWorkloadTitle" class="text-sm font-bold text-white">Neural Engine Ready / Standby</h3>
+                            <span id="ssWorkloadBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-on-surface-variant border border-white/10">STANDBY</span>
+                        </div>
+                        <p id="ssWorkloadDesc" class="text-xs text-on-surface-variant mt-0.5">Kona2 Georgian LLM loaded in memory and ready for translation requests</p>
+                    </div>
+                </div>
+                <div id="ssWorkloadStats" class="flex items-center gap-2 text-xs font-mono">
+                    <span id="ssWorkloadPid" class="hidden px-2.5 py-1 rounded-lg bg-black/30 border border-white/5 text-white">PID: --</span>
+                    <span id="ssWorkloadCpu" class="hidden px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">CPU: 0%</span>
                 </div>
             </div>
 
@@ -1493,6 +1522,102 @@
                         <span>Inbound Received:</span>
                         <span id="ssNetRxVal" class="font-mono text-white">--</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- Whole App & Storage Breakdown Section -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-amber-400">folder_data</span>
+                        <h3 class="text-sm font-bold text-white">Application Footprint & Storage Breakdown</h3>
+                    </div>
+                    <span class="text-xs text-on-surface-variant font-mono">System-wide storage breakdown</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <!-- 1. App Codebase & ML Venv -->
+                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-on-surface-variant">App & Python Venv</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono">Codebase</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="ssAppTotalSize" class="text-xl font-bold text-white">-- GB</span>
+                            <span id="ssVenvSize" class="text-xs text-on-surface-variant font-mono">venv: -- GB</span>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant">PyTorch, Transformers, ONNX & Studio backend</p>
+                    </div>
+
+                    <!-- 2. Neural LLM Models -->
+                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-on-surface-variant">Ollama Neural Models</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">LLM Store</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="ssOllamaModelsSize" class="text-xl font-bold text-white">-- GB</span>
+                            <span id="ssOllamaModelName" class="text-xs text-purple-300 font-mono">Kona2 3.8B</span>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant">GGUF weights in /usr/share/ollama/.ollama</p>
+                    </div>
+
+                    <!-- 3. Books & Uploads -->
+                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-on-surface-variant">Books & Audio Cache</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">User Data</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="ssBooksCount" class="text-xl font-bold text-white">-- Books</span>
+                            <span id="ssUploadsSize" class="text-xs text-on-surface-variant font-mono">-- KB</span>
+                        </div>
+                        <p id="ssAudioCacheDetail" class="text-[11px] text-on-surface-variant">Audio previews & PDFs in data/uploads</p>
+                    </div>
+
+                    <!-- 4. Host Free Space & Pool -->
+                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-on-surface-variant">Available Boot Storage</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">Free</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="ssDiskFreeVal" class="text-xl font-bold text-emerald-400">-- GB</span>
+                            <span class="text-xs text-on-surface-variant font-mono">of 96 GB</span>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant">+ 104 GB unallocated in 200 GB OCI pool</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Host System Processes Table -->
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/10">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary-fixed">terminal</span>
+                        <h3 class="text-sm font-bold text-white">Live System Processes & Resource Consumption</h3>
+                    </div>
+                    <span class="text-xs text-on-surface-variant font-mono">Real-time <code class="text-primary-fixed">ps</code> output from Oracle host</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-on-surface-variant">
+                        <thead>
+                            <tr class="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/60">
+                                <th class="py-2 px-3">PID</th>
+                                <th class="py-2 px-3">User</th>
+                                <th class="py-2 px-3">Process / Role</th>
+                                <th class="py-2 px-3 text-right">CPU %</th>
+                                <th class="py-2 px-3 text-right">Memory % (RAM)</th>
+                                <th class="py-2 px-3">CPU Time</th>
+                                <th class="py-2 px-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ssProcessesTableBody" class="divide-y divide-white/5 font-mono text-xs">
+                            <tr>
+                                <td colspan="7" class="py-4 text-center text-on-surface-variant">Loading live host processes...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

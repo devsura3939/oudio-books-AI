@@ -14,7 +14,8 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.server_stats import (
     get_cpu_metrics, get_memory_metrics, get_disk_metrics,
-    get_network_metrics, get_service_metrics, get_full_server_stats
+    get_network_metrics, get_service_metrics, get_full_server_stats,
+    get_app_storage_breakdown, get_active_processes
 )
 
 class TestServerStats(unittest.TestCase):
@@ -39,6 +40,18 @@ class TestServerStats(unittest.TestCase):
         self.assertIn("total_bytes", disk)
         self.assertIn("used_percent", disk)
         self.assertIn("plan_limit", disk)
+        self.assertIn("app_storage", disk)
+
+        storage_breakdown = get_app_storage_breakdown()
+        self.assertIn("app_total_bytes", storage_breakdown)
+        self.assertIn("venv_bytes", storage_breakdown)
+        self.assertIn("ollama_models_bytes", storage_breakdown)
+        self.assertIn("books_count", storage_breakdown)
+
+        active_procs = get_active_processes()
+        self.assertIn("processes", active_procs)
+        self.assertIn("workload", active_procs)
+        self.assertIsInstance(active_procs["processes"], list)
 
         net = get_network_metrics()
         self.assertIn("rx_bytes", net)
@@ -53,6 +66,9 @@ class TestServerStats(unittest.TestCase):
         self.assertEqual(full["status"], "online")
         self.assertIn("server", full)
         self.assertIn("oci_plan", full)
+        self.assertIn("app_storage", full)
+        self.assertIn("processes", full)
+        self.assertIn("workload", full)
 
     def test_admin_endpoint_forbidden_for_anonymous(self):
         """Anonymous callers must receive 403 Forbidden."""
@@ -80,6 +96,9 @@ class TestServerStats(unittest.TestCase):
         self.assertIn("compute", data)
         self.assertIn("memory", data)
         self.assertIn("storage", data)
+        self.assertIn("app_storage", data)
+        self.assertIn("processes", data)
+        self.assertIn("workload", data)
         self.assertIn("network", data)
         self.assertIn("services", data)
         self.assertIn("oci_plan", data)

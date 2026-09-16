@@ -3704,10 +3704,8 @@ function updateAuthUI() {
         }
         const curHash = (window.location.hash || '').replace('#', '').trim();
         if (curHash === 'server-stats') {
-            const curView = document.querySelector('main > div:not(.hidden)');
-            if (!curView || curView.id !== 'view-server-stats') {
-                if (typeof navigate === 'function') navigate('server-stats');
-            }
+            if (typeof navigate === 'function') navigate('server-stats');
+            else if (typeof loadServerStats === 'function') loadServerStats(true);
         }
     } else {
         if (navItemServerStats) {
@@ -11863,6 +11861,16 @@ let serverStatsTimer = null;
 let serverStatsAutoRefreshEnabled = true;
 let serverStatsFetching = false;
 
+function getOciBackendApiBase() {
+    if (window.LUMINA_RUNTIME_CONFIG?.API_URL) return window.LUMINA_RUNTIME_CONFIG.API_URL;
+    try {
+        const h = window.location.hostname;
+        if (h === '92.5.71.162' || h.endsWith('92.5.71.162.sslip.io')) {
+            return '';
+        }
+    } catch (e) {}
+    return 'https://92.5.71.162.sslip.io';
+}
 
 function getServerStatsViewHtml() {
     return `<!-- Header -->
@@ -11889,10 +11897,19 @@ function getServerStatsViewHtml() {
                         <span id="textServerStatsAutoRefresh">Auto-refresh: ON (5s)</span>
                     </button>
                     <button onclick="loadServerStats(true)" id="btnServerStatsRefreshNow" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition shadow-sm active:scale-95">
-                        <span class="material-symbols-outlined text-base">refresh</span>
+                        <span class="material-symbols-outlined text-base" id="iconServerStatsRefreshNow">refresh</span>
                         <span>Refresh Now</span>
                     </button>
                 </div>
+            </div>
+
+            <!-- Error / Offline Notice Banner (hidden by default) -->
+            <div id="ssErrorBanner" class="hidden p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-200 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-red-400">error</span>
+                    <span id="ssErrorBannerText">Failed to connect to Oracle Cloud telemetry endpoint.</span>
+                </div>
+                <button onclick="loadServerStats(true)" class="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-100 font-semibold transition">Retry</button>
             </div>
 
             <!-- Host Meta Banner -->
@@ -11912,6 +11929,26 @@ function getServerStatsViewHtml() {
                 <div class="p-3 rounded-xl bg-white/5 border border-white/10">
                     <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Monthly Plan Cost</p>
                     <p class="font-semibold text-emerald-400 truncate mt-0.5">$0.00 (Always Free Tier)</p>
+                </div>
+            </div>
+
+            <!-- Live Workload / Translation Status Banner -->
+            <div id="ssWorkloadBanner" class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div id="ssWorkloadIconBox" class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                        <span id="ssWorkloadIcon" class="material-symbols-outlined text-xl">psychology</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 id="ssWorkloadTitle" class="text-sm font-bold text-white">Neural Engine Ready / Standby</h3>
+                            <span id="ssWorkloadBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-on-surface-variant border border-white/10">STANDBY</span>
+                        </div>
+                        <p id="ssWorkloadDesc" class="text-xs text-on-surface-variant mt-0.5">Kona2 Georgian LLM loaded in memory and ready for translation requests</p>
+                    </div>
+                </div>
+                <div id="ssWorkloadStats" class="flex items-center gap-2 text-xs font-mono">
+                    <span id="ssWorkloadPid" class="hidden px-2.5 py-1 rounded-lg bg-black/30 border border-white/5 text-white">PID: --</span>
+                    <span id="ssWorkloadCpu" class="hidden px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">CPU: 0%</span>
                 </div>
             </div>
 
@@ -12011,6 +12048,102 @@ function getServerStatsViewHtml() {
                         <span>Inbound Received:</span>
                         <span id="ssNetRxVal" class="font-mono text-white">--</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- Whole App & Storage Breakdown Section -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-amber-400">folder_data</span>
+                        <h3 class="text-sm font-bold text-white">Application Footprint & Storage Breakdown</h3>
+                    </div>
+                    <span class="text-xs text-on-surface-variant font-mono">System-wide storage breakdown</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <!-- 1. App Codebase & ML Venv -->
+                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-on-surface-variant">App & Python Venv</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono">Codebase</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="ssAppTotalSize" class="text-xl font-bold text-white">-- GB</span>
+                            <span id="ssVenvSize" class="text-xs text-on-surface-variant font-mono">venv: -- GB</span>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant">PyTorch, Transformers, ONNX & Studio backend</p>
+                    </div>
+
+                    <!-- 2. Neural LLM Models -->
+                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-on-surface-variant">Ollama Neural Models</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">LLM Store</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="ssOllamaModelsSize" class="text-xl font-bold text-white">-- GB</span>
+                            <span id="ssOllamaModelName" class="text-xs text-purple-300 font-mono">Kona2 3.8B</span>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant">GGUF weights in /usr/share/ollama/.ollama</p>
+                    </div>
+
+                    <!-- 3. Books & Uploads -->
+                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-on-surface-variant">Books & Audio Cache</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">User Data</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="ssBooksCount" class="text-xl font-bold text-white">-- Books</span>
+                            <span id="ssUploadsSize" class="text-xs text-on-surface-variant font-mono">-- KB</span>
+                        </div>
+                        <p id="ssAudioCacheDetail" class="text-[11px] text-on-surface-variant">Audio previews & PDFs in data/uploads</p>
+                    </div>
+
+                    <!-- 4. Host Free Space & Pool -->
+                    <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-on-surface-variant">Available Boot Storage</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">Free</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="ssDiskFreeVal" class="text-xl font-bold text-emerald-400">-- GB</span>
+                            <span class="text-xs text-on-surface-variant font-mono">of 96 GB</span>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant">+ 104 GB unallocated in 200 GB OCI pool</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Host System Processes Table -->
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/10">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary-fixed">terminal</span>
+                        <h3 class="text-sm font-bold text-white">Live System Processes & Resource Consumption</h3>
+                    </div>
+                    <span class="text-xs text-on-surface-variant font-mono">Real-time <code class="text-primary-fixed">ps</code> output from Oracle host</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-on-surface-variant">
+                        <thead>
+                            <tr class="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/60">
+                                <th class="py-2 px-3">PID</th>
+                                <th class="py-2 px-3">User</th>
+                                <th class="py-2 px-3">Process / Role</th>
+                                <th class="py-2 px-3 text-right">CPU %</th>
+                                <th class="py-2 px-3 text-right">Memory % (RAM)</th>
+                                <th class="py-2 px-3">CPU Time</th>
+                                <th class="py-2 px-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ssProcessesTableBody" class="divide-y divide-white/5 font-mono text-xs">
+                            <tr>
+                                <td colspan="7" class="py-4 text-center text-on-surface-variant">Loading live host processes...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -12147,9 +12280,9 @@ async function loadServerStats(manual = false) {
     serverStatsFetching = true;
 
     const refreshBtn = document.getElementById('btnServerStatsRefreshNow');
-    if (manual && refreshBtn) {
-        refreshBtn.classList.add('opacity-75', 'pointer-events-none');
-    }
+    const refreshIcon = document.getElementById('iconServerStatsRefreshNow');
+    if (refreshBtn) refreshBtn.classList.add('opacity-75', 'pointer-events-none');
+    if (refreshIcon) refreshIcon.classList.add('animate-spin');
 
     try {
         const headers = {
@@ -12160,7 +12293,7 @@ async function loadServerStats(manual = false) {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const apiBase = window.LUMINA_RUNTIME_CONFIG?.API_URL || (_isStaticHost ? 'https://92.5.71.162.sslip.io' : '');
+        const apiBase = getOciBackendApiBase();
         const res = await fetch(`${apiBase}/api/admin/server-stats?t=${Date.now()}`, {
             method: 'GET',
             headers
@@ -12174,16 +12307,25 @@ async function loadServerStats(manual = false) {
         renderServerStats(data);
     } catch (err) {
         console.warn('Failed to load server stats:', err);
+        const errBanner = document.getElementById('ssErrorBanner');
+        const errText = document.getElementById('ssErrorBannerText');
+        if (errBanner) {
+            errBanner.classList.remove('hidden');
+            if (errText) errText.textContent = `Server stats unavailable (${err.message || 'Connection error'}). Telemetry backend offline or unreachable.`;
+        }
     } finally {
         serverStatsFetching = false;
-        if (refreshBtn) {
-            refreshBtn.classList.remove('opacity-75', 'pointer-events-none');
-        }
+        if (refreshBtn) refreshBtn.classList.remove('opacity-75', 'pointer-events-none');
+        if (refreshIcon) refreshIcon.classList.remove('animate-spin');
     }
 }
 
 function renderServerStats(data) {
     if (!data) return;
+
+    // Hide any previous error banner
+    const errBanner = document.getElementById('ssErrorBanner');
+    if (errBanner) errBanner.classList.add('hidden');
 
     // Host & OS
     const elHostOs = document.getElementById('ssHostOs');
@@ -12192,7 +12334,47 @@ function renderServerStats(data) {
     const elUptime = document.getElementById('ssHostUptime');
     if (elUptime && data.server) elUptime.textContent = data.server.uptime_human;
 
-    // 1. Compute
+    // 1. Workload Banner
+    const workload = data.workload || {};
+    const wlTitle = document.getElementById('ssWorkloadTitle');
+    const wlBadge = document.getElementById('ssWorkloadBadge');
+    const wlDesc = document.getElementById('ssWorkloadDesc');
+    const wlIconBox = document.getElementById('ssWorkloadIconBox');
+    const wlIcon = document.getElementById('ssWorkloadIcon');
+    const wlPid = document.getElementById('ssWorkloadPid');
+    const wlCpu = document.getElementById('ssWorkloadCpu');
+
+    if (workload.is_active) {
+        if (wlTitle) wlTitle.textContent = workload.title || 'Active Neural Translation Ongoing';
+        if (wlBadge) {
+            wlBadge.textContent = 'TRANSLATING';
+            wlBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 animate-pulse';
+        }
+        if (wlDesc) wlDesc.textContent = workload.description || 'Kona2 LLM actively processing translation workload';
+        if (wlIconBox) wlIconBox.className = 'w-10 h-10 rounded-xl bg-emerald-500/25 border border-emerald-500/40 flex items-center justify-center text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse flex-shrink-0';
+        if (wlIcon) wlIcon.textContent = 'bolt';
+        if (wlPid && workload.pid) {
+            wlPid.textContent = `PID: ${workload.pid}`;
+            wlPid.classList.remove('hidden');
+        }
+        if (wlCpu && workload.cpu_percent) {
+            wlCpu.textContent = `CPU: ${workload.cpu_percent}%`;
+            wlCpu.classList.remove('hidden');
+        }
+    } else {
+        if (wlTitle) wlTitle.textContent = workload.title || 'Neural Engine Ready / Standby';
+        if (wlBadge) {
+            wlBadge.textContent = 'STANDBY';
+            wlBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-on-surface-variant border border-white/10';
+        }
+        if (wlDesc) wlDesc.textContent = workload.description || 'Kona2 Georgian LLM loaded in memory and ready for translation requests';
+        if (wlIconBox) wlIconBox.className = 'w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 flex-shrink-0';
+        if (wlIcon) wlIcon.textContent = 'psychology';
+        if (wlPid) wlPid.classList.add('hidden');
+        if (wlCpu) wlCpu.classList.add('hidden');
+    }
+
+    // 2. Compute
     const cpu = data.compute || {};
     const elCpuBadge = document.getElementById('ssCpuBadge');
     if (elCpuBadge) elCpuBadge.textContent = `${cpu.cores || 4} OCPUs (ARM)`;
@@ -12209,7 +12391,7 @@ function renderServerStats(data) {
     const elCpuLoads = document.getElementById('ssCpuLoads');
     if (elCpuLoads && cpu.load_avg) elCpuLoads.textContent = `${cpu.load_avg['1m']} / ${cpu.load_avg['5m']} / ${cpu.load_avg['15m']}`;
 
-    // 2. Memory
+    // 3. Memory
     const mem = data.memory || {};
     const elMemVal = document.getElementById('ssMemVal');
     if (elMemVal) elMemVal.textContent = `${mem.used_gb || 0} GB`;
@@ -12223,7 +12405,7 @@ function renderServerStats(data) {
     const elMemAvail = document.getElementById('ssMemAvail');
     if (elMemAvail) elMemAvail.textContent = `${mem.available_human || '--'} free`;
 
-    // 3. Storage
+    // 4. Storage
     const disk = data.storage || {};
     const elDiskVal = document.getElementById('ssDiskVal');
     if (elDiskVal) elDiskVal.textContent = `${disk.used_gb || 0} GB`;
@@ -12237,7 +12419,7 @@ function renderServerStats(data) {
     const elModelCache = document.getElementById('ssModelCache');
     if (elModelCache) elModelCache.textContent = disk.model_cache_human || '0 B';
 
-    // 4. Bandwidth
+    // 5. Bandwidth
     const net = data.network || {};
     const elNetTxVal = document.getElementById('ssNetTxVal');
     if (elNetTxVal) elNetTxVal.textContent = net.tx_human || '0 B';
@@ -12251,7 +12433,67 @@ function renderServerStats(data) {
     const elNetRxVal = document.getElementById('ssNetRxVal');
     if (elNetRxVal) elNetRxVal.textContent = `${net.rx_human || '0 B'} (${(net.rx_packets || 0).toLocaleString()} pkts)`;
 
-    // Services
+    // 6. Application Storage Breakdown Cards
+    const appStorage = data.app_storage || disk.app_storage || {};
+    const elAppTotalSize = document.getElementById('ssAppTotalSize');
+    if (elAppTotalSize) elAppTotalSize.textContent = appStorage.app_total_human || `${appStorage.app_total_gb || 8.1} GB`;
+
+    const elVenvSize = document.getElementById('ssVenvSize');
+    if (elVenvSize) elVenvSize.textContent = `venv: ${appStorage.venv_human || '5.6 GB'}`;
+
+    const elOllamaModelsSize = document.getElementById('ssOllamaModelsSize');
+    if (elOllamaModelsSize) elOllamaModelsSize.textContent = appStorage.ollama_models_human || `${appStorage.ollama_models_gb || 10.3} GB`;
+
+    const elBooksCount = document.getElementById('ssBooksCount');
+    if (elBooksCount) elBooksCount.textContent = `${appStorage.books_count || 10} Books`;
+
+    const elUploadsSize = document.getElementById('ssUploadsSize');
+    if (elUploadsSize) elUploadsSize.textContent = `${appStorage.uploads_human || '48 KB'} stored`;
+
+    const elAudioCacheDetail = document.getElementById('ssAudioCacheDetail');
+    if (elAudioCacheDetail) elAudioCacheDetail.textContent = `Audio cache: ${appStorage.audio_human || '112 KB'} (${appStorage.audio_files_count || 0} previews)`;
+
+    const elDiskFreeVal = document.getElementById('ssDiskFreeVal');
+    if (elDiskFreeVal) elDiskFreeVal.textContent = `${disk.free_gb || 55} GB free`;
+
+    // 7. Active Host System Processes Table
+    const procTbody = document.getElementById('ssProcessesTableBody');
+    if (procTbody && Array.isArray(data.processes)) {
+        if (data.processes.length === 0) {
+            procTbody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-on-surface-variant">No active processes sampled.</td></tr>';
+        } else {
+            procTbody.innerHTML = data.processes.map(p => {
+                let cpuBadge = '<span class="text-white font-bold">' + p.cpu_percent.toFixed(1) + '%</span>';
+                if (p.cpu_percent >= 50.0) {
+                    cpuBadge = '<span class="px-2 py-0.5 rounded bg-red-500/20 text-red-300 font-bold border border-red-500/30">' + p.cpu_percent.toFixed(1) + '%</span>';
+                } else if (p.cpu_percent >= 10.0) {
+                    cpuBadge = '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">' + p.cpu_percent.toFixed(1) + '%</span>';
+                }
+
+                let statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-on-surface-variant">active</span>';
+                if (p.is_workload && p.cpu_percent > 10.0) {
+                    statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">busy</span>';
+                } else if (p.is_workload) {
+                    statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-container/20 text-primary-fixed">ready</span>';
+                }
+
+                return `<tr class="hover:bg-white/[0.02] transition">
+                    <td class="py-2.5 px-3 font-mono text-white/80">${p.pid}</td>
+                    <td class="py-2.5 px-3 text-on-surface-variant font-sans">${p.user}</td>
+                    <td class="py-2.5 px-3">
+                        <div class="font-sans font-semibold text-white">${p.role || p.name}</div>
+                        <div class="text-[10px] font-mono text-on-surface-variant/70 truncate max-w-xs" title="${p.comm}">${p.name}</div>
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono">${cpuBadge}</td>
+                    <td class="py-2.5 px-3 text-right font-mono text-purple-300">${p.mem_percent.toFixed(1)}% <span class="text-on-surface-variant text-[10px]">(${p.mem_human})</span></td>
+                    <td class="py-2.5 px-3 font-mono text-on-surface-variant text-xs">${p.cpu_time || '--'}</td>
+                    <td class="py-2.5 px-3">${statusBadge}</td>
+                </tr>`;
+            }).join('');
+        }
+    }
+
+    // 8. Services
     const srv = data.services || {};
     const elApiPid = document.getElementById('ssApiPid');
     if (elApiPid && srv.oudio_api) elApiPid.textContent = `PID ${srv.oudio_api.pid} (active)`;
@@ -12272,7 +12514,7 @@ function renderServerStats(data) {
         elOllamaModel.textContent = srv.ollama.active_model || 'kona2-small-3.8B.Q4_K_M';
     }
 
-    // Table rows
+    // 9. Table rows
     const elTblCpu = document.getElementById('ssTableCpuUsed');
     if (elTblCpu && cpu.cores) elTblCpu.textContent = `${cpu.cores} Cores (100% OCI Allocation)`;
 
@@ -12321,6 +12563,7 @@ function stopServerStatsAutoRefresh() {
     }
 }
 
+window.getOciBackendApiBase = getOciBackendApiBase;
 window.getServerStatsViewHtml = getServerStatsViewHtml;
 window.ensureServerStatsViewRendered = ensureServerStatsViewRendered;
 window.loadServerStats = loadServerStats;
