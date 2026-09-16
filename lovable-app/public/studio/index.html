@@ -1021,8 +1021,8 @@
             <button onclick="openModal('uploadModal')" class="p-2 rounded-xl text-primary-fixed hover:bg-white/10 transition" aria-label="Upload PDF" title="Upload PDF">
                 <span class="material-symbols-outlined text-2xl">upload_file</span>
             </button>
-            <button onclick="openTrainingLabModal()" class="p-2 rounded-xl text-secondary hover:bg-white/10 transition" aria-label="Train with LLMs" title="Train with LLMs & Keys">
-                <span class="material-symbols-outlined text-2xl">model_training</span>
+            <button id="mobileTopServerStatsBtn" onclick="navigate('server-stats')" data-admin-build class="hidden p-2 rounded-xl text-emerald-400 hover:bg-white/10 transition" aria-label="Server Stats" title="Server Stats" style="display: none !important;">
+                <span class="material-symbols-outlined text-2xl">dns</span>
             </button>
             <button id="mobileTopProfileBtn" onclick="openAccountCabinet()" class="p-2 rounded-xl text-white hover:bg-white/10 transition" aria-label="Account & Cabinet" title="Account & Cabinet">
                 <span class="material-symbols-outlined text-2xl">account_circle</span>
@@ -1083,9 +1083,7 @@
                 <button onclick="openTrainingLabModal();closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-secondary hover:bg-white/5 transition">
                     <span class="material-symbols-outlined text-[20px]">model_training</span><span>Training Lab</span>
                 </button>
-                <button id="mobileNavServerStats" onclick="navigate('server-stats');closeMobileNav()" class="hidden w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-emerald-400 hover:bg-white/5 hover:text-white transition">
-                    <span class="material-symbols-outlined text-[20px] text-emerald-400">dns</span><span>Server Stats (OCI)</span>
-                </button>
+                <button id="mobileNavServerStats" data-admin-build class="hidden" style="display: none !important;"></button>
                 <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
                     <svg class="w-5 h-5 fill-current text-white/80" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                     <span>GitHub Repository</span>
@@ -1171,15 +1169,7 @@
                     <span>Training Lab</span>
                 </button>
             </li>
-            <li id="nav-item-server-stats" class="hidden">
-                <button onclick="navigate('server-stats')" id="nav-server-stats" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-emerald-400 hover:bg-white/5 hover:text-emerald-300 transition-all font-medium text-sm">
-                    <span class="material-symbols-outlined text-[20px] text-emerald-400">dns</span>
-                    <span class="flex items-center gap-1.5 flex-grow justify-between">
-                        <span>Server Stats</span>
-                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Live</span>
-                    </span>
-                </button>
-            </li>
+            <li id="nav-item-server-stats" data-admin-build class="hidden" style="display: none !important;"></li>
             <li>
                 <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-white transition-all font-medium text-sm">
                     <svg class="w-5 h-5 fill-current text-white/80" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
@@ -1235,9 +1225,10 @@
                 <span class="material-symbols-outlined text-sm text-on-surface-variant">expand_more</span>
             </button>
 
-            <button id="topTrainingLabBtn" onclick="openTrainingLabModal()" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-secondary/15 hover:bg-secondary/25 border border-secondary/30 text-xs font-bold text-secondary transition shadow-sm" title="Train with LLMs & Generate API Keys">
-                <span class="material-symbols-outlined text-base">model_training</span>
-                <span>Train with LLMs</span>
+            <button id="topServerStatsBtn" onclick="navigate('server-stats')" data-admin-build class="hidden items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-bold text-emerald-400 transition shadow-sm" title="Server State & Live Usage Telemetry" style="display: none !important;">
+                <span class="material-symbols-outlined text-base text-emerald-400">dns</span>
+                <span>Server Stats</span>
+                <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Live</span>
             </button>
 
             <button id="topProfileBtn" onclick="openAccountCabinet()" class="p-1 rounded-full text-on-surface-variant hover:text-white transition flex items-center gap-2" title="Your Account & Cabinet">
@@ -1354,9 +1345,9 @@
             <div id="scanShelfGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
         </div>
 
-        <!-- View: Server Stats (Admin: ananiadevsurashvili@gmail.com Only) -->
-        <div id="view-server-stats" class="hidden space-y-6">
-            <!-- Header -->
+        <!-- View: Server Stats (Strict Admin Only: ananiadevsurashvili@gmail.com) -->
+        <div id="view-server-stats" data-admin-build class="hidden space-y-6" style="display: none !important;">
+<!-- Header -->
             <div class="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-white/10">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)]">
@@ -1611,6 +1602,7 @@
                 </div>
             </div>
         </div>
+
 
     </main>
 
@@ -2348,14 +2340,27 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
 
             <div id="wbAdminTelemetryCard" class="hidden p-3.5 rounded-2xl bg-gradient-to-br from-indigo-950/70 via-black/80 to-purple-950/60 border border-indigo-500/30 text-xs space-y-2"></div>
 
-            <div class="flex flex-col sm:flex-row gap-2 pt-1">
-                <button id="wbStartReadingButton" onclick="startReadingWhileTranslating()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-georgian-gold/25 to-amber-500/25 hover:from-georgian-gold/35 hover:to-amber-500/35 text-georgian-gold text-xs font-bold border border-georgian-gold/40 shadow-lg shadow-black/20 transition flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-base">auto_stories</span>
-                    <span id="wbStartReadingText">Start Reading Translated Chapters</span>
+            <!-- Primary Action Bar (Dynamic depending on Running vs Paused/Finished) -->
+            <div id="wbActionContainer" class="space-y-2 pt-1">
+                <!-- Large, Glowing Continue / Resume Button (Visible whenever paused, stopped, or stalled) -->
+                <button id="wbResumeButton" onclick="startWholeBookTranslation(true)" class="hidden w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400 via-georgian-gold to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-neutral-950 font-extrabold text-sm shadow-[0_0_30px_rgba(212,175,55,0.45)] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 cursor-pointer">
+                    <span class="material-symbols-outlined text-xl font-black">play_arrow</span>
+                    <span id="wbResumeButtonText">Resume Translation from Last Accepted Segment</span>
                 </button>
-                <button id="wbDismissButton" onclick="cancelWholeBookTranslation()" class="sm:w-36 py-2.5 rounded-xl bg-error/15 hover:bg-error/25 text-error text-xs font-semibold border border-error/30 transition">
-                    Stop Translation
-                </button>
+
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <button id="wbStartReadingButton" onclick="startReadingWhileTranslating()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-georgian-gold/25 to-amber-500/25 hover:from-georgian-gold/35 hover:to-amber-500/35 text-georgian-gold text-xs font-bold border border-georgian-gold/40 shadow-lg shadow-black/20 transition flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-base">auto_stories</span>
+                        <span id="wbStartReadingText">Start Reading Translated Chapters</span>
+                    </button>
+                    <button id="wbSkipSegmentButton" onclick="skipCurrentTranslationSegment()" title="Skip current segment and immediately advance" class="hidden sm:flex px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white/90 text-xs font-semibold border border-white/15 transition items-center justify-center gap-1.5">
+                        <span class="material-symbols-outlined text-base text-amber-400">fast_forward</span>
+                        <span>Skip Segment</span>
+                    </button>
+                    <button id="wbDismissButton" onclick="cancelWholeBookTranslation()" class="sm:w-36 py-2.5 rounded-xl bg-error/15 hover:bg-error/25 text-error text-xs font-semibold border border-error/30 transition">
+                        Stop Translation
+                    </button>
+                </div>
             </div>
             <button id="wbRetryButton" hidden onclick="startWholeBookTranslation(true)" class="studio-primary w-full">Retry from last accepted segment</button>
         </div>

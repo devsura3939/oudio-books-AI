@@ -45,7 +45,7 @@
             signal?.throwIfAborted();
             if ((cooldown.get(provider) || 0) > Date.now()) {failure(provider,'temporarily paused after an earlier failure');return null;}
             try {
-                const timeout = provider === 'server' ? 180000 : 8000;
+                const timeout = provider === 'server' ? 12000 : 8000;
                 const response = await fetchImpl(url, { ...options, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout) });
                 if (!response.ok) {
                     failure(provider,response.status===429?'rate limited':`HTTP ${response.status}`);
@@ -72,7 +72,7 @@
                 if (previous) cacheChars -= previous.size;
                 const size = key.length + text.length;
                 cache.delete(key); cache.set(key, { text, at: Date.now(), size }); cacheChars += size;
-                while (cache.size > 128 || cacheChars > 256000) {
+                while (cache.size > 512 || cacheChars > 1024000) {
                     const oldest = cache.keys().next().value;
                     cacheChars -= cache.get(oldest).size; cache.delete(oldest);
                 }
@@ -83,7 +83,21 @@
                 const payload = { text: source, source_lang: sourceLang, target_lang: targetLang };
                 if (options?.context_before) payload.context_before = options.context_before;
                 if (options?.context_after) payload.context_after = options.context_after;
-                const data = await request('server', serverEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, signal);
+                const headers = { 'Content-Type': 'application/json' };
+                try {
+                    const sessionApiKey = options?.api_key || (typeof localStorage !== 'undefined' ? (localStorage.getItem('geminiApiKey') || localStorage.getItem('openRouterApiKey') || '') : '');
+                    if (sessionApiKey) {
+                        const cleanKey = sessionApiKey.trim();
+                        payload.api_key = cleanKey;
+                        headers['X-Goog-Api-Key'] = cleanKey;
+                        headers['X-Gemini-Key'] = cleanKey;
+                    }
+                    const customUrl = options?.checker_url || (typeof localStorage !== 'undefined' ? (localStorage.getItem('customProviderUrl') || '') : '');
+                    if (customUrl) payload.checker_url = customUrl.trim();
+                    const customModel = options?.checker_model || (typeof localStorage !== 'undefined' ? (localStorage.getItem('customProviderModel') || '') : '');
+                    if (customModel) payload.checker_model = customModel.trim();
+                } catch (_) { /* ignore storage errors */ }
+                const data = await request('server', serverEndpoint, { method: 'POST', headers, body: JSON.stringify(payload) }, signal);
                 const engineName = data?.engine || 'server';
                 const result = data?.success !== false && accept(data?.translated, engineName);
                 if (result) return result;

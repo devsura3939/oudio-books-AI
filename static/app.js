@@ -2096,6 +2096,9 @@ function cacheDOM() {
         wbStartReadingButton: document.getElementById('wbStartReadingButton'),
         wbStartReadingText: document.getElementById('wbStartReadingText'),
         wbAdminTelemetryCard: document.getElementById('wbAdminTelemetryCard'),
+        wbResumeButton: document.getElementById('wbResumeButton'),
+        wbResumeButtonText: document.getElementById('wbResumeButtonText'),
+        wbSkipSegmentButton: document.getElementById('wbSkipSegmentButton'),
     };
 }
 
@@ -2873,28 +2876,43 @@ function navToSection(tab) {
 
 function navigate(viewId) {
     const views = ['library', 'discover', 'scanner', 'server-stats'];
+    const emailClean = (currentUser?.email || '').trim().toLowerCase();
+    const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
+
+    // Strictly forbid non-admin users from accessing server-stats
+    if (viewId === 'server-stats' && !isAdmin) {
+        const viewStats = document.getElementById('view-server-stats');
+        if (viewStats) {
+            viewStats.innerHTML = '';
+            viewStats.classList.add('hidden');
+            viewStats.style.display = 'none';
+        }
+        navigate('library');
+        return;
+    }
+
     views.forEach(id => {
         const view = document.getElementById(`view-${id}`);
         const nav = document.getElementById(`nav-${id}`);
-        if (view) view.classList.add('hidden');
+        if (view) {
+            view.classList.add('hidden');
+            if (id === 'server-stats' && !isAdmin) {
+                view.innerHTML = '';
+                view.style.display = 'none';
+            }
+        }
         if (nav) {
             nav.classList.remove('text-primary-fixed-dim', 'bg-white/10', 'border-l-2', 'border-primary-container');
             nav.classList.add('text-on-surface-variant');
         }
     });
 
-    if (viewId === 'server-stats') {
-        const emailClean = (currentUser?.email || '').trim().toLowerCase();
-        const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
-        if (!isAdmin) {
-            navigate('library');
-            return;
-        }
-    }
-
     const activeView = document.getElementById(`view-${viewId}`);
     const activeNav = document.getElementById(`nav-${viewId}`);
-    if (activeView) activeView.classList.remove('hidden');
+    if (activeView) {
+        activeView.classList.remove('hidden');
+        activeView.style.display = '';
+    }
     if (activeNav) {
         activeNav.classList.add('text-primary-fixed-dim', 'bg-white/10', 'border-l-2', 'border-primary-container');
         activeNav.classList.remove('text-on-surface-variant');
@@ -2904,11 +2922,22 @@ function navigate(viewId) {
     if (viewId === 'library') updateBottomNavActive('home');
     else if (viewId === 'scanner') updateBottomNavActive('scanner');
 
-    if (viewId === 'server-stats') {
-        if (typeof loadServerStats === 'function') loadServerStats();
+    if (viewId === 'server-stats' && isAdmin) {
+        if (typeof ensureServerStatsViewRendered === 'function') ensureServerStatsViewRendered();
+        if (typeof loadServerStats === 'function') loadServerStats(true);
         if (typeof startServerStatsAutoRefresh === 'function') startServerStatsAutoRefresh();
+        try {
+            if (window.location.hash !== '#server-stats') {
+                history.replaceState(null, '', '#server-stats');
+            }
+        } catch (_) {}
     } else {
         if (typeof stopServerStatsAutoRefresh === 'function') stopServerStatsAutoRefresh();
+        try {
+            if (window.location.hash === '#server-stats') {
+                history.replaceState(null, '', '#' + (viewId || 'library'));
+            }
+        } catch (_) {}
     }
 }
 
@@ -3618,29 +3647,84 @@ function updateAuthUI() {
         }
     }
 
-    // 3b. Server Stats Nav Item (Sidebar & Mobile)
+    // 3b. Server Stats Controls (Top Navbar, Mobile Header, Sidebar & Drawer)
+    const topServerStatsBtn = document.getElementById('topServerStatsBtn');
+    const mobileTopServerStatsBtn = document.getElementById('mobileTopServerStatsBtn');
     const navItemServerStats = document.getElementById('nav-item-server-stats');
-    if (navItemServerStats) {
+    const mobileNavServerStats = document.getElementById('mobileNavServerStats');
+    const viewServerStats = document.getElementById('view-server-stats');
+
+    if (topServerStatsBtn) {
         if (isAdmin) {
-            navItemServerStats.classList.remove('hidden');
+            topServerStatsBtn.classList.remove('hidden');
+            topServerStatsBtn.classList.add('flex');
+            topServerStatsBtn.style.removeProperty('display');
         } else {
-            navItemServerStats.classList.add('hidden');
+            topServerStatsBtn.classList.add('hidden');
+            topServerStatsBtn.classList.remove('flex');
+            topServerStatsBtn.style.setProperty('display', 'none', 'important');
         }
     }
-    const mobileNavServerStats = document.getElementById('mobileNavServerStats');
-    if (mobileNavServerStats) {
+    if (mobileTopServerStatsBtn) {
         if (isAdmin) {
+            mobileTopServerStatsBtn.classList.remove('hidden');
+            mobileTopServerStatsBtn.classList.add('flex');
+            mobileTopServerStatsBtn.style.removeProperty('display');
+        } else {
+            mobileTopServerStatsBtn.classList.add('hidden');
+            mobileTopServerStatsBtn.classList.remove('flex');
+            mobileTopServerStatsBtn.style.setProperty('display', 'none', 'important');
+        }
+    }
+
+    if (isAdmin) {
+        if (navItemServerStats) {
+            navItemServerStats.classList.remove('hidden');
+            navItemServerStats.style.display = '';
+            if (!navItemServerStats.innerHTML || !navItemServerStats.innerHTML.trim()) {
+                navItemServerStats.innerHTML = `<button onclick="navigate('server-stats')" id="nav-server-stats" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-emerald-400 hover:bg-white/5 hover:text-emerald-300 transition-all font-medium text-sm"><span class="material-symbols-outlined text-[20px] text-emerald-400">dns</span><span class="flex items-center gap-1.5 flex-grow justify-between"><span>Server Stats</span><span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Live</span></span></button>`;
+            }
+        }
+        if (mobileNavServerStats) {
             mobileNavServerStats.classList.remove('hidden');
             mobileNavServerStats.classList.add('flex');
-        } else {
+            mobileNavServerStats.style.display = '';
+            mobileNavServerStats.onclick = function() { navigate('server-stats'); if (typeof closeMobileNav === 'function') closeMobileNav(); };
+            if (!mobileNavServerStats.innerHTML || !mobileNavServerStats.innerHTML.trim()) {
+                mobileNavServerStats.innerHTML = `<span class="material-symbols-outlined text-[20px] text-emerald-400">dns</span><span>Server Stats (OCI)</span>`;
+            }
+        }
+        const curHash = (window.location.hash || '').replace('#', '').trim();
+        if (curHash === 'server-stats') {
+            const curView = document.querySelector('main > div:not(.hidden)');
+            if (!curView || curView.id !== 'view-server-stats') {
+                if (typeof navigate === 'function') navigate('server-stats');
+            }
+        }
+    } else {
+        if (navItemServerStats) {
+            navItemServerStats.innerHTML = '';
+            navItemServerStats.classList.add('hidden');
+            navItemServerStats.style.display = 'none';
+        }
+        if (mobileNavServerStats) {
+            mobileNavServerStats.innerHTML = '';
             mobileNavServerStats.classList.add('hidden');
             mobileNavServerStats.classList.remove('flex');
+            mobileNavServerStats.style.display = 'none';
+            mobileNavServerStats.onclick = null;
         }
-    }
-    if (!isAdmin) {
-        const viewServerStats = document.getElementById('view-server-stats');
-        if (viewServerStats && !viewServerStats.classList.contains('hidden')) {
-            if (typeof navigate === 'function') navigate('library');
+        if (viewServerStats) {
+            viewServerStats.innerHTML = '';
+            viewServerStats.classList.add('hidden');
+            viewServerStats.style.display = 'none';
+        }
+        if (typeof stopServerStatsAutoRefresh === 'function') stopServerStatsAutoRefresh();
+        if (document.querySelector) {
+            const curView = document.querySelector('main > div:not(.hidden)');
+            if (curView && curView.id === 'view-server-stats') {
+                if (typeof navigate === 'function') navigate('library');
+            }
         }
     }
 
@@ -8133,9 +8217,22 @@ async function runWholeBookTranslation(resume = false) {
             job.chapterIdx = index;
             await saveTranslationJob(job);
             updateChapterQueueStatus(index, -1);
-            if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `${targetName}: chapter ${index + 1} / ${job.totalChapters}`;
+            let lookaheadPromise = null;
+            let lookaheadIndex = -1;
+            const startLookahead = (nextIdx) => {
+                if (nextIdx < chunks.length && (!checkpoint.outputs[nextIdx] || !assessTranslation(chunks[nextIdx], checkpoint.outputs[nextIdx], targetLang).ok)) {
+                    lookaheadIndex = nextIdx;
+                    lookaheadPromise = (typeof translateChunkSmart === 'function'
+                        ? translateChunkSmart(chunks[nextIdx], targetLang, chunks[nextIdx - 1] || '', chunks[nextIdx + 1] || '')
+                        : translateChunkAI(chunks[nextIdx], targetLang, chunks[nextIdx - 1] || '', chunks[nextIdx + 1] || '', true)
+                    );
+                } else {
+                    lookaheadPromise = null;
+                    lookaheadIndex = -1;
+                }
+            };
             for (let i = 0; i < chunks.length; i++) {
-                if (cancelTranslationFlag) break;
+                if (cancelTranslationFlag) { lookaheadPromise = null; lookaheadIndex = -1; break; }
                 if (DOM.wbSentenceCounter) DOM.wbSentenceCounter.textContent = `Accepted segments: ${checkpoint.outputs.filter(Boolean).length} / ${chunks.length}`;
                 if (checkpoint.outputs[i] && assessTranslation(chunks[i], checkpoint.outputs[i], targetLang).ok) continue;
                 lastTranslationFailure = '';
@@ -8147,17 +8244,63 @@ async function runWholeBookTranslation(resume = false) {
                 // must never stop solely because an optional reviewer rejects
                 // a candidate; the deterministic tier still has to pass the
                 // same script and completeness gate before it is committed.
-                let output = typeof translateChunkSmart === 'function'
-                    ? await translateChunkSmart(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '')
-                    : await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true);
+                let output = null;
+                let chunkPromise;
+                if (lookaheadIndex === i && lookaheadPromise) {
+                    chunkPromise = lookaheadPromise;
+                    lookaheadPromise = null;
+                    lookaheadIndex = -1;
+                } else {
+                    chunkPromise = (typeof translateChunkSmart === 'function'
+                        ? translateChunkSmart(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '')
+                        : translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true));
+                }
+
+                // 12-second safety timeout race for smart routing
+                if (typeof translateChunkSmart === 'function' && typeof translateChunkLocal === 'function') {
+                    let segTimer;
+                    const segTimeout = new Promise(resolve => {
+                        segTimer = setTimeout(() => resolve('__STALL__'), 12000);
+                    });
+                    try {
+                        const raceRes = await Promise.race([chunkPromise, segTimeout]);
+                        clearTimeout(segTimer);
+                        if (raceRes === '__STALL__') {
+                            console.warn(`[Translation] Chunk ${i + 1} took >12s; auto-recovering with fast neural translation`);
+                            output = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
+                        } else {
+                            output = raceRes;
+                        }
+                    } catch (raceErr) {
+                        clearTimeout(segTimer);
+                        output = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
+                    }
+                } else {
+                    output = await chunkPromise;
+                }
+
+                if (skipCurrentTranslationSegmentRequested) {
+                    skipCurrentTranslationSegmentRequested = false;
+                    output = output || chunks[i];
+                }
                 checkOwner();
                 if (window.EngbotTranslationPhases) {
                     job.phaseBudget = getPhaseTranslator().snapshot();
                     await saveTranslationJob(job);
                 }
-                if (cancelTranslationFlag) break; // Late provider responses cannot commit after stop.
+                if (cancelTranslationFlag) { lookaheadPromise = null; lookaheadIndex = -1; break; } // Late provider responses cannot commit after stop.
                 checkOwner();
                 let assessment = assessTranslation(chunks[i], output, targetLang);
+                if (!assessment.ok && typeof translateChunkLocal === 'function') {
+                    // Try one fast local neural attempt before rejecting
+                    try {
+                        const fallbackOut = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
+                        if (fallbackOut && assessTranslation(chunks[i], fallbackOut, targetLang).ok) {
+                            output = fallbackOut;
+                            assessment = { ok: true };
+                        }
+                    } catch (_) {}
+                }
                 if (!assessment.ok) {
                     const isMetadata = /(?:printed|bound|published|copyright|edition|london|street|road|lane|house|press|books|company|ltd|inc|shps|isbn)\b/i.test(chunks[i]);
                     if (output && (assessment.reason === 'wrong_script_ratio' || isMetadata)) {
@@ -8168,10 +8311,14 @@ async function runWholeBookTranslation(resume = false) {
                     }
                 }
                 if (!assessment.ok) {
+                    lookaheadPromise = null; lookaheadIndex = -1;
                     throw new Error(`Chapter ${index + 1}, segment ${i + 1}. ${lastTranslationFailure || window.EngbotProviders?.getFailure()?.message || 'The result failed translation quality checks. Retry this segment.'}`);
                 }
                 checkpoint.outputs[i] = output;
                 await saveTranslationJob(job);
+                if (!cancelTranslationFlag && i + 1 < chunks.length) {
+                    startLookahead(i + 1);
+                }
                 const engKey = lastTranslationEngine || 'kona2';
                 job.telemetry.engines[engKey] = (job.telemetry.engines[engKey] || 0) + 1;
                 job.telemetry.totalChunks = (job.telemetry.totalChunks || 0) + 1;
@@ -8264,7 +8411,14 @@ async function runWholeBookTranslation(resume = false) {
         if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = 'Paused at the last accepted segment. Your source and completed translations are retained.';
         const retryButton = document.getElementById('wbRetryButton');
         if (retryButton) retryButton.hidden = false;
-        showToast(`Translation incomplete: ${error.message} Press Translate to retry.`, 'error');
+        const resumeBtn = document.getElementById('wbResumeButton');
+        const resumeText = document.getElementById('wbResumeButtonText');
+        if (resumeBtn) {
+            resumeBtn.classList.remove('hidden');
+            resumeBtn.style.display = '';
+            if (resumeText) resumeText.textContent = `▶ Continue Translation (from Chapter ${(job?.chapterIdx || 0) + 1})`;
+        }
+        showToast(`Translation incomplete: ${error.message} Click Continue to resume.`, 'error');
     } finally {
         activeTranslationBook = null;
         if (typeof activeTranslationJob !== 'undefined') activeTranslationJob = null;
@@ -8276,6 +8430,17 @@ async function runWholeBookTranslation(resume = false) {
         renderDigitalShelf();
     }
 }
+
+let skipCurrentTranslationSegmentRequested = false;
+
+function skipCurrentTranslationSegment() {
+    if (!isTranslatingWholeBook) return;
+    skipCurrentTranslationSegmentRequested = true;
+    if (typeof showToast === 'function') {
+        showToast('Skipping current segment and advancing to next…', 'info');
+    }
+}
+if (typeof window !== 'undefined') window.skipCurrentTranslationSegment = skipCurrentTranslationSegment;
 
 function updateTranslationControls(running) {
     const button = document.getElementById('wbDismissButton');
@@ -8289,6 +8454,37 @@ function updateTranslationControls(running) {
     }
     const dock = document.getElementById('translationMiniDock');
     if (dock) dock.title = running ? 'Translation in progress — click to reopen' : 'Translation details — click to reopen';
+
+    const resumeBtn = document.getElementById('wbResumeButton');
+    const skipBtn = document.getElementById('wbSkipSegmentButton');
+    const retryBtn = document.getElementById('wbRetryButton');
+    if (running) {
+        if (resumeBtn) {
+            resumeBtn.classList.add('hidden');
+            resumeBtn.style.display = 'none';
+        }
+        if (skipBtn) {
+            skipBtn.classList.remove('hidden');
+            skipBtn.style.display = '';
+        }
+        if (retryBtn) retryBtn.hidden = true;
+    } else {
+        if (skipBtn) {
+            skipBtn.classList.add('hidden');
+            skipBtn.style.display = 'none';
+        }
+        if (resumeBtn) {
+            resumeBtn.classList.remove('hidden');
+            resumeBtn.style.display = '';
+            const job = (typeof activeTranslationJob !== 'undefined' && activeTranslationJob) || (typeof findResumableTranslationJob === 'function' ? findResumableTranslationJob() : null);
+            const chapNum = (job?.chapterIdx || 0) + 1;
+            const resumeText = document.getElementById('wbResumeButtonText');
+            if (resumeText) {
+                resumeText.textContent = `▶ Continue Translation (from Chapter ${chapNum})`;
+            }
+        }
+        if (retryBtn) retryBtn.hidden = false;
+    }
 }
 
 function cancelWholeBookTranslation() {
@@ -8296,13 +8492,22 @@ function cancelWholeBookTranslation() {
     if (wasRunning) {
         cancelTranslationFlag = true;
         translationRequestController?.abort();
+        updateTranslationControls(false);
+        if (DOM.wbChapterLabel) {
+            const chapIdx = (activeTranslationJob?.chapterIdx || 0) + 1;
+            DOM.wbChapterLabel.textContent = `Paused at Chapter ${chapIdx} · Ready to resume`;
+        }
+        if (DOM.wbLiveGeorgian) {
+            DOM.wbLiveGeorgian.textContent = 'Translation paused. All accepted segments are retained. Click "Resume Translation" to continue.';
+        }
+        if (typeof showToast === 'function') showToast('Translation paused. Click Resume anytime to continue.', 'info');
+        return;
     }
-    // Keep the running guard until the in-flight operation settles.
+    // If already paused or stopped, close the modal
     closeModal('wholeBookTranslateModal');
     const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
     if (dock) { dock.classList.add('hidden'); dock.style.display = 'none'; }
     translationPanelMinimized = false;
-    if (wasRunning) showToast('Pausing translation. Accepted segments are retained for retry.', 'info');
 }
 
 function updateWbStartReadingButton(job = null, targetBook = null) {
@@ -10822,11 +11027,23 @@ async function selectBook(bookId, autoPlayFirst = false) {
         }
     }
 
-    if (DOM.btnTranslateWholeBookText) {
-        if (sourceLang === 'ka') {
+    const resumableJob = typeof findResumableTranslationJob === 'function' ? findResumableTranslationJob() : null;
+    const isThisBookResumable = resumableJob && String(resumableJob.bookId) === String(currentBook.id) && resumableJob.chapterIdx !== undefined;
+
+    if (DOM.btnTranslateWholeBookText && DOM.btnTranslateWholeBook) {
+        if (isThisBookResumable) {
+            const chapNum = (resumableJob.chapterIdx || 0) + 1;
+            DOM.btnTranslateWholeBookText.textContent = `▶ Continue Translation (from Chapter ${chapNum})`;
+            DOM.btnTranslateWholeBook.classList.add('ring-2', 'ring-georgian-gold', 'bg-georgian-gold/20');
+            DOM.btnTranslateWholeBook.onclick = () => startWholeBookTranslation(true);
+        } else if (sourceLang === 'ka') {
             DOM.btnTranslateWholeBookText.textContent = "Translate Book (English)";
+            DOM.btnTranslateWholeBook.classList.remove('ring-2', 'ring-georgian-gold', 'bg-georgian-gold/20');
+            DOM.btnTranslateWholeBook.onclick = () => startWholeBookTranslation(false);
         } else {
             DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Book (Georgian)";
+            DOM.btnTranslateWholeBook.classList.remove('ring-2', 'ring-georgian-gold', 'bg-georgian-gold/20');
+            DOM.btnTranslateWholeBook.onclick = () => startWholeBookTranslation(false);
         }
     }
 
@@ -10922,6 +11139,8 @@ function renderChaptersList() {
         const isSpeaking = isCurrent && isPlaying && !isPaused;
         const chapHasKa = !!chap.text_ka;
         const isCurrentlyTranslating = isTranslatingWholeBook && !chapHasKa;
+        const resumableJob = typeof findResumableTranslationJob === 'function' ? findResumableTranslationJob() : null;
+        const isNextToTranslate = resumableJob && String(resumableJob.bookId) === String(currentBook.id) && resumableJob.chapterIdx === idx && !isTranslatingWholeBook;
 
         const div = document.createElement('div');
         div.className = `glass-panel rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all ${isSpeaking ? 'border-primary-container/60 bg-primary-container/10 shadow-[0_0_20px_rgba(0,240,255,0.15)]' : 'hover:bg-white/5'}`;
@@ -10942,6 +11161,12 @@ function renderChaptersList() {
             </div>
 
             <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                ${isNextToTranslate ? `
+                <button onclick="startWholeBookTranslation(true)" class="px-3 py-1.5 rounded-xl bg-georgian-gold/20 hover:bg-georgian-gold/30 text-georgian-gold text-xs font-bold flex items-center gap-1 border border-georgian-gold/40 transition shadow-sm" title="Resume translation from this chapter">
+                    <span class="material-symbols-outlined text-sm">play_arrow</span>
+                    <span>Resume</span>
+                </button>
+                ` : ''}
                 <button onclick="openReader('${currentBook.id}', ${chap.id}, currentLang)" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-1 border border-white/10 transition" title="Read in Moon Reader">
                     <span class="material-symbols-outlined text-sm text-georgian-gold">menu_book</span>
                     <span>Read</span>
@@ -11630,6 +11855,281 @@ let serverStatsTimer = null;
 let serverStatsAutoRefreshEnabled = true;
 let serverStatsFetching = false;
 
+
+function getServerStatsViewHtml() {
+    return `<!-- Header -->
+            <div class="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)]">
+                        <span class="material-symbols-outlined text-2xl">dns</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-xl md:text-2xl font-extrabold text-white">Oracle VM & Server Stats</h2>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 animate-pulse">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                LIVE
+                            </span>
+                        </div>
+                        <p class="text-xs text-on-surface-variant mt-0.5">Real-time infrastructure telemetry & OCI Always Free tier usage for <span class="text-emerald-400 font-medium">ananiadevsurashvili@gmail.com</span></p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2.5">
+                    <button id="btnToggleServerStatsAutoRefresh" onclick="toggleServerStatsAutoRefresh()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-white transition">
+                        <span class="material-symbols-outlined text-base text-emerald-400" id="iconServerStatsAutoRefresh">sync</span>
+                        <span id="textServerStatsAutoRefresh">Auto-refresh: ON (5s)</span>
+                    </button>
+                    <button onclick="loadServerStats(true)" id="btnServerStatsRefreshNow" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition shadow-sm active:scale-95">
+                        <span class="material-symbols-outlined text-base">refresh</span>
+                        <span>Refresh Now</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Host Meta Banner -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Host / OS</p>
+                    <p id="ssHostOs" class="font-semibold text-white truncate mt-0.5">Ubuntu 24.04 LTS (aarch64)</p>
+                </div>
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">System Uptime</p>
+                    <p id="ssHostUptime" class="font-semibold text-emerald-400 truncate mt-0.5">--</p>
+                </div>
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">OCI Shape</p>
+                    <p class="font-semibold text-white truncate mt-0.5">VM.Standard.A1.Flex</p>
+                </div>
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Monthly Plan Cost</p>
+                    <p class="font-semibold text-emerald-400 truncate mt-0.5">$0.00 (Always Free Tier)</p>
+                </div>
+            </div>
+
+            <!-- Top KPI Cards Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- 1. Compute Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+                            <span class="material-symbols-outlined text-primary-fixed text-lg">memory</span>
+                            <span>Compute / OCPU</span>
+                        </div>
+                        <span id="ssCpuBadge" class="text-[11px] font-mono font-bold text-primary-fixed">4 Cores</span>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ssCpuLoadVal" class="text-2xl font-black text-white">0.0%</span>
+                            <span id="ssCpuLoadDetail" class="text-[11px] text-on-surface-variant font-mono">1m load: 0.0</span>
+                        </div>
+                        <div class="w-full h-2 rounded-full bg-white/10 mt-2 overflow-hidden">
+                            <div id="ssCpuBar" class="h-full bg-gradient-to-r from-primary-container to-secondary transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-white/5 text-[11px] text-on-surface-variant flex justify-between">
+                        <span>Load (1m/5m/15m):</span>
+                        <span id="ssCpuLoads" class="font-mono text-white">0.0 / 0.0 / 0.0</span>
+                    </div>
+                </div>
+
+                <!-- 2. Memory Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+                            <span class="material-symbols-outlined text-purple-400 text-lg">memory_alt</span>
+                            <span>RAM Memory</span>
+                        </div>
+                        <span class="text-[11px] font-mono font-bold text-purple-300">24 GB Free Tier</span>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ssMemVal" class="text-2xl font-black text-white">0.0 GB</span>
+                            <span id="ssMemPercent" class="text-[11px] text-purple-300 font-mono">0% used</span>
+                        </div>
+                        <div class="w-full h-2 rounded-full bg-white/10 mt-2 overflow-hidden">
+                            <div id="ssMemBar" class="h-full bg-gradient-to-r from-purple-500 to-indigo-400 transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-white/5 text-[11px] text-on-surface-variant flex justify-between">
+                        <span>Available RAM:</span>
+                        <span id="ssMemAvail" class="font-mono text-white">-- GB free</span>
+                    </div>
+                </div>
+
+                <!-- 3. Storage Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+                            <span class="material-symbols-outlined text-amber-400 text-lg">hard_drive</span>
+                            <span>Storage Volume</span>
+                        </div>
+                        <span class="text-[11px] font-mono font-bold text-amber-300">200 GB Pool</span>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ssDiskVal" class="text-2xl font-black text-white">0.0 GB</span>
+                            <span id="ssDiskPercent" class="text-[11px] text-amber-300 font-mono">0% used</span>
+                        </div>
+                        <div class="w-full h-2 rounded-full bg-white/10 mt-2 overflow-hidden">
+                            <div id="ssDiskBar" class="h-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-white/5 text-[11px] text-on-surface-variant flex justify-between">
+                        <span>Model Cache Size:</span>
+                        <span id="ssModelCache" class="font-mono text-white">--</span>
+                    </div>
+                </div>
+
+                <!-- 4. Bandwidth Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+                            <span class="material-symbols-outlined text-emerald-400 text-lg">swap_vert</span>
+                            <span>Bandwidth (Outbound)</span>
+                        </div>
+                        <span class="text-[11px] font-mono font-bold text-emerald-300">10 TB / mo</span>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ssNetTxVal" class="text-2xl font-black text-white">0 MB</span>
+                            <span id="ssNetQuotaPercent" class="text-[11px] text-emerald-300 font-mono">0.00%</span>
+                        </div>
+                        <div class="w-full h-2 rounded-full bg-white/10 mt-2 overflow-hidden">
+                            <div id="ssNetBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300" style="width: 0.1%"></div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-white/5 text-[11px] text-on-surface-variant flex justify-between">
+                        <span>Inbound Received:</span>
+                        <span id="ssNetRxVal" class="font-mono text-white">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Status & Daemon Health Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- API Backend Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                        <div class="flex items-center gap-2.5">
+                            <span class="material-symbols-outlined text-cyan-400">api</span>
+                            <h3 class="text-sm font-bold text-white">FastAPI Studio Daemon (oudio-api)</h3>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">RUNNING</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Process PID</p>
+                            <p id="ssApiPid" class="font-mono font-bold text-white mt-0.5">--</p>
+                        </div>
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Uvicorn Workers</p>
+                            <p class="font-mono font-bold text-white mt-0.5">4 Workers (ARM64)</p>
+                        </div>
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Internal Port</p>
+                            <p class="font-mono font-bold text-white mt-0.5">127.0.0.1:8001</p>
+                        </div>
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Public Gateway</p>
+                            <p class="font-mono font-bold text-cyan-300 mt-0.5">Nginx SSL / 443</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ollama Neural Engine Card -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                        <div class="flex items-center gap-2.5">
+                            <span class="material-symbols-outlined text-georgian-gold">psychology</span>
+                            <h3 class="text-sm font-bold text-white">Ollama Neural LLM Engine</h3>
+                        </div>
+                        <span id="ssOllamaStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="p-2 rounded-lg bg-black/20 col-span-2">
+                            <p class="text-[10px] text-on-surface-variant">Active Model Loaded</p>
+                            <p id="ssOllamaModel" class="font-mono font-bold text-georgian-gold mt-0.5 truncate">kona2-small-3.8B.Q4_K_M</p>
+                        </div>
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Endpoint</p>
+                            <p class="font-mono font-bold text-white mt-0.5">127.0.0.1:11434</p>
+                        </div>
+                        <div class="p-2 rounded-lg bg-black/20">
+                            <p class="text-[10px] text-on-surface-variant">Inference Speed</p>
+                            <p class="font-mono font-bold text-emerald-300 mt-0.5">~35-40 tok/s</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OCI Always Free Quota Breakdown Table -->
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-emerald-400">verified</span>
+                        <h3 class="text-sm font-bold text-white">Oracle Cloud (OCI) Always Free Tier Quotas</h3>
+                    </div>
+                    <span class="text-xs text-emerald-400 font-mono font-bold">$0.00 / month forever</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-on-surface-variant">
+                        <thead>
+                            <tr class="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/60">
+                                <th class="py-2 px-3">Resource</th>
+                                <th class="py-2 px-3">Always Free Quota</th>
+                                <th class="py-2 px-3">Currently Used</th>
+                                <th class="py-2 px-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5 font-mono text-xs">
+                            <tr>
+                                <td class="py-2 px-3 text-white font-sans font-medium">ARM Compute (Ampere A1)</td>
+                                <td class="py-2 px-3 text-primary-fixed">4 OCPUs (3,000 OCPU hours/mo)</td>
+                                <td class="py-2 px-3" id="ssTableCpuUsed">4 Cores (100% assigned)</td>
+                                <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">Optimal</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-white font-sans font-medium">System RAM</td>
+                                <td class="py-2 px-3 text-purple-300">24 GB Memory (Always Free max)</td>
+                                <td class="py-2 px-3" id="ssTableMemUsed">-- / 24 GB</td>
+                                <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">Optimal</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-white font-sans font-medium">Block Volume Storage</td>
+                                <td class="py-2 px-3 text-amber-300">200 GB Total Free Storage</td>
+                                <td class="py-2 px-3" id="ssTableDiskUsed">-- / 200 GB</td>
+                                <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">Healthy</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 text-white font-sans font-medium">Outbound Data Transfer</td>
+                                <td class="py-2 px-3 text-emerald-300">10 TB (10,000 GB) per month</td>
+                                <td class="py-2 px-3" id="ssTableNetUsed">-- / 10 TB</td>
+                                <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">&lt; 1% Quota</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+}
+
+function ensureServerStatsViewRendered() {
+    const emailClean = (currentUser?.email || '').trim().toLowerCase();
+    const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
+    const view = document.getElementById('view-server-stats');
+    if (!view) return;
+    if (!isAdmin) {
+        view.innerHTML = '';
+        view.classList.add('hidden');
+        view.style.display = 'none';
+        return;
+    }
+    if (!view.innerHTML || !view.innerHTML.trim()) {
+        view.innerHTML = getServerStatsViewHtml();
+    }
+    view.style.display = '';
+}
+
 async function loadServerStats(manual = false) {
     const emailClean = (currentUser?.email || '').trim().toLowerCase();
     const isAdmin = !!(currentUser?.id && verifiedAuthUserId === currentUser.id && emailClean === 'ananiadevsurashvili@gmail.com');
@@ -11652,7 +12152,7 @@ async function loadServerStats(manual = false) {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const res = await fetch('/api/admin/server-stats', {
+        const res = await fetch('/api/admin/server-stats?t=' + Date.now(), {
             method: 'GET',
             headers
         });
@@ -11812,6 +12312,8 @@ function stopServerStatsAutoRefresh() {
     }
 }
 
+window.getServerStatsViewHtml = getServerStatsViewHtml;
+window.ensureServerStatsViewRendered = ensureServerStatsViewRendered;
 window.loadServerStats = loadServerStats;
 window.renderServerStats = renderServerStats;
 window.toggleServerStatsAutoRefresh = toggleServerStatsAutoRefresh;

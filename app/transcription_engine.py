@@ -70,7 +70,7 @@ def refine_georgian_with_kona(text: str, task: str = "audio_punctuation") -> str
                 "temperature": 0.1,
                 "max_tokens": min(2048, max(256, len(text) * 2))
             },
-            timeout=25.0
+            timeout=6.0
         )
         if resp.status_code == 200:
             cand = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()

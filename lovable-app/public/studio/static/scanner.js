@@ -1646,6 +1646,16 @@ ${text.slice(0, 10000)}`;
           attempts.push({ text: local.text, engine: 'offline+text-block', score: localScore(local), confidence: local.confidence });
         } catch (err) { if (state.cancel) throw err; }
       }
+      if (!attempts.some(a => a.score >= 0.8) && canUseNeuralOCR() && !state.cancel) {
+        try {
+          const res = await ocrGateway(enhanced.dataUrl, lang, ocrHint(page, lang));
+          const score = scoreText(res.text, lang) * coverage(res.text);
+          const currentBest = [...attempts].sort((a, b) => b.score - a.score)[0];
+          if (!currentBest?.text || res.text.length >= currentBest.text.length * 0.8) {
+            attempts.push({ text: res.text, engine: res.engine || "neural", score });
+          }
+        } catch (err) { console.warn("[scanner] optional vision unavailable; local text retained."); }
+      }
       if (!attempts.some(a => a.score >= 0.8)) {
         try {
           const variant = isBlurry && (first?.score || 0) < 0.55 ? "super_res" : "binary";
@@ -1653,17 +1663,6 @@ ${text.slice(0, 10000)}`;
           const local = await ocrLocal(recovery.blob, lang);
           attempts.push({ text: local.text, engine: "offline+" + variant, score: localScore(local), confidence: local.confidence });
         } catch (err) { if (state.cancel) throw err; }
-      }
-      const localBest = [...attempts].sort((a, b) => b.score - a.score)[0];
-      if ((!localBest || localBest.score < 0.8) && canUseNeuralOCR() && !state.cancel) {
-        try {
-          const res = await ocrGateway(enhanced.dataUrl, lang, ocrHint(page, lang));
-          const score = scoreText(res.text, lang) * coverage(res.text);
-          // A much shorter response is not a valid correction of visible recognized text.
-          if (!localBest?.text || res.text.length >= localBest.text.length * 0.8) {
-            attempts.push({ text: res.text, engine: res.engine || "neural", score });
-          }
-        } catch (err) { console.warn("[scanner] optional vision unavailable; local text retained."); }
       }
 
       if (!attempts.length) throw new Error('Text recognition is unavailable. Retry this page when the OCR engine is ready.');
