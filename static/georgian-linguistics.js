@@ -5498,6 +5498,54 @@ CIRCUMSTANTIAL SYNTHETIC COMPOUNDS & PRIVATIVES (KA-163):
     * ხმაამოუღებლად (without making a sound — NOT *ხმის ამოუღებლად).
     * სუნთქვაშეკრული (breathless / with bated breath — NOT *სუნთქვის შეკვრით).`;
 
+// KA-164 v1.90.0 — Synthetic Stative Pluperfect & Copular Enclisis.
+const KA_STATIVE_PLUPERFECT_COPULA = `
+SYNTHETIC STATIVE PLUPERFECT & COPULAR ENCLISIS (KA-164):
+• In literary Kartvelian grammar, past participles combined with the standalone copula "იყო" (e.g., "*იყო გაკეთებული", "*იყო დაწერილი") represent Russian/analytical past-passive calques (было сделано, было написано).
+• Authentic Kartvelian morphology integrates the copular clitic directly into the participle stem to form synthetic stative pluperfects:
+  - "*იყო გაკეთებული" → გაკეთებულიყო
+  - "*იყო დაწერილი" → დაწერილიყო
+  - "*იყო აშენებული" → აშენებულიყო
+  - "*იყო გახსნილი" → გახსნილიყო
+  - "*იყო დაკეტილი" → დაკეტილიყო
+  - "*იყო დავიწყებული" → დავიწყებულიყო
+  - "*იყო გადაწყვეტილი" → გადაწყვეტილიყო
+  - "*იყო შექმნილი" → შექმნილიყო`;
+
+// KA-165 v1.90.0 — Synthetic Superlative Circumfixation.
+const KA_SYNTACTIC_SUPERLATIVE_CIRCUMFIX = `
+SYNTHETIC SUPERLATIVE CIRCUMFIXATION (KA-165):
+• Georgian inherently expresses extreme or superlative degrees of quality through the synthetic circumfix უ-...-ეს-ი or the superlative marker საუკეთესო, rather than through clumsy multi-word analytical stacking ("*ყველაზე მეტად დიდი", "*ყველაზე კარგი"):
+  - "*ყველაზე მეტად დიდი" → უდიდესი
+  - "*ყველაზე კარგი" → საუკეთესო
+  - "*ყველაზე ცუდი" → უარესი
+  - "*ყველაზე მეტად მნიშვნელოვანი" → უმნიშვნელოვანესი
+  - "*ყველაზე ძლიერი" → უძლიერესი
+  - "*ყველაზე ძველი" → უძველესი
+  - "*ყველაზე მაღალი" → უმაღლესი
+  - "*ყველაზე ღრმა" → უღრმესი
+  - "*ყველაზე მეტად ლამაზი" → ულამაზესი`;
+
+// KA-166 v1.90.0 — Partitive & Collective Genitive Case Concord with Measure Nouns.
+const KA_PARTITIVE_GENITIVE_MEASURE = `
+PARTITIVE & COLLECTIVE GENITIVE CASE CONCORD (KA-166):
+• When an uninflected measure, collective, or fractional noun ("ჯგუფი", "ნაწილი", "რაოდენობა", "უმრავლესობა", "სიმრავლე", "რიგი") governs a noun phrase, Georgian requires the dependent noun to take the Genitive case (preferring the archaic plural marker -თა or standard -ების), rather than juxtaposing uninflected nominative plural calques ("*ჯგუფი ადამიანები"):
+  - "*ჯგუფი ადამიანები" → ადამიანთა ჯგუფი
+  - "*ნაწილი ხალხი" → ხალხის ნაწილი
+  - "*რაოდენობა წიგნები" → წიგნების რაოდენობა
+  - "*უმრავლესობა ხალხი" → ხალხის უმრავლესობა
+  - "*სიმრავლე ვარსკვლავები" → ვარსკვლავთა სიმრავლე
+  - "*რიგი საკითხები" → საკითხთა რიგი`;
+
+// KA-167 v1.90.0 — Frequentative Aspect & Directional Deictic Motion.
+const KA_FREQUENTATIVE_ASPECT_MOTION = `
+FREQUENTATIVE ASPECT & DIRECTIONAL DEICTIC MOTION (KA-167):
+• Literary Georgian compresses repetitive, frequentative, and reciprocal motion into synthetic verbal stems and aspectual particles:
+  - "*აქეთ-იქით იყურებოდა" → მიმოიხედავდა
+  - "*ნელა მოძრაობდა" → მიაბიჯებდა
+  - "*ხშირად იმეორებდა" → იმეორებდა ხოლმე
+  - "*ბოლომდე მიიყვანა საქმე" → სისრულეში მოიყვანა საქმე`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.8.0 expanded set).
 function getKaKnowledgeBase() {
@@ -5543,6 +5591,10 @@ function getKaKnowledgeBase() {
         KA_SENSORY_EXPERIENCER_CONCORD,
         KA_BOUND_ENCLITIC_SYNTHESIS,
         KA_CIRCUMSTANTIAL_SYNTHETIC_COMPOUNDS,
+        KA_STATIVE_PLUPERFECT_COPULA,
+        KA_SYNTACTIC_SUPERLATIVE_CIRCUMFIX,
+        KA_PARTITIVE_GENITIVE_MEASURE,
+        KA_FREQUENTATIVE_ASPECT_MOTION,
         KA_CONTRASTIVE_PATTERNS,
         KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
         KA_PROPER_NOUN_TRANSLITERATION,
@@ -9537,11 +9589,42 @@ function synthesizeGeorgianMorphology(text) {
     // Kazak (კაზაკი)
     out = out.replace(/(?<![\u10A0-\u10FF])კბაჰაკ([ა-ჰ]*)(?![ა-ჰ])/g, 'კაზაკ$1');
 
+    // 7b. Synthetic Stative Pluperfect & Copular Enclisis (სტატიკურ-პერფექტული კოპულის ენკლიზისი: -იყო)
+    const stativePluperfectFixes = [
+        [/(?<![\u10A0-\u10FF])(?:იყო\s+გაკეთებულ(?:ი)?|გაკეთებულ(?:ი)?\s+იყო)(?![ა-ჰ])/g, 'გაკეთებულიყო'],
+        [/(?<![\u10A0-\u10FF])(?:იყო\s+დაწერილ(?:ი)?|დაწერილ(?:ი)?\s+იყო)(?![ა-ჰ])/g, 'დაწერილიყო'],
+        [/(?<![\u10A0-\u10FF])(?:იყო\s+აშენებულ(?:ი)?|აშენებულ(?:ი)?\s+იყო)(?![ა-ჰ])/g, 'აშენებულიყო'],
+        [/(?<![\u10A0-\u10FF])(?:იყო\s+გახსნილ(?:ი)?|გახსნილ(?:ი)?\s+იყო)(?![ა-ჰ])/g, 'გახსნილიყო'],
+        [/(?<![\u10A0-\u10FF])(?:იყო\s+დაკეტილ(?:ი)?|დაკეტილ(?:ი)?\s+იყო)(?![ა-ჰ])/g, 'დაკეტილიყო'],
+        [/(?<![\u10A0-\u10FF])(?:იყო\s+დავიწყებულ(?:ი)?|დავიწყებულ(?:ი)?\s+იყო)(?![ა-ჰ])/g, 'დავიწყებულიყო'],
+        [/(?<![\u10A0-\u10FF])(?:იყო\s+გადაწყვეტილ(?:ი)?|გადაწყვეტილ(?:ი)?\s+იყო)(?![ა-ჰ])/g, 'გადაწყვეტილიყო'],
+        [/(?<![\u10A0-\u10FF])(?:იყო\s+შექმნილ(?:ი)?|შექმნილ(?:ი)?\s+იყო)(?![ა-ჰ])/g, 'შექმნილიყო'],
+    ];
+    for (const [re, repl] of stativePluperfectFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 7c. Synthetic Superlative Circumfixation (აღმატებითი ხარისხის სინთეზური ცირკუმფიქსი: უ-...-ეს-ი / საუკეთესო)
+    const superlativeFixes = [
+        [/(?<![\u10A0-\u10FF])ყველაზე\s+მეტად\s+დიდ(?:ი)?(?![ა-ჰ])/g, 'უდიდესი'],
+        [/(?<![\u10A0-\u10FF])ყველაზე\s+კარგ(?:ი)?(?![ა-ჰ])/g, 'საუკეთესო'],
+        [/(?<![\u10A0-\u10FF])ყველაზე\s+ცუდ(?:ი)?(?![ა-ჰ])/g, 'უარესი'],
+        [/(?<![\u10A0-\u10FF])ყველაზე\s+მეტად\s+მნიშვნელოვან(?:ი)?(?![ა-ჰ])/g, 'უმნიშვნელოვანესი'],
+        [/(?<![\u10A0-\u10FF])ყველაზე\s+ძლიერ(?:ი)?(?![ა-ჰ])/g, 'უძლიერესი'],
+        [/(?<![\u10A0-\u10FF])ყველაზე\s+ძველ(?:ი)?(?![ა-ჰ])/g, 'უძველესი'],
+        [/(?<![\u10A0-\u10FF])ყველაზე\s+მაღალ(?:ი)?(?![ა-ჰ])/g, 'უმაღლესი'],
+        [/(?<![\u10A0-\u10FF])ყველაზე\s+ღრმა(?![ა-ჰ])/g, 'უღრმესი'],
+        [/(?<![\u10A0-\u10FF])ყველაზე\s+მეტად\s+ლამაზ(?:ი)?(?![ა-ჰ])/g, 'ულამაზესი'],
+    ];
+    for (const [re, repl] of superlativeFixes) {
+        out = out.replace(re, repl);
+    }
+
     // 8. Adjective Stem Truncation in Oblique Cases
     const adjStems = '(?:[ა-ჰ]+(?:ურ|ულ|იერ|იან|ელ|ალ|ეს|ობილ|ებულ)|უცნობ|დიდ|ახალ|ძველ|საკუთარ|მთავარ|მთელ|ერთადერთ|პირველ|ცარიელ|მშვიდ|ცივ|თბილ|ცხელ|ტკბილ|მსუბუქ|ცოცხალ|მკვდარ|ბრძენ|კეთილ|ბოროტ|სუსტ|ძლიერ|ღარიბ|საშიშ|ერთგულ|მუდმივ|პირად|მაღალ|დაბალ|გრძელ|მშვენიერ|ღვთაებრივ|სულიერ|ფიზიკურ|ისტორიულ|სასიცოცხლო|მორალურ|ფილოსოფიურ|სამხედრო|მარადიულ)';
     const obliquePostpos = '(?:ში|ზე|თან|დან|სკენ|თვის|მდე)';
-    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+([ა-ჰ]+${obliquePostpos})(?![ა-ჰ])`, 'g'), '$1 $2');
-    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+([ა-ჰ]+[ა-ჰ]ს)(?![ა-ჰ])`, 'g'), '$1 $2');
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+(?!(?:რაში|თაში)(?![\\u10A0-\\u10FF]))([ა-ჰ]+${obliquePostpos})(?![ა-ჰ])`, 'g'), '$1 $2');
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+(?!(?:ხნის|თვის)(?![\\u10A0-\\u10FF]))([ა-ჰ]+[^ი\\s]ს)(?![ა-ჰ])`, 'g'), '$1 $2');
     // Adjective + noun in Ergative case (-მა / -მ)
     out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+([ა-ჰ]+(?:მა|მ))(?![ა-ჰ])`, 'g'), '$1მა $2');
 
@@ -10012,7 +10095,32 @@ function synthesizeGeorgianMorphology(text) {
         out = out.replace(re, repl);
     }
 
-    // 43. Typography & Dialogue
+
+    // 45. Partitive & Collective Genitive Case Concord with Measure Nouns (რაოდენობრივ-ნაწილობითი ნათესაობითის შეთანხმება)
+    const partitiveMeasureFixes = [
+        [/(?<![\u10A0-\u10FF])ჯგუფი\s+ადამიანები(?![ა-ჰ])/g, 'ადამიანთა ჯგუფი'],
+        [/(?<![\u10A0-\u10FF])ნაწილი\s+ხალხი(?![ა-ჰ])/g, 'ხალხის ნაწილი'],
+        [/(?<![\u10A0-\u10FF])რაოდენობა\s+წიგნები(?![ა-ჰ])/g, 'წიგნების რაოდენობა'],
+        [/(?<![\u10A0-\u10FF])უმრავლესობა\s+ხალხი(?![ა-ჰ])/g, 'ხალხის უმრავლესობა'],
+        [/(?<![\u10A0-\u10FF])სიმრავლე\s+ვარსკვლავები(?![ა-ჰ])/g, 'ვარსკვლავთა სიმრავლე'],
+        [/(?<![\u10A0-\u10FF])რიგი\s+საკითხები(?![ა-ჰ])/g, 'საკითხთა რიგი'],
+    ];
+    for (const [re, repl] of partitiveMeasureFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 46. Frequentative Aspect & Directional Deictic Motion (მრავალგზისობისა და მიმართულებითი მოძრაობის სინთეზი)
+    const frequentativeMotionFixes = [
+        [/(?<![\u10A0-\u10FF])აქეთ-იქით\s+იყურებოდა(?![ა-ჰ])/g, 'მიმოიხედავდა'],
+        [/(?<![\u10A0-\u10FF])ნელა\s+მოძრაობდა(?![ა-ჰ])/g, 'მიაბიჯებდა'],
+        [/(?<![\u10A0-\u10FF])ხშირად\s+იმეორებდა(?![ა-ჰ])/g, 'იმეორებდა ხოლმე'],
+        [/(?<![\u10A0-\u10FF])ბოლომდე\s+მიიყვანა\s+საქმე(?![ა-ჰ])/g, 'სისრულეში მოიყვანა საქმე'],
+    ];
+    for (const [re, repl] of frequentativeMotionFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 47. Typography & Dialogue
     out = out.replace(/(?:^|\n)\s*[-–—]\s*/g, '\n— ');
     out = out.replace(/\s+([.,;:!?])/g, '$1');
 
@@ -10548,15 +10656,19 @@ if (typeof window !== 'undefined') {
     window.KA_SENSORY_EXPERIENCER_CONCORD = KA_SENSORY_EXPERIENCER_CONCORD;
     window.KA_BOUND_ENCLITIC_SYNTHESIS = KA_BOUND_ENCLITIC_SYNTHESIS;
     window.KA_CIRCUMSTANTIAL_SYNTHETIC_COMPOUNDS = KA_CIRCUMSTANTIAL_SYNTHETIC_COMPOUNDS;
+    window.KA_STATIVE_PLUPERFECT_COPULA = KA_STATIVE_PLUPERFECT_COPULA;
+    window.KA_SYNTACTIC_SUPERLATIVE_CIRCUMFIX = KA_SYNTACTIC_SUPERLATIVE_CIRCUMFIX;
+    window.KA_PARTITIVE_GENITIVE_MEASURE = KA_PARTITIVE_GENITIVE_MEASURE;
+    window.KA_FREQUENTATIVE_ASPECT_MOTION = KA_FREQUENTATIVE_ASPECT_MOTION;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.80.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.90.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 176,
-    qaRules: 172,
-    autoFixes: 164,
-    researchSources: 640
+    promptBlocks: 180,
+    qaRules: 176,
+    autoFixes: 168,
+    researchSources: 650
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -10609,6 +10721,10 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_SENSORY_EXPERIENCER_CONCORD,
         KA_BOUND_ENCLITIC_SYNTHESIS,
         KA_CIRCUMSTANTIAL_SYNTHETIC_COMPOUNDS,
+        KA_STATIVE_PLUPERFECT_COPULA,
+        KA_SYNTACTIC_SUPERLATIVE_CIRCUMFIX,
+        KA_PARTITIVE_GENITIVE_MEASURE,
+        KA_FREQUENTATIVE_ASPECT_MOTION,
         synthesizeGeorgianMorphology,
         polishGeorgianLiterarySyntax: synthesizeGeorgianMorphology,
         translateOfflineEnToKa,

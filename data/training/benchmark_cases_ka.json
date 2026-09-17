@@ -7060,5 +7060,919 @@
       "spinoza",
       "freedom"
     ]
+  },
+  {
+    "id": "case-syntax-ka-548",
+    "kind": "autofix",
+    "source": "საქმე იყო გაკეთებული დიდი ხნის წინ.",
+    "expected": "საქმე გაკეთებულიყო დიდი ხნის წინ.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative",
+      "copula"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-549",
+    "kind": "autofix",
+    "source": "წიგნი იყო დაწერილი ოქროს ასოებით.",
+    "expected": "წიგნი დაწერილიყო ოქროს ასოებით.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative",
+      "copula"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-550",
+    "kind": "autofix",
+    "source": "ციხესიმაგრე იყო აშენებული კლდეზე მტკიცედ.",
+    "expected": "ციხესიმაგრე აშენებულიყო კლდეზე მტკიცედ.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative",
+      "copula"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-551",
+    "kind": "autofix",
+    "source": "კარიბჭე იყო გახსნილი სტუმრებისთვის.",
+    "expected": "კარიბჭე გახსნილიყო სტუმრებისთვის.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative",
+      "copula"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-552",
+    "kind": "autofix",
+    "source": "ოთახი იყო დაკეტილი გასაღებით.",
+    "expected": "ოთახი დაკეტილიყო გასაღებით.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative",
+      "copula"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-553",
+    "kind": "autofix",
+    "source": "ძველი მტრობა იყო დავიწყებული სამუდამოდ.",
+    "expected": "ძველი მტრობა დავიწყებულიყო სამუდამოდ.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative",
+      "copula"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-554",
+    "kind": "autofix",
+    "source": "მთავარი საკითხი იყო გადაწყვეტილი საბჭოზე.",
+    "expected": "მთავარი საკითხი გადაწყვეტილიყო საბჭოზე.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative",
+      "copula"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-555",
+    "kind": "autofix",
+    "source": "დიდებული ნაწარმოები იყო შექმნილი ოსტატის მიერ.",
+    "expected": "დიდებული ნაწარმოები შექმნილიყო ოსტატის მიერ.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative",
+      "copula"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-556",
+    "kind": "autofix",
+    "source": "იყო გაკეთებული",
+    "expected": "გაკეთებულიყო",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-557",
+    "kind": "autofix",
+    "source": "იყო დაწერილი",
+    "expected": "დაწერილიყო",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-558",
+    "kind": "autofix",
+    "source": "იყო აშენებული",
+    "expected": "აშენებულიყო",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-559",
+    "kind": "autofix",
+    "source": "იყო გახსნილი",
+    "expected": "გახსნილიყო",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-560",
+    "kind": "autofix",
+    "source": "იყო დაკეტილი",
+    "expected": "დაკეტილიყო",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-561",
+    "kind": "autofix",
+    "source": "იყო დავიწყებული",
+    "expected": "დავიწყებულიყო",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-562",
+    "kind": "autofix",
+    "source": "იყო გადაწყვეტილი",
+    "expected": "გადაწყვეტილიყო",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-563",
+    "kind": "autofix",
+    "source": "იყო შექმნილი",
+    "expected": "შექმნილიყო",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "stative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-564",
+    "kind": "autofix",
+    "source": "გაკეთებულიყო ყოველივე წესისაებრ.",
+    "expected": "გაკეთებულიყო ყოველივე წესისაებრ.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-565",
+    "kind": "autofix",
+    "source": "დაწერილიყო ჭეშმარიტი სიტყვა.",
+    "expected": "დაწერილიყო ჭეშმარიტი სიტყვა.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-566",
+    "kind": "autofix",
+    "source": "აშენებულიყო სატახტო ქალაქი.",
+    "expected": "აშენებულიყო სატახტო ქალაქი.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-567",
+    "kind": "autofix",
+    "source": "გადაწყვეტილიყო ბედი ქვეყნისა.",
+    "expected": "გადაწყვეტილიყო ბედი ქვეყნისა.",
+    "weight": 1.0,
+    "tags": [
+      "pluperfect",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-568",
+    "kind": "autofix",
+    "source": "ეს იყო ყველაზე მეტად დიდი ტაძარი ქვეყანაში.",
+    "expected": "ეს იყო უდიდესი ტაძარი ქვეყანაში.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-569",
+    "kind": "autofix",
+    "source": "მან მიიღო ყველაზე კარგი რჩევა ბრძენისგან.",
+    "expected": "მან მიიღო საუკეთესო რჩევა ბრძენისგან.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-570",
+    "kind": "autofix",
+    "source": "ეს იყო ყველაზე ცუდი განსაცდელი მათ ცხოვრებაში.",
+    "expected": "ეს იყო უარესი განსაცდელი მათ ცხოვრებაში.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-571",
+    "kind": "autofix",
+    "source": "ეს არის ყველაზე მეტად მნიშვნელოვანი გადაწყვეტილება.",
+    "expected": "ეს არის უმნიშვნელოვანესი გადაწყვეტილება.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-572",
+    "kind": "autofix",
+    "source": "მხედარს ჰყავდა ყველაზე ძლიერი რაში სამეფოში.",
+    "expected": "მხედარს ჰყავდა უძლიერესი რაში სამეფოში.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-573",
+    "kind": "autofix",
+    "source": "ხელნაწერი ინახავდა ყველაზე ძველი ეპოქის საიდუმლოს.",
+    "expected": "ხელნაწერი ინახავდა უძველესი ეპოქის საიდუმლოს.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-574",
+    "kind": "autofix",
+    "source": "ის ავიდა ყველაზე მაღალი მწვერვალის თავზე.",
+    "expected": "ის ავიდა უმაღლესი მწვერვალის თავზე.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-575",
+    "kind": "autofix",
+    "source": "ეს იყო ყველაზე ღრმა ხეობა.",
+    "expected": "ეს იყო უღრმესი ხეობა.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-576",
+    "kind": "autofix",
+    "source": "ბაღში ყვაოდა ყველაზე მეტად ლამაზი ვარდი.",
+    "expected": "ბაღში ყვაოდა ულამაზესი ვარდი.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-577",
+    "kind": "autofix",
+    "source": "ყველაზე მეტად დიდი",
+    "expected": "უდიდესი",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-578",
+    "kind": "autofix",
+    "source": "ყველაზე კარგი",
+    "expected": "საუკეთესო",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-579",
+    "kind": "autofix",
+    "source": "ყველაზე ცუდი",
+    "expected": "უარესი",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-580",
+    "kind": "autofix",
+    "source": "ყველაზე მეტად მნიშვნელოვანი",
+    "expected": "უმნიშვნელოვანესი",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-581",
+    "kind": "autofix",
+    "source": "ყველაზე ძლიერი",
+    "expected": "უძლიერესი",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-582",
+    "kind": "autofix",
+    "source": "ყველაზე ძველი",
+    "expected": "უძველესი",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-583",
+    "kind": "autofix",
+    "source": "ყველაზე მაღალი",
+    "expected": "უმაღლესი",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-584",
+    "kind": "autofix",
+    "source": "ყველაზე ღრმა",
+    "expected": "უღრმესი",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-585",
+    "kind": "autofix",
+    "source": "ყველაზე მეტად ლამაზი",
+    "expected": "ულამაზესი",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "circumfix"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-586",
+    "kind": "autofix",
+    "source": "უდიდესი სიხარული მოიცვა ყველამ.",
+    "expected": "უდიდესი სიხარული მოიცვა ყველამ.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-587",
+    "kind": "autofix",
+    "source": "საუკეთესო გზა სიბრძნის შეცნობაა.",
+    "expected": "საუკეთესო გზა სიბრძნის შეცნობაა.",
+    "weight": 1.0,
+    "tags": [
+      "superlative",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-588",
+    "kind": "autofix",
+    "source": "მოედანზე შეიკრიბა ჯგუფი ადამიანები დილით.",
+    "expected": "მოედანზე შეიკრიბა ადამიანთა ჯგუფი დილით.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-589",
+    "kind": "autofix",
+    "source": "ნაწილი ხალხი გაჰყვა წინამძღოლს მთაში.",
+    "expected": "ხალხის ნაწილი გაჰყვა წინამძღოლს მთაში.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-590",
+    "kind": "autofix",
+    "source": "ბიბლიოთეკაში ინახებოდა დიდი რაოდენობა წიგნები.",
+    "expected": "ბიბლიოთეკაში ინახებოდა დიდი წიგნების რაოდენობა.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-591",
+    "kind": "autofix",
+    "source": "უმრავლესობა ხალხი ემხრობოდა მშვიდობას.",
+    "expected": "ხალხის უმრავლესობა ემხრობოდა მშვიდობას.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-592",
+    "kind": "autofix",
+    "source": "ღამის ცაზე ბრწყინავდა სიმრავლე ვარსკვლავები.",
+    "expected": "ღამის ცაზე ბრწყინავდა ვარსკვლავთა სიმრავლე.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-593",
+    "kind": "autofix",
+    "source": "საბჭოზე განიხილეს რიგი საკითხები დეტალურად.",
+    "expected": "საბჭოზე განიხილეს საკითხთა რიგი დეტალურად.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-594",
+    "kind": "autofix",
+    "source": "ჯგუფი ადამიანები",
+    "expected": "ადამიანთა ჯგუფი",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-595",
+    "kind": "autofix",
+    "source": "ნაწილი ხალხი",
+    "expected": "ხალხის ნაწილი",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-596",
+    "kind": "autofix",
+    "source": "რაოდენობა წიგნები",
+    "expected": "წიგნების რაოდენობა",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-597",
+    "kind": "autofix",
+    "source": "უმრავლესობა ხალხი",
+    "expected": "ხალხის უმრავლესობა",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-598",
+    "kind": "autofix",
+    "source": "სიმრავლე ვარსკვლავები",
+    "expected": "ვარსკვლავთა სიმრავლე",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-599",
+    "kind": "autofix",
+    "source": "რიგი საკითხები",
+    "expected": "საკითხთა რიგი",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "genitive",
+      "measure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-600",
+    "kind": "autofix",
+    "source": "ადამიანთა ჯგუფი მღეროდა ჰიმნს.",
+    "expected": "ადამიანთა ჯგუფი მღეროდა ჰიმნს.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-601",
+    "kind": "autofix",
+    "source": "ხალხის ნაწილი დაბრუნდა შინ.",
+    "expected": "ხალხის ნაწილი დაბრუნდა შინ.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-602",
+    "kind": "autofix",
+    "source": "წიგნების რაოდენობა იზრდებოდა ყოველდღე.",
+    "expected": "წიგნების რაოდენობა იზრდებოდა ყოველდღე.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-603",
+    "kind": "autofix",
+    "source": "ხალხის უმრავლესობა სიხარულით შეხვდა მეფეს.",
+    "expected": "ხალხის უმრავლესობა სიხარულით შეხვდა მეფეს.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-604",
+    "kind": "autofix",
+    "source": "ვარსკვლავთა სიმრავლე ანათებდა გზას.",
+    "expected": "ვარსკვლავთა სიმრავლე ანათებდა გზას.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-605",
+    "kind": "autofix",
+    "source": "საკითხთა რიგი წარმატებით ამოიწურა.",
+    "expected": "საკითხთა რიგი წარმატებით ამოიწურა.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-606",
+    "kind": "autofix",
+    "source": "მეომართა რაზმი გაემართა ციხის დასაცავად.",
+    "expected": "მეომართა რაზმი გაემართა ციხის დასაცავად.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-607",
+    "kind": "autofix",
+    "source": "მგზავრთა ნაკადი არ წყდებოდა ქალაქის კარიბჭესთან.",
+    "expected": "მგზავრთა ნაკადი არ წყდებოდა ქალაქის კარიბჭესთან.",
+    "weight": 1.0,
+    "tags": [
+      "partitive",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-608",
+    "kind": "autofix",
+    "source": "დარაჯი ფრთხილად აქეთ-იქით იყურებოდა ბნელ ღამეში.",
+    "expected": "დარაჯი ფრთხილად მიმოიხედავდა ბნელ ღამეში.",
+    "weight": 1.0,
+    "tags": [
+      "frequentative",
+      "motion",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-609",
+    "kind": "autofix",
+    "source": "მოხუცი ნელა მოძრაობდა ქუჩაში ჯოხით.",
+    "expected": "მოხუცი მიაბიჯებდა ქუჩაში ჯოხით.",
+    "weight": 1.0,
+    "tags": [
+      "frequentative",
+      "motion",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-610",
+    "kind": "autofix",
+    "source": "მასწავლებელი ხშირად იმეორებდა ამ ბრძნულ დარიგებას.",
+    "expected": "მასწავლებელი იმეორებდა ხოლმე ამ ბრძნულ დარიგებას.",
+    "weight": 1.0,
+    "tags": [
+      "frequentative",
+      "motion",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-611",
+    "kind": "autofix",
+    "source": "ოსტატმა ბოლომდე მიიყვანა საქმე ერთგულად.",
+    "expected": "ოსტატმა სისრულეში მოიყვანა საქმე ერთგულად.",
+    "weight": 1.0,
+    "tags": [
+      "frequentative",
+      "motion",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-612",
+    "kind": "autofix",
+    "source": "აქეთ-იქით იყურებოდა",
+    "expected": "მიმოიხედავდა",
+    "weight": 1.0,
+    "tags": [
+      "frequentative",
+      "motion"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-613",
+    "kind": "autofix",
+    "source": "ნელა მოძრაობდა",
+    "expected": "მიაბიჯებდა",
+    "weight": 1.0,
+    "tags": [
+      "frequentative",
+      "motion"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-614",
+    "kind": "autofix",
+    "source": "ხშირად იმეორებდა",
+    "expected": "იმეორებდა ხოლმე",
+    "weight": 1.0,
+    "tags": [
+      "frequentative",
+      "motion"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-615",
+    "kind": "autofix",
+    "source": "ბოლომდე მიიყვანა საქმე",
+    "expected": "სისრულეში მოიყვანა საქმე",
+    "weight": 1.0,
+    "tags": [
+      "frequentative",
+      "motion"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-616",
+    "kind": "autofix",
+    "source": "მიმოიხედავდა და ეძებდა სიმართლეს.",
+    "expected": "მიმოიხედავდა და ეძებდა სიმართლეს.",
+    "weight": 1.0,
+    "tags": [
+      "frequentative",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-617",
+    "kind": "autofix",
+    "source": "სისრულეში მოიყვანა თავისი აღთქმა.",
+    "expected": "სისრულეში მოიყვანა თავისი აღთქმა.",
+    "weight": 1.0,
+    "tags": [
+      "frequentative",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-618",
+    "kind": "autofix",
+    "source": "პლატონი: სახელმწიფო გვასწავლის იდეათა სამყაროს და სამართლიანობის არსს.",
+    "expected": "პლატონი: სახელმწიფო გვასწავლის იდეათა სამყაროს და სამართლიანობის არსს.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "plato",
+      "republic"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-619",
+    "kind": "autofix",
+    "source": "გოტფრიდ ლაიბნიცი: მონადოლოგია ამტკიცებს წინასწარდადგენილ ჰარმონიას ყოფიერებაში.",
+    "expected": "გოტფრიდ ლაიბნიცი: მონადოლოგია ამტკიცებს წინასწარდადგენილ ჰარმონიას ყოფიერებაში.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "leibniz",
+      "monadology"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-620",
+    "kind": "autofix",
+    "source": "არტურ შოპენჰაუერი: სამყარო როგორც ნება და წარმოდგენა ხსნის ადამიანის ტანჯვის სათავეს.",
+    "expected": "არტურ შოპენჰაუერი: სამყარო როგორც ნება და წარმოდგენა ხსნის ადამიანის ტანჯვის სათავეს.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "schopenhauer",
+      "will"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-621",
+    "kind": "autofix",
+    "source": "სიორენ კირკეგორი: შიში და ძრწოლა იკვლევს რწმენის ნახტომსა და აბსურდის პარადოქსს.",
+    "expected": "სიორენ კირკეგორი: შიში და ძრწოლა იკვლევს რწმენის ნახტომსა და აბსურდის პარადოქსს.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "kierkegaard",
+      "faith"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-622",
+    "kind": "autofix",
+    "source": "კონსტანტინე გამსახურდია: დიდოსტატის მარჯვენა ქვაში გამოკვეთილი ერის უკვდავი სულია.",
+    "expected": "კონსტანტინე გამსახურდია: დიდოსტატის მარჯვენა ქვაში გამოკვეთილი ერის უკვდავი სულია.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "gamsakhurdia",
+      "grandmaster"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-623",
+    "kind": "autofix",
+    "source": "მიხეილ ჯავახიშვილი: ჯაყოს ხიზნები ავლენს ერის სოციალურ დრამას და სულიერ გამოღვიძებას.",
+    "expected": "მიხეილ ჯავახიშვილი: ჯაყოს ხიზნები ავლენს ერის სოციალურ დრამას და სულიერ გამოღვიძებას.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "javakhishvili",
+      "jaqo"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-624",
+    "kind": "autofix",
+    "source": "პლატონი: ნადიმი ეძღვნება სიყვარულის უზენაეს ჭვრეტას და სილამაზეს.",
+    "expected": "პლატონი: ნადიმი ეძღვნება სიყვარულის უზენაეს ჭვრეტას და სილამაზეს.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "plato",
+      "symposium"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-625",
+    "kind": "autofix",
+    "source": "გოტფრიდ ლაიბნიცი: საკმარისი საფუძვლის პრინციპი წარმართავს გონების ყოველ ჭეშმარიტებას.",
+    "expected": "გოტფრიდ ლაიბნიცი: საკმარისი საფუძვლის პრინციპი წარმართავს გონების ყოველ ჭეშმარიტებას.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "leibniz",
+      "sufficient_reason"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-626",
+    "kind": "autofix",
+    "source": "არტურ შოპენჰაუერი: ხელოვნების ესთეტიკური ჭვრეტა ათავისუფლებს გონებას ნების ბორკილებისგან.",
+    "expected": "არტურ შოპენჰაუერი: ხელოვნების ესთეტიკური ჭვრეტა ათავისუფლებს გონებას ნების ბორკილებისგან.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "schopenhauer",
+      "aesthetic"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-627",
+    "kind": "autofix",
+    "source": "სიორენ კირკეგორი: რწმენის რაინდი მარტოობაში დგას ღმერთის პირისპირ.",
+    "expected": "სიორენ კირკეგორი: რწმენის რაინდი მარტოობაში დგას ღმერთის პირისპირ.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "kierkegaard",
+      "knight_of_faith"
+    ]
   }
 ]

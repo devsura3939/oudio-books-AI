@@ -199,9 +199,9 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 660, "Expected at least 660 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 740, "Expected at least 740 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 38, "Active pack version must be at least 38")
+        self.assertGreaterEqual(len(cases), 740, "Expected at least 740 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 850, "Expected at least 850 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 40, "Active pack version must be at least 40")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
@@ -673,6 +673,65 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         for raw, expected in pairs:
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Circumstantial compounds failed for '{raw}': got '{polished}'")
+
+    def test_41_synthetic_stative_pluperfect_copula(self):
+        """Verify synthetic stative pluperfect and copular cliticization (-იყო fusion)."""
+        pairs = [
+            ("საქმე იყო გაკეთებული დიდი ხნის წინ.", "საქმე გაკეთებულიყო დიდი ხნის წინ."),
+            ("წიგნი იყო დაწერილი ოქროს ასოებით.", "წიგნი დაწერილიყო ოქროს ასოებით."),
+            ("ციხესიმაგრე იყო აშენებული კლდეზე მტკიცედ.", "ციხესიმაგრე აშენებულიყო კლდეზე მტკიცედ."),
+            ("კარიბჭე იყო გახსნილი სტუმრებისთვის.", "კარიბჭე გახსნილიყო სტუმრებისთვის."),
+            ("ოთახი იყო დაკეტილი გასაღებით.", "ოთახი დაკეტილიყო გასაღებით."),
+            ("ძველი მტრობა იყო დავიწყებული სამუდამოდ.", "ძველი მტრობა დავიწყებულიყო სამუდამოდ."),
+            ("მთავარი საკითხი იყო გადაწყვეტილი საბჭოზე.", "მთავარი საკითხი გადაწყვეტილიყო საბჭოზე."),
+            ("დიდებული ნაწარმოები იყო შექმნილი ოსტატის მიერ.", "დიდებული ნაწარმოები შექმნილიყო ოსტატის მიერ."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Stative pluperfect failed for '{raw}': got '{polished}'")
+
+    def test_42_synthetic_superlative_circumfix(self):
+        """Verify synthetic superlative circumfixation (უ-...-ეს-ი / საუკეთესო)."""
+        pairs = [
+            ("ეს იყო ყველაზე მეტად დიდი ტაძარი ქვეყანაში.", "ეს იყო უდიდესი ტაძარი ქვეყანაში."),
+            ("მან მიიღო ყველაზე კარგი რჩევა ბრძენისგან.", "მან მიიღო საუკეთესო რჩევა ბრძენისგან."),
+            ("ეს იყო ყველაზე ცუდი განსაცდელი მათ ცხოვრებაში.", "ეს იყო უარესი განსაცდელი მათ ცხოვრებაში."),
+            ("ეს არის ყველაზე მეტად მნიშვნელოვანი გადაწყვეტილება.", "ეს არის უმნიშვნელოვანესი გადაწყვეტილება."),
+            ("მხედარს ჰყავდა ყველაზე ძლიერი რაში სამეფოში.", "მხედარს ჰყავდა უძლიერესი რაში სამეფოში."),
+            ("ხელნაწერი ინახავდა ყველაზე ძველი ეპოქის საიდუმლოს.", "ხელნაწერი ინახავდა უძველესი ეპოქის საიდუმლოს."),
+            ("ის ავიდა ყველაზე მაღალი მწვერვალის თავზე.", "ის ავიდა უმაღლესი მწვერვალის თავზე."),
+            ("ეს იყო ყველაზე ღრმა ხეობა.", "ეს იყო უღრმესი ხეობა."),
+            ("ბაღში ყვაოდა ყველაზე მეტად ლამაზი ვარდი.", "ბაღში ყვაოდა ულამაზესი ვარდი."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Superlative circumfix failed for '{raw}': got '{polished}'")
+
+    def test_43_partitive_genitive_measure_concord(self):
+        """Verify partitive and collective Genitive case concord with measure nouns."""
+        pairs = [
+            ("მოედანზე შეიკრიბა ჯგუფი ადამიანები დილით.", "მოედანზე შეიკრიბა ადამიანთა ჯგუფი დილით."),
+            ("ნაწილი ხალხი გაჰყვა წინამძღოლს მთაში.", "ხალხის ნაწილი გაჰყვა წინამძღოლს მთაში."),
+            ("ბიბლიოთეკაში ინახებოდა დიდი რაოდენობა წიგნები.", "ბიბლიოთეკაში ინახებოდა დიდი წიგნების რაოდენობა."),
+            ("უმრავლესობა ხალხი ემხრობოდა მშვიდობას.", "ხალხის უმრავლესობა ემხრობოდა მშვიდობას."),
+            ("ღამის ცაზე ბრწყინავდა სიმრავლე ვარსკვლავები.", "ღამის ცაზე ბრწყინავდა ვარსკვლავთა სიმრავლე."),
+            ("საბჭოზე განიხილეს რიგი საკითხები დეტალურად.", "საბჭოზე განიხილეს საკითხთა რიგი დეტალურად."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Partitive measure concord failed for '{raw}': got '{polished}'")
+
+    def test_44_frequentative_aspect_and_light_motion(self):
+        """Verify synthetic frequentative verbs and aspectual motion."""
+        pairs = [
+            ("დარაჯი ფრთხილად აქეთ-იქით იყურებოდა ბნელ ღამეში.", "დარაჯი ფრთხილად მიმოიხედავდა ბნელ ღამეში."),
+            ("მოხუცი ნელა მოძრაობდა ქუჩაში ჯოხით.", "მოხუცი მიაბიჯებდა ქუჩაში ჯოხით."),
+            ("მასწავლებელი ხშირად იმეორებდა ამ ბრძნულ დარიგებას.", "მასწავლებელი იმეორებდა ხოლმე ამ ბრძნულ დარიგებას."),
+            ("ოსტატმა ბოლომდე მიიყვანა საქმე ერთგულად.", "ოსტატმა სისრულეში მოიყვანა საქმე ერთგულად."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Frequentative motion failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":
