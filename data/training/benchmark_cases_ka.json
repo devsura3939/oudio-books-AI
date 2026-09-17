@@ -6121,5 +6121,944 @@
       "rustaveli",
       "eternal"
     ]
+  },
+  {
+    "id": "case-syntax-ka-468",
+    "kind": "autofix",
+    "source": "ის კიბეზე ზემოთ ავიდა და კარი შეაღო.",
+    "expected": "ის კიბეზე ავიდა და კარი შეაღო.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-469",
+    "kind": "autofix",
+    "source": "მგზავრი სარდაფში ქვემოთ ჩავიდა სანთლით.",
+    "expected": "მგზავრი სარდაფში ჩავიდა სანთლით.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-470",
+    "kind": "autofix",
+    "source": "მზე მთიდან ზემოთ ამოვიდა და გაანათა ველი.",
+    "expected": "მზე მთიდან ამოვიდა და გაანათა ველი.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-471",
+    "kind": "autofix",
+    "source": "მდინარიდან ნავი ქვემოთ ჩამოვიდა წყნარად.",
+    "expected": "მდინარიდან ნავი ჩამოვიდა წყნარად.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-472",
+    "kind": "autofix",
+    "source": "სტუმარი დარბაზში შიგნით შევიდა მოწიწებით.",
+    "expected": "სტუმარი დარბაზში შევიდა მოწიწებით.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-473",
+    "kind": "autofix",
+    "source": "მხედარი ციხიდან გარეთ გამოვიდა ამაყად.",
+    "expected": "მხედარი ციხიდან გამოვიდა ამაყად.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-474",
+    "kind": "autofix",
+    "source": "მეფე სასახლიდან გარეთ გავიდა ხალხთან.",
+    "expected": "მეფე სასახლიდან გავიდა ხალხთან.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-475",
+    "kind": "autofix",
+    "source": "მოგზაური მშობლიურ ქალაქში უკან დაბრუნდა წლების შემდეგ.",
+    "expected": "მოგზაური მშობლიურ ქალაქში დაბრუნდა წლების შემდეგ.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-476",
+    "kind": "autofix",
+    "source": "ბრძენი ჩვენკენ აქეთ მოვიდა და დაგვლოცა.",
+    "expected": "ბრძენი ჩვენკენ მოვიდა და დაგვლოცა.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-477",
+    "kind": "autofix",
+    "source": "მწყემსი მთისკენ იქით წავიდა ცხვრის ფარით.",
+    "expected": "მწყემსი მთისკენ წავიდა ცხვრის ფარით.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-478",
+    "kind": "autofix",
+    "source": "ზემოთ ავიდა",
+    "expected": "ავიდა",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-479",
+    "kind": "autofix",
+    "source": "ქვემოთ ჩავიდა",
+    "expected": "ჩავიდა",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-480",
+    "kind": "autofix",
+    "source": "ზემოთ ამოვიდა",
+    "expected": "ამოვიდა",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-481",
+    "kind": "autofix",
+    "source": "ქვემოთ ჩამოვიდა",
+    "expected": "ჩამოვიდა",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-482",
+    "kind": "autofix",
+    "source": "შიგნით შევიდა",
+    "expected": "შევიდა",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-483",
+    "kind": "autofix",
+    "source": "გარეთ გამოვიდა",
+    "expected": "გამოვიდა",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-484",
+    "kind": "autofix",
+    "source": "გარეთ გავიდა",
+    "expected": "გავიდა",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-485",
+    "kind": "autofix",
+    "source": "უკან დაბრუნდა",
+    "expected": "დაბრუნდა",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-486",
+    "kind": "autofix",
+    "source": "აქეთ მოვიდა",
+    "expected": "მოვიდა",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-487",
+    "kind": "autofix",
+    "source": "იქით წავიდა",
+    "expected": "წავიდა",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "deixis",
+      "preverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-488",
+    "kind": "autofix",
+    "source": "ის ესმის შორიდან ნაზი სიმღერა.",
+    "expected": "მას ესმის შორიდან ნაზი სიმღერა.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-489",
+    "kind": "autofix",
+    "source": "ის ჩაესმა გულში საყვარელი ხმა.",
+    "expected": "მას ჩაესმა გულში საყვარელი ხმა.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-490",
+    "kind": "autofix",
+    "source": "ის ეჩვენა სიზმრად უცხო სამყარო.",
+    "expected": "მას ეჩვენა სიზმრად უცხო სამყარო.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-491",
+    "kind": "autofix",
+    "source": "ის მოეჩვენა თითქოს ჩრდილი განძრეულიყო.",
+    "expected": "მას მოეჩვენა თითქოს ჩრდილი განძრეულიყო.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-492",
+    "kind": "autofix",
+    "source": "ის მოაგონდა ძველი მეგობრის დარიგება.",
+    "expected": "მას მოაგონდა ძველი მეგობრის დარიგება.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-493",
+    "kind": "autofix",
+    "source": "ის გაახსენდა ბავშვობის უდარდელი წლები.",
+    "expected": "მას გაახსენდა ბავშვობის უდარდელი წლები.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-494",
+    "kind": "autofix",
+    "source": "ის ეუცხოვა ახალი გარემო და წესები.",
+    "expected": "მას ეუცხოვა ახალი გარემო და წესები.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-495",
+    "kind": "autofix",
+    "source": "ის მოეწონა ოსტატის მიერ მოხატული ტაძარი.",
+    "expected": "მას მოეწონა ოსტატის მიერ მოხატული ტაძარი.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-496",
+    "kind": "autofix",
+    "source": "ის ეამა მშვიდი ნიავის მოალერსება.",
+    "expected": "მას ეამა მშვიდი ნიავის მოალერსება.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-497",
+    "kind": "autofix",
+    "source": "ის ესმის",
+    "expected": "მას ესმის",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-498",
+    "kind": "autofix",
+    "source": "ის ჩაესმა",
+    "expected": "მას ჩაესმა",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-499",
+    "kind": "autofix",
+    "source": "ის ეჩვენა",
+    "expected": "მას ეჩვენა",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-500",
+    "kind": "autofix",
+    "source": "ის მოეჩვენა",
+    "expected": "მას მოეჩვენა",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-501",
+    "kind": "autofix",
+    "source": "ის მოაგონდა",
+    "expected": "მას მოაგონდა",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-502",
+    "kind": "autofix",
+    "source": "ის გაახსენდა",
+    "expected": "მას გაახსენდა",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-503",
+    "kind": "autofix",
+    "source": "ის ეუცხოვა",
+    "expected": "მას ეუცხოვა",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-504",
+    "kind": "autofix",
+    "source": "ის მოეწონა",
+    "expected": "მას მოეწონა",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-505",
+    "kind": "autofix",
+    "source": "ის ეამა",
+    "expected": "მას ეამა",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "dative",
+      "sensory"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-506",
+    "kind": "autofix",
+    "source": "მას ესმის სიბრძნის ხმა ყოველ წამს.",
+    "expected": "მას ესმის სიბრძნის ხმა ყოველ წამს.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-507",
+    "kind": "autofix",
+    "source": "მას გაახსენდა წინაპართა დანაბარები.",
+    "expected": "მას გაახსენდა წინაპართა დანაბარები.",
+    "weight": 1.0,
+    "tags": [
+      "experiencer",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-508",
+    "kind": "autofix",
+    "source": "მხოლოდ ის დარჩა უკაცრიელ ციხესიმაგრეში.",
+    "expected": "ისიღა დარჩა უკაცრიელ ციხესიმაგრეში.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "restrictive",
+      "bound"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-509",
+    "kind": "autofix",
+    "source": "მხოლოდ ეს ვიცი ამ იდუმალ ამბავზე.",
+    "expected": "ესღა ვიცი ამ იდუმალ ამბავზე.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "restrictive",
+      "bound"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-510",
+    "kind": "autofix",
+    "source": "მხოლოდ ერთი დარჩა ერთგული მოღვაწე.",
+    "expected": "ერთიღა დარჩა ერთგული მოღვაწე.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "restrictive",
+      "bound"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-511",
+    "kind": "autofix",
+    "source": "იმავე დღეს შეიკრიბა მთელი საბჭო.",
+    "expected": "იმ დღესვე შეიკრიბა მთელი საბჭო.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "temporal",
+      "bound"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-512",
+    "kind": "autofix",
+    "source": "იმავე წამს გაიფანტა შავი ღრუბელი.",
+    "expected": "იმწამსვე გაიფანტა შავი ღრუბელი.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "temporal",
+      "bound"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-513",
+    "kind": "autofix",
+    "source": "იმავე წუთს მიიღო ბრძნული გადაწყვეტილება.",
+    "expected": "იმ წუთსვე მიიღო ბრძნული გადაწყვეტილება.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "temporal",
+      "bound"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-514",
+    "kind": "autofix",
+    "source": "მაგრამ ის კი მშვიდად განაგრძობდა გზას.",
+    "expected": "ის კი მშვიდად განაგრძობდა გზას.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "contrastive",
+      "bound"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-515",
+    "kind": "autofix",
+    "source": "მხოლოდ ის დარჩა",
+    "expected": "ისიღა დარჩა",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "restrictive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-516",
+    "kind": "autofix",
+    "source": "მხოლოდ ეს ვიცი",
+    "expected": "ესღა ვიცი",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "restrictive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-517",
+    "kind": "autofix",
+    "source": "მხოლოდ ერთი დარჩა",
+    "expected": "ერთიღა დარჩა",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "restrictive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-518",
+    "kind": "autofix",
+    "source": "იმავე დღეს",
+    "expected": "იმ დღესვე",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "temporal"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-519",
+    "kind": "autofix",
+    "source": "იმავე წამს",
+    "expected": "იმწამსვე",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "temporal"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-520",
+    "kind": "autofix",
+    "source": "იმავე წუთს",
+    "expected": "იმ წუთსვე",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "temporal"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-521",
+    "kind": "autofix",
+    "source": "მაგრამ ის კი",
+    "expected": "ის კი",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "contrastive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-522",
+    "kind": "autofix",
+    "source": "ისიღა დარჩა იმედის სხივად.",
+    "expected": "ისიღა დარჩა იმედის სხივად.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-523",
+    "kind": "autofix",
+    "source": "ესღა ვიცი და მეტი არაფერი.",
+    "expected": "ესღა ვიცი და მეტი არაფერი.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-524",
+    "kind": "autofix",
+    "source": "იმ დღესვე დასრულდა დიდი ბრძოლა.",
+    "expected": "იმ დღესვე დასრულდა დიდი ბრძოლა.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-525",
+    "kind": "autofix",
+    "source": "იმწამსვე გაანათა ზეცამ.",
+    "expected": "იმწამსვე გაანათა ზეცამ.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-526",
+    "kind": "autofix",
+    "source": "იმ წუთსვე გაიღო კარიბჭე.",
+    "expected": "იმ წუთსვე გაიღო კარიბჭე.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-527",
+    "kind": "autofix",
+    "source": "ის კი დუმდა და უსმენდა ბუნებას.",
+    "expected": "ის კი დუმდა და უსმენდა ბუნებას.",
+    "weight": 1.0,
+    "tags": [
+      "enclitic",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-528",
+    "kind": "autofix",
+    "source": "მეომარი თვალის დახამხამების გარეშე შეებრძოლა მტერს.",
+    "expected": "მეომარი დაუხამხამებლად შეებრძოლა მტერს.",
+    "weight": 1.0,
+    "tags": [
+      "circumstantial",
+      "synthetic",
+      "compounds"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-529",
+    "kind": "autofix",
+    "source": "დედა გულის ფანცქალით ელოდა შვილის დაბრუნებას.",
+    "expected": "დედა გულფანცქალით ელოდა შვილის დაბრუნებას.",
+    "weight": 1.0,
+    "tags": [
+      "circumstantial",
+      "synthetic",
+      "compounds"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-530",
+    "kind": "autofix",
+    "source": "მსმენელი ხმის ამოუღებლად უსმენდა მოძღვარს.",
+    "expected": "მსმენელი ხმაამოუღებლად უსმენდა მოძღვარს.",
+    "weight": 1.0,
+    "tags": [
+      "circumstantial",
+      "synthetic",
+      "compounds"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-531",
+    "kind": "autofix",
+    "source": "მგზავრი სუნთქვის შეკვრით უყურებდა უფსკრულს.",
+    "expected": "მგზავრი სუნთქვაშეკრული უყურებდა უფსკრულს.",
+    "weight": 1.0,
+    "tags": [
+      "circumstantial",
+      "synthetic",
+      "compounds"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-532",
+    "kind": "autofix",
+    "source": "თვალის დახამხამების გარეშე",
+    "expected": "დაუხამხამებლად",
+    "weight": 1.0,
+    "tags": [
+      "circumstantial",
+      "synthetic"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-533",
+    "kind": "autofix",
+    "source": "გულის ფანცქალით",
+    "expected": "გულფანცქალით",
+    "weight": 1.0,
+    "tags": [
+      "circumstantial",
+      "synthetic"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-534",
+    "kind": "autofix",
+    "source": "ხმის ამოუღებლად",
+    "expected": "ხმაამოუღებლად",
+    "weight": 1.0,
+    "tags": [
+      "circumstantial",
+      "synthetic"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-535",
+    "kind": "autofix",
+    "source": "სუნთქვის შეკვრით",
+    "expected": "სუნთქვაშეკრული",
+    "weight": 1.0,
+    "tags": [
+      "circumstantial",
+      "synthetic"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-536",
+    "kind": "autofix",
+    "source": "დაუხამხამებლად შეხედა საფრთხეს თვალებში.",
+    "expected": "დაუხამხამებლად შეხედა საფრთხეს თვალებში.",
+    "weight": 1.0,
+    "tags": [
+      "circumstantial",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-537",
+    "kind": "autofix",
+    "source": "ხმაამოუღებლად იდგა დარბაზში.",
+    "expected": "ხმაამოუღებლად იდგა დარბაზში.",
+    "weight": 1.0,
+    "tags": [
+      "circumstantial",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-538",
+    "kind": "autofix",
+    "source": "სულხან-საბა ორბელიანი: სიბრძნე სიცრუისა გვასწავლის ჭეშმარიტების ძიებას იგავთა მეშვეობით.",
+    "expected": "სულხან-საბა ორბელიანი: სიბრძნე სიცრუისა გვასწავლის ჭეშმარიტების ძიებას იგავთა მეშვეობით.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "sulkhan-saba",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-539",
+    "kind": "autofix",
+    "source": "ნიკოლოზ ბარათაშვილი: მერანი მიქრის და უკან არ იხევს ბედისწერის წინაშე.",
+    "expected": "ნიკოლოზ ბარათაშვილი: მერანი მიქრის და უკან არ იხევს ბედისწერის წინაშე.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "baratashvili",
+      "merani"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-540",
+    "kind": "autofix",
+    "source": "დავით გურამიშვილი: დავითიანი გამოხატავს ერის სულიერ ტკივილსა და იმედს.",
+    "expected": "დავით გურამიშვილი: დავითიანი გამოხატავს ერის სულიერ ტკივილსა და იმედს.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "guramishvili",
+      "davitiani"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-541",
+    "kind": "autofix",
+    "source": "დანტე ალიგიერი: ღვთაებრივი კომედია გვიჩვენებს სულის განწმენდისა და ამაღლების გზას.",
+    "expected": "დანტე ალიგიერი: ღვთაებრივი კომედია გვიჩვენებს სულის განწმენდისა და ამაღლების გზას.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "dante",
+      "comedy"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-542",
+    "kind": "autofix",
+    "source": "ბარუხ სპინოზა: ეთიკა ამტკიცებს, რომ გონების უმაღლესი სიკეთე ღმერთის შეცნობაა.",
+    "expected": "ბარუხ სპინოზა: ეთიკა ამტკიცებს, რომ გონების უმაღლესი სიკეთე ღმერთის შეცნობაა.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "spinoza",
+      "ethics"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-543",
+    "kind": "autofix",
+    "source": "იმანუელ კანტი: წმინდა გონების კრიტიკა იკვლევს შემეცნების აპრიორულ საზღვრებს.",
+    "expected": "იმანუელ კანტი: წმინდა გონების კრიტიკა იკვლევს შემეცნების აპრიორულ საზღვრებს.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "kant",
+      "pure_reason"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-544",
+    "kind": "autofix",
+    "source": "შოთა რუსთაველი: ვინ მოყვარესა არ ეძებს, იგი თავისა მტერია.",
+    "expected": "შოთა რუსთაველი: ვინ მოყვარესა არ ეძებს, იგი თავისა მტერია.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "rustaveli",
+      "friendship"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-545",
+    "kind": "autofix",
+    "source": "სულხან-საბა ორბელიანი: სიტყვის კონა ქართული ენის ამოუწურავი სიმდიდრეა.",
+    "expected": "სულხან-საბა ორბელიანი: სიტყვის კონა ქართული ენის ამოუწურავი სიმდიდრეა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "sulkhan-saba",
+      "lexicon"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-546",
+    "kind": "autofix",
+    "source": "ნიკოლოზ ბარათაშვილი: ცისა ფერს, ლურჯსა ფერს, პირველად ქმნილსა ფერს.",
+    "expected": "ნიკოლოზ ბარათაშვილი: ცისა ფერს, ლურჯსა ფერს, პირველად ქმნილსა ფერს.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "baratashvili",
+      "azure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-547",
+    "kind": "autofix",
+    "source": "ბარუხ სპინოზა: თავისუფლება არის შეცნობილი აუცილებლობა.",
+    "expected": "ბარუხ სპინოზა: თავისუფლება არის შეცნობილი აუცილებლობა.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "spinoza",
+      "freedom"
+    ]
   }
 ]

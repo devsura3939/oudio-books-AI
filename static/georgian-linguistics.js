@@ -5446,8 +5446,60 @@ CONCESSIVE SUBORDINATION SYNTHESIS (KA-159):
     * თუნდაც მოვიდეს (even if he comes — NOT *თუნდაც რომ მოვიდეს).
     * თუნდაც გააკეთოს (even if he does it — NOT *თუნდაც რომ გააკეთოს).`;
 
+// KA-160 v1.80.0 — Spatial & Directional Deictic Preverb Synthesis.
+const KA_SPATIAL_DEICTIC_PREVERBS = `
+SPATIAL & DIRECTIONAL DEICTIC PREVERB SYNTHESIS (KA-160):
+• ELIMINATION OF PLEONASTIC SPATIAL ADVERBS:
+  - In Kartvelian linguistics, vertical and directional preverbs already express orientation; avoid pleonastic adverbs:
+    * ავიდა (went up — NOT *ზემოთ ავიდა).
+    * ჩავიდა (went down — NOT *ქვემოთ ჩავიდა).
+    * ამოვიდა (came up — NOT *ზემოთ ამოვიდა).
+    * ჩამოვიდა (came down — NOT *ქვემოთ ჩამოვიდა).
+    * შევიდა (entered — NOT *შიგნით შევიდა).
+    * გამოვიდა (came out — NOT *გარეთ გამოვიდა).
+    * გავიდა (went out — NOT *გარეთ გავიდა).
+    * დაბრუნდა (returned — NOT *უკან დაბრუნდა).
+    * მოვიდა (came towards speaker — NOT *აქეთ მოვიდა).
+    * წავიდა (went away from speaker — NOT *იქით წავიდა).`;
+
+// KA-161 v1.80.0 — Sensory & Psychological Involuntary Experiencer Concord.
+const KA_SENSORY_EXPERIENCER_CONCORD = `
+SENSORY & PSYCHOLOGICAL INVOLUNTARY EXPERIENCER CONCORD (KA-161):
+• DATIVE LOGICAL SUBJECTS WITH PERCEPTION PREDICATES:
+  - Involuntary perception, auditory recollection, and apparition verbs require Dative Experiencers (მას), not Nominative (ის):
+    * მას ესმის (he hears — NOT *ის ესმის).
+    * მას ჩაესმა (rang in his ears — NOT *ის ჩაესმა).
+    * მას ეჩვენა / მას მოეჩვენა (appeared to him — NOT *ის ეჩვენა / *ის მოეჩვენა).
+    * მას მოაგონდა (came to his mind — NOT *ის მოაგონდა).
+    * მას გაახსენდა (he remembered — NOT *ის გაახსენდა).
+    * მას ეუცხოვა (seemed strange to him — NOT *ის ეუცხოვა).
+    * მას მოეწონა (he liked it — NOT *ის მოეწონა).
+    * მას ეამა (pleased him — NOT *ის ეამა).`;
+
+// KA-162 v1.80.0 — Restrictive, Temporal & Contrastive Bound Enclitics (-ღა, -ვე, -კი).
+const KA_BOUND_ENCLITIC_SYNTHESIS = `
+RESTRICTIVE, TEMPORAL & CONTRASTIVE BOUND ENCLITICS (KA-162):
+• CANONICAL KARTVELIAN BOUND ENCLITICS:
+  - Synthesize native enclitics instead of heavy analytical periphrases:
+    * ისიღა დარჩა (only he remained — NOT *მხოლოდ ის დარჩა).
+    * ესღა ვიცი (this alone I know — NOT *მხოლოდ ეს ვიცი).
+    * ერთიღა დარჩა (only one remained — NOT *მხოლოდ ერთი დარჩა).
+    * იმ დღესვე (that very day — NOT *იმავე დღეს).
+    * იმწამსვე / იმ წუთსვე (that very instant/minute — NOT *იმავე წამს / *იმავე წუთს).
+    * ის კი წავიდა (as for him, he went — contrastive -კი).`;
+
+// KA-163 v1.80.0 — Circumstantial Synthetic Compounds & Privatives.
+const KA_CIRCUMSTANTIAL_SYNTHETIC_COMPOUNDS = `
+CIRCUMSTANTIAL SYNTHETIC COMPOUNDS & PRIVATIVES (KA-163):
+• LITERARY CIRCUMSTANTIAL ADVERBIALS:
+  - Use idiomatic synthetic Kartvelian compounds:
+    * დაუხამხამებლად (without blinking — NOT *თვალის დახამხამების გარეშე).
+    * გულფანცქალით (with fluttering heart — NOT *გულის ფანცქალით).
+    * ხმაამოუღებლად (without making a sound — NOT *ხმის ამოუღებლად).
+    * სუნთქვაშეკრული (breathless / with bated breath — NOT *სუნთქვის შეკვრით).`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
-// Full knowledge base for draft translation (v1.7.0 expanded set).
+// Full knowledge base for draft translation (v1.8.0 expanded set).
 function getKaKnowledgeBase() {
     return [
         KA_MORPHOLOGY,
@@ -5487,6 +5539,10 @@ function getKaKnowledgeBase() {
         KA_TEMPORAL_CONVERB_SYNTHESIS,
         KA_APPOSITIVE_CASE_CONCORD,
         KA_CONCESSIVE_SUBORDINATION,
+        KA_SPATIAL_DEICTIC_PREVERBS,
+        KA_SENSORY_EXPERIENCER_CONCORD,
+        KA_BOUND_ENCLITIC_SYNTHESIS,
+        KA_CIRCUMSTANTIAL_SYNTHETIC_COMPOUNDS,
         KA_CONTRASTIVE_PATTERNS,
         KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
         KA_PROPER_NOUN_TRANSLITERATION,
@@ -9898,7 +9954,65 @@ function synthesizeGeorgianMorphology(text) {
         out = out.replace(re, repl);
     }
 
-    // 39. Typography & Dialogue
+    // 39. Spatial & Directional Deictic Pleonasm Elimination (სივრცით-ორიენტაციული ზმნისწინის სინთეზი)
+    const spatialDeicticFixes = [
+        [/(?<![\u10A0-\u10FF])ზემოთ\s+ავიდა(?![ა-ჰ])/g, 'ავიდა'],
+        [/(?<![\u10A0-\u10FF])ქვემოთ\s+ჩავიდა(?![ა-ჰ])/g, 'ჩავიდა'],
+        [/(?<![\u10A0-\u10FF])ზემოთ\s+ამოვიდა(?![ა-ჰ])/g, 'ამოვიდა'],
+        [/(?<![\u10A0-\u10FF])ქვემოთ\s+ჩამოვიდა(?![ა-ჰ])/g, 'ჩამოვიდა'],
+        [/(?<![\u10A0-\u10FF])შიგნით\s+შევიდა(?![ა-ჰ])/g, 'შევიდა'],
+        [/(?<![\u10A0-\u10FF])გარეთ\s+გამოვიდა(?![ა-ჰ])/g, 'გამოვიდა'],
+        [/(?<![\u10A0-\u10FF])გარეთ\s+გავიდა(?![ა-ჰ])/g, 'გავიდა'],
+        [/(?<![\u10A0-\u10FF])უკან\s+დაბრუნდა(?![ა-ჰ])/g, 'დაბრუნდა'],
+        [/(?<![\u10A0-\u10FF])აქეთ\s+მოვიდა(?![ა-ჰ])/g, 'მოვიდა'],
+        [/(?<![\u10A0-\u10FF])იქით\s+წავიდა(?![ა-ჰ])/g, 'წავიდა'],
+    ];
+    for (const [re, repl] of spatialDeicticFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 40. Sensory & Psychological Involuntary Experiencer Concord (გრძნობად-აღქმითი ზმნების დატიური შეთანხმება)
+    const sensoryExperiencerFixes = [
+        [/(?<![\u10A0-\u10FF])ის\s+ესმის(?![ა-ჰ])/g, 'მას ესმის'],
+        [/(?<![\u10A0-\u10FF])ის\s+ჩაესმა(?![ა-ჰ])/g, 'მას ჩაესმა'],
+        [/(?<![\u10A0-\u10FF])ის\s+ეჩვენა(?![ა-ჰ])/g, 'მას ეჩვენა'],
+        [/(?<![\u10A0-\u10FF])ის\s+მოეჩვენა(?![ა-ჰ])/g, 'მას მოეჩვენა'],
+        [/(?<![\u10A0-\u10FF])ის\s+მოაგონდა(?![ა-ჰ])/g, 'მას მოაგონდა'],
+        [/(?<![\u10A0-\u10FF])ის\s+გაახსენდა(?![ა-ჰ])/g, 'მას გაახსენდა'],
+        [/(?<![\u10A0-\u10FF])ის\s+ეუცხოვა(?![ა-ჰ])/g, 'მას ეუცხოვა'],
+        [/(?<![\u10A0-\u10FF])ის\s+მოეწონა(?![ა-ჰ])/g, 'მას მოეწონა'],
+        [/(?<![\u10A0-\u10FF])ის\s+ეამა(?![ა-ჰ])/g, 'მას ეამა'],
+    ];
+    for (const [re, repl] of sensoryExperiencerFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 41. Restrictive, Temporal & Contrastive Bound Enclitics (საზღვრულობითი და დროითი ნაწილაკების სინთეზი: -ღა, -ვე, -კი)
+    const boundEncliticFixes = [
+        [/(?<![\u10A0-\u10FF])მხოლოდ\s+ის\s+დარჩა(?![ა-ჰ])/g, 'ისიღა დარჩა'],
+        [/(?<![\u10A0-\u10FF])მხოლოდ\s+ეს\s+ვიცი(?![ა-ჰ])/g, 'ესღა ვიცი'],
+        [/(?<![\u10A0-\u10FF])მხოლოდ\s+ერთი\s+დარჩა(?![ა-ჰ])/g, 'ერთიღა დარჩა'],
+        [/(?<![\u10A0-\u10FF])იმავე\s+დღეს(?![ა-ჰ])/g, 'იმ დღესვე'],
+        [/(?<![\u10A0-\u10FF])იმავე\s+წამს(?![ა-ჰ])/g, 'იმწამსვე'],
+        [/(?<![\u10A0-\u10FF])იმავე\s+წუთს(?![ა-ჰ])/g, 'იმ წუთსვე'],
+        [/(?<![\u10A0-\u10FF])მაგრამ\s+ის\s+კი(?![ა-ჰ])/g, 'ის კი'],
+    ];
+    for (const [re, repl] of boundEncliticFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 42. Circumstantial Synthetic Compounds & Privatives (ვითარებითი შედგენილი ზმნიზედები)
+    const circumstantialFixes = [
+        [/(?<![\u10A0-\u10FF])თვალის\s+დახამხამების\s+გარეშე(?![ა-ჰ])/g, 'დაუხამხამებლად'],
+        [/(?<![\u10A0-\u10FF])გულის\s+ფანცქალით(?![ა-ჰ])/g, 'გულფანცქალით'],
+        [/(?<![\u10A0-\u10FF])ხმის\s+ამოუღებლად(?![ა-ჰ])/g, 'ხმაამოუღებლად'],
+        [/(?<![\u10A0-\u10FF])სუნთქვის\s+შეკვრით(?![ა-ჰ])/g, 'სუნთქვაშეკრული'],
+    ];
+    for (const [re, repl] of circumstantialFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 43. Typography & Dialogue
     out = out.replace(/(?:^|\n)\s*[-–—]\s*/g, '\n— ');
     out = out.replace(/\s+([.,;:!?])/g, '$1');
 
@@ -9993,7 +10107,15 @@ function translateOfflineEnToKa(text) {
             [/\bJustice\s+is\s+the\s+habit\s+of\s+rendering\s+to\s+each\s+his\s+own\.?\b/gi, 'სამართლიანობა არის საკუთარი საქმის კეთება და თითოეულისთვის თავისის მიგება.'],
             [/\bThe\s+wheel\s+of\s+fortune\s+never\s+ceases\s+to\s+turn\.?\b/gi, 'ბედის ბორბალი განუწყვეტლივ ბრუნავს.'],
             [/\bFreedom\s+is\s+necessity\s+understood\.?\b/gi, 'თავისუფლება შეცნობილი აუცილებლობაა.'],
-            [/\bThe\s+greatest\s+thing\s+in\s+the\s+world\s+is\s+to\s+know\s+how\s+to\s+belong\s+to\s+oneself\.?\b/gi, 'უდიდესი ხელოვნება სამყაროში საკუთარი თავის ფლობაა.']
+            [/\bThe\s+greatest\s+thing\s+in\s+the\s+world\s+is\s+to\s+know\s+how\s+to\s+belong\s+to\s+oneself\.?\b/gi, 'უდიდესი ხელოვნება სამყაროში საკუთარი თავის ფლობაა.'],
+            [/\bWisdom\s+is\s+the\s+greatest\s+treasure\s+and\s+false\s+speech\s+destroys\s+the\s+soul\.?\b/gi, 'სიბრძნე უდიდესი საუნჯეა, ხოლო სიცრუე სულს ღუპავს.'],
+            [/\bRush\s+forward,?\s+my\s+merani,?\s+and\s+take\s+me\s+beyond\s+the\s+bounds\s+of\s+destiny!?|\bRush\s+forward,?\s+my\s+merani,?\s+and\s+take\s+me\s+beyond\s+the\s+bounds\s+of\s+destiny\.?\b/gi, 'გაჰქუსლე, მერანო, და გადამაფრინე ბედის სამზღვარს!'],
+            [/\bHe\s+who\s+teaches\s+wisdom\s+gives\s+light\s+to\s+the\s+blind\s+heart\.?\b/gi, 'ვინცა სიბრძნეს ასწავლის, იგი ბრმა გულს ნათელს ჰფენს.'],
+            [/\bAbandon\s+all\s+hope,?\s+you\s+who\s+enter\s+here!?|\bAbandon\s+all\s+hope,?\s+you\s+who\s+enter\s+here\.?\b/gi, 'დაუტევეთ ყოველი იმედი, ვინც აქ შემოდიხართ.'],
+            [/\bThe\s+love\s+that\s+moves\s+the\s+sun\s+and\s+the\s+other\s+stars\.?\b/gi, 'სიყვარული, რომელიც ამოძრავებს მზესა და სხვა ვარსკვლავებს.'],
+            [/\bBlessedness\s+is\s+not\s+the\s+reward\s+of\s+virtue,?\s+but\s+virtue\s+itself\.?\b/gi, 'ნეტარება სათნოების ჯილდო კი არა, თავად სათნოებაა.'],
+            [/\bThoughts\s+without\s+content\s+are\s+empty,?\s+intuitions\s+without\s+concepts\s+are\s+blind\.?\b/gi, 'აზრები შინაარსის გარეშე ცარიელია, ჭვრეტა ცნებათა გარეშე — ბრმა.'],
+            [/\bWhat\s+is\s+sweet\s+to\s+the\s+heart\s+is\s+sweeter\s+than\s+all\s+treasures\.?\b/gi, 'რაცა გულს ტკბილად ეამოს, ყოველთა საუნჯეთა სჯობს.']
         ];
         for (const [re, repl] of idioms) {
             p = p.replace(re, repl);
@@ -10422,15 +10544,19 @@ if (typeof window !== 'undefined') {
     window.KA_TEMPORAL_CONVERB_SYNTHESIS = KA_TEMPORAL_CONVERB_SYNTHESIS;
     window.KA_APPOSITIVE_CASE_CONCORD = KA_APPOSITIVE_CASE_CONCORD;
     window.KA_CONCESSIVE_SUBORDINATION = KA_CONCESSIVE_SUBORDINATION;
+    window.KA_SPATIAL_DEICTIC_PREVERBS = KA_SPATIAL_DEICTIC_PREVERBS;
+    window.KA_SENSORY_EXPERIENCER_CONCORD = KA_SENSORY_EXPERIENCER_CONCORD;
+    window.KA_BOUND_ENCLITIC_SYNTHESIS = KA_BOUND_ENCLITIC_SYNTHESIS;
+    window.KA_CIRCUMSTANTIAL_SYNTHETIC_COMPOUNDS = KA_CIRCUMSTANTIAL_SYNTHETIC_COMPOUNDS;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.70.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.80.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 172,
-    qaRules: 168,
-    autoFixes: 160,
-    researchSources: 630
+    promptBlocks: 176,
+    qaRules: 172,
+    autoFixes: 164,
+    researchSources: 640
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -10479,6 +10605,10 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_TEMPORAL_CONVERB_SYNTHESIS,
         KA_APPOSITIVE_CASE_CONCORD,
         KA_CONCESSIVE_SUBORDINATION,
+        KA_SPATIAL_DEICTIC_PREVERBS,
+        KA_SENSORY_EXPERIENCER_CONCORD,
+        KA_BOUND_ENCLITIC_SYNTHESIS,
+        KA_CIRCUMSTANTIAL_SYNTHETIC_COMPOUNDS,
         synthesizeGeorgianMorphology,
         polishGeorgianLiterarySyntax: synthesizeGeorgianMorphology,
         translateOfflineEnToKa,

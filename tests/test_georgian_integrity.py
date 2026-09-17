@@ -199,9 +199,9 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 580, "Expected at least 580 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 620, "Expected at least 620 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 36, "Active pack version must be at least 36")
+        self.assertGreaterEqual(len(cases), 660, "Expected at least 660 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 740, "Expected at least 740 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 38, "Active pack version must be at least 38")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
@@ -611,6 +611,68 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         for raw, expected in pairs:
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Appositive/concessive failed for '{raw}': got '{polished}'")
+
+    def test_37_spatial_deictic_preverbs_and_pleonasm_elimination(self):
+        """Verify spatial/directional deictic preverbs and pleonasm elimination."""
+        pairs = [
+            ("ზემოთ ავიდა", "ავიდა"),
+            ("ქვემოთ ჩავიდა", "ჩავიდა"),
+            ("ზემოთ ამოვიდა", "ამოვიდა"),
+            ("ქვემოთ ჩამოვიდა", "ჩამოვიდა"),
+            ("შიგნით შევიდა", "შევიდა"),
+            ("გარეთ გამოვიდა", "გამოვიდა"),
+            ("გარეთ გავიდა", "გავიდა"),
+            ("უკან დაბრუნდა", "დაბრუნდა"),
+            ("აქეთ მოვიდა", "მოვიდა"),
+            ("იქით წავიდა", "წავიდა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Spatial deictic preverbs failed for '{raw}': got '{polished}'")
+
+    def test_38_sensory_involuntary_experiencer_dative_concord(self):
+        """Verify Dative subject concord for sensory and psychological involuntary experiencer verbs."""
+        pairs = [
+            ("ის ესმის", "მას ესმის"),
+            ("ის ჩაესმა", "მას ჩაესმა"),
+            ("ის ეჩვენა", "მას ეჩვენა"),
+            ("ის მოეჩვენა", "მას მოეჩვენა"),
+            ("ის მოაგონდა", "მას მოაგონდა"),
+            ("ის გაახსენდა", "მას გაახსენდა"),
+            ("ის ეუცხოვა", "მას ეუცხოვა"),
+            ("ის მოეწონა", "მას მოეწონა"),
+            ("ის ეამა", "მას ეამა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Sensory experiencer concord failed for '{raw}': got '{polished}'")
+
+    def test_39_restrictive_and_temporal_bound_enclitics(self):
+        """Verify restrictive, temporal, and contrastive bound enclitics (-ღა, -ვე, -კი)."""
+        pairs = [
+            ("მხოლოდ ის დარჩა", "ისიღა დარჩა"),
+            ("მხოლოდ ეს ვიცი", "ესღა ვიცი"),
+            ("მხოლოდ ერთი დარჩა", "ერთიღა დარჩა"),
+            ("იმავე დღეს", "იმ დღესვე"),
+            ("იმავე წამს", "იმწამსვე"),
+            ("იმავე წუთს", "იმ წუთსვე"),
+            ("მაგრამ ის კი", "ის კი"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Bound enclitics failed for '{raw}': got '{polished}'")
+
+    def test_40_circumstantial_synthetic_compounds(self):
+        """Verify circumstantial privative and instrumental synthetic compounds."""
+        pairs = [
+            ("თვალის დახამხამების გარეშე", "დაუხამხამებლად"),
+            ("გულის ფანცქალით", "გულფანცქალით"),
+            ("ხმის ამოუღებლად", "ხმაამოუღებლად"),
+            ("სუნთქვის შეკვრით", "სუნთქვაშეკრული"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Circumstantial compounds failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":

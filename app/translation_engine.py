@@ -119,7 +119,8 @@ def synthesize_georgian_morphology(text: str) -> str:
         r'(?:სურს|სურდა|მოსწონს|მოსწონდა|ეჩვენება|ეჩვენებოდა|ეხერხება|ეზარება|სწყურია|'
         r'აინტერესებს|აღელვებს|უნდა|უნდოდა|სჭირდება|სჭირდებოდა|უყვარს|უყვარდა|ახსოვს|'
         r'ახსოვდა|ეშინია|ეშინოდა|სტკივა|სტკიოდა|შია|ცივა|სცივა|უნახავს|გაუგია|დაეკარგა|'
-        r'გაუტყდა|შეეშალა|დაავიწყდა)'
+        r'გაუტყდა|შეეშალა|დაავიწყდა|ესმის|ესმოდა|ჩაესმა|ეჩვენა|მოეჩვენა|მოაგონდა|'
+        r'გაახსენდა|ეუცხოვა|მოეწონა|ეამა)'
     )
     t = re.sub(r'(?<![\u10A0-\u10FF])ის(\s+(?:[ა-ჰ]+\s+)?' + experiencer_verbs + r')(?![ა-ჰ])', r'მას\g<1>', t)
 
@@ -457,6 +458,22 @@ OFFLINE_LITERARY_EXEMPLARS = [
      "მთამ არ იცის სხვა ბატონი, გარდა ცის თავისუფლებისა."),
     (r"let the pale moon shine over the quiet valley\.?",
      "დაე მკრთალმა მთვარემ გაანათოს მყუდრო ხეობა."),
+    (r"wisdom is the greatest treasure and false speech destroys the soul\.?",
+     "სიბრძნე უდიდესი საუნჯეა, ხოლო სიცრუე სულს ღუპავს."),
+    (r"rush forward,? my merani,? and take me beyond the bounds of destiny!?|rush forward,? my merani,? and take me beyond the bounds of destiny\.?",
+     "გაჰქუსლე, მერანო, და გადამაფრინე ბედის სამზღვარს!"),
+    (r"he who teaches wisdom gives light to the blind heart\.?",
+     "ვინცა სიბრძნეს ასწავლის, იგი ბრმა გულს ნათელს ჰფენს."),
+    (r"abandon all hope,? you who enter here!?|abandon all hope,? you who enter here\.?",
+     "დაუტევეთ ყოველი იმედი, ვინც აქ შემოდიხართ."),
+    (r"the love that moves the sun and the other stars\.?",
+     "სიყვარული, რომელიც ამოძრავებს მზესა და სხვა ვარსკვლავებს."),
+    (r"blessedness is not the reward of virtue,? but virtue itself\.?",
+     "ნეტარება სათნოების ჯილდო კი არა, თავად სათნოებაა."),
+    (r"thoughts without content are empty,? intuitions without concepts are blind\.?",
+     "აზრები შინაარსის გარეშე ცარიელია, ჭვრეტა ცნებათა გარეშე — ბრმა."),
+    (r"what is sweet to the heart is sweeter than all treasures\.?",
+     "რაცა გულს ტკბილად ეამოს, ყოველთა საუნჯეთა სჯობს."),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),
@@ -657,6 +674,10 @@ def translate_with_gemini(
                 "33. SYNTHETIC TEMPORAL CONVERBS: Use synthetic converbs in '-ას' / '-ისას' ('კითხვისას', 'საუბრისას', 'წერისას', 'ფიქრისას', 'დანახვისთანავე') instead of clunky subordinate clauses with 'დროს' or 'მომენტში'.\n"
                 "34. APPOSITIVE CASE CONCORD: Postposed appositives and determinatives must agree in case with the head noun ('გიორგიმ, თავდადებულმა მეომარმა,', 'მეფემ, ბრძენმა მმართველმა,').\n"
                 "35. CONCESSIVE SYNTHESIS: Use authentic Kartvelian concessive markers ('თუმცა', 'მართალია... მაგრამ', 'თუნდაც') instead of heavy Russian calques like '*მიუხედავად იმისა, რომ'.\n"
+                "36. SPATIAL DEIXIS: Eliminate redundant spatial adverbs preceding directional preverbs ('*ზემოთ ავიდა' -> 'ავიდა', '*ქვემოთ ჩავიდა' -> 'ჩავიდა', '*შიგნით შევიდა' -> 'შევიდა', '*გარეთ გამოვიდა' -> 'გამოვიდა', '*უკან დაბრუნდა' -> 'დაბრუნდა').\n"
+                "37. SENSORY EXPERIENCER CONCORD: Verbs of perception and involuntary sensation require Dative logical subjects ('მას ესმის', 'მას ჩაესმა', 'მას მოეჩვენა', 'მას გაახსენდა', 'მას ეამა').\n"
+                "38. BOUND ENCLITICS: Use authentic bound restrictive, temporal, and contrastive clitics ('-ღა', '-ვე', '-კი': 'ისიღა დარჩა', 'ესღა ვიცი', 'იმ დღესვე', 'იმწამსვე', 'ის კი').\n"
+                "39. CIRCUMSTANTIAL COMPOUNDS: Prefer synthetic compound adverbs ('დაუხამხამებლად', 'გულფანცქალით', 'ხმაამოუღებლად', 'სუნთქვაშეკრული') over analytical prepositional phrases.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -755,6 +776,10 @@ def translate_with_kona(
                 "34. SYNTHETIC TEMPORAL CONVERBS: Use synthetic converbs in '-ას' / '-ისას' ('კითხვისას', 'საუბრისას', 'წერისას', 'ფიქრისას', 'დანახვისთანავე') instead of clunky subordinate clauses with 'დროს' or 'მომენტში'.\n"
                 "35. APPOSITIVE CASE CONCORD: Postposed appositives and determinatives must agree in case with the head noun ('გიორგიმ, თავდადებულმა მეომარმა,', 'მეფემ, ბრძენმა მმართველმა,').\n"
                 "36. CONCESSIVE SYNTHESIS: Use authentic Kartvelian concessive markers ('თუმცა', 'მართალია... მაგრამ', 'თუნდაც') instead of heavy Russian calques like '*მიუხედავად იმისა, რომ'.\n"
+                "37. SPATIAL DEIXIS: Eliminate redundant spatial adverbs preceding directional preverbs ('*ზემოთ ავიდა' -> 'ავიდა', '*ქვემოთ ჩავიდა' -> 'ჩავიდა', '*შიგნით შევიდა' -> 'შევიდა', '*გარეთ გამოვიდა' -> 'გამოვიდა', '*უკან დაბრუნდა' -> 'დაბრუნდა').\n"
+                "38. SENSORY EXPERIENCER CONCORD: Verbs of perception and involuntary sensation require Dative logical subjects ('მას ესმის', 'მას ჩაესმა', 'მას მოეჩვენა', 'მას გაახსენდა', 'მას ეამა').\n"
+                "39. BOUND ENCLITICS: Use authentic bound restrictive, temporal, and contrastive clitics ('-ღა', '-ვე', '-კი': 'ისიღა დარჩა', 'ესღა ვიცი', 'იმ დღესვე', 'იმწამსვე', 'ის კი').\n"
+                "40. CIRCUMSTANTIAL COMPOUNDS: Prefer synthetic compound adverbs ('დაუხამხამებლად', 'გულფანცქალით', 'ხმაამოუღებლად', 'სუნთქვაშეკრული') over analytical prepositional phrases.\n"
                 "Output ONLY the Georgian translation."
             )
             user_parts = []
