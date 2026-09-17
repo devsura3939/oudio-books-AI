@@ -4115,6 +4115,7 @@ function updateAuthGateVisibility() {
                 const badge = document.getElementById('gateResetEmailBadge');
                 if (badge) badge.textContent = res.user.email;
                 if (submit) submit.disabled = false;
+                setGateSuccess('');
             } else {
                 switchGateMode('signin');
                 const email = document.getElementById('gateEmail');
@@ -4463,13 +4464,9 @@ async function handleGateForgot() {
             );
             const res = await Promise.race([window.LuminaStore.resetPassword(email), timeoutPromise]);
             if (res.success) {
-                if (res.action_link) {
-                    setGateSuccess(`A recovery link has been generated! Check your email, or <a href="${res.action_link}" class="underline font-bold text-teal-400">click here to reset password now</a>.`);
-                } else {
-                    setGateSuccess('If an account exists for this email, a recovery link has been requested. Check your inbox and spam folder.');
-                }
+                setGateSuccess('Password reset link has been sent to your email! Please check your inbox and spam folder.');
             } else {
-                setGateError(res.error?.message || 'Could not send recovery link.');
+                setGateError(res.error?.message || 'Could not send recovery link. Please try again.');
             }
         } else {
             setGateError('Authentication service not connected.');

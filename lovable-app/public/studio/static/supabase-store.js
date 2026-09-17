@@ -423,24 +423,7 @@
         redirectTo: callbackUrl,
       });
       if (res && res.error) throw res.error;
-
-      var actionLink = null;
-      if (typeof window !== "undefined" && window.location && window.location.protocol && window.location.protocol.indexOf("http") === 0) {
-        try {
-          var baseApi = (window.LUMINA_RUNTIME_CONFIG && window.LUMINA_RUNTIME_CONFIG.API_URL) || "https://92.5.71.162.sslip.io";
-          var r = await fetch(baseApi + "/api/public/auth/recover", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: cleanEmail })
-          });
-          if (r && r.ok) {
-            var data = await r.json();
-            if (data && data.action_link) actionLink = data.action_link;
-          }
-        } catch (_) {}
-      }
-
-      return { success: true, action_link: actionLink };
+      return { success: true };
     } catch (err) {
       if (typeof window !== "undefined" && window.location && window.location.protocol && window.location.protocol.indexOf("http") === 0) {
         try {
@@ -452,8 +435,8 @@
           });
           if (r && r.ok) {
             var data = await r.json();
-            if (data && data.action_link) {
-              return { success: true, action_link: data.action_link };
+            if (data && data.success) {
+              return { success: true };
             }
           }
         } catch (_) {}
@@ -466,6 +449,9 @@
     var c = ensureClient();
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     try {
+      if (!recoveryUserId) {
+        try { recoveryUserId = sessionStorage.getItem("engbot_recovery_user"); } catch (e) {}
+      }
       if (!recoveryUserId) throw new Error("Open a valid recovery email link before changing your password.");
       var verified = await c.auth.getUser();
       if (verified.error || verified.data?.user?.id !== recoveryUserId) throw new Error("Your recovery session expired. Request a new link.");

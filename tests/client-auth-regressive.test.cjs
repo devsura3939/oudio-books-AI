@@ -564,7 +564,7 @@ test('Suite 7.1: handleGateForgot validates email before calling LuminaStore.res
   assert.match(elements.gateErrorMsg.textContent, /valid email address/i);
 });
 
-test('Suite 7.2: handleGateForgot sends reset request and displays confirmation', async () => {
+test('Suite 7.2: handleGateForgot sends reset request and displays confirmation with zero link on page', async () => {
   const { context, elements, storeCalls } = buildSandbox(undefined, {
     resetPassword: () => ({ success: true })
   });
@@ -574,7 +574,9 @@ test('Suite 7.2: handleGateForgot sends reset request and displays confirmation'
   assert.equal(storeCalls[0][0], 'resetPassword');
   assert.equal(storeCalls[0][1], 'recover_user@example.test');
   assert.equal(elements.gateSuccessMsg.classList.contains('hidden'), false);
-  assert.match(elements.gateSuccessMsg.textContent, /recovery link has been requested/i);
+  assert.match(elements.gateSuccessMsg.textContent, /Password reset link has been sent to your email|check your inbox/i);
+  assert.equal(elements.gateSuccessMsg.innerHTML.includes('<a'), false);
+  assert.equal(elements.gateSuccessMsg.innerHTML.includes('http'), false);
   assert.equal(elements.btnGateForgot.disabled, false);
 });
 

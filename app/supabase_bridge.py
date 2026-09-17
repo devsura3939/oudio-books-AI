@@ -62,15 +62,26 @@ def fetch_supabase_books() -> List[Dict[str, Any]]:
         return json.loads(resp.read().decode("utf-8"))
 
 def generate_recovery_link(email: str) -> Dict[str, Any]:
-    if not SUPABASE_SECRET_KEY:
-        raise RuntimeError("Supabase admin access is not configured")
-    headers = _admin_headers()
-    body = json.dumps({"type": "recovery", "email": email.strip().lower()}).encode("utf-8")
-    r1 = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/admin/generate_link", data=body, headers=headers, method="POST")
-    with urllib.request.urlopen(r1, timeout=10) as resp1:
-        data = json.loads(resp1.read().decode("utf-8"))
+    # Triggers recovery email through GoTrue mailer so email is delivered directly to user's inbox
+    body = json.dumps({"email": email.strip().lower()}).encode("utf-8")
+    headers = {"apikey": SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json"}
+    r = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/recover", data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(r, timeout=10) as resp:
+            return {
+                "success": True,
+                "message": "Password reset link has been sent to your email.",
+                "email": email.strip().lower()
+            }
+    except urllib.error.HTTPError as e:
+        err_msg = "Could not send password reset email."
+        try:
+            err_data = json.loads(e.read().decode("utf-8"))
+            err_msg = err_data.get("msg") or err_data.get("message") or err_msg
+        except Exception:
+            pass
         return {
-            "success": True,
-            "action_link": data.get("action_link"),
+            "success": False,
+            "error": {"message": err_msg},
             "email": email.strip().lower()
         }
