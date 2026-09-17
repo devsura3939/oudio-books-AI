@@ -9006,12 +9006,14 @@ function cancelWholeBookTranslation() {
             DOM.wbLiveGeorgian.textContent = 'Translation paused. All accepted segments are retained. Click "Resume Translation" to continue.';
         }
         if (typeof showToast === 'function') showToast('Translation paused. Click Resume anytime to continue.', 'info');
-        return;
     }
-    // If already paused or stopped, close the modal
-    closeModal('wholeBookTranslateModal');
-    const dock = DOM.translationMiniDock || document.getElementById('translationMiniDock');
-    if (dock) { dock.classList.add('hidden'); dock.style.display = 'none'; }
+    // If already paused or stopped, or when canceling, close the modal and hide dock
+    if (typeof closeModal === 'function') closeModal('wholeBookTranslateModal');
+    const dock = DOM?.translationMiniDock || (typeof document !== 'undefined' && document.getElementById('translationMiniDock'));
+    if (dock) {
+        if (dock.classList?.add) dock.classList.add('hidden');
+        if (dock.style) dock.style.display = 'none';
+    }
     translationPanelMinimized = false;
 }
 
