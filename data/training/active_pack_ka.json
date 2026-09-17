@@ -1,5 +1,5 @@
 {
-  "version": 29,
+  "version": 30,
   "language": "ka",
   "score": 100.0,
   "enabled": true,
@@ -3059,6 +3059,444 @@
       "type": "prompt_block",
       "pattern": "version_system",
       "replacement": "Use verbal version markers (სათავისო 'ი-': დაიწერა წერილი; სასხვისო 'უ-': შვილს წერილი დაუწერა) and ablative '-გან' (ღვთისგან ბოძებული)."
+    },
+    {
+      "id": "af-refl-01",
+      "type": "autofix",
+      "pattern": "მან დაინახა ის სარკეში",
+      "replacement": "მან საკუთარი თავი დაინახა სარკეში"
+    },
+    {
+      "id": "af-refl-02",
+      "type": "autofix",
+      "pattern": "ჰკითხა მის თავს",
+      "replacement": "თავის თავს ჰკითხა"
+    },
+    {
+      "id": "af-refl-03",
+      "type": "autofix",
+      "pattern": "უთხრა მის თავს",
+      "replacement": "თავის თავს უთხრა"
+    },
+    {
+      "id": "af-refl-04",
+      "type": "autofix",
+      "pattern": "დარწმუნებული იყო მის თავში",
+      "replacement": "თავის თავში იყო დარწმუნებული"
+    },
+    {
+      "id": "af-refl-05",
+      "type": "autofix",
+      "pattern": "დაინახა მისი თავი",
+      "replacement": "საკუთარი თავი დაინახა"
+    },
+    {
+      "id": "af-refl-06",
+      "type": "autofix",
+      "pattern": "მან აიღო მისი წიგნი",
+      "replacement": "მან თავისი წიგნი აიღო"
+    },
+    {
+      "id": "af-refl-07",
+      "type": "autofix",
+      "pattern": "მან დახუჭა მისი თვალები",
+      "replacement": "მან თავისი თვალები დახუჭა"
+    },
+    {
+      "id": "af-refl-08",
+      "type": "autofix",
+      "pattern": "მან გახსნა მისი გული",
+      "replacement": "მან თავისი გული გახსნა"
+    },
+    {
+      "id": "af-refl-09",
+      "type": "autofix",
+      "pattern": "მან დატოვა მისი სახლი",
+      "replacement": "მან თავისი სახლი დატოვა"
+    },
+    {
+      "id": "af-refl-10",
+      "type": "autofix",
+      "pattern": "მან იპოვა მისი გზა",
+      "replacement": "მან თავისი გზა იპოვა"
+    },
+    {
+      "id": "af-post-01",
+      "type": "autofix",
+      "pattern": "შესახებ ამის",
+      "replacement": "ამის შესახებ"
+    },
+    {
+      "id": "af-post-02",
+      "type": "autofix",
+      "pattern": "შესახებ წიგნის",
+      "replacement": "წიგნის შესახებ"
+    },
+    {
+      "id": "af-post-03",
+      "type": "autofix",
+      "pattern": "შესახებ ცხოვრების",
+      "replacement": "ცხოვრების შესახებ"
+    },
+    {
+      "id": "af-post-04",
+      "type": "autofix",
+      "pattern": "შესახებ ადამიანის",
+      "replacement": "ადამიანის შესახებ"
+    },
+    {
+      "id": "af-post-05",
+      "type": "autofix",
+      "pattern": "შესახებ სამყაროს",
+      "replacement": "სამყაროს შესახებ"
+    },
+    {
+      "id": "af-post-06",
+      "type": "autofix",
+      "pattern": "შიგნით ოთახში",
+      "replacement": "ოთახში"
+    },
+    {
+      "id": "af-post-07",
+      "type": "autofix",
+      "pattern": "როგორც კი დაინახა, მაშინვე",
+      "replacement": "დანახვისთანავე"
+    },
+    {
+      "id": "af-post-08",
+      "type": "autofix",
+      "pattern": "როგორც კი მოვიდა,",
+      "replacement": "მოსვლისთანავე"
+    },
+    {
+      "id": "af-post-09",
+      "type": "autofix",
+      "pattern": "როგორც კი გაიგო,",
+      "replacement": "გაგებისთანავე"
+    },
+    {
+      "id": "af-post-10",
+      "type": "autofix",
+      "pattern": "როგორც კი გაიღვიძა,",
+      "replacement": "გაღვიძებისთანავე"
+    },
+    {
+      "id": "af-post-11",
+      "type": "autofix",
+      "pattern": "როგორც კი შეიტყო,",
+      "replacement": "შეტყობისთანავე"
+    },
+    {
+      "id": "af-post-12",
+      "type": "autofix",
+      "pattern": "სანამ დილა მოვიდოდა",
+      "replacement": "დილამდე"
+    },
+    {
+      "id": "af-post-13",
+      "type": "autofix",
+      "pattern": "სანამ ბოლო მოვიდოდა",
+      "replacement": "ბოლომდე"
+    },
+    {
+      "id": "af-post-14",
+      "type": "autofix",
+      "pattern": "სანამ სიკვდილი მოვიდოდა",
+      "replacement": "სიკვდილამდე"
+    },
+    {
+      "id": "af-neg-01",
+      "type": "autofix",
+      "pattern": "არავინ არ შეძლო",
+      "replacement": "ვერავინ შეძლო"
+    },
+    {
+      "id": "af-neg-02",
+      "type": "autofix",
+      "pattern": "არავინ შეძლო",
+      "replacement": "ვერავინ შეძლო"
+    },
+    {
+      "id": "af-neg-03",
+      "type": "autofix",
+      "pattern": "არაფერი არ შევძელი",
+      "replacement": "ვერაფერი შევძელი"
+    },
+    {
+      "id": "af-neg-04",
+      "type": "autofix",
+      "pattern": "არაფერი შევძელი",
+      "replacement": "ვერაფერი შევძელი"
+    },
+    {
+      "id": "af-neg-05",
+      "type": "autofix",
+      "pattern": "არსად არ შეეძლო წასვლა",
+      "replacement": "ვერსად წავიდოდა"
+    },
+    {
+      "id": "af-neg-06",
+      "type": "autofix",
+      "pattern": "არაფერი არ გააკეთო",
+      "replacement": "ნურაფერს ნუ გააკეთებ"
+    },
+    {
+      "id": "af-neg-07",
+      "type": "autofix",
+      "pattern": "არაფერს არ შეეხო",
+      "replacement": "ნურაფერს ნუ შეეხები"
+    },
+    {
+      "id": "af-neg-08",
+      "type": "autofix",
+      "pattern": "არავის არ უთხრა",
+      "replacement": "ნურავის ნუ ეტყვი"
+    },
+    {
+      "id": "af-neg-09",
+      "type": "autofix",
+      "pattern": "არასოდეს არ დაივიწყო",
+      "replacement": "ნურასოდეს ნუ დაივიწყებ"
+    },
+    {
+      "id": "af-neg-10",
+      "type": "autofix",
+      "pattern": "არასდროს არ დაბრუნდე",
+      "replacement": "ნურასდროს ნუ დაბრუნდები"
+    },
+    {
+      "id": "af-neg-11",
+      "type": "autofix",
+      "pattern": "არსად არ წახვიდე",
+      "replacement": "ნურსად ნუ წახვალ"
+    },
+    {
+      "id": "af-sup-01",
+      "type": "autofix",
+      "pattern": "იმისთვის, რომ გაიგოს",
+      "replacement": "გასაგებად"
+    },
+    {
+      "id": "af-sup-02",
+      "type": "autofix",
+      "pattern": "იმისთვის, რომ ნახოს",
+      "replacement": "სანახავად"
+    },
+    {
+      "id": "af-sup-03",
+      "type": "autofix",
+      "pattern": "იმისთვის, რომ ისწავლოს",
+      "replacement": "სასწავლად"
+    },
+    {
+      "id": "af-sup-04",
+      "type": "autofix",
+      "pattern": "იმისთვის, რომ თქვას",
+      "replacement": "სათქმელად"
+    },
+    {
+      "id": "af-sup-05",
+      "type": "autofix",
+      "pattern": "იმისთვის, რომ გადარჩეს",
+      "replacement": "გადასარჩენად"
+    },
+    {
+      "id": "af-sup-06",
+      "type": "autofix",
+      "pattern": "იმისთვის, რომ იპოვოს",
+      "replacement": "საპოვნელად"
+    },
+    {
+      "id": "af-sup-07",
+      "type": "autofix",
+      "pattern": "იმისთვის, რომ იცხოვროს",
+      "replacement": "საცხოვრებლად"
+    },
+    {
+      "id": "af-sup-08",
+      "type": "autofix",
+      "pattern": "იმისთვის, რომ დაინახოს",
+      "replacement": "დასანახად"
+    },
+    {
+      "id": "af-mir-01",
+      "type": "autofix",
+      "pattern": "როგორც ჩანს, მას დავიწყებია",
+      "replacement": "თურმე დავიწყებია"
+    },
+    {
+      "id": "af-mir-02",
+      "type": "autofix",
+      "pattern": "როგორც ჩანს, დავიწყებია",
+      "replacement": "თურმე დავიწყებია"
+    },
+    {
+      "id": "af-mir-03",
+      "type": "autofix",
+      "pattern": "აღმოჩნდა, რომ მოვიდა",
+      "replacement": "თურმე მოსულა"
+    },
+    {
+      "id": "af-mir-04",
+      "type": "autofix",
+      "pattern": "აღმოჩნდა, რომ წავიდა",
+      "replacement": "თურმე წასულა"
+    },
+    {
+      "id": "af-mir-05",
+      "type": "autofix",
+      "pattern": "აღმოჩნდა, რომ სიმართლეა",
+      "replacement": "თურმე სიმართლე ყოფილა"
+    },
+    {
+      "id": "pb-reflexive-coreference",
+      "type": "prompt_block",
+      "pattern": "reflexive_coreference",
+      "replacement": "Use 'თავისი' (oblique 'თავის') when co-referent with 3rd-person subject ('მან თავისი წიგნი აიღო'). Use reflexive head 'თავ-' ('საკუთარი თავი დაინახა', 'თავის თავს ჰკითხა')."
+    },
+    {
+      "id": "pb-postpositions-temporal",
+      "type": "prompt_block",
+      "pattern": "postpositions_temporal",
+      "replacement": "Postpositions follow governed nouns ('ამის შესახებ'). Use instantaneous '-თანავე' ('დანახვისთანავე') and terminative '-მდე' ('დილამდე')."
+    },
+    {
+      "id": "pb-prohibitive-inability",
+      "type": "prompt_block",
+      "pattern": "prohibitive_inability",
+      "replacement": "Commands require prohibitive pronouns with 'ნუ' ('ნურაფერს ნუ გააკეთებ', 'ნურასოდეს ნუ დაივიწყებ'). Inability requires 'ვერ' ('ვერავინ შეძლო')."
+    },
+    {
+      "id": "pb-purposive-supine",
+      "type": "prompt_block",
+      "pattern": "purposive_supine",
+      "replacement": "Prefer synthetic purpose supines in 'სა-...-ოდ' / '-ად' ('გასაგებად', 'სანახავად', 'სასწავლად') over clunky 'იმისთვის, რომ'."
+    },
+    {
+      "id": "pb-miratives-discourse",
+      "type": "prompt_block",
+      "pattern": "miratives_discourse",
+      "replacement": "Harmonize non-witnessed inference 'თურმე' with Series III evidentials ('თურმე დავიწყებია', 'თურმე მოსულა'). Place discourse tags ('ხომ', 'განა') in preverbal focus."
+    },
+    {
+      "id": "gl-term-01",
+      "type": "glossary",
+      "pattern": "metaphysics",
+      "replacement": "მეტაფიზიკა"
+    },
+    {
+      "id": "gl-term-02",
+      "type": "glossary",
+      "pattern": "epistemology",
+      "replacement": "ეპისტემოლოგია"
+    },
+    {
+      "id": "gl-term-03",
+      "type": "glossary",
+      "pattern": "ontological",
+      "replacement": "ონტოლოგიური"
+    },
+    {
+      "id": "gl-term-04",
+      "type": "glossary",
+      "pattern": "categorical imperative",
+      "replacement": "კატეგორიული იმპერატივი"
+    },
+    {
+      "id": "gl-term-05",
+      "type": "glossary",
+      "pattern": "pure reason",
+      "replacement": "წმინდა გონება"
+    },
+    {
+      "id": "gl-term-06",
+      "type": "glossary",
+      "pattern": "practical reason",
+      "replacement": "პრაქტიკული გონება"
+    },
+    {
+      "id": "gl-term-07",
+      "type": "glossary",
+      "pattern": "aesthetic judgment",
+      "replacement": "ესთეტიკური მსჯელობა"
+    },
+    {
+      "id": "gl-term-08",
+      "type": "glossary",
+      "pattern": "will to power",
+      "replacement": "ძალაუფლების ნება"
+    },
+    {
+      "id": "gl-term-09",
+      "type": "glossary",
+      "pattern": "amor fati",
+      "replacement": "ბედისწერის სიყვარული"
+    },
+    {
+      "id": "gl-term-10",
+      "type": "glossary",
+      "pattern": "stoic tranquility",
+      "replacement": "სტოიკური სიმშვიდე"
+    },
+    {
+      "id": "gl-term-11",
+      "type": "glossary",
+      "pattern": "dialectical reason",
+      "replacement": "დიალექტიკური გონება"
+    },
+    {
+      "id": "gl-term-12",
+      "type": "glossary",
+      "pattern": "first philosophy",
+      "replacement": "პირველი ფილოსოფია"
+    },
+    {
+      "id": "gl-term-13",
+      "type": "glossary",
+      "pattern": "kartvelian linguistics",
+      "replacement": "ქართველური ენათმეცნიერება"
+    },
+    {
+      "id": "gl-term-14",
+      "type": "glossary",
+      "pattern": "polypersonalism",
+      "replacement": "პოლიპერსონალიზმი"
+    },
+    {
+      "id": "gl-term-15",
+      "type": "glossary",
+      "pattern": "inversion screeve",
+      "replacement": "ინვერსიული მწკრივი"
+    },
+    {
+      "id": "gl-term-16",
+      "type": "glossary",
+      "pattern": "synthetic supine",
+      "replacement": "სინთეზური სუპინი"
+    },
+    {
+      "id": "gl-term-17",
+      "type": "glossary",
+      "pattern": "ergative construction",
+      "replacement": "ერგატიული კონსტრუქცია"
+    },
+    {
+      "id": "gl-term-18",
+      "type": "glossary",
+      "pattern": "temporal enclitic",
+      "replacement": "დროითი ენკლიტიკა"
+    },
+    {
+      "id": "gl-term-19",
+      "type": "glossary",
+      "pattern": "reflexive anaphor",
+      "replacement": "რეფლექსური ანაფორა"
+    },
+    {
+      "id": "gl-term-20",
+      "type": "glossary",
+      "pattern": "privative circumfix",
+      "replacement": "უარყოფითი ცირკუმფიქსი"
     }
   ],
   "updated_at": "2026-09-17T14:59:30.376602+00:00",

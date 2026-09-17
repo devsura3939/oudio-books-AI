@@ -395,6 +395,20 @@ OFFLINE_LITERARY_EXEMPLARS = [
      "თავისუფლება შეცნობილი აუცილებლობაა."),
     (r"the greatest thing in the world is to know how to belong to oneself\.?",
      "უდიდესი ხელოვნება სამყაროში საკუთარი თავის ფლობაა."),
+    (r"you have power over your mind - not outside events\.? realize this,? and you will find strength\.?",
+     "შენ გაქვს ძალაუფლება საკუთარ გონებაზე და არა გარე მოვლენებზე; შეიცანი ეს და ჰპოვებ ძალას."),
+    (r"two things fill the mind with ever new and increasing admiration and awe:? the starry heavens above me and the moral law within me\.?",
+     "ორი რამ ავსებს სულს მუდამ ახალი და მზარდი აღტაცებითა და მოწიწებით: ვარსკვლავებით მოჭედილი ცა ჩემ ზემოთ და ზნეობრივი კანონი ჩემში."),
+    (r"i think,? therefore i am\.?",
+     "ვაზროვნებ, მაშასადამე ვარსებობ."),
+    (r"he who has a why to live can bear almost any how\.?",
+     "ვისაც აქვს სიცოცხლის არსი, თითქმის ნებისმიერ განსაცდელს გაუძლებს."),
+    (r"the black raven will not croak over my head\.?",
+     "არ დაჰყეფს ყვავი ჩემს თავსა ზედა."),
+    (r"knowledge is the greatest wealth and the true light of the mind\.?",
+     "ცოდნა უდიდესი სიმდიდრეა და გონების ჭეშმარიტი ნათელი."),
+    (r"a man must fight for his land and honor until the last breath\.?",
+     "ადამიანმა საკუთარი მიწისა და ღირსებისთვის უკანასკნელ ამოსუნთქვამდე უნდა იბრძოლოს."),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),
@@ -574,7 +588,12 @@ def translate_with_gemini(
                 "12. ACTION PREDICATES OVER 'გაკეთება': Avoid repetitive light-verb calques: use 'შეცდომის დაშვება' (make mistake), 'გავლენის მოხდენა' (have influence), 'შთაბეჭდილების მოხდენა' (make impression), 'ყურადღების მიქცევა' (pay attention), 'საჩივრის შეტანა' (file complaint).\n"
                 "13. VERBAL VERSION SYSTEM (ქცევა): Use synthetic version markers (სათავისო 'ი-': 'დაიწერა წერილი', 'აიშენა სახლი'; სასხვისო 'უ-': 'შვილს წერილი დაუწერა', 'დედას საჭმელი მოუმზადა') instead of analytical 'თავისთვის' / 'შვილისთვის'.\n"
                 "14. AGENTIVE PASSIVES: Express agency naturally via active voice or ablative '-გან' ('ღვთისგან ბოძებული', 'ბუნებისგან შექმნილი') instead of bureaucratic '*მიერ' calques.\n"
-                "15. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
+                "15. REFLEXIVE CO-REFERENCE: For 3rd-person subjects coreferent with the possessor, strictly use 'თავისი' (oblique 'თავის'), NEVER non-coreferent '*მისი' ('მან თავისი წიგნი აიღო', 'მან თავისი თვალები დახუჭა'). Use reflexive head 'თავ-' for self ('საკუთარი თავი დაინახა', 'თავის თავს ჰკითხა').\n"
+                "16. POSTPOSITIONAL WORD ORDER & TEMPORAL CLITICS: Postpositions strictly follow the noun ('ამის შესახებ', NOT '*შესახებ ამის'). Use instantaneous participial clitic '-თანავე' ('დანახვისთანავე', 'მოსვლისთანავე', 'გაგებისთანავე') and terminative '-მდე' ('დილამდე', 'სიკვდილამდე').\n"
+                "17. PROHIBITIVE & INABILITY NEGATIVE CONCORD: Commands use prohibitive pronouns with 'ნუ' ('ნურაფერს ნუ გააკეთებ', 'ნურასოდეს ნუ დაივიწყებ', 'ნურსად ნუ წახვალ'). Inability uses 'ვერ' ('ვერავინ შეძლო', 'ვერაფერი შევძელი').\n"
+                "18. PURPOSIVE SUPINES: Prefer synthetic purpose supines in 'სა-...-ოდ' / '-ად' ('გასაგებად', 'სანახავად', 'სასწავლად', 'სათქმელად', 'გადასარჩენად') over bulky 'იმისთვის, რომ'.\n"
+                "19. MIRATIVE & DISCOURSE PARTICLES: Match non-witnessed inference 'თურმე' with Series III evidentials ('თურმე დავიწყებია', 'თურმე მოსულა'). Place discourse tags 'ხომ', 'განა', 'ნუთუ' in natural preverbal position.\n"
+                "20. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -652,8 +671,12 @@ def translate_with_kona(
                 "13. CARITIVE ADVERBS: Use synthetic 'უ-...-ოდ' adverbs ('უეჭველად', 'უშიშრად', 'უიმედოდ', 'უხმოდ', 'დაუღალავად') over '*გარეშე + Genitive'.\n"
                 "14. ACTION PREDICATES: Avoid 'გაკეთება' calques: use 'შეცდომის დაშვება', 'გავლენის მოხდენა', 'შთაბეჭდილების მოხდენა', 'ყურადღების მიქცევა', 'საჩივრის შეტანა'.\n"
                 "15. VERSION & PASSIVE: Use version markers (სათავისო 'ი-': 'დაიწერა წერილი'; სასხვისო 'უ-': 'შვილს აუშენა') and ablative '-გან' ('ღვთისგან ბოძებული') instead of '*მიერ'.\n"
-                "16. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
-                "17. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
+                "16. REFLEXIVE CO-REFERENCE: Strictly use 'თავისი' (oblique 'თავის') for co-referent 3rd-person subjects ('მან თავისი წიგნი აიღო'). Use reflexive head 'თავ-' for self ('საკუთარი თავი დაინახა', 'თავის თავს ჰკითხა').\n"
+                "17. POSTPOSITIONS & TEMPORAL CLITICS: Postpositions follow nouns ('ამის შესახებ'). Use instantaneous '-თანავე' ('დანახვისთანავე') and terminative '-მდე' ('დილამდე').\n"
+                "18. PROHIBITIVE & INABILITY CONCORD: Commands use prohibitive pronouns with 'ნუ' ('ნურაფერს ნუ გააკეთებ', 'ნურასოდეს ნუ დაივიწყებ'). Inability uses 'ვერ' ('ვერავინ შეძლო').\n"
+                "19. PURPOSIVE SUPINES & MIRATIVES: Use synthetic 'სა-...-ოდ' supines ('გასაგებად', 'სანახავად') and match 'თურმე' with Series III evidentials ('თურმე დავიწყებია').\n"
+                "20. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
+                "21. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
                 "Output ONLY the Georgian translation."
             )
             user_parts = []

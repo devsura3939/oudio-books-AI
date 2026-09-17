@@ -195,13 +195,13 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             self.assertEqual(polished, expected, f"Adjective truncation failed for '{raw}': got '{polished}'")
 
     def test_13_autonomous_training_pack_eval(self):
-        """Verify that the active rule pack scores 100% with zero regressions across all 280+ benchmark cases."""
+        """Verify that the active rule pack scores 100% with zero regressions across all 350+ benchmark cases."""
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 280, "Expected at least 280 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 275, "Expected at least 275 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 29, "Active pack version must be at least 29")
+        self.assertGreaterEqual(len(cases), 350, "Expected at least 350 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 350, "Expected at least 350 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 30, "Active pack version must be at least 30")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
@@ -328,6 +328,85 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         for raw, expected in pairs:
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Version/passive failed for '{raw}': got '{polished}'")
+
+    def test_21_reflexive_anaphora_and_coreference(self):
+        """Verify that 3rd-person co-referent possessives strictly resolve to თავისი and reflexives to თავ- stem."""
+        pairs = [
+            ("მან დაინახა ის", "მან საკუთარი თავი დაინახა"),
+            ("ჰკითხა მის თავს", "თავის თავს ჰკითხა"),
+            ("დარწმუნებული იყო მის თავში", "თავის თავში იყო დარწმუნებული"),
+            ("უთხრა მის თავს", "თავის თავს უთხრა"),
+            ("დაინახა მისი თავი", "საკუთარი თავი დაინახა"),
+            ("მან აიღო მისი წიგნი", "მან თავისი წიგნი აიღო"),
+            ("მან დახუჭა მისი თვალები", "მან თავისი თვალები დახუჭა"),
+            ("მან გახსნა მისი გული", "მან თავისი გული გახსნა"),
+            ("მან დატოვა მისი სახლი", "მან თავისი სახლი დატოვა"),
+            ("მან იპოვა მისი გზა", "მან თავისი გზა იპოვა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Reflexive synthesis failed for '{raw}': got '{polished}'")
+
+    def test_22_postpositional_syntax_and_temporal_enclitics(self):
+        """Verify postpositional word order and instantaneous temporal clitics (-თანავე, -მდე)."""
+        pairs = [
+            ("შესახებ ამის", "ამის შესახებ"),
+            ("შესახებ წიგნის", "წიგნის შესახებ"),
+            ("შესახებ ცხოვრების", "ცხოვრების შესახებ"),
+            ("შესახებ ადამიანის", "ადამიანის შესახებ"),
+            ("შესახებ სამყაროს", "სამყაროს შესახებ"),
+            ("შიგნით ოთახში", "ოთახში"),
+            ("როგორც კი დაინახა", "დანახვისთანავე"),
+            ("როგორც კი მოვიდა", "მოსვლისთანავე"),
+            ("როგორც კი გაიგო", "გაგებისთანავე"),
+            ("როგორც კი გაიღვიძა", "გაღვიძებისთანავე"),
+            ("როგორც კი შეიტყო", "შეტყობისთანავე"),
+            ("სანამ დილა მოვიდოდა", "დილამდე"),
+            ("სანამ ბოლო მოვიდოდა", "ბოლომდე"),
+            ("სანამ სიკვდილი მოვიდოდა", "სიკვდილამდე"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Postpositional synthesis failed for '{raw}': got '{polished}'")
+
+    def test_23_prohibitive_and_inability_negative_concord(self):
+        """Verify distinct prohibitive (ნუ) and modal inability (ვერ) negative concord."""
+        pairs = [
+            ("არავინ არ შეძლო", "ვერავინ შეძლო"),
+            ("არავინ შეძლო", "ვერავინ შეძლო"),
+            ("არაფერი არ შევძელი", "ვერაფერი შევძელი"),
+            ("არაფერი შევძელი", "ვერაფერი შევძელი"),
+            ("არსად არ შეეძლო წასვლა", "ვერსად წავიდოდა"),
+            ("არაფერი არ გააკეთო", "ნურაფერს ნუ გააკეთებ"),
+            ("არაფერს არ შეეხო", "ნურაფერს ნუ შეეხები"),
+            ("არავის არ უთხრა", "ნურავის ნუ ეტყვი"),
+            ("არასოდეს არ დაივიწყო", "ნურასოდეს ნუ დაივიწყებ"),
+            ("არასდროს არ დაბრუნდე", "ნურასდროს ნუ დაბრუნდები"),
+            ("არსად არ წახვიდე", "ნურსად ნუ წახვალ"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Negative concord failed for '{raw}': got '{polished}'")
+
+    def test_24_purposive_supine_and_mirative_particles(self):
+        """Verify synthetic purposive supines (სა-...-ოდ) and mirative evidentials (თურმე)."""
+        pairs = [
+            ("იმისთვის, რომ გაიგოს", "გასაგებად"),
+            ("იმისთვის, რომ ნახოს", "სანახავად"),
+            ("იმისთვის, რომ ისწავლოს", "სასწავლად"),
+            ("იმისთვის, რომ თქვას", "სათქმელად"),
+            ("იმისთვის, რომ გადარჩეს", "გადასარჩენად"),
+            ("იმისთვის, რომ იპოვოს", "საპოვნელად"),
+            ("იმისთვის, რომ იცხოვროს", "საცხოვრებლად"),
+            ("იმისთვის, რომ დაინახოს", "დასანახად"),
+            ("როგორც ჩანს, მას დავიწყებია", "თურმე დავიწყებია"),
+            ("აღმოჩნდა, რომ მოვიდა", "თურმე მოსულა"),
+            ("აღმოჩნდა, რომ წავიდა", "თურმე წასულა"),
+            ("აღმოჩნდა, რომ სიმართლეა", "თურმე სიმართლე ყოფილა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Supine/mirative failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":

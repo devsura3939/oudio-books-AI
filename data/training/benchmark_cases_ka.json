@@ -2694,5 +2694,775 @@
       "literature",
       "sulkhan_saba"
     ]
+  },
+  {
+    "id": "case-syntax-ka-168",
+    "kind": "autofix",
+    "source": "მან დაინახა ის სარკეში.",
+    "expected": "მან საკუთარი თავი დაინახა სარკეში.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-169",
+    "kind": "autofix",
+    "source": "მან ჰკითხა მის თავს სიმართლე.",
+    "expected": "მან თავის თავს ჰკითხა სიმართლე.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-170",
+    "kind": "autofix",
+    "source": "მან უთხრა მის თავს სიმართლე.",
+    "expected": "მან თავის თავს უთხრა სიმართლე.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-171",
+    "kind": "autofix",
+    "source": "ავტორი დარწმუნებული იყო მის თავში.",
+    "expected": "ავტორი თავის თავში იყო დარწმუნებული.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-172",
+    "kind": "autofix",
+    "source": "მან დაინახა მისი თავი წყალში.",
+    "expected": "მან საკუთარი თავი დაინახა წყალში.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-173",
+    "kind": "autofix",
+    "source": "მან აიღო მისი წიგნი მაგიდიდან.",
+    "expected": "მან თავისი წიგნი აიღო მაგიდიდან.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "coreference"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-174",
+    "kind": "autofix",
+    "source": "მან დახუჭა მისი თვალები დაღლილობისგან.",
+    "expected": "მან თავისი თვალები დახუჭა დაღლილობისგან.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "coreference"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-175",
+    "kind": "autofix",
+    "source": "მან გახსნა მისი გული მეგობრისთვის.",
+    "expected": "მან თავისი გული გახსნა მეგობრისთვის.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "coreference"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-176",
+    "kind": "autofix",
+    "source": "მან დატოვა მისი სახლი დილით.",
+    "expected": "მან თავისი სახლი დატოვა დილით.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "coreference"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-177",
+    "kind": "autofix",
+    "source": "მან იპოვა მისი გზა უდაბნოში.",
+    "expected": "მან თავისი გზა იპოვა უდაბნოში.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "coreference"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-178",
+    "kind": "autofix",
+    "source": "მეფემ დაიბრუნა თავისი სამეფო.",
+    "expected": "მეფემ დაიბრუნა თავისი სამეფო.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "gold"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-179",
+    "kind": "autofix",
+    "source": "უფლისწულმა გახსნა თავისი საიდუმლო.",
+    "expected": "უფლისწულმა გახსნა თავისი საიდუმლო.",
+    "weight": 1.0,
+    "tags": [
+      "reflexive",
+      "gold"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-180",
+    "kind": "autofix",
+    "source": "მან დაწერა შესახებ ამის.",
+    "expected": "მან დაწერა ამის შესახებ.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-181",
+    "kind": "autofix",
+    "source": "წიგნში საუბარია შესახებ წიგნის.",
+    "expected": "წიგნში საუბარია წიგნის შესახებ.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-182",
+    "kind": "autofix",
+    "source": "ავტორი ფიქრობს შესახებ ცხოვრების.",
+    "expected": "ავტორი ფიქრობს ცხოვრების შესახებ.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-183",
+    "kind": "autofix",
+    "source": "ჩვენ ვმსჯელობთ შესახებ ადამიანის.",
+    "expected": "ჩვენ ვმსჯელობთ ადამიანის შესახებ.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-184",
+    "kind": "autofix",
+    "source": "მეცნიერმა გამოიკვლია შესახებ სამყაროს.",
+    "expected": "მეცნიერმა გამოიკვლია სამყაროს შესახებ.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-185",
+    "kind": "autofix",
+    "source": "ბავშვი შევიდა შიგნით ოთახში.",
+    "expected": "ბავშვი შევიდა ოთახში.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "anti_calque"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-186",
+    "kind": "autofix",
+    "source": "როგორც კი დაინახა, მაშინვე გაიღიმა.",
+    "expected": "დანახვისთანავე გაიღიმა.",
+    "weight": 1.0,
+    "tags": [
+      "temporal_clitic",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-187",
+    "kind": "autofix",
+    "source": "როგორც კი მოვიდა, კარი გააღო.",
+    "expected": "მოსვლისთანავე კარი გააღო.",
+    "weight": 1.0,
+    "tags": [
+      "temporal_clitic",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-188",
+    "kind": "autofix",
+    "source": "როგორც კი გაიგო, სიხარულით აივსო.",
+    "expected": "გაგებისთანავე სიხარულით აივსო.",
+    "weight": 1.0,
+    "tags": [
+      "temporal_clitic",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-189",
+    "kind": "autofix",
+    "source": "როგორც კი გაიღვიძა, მზე დაინახა.",
+    "expected": "გაღვიძებისთანავე მზე დაინახა.",
+    "weight": 1.0,
+    "tags": [
+      "temporal_clitic",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-190",
+    "kind": "autofix",
+    "source": "როგორც კი შეიტყო, წავიდა.",
+    "expected": "შეტყობისთანავე წავიდა.",
+    "weight": 1.0,
+    "tags": [
+      "temporal_clitic",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-191",
+    "kind": "autofix",
+    "source": "ისინი მუშაობდნენ სანამ დილა მოვიდოდა.",
+    "expected": "ისინი მუშაობდნენ დილამდე.",
+    "weight": 1.0,
+    "tags": [
+      "temporal_clitic",
+      "limitative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-192",
+    "kind": "autofix",
+    "source": "მან იბრძოლა სანამ ბოლო მოვიდოდა.",
+    "expected": "მან იბრძოლა ბოლომდე.",
+    "weight": 1.0,
+    "tags": [
+      "temporal_clitic",
+      "limitative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-193",
+    "kind": "autofix",
+    "source": "მგზავრი ელოდა სანამ სიკვდილი მოვიდოდა.",
+    "expected": "მგზავრი ელოდა სიკვდილამდე.",
+    "weight": 1.0,
+    "tags": [
+      "temporal_clitic",
+      "limitative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-194",
+    "kind": "autofix",
+    "source": "არავინ არ შეძლო კარის გაღება.",
+    "expected": "ვერავინ შეძლო კარის გაღება.",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "inability"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-195",
+    "kind": "autofix",
+    "source": "არავინ შეძლო სიმართლის გაგება.",
+    "expected": "ვერავინ შეძლო სიმართლის გაგება.",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "inability"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-196",
+    "kind": "autofix",
+    "source": "მე არაფერი არ შევძელი.",
+    "expected": "მე ვერაფერი შევძელი.",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "inability"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-197",
+    "kind": "autofix",
+    "source": "მე არაფერი შევძელი.",
+    "expected": "მე ვერაფერი შევძელი.",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "inability"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-198",
+    "kind": "autofix",
+    "source": "არსად არ შეეძლო წასვლა.",
+    "expected": "ვერსად წავიდოდა.",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "inability"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-199",
+    "kind": "autofix",
+    "source": "არაფერი არ გააკეთო აქ!",
+    "expected": "ნურაფერს ნუ გააკეთებ აქ!",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "prohibitive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-200",
+    "kind": "autofix",
+    "source": "არაფერს არ შეეხო!",
+    "expected": "ნურაფერს ნუ შეეხები!",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "prohibitive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-201",
+    "kind": "autofix",
+    "source": "არავის არ უთხრა ეს საიდუმლო!",
+    "expected": "ნურავის ნუ ეტყვი ეს საიდუმლო!",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "prohibitive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-202",
+    "kind": "autofix",
+    "source": "არასოდეს არ დაივიწყო შენი სამშობლო!",
+    "expected": "ნურასოდეს ნუ დაივიწყებ შენი სამშობლო!",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "prohibitive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-203",
+    "kind": "autofix",
+    "source": "არასდროს არ დაბრუნდე უკან!",
+    "expected": "ნურასდროს ნუ დაბრუნდები უკან!",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "prohibitive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-204",
+    "kind": "autofix",
+    "source": "არსად არ წახვიდე დღეს!",
+    "expected": "ნურსად ნუ წახვალ დღეს!",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "prohibitive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-205",
+    "kind": "autofix",
+    "source": "ნურავინ ნუ იტყვის სიცრუეს.",
+    "expected": "ნურავინ ნუ იტყვის სიცრუეს.",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "gold"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-206",
+    "kind": "autofix",
+    "source": "ნურაფერს ნუ იდარდებ.",
+    "expected": "ნურაფერს ნუ იდარდებ.",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "gold"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-207",
+    "kind": "autofix",
+    "source": "ვერავინ ვერ შეაჩერებს დროს.",
+    "expected": "ვერავინ ვერ შეაჩერებს დროს.",
+    "weight": 1.0,
+    "tags": [
+      "negation",
+      "gold"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-208",
+    "kind": "autofix",
+    "source": "მან წაიკითხა წიგნი იმისთვის, რომ გაიგოს.",
+    "expected": "მან წაიკითხა წიგნი გასაგებად.",
+    "weight": 1.0,
+    "tags": [
+      "supine",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-209",
+    "kind": "autofix",
+    "source": "ის მოვიდა იმისთვის, რომ ნახოს ტაძარი.",
+    "expected": "ის მოვიდა სანახავად ტაძარი.",
+    "weight": 1.0,
+    "tags": [
+      "supine",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-210",
+    "kind": "autofix",
+    "source": "ბავშვი დადის სკოლაში იმისთვის, რომ ისწავლოს.",
+    "expected": "ბავშვი დადის სკოლაში სასწავლად.",
+    "weight": 1.0,
+    "tags": [
+      "supine",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-211",
+    "kind": "autofix",
+    "source": "ავტორმა დაწერა ეს იმისთვის, რომ თქვას სიმართლე.",
+    "expected": "ავტორმა დაწერა ეს სათქმელად სიმართლე.",
+    "weight": 1.0,
+    "tags": [
+      "supine",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-212",
+    "kind": "autofix",
+    "source": "მეომარი იბრძოდა იმისთვის, რომ გადარჩეს.",
+    "expected": "მეომარი იბრძოდა გადასარჩენად.",
+    "weight": 1.0,
+    "tags": [
+      "supine",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-213",
+    "kind": "autofix",
+    "source": "მოგზაური ეძებდა წყალს იმისთვის, რომ იპოვოს.",
+    "expected": "მოგზაური ეძებდა წყალს საპოვნელად.",
+    "weight": 1.0,
+    "tags": [
+      "supine",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-214",
+    "kind": "autofix",
+    "source": "ხალხი აშენებდა სახლს იმისთვის, რომ იცხოვროს.",
+    "expected": "ხალხი აშენებდა სახლს საცხოვრებლად.",
+    "weight": 1.0,
+    "tags": [
+      "supine",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-215",
+    "kind": "autofix",
+    "source": "მან აანთო სანთელი იმისთვის, რომ დაინახოს.",
+    "expected": "მან აანთო სანთელი დასანახად.",
+    "weight": 1.0,
+    "tags": [
+      "supine",
+      "syntax"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-216",
+    "kind": "autofix",
+    "source": "სათქმელი სიტყვა დროზე უნდა ითქვას.",
+    "expected": "სათქმელი სიტყვა დროზე უნდა ითქვას.",
+    "weight": 1.0,
+    "tags": [
+      "supine",
+      "gold"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-217",
+    "kind": "autofix",
+    "source": "საკეთებელი საქმე ბოლომდე უნდა მიიყვანო.",
+    "expected": "საკეთებელი საქმე ბოლომდე უნდა მიიყვანო.",
+    "weight": 1.0,
+    "tags": [
+      "supine",
+      "gold"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-218",
+    "kind": "autofix",
+    "source": "როგორც ჩანს, მას დავიწყებია წერილი.",
+    "expected": "თურმე დავიწყებია წერილი.",
+    "weight": 1.0,
+    "tags": [
+      "mirative",
+      "evidential"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-219",
+    "kind": "autofix",
+    "source": "როგორც ჩანს, დავიწყებია წიგნი.",
+    "expected": "თურმე დავიწყებია წიგნი.",
+    "weight": 1.0,
+    "tags": [
+      "mirative",
+      "evidential"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-220",
+    "kind": "autofix",
+    "source": "აღმოჩნდა, რომ მოვიდა მეგობარი.",
+    "expected": "თურმე მოსულა მეგობარი.",
+    "weight": 1.0,
+    "tags": [
+      "mirative",
+      "evidential"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-221",
+    "kind": "autofix",
+    "source": "აღმოჩნდა, რომ წავიდა სტუმარი.",
+    "expected": "თურმე წასულა სტუმარი.",
+    "weight": 1.0,
+    "tags": [
+      "mirative",
+      "evidential"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-222",
+    "kind": "autofix",
+    "source": "აღმოჩნდა, რომ სიმართლეა ეს ამბავი.",
+    "expected": "თურმე სიმართლე ყოფილა ეს ამბავი.",
+    "weight": 1.0,
+    "tags": [
+      "mirative",
+      "evidential"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-223",
+    "kind": "autofix",
+    "source": "თურმე უძველეს დროს აუშენებიათ ეს ციხე.",
+    "expected": "თურმე უძველეს დროს აუშენებიათ ეს ციხე.",
+    "weight": 1.0,
+    "tags": [
+      "mirative",
+      "gold"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-224",
+    "kind": "autofix",
+    "source": "ეს ხომ სიმართლეა, ჩემო მეგობარო?",
+    "expected": "ეს ხომ სიმართლეა, ჩემო მეგობარო?",
+    "weight": 1.0,
+    "tags": [
+      "discourse",
+      "gold"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-225",
+    "kind": "autofix",
+    "source": "განა შესაძლებელია ამის დავიწყება?",
+    "expected": "განა შესაძლებელია ამის დავიწყება?",
+    "weight": 1.0,
+    "tags": [
+      "rhetorical",
+      "gold"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-226",
+    "kind": "autofix",
+    "source": "მარკუს ავრელიუსი: შენ გაქვს ძალაუფლება საკუთარ გონებაზე და არა გარე მოვლენებზე; შეიცანი ეს და ჰპოვებ ძალას.",
+    "expected": "მარკუს ავრელიუსი: შენ გაქვს ძალაუფლება საკუთარ გონებაზე და არა გარე მოვლენებზე; შეიცანი ეს და ჰპოვებ ძალას.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "aurelius"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-227",
+    "kind": "autofix",
+    "source": "იმანუელ კანტი: ორი რამ ავსებს სულს მუდამ ახალი და მზარდი აღტაცებითა და მოწიწებით: ვარსკვლავებით მოჭედილი ცა ჩემ ზემოთ და ზნეობრივი კანონი ჩემში.",
+    "expected": "იმანუელ კანტი: ორი რამ ავსებს სულს მუდამ ახალი და მზარდი აღტაცებითა და მოწიწებით: ვარსკვლავებით მოჭედილი ცა ჩემ ზემოთ და ზნეობრივი კანონი ჩემში.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "kant"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-228",
+    "kind": "autofix",
+    "source": "რენე დეკარტი: ვაზროვნებ, მაშასადამე ვარსებობ.",
+    "expected": "რენე დეკარტი: ვაზროვნებ, მაშასადამე ვარსებობ.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "descartes"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-229",
+    "kind": "autofix",
+    "source": "ფრიდრიხ ნიცშე: ვისაც აქვს სიცოცხლის არსი, თითქმის ნებისმიერ განსაცდელს გაუძლებს.",
+    "expected": "ფრიდრიხ ნიცშე: ვისაც აქვს სიცოცხლის არსი, თითქმის ნებისმიერ განსაცდელს გაუძლებს.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "nietzsche"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-230",
+    "kind": "autofix",
+    "source": "ნიკოლოზ ბარათაშვილი: არ დაჰყეფს ყვავი ჩემს თავსა ზედა.",
+    "expected": "ნიკოლოზ ბარათაშვილი: არ დაჰყეფს ყვავი ჩემს თავსა ზედა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "baratashvili"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-231",
+    "kind": "autofix",
+    "source": "ნიკოლოზ ბარათაშვილი: გასწი, მერანო, შენს ჭენებას არა აქვს სამღვარი.",
+    "expected": "ნიკოლოზ ბარათაშვილი: გასწი, მერანო, შენს ჭენებას არა აქვს სამღვარი.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "baratashvili"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-232",
+    "kind": "autofix",
+    "source": "სულხან-საბა ორბელიანი: ცოდნა უდიდესი სიმდიდრეა და გონების ჭეშმარიტი ნათელი.",
+    "expected": "სულხან-საბა ორბელიანი: ცოდნა უდიდესი სიმდიდრეა და გონების ჭეშმარიტი ნათელი.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "sulkhan_saba"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-233",
+    "kind": "autofix",
+    "source": "მიხეილ ჯავახიშვილი: ადამიანმა საკუთარი მიწისა და ღირსებისთვის უკანასკნელ ამოსუნთქვამდე უნდა იბრძოლოს.",
+    "expected": "მიხეილ ჯავახიშვილი: ადამიანმა საკუთარი მიწისა და ღირსებისთვის უკანასკნელ ამოსუნთქვამდე უნდა იბრძოლოს.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "javakhishvili"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-234",
+    "kind": "autofix",
+    "source": "ლეონტი მროველი: ქართლისა ცხოვრება და ნათესავთა მეფეთა პირველთა.",
+    "expected": "ლეონტი მროველი: ქართლისა ცხოვრება და ნათესავთა მეფეთა პირველთა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "mroveli"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-235",
+    "kind": "autofix",
+    "source": "გალაკტიონ ტაბიძე: ქარი ქრის, ქარი ქრის, ქარი ქრის, ფოთლები მიჰქრიან ქარდაქარ.",
+    "expected": "გალაკტიონ ტაბიძე: ქარი ქრის, ქარი ქრის, ქარი ქრის, ფოთლები მიჰქრიან ქარდაქარ.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "galaktioni"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-236",
+    "kind": "autofix",
+    "source": "აკაკი შანიძე: ქართული ენის გრამატიკის საფუძვლები და ზმნის მორფოლოგიური წყობა.",
+    "expected": "აკაკი შანიძე: ქართული ენის გრამატიკის საფუძვლები და ზმნის მორფოლოგიური წყობა.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "shanidze"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-237",
+    "kind": "autofix",
+    "source": "არნოლდ ჩიქობავა: იბერიულ-კავკასიური ენათმეცნიერება და ქართული ენის ერგატიული კონსტრუქცია.",
+    "expected": "არნოლდ ჩიქობავა: იბერიულ-კავკასიური ენათმეცნიერება და ქართული ენის ერგატიული კონსტრუქცია.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "chikobava"
+    ]
   }
 ]

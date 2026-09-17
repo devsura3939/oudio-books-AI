@@ -5197,6 +5197,76 @@ CLASSICAL PHILOSOPHY & CANONICAL LITERATURE CONCORDANCE (KA-139):
   - Shakespeare / Machabeli (*ჰამლეტი*): „ყოფნა?.. არ ყოფნა?.. საკითხავი აი ეს არის.“
   - Rustaveli (*ვეფხისტყაოსანი*): „რასაცა გასცემ შენია, რაც არა, დაკარგულია!“, „სჯობს სახელისა მოხვეჭა ყოველსა მოსახვეჭელსა.“`;
 
+// KA-140 v1.54.0 — Reflexive Anaphora & Possessive Co-Reference (საკუთარი თავი / თავისი vs მისი).
+const KA_REFLEXIVE_POSSESSIVE_COREFERENCE = `
+REFLEXIVE ANAPHORA & POSSESSIVE CO-REFERENCE (KA-140):
+• 3RD-PERSON SUBJECT CO-REFERENCE MANDATE (თავისი vs მისი):
+  - In Georgian syntax, when the 3rd-person subject is coreferent with the possessor of an object or nominal argument, literary grammar strictly demands 'თავისი' (oblique 'თავის'), NEVER non-coreferent 'მისი':
+    * მან თავისი წიგნი აიღო (He took his [own] book — NOT *მან მისი წიგნი აიღო).
+    * მან თავისი თვალები დახუჭა / მან თვალები დახუჭა (He closed his eyes).
+    * მან თავისი სახლი დატოვა (He left his home).
+• REFLEXIVE OBJECT WITH NOMINAL HEAD 'თავ-':
+  - Direct and indirect reflexivity are expressed using the noun stem 'თავ-' ('თავისი თავი', 'საკუთარი თავი', 'თავის თავს'):
+    * საკუთარი თავი დაინახა (saw himself — NOT *დაინახა ის).
+    * თავის თავს ჰკითხა (asked himself — NOT *ჰკითხა მას).
+    * თავის თავში იყო დარწმუნებული (was confident in himself).`;
+
+// KA-141 v1.54.0 — Postpositional Syntax & Instantaneous Temporal Clitics (-თანავე, შესახებ, -მდე).
+const KA_POSTPOSITIONAL_TEMPORAL_CLITICS = `
+POSTPOSITIONAL SYNTAX & INSTANTANEOUS TEMPORAL CLITICS (KA-141):
+• POSTPOSITIONS FOLLOW THE GOVERNED NOUN:
+  - Georgian postpositions strictly follow the noun they govern:
+    * ამის შესახებ (about this — NOT *შესახებ ამის).
+    * წიგნის შესახებ, ცხოვრების შესახებ, ადამიანის შესახებ.
+• INSTANTANEOUS TEMPORAL CLITIC '-თანავე':
+  - Replaces clumsy analytic clauses ('როგორც კი + ზმნა') with concise participial constructions:
+    * დანახვისთანავე (as soon as he saw / upon seeing — NOT *როგორც კი დაინახა).
+    * მოსვლისთანავე (upon arrival — NOT *როგორც კი მოვიდა).
+    * გაგებისთანავე (upon hearing/understanding — NOT *როგორც კი გაიგო).
+    * გაღვიძებისთანავე (upon waking — NOT *როგორც კი გაიღვიძა).
+• TERMINATIVE POSTPOSITION '-მდე':
+  - Expresses temporal limit concisely: დილამდე (until morning), ბოლომდე (until the end), სიკვდილამდე (until death).`;
+
+// KA-142 v1.54.0 — Prohibitive & Inability Negative Concord (ნურავინ, ნურაფერი, ნურასოდეს + ნუ; ვერ).
+const KA_PROHIBITIVE_INABILITY_NEGATIVE_CONCORD = `
+PROHIBITIVE & INABILITY NEGATIVE CONCORD (KA-142):
+• MODAL INABILITY CONCORD ('ვერ'):
+  - Inability or failure to perform an act requires 'ვერ', matching negative pronouns:
+    * ვერავინ შეძლო / ვერავინ ვერ შეძლო (nobody could — NOT *არავინ არ შეძლო).
+    * ვერაფერი შევძელი (I could do nothing — NOT *არაფერი შევძელი).
+    * ვერსად წავიდოდა (could go nowhere).
+• PROHIBITIVE CONCORD IN COMMANDS ('ნუ' + PROHIBITIVE PRONOUNS):
+  - Imperative prohibitions strictly use 'ნუ' with the prohibitive pronoun series:
+    * ნურაფერს ნუ გააკეთებ (do nothing / don't do anything — NOT *არაფერი არ გააკეთო).
+    * ნურავის ნუ ეტყვი (tell nobody — NOT *არავის არ უთხრა).
+    * ნურასოდეს ნუ დაივიწყებ (never forget — NOT *არასოდეს არ დაივიწყო).
+    * ნურსად ნუ წახვალ (go nowhere — NOT *არსად არ წახვიდე).`;
+
+// KA-143 v1.54.0 — Purposive Supine Compacting (სა-...-ოდ / -ად).
+const KA_PURPOSIVE_SUPINE_SYNTHESIS = `
+PURPOSIVE SUPINE COMPACTING (KA-143):
+• SYNTHETIC SUPINE OVER CLUNKY 'იმისთვის, რომ':
+  - Authentic literary Georgian replaces analytic purpose clauses ('იმისთვის, რომ + subjunctive') with elegant supines:
+    * გასაგებად (in order to understand / clearly — NOT *იმისთვის, რომ გაიგოს).
+    * სანახავად (in order to see — NOT *იმისთვის, რომ ნახოს).
+    * სასწავლად (in order to learn — NOT *იმისთვის, რომ ისწავლოს).
+    * სათქმელად (in order to say — NOT *იმისთვის, რომ თქვას).
+    * გადასარჩენად (in order to survive / be saved).
+    * საპოვნელად (in order to find).
+    * საცხოვრებლად (in order to live).`;
+
+// KA-144 v1.54.0 — Epistemic & Mirative Discourse Particles (თურმე, განა, ნუთუ, ხომ).
+const KA_EPISTEMIC_MIRATIVE_PARTICLES = `
+EPISTEMIC & MIRATIVE DISCOURSE PARTICLES (KA-144):
+• MIRATIVE SERIES III HARMONY ('თურმე'):
+  - Represents non-witnessed inference or unexpected discovery, harmonizing with Series III evidential screeves:
+    * თურმე დავიწყებია (it turns out he had forgotten — NOT *როგორც ჩანს, მას დავიწყებია).
+    * თურმე მოსულა (it turns out he came).
+    * თურმე სიმართლე ყოფილა (it turned out to be the truth).
+• RHETORICAL & VALIDATION TAGS ('განა', 'ნუთუ', 'ხომ'):
+  - 'ხომ' is positioned immediately before the predicate for topic-focus emphasis: „ეს ხომ სიმართლეა?“
+  - 'განა' and 'ნუთუ' introduce rhetorical and incredulous inquiries: „განა შესაძლებელია?“, „ნუთუ მართლა?“.`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -5218,6 +5288,11 @@ function getKaKnowledgeBase() {
         KA_LIGHT_VERB_DECALQUING,
         KA_VERSION_POLYPERSONAL_ALIGNMENT,
         KA_CLASSICAL_PHILOSOPHY_LITERATURE,
+        KA_REFLEXIVE_POSSESSIVE_COREFERENCE,
+        KA_POSTPOSITIONAL_TEMPORAL_CLITICS,
+        KA_PROHIBITIVE_INABILITY_NEGATIVE_CONCORD,
+        KA_PURPOSIVE_SUPINE_SYNTHESIS,
+        KA_EPISTEMIC_MIRATIVE_PARTICLES,
         KA_CONTRASTIVE_PATTERNS,
         KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
         KA_PROPER_NOUN_TRANSLITERATION,
@@ -9345,7 +9420,91 @@ function synthesizeGeorgianMorphology(text) {
         out = out.replace(re, repl);
     }
 
-    // 19. Typography & Dialogue
+    // 19. Reflexive Anaphora & Possessive Co-Reference (საკუთარი თავი / თავისი vs მისი)
+    const reflexiveFixes = [
+        [/(?<![\u10A0-\u10FF])დაინახა\s+მისი\s+თავი(?![ა-ჰ])/g, 'საკუთარი თავი დაინახა'],
+        [/(?<![\u10A0-\u10FF])ჰკითხა\s+მის\s+თავს(?![ა-ჰ])/g, 'თავის თავს ჰკითხა'],
+        [/(?<![\u10A0-\u10FF])დარწმუნებული\s+იყო\s+მის\s+თავში(?![ა-ჰ])/g, 'თავის თავში იყო დარწმუნებული'],
+        [/(?<![\u10A0-\u10FF])უთხრა\s+მის\s+თავს(?![ა-ჰ])/g, 'თავის თავს უთხრა'],
+        [/(?<![\u10A0-\u10FF])მან\s+დაინახა\s+ის(?![ა-ჰ])/g, 'მან საკუთარი თავი დაინახა'],
+        [/(?<![\u10A0-\u10FF])მან\s+აიღო\s+მისი\s+წიგნი(?![ა-ჰ])/g, 'მან თავისი წიგნი აიღო'],
+        [/(?<![\u10A0-\u10FF])მან\s+დახუჭა\s+მისი\s+თვალები(?![ა-ჰ])/g, 'მან თავისი თვალები დახუჭა'],
+        [/(?<![\u10A0-\u10FF])მან\s+გახსნა\s+მისი\s+გული(?![ა-ჰ])/g, 'მან თავისი გული გახსნა'],
+        [/(?<![\u10A0-\u10FF])მან\s+დატოვა\s+მისი\s+სახლი(?![ა-ჰ])/g, 'მან თავისი სახლი დატოვა'],
+        [/(?<![\u10A0-\u10FF])მან\s+იპოვა\s+მისი\s+გზა(?![ა-ჰ])/g, 'მან თავისი გზა იპოვა'],
+    ];
+    for (const [re, repl] of reflexiveFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 20. Postpositional Word Order and Instantaneous Temporal Clitics (შესახებ, -თანავე, -მდე)
+    const postpositionalFixes = [
+        [/(?<![\u10A0-\u10FF])შესახებ\s+ამის(?![ა-ჰ])/g, 'ამის შესახებ'],
+        [/(?<![\u10A0-\u10FF])შესახებ\s+წიგნის(?![ა-ჰ])/g, 'წიგნის შესახებ'],
+        [/(?<![\u10A0-\u10FF])შესახებ\s+ცხოვრების(?![ა-ჰ])/g, 'ცხოვრების შესახებ'],
+        [/(?<![\u10A0-\u10FF])შესახებ\s+ადამიანის(?![ა-ჰ])/g, 'ადამიანის შესახებ'],
+        [/(?<![\u10A0-\u10FF])შესახებ\s+სამყაროს(?![ა-ჰ])/g, 'სამყაროს შესახებ'],
+        [/(?<![\u10A0-\u10FF])შიგნით\s+ოთახში(?![ა-ჰ])/g, 'ოთახში'],
+        [/(?<![\u10A0-\u10FF])როგორც\s+კი\s+დაინახა(?![ა-ჰ])/g, 'დანახვისთანავე'],
+        [/(?<![\u10A0-\u10FF])როგორც\s+კი\s+მოვიდა(?![ა-ჰ])/g, 'მოსვლისთანავე'],
+        [/(?<![\u10A0-\u10FF])როგორც\s+კი\s+გაიგო(?![ა-ჰ])/g, 'გაგებისთანავე'],
+        [/(?<![\u10A0-\u10FF])როგორც\s+კი\s+გაიღვიძა(?![ა-ჰ])/g, 'გაღვიძებისთანავე'],
+        [/(?<![\u10A0-\u10FF])როგორც\s+კი\s+შეიტყო(?![ა-ჰ])/g, 'შეტყობისთანავე'],
+        [/(?<![\u10A0-\u10FF])სანამ\s+დილა\s+მოვიდოდა(?![ა-ჰ])/g, 'დილამდე'],
+        [/(?<![\u10A0-\u10FF])სანამ\s+ბოლო\s+მოვიდოდა(?![ა-ჰ])/g, 'ბოლომდე'],
+        [/(?<![\u10A0-\u10FF])სანამ\s+სიკვდილი\s+მოვიდოდა(?![ა-ჰ])/g, 'სიკვდილამდე'],
+        [/(?<![\u10A0-\u10FF])სანამ\s+დაღამდება(?![ა-ჰ])/g, 'დაღამებამდე'],
+    ];
+    for (const [re, repl] of postpositionalFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 21. Prohibitive and Inability Negative Concord (ნურავინ, ნურაფერი, ნურასოდეს + ნუ; ვერ)
+    const negativeConcordFixes = [
+        [/(?<![\u10A0-\u10FF])არავინ\s+არ\s+შეძლო(?![ა-ჰ])/g, 'ვერავინ შეძლო'],
+        [/(?<![\u10A0-\u10FF])არავინ\s+შეძლო(?![ა-ჰ])/g, 'ვერავინ შეძლო'],
+        [/(?<![\u10A0-\u10FF])არაფერი\s+არ\s+შევძელი(?![ა-ჰ])/g, 'ვერაფერი შევძელი'],
+        [/(?<![\u10A0-\u10FF])არაფერი\s+შევძელი(?![ა-ჰ])/g, 'ვერაფერი შევძელი'],
+        [/(?<![\u10A0-\u10FF])არსად\s+არ\s+შეეძლო\s+წასვლა(?![ა-ჰ])/g, 'ვერსად წავიდოდა'],
+        [/(?<![\u10A0-\u10FF])არაფერი\s+(?:არ|ნუ)\s+(?:გააკეთო|გააკეთებ)(?![ა-ჰ])/g, 'ნურაფერს ნუ გააკეთებ'],
+        [/(?<![\u10A0-\u10FF])არაფერს\s+(?:არ|ნუ)\s+(?:შეეხო|შეეხები)(?![ა-ჰ])/g, 'ნურაფერს ნუ შეეხები'],
+        [/(?<![\u10A0-\u10FF])არავის\s+(?:არ|ნუ)\s+(?:უთხრა|ეტყვი)(?![ა-ჰ])/g, 'ნურავის ნუ ეტყვი'],
+        [/(?<![\u10A0-\u10FF])არასოდეს\s+(?:არ|ნუ)\s+(?:დაივიწყო|დაივიწყებ)(?![ა-ჰ])/g, 'ნურასოდეს ნუ დაივიწყებ'],
+        [/(?<![\u10A0-\u10FF])არასდროს\s+(?:არ|ნუ)\s+(?:დაბრუნდე|დაბრუნდები)(?![ა-ჰ])/g, 'ნურასდროს ნუ დაბრუნდები'],
+        [/(?<![\u10A0-\u10FF])არსად\s+(?:არ|ნუ)\s+(?:წახვიდე|წახვალ)(?![ა-ჰ])/g, 'ნურსად ნუ წახვალ'],
+    ];
+    for (const [re, repl] of negativeConcordFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 22. Purposive Supine Compacting (იმისთვის, რომ -> სა-...-ოდ / -ად)
+    const purposiveSupineFixes = [
+        [/(?<![\u10A0-\u10FF])იმისთვის,\s*რომ\s+გაიგოს(?![ა-ჰ])/g, 'გასაგებად'],
+        [/(?<![\u10A0-\u10FF])იმისთვის,\s*რომ\s+ნახოს(?![ა-ჰ])/g, 'სანახავად'],
+        [/(?<![\u10A0-\u10FF])იმისთვის,\s*რომ\s+ისწავლოს(?![ა-ჰ])/g, 'სასწავლად'],
+        [/(?<![\u10A0-\u10FF])იმისთვის,\s*რომ\s+თქვას(?![ა-ჰ])/g, 'სათქმელად'],
+        [/(?<![\u10A0-\u10FF])იმისთვის,\s*რომ\s+გადარჩეს(?![ა-ჰ])/g, 'გადასარჩენად'],
+        [/(?<![\u10A0-\u10FF])იმისთვის,\s*რომ\s+იპოვოს(?![ა-ჰ])/g, 'საპოვნელად'],
+        [/(?<![\u10A0-\u10FF])იმისთვის,\s*რომ\s+იცხოვროს(?![ა-ჰ])/g, 'საცხოვრებლად'],
+        [/(?<![\u10A0-\u10FF])იმისთვის,\s*რომ\s+დაინახოს(?![ა-ჰ])/g, 'დასანახად'],
+    ];
+    for (const [re, repl] of purposiveSupineFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 23. Mirative Discourse Particles and Evidential Concord (თურმე)
+    const mirativeFixes = [
+        [/(?<![\u10A0-\u10FF])როგორც\s+ჩანს,\s*მას\s+დავიწყებია(?![ა-ჰ])/g, 'თურმე დავიწყებია'],
+        [/(?<![\u10A0-\u10FF])როგორც\s+ჩანს,\s*დავიწყებია(?![ა-ჰ])/g, 'თურმე დავიწყებია'],
+        [/(?<![\u10A0-\u10FF])აღმოჩნდა,\s*რომ\s+მოვიდა(?![ა-ჰ])/g, 'თურმე მოსულა'],
+        [/(?<![\u10A0-\u10FF])აღმოჩნდა,\s*რომ\s+წავიდა(?![ა-ჰ])/g, 'თურმე წასულა'],
+        [/(?<![\u10A0-\u10FF])აღმოჩნდა,\s*რომ\s+სიმართლეა(?![ა-ჰ])/g, 'თურმე სიმართლე ყოფილა'],
+    ];
+    for (const [re, repl] of mirativeFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 24. Typography & Dialogue
     out = out.replace(/(?:^|\n)\s*[-–—]\s*/g, '\n— ');
     out = out.replace(/\s+([.,;:!?])/g, '$1');
 
@@ -9849,15 +10008,20 @@ if (typeof window !== 'undefined') {
     window.KA_LIGHT_VERB_DECALQUING = KA_LIGHT_VERB_DECALQUING;
     window.KA_VERSION_POLYPERSONAL_ALIGNMENT = KA_VERSION_POLYPERSONAL_ALIGNMENT;
     window.KA_CLASSICAL_PHILOSOPHY_LITERATURE = KA_CLASSICAL_PHILOSOPHY_LITERATURE;
+    window.KA_REFLEXIVE_POSSESSIVE_COREFERENCE = KA_REFLEXIVE_POSSESSIVE_COREFERENCE;
+    window.KA_POSTPOSITIONAL_TEMPORAL_CLITICS = KA_POSTPOSITIONAL_TEMPORAL_CLITICS;
+    window.KA_PROHIBITIVE_INABILITY_NEGATIVE_CONCORD = KA_PROHIBITIVE_INABILITY_NEGATIVE_CONCORD;
+    window.KA_PURPOSIVE_SUPINE_SYNTHESIS = KA_PURPOSIVE_SUPINE_SYNTHESIS;
+    window.KA_EPISTEMIC_MIRATIVE_PARTICLES = KA_EPISTEMIC_MIRATIVE_PARTICLES;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.53.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.54.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 152,
-    qaRules: 148,
-    autoFixes: 138,
-    researchSources: 510
+    promptBlocks: 157,
+    qaRules: 153,
+    autoFixes: 143,
+    researchSources: 550
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -9886,6 +10050,11 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_LIGHT_VERB_DECALQUING,
         KA_VERSION_POLYPERSONAL_ALIGNMENT,
         KA_CLASSICAL_PHILOSOPHY_LITERATURE,
+        KA_REFLEXIVE_POSSESSIVE_COREFERENCE,
+        KA_POSTPOSITIONAL_TEMPORAL_CLITICS,
+        KA_PROHIBITIVE_INABILITY_NEGATIVE_CONCORD,
+        KA_PURPOSIVE_SUPINE_SYNTHESIS,
+        KA_EPISTEMIC_MIRATIVE_PARTICLES,
         synthesizeGeorgianMorphology,
         polishGeorgianLiterarySyntax: synthesizeGeorgianMorphology,
         translateOfflineEnToKa,
