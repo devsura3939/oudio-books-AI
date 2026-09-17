@@ -153,6 +153,8 @@ button[aria-busy="true"] { cursor:progress; opacity:.7; }
 .book-page-card { padding:clamp(22px,2.8vw,44px)!important; border-radius:16px!important; contain:layout paint; }
 .book-page-card .book-page-text-flow > div { width:min(100%,70ch); margin-inline:auto; }
 .book-prose { text-align:start!important; text-justify:auto!important; line-height:1.85; }
+#readerScrollContainer .book-prose { content-visibility:auto; contain-intrinsic-size:auto 60px; }
+.reader-sentence { transition:background-color 0.15s ease, color 0.15s ease; }
 #readerView[data-reader-lang="ka"] .book-prose { hyphens:none; letter-spacing:0; }
 #readerBottomToolbar > div:first-child { min-height:44px; }
 

@@ -31,7 +31,8 @@
         const signal=init.signal?AbortSignal.any([init.signal,ctrl.signal]):ctrl.signal;
         emit({phase:'requesting',provider});
         try{
-            const response=await (meta.fetchImpl||fetch)(url,{...init,signal});
+            const priority=init.priority||meta.priority||'auto';
+            const response=await (meta.fetchImpl||fetch)(url,{...init,signal,priority});
             // Keep the deadline active until the payload is received, including audio.
             const body=await response.arrayBuffer();
             if(!response.ok)fail(provider,'http',response.status);

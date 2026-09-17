@@ -2227,6 +2227,72 @@ function stopLibraryRealtime() {
     if (window.LuminaStore && typeof window.LuminaStore.unsubscribeLibraryChanges === 'function') {
         window.LuminaStore.unsubscribeLibraryChanges();
     }
+// ════════════════ Low-End Device & Concurrency Optimization Engine ════════════════
+function isLowTierHardware() {
+    if (typeof navigator === 'undefined') return false;
+    const cores = navigator.hardwareConcurrency || 4;
+    const mem = navigator.deviceMemory || 4;
+    return cores <= 4 || mem <= 2;
+}
+
+function yieldMainThread() {
+    if (typeof scheduler !== 'undefined' && typeof scheduler.yield === 'function') {
+        return scheduler.yield();
+    }
+    return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+let _audioCacheDB = null;
+function getAudioCacheDB() {
+    if (_audioCacheDB) return Promise.resolve(_audioCacheDB);
+    return new Promise((resolve) => {
+        try {
+            if (typeof indexedDB === 'undefined') return resolve(null);
+            const req = indexedDB.open('LuminaAudioCacheDB_v1', 1);
+            req.onupgradeneeded = (e) => {
+                const dbInst = e.target.result;
+                if (!dbInst.objectStoreNames.contains('clips')) {
+                    dbInst.createObjectStore('clips', { keyPath: 'key' });
+                }
+            };
+            req.onsuccess = (e) => {
+                _audioCacheDB = e.target.result;
+                resolve(_audioCacheDB);
+            };
+            req.onerror = () => resolve(null);
+        } catch (e) {
+            resolve(null);
+        }
+    });
+}
+
+async function getAudioFromPersistentCache(key) {
+    try {
+        const dbInst = await getAudioCacheDB();
+        if (!dbInst) return null;
+        return new Promise((resolve) => {
+            const tx = dbInst.transaction('clips', 'readonly');
+            const store = tx.objectStore('clips');
+            const req = store.get(key);
+            req.onsuccess = () => {
+                if (req.result && req.result.blob) resolve(req.result.blob);
+                else resolve(null);
+            };
+            req.onerror = () => resolve(null);
+        });
+    } catch (e) {
+        return null;
+    }
+}
+
+async function saveAudioToPersistentCache(key, blob) {
+    try {
+        const dbInst = await getAudioCacheDB();
+        if (!dbInst || !blob) return;
+        const tx = dbInst.transaction('clips', 'readwrite');
+        const store = tx.objectStore('clips');
+        store.put({ key, blob, timestamp: Date.now() });
+    } catch (e) {}
 }
 
 function initLocalDB() {
@@ -2472,6 +2538,8 @@ async function saveBookToDB(book) {
 let _progressDebounceTimer = null;
 let _lastSavedProgressPct = -1;
 let _lastSavedChapterId = null;
+let _localProgressDebounceTimer = null;
+let _lastLocalSavedProgressTime = 0;
 
 function saveBookProgress(book, progressPct, lastPlayedChapterId) {
     if (!book) return;
@@ -2479,17 +2547,30 @@ function saveBookProgress(book, progressPct, lastPlayedChapterId) {
     if (lastPlayedChapterId !== undefined && lastPlayedChapterId !== null) {
         book.lastPlayedChapterId = lastPlayedChapterId;
     }
-    // 1. Immediately update local IndexedDB (zero network latency)
-    try {
-        saveBookToLocalDB(book).catch(() => {});
-    } catch (e) {}
+    // 1. Debounce local IndexedDB writes to save flash I/O on low-end devices
+    const now = Date.now();
+    const chapterChanged = lastPlayedChapterId !== _lastSavedChapterId;
+    if (chapterChanged || (now - _lastLocalSavedProgressTime > 12000)) {
+        clearTimeout(_localProgressDebounceTimer);
+        _lastLocalSavedProgressTime = now;
+        try {
+            saveBookToLocalDB(book).catch(() => {});
+        } catch (e) {}
+    } else {
+        clearTimeout(_localProgressDebounceTimer);
+        _localProgressDebounceTimer = setTimeout(() => {
+            _lastLocalSavedProgressTime = Date.now();
+            try {
+                saveBookToLocalDB(book).catch(() => {});
+            } catch (e) {}
+        }, 3500);
+    }
 
     // 2. Debounce cloud update to Supabase metadata without touching chapters
     if (usingCloud && window.LuminaStore && typeof window.LuminaStore.updateProgress === 'function') {
         const sid = book.id || book.slug;
         if (!sid) return;
 
-        const chapterChanged = lastPlayedChapterId !== _lastSavedChapterId;
         const pctDiff = Math.abs(progressPct - _lastSavedProgressPct);
 
         if (chapterChanged || pctDiff >= 5) {
@@ -2505,7 +2586,9 @@ function saveBookProgress(book, progressPct, lastPlayedChapterId) {
 
 function flushBookProgressImmediate(book) {
     if (!book) return;
+    clearTimeout(_localProgressDebounceTimer);
     clearTimeout(_progressDebounceTimer);
+    _lastLocalSavedProgressTime = Date.now();
     try {
         saveBookToLocalDB(book).catch(() => {});
     } catch (e) {}
@@ -5845,6 +5928,44 @@ function measurePages(sentences) {
         const page1MaxH = Math.max(220, spreadH - measuredPadY - footerReserve - headerReserve - safety);
         const pageOtherMaxH = Math.max(260, spreadH - measuredPadY - footerReserve - safety);
 
+        // Fast calibrated pagination for low-tier devices or during active background tasks:
+        // Instead of 500+ layout reflows, calibrate on a single reference sample in <1ms!
+        const isBusyTask = (typeof isTranslatingWholeBook !== 'undefined' && isTranslatingWholeBook) || (typeof window._scannerActive !== 'undefined' && window._scannerActive);
+        if (isLowTierHardware() || isBusyTask) {
+            const sampleText = sentences.slice(0, 8).map(s => s.text).join(' ');
+            const sampleWords = Math.max(1, sampleText.split(/\s+/).length);
+            const pProbe = document.createElement('div');
+            pProbe.className = `${readerFontFamily} space-y-3.5`;
+            pProbe.style.cssText = `position:absolute;left:-99999px;top:0;visibility:hidden;width:${innerW}px;font-size:${readerFontSize}px;line-height:1.85;box-sizing:border-box;`;
+            pProbe.innerHTML = `<p class="book-prose indent-6">${escapeHtml(sampleText)}</p>`;
+            document.body.appendChild(pProbe);
+            const measuredH = pProbe.scrollHeight || 100;
+            pProbe.remove();
+
+            const wordsPerPx = sampleWords / Math.max(1, measuredH);
+            const p1Words = Math.max(50, Math.floor(page1MaxH * wordsPerPx * 0.94));
+            const pOtherWords = Math.max(60, Math.floor(pageOtherMaxH * wordsPerPx * 0.94));
+
+            const pages = [];
+            let curPage = [];
+            let curWords = 0;
+            for (let i = 0; i < sentences.length; i++) {
+                const item = sentences[i];
+                const limit = (pages.length === 0) ? p1Words : pOtherWords;
+                const itemWordCount = Math.max(1, item.text.split(/\s+/).length);
+                if (curWords + itemWordCount > limit && curPage.length > 0) {
+                    pages.push(curPage);
+                    curPage = [item];
+                    curWords = itemWordCount;
+                } else {
+                    curPage.push(item);
+                    curWords += itemWordCount;
+                }
+            }
+            if (curPage.length) pages.push(curPage);
+            return pages.length ? pages : null;
+        }
+
         const probe = document.createElement('div');
         probe.className = `${readerFontFamily} space-y-3.5`;
         probe.style.cssText = `position:absolute;left:-99999px;top:0;visibility:hidden;width:${innerW}px;font-size:${readerFontSize}px;line-height:1.85;box-sizing:border-box;`;
@@ -6433,6 +6554,9 @@ function onReaderSentenceClick(sentenceIdx) {
     speakCurrentSentence();
 }
 
+let _currentActiveReaderSentenceEl = null;
+let _lastUserScrollTime = 0;
+
 function highlightReaderSentence(sentenceIdx, forceSync = false) {
     if (forceSync) {
         isUserManuallyNavigating = false;
@@ -6468,15 +6592,31 @@ function highlightReaderSentence(sentenceIdx, forceSync = false) {
         }
     }
 
-    document.querySelectorAll('.reader-sentence.active-sentence').forEach(el => {
-        el.classList.remove('active-sentence');
-    });
+    // O(1) active sentence removal - avoid expensive full-DOM tree query
+    if (_currentActiveReaderSentenceEl && _currentActiveReaderSentenceEl.classList) {
+        _currentActiveReaderSentenceEl.classList.remove('active-sentence');
+    } else {
+        const oldActive = document.querySelector('.reader-sentence.active-sentence');
+        if (oldActive) oldActive.classList.remove('active-sentence');
+    }
 
     const targetEl = document.getElementById(`rsentence_${sentenceIdx}`);
     if (targetEl) {
         targetEl.classList.add('active-sentence');
-        if (readerMode === 'scroll') {
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        _currentActiveReaderSentenceEl = targetEl;
+
+        if (readerMode === 'scroll' && DOM.readerScrollContainer) {
+            const now = Date.now();
+            const recentlyTouched = (now - _lastUserScrollTime) < 3000;
+            if (!isUserManuallyNavigating && !recentlyTouched) {
+                const cRect = DOM.readerScrollContainer.getBoundingClientRect();
+                const eRect = targetEl.getBoundingClientRect();
+                const isComfortablyVisible = eRect.top >= (cRect.top + 32) && eRect.bottom <= (cRect.bottom - 32);
+                if (!isComfortablyVisible) {
+                    const behavior = isLowTierHardware() ? 'auto' : 'smooth';
+                    targetEl.scrollIntoView({ behavior, block: 'nearest' });
+                }
+            }
         }
     }
 
@@ -8381,6 +8521,7 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
             for (let index = job.chapterIdx || 0; index < targetBook.chapters.length; index++) {
                 checkOwner();
                 if (cancelTranslationFlag) break;
+                if (typeof yieldMainThread === 'function') await yieldMainThread();
                 const chapter = targetBook.chapters[index];
                 const source = chapter.text_content || chapter.text || '';
                 let draft = chapter[field] || chapter.metadata?.[field] || '';
@@ -8465,8 +8606,11 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                     if (!readerBook.translatedLangs) readerBook.translatedLangs = [];
                     if (!readerBook.translatedLangs.includes(targetLang)) readerBook.translatedLangs.push(targetLang);
                     if (typeof readerChapterId !== 'undefined' && String(readerChapterId) === String(chapter.id)) {
-                        if (typeof paginateChapter === 'function') paginateChapter();
-                        if (typeof renderCurrentPage === 'function') renderCurrentPage();
+                        const isActivelyEngaged = (typeof isPlaying !== 'undefined' && isPlaying && !isPaused);
+                        if (!isActivelyEngaged && readerLang === targetLang) {
+                            if (typeof paginateChapter === 'function') paginateChapter();
+                            if (typeof renderCurrentPage === 'function') renderCurrentPage();
+                        }
                     }
                     if (typeof renderToCDrawerList === 'function') renderToCDrawerList();
                 }
@@ -8561,6 +8705,7 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
             };
             for (let i = 0; i < chunks.length; i++) {
                 if (cancelTranslationFlag) { lookaheadPromise = null; lookaheadIndex = -1; break; }
+                if (typeof yieldMainThread === 'function') await yieldMainThread();
                 if (DOM.wbSentenceCounter) DOM.wbSentenceCounter.textContent = `Accepted segments: ${checkpoint.outputs.filter(Boolean).length} / ${chunks.length}`;
                 if (checkpoint.outputs[i] && assessTranslation(chunks[i], checkpoint.outputs[i], targetLang).ok) continue;
                 lastTranslationFailure = '';
@@ -8694,8 +8839,11 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                 if (!readerBook.translatedLangs) readerBook.translatedLangs = [];
                 if (!readerBook.translatedLangs.includes(targetLang)) readerBook.translatedLangs.push(targetLang);
                 if (typeof readerChapterId !== 'undefined' && String(readerChapterId) === String(chapter.id)) {
-                    if (typeof paginateChapter === 'function') paginateChapter();
-                    if (typeof renderCurrentPage === 'function') renderCurrentPage();
+                    const isActivelyEngaged = (typeof isPlaying !== 'undefined' && isPlaying && !isPaused);
+                    if (!isActivelyEngaged && readerLang === targetLang) {
+                        if (typeof paginateChapter === 'function') paginateChapter();
+                        if (typeof renderCurrentPage === 'function') renderCurrentPage();
+                    }
                 }
                 if (typeof renderToCDrawerList === 'function') renderToCDrawerList();
                 if (typeof showToast === 'function') showToast(`Chapter ${index + 1} translated and available in Reader.`, 'info');
@@ -8849,7 +8997,7 @@ function cancelWholeBookTranslation() {
     if (wasRunning) {
         cancelTranslationFlag = true;
         translationRequestController?.abort();
-        updateTranslationControls(false);
+        if (typeof updateTranslationControls === 'function') updateTranslationControls(false);
         if (DOM.wbChapterLabel) {
             const chapIdx = (activeTranslationJob?.chapterIdx || 0) + 1;
             DOM.wbChapterLabel.textContent = `Paused at Chapter ${chapIdx} · Ready to resume`;
@@ -9533,7 +9681,7 @@ function clearNarrationBuffers() {
 window.clearNarrationBuffers = clearNarrationBuffers;
 
 
-async function fetchGatewaySpeechUrl(text, lang, overridePreset = null) {
+async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority = 'high') {
     if (!gatewayTTSAvailable) return null;
     const preset = overridePreset || gatewayPresetForLang(lang);
     const spoken = lang === 'ka'
@@ -9544,19 +9692,45 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null) {
     const key = preset + '|' + spoken;
     if (gatewayTTSCache.has(key)) return gatewayTTSCache.get(key);
 
+    // Check persistent IndexedDB cache before hitting the network
+    try {
+        const cachedBlob = await getAudioFromPersistentCache(key);
+        if (cachedBlob) {
+            const url = URL.createObjectURL(cachedBlob);
+            if (gatewayTTSCache.size > 60) {
+                const oldest = gatewayTTSCache.keys().next().value;
+                try { URL.revokeObjectURL(gatewayTTSCache.get(oldest)); } catch (e) {}
+                gatewayTTSCache.delete(oldest);
+            }
+            gatewayTTSCache.set(key, url);
+            return url;
+        }
+    } catch (dbErr) {
+        console.warn('[Lumina AudioCache] read failed:', dbErr);
+    }
+
     try {
         const res = await window.EngbotProviders.request('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: spoken.slice(0, 3800), preset }),
-        }, { timeoutMs: 14_000, provider: 'Lumina TTS gateway' });
+            priority: priority || 'high',
+        }, { timeoutMs: 16_000, provider: 'Lumina TTS gateway', priority: priority || 'high' });
+
+        // Only disable gateway on fatal unauthorized/not-found codes
         if (res.status === 404 || res.status === 401 || res.status === 403 || res.status === 402) {
             gatewayTTSAvailable = false;
             console.warn('[Lumina TTS] gateway unavailable (' + res.status + ') — using browser/HF engines.');
             return null;
         }
-        if (!res.ok) return null;
-        const url = URL.createObjectURL(await res.blob());
+        if (!res.ok) {
+            console.warn('[Lumina TTS] gateway returned non-ok status (' + res.status + ') — transient failure.');
+            return null;
+        }
+        const blob = await res.blob();
+        saveAudioToPersistentCache(key, blob);
+
+        const url = URL.createObjectURL(blob);
         if (gatewayTTSCache.size > 60) {
             const oldest = gatewayTTSCache.keys().next().value;
             try { URL.revokeObjectURL(gatewayTTSCache.get(oldest)); } catch (e) {}
@@ -9565,40 +9739,69 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null) {
         gatewayTTSCache.set(key, url);
         return url;
     } catch (e) {
-        gatewayTTSAvailable = false;
-        console.warn('[Lumina TTS] gateway unreachable — using browser/HF engines.', e && e.message);
+        // Do NOT permanently set gatewayTTSAvailable = false on transient timeouts or network drops!
+        console.warn('[Lumina TTS] gateway transient failure — will retry or fallback for this sentence:', e && e.message);
         return null;
     }
 }
 
-// ── Rolling prefetch window ────────────────────────────────────────────────
-// Fetching one sentence at a time, only after the current one started playing,
-// is what produced the long silences between sentences (worst on scanned books
-// with very long "sentences"). We keep the next few sentences already
-// synthesized, so the next clip is ready the moment the current one ends.
-const GATEWAY_PREFETCH_AHEAD = 4;
+// ── Rolling adaptive prefetch window ───────────────────────────────────────
+// Keep ahead adaptively: on slow/mobile connections or saveData, prefetch up to 6 sentences
+// ahead to avoid audio stutter or silence during packet jitter.
+function getAdaptivePrefetchCount() {
+    const conn = (typeof navigator !== 'undefined') ? (navigator.connection || navigator.mozConnection || navigator.webkitConnection) : null;
+    if (conn) {
+        if (conn.saveData) return 6;
+        if (conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g' || conn.effectiveType === '3g') return 6;
+        if (conn.downlink && conn.downlink < 2.5) return 6;
+    }
+    if (typeof isLowTierHardware === 'function' && isLowTierHardware()) {
+        return 5;
+    }
+    return 4;
+}
+
 const gatewayPrefetchInFlight = new Set();
 
-function prefetchNextGatewaySentence(index, lang) {
+function prefetchNextGatewaySentence(index, lang, retryCount = 0) {
     if (index >= sentenceQueue.length || index < 0) return;
     if (georgianAudioPrefetchCache.has(index) || gatewayPrefetchInFlight.has(index)) return;
     const nextText = sentenceQueue[index];
     if (!nextText || !nextText.trim()) return;
     const myGen = narrationGeneration;
     gatewayPrefetchInFlight.add(index);
-    fetchGatewaySpeechUrl(nextText, lang).then(url => {
+    fetchGatewaySpeechUrl(nextText, lang, null, 'low').then(url => {
         gatewayPrefetchInFlight.delete(index);
-        if (myGen !== narrationGeneration || !url) return;
-        const audio = new Audio(url);
-        audio.preload = 'auto';
-        try { audio.load(); } catch (e) {}
-        prefetchCachePut(index, audio);
-    }).catch(() => { gatewayPrefetchInFlight.delete(index); });
+        if (myGen !== narrationGeneration) return;
+        if (url) {
+            const audio = new Audio(url);
+            audio.preload = 'auto';
+            try { audio.load(); } catch (e) {}
+            prefetchCachePut(index, audio);
+        } else if (retryCount < 2 && isPlaying && !isPaused) {
+            // Adaptive retry with backoff on transient drops
+            setTimeout(() => {
+                if (myGen === narrationGeneration && isPlaying && !isPaused) {
+                    prefetchNextGatewaySentence(index, lang, retryCount + 1);
+                }
+            }, 1200 * (retryCount + 1));
+        }
+    }).catch(() => {
+        gatewayPrefetchInFlight.delete(index);
+        if (retryCount < 2 && isPlaying && !isPaused && myGen === narrationGeneration) {
+            setTimeout(() => {
+                if (myGen === narrationGeneration && isPlaying && !isPaused) {
+                    prefetchNextGatewaySentence(index, lang, retryCount + 1);
+                }
+            }, 1200 * (retryCount + 1));
+        }
+    });
 }
 
-/** Keeps the next GATEWAY_PREFETCH_AHEAD sentences warm, in reading order. */
+/** Keeps the adaptive prefetch window warm, in reading order. */
 function primeGatewayPrefetchWindow(fromIndex, lang) {
-    for (let i = 1; i <= GATEWAY_PREFETCH_AHEAD; i++) {
+    const ahead = getAdaptivePrefetchCount();
+    for (let i = 1; i <= ahead; i++) {
         prefetchNextGatewaySentence(fromIndex + i, lang);
     }
 }
