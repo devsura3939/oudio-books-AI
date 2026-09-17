@@ -195,13 +195,13 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             self.assertEqual(polished, expected, f"Adjective truncation failed for '{raw}': got '{polished}'")
 
     def test_13_autonomous_training_pack_eval(self):
-        """Verify that the active rule pack scores 100% with zero regressions across all 220+ benchmark cases."""
+        """Verify that the active rule pack scores 100% with zero regressions across all 280+ benchmark cases."""
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 220, "Expected at least 220 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 225, "Expected at least 225 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 28, "Active pack version must be at least 28")
+        self.assertGreaterEqual(len(cases), 280, "Expected at least 280 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 275, "Expected at least 275 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 29, "Active pack version must be at least 29")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
@@ -254,6 +254,80 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         for raw, expected in pairs:
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Quotative/idiom synthesis failed for '{raw}': got '{polished}'")
+
+    def test_17_numeral_noun_singular_concord(self):
+        """Verify that nouns modified by numerals or quantifiers remain strictly singular."""
+        pairs = [
+            ("სამი წიგნები", "სამი წიგნი"),
+            ("ათი დღეები", "ათი დღე"),
+            ("მრავალი წლები", "მრავალი წელი"),
+            ("რამდენიმე კითხვები", "რამდენიმე კითხვა"),
+            ("ბევრი ადამიანები", "ბევრი ადამიანი"),
+            ("რამდენიმე სიტყვები", "რამდენიმე სიტყვა"),
+            ("ორი მეგობრები", "ორი მეგობარი"),
+            ("სამი დღე გავიდნენ", "სამი დღე გავიდა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Numeral-noun concord failed for '{raw}': got '{polished}'")
+
+    def test_18_caritive_privative_adverbs(self):
+        """Verify synthetic caritive adverbs (უ-...-ოდ) replace mechanical 'გარეშე + Genitive' calques."""
+        pairs = [
+            ("გარეშე ეჭვის", "უეჭველად"),
+            ("გარეშე შიშის", "უშიშრად"),
+            ("გარეშე იმედის", "უიმედოდ"),
+            ("გარეშე ხმის", "უხმოდ"),
+            ("გარეშე მიზეზის", "უმიზეზოდ"),
+            ("გარეშე აზრის", "უაზროდ"),
+            ("გარეშე შეცდომის", "უშეცდომოდ"),
+            ("გარეშე დაღლის", "დაუღალავად"),
+            ("გარეშე დასასრულის", "დაუსრულებლად"),
+            ("გარეშე ყოყმანის", "დაუყოვნებლივ"),
+            ("გარეშე დაფიქრების", "დაუფიქრებლად"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Caritive adverb failed for '{raw}': got '{polished}'")
+
+    def test_19_collocational_light_verb_decalquing(self):
+        """Verify replacement of generic 'გაკეთება' with specific Kartvelian verbal roots."""
+        pairs = [
+            ("შეცდომის გაკეთება", "შეცდომის დაშვება"),
+            ("შეცდომა გააკეთა", "შეცდომა დაუშვა"),
+            ("გავლენის გაკეთება", "გავლენის მოხდენა"),
+            ("გავლენა გააკეთა", "გავლენა მოახდინა"),
+            ("შთაბეჭდილების გაკეთება", "შთაბეჭდილების მოხდენა"),
+            ("შთაბეჭდილება გააკეთა", "შთაბეჭდილება მოახდინა"),
+            ("ყურადღების გაკეთება", "ყურადღების მიქცევა"),
+            ("ყურადღება გააკეთა", "ყურადღება მიაქცია"),
+            ("წარმოდგენის გაკეთება", "წარმოდგენის შექმნა"),
+            ("საჩივრის გაკეთება", "საჩივრის შეტანა"),
+            ("სარგებლის გაკეთება", "სარგებლის მიღება"),
+            ("წინსვლის გაკეთება", "წინსვლის მიღწევა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Collocational decalquing failed for '{raw}': got '{polished}'")
+
+    def test_20_version_markers_and_agentive_passives(self):
+        """Verify verbal version markers (ქცევა) and natural agentive passives (-გან)."""
+        pairs = [
+            ("დაწერა წერილი თავისთვის", "დაიწერა წერილი"),
+            ("ააშენა სახლი თავისთვის", "აიშენა სახლი"),
+            ("მოამზადა სადილი თავისთვის", "მოიმზადა სადილი"),
+            ("დაწერა წერილი შვილისთვის", "შვილს წერილი დაუწერა"),
+            ("ააშენა სახლი მეგობრისთვის", "მეგობარს სახლი აუშენა"),
+            ("მოამზადა საჭმელი დედისთვის", "დედას საჭმელი მოუმზადა"),
+            ("გააკეთა თავისთვის", "გაიკეთა"),
+            ("ღვთის მიერ ბოძებული", "ღვთისგან ბოძებული"),
+            ("ბუნების მიერ შექმნილი", "ბუნებისგან შექმნილი"),
+            ("მტრის მიერ განადგურებული", "მტრისგან განადგურებული"),
+            ("ხალხის მიერ არჩეული", "ხალხისგან არჩეული"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Version/passive failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":

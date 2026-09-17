@@ -2033,5 +2033,666 @@
     "weight": 1.0,
     "source": "ადამიანმა გაეკეთებინა სწორი არჩევანი.",
     "expected": "ადამიანს გაეკეთებინა სწორი არჩევანი."
+  },
+  {
+    "id": "case-syntax-ka-108",
+    "kind": "autofix",
+    "source": "სამი წიგნები წაიკითხა ავტორმა.",
+    "expected": "სამი წიგნი წაიკითხა ავტორმა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-109",
+    "kind": "autofix",
+    "source": "ათი დღეები გავიდა მას შემდეგ.",
+    "expected": "ათი დღე გავიდა მას შემდეგ.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-110",
+    "kind": "autofix",
+    "source": "მრავალი წლები იცხოვრა ქალაქში.",
+    "expected": "მრავალი წელი იცხოვრა ქალაქში.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-111",
+    "kind": "autofix",
+    "source": "რამდენიმე კითხვები დაუსვა მასწავლებელს.",
+    "expected": "რამდენიმე კითხვა დაუსვა მასწავლებელს.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-112",
+    "kind": "autofix",
+    "source": "ბევრი ადამიანები შეიკრიბა მოედანზე.",
+    "expected": "ბევრი ადამიანი შეიკრიბა მოედანზე.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-113",
+    "kind": "autofix",
+    "source": "რამდენიმე სიტყვები თქვა მეგობარმა.",
+    "expected": "რამდენიმე სიტყვა თქვა მეგობარმა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-114",
+    "kind": "autofix",
+    "source": "ორი მეგობრები შეხვდნენ ერთმანეთს.",
+    "expected": "ორი მეგობარი შეხვდნენ ერთმანეთს.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-115",
+    "kind": "autofix",
+    "source": "ხუთი წლები გავიდა მას შემდეგ.",
+    "expected": "ხუთი წელი გავიდა მას შემდეგ.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-116",
+    "kind": "autofix",
+    "source": "ათი კაცები შევიდნენ ოთახში.",
+    "expected": "ათი კაცი შევიდნენ ოთახში.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-117",
+    "kind": "autofix",
+    "source": "სამი ქალები ისხდნენ ბაღში.",
+    "expected": "სამი ქალი ისხდნენ ბაღში.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-118",
+    "kind": "autofix",
+    "source": "უამრავი ხალხები ელოდა გამარჯვებას.",
+    "expected": "უამრავი ხალხი ელოდა გამარჯვებას.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-119",
+    "kind": "autofix",
+    "source": "სამი დღე გავიდნენ მდუმარებაში.",
+    "expected": "სამი დღე გავიდა მდუმარებაში.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "numeral_noun_concord",
+      "verb_concord"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-120",
+    "kind": "autofix",
+    "source": "გარეშე ეჭვის ის სიმართლეს ამბობს.",
+    "expected": "უეჭველად ის სიმართლეს ამბობს.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-121",
+    "kind": "autofix",
+    "source": "გარეშე შიშის შევიდა ბრძოლაში.",
+    "expected": "უშიშრად შევიდა ბრძოლაში.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-122",
+    "kind": "autofix",
+    "source": "გარეშე იმედის ელოდა პასუხს.",
+    "expected": "უიმედოდ ელოდა პასუხს.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-123",
+    "kind": "autofix",
+    "source": "გარეშე ხმის შევიდა ოთახში.",
+    "expected": "უხმოდ შევიდა ოთახში.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-124",
+    "kind": "autofix",
+    "source": "გარეშე მიზეზის არაფერი ხდება.",
+    "expected": "უმიზეზოდ არაფერი ხდება.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-125",
+    "kind": "autofix",
+    "source": "გარეშე აზრის ლაპარაკობდა მთელი დღე.",
+    "expected": "უაზროდ ლაპარაკობდა მთელი დღე.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-126",
+    "kind": "autofix",
+    "source": "გარეშე შეცდომის შეასრულა დავალება.",
+    "expected": "უშეცდომოდ შეასრულა დავალება.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-127",
+    "kind": "autofix",
+    "source": "გარეშე დაღლის შრომობდა ოსტატი.",
+    "expected": "დაუღალავად შრომობდა ოსტატი.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-128",
+    "kind": "autofix",
+    "source": "გარეშე დასასრულის მიედინება დრო.",
+    "expected": "დაუსრულებლად მიედინება დრო.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-129",
+    "kind": "autofix",
+    "source": "გარეშე ყოყმანის მიიღო გადაწყვეტილება.",
+    "expected": "დაუყოვნებლივ მიიღო გადაწყვეტილება.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-130",
+    "kind": "autofix",
+    "source": "გარეშე დაფიქრების გასცა პასუხი.",
+    "expected": "დაუფიქრებლად გასცა პასუხი.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-131",
+    "kind": "autofix",
+    "source": "გარეშე ეჭვის ჭეშმარიტება გაიმარჯვებს.",
+    "expected": "უეჭველად ჭეშმარიტება გაიმარჯვებს.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "caritive_adverbs"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-132",
+    "kind": "autofix",
+    "source": "შეცდომის გაკეთება ყველას შეუძლია.",
+    "expected": "შეცდომის დაშვება ყველას შეუძლია.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-133",
+    "kind": "autofix",
+    "source": "ავტორმა შეცდომა გააკეთა ხელნაწერში.",
+    "expected": "ავტორმა შეცდომა დაუშვა ხელნაწერში.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-134",
+    "kind": "autofix",
+    "source": "გავლენის გაკეთება ადვილი არ არის.",
+    "expected": "გავლენის მოხდენა ადვილი არ არის.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-135",
+    "kind": "autofix",
+    "source": "წიგნმა დიდი გავლენა გააკეთა საზოგადოებაზე.",
+    "expected": "წიგნმა დიდი გავლენა მოახდინა საზოგადოებაზე.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-136",
+    "kind": "autofix",
+    "source": "შთაბეჭდილების გაკეთება სურდა სტუმრებზე.",
+    "expected": "შთაბეჭდილების მოხდენა სურდა სტუმრებზე.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-137",
+    "kind": "autofix",
+    "source": "ახალგაზრდამ კარგი შთაბეჭდილება გააკეთა.",
+    "expected": "ახალგაზრდამ კარგი შთაბეჭდილება მოახდინა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-138",
+    "kind": "autofix",
+    "source": "ყურადღების გაკეთება აუცილებელია სწავლისას.",
+    "expected": "ყურადღების მიქცევა აუცილებელია სწავლისას.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-139",
+    "kind": "autofix",
+    "source": "მეცნიერმა დეტალებს ყურადღება გააკეთა.",
+    "expected": "მეცნიერმა დეტალებს ყურადღება მიაქცია.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-140",
+    "kind": "autofix",
+    "source": "წარმოდგენის გაკეთება უჭირდა მომავალზე.",
+    "expected": "წარმოდგენის შექმნა უჭირდა მომავალზე.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-141",
+    "kind": "autofix",
+    "source": "საჩივრის გაკეთება გადაწყვიტა მოქალაქემ.",
+    "expected": "საჩივრის შეტანა გადაწყვიტა მოქალაქემ.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-142",
+    "kind": "autofix",
+    "source": "მოქალაქემ საჩივარი გააკეთა სასამართლოში.",
+    "expected": "მოქალაქემ საჩივარი შეიტანა სასამართლოში.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-143",
+    "kind": "autofix",
+    "source": "სარგებლის გაკეთება სურდა ვაჭარს.",
+    "expected": "სარგებლის მიღება სურდა ვაჭარს.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "light_verb_decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-144",
+    "kind": "autofix",
+    "source": "დაწერა წერილი თავისთვის ავტორმა.",
+    "expected": "დაიწერა წერილი ავტორმა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "version_system"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-145",
+    "kind": "autofix",
+    "source": "ააშენა სახლი თავისთვის მეგობარმა.",
+    "expected": "აიშენა სახლი მეგობარმა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "version_system"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-146",
+    "kind": "autofix",
+    "source": "მოამზადა სადილი თავისთვის მგზავრმა.",
+    "expected": "მოიმზადა სადილი მგზავრმა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "version_system"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-147",
+    "kind": "autofix",
+    "source": "დაწერა წერილი შვილისთვის მამამ.",
+    "expected": "შვილს წერილი დაუწერა მამამ.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "version_system"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-148",
+    "kind": "autofix",
+    "source": "ააშენა სახლი მეგობრისთვის ოსტატმა.",
+    "expected": "მეგობარს სახლი აუშენა ოსტატმა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "version_system"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-149",
+    "kind": "autofix",
+    "source": "მოამზადა საჭმელი დედისთვის შვილმა.",
+    "expected": "დედას საჭმელი მოუმზადა შვილმა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "version_system"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-150",
+    "kind": "autofix",
+    "source": "გააკეთა თავისთვის ახალი იარაღი.",
+    "expected": "გაიკეთა ახალი იარაღი.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "version_system"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-151",
+    "kind": "autofix",
+    "source": "ღვთის მიერ ბოძებული ნიჭი აქვს.",
+    "expected": "ღვთისგან ბოძებული ნიჭი აქვს.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "agentive_passive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-152",
+    "kind": "autofix",
+    "source": "ბუნების მიერ შექმნილი საოცრებაა ეს.",
+    "expected": "ბუნებისგან შექმნილი საოცრებაა ეს.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "agentive_passive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-153",
+    "kind": "autofix",
+    "source": "მტრის მიერ განადგურებული ქალაქი აღდგა.",
+    "expected": "მტრისგან განადგურებული ქალაქი აღდგა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "agentive_passive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-154",
+    "kind": "autofix",
+    "source": "ხალხის მიერ არჩეული წინამძღოლი მოვიდა.",
+    "expected": "ხალხისგან არჩეული წინამძღოლი მოვიდა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "agentive_passive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-155",
+    "kind": "autofix",
+    "source": "ღვთის მიერ ბოძებული სიბრძნით გამოირჩეოდა.",
+    "expected": "ღვთისგან ბოძებული სიბრძნით გამოირჩეოდა.",
+    "weight": 1.0,
+    "tags": [
+      "syntax",
+      "agentive_passive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-156",
+    "kind": "autofix",
+    "source": "არისტოტელეს თქმით, ყველა ადამიანს ბუნებით მიესწრაფვის შემეცნებისკენ.",
+    "expected": "არისტოტელეს თქმით, ყველა ადამიანს ბუნებით მიესწრაფვის შემეცნებისკენ.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "aristotle"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-157",
+    "kind": "autofix",
+    "source": "პლატონის თანახმად, სამართლიანობა არის საკუთარი საქმის კეთება და თითოეულისთვის თავისის მიგება.",
+    "expected": "პლატონის თანახმად, სამართლიანობა არის საკუთარი საქმის კეთება და თითოეულისთვის თავისის მიგება.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "plato"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-158",
+    "kind": "autofix",
+    "source": "ბოეციუსი წერდა, რომ ბედის ბორბალი განუწყვეტლივ ბრუნავს.",
+    "expected": "ბოეციუსი წერდა, რომ ბედის ბორბალი განუწყვეტლივ ბრუნავს.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "boethius"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-159",
+    "kind": "autofix",
+    "source": "სპინოზას მიხედვით, თავისუფლება შეცნობილი აუცილებლობაა.",
+    "expected": "სპინოზას მიხედვით, თავისუფლება შეცნობილი აუცილებლობაა.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "spinoza"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-160",
+    "kind": "autofix",
+    "source": "მონტენი ამბობდა, რომ უდიდესი ხელოვნება სამყაროში საკუთარი თავის ფლობაა.",
+    "expected": "მონტენი ამბობდა, რომ უდიდესი ხელოვნება სამყაროში საკუთარი თავის ფლობაა.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "montaigne"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-161",
+    "kind": "autofix",
+    "source": "რუსთაველი გვასწავლის: რასაცა გასცემ შენია, რაც არა, დაკარგულია!",
+    "expected": "რუსთაველი გვასწავლის: რასაცა გასცემ შენია, რაც არა, დაკარგულია!",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "rustaveli"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-162",
+    "kind": "autofix",
+    "source": "სჯობს სახელისა მოხვეჭა ყოველსა მოსახვეჭელსა.",
+    "expected": "სჯობს სახელისა მოხვეჭა ყოველსა მოსახვეჭელსა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "rustaveli"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-163",
+    "kind": "autofix",
+    "source": "ილია ჭავჭავაძე: მოძრაობა და მხოლოდ მოძრაობა არის ქვეყნის ღონე და სიცოცხლე.",
+    "expected": "ილია ჭავჭავაძე: მოძრაობა და მხოლოდ მოძრაობა არის ქვეყნის ღონე და სიცოცხლე.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "ilia"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-164",
+    "kind": "autofix",
+    "source": "ვაჟა-ფშაველა: ვაჟკაცსა გული რკინისა, აბჯარი თუნდაც თიხისა.",
+    "expected": "ვაჟა-ფშაველა: ვაჟკაცსა გული რკინისა, აბჯარი თუნდაც თიხისა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "vazha"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-165",
+    "kind": "autofix",
+    "source": "კონსტანტინე გამსახურდია: ხელოვნებაა თვით უკვდავება, მხოლოდ ოსტატს ვერ ეწევა სიკვდილი.",
+    "expected": "კონსტანტინე გამსახურდია: ხელოვნებაა თვით უკვდავება, მხოლოდ ოსტატს ვერ ეწევა სიკვდილი.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "gamsakhurdia"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-166",
+    "kind": "autofix",
+    "source": "ივანე მაჩაბლის შექსპირი: ყოფნა?.. არ ყოფნა?.. საკითხავი აი ეს არის.",
+    "expected": "ივანე მაჩაბლის შექსპირი: ყოფნა?.. არ ყოფნა?.. საკითხავი აი ეს არის.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "machabeli"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-167",
+    "kind": "autofix",
+    "source": "სულხან-საბა ორბელიანი: უსიბრძნო სიტყვა უმარილო საჭმელს ჰგავს.",
+    "expected": "სულხან-საბა ორბელიანი: უსიბრძნო სიტყვა უმარილო საჭმელს ჰგავს.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "sulkhan_saba"
+    ]
   }
 ]

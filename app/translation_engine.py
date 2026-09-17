@@ -385,6 +385,16 @@ OFFLINE_LITERARY_EXEMPLARS = [
      "მეფეს მკაცრი ბრძანება გაუცია."),
     (r"the master had built the ancient fortress\.?",
      "ოსტატს უძველესი ციხესიმაგრე აუშენებია."),
+    (r"all men by nature desire knowledge\.?",
+     "ყველა ადამიანს ბუნებით მიესწრაფვის შემეცნებისკენ."),
+    (r"justice is the habit of rendering to each his own\.?",
+     "სამართლიანობა არის საკუთარი საქმის კეთება და თითოეულისთვის თავისის მიგება."),
+    (r"the wheel of fortune never ceases to turn\.?",
+     "ბედის ბორბალი განუწყვეტლივ ბრუნავს."),
+    (r"freedom is necessity understood\.?",
+     "თავისუფლება შეცნობილი აუცილებლობაა."),
+    (r"the greatest thing in the world is to know how to belong to oneself\.?",
+     "უდიდესი ხელოვნება სამყაროში საკუთარი თავის ფლობაა."),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),
@@ -559,7 +569,12 @@ def translate_with_gemini(
                 "7. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე, and dative -ს), vowel-ending adjectives drop -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', 'ახალ სახლში', NOT 'უცნობი სივრცეში').\n"
                 "8. COMPOUND CONNECTORS: Use authentic Georgian compound literary connectors: 'არა მხოლოდ... არამედ... კიდეც' (not only... but also), 'თუმცა... მაინც' (although... still), 'როგორც კი... მაშინვე' (as soon as... immediately).\n"
                 "9. PREVERB DEIXIS & DIALOGUE QUOTATIVES: Use correct directional preverbs ('მოვიდა' towards speaker vs 'წავიდა' away) and bound quotative enclitics ('-ო', '-მეთქი', '-თქო') in reported speech.\n"
-                "10. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
+                "10. NUMERAL-NOUN AGREEMENT: Cardinal numerals and quantifiers (ორი, სამი, ათი, მრავალი, ბევრი, რამდენიმე, უამრავი) strictly require SINGULAR nouns ('სამი წიგნი', 'ათი დღე', 'მრავალი წელი'), NEVER plural '*სამი წიგნები'. Inanimate quantified subjects take singular verbs ('სამი დღე გავიდა').\n"
+                "11. SYNTHETIC CARITIVE ADVERBS: Prefer synthetic privative adverbs with 'უ-...-ოდ' / 'დაუ-...-ებელ-ად' ('უეჭველად', 'უშიშრად', 'უიმედოდ', 'უხმოდ', 'უმიზეზოდ', 'დაუღალავად') over clumsy '*გარეშე + Genitive' calques.\n"
+                "12. ACTION PREDICATES OVER 'გაკეთება': Avoid repetitive light-verb calques: use 'შეცდომის დაშვება' (make mistake), 'გავლენის მოხდენა' (have influence), 'შთაბეჭდილების მოხდენა' (make impression), 'ყურადღების მიქცევა' (pay attention), 'საჩივრის შეტანა' (file complaint).\n"
+                "13. VERBAL VERSION SYSTEM (ქცევა): Use synthetic version markers (სათავისო 'ი-': 'დაიწერა წერილი', 'აიშენა სახლი'; სასხვისო 'უ-': 'შვილს წერილი დაუწერა', 'დედას საჭმელი მოუმზადა') instead of analytical 'თავისთვის' / 'შვილისთვის'.\n"
+                "14. AGENTIVE PASSIVES: Express agency naturally via active voice or ablative '-გან' ('ღვთისგან ბოძებული', 'ბუნებისგან შექმნილი') instead of bureaucratic '*მიერ' calques.\n"
+                "15. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -633,8 +648,12 @@ def translate_with_kona(
                 "9. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე), adjectives drop nominative -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', NOT 'უცნობი სივრცეში').\n"
                 "10. COMPOUND CONNECTORS: Use natural Georgian compound connectors: 'არა მხოლოდ... არამედ... კიდეც', 'თუმცა... მაინც', 'როგორც კი... მაშინვე'.\n"
                 "11. PREVERB DEIXIS & DIALOGUE QUOTATIVES: Respect speaker orientation in preverbs ('მოვიდა' vs 'წავიდა') and attach quotative enclitics ('-ო', '-მეთქი', '-თქო') in dialogue.\n"
-                "12. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
-                "13. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
+                "12. NUMERAL-NOUN AGREEMENT: Quantifiers and numerals (ორი, სამი, ათი, მრავალი, ბევრი, რამდენიმე) strictly require singular nouns ('სამი წიგნი', 'ათი დღე'), never plural '*სამი წიგნები'. Inanimate subjects take singular verbs ('სამი დღე გავიდა').\n"
+                "13. CARITIVE ADVERBS: Use synthetic 'უ-...-ოდ' adverbs ('უეჭველად', 'უშიშრად', 'უიმედოდ', 'უხმოდ', 'დაუღალავად') over '*გარეშე + Genitive'.\n"
+                "14. ACTION PREDICATES: Avoid 'გაკეთება' calques: use 'შეცდომის დაშვება', 'გავლენის მოხდენა', 'შთაბეჭდილების მოხდენა', 'ყურადღების მიქცევა', 'საჩივრის შეტანა'.\n"
+                "15. VERSION & PASSIVE: Use version markers (სათავისო 'ი-': 'დაიწერა წერილი'; სასხვისო 'უ-': 'შვილს აუშენა') and ablative '-გან' ('ღვთისგან ბოძებული') instead of '*მიერ'.\n"
+                "16. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
+                "17. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
                 "Output ONLY the Georgian translation."
             )
             user_parts = []

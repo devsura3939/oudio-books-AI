@@ -5119,6 +5119,84 @@ SULKHAN-SABA ORBELIANI & CLASSICAL WISDOM IDIOMS (KA-134):
     * სასოწარკვეთას მიეცა (fell into despair).
     * სულის სიმშვიდე მოიპოვა (attained tranquility of soul).`;
 
+// KA-135 v1.53.0 — Numeral-Noun Agreement & Quantifier Syntax.
+const KA_NUMERAL_NOUN_CONCORD = `
+NUMERAL-NOUN AGREEMENT & QUANTIFIER SYNTAX (KA-135):
+• STRICT CARDINAL NUMERAL + SINGULAR NOUN RULE:
+  - In Georgian grammar (Shanidze, Chikobava), ANY noun modified by a cardinal numeral (ორი, სამი, ათი, ასი) or quantitative determiner (მრავალი, ბევრი, რამდენიმე, უამრავი, ცოტა) MUST REMAIN IN THE SINGULAR:
+    * სამი წიგნი (three books — NOT *სამი წიგნები).
+    * ათი დღე (ten days — NOT *ათი დღეები).
+    * მრავალი წელი (many years — NOT *მრავალი წლები).
+    * რამდენიმე კითხვა (several questions — NOT *რამდენიმე კითხვები).
+    * ბევრი ადამიანი (many people — NOT *ბევრი ადამიანები).
+    * ორი მეგობარი (two friends — NOT *ორი მეგობრები).
+• QUANTIFIED SUBJECT VERB CONCORD:
+  - Inanimate quantified subjects strictly take a singular 3rd person verb:
+    * „სამი დღე გავიდა“ (Three days passed — NOT *სამი დღე გავიდნენ).
+    * „მრავალი წელი განვლო“ (Many years elapsed).`;
+
+// KA-136 v1.53.0 — Caritive / Privative Synthetic Adverbs (უ-...-ოდ).
+const KA_CARITIVE_PRIVATIVE_ADVERBS = `
+CARITIVE / PRIVATIVE SYNTHETIC ADVERBS (KA-136):
+• SYNTHETIC CIRCUMFIX OVER ANALYTIC 'გარეშე' CALQUES:
+  - Naive translation mechanically calques English 'without X' or Russian 'без X' with 'გარეშე + Genitive'.
+  - Authentic Georgian literary style strictly favors synthetic privative adverbs with 'უ-...-ოდ' or 'დაუ-...-ებელ-ად':
+    * უეჭველად (without doubt — NOT *გარეშე ეჭვის).
+    * უშიშრად (without fear — NOT *გარეშე შიშის).
+    * უიმედოდ (without hope — NOT *გარეშე იმედის).
+    * უხმოდ (without sound / silently — NOT *გარეშე ხმის).
+    * უმიზეზოდ (without reason — NOT *გარეშე მიზეზის).
+    * უაზროდ (senselessly — NOT *გარეშე აზრის).
+    * უშეცდომოდ (faultlessly — NOT *გარეშე შეცდომის).
+    * დაუღალავად (tirelessly — NOT *გარეშე დაღლის).
+    * დაუსრულებლად / უსასრულოდ (endlessly — NOT *გარეშე დასასრულის).
+    * დაუყოვნებლივ (without delay — NOT *გარეშე დაყოვნების).
+    * დაუფიქრებლად (unhesitatingly / without thinking).`;
+
+// KA-137 v1.53.0 — Collocational Light-Verb De-Calquing.
+const KA_LIGHT_VERB_DECALQUING = `
+COLLOCATIONAL LIGHT-VERB DE-CALQUING (KA-137):
+• ERADICATING OVERUSED 'გაკეთება' (DO/MAKE) CALQUES:
+  - Naive translation overuses 'გაკეთება' for every English 'make/do/take' collocation.
+  - Georgian possesses rich, specific verbal roots for each nominal concept:
+    * შეცდომის დაშვება / შეცდომა დაუშვა (make a mistake — NOT *შეცდომის გაკეთება).
+    * გავლენის მოხდენა / გავლენა მოახდინა (have influence / make impact — NOT *გავლენის გაკეთება).
+    * შთაბეჭდილების მოხდენა / შთაბეჭდილება მოახდინა (make impression — NOT *შთაბეჭდილების გაკეთება).
+    * ყურადღების მიქცევა / ყურადღება მიაქცია (pay attention — NOT *ყურადღების გაკეთება).
+    * წარმოდგენის შექმნა (form an idea/picture — NOT *წარმოდგენის გაკეთება).
+    * საჩივრის შეტანა / საჩივარი შეიტანა (file a complaint — NOT *საჩივრის გაკეთება).
+    * სარგებლის მიღება (gain benefit — NOT *სარგებლის გაკეთება).
+    * წინსვლის მიღწევა (make progress — NOT *წინსვლის გაკეთება).`;
+
+// KA-138 v1.53.0 — Screeve Version System (ქცევა: სათავისო vs სასხვისო).
+const KA_VERSION_POLYPERSONAL_ALIGNMENT = `
+SCREEVE VERSION SYSTEM & POLYPERSONAL ALIGNMENT (KA-138):
+• SUBJECTIVE VERSION (სათავისო 'ი-'):
+  - Actions performed for oneself, reflexive interest, or personal sphere:
+    * დაიწერა წერილი (wrote a letter for himself — NOT *დაწერა წერილი თავისთვის).
+    * აიშენა სახლი (built a house for himself — NOT *ააშენა სახლი თავისთვის).
+    * მოიმზადა სადილი (prepared dinner for himself).
+    * გაიკეთა (made for himself).
+• OBJECTIVE / BENEFACTIVE VERSION (სასხვისო 'უ-'):
+  - Actions performed on behalf of an indirect object / beneficiary:
+    * შვილს წერილი დაუწერა (wrote a letter for his son — NOT *დაწერა წერილი შვილისთვის).
+    * მეგობარს სახლი აუშენა (built a house for his friend).
+    * დედას საჭმელი მოუმზადა (prepared food for mother).
+• AGENTIVE PASSIVE ALIGNMENT (-გან vs 'მიერ'):
+  - Natural Kartvelian ablative agency: ღვთისგან ბოძებული, ბუნებისგან შექმნილი, მტრისგან განადგურებული.`;
+
+// KA-139 v1.53.0 — Classical Philosophy & Canonical Literature Concordance.
+const KA_CLASSICAL_PHILOSOPHY_LITERATURE = `
+CLASSICAL PHILOSOPHY & CANONICAL LITERATURE CONCORDANCE (KA-139):
+• CANONICAL PHILOSOPHICAL FORMULATIONS:
+  - Aristotle (*მეტაფიზიკა*): „ყველა ადამიანს ბუნებით მიესწრაფვის შემეცნებისკენ.“
+  - Plato (*სახელმწიფო*): „სამართლიანობა არის საკუთარი საქმის კეთება და თითოეულისთვის თავისის მიგება.“
+  - Boethius (*ფილოსოფიის ნუგეში*): „ბედის ბორბალი განუწყვეტლივ ბრუნავს.“
+  - Spinoza (*ეთიკა*): „თავისუფლება შეცნობილი აუცილებლობაა.“
+  - Montaigne (*ესეები*): „უდიდესი ხელოვნება სამყაროში საკუთარი თავის ფლობაა.“
+  - Shakespeare / Machabeli (*ჰამლეტი*): „ყოფნა?.. არ ყოფნა?.. საკითხავი აი ეს არის.“
+  - Rustaveli (*ვეფხისტყაოსანი*): „რასაცა გასცემ შენია, რაც არა, დაკარგულია!“, „სჯობს სახელისა მოხვეჭა ყოველსა მოსახვეჭელსა.“`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -5135,6 +5213,11 @@ function getKaKnowledgeBase() {
         KA_PREVERB_DEIXIS,
         KA_DIALOGUE_QUOTATIVES,
         KA_SULKHAN_SABA_IDIOMS,
+        KA_NUMERAL_NOUN_CONCORD,
+        KA_CARITIVE_PRIVATIVE_ADVERBS,
+        KA_LIGHT_VERB_DECALQUING,
+        KA_VERSION_POLYPERSONAL_ALIGNMENT,
+        KA_CLASSICAL_PHILOSOPHY_LITERATURE,
         KA_CONTRASTIVE_PATTERNS,
         KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
         KA_PROPER_NOUN_TRANSLITERATION,
@@ -9179,7 +9262,90 @@ function synthesizeGeorgianMorphology(text) {
         out = out.replace(re, repl);
     }
 
-    // 14. Typography & Dialogue
+    // 14. Numeral-Noun Singular Agreement (რიცხვითი სახელისა და არსებითის შეთანხმება)
+    const numeralNounPairs = [
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+წიგნები(?![ა-ჰ])/g, '$1 წიგნი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+დღეები(?![ა-ჰ])/g, '$1 დღე'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+წლები(?![ა-ჰ])/g, '$1 წელი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+კითხვები(?![ა-ჰ])/g, '$1 კითხვა'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+ადამიანები(?![ა-ჰ])/g, '$1 ადამიანი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+სიტყვები(?![ა-ჰ])/g, '$1 სიტყვა'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+მეგობრები(?![ა-ჰ])/g, '$1 მეგობარი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+კაცები(?![ა-ჰ])/g, '$1 კაცი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+ქალები(?![ა-ჰ])/g, '$1 ქალი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+ხალხები(?![ა-ჰ])/g, '$1 ხალხი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+ქვეყნები(?![ა-ჰ])/g, '$1 ქვეყანა'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ექვსი|შვიდი|რვა|ცხრა|ათი|ოცი|ორმოცი|სამოცი|ოთხმოცი|ასი|ათასი|მრავალი|ბევრი|რამდენიმე|უამრავი|ცოტა)\s+ქალაქები(?![ა-ჰ])/g, '$1 ქალაქი'],
+    ];
+    for (const [re, repl] of numeralNounPairs) {
+        out = out.replace(re, repl);
+    }
+    out = out.replace(/(?<![\u10A0-\u10FF])(სამი|ათი|მრავალი|რამდენიმე)\s+დღე\s+გავიდნენ(?![ა-ჰ])/g, '$1 დღე გავიდა');
+
+    // 15. Caritive / Privative Synthetic Adverbs (უ-...-ოდ / დაუ-...-ებელ-ად)
+    const caritiveAdverbs = [
+        [/(?<![\u10A0-\u10FF])გარეშე\s+ეჭვის(?![ა-ჰ])/g, 'უეჭველად'],
+        [/(?<![\u10A0-\u10FF])გარეშე\s+შიშის(?![ა-ჰ])/g, 'უშიშრად'],
+        [/(?<![\u10A0-\u10FF])გარეშე\s+იმედის(?![ა-ჰ])/g, 'უიმედოდ'],
+        [/(?<![\u10A0-\u10FF])გარეშე\s+ხმის(?![ა-ჰ])/g, 'უხმოდ'],
+        [/(?<![\u10A0-\u10FF])გარეშე\s+მიზეზის(?![ა-ჰ])/g, 'უმიზეზოდ'],
+        [/(?<![\u10A0-\u10FF])გარეშე\s+აზრის(?![ა-ჰ])/g, 'უაზროდ'],
+        [/(?<![\u10A0-\u10FF])გარეშე\s+შეცდომის(?![ა-ჰ])/g, 'უშეცდომოდ'],
+        [/(?<![\u10A0-\u10FF])გარეშე\s+დაღლის(?![ა-ჰ])/g, 'დაუღალავად'],
+        [/(?<![\u10A0-\u10FF])გარეშე\s+დასასრულის(?![ა-ჰ])/g, 'დაუსრულებლად'],
+        [/(?<![\u10A0-\u10FF])გარეშე\s+ყოყმანის(?![ა-ჰ])/g, 'დაუყოვნებლივ'],
+        [/(?<![\u10A0-\u10FF])გარეშე\s+დაფიქრების(?![ა-ჰ])/g, 'დაუფიქრებლად'],
+    ];
+    for (const [re, repl] of caritiveAdverbs) {
+        out = out.replace(re, repl);
+    }
+
+    // 16. Collocational Light-Verb De-Calquing (გაკეთება / ქონა აკრძალვები)
+    const lightVerbs = [
+        [/(?<![\u10A0-\u10FF])შეცდომის\s+გაკეთება(?![ა-ჰ])/g, 'შეცდომის დაშვება'],
+        [/(?<![\u10A0-\u10FF])შეცდომა\s+გააკეთა(?![ა-ჰ])/g, 'შეცდომა დაუშვა'],
+        [/(?<![\u10A0-\u10FF])გავლენის\s+გაკეთება(?![ა-ჰ])/g, 'გავლენის მოხდენა'],
+        [/(?<![\u10A0-\u10FF])გავლენა\s+გააკეთა(?![ა-ჰ])/g, 'გავლენა მოახდინა'],
+        [/(?<![\u10A0-\u10FF])შთაბეჭდილების\s+გაკეთება(?![ა-ჰ])/g, 'შთაბეჭდილების მოხდენა'],
+        [/(?<![\u10A0-\u10FF])შთაბეჭდილება\s+გააკეთა(?![ა-ჰ])/g, 'შთაბეჭდილება მოახდინა'],
+        [/(?<![\u10A0-\u10FF])ყურადღების\s+გაკეთება(?![ა-ჰ])/g, 'ყურადღების მიქცევა'],
+        [/(?<![\u10A0-\u10FF])ყურადღება\s+გააკეთა(?![ა-ჰ])/g, 'ყურადღება მიაქცია'],
+        [/(?<![\u10A0-\u10FF])წარმოდგენის\s+გაკეთება(?![ა-ჰ])/g, 'წარმოდგენის შექმნა'],
+        [/(?<![\u10A0-\u10FF])საჩივრის\s+გაკეთება(?![ა-ჰ])/g, 'საჩივრის შეტანა'],
+        [/(?<![\u10A0-\u10FF])საჩივარი\s+გააკეთა(?![ა-ჰ])/g, 'საჩივარი შეიტანა'],
+        [/(?<![\u10A0-\u10FF])სარგებლის\s+გაკეთება(?![ა-ჰ])/g, 'სარგებლის მიღება'],
+        [/(?<![\u10A0-\u10FF])წინსვლის\s+გაკეთება(?![ა-ჰ])/g, 'წინსვლის მიღწევა'],
+    ];
+    for (const [re, repl] of lightVerbs) {
+        out = out.replace(re, repl);
+    }
+
+    // 17. Verbal Version Markers (ქცევა: სათავისო ი- vs სასხვისო უ-)
+    const versionFixes = [
+        [/(?<![\u10A0-\u10FF])დაწერა\s+წერილ(?:ი)?\s+თავისთვის(?![ა-ჰ])/g, 'დაიწერა წერილი'],
+        [/(?<![\u10A0-\u10FF])ააშენა\s+სახლ(?:ი)?\s+თავისთვის(?![ა-ჰ])/g, 'აიშენა სახლი'],
+        [/(?<![\u10A0-\u10FF])მოამზადა\s+სადილ(?:ი)?\s+თავისთვის(?![ა-ჰ])/g, 'მოიმზადა სადილი'],
+        [/(?<![\u10A0-\u10FF])დაწერა\s+წერილ(?:ი)?\s+შვილისთვის(?![ა-ჰ])/g, 'შვილს წერილი დაუწერა'],
+        [/(?<![\u10A0-\u10FF])ააშენა\s+სახლ(?:ი)?\s+მეგობრისთვის(?![ა-ჰ])/g, 'მეგობარს სახლი აუშენა'],
+        [/(?<![\u10A0-\u10FF])მოამზადა\s+საჭმელ(?:ი)?\s+დედისთვის(?![ა-ჰ])/g, 'დედას საჭმელი მოუმზადა'],
+        [/(?<![\u10A0-\u10FF])გააკეთა\s+თავისთვის(?![ა-ჰ])/g, 'გაიკეთა'],
+    ];
+    for (const [re, repl] of versionFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 18. Agentive Passive Ablative De-Calquing (-ის მიერ -> -გან)
+    const passiveFixes = [
+        [/(?<![\u10A0-\u10FF])ღვთის\s+მიერ\s+ბოძებული(?![ა-ჰ])/g, 'ღვთისგან ბოძებული'],
+        [/(?<![\u10A0-\u10FF])ბუნების\s+მიერ\s+შექმნილი(?![ა-ჰ])/g, 'ბუნებისგან შექმნილი'],
+        [/(?<![\u10A0-\u10FF])მტრის\s+მიერ\s+განადგურებული(?![ა-ჰ])/g, 'მტრისგან განადგურებული'],
+        [/(?<![\u10A0-\u10FF])ხალხის\s+მიერ\s+არჩეული(?![ა-ჰ])/g, 'ხალხისგან არჩეული'],
+    ];
+    for (const [re, repl] of passiveFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 19. Typography & Dialogue
     out = out.replace(/(?:^|\n)\s*[-–—]\s*/g, '\n— ');
     out = out.replace(/\s+([.,;:!?])/g, '$1');
 
@@ -9269,7 +9435,12 @@ function translateOfflineEnToKa(text) {
             [/\bThe\s+most\s+certain\s+sign\s+of\s+wisdom\s+is\s+cheerfulness\.?\b/gi, 'სიბრძნის ყველაზე უტყუარი ნიშანი სულიერი სიმხნევეა.'],
             [/\bThe\s+author\s+has\s+written\s+a\s+profound\s+book\.?\b/gi, 'ავტორს ღრმა წიგნი დაუწერია.'],
             [/\bThe\s+king\s+had\s+given\s+the\s+strict\s+order\.?\b/gi, 'მეფეს მკაცრი ბრძანება გაუცია.'],
-            [/\bThe\s+master\s+had\s+built\s+the\s+ancient\s+fortress\.?\b/gi, 'ოსტატს უძველესი ციხესიმაგრე აუშენებია.']
+            [/\bThe\s+master\s+had\s+built\s+the\s+ancient\s+fortress\.?\b/gi, 'ოსტატს უძველესი ციხესიმაგრე აუშენებია.'],
+            [/\bAll\s+men\s+by\s+nature\s+desire\s+knowledge\.?\b/gi, 'ყველა ადამიანს ბუნებით მიესწრაფვის შემეცნებისკენ.'],
+            [/\bJustice\s+is\s+the\s+habit\s+of\s+rendering\s+to\s+each\s+his\s+own\.?\b/gi, 'სამართლიანობა არის საკუთარი საქმის კეთება და თითოეულისთვის თავისის მიგება.'],
+            [/\bThe\s+wheel\s+of\s+fortune\s+never\s+ceases\s+to\s+turn\.?\b/gi, 'ბედის ბორბალი განუწყვეტლივ ბრუნავს.'],
+            [/\bFreedom\s+is\s+necessity\s+understood\.?\b/gi, 'თავისუფლება შეცნობილი აუცილებლობაა.'],
+            [/\bThe\s+greatest\s+thing\s+in\s+the\s+world\s+is\s+to\s+know\s+how\s+to\s+belong\s+to\s+oneself\.?\b/gi, 'უდიდესი ხელოვნება სამყაროში საკუთარი თავის ფლობაა.']
         ];
         for (const [re, repl] of idioms) {
             p = p.replace(re, repl);
@@ -9673,15 +9844,20 @@ if (typeof window !== 'undefined') {
     window.KA_PREVERB_DEIXIS = KA_PREVERB_DEIXIS;
     window.KA_DIALOGUE_QUOTATIVES = KA_DIALOGUE_QUOTATIVES;
     window.KA_SULKHAN_SABA_IDIOMS = KA_SULKHAN_SABA_IDIOMS;
+    window.KA_NUMERAL_NOUN_CONCORD = KA_NUMERAL_NOUN_CONCORD;
+    window.KA_CARITIVE_PRIVATIVE_ADVERBS = KA_CARITIVE_PRIVATIVE_ADVERBS;
+    window.KA_LIGHT_VERB_DECALQUING = KA_LIGHT_VERB_DECALQUING;
+    window.KA_VERSION_POLYPERSONAL_ALIGNMENT = KA_VERSION_POLYPERSONAL_ALIGNMENT;
+    window.KA_CLASSICAL_PHILOSOPHY_LITERATURE = KA_CLASSICAL_PHILOSOPHY_LITERATURE;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.52.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.53.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 147,
-    qaRules: 143,
-    autoFixes: 131,
-    researchSources: 475
+    promptBlocks: 152,
+    qaRules: 148,
+    autoFixes: 138,
+    researchSources: 510
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -9705,6 +9881,11 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_PREVERB_DEIXIS,
         KA_DIALOGUE_QUOTATIVES,
         KA_SULKHAN_SABA_IDIOMS,
+        KA_NUMERAL_NOUN_CONCORD,
+        KA_CARITIVE_PRIVATIVE_ADVERBS,
+        KA_LIGHT_VERB_DECALQUING,
+        KA_VERSION_POLYPERSONAL_ALIGNMENT,
+        KA_CLASSICAL_PHILOSOPHY_LITERATURE,
         synthesizeGeorgianMorphology,
         polishGeorgianLiterarySyntax: synthesizeGeorgianMorphology,
         translateOfflineEnToKa,

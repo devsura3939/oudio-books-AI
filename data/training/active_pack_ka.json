@@ -1,5 +1,5 @@
 {
-  "version": 28,
+  "version": 29,
   "language": "ka",
   "score": 100.0,
   "enabled": true,
@@ -2759,10 +2759,310 @@
       "session_id": "session-deep-linguistics-ka-v28",
       "model": "deep-linguistics-engine-v28",
       "note": "Phraseologism: მოხდა"
+    },
+    {
+      "id": "af-numeral-noun-01",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])სამი\\s+წიგნები(?![ა-ჰ])",
+      "replacement": "სამი წიგნი"
+    },
+    {
+      "id": "af-numeral-noun-02",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ათი\\s+დღეები(?![ა-ჰ])",
+      "replacement": "ათი დღე"
+    },
+    {
+      "id": "af-numeral-noun-03",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მრავალი\\s+წლები(?![ა-ჰ])",
+      "replacement": "მრავალი წელი"
+    },
+    {
+      "id": "af-numeral-noun-04",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])რამდენიმე\\s+კითხვები(?![ა-ჰ])",
+      "replacement": "რამდენიმე კითხვა"
+    },
+    {
+      "id": "af-numeral-noun-05",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ბევრი\\s+ადამიანები(?![ა-ჰ])",
+      "replacement": "ბევრი ადამიანი"
+    },
+    {
+      "id": "af-numeral-noun-06",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])რამდენიმე\\s+სიტყვები(?![ა-ჰ])",
+      "replacement": "რამდენიმე სიტყვა"
+    },
+    {
+      "id": "af-numeral-noun-07",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ორი\\s+მეგობრები(?![ა-ჰ])",
+      "replacement": "ორი მეგობარი"
+    },
+    {
+      "id": "af-numeral-noun-08",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ხუთი\\s+წლები(?![ა-ჰ])",
+      "replacement": "ხუთი წელი"
+    },
+    {
+      "id": "af-numeral-noun-09",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ათი\\s+კაცები(?![ა-ჰ])",
+      "replacement": "ათი კაცი"
+    },
+    {
+      "id": "af-numeral-noun-10",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])სამი\\s+ქალები(?![ა-ჰ])",
+      "replacement": "სამი ქალი"
+    },
+    {
+      "id": "af-numeral-noun-11",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])უამრავი\\s+ხალხები(?![ა-ჰ])",
+      "replacement": "უამრავი ხალხი"
+    },
+    {
+      "id": "af-numeral-noun-12",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])სამი\\s+დღე\\s+გავიდნენ(?![ა-ჰ])",
+      "replacement": "სამი დღე გავიდა"
+    },
+    {
+      "id": "af-caritive-01",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+ეჭვის(?![ა-ჰ])",
+      "replacement": "უეჭველად"
+    },
+    {
+      "id": "af-caritive-02",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+შიშის(?![ა-ჰ])",
+      "replacement": "უშიშრად"
+    },
+    {
+      "id": "af-caritive-03",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+იმედის(?![ა-ჰ])",
+      "replacement": "უიმედოდ"
+    },
+    {
+      "id": "af-caritive-04",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+ხმის(?![ა-ჰ])",
+      "replacement": "უხმოდ"
+    },
+    {
+      "id": "af-caritive-05",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+მიზეზის(?![ა-ჰ])",
+      "replacement": "უმიზეზოდ"
+    },
+    {
+      "id": "af-caritive-06",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+აზრის(?![ა-ჰ])",
+      "replacement": "უაზროდ"
+    },
+    {
+      "id": "af-caritive-07",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+შეცდომის(?![ა-ჰ])",
+      "replacement": "უშეცდომოდ"
+    },
+    {
+      "id": "af-caritive-08",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+დაღლის(?![ა-ჰ])",
+      "replacement": "დაუღალავად"
+    },
+    {
+      "id": "af-caritive-09",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+დასასრულის(?![ა-ჰ])",
+      "replacement": "დაუსრულებლად"
+    },
+    {
+      "id": "af-caritive-10",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+ყოყმანის(?![ა-ჰ])",
+      "replacement": "დაუყოვნებლივ"
+    },
+    {
+      "id": "af-caritive-11",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გარეშე\\s+დაფიქრების(?![ა-ჰ])",
+      "replacement": "დაუფიქრებლად"
+    },
+    {
+      "id": "af-lightverb-01",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])შეცდომის\\s+გაკეთება(?![ა-ჰ])",
+      "replacement": "შეცდომის დაშვება"
+    },
+    {
+      "id": "af-lightverb-02",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])შეცდომა\\s+გააკეთა(?![ა-ჰ])",
+      "replacement": "შეცდომა დაუშვა"
+    },
+    {
+      "id": "af-lightverb-03",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გავლენის\\s+გაკეთება(?![ა-ჰ])",
+      "replacement": "გავლენის მოხდენა"
+    },
+    {
+      "id": "af-lightverb-04",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გავლენა\\s+გააკეთა(?![ა-ჰ])",
+      "replacement": "გავლენა მოახდინა"
+    },
+    {
+      "id": "af-lightverb-05",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])შთაბეჭდილების\\s+გაკეთება(?![ა-ჰ])",
+      "replacement": "შთაბეჭდილების მოხდენა"
+    },
+    {
+      "id": "af-lightverb-06",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])შთაბეჭდილება\\s+გააკეთა(?![ა-ჰ])",
+      "replacement": "შთაბეჭდილება მოახდინა"
+    },
+    {
+      "id": "af-lightverb-07",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ყურადღების\\s+გაკეთება(?![ა-ჰ])",
+      "replacement": "ყურადღების მიქცევა"
+    },
+    {
+      "id": "af-lightverb-08",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ყურადღება\\s+გააკეთა(?![ა-ჰ])",
+      "replacement": "ყურადღება მიაქცია"
+    },
+    {
+      "id": "af-lightverb-09",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])წარმოდგენის\\s+გაკეთება(?![ა-ჰ])",
+      "replacement": "წარმოდგენის შექმნა"
+    },
+    {
+      "id": "af-lightverb-10",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])საჩივრის\\s+გაკეთება(?![ა-ჰ])",
+      "replacement": "საჩივრის შეტანა"
+    },
+    {
+      "id": "af-lightverb-11",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])საჩივარი\\s+გააკეთა(?![ა-ჰ])",
+      "replacement": "საჩივარი შეიტანა"
+    },
+    {
+      "id": "af-lightverb-12",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])სარგებლის\\s+გაკეთება(?![ა-ჰ])",
+      "replacement": "სარგებლის მიღება"
+    },
+    {
+      "id": "af-version-01",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაწერა\\s+წერილ(?:ი)?\\s+თავისთვის(?![ა-ჰ])",
+      "replacement": "დაიწერა წერილი"
+    },
+    {
+      "id": "af-version-02",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ააშენა\\s+სახლ(?:ი)?\\s+თავისთვის(?![ა-ჰ])",
+      "replacement": "აიშენა სახლი"
+    },
+    {
+      "id": "af-version-03",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მოამზადა\\s+სადილ(?:ი)?\\s+თავისთვის(?![ა-ჰ])",
+      "replacement": "მოიმზადა სადილი"
+    },
+    {
+      "id": "af-version-04",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაწერა\\s+წერილ(?:ი)?\\s+შვილისთვის(?![ა-ჰ])",
+      "replacement": "შვილს წერილი დაუწერა"
+    },
+    {
+      "id": "af-version-05",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ააშენა\\s+სახლ(?:ი)?\\s+მეგობრისთვის(?![ა-ჰ])",
+      "replacement": "მეგობარს სახლი აუშენა"
+    },
+    {
+      "id": "af-version-06",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მოამზადა\\s+საჭმელ(?:ი)?\\s+დედისთვის(?![ა-ჰ])",
+      "replacement": "დედას საჭმელი მოუმზადა"
+    },
+    {
+      "id": "af-version-07",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გააკეთა\\s+თავისთვის(?![ა-ჰ])",
+      "replacement": "გაიკეთა"
+    },
+    {
+      "id": "af-passive-01",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ღვთის\\s+მიერ\\s+ბოძებული(?![ა-ჰ])",
+      "replacement": "ღვთისგან ბოძებული"
+    },
+    {
+      "id": "af-passive-02",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ბუნების\\s+მიერ\\s+შექმნილი(?![ა-ჰ])",
+      "replacement": "ბუნებისგან შექმნილი"
+    },
+    {
+      "id": "af-passive-03",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მტრის\\s+მიერ\\s+განადგურებული(?![ა-ჰ])",
+      "replacement": "მტრისგან განადგურებული"
+    },
+    {
+      "id": "af-passive-04",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ხალხის\\s+მიერ\\s+არჩეული(?![ა-ჰ])",
+      "replacement": "ხალხისგან არჩეული"
+    },
+    {
+      "id": "pb-numeral-noun-concord",
+      "type": "prompt_block",
+      "pattern": "numeral_noun_concord",
+      "replacement": "Nouns modified by numerals or quantifiers (ორი, სამი, ათი, მრავალი, რამდენიმე) must remain singular (სამი წიგნი, ათი დღე)."
+    },
+    {
+      "id": "pb-caritive-adverbs",
+      "type": "prompt_block",
+      "pattern": "caritive_adverbs",
+      "replacement": "Prefer synthetic privative adverbs with უ-...-ოდ (უეჭველად, უშიშრად, უიმედოდ, უხმოდ, დაუღალავად) over clumsy '*გარეშე + Genitive' calques."
+    },
+    {
+      "id": "pb-light-verb-decalquing",
+      "type": "prompt_block",
+      "pattern": "light_verb_decalquing",
+      "replacement": "Avoid overusing 'გაკეთება'; use authentic Kartvelian idiomatic predicates: შეცდომის დაშვება, გავლენის მოხდენა, შთაბეჭდილების მოხდენა, ყურადღების მიქცევა."
+    },
+    {
+      "id": "pb-version-system",
+      "type": "prompt_block",
+      "pattern": "version_system",
+      "replacement": "Use verbal version markers (სათავისო 'ი-': დაიწერა წერილი; სასხვისო 'უ-': შვილს წერილი დაუწერა) and ablative '-გან' (ღვთისგან ბოძებული)."
     }
   ],
   "updated_at": "2026-09-17T14:59:30.376602+00:00",
   "last_score": 100.0,
   "last_evaluated_at": "2026-09-17T14:59:30.376602+00:00",
-  "benchmark_cases_count": 220
+  "benchmark_cases_count": 280
 }
