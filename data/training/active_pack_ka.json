@@ -1,5 +1,5 @@
 {
-  "version": 32,
+  "version": 34,
   "language": "ka",
   "score": 100.0,
   "enabled": true,
@@ -4049,6 +4049,556 @@
       "type": "autofix",
       "pattern": "(?<![\\u10A0-\\u10FF])შეიძლება\\s+ითქვას\\s+ის,\\s*რომ(?![\\u10A0-\\u10FF])",
       "replacement": "შეიძლება ითქვას, რომ"
+    },
+    {
+      "id": "af-recip-dative-see",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ერთმანეთმა\\s+დაინახეს(?![\\u10A0-\\u10FF])",
+      "replacement": "ერთმანეთი დაინახეს"
+    },
+    {
+      "id": "af-recip-dative-look",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ერთმანეთმა\\s+შეხედეს(?![\\u10A0-\\u10FF])",
+      "replacement": "ერთმანეთს შეხედეს"
+    },
+    {
+      "id": "af-recip-dative-tell",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ერთმანეთმა\\s+უთხრეს(?![\\u10A0-\\u10FF])",
+      "replacement": "ერთმანეთს უთხრეს"
+    },
+    {
+      "id": "af-recip-dative-understand",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ერთმანეთმა\\s+გაუგეს(?![\\u10A0-\\u10FF])",
+      "replacement": "ერთმანეთს გაუგეს"
+    },
+    {
+      "id": "af-recip-nom-find",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ერთმანეთმა\\s+იპოვეს(?![\\u10A0-\\u10FF])",
+      "replacement": "ერთმანეთი იპოვეს"
+    },
+    {
+      "id": "af-recip-dative-help",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ერთმანეთმა\\s+გააკეთეს(?![\\u10A0-\\u10FF])",
+      "replacement": "ერთმანეთს დაეხმარნენ"
+    },
+    {
+      "id": "af-recip-dative-call",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მათ\\s+ერთმანეთმა\\s+დაუძახეს(?![\\u10A0-\\u10FF])",
+      "replacement": "მათ ერთმანეთს დაუძახეს"
+    },
+    {
+      "id": "af-recip-dative-glance",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ერთმანეთმა\\s+გადახედეს(?![\\u10A0-\\u10FF])",
+      "replacement": "ერთმანეთს გადახედეს"
+    },
+    {
+      "id": "af-recip2-nom-see",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ერთიმეორემ\\s+დაინახეს(?![\\u10A0-\\u10FF])",
+      "replacement": "ერთიმეორე დაინახეს"
+    },
+    {
+      "id": "af-recip2-dative-look",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ერთიმეორემ\\s+შეხედეს(?![\\u10A0-\\u10FF])",
+      "replacement": "ერთიმეორეს შეხედეს"
+    },
+    {
+      "id": "af-opt-dae-go",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:ნება\\s+მიეცით\\s+მას|ნება\\s+მიეცით)\\s+წავიდეს(?![\\u10A0-\\u10FF])",
+      "replacement": "დაე წავიდეს"
+    },
+    {
+      "id": "af-opt-dae-be",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:ნება\\s+მიეცით\\s+მას|ნება\\s+მიეცით)\\s+იყოს(?![\\u10A0-\\u10FF])",
+      "replacement": "დაე იყოს"
+    },
+    {
+      "id": "af-opt-netav-know",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მინდა,?\\s*რომ\\s+ვიცოდე(?![\\u10A0-\\u10FF])",
+      "replacement": "ნეტავ ვიცოდე"
+    },
+    {
+      "id": "af-opt-netav-could",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მინდა,?\\s*რომ\\s+შემეძლოს(?![\\u10A0-\\u10FF])",
+      "replacement": "ნეტავ შემეძლოს"
+    },
+    {
+      "id": "af-opt-ikneb-come",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:შესაძლოა|იქნებ\\s+რომ)\\s+მოვიდეს(?![\\u10A0-\\u10FF])",
+      "replacement": "იქნებ მოვიდეს"
+    },
+    {
+      "id": "af-opt-ikneb-understand",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:შესაძლოა|იქნებ\\s+რომ)\\s+გაიგოს(?![\\u10A0-\\u10FF])",
+      "replacement": "იქნებ გაიგოს"
+    },
+    {
+      "id": "af-inch-sing",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+სიმღერა(?![\\u10A0-\\u10FF])",
+      "replacement": "ამღერდა"
+    },
+    {
+      "id": "af-inch-cry",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+ტირილი(?![\\u10A0-\\u10FF])",
+      "replacement": "ატირდა"
+    },
+    {
+      "id": "af-inch-talk",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+ლაპარაკი(?![\\u10A0-\\u10FF])",
+      "replacement": "ალაპარაკდა"
+    },
+    {
+      "id": "af-inch-glow",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+ნათება(?![\\u10A0-\\u10FF])",
+      "replacement": "აენთო"
+    },
+    {
+      "id": "af-inch-think",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+ფიქრი(?![\\u10A0-\\u10FF])",
+      "replacement": "დაფიქრდა"
+    },
+    {
+      "id": "af-inch-tremble",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+კანკალი(?![\\u10A0-\\u10FF])",
+      "replacement": "აკანკალდა"
+    },
+    {
+      "id": "af-inch-shout",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+ყვირილი(?![\\u10A0-\\u10FF])",
+      "replacement": "აყვირდა"
+    },
+    {
+      "id": "af-inch-boil",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+დუღილი(?![\\u10A0-\\u10FF])",
+      "replacement": "ადუღდა"
+    },
+    {
+      "id": "af-inch-bloom",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+ყვავილობა(?![\\u10A0-\\u10FF])",
+      "replacement": "აყვავდა"
+    },
+    {
+      "id": "af-inch-flicker",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+ციმციმი(?![\\u10A0-\\u10FF])",
+      "replacement": "აციმციმდა"
+    },
+    {
+      "id": "af-deic-here-there",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])აქ\\s+და\\s+იქ(?![\\u10A0-\\u10FF])",
+      "replacement": "აქა-იქ"
+    },
+    {
+      "id": "af-deic-here-there-dir",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:აქ\\s+და\\s+იქით|აქეთ\\s+და\\s+იქით)(?![\\u10A0-\\u10FF])",
+      "replacement": "აქეთ-იქით"
+    },
+    {
+      "id": "af-deic-up-down",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ზემოთ\\s+და\\s+ქვემოთ(?![\\u10A0-\\u10FF])",
+      "replacement": "ზემოთ-ქვემოთ"
+    },
+    {
+      "id": "af-deic-from-today",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დღიდან\\s+მოყოლებული(?![\\u10A0-\\u10FF])",
+      "replacement": "დღეიდან მოყოლებული"
+    },
+    {
+      "id": "af-deic-day-to-day",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დღიდან\\s+დღემდე(?![\\u10A0-\\u10FF])",
+      "replacement": "დღითი დღე"
+    },
+    {
+      "id": "af-deic-door-to-door",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])კარიდან\\s+კარამდე(?![\\u10A0-\\u10FF])",
+      "replacement": "კარდაკარ"
+    },
+    {
+      "id": "af-deic-house-to-house",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])სახლიდან\\s+სახლამდე(?![\\u10A0-\\u10FF])",
+      "replacement": "სახლდასახლ"
+    },
+    {
+      "id": "af-deg-more-and-more",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])უფრო\\s+და\\s+უფრო\\s+მეტი(?![\\u10A0-\\u10FF])",
+      "replacement": "სულ უფრო მეტი"
+    },
+    {
+      "id": "af-deg-less-and-less",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])უფრო\\s+და\\s+უფრო\\s+ნაკლები(?![\\u10A0-\\u10FF])",
+      "replacement": "სულ უფრო ნაკლები"
+    },
+    {
+      "id": "af-deg-harder-and-harder",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])უფრო\\s+და\\s+უფრო\\s+რთული(?![\\u10A0-\\u10FF])",
+      "replacement": "სულ უფრო რთული"
+    },
+    {
+      "id": "af-deg-better-and-better",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])უფრო\\s+და\\s+უფრო\\s+კარგი(?![\\u10A0-\\u10FF])",
+      "replacement": "სულ უფრო კარგი"
+    },
+    {
+      "id": "af-deg-deeper-and-deeper",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])უფრო\\s+და\\s+უფრო\\s+ღრმა(?![\\u10A0-\\u10FF])",
+      "replacement": "სულ უფრო ღრმა"
+    },
+    {
+      "id": "af-deg-faster-and-faster",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])უფრო\\s+და\\s+უფრო\\s+სწრაფი(?![\\u10A0-\\u10FF])",
+      "replacement": "სულ უფრო სწრაფი"
+    },
+    {
+      "id": "af-deg-brighter-and-brighter",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])უფრო\\s+და\\s+უფრო\\s+ნათელი(?![\\u10A0-\\u10FF])",
+      "replacement": "სულ უფრო ნათელი"
+    },
+    {
+      "id": "af-deg-as-much-so-much",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:რაც\\s+მეტად,\\s*მით\\s+მეტად|რაც\\s+უფრო,\\s*უფრო)(?![\\u10A0-\\u10FF])",
+      "replacement": "რაც უფრო, მით უფრო"
+    },
+    {
+      "id": "af-deg-the-more-the-more",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])რაც\\s+მეტი,\\s*მით\\s+მეტი(?![\\u10A0-\\u10FF])",
+      "replacement": "რაც უფრო მეტი, მით უფრო მეტი"
+    },
+    {
+      "id": "qa-recip-ergative-ban",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:ერთმანეთმა|ერთიმეორემ)(?=[\\s\\u10A0-\\u10FF]+(?:დაინახეს|შეხედეს|დაეხმარნენ|შეიყვარეს|გაუღიმეს|მოუსმინეს|უთხრეს|გადახედეს|გაიგეს|იპოვეს|გააკეთეს|დაუძახეს))",
+      "replacement": "Reciprocal pronoun cannot take Ergative case - use ერთმანეთი or ერთმანეთს",
+      "severity": "error"
+    },
+    {
+      "id": "qa-opt-permissive-calque",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])ნება\\s+მიეცით\\s+(?:მას\\s+)?(?:წავიდეს|იყოს|გააკეთოს|მოვიდეს)",
+      "replacement": "Permissive calque detected; prefer synthetic optative დაე",
+      "severity": "warn"
+    },
+    {
+      "id": "qa-opt-wish-calque",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])მინდა,?\\s*რომ\\s+(?:ვიცოდე|შემეძლოს|მქონდეს|მენახა)",
+      "replacement": "Analytical wish calque detected; prefer optative particle ნეტავ",
+      "severity": "warn"
+    },
+    {
+      "id": "qa-opt-modal-calque",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])იქნებ\\s+რომ\\s+(?:მოვიდეს|გაიგოს|ვნახოთ|მოხდეს)",
+      "replacement": "Redundant complementizer with particle იქნებ",
+      "severity": "warn"
+    },
+    {
+      "id": "qa-inch-analytical-calque",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიწყო\\s+(?:სიმღერა|ტირილი|ლაპარაკი|ნათება|ფიქრი|კანკალი|ყვირილი|დუღილი|ყვავილობა|ციმციმი)(?![\\u10A0-\\u10FF])",
+      "replacement": "Analytical inchoative detected; use synthetic prefixed inchoative verb",
+      "severity": "warn"
+    },
+    {
+      "id": "qa-deic-binomial-calque",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:აქ\\s+და\\s+იქ|აქ\\s+და\\s+იქით|აქეთ\\s+და\\s+იქით)(?![\\u10A0-\\u10FF])",
+      "replacement": "Un-hyphenated spatial binomial; use canonical აქა-იქ or აქეთ-იქით",
+      "severity": "warn"
+    },
+    {
+      "id": "qa-deg-double-more-calque",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])უფრო\\s+და\\s+უფრო\\s+(?:მეტი|ნაკლები|რთული|კარგი|ღრმა|სწრაფი|ნათელი)(?![\\u10A0-\\u10FF])",
+      "replacement": "Calqued double comparative; use სულ უფრო + adjective",
+      "severity": "warn"
+    },
+    {
+      "id": "pb-reciprocal-concord",
+      "type": "prompt_block",
+      "text": "Georgian grammar strictly forbids the Ergative form *ერთმანეთმა. In all past-tense transitive clauses, the subject is plural and reciprocal pronoun is Dative (ერთმანეთს შეხედეს) or Nominative (ერთმანეთი დაინახეს)."
+    },
+    {
+      "id": "pb-optative-permissive",
+      "type": "prompt_block",
+      "text": "Synthesize volitional and optative moods using canonical particles დაე (permissive), ნეტავ (optative longing), and იქნებ (epistemic possibility). Never use clumsy analytical calques like *ნება მიეცით მას or *მინდა რომ."
+    },
+    {
+      "id": "pb-dynamic-inchoatives",
+      "type": "prompt_block",
+      "text": "Use dynamic synthetic root inchoatives (ამღერდა, ატირდა, ალაპარაკდა, აენთო, დაფიქრდა, აკანკალდა, აყვირდა, ადუღდა, აყვავდა, აციმციმდა) instead of the analytical calque დაიწყო + masdar."
+    },
+    {
+      "id": "pb-deictic-binomials",
+      "type": "prompt_block",
+      "text": "Employ canonical hyphenated coordinate spatial and temporal binomial adverbs: აქა-იქ, აქეთ-იქით, ზემოთ-ქვემოთ, დღეიდან მოყოლებული, დღითი დღე, კარდაკარ, სახლდასახლ."
+    },
+    {
+      "id": "pb-correlative-degree",
+      "type": "prompt_block",
+      "text": "In proportional comparisons, use the balanced correlative frame 'რაც უფრო... მით უფრო...'. For cumulative progression, synthesize with 'სულ უფრო + adj' rather than literal 'უფრო და უფრო'."
+    },
+    {
+      "id": "pb-classical-spinoza",
+      "type": "prompt_block",
+      "text": "In philosophical discourse (Spinoza, Schopenhauer, Kierkegaard), render ontological and metaphysical concepts with classical Georgian precision: სუბსტანცია, ატრიბუტი, ნება და წარმოდგენა, ეგზისტენციალური რწმენა."
+    },
+    {
+      "id": "pb-classical-epic-homer",
+      "type": "prompt_block",
+      "text": "In classical epic narrative (Homer, Greek tragedy), honor traditional Georgian poetic meter and diction (მრისხანება მიმღერე, ქალღმერთო; მრავალტანჯული ქმარი)."
+    },
+    {
+      "id": "pb-romantic-besiki-chavchavadze",
+      "type": "prompt_block",
+      "text": "In 18th-19th century Georgian literary texts (Besiki, Alexander Chavchavadze), preserve elegant phonetic alliteration and refined lyric cadence."
+    },
+    {
+      "id": "pb-historiography-javakhishvili",
+      "type": "prompt_block",
+      "text": "In academic and historiographical prose (Ivane Javakhishvili), adhere to formal classical Georgian syntax with precise terminology (თვითმყოფადობა, უწყვეტი ბრძოლა)."
+    },
+    {
+      "id": "gl-spinoza-substance",
+      "type": "glossary",
+      "pattern": "substantia",
+      "replacement": "სუბსტანცია"
+    },
+    {
+      "id": "gl-spinoza-attribute",
+      "type": "glossary",
+      "pattern": "attributum",
+      "replacement": "ატრიბუტი"
+    },
+    {
+      "id": "gl-spinoza-mode",
+      "type": "glossary",
+      "pattern": "modus",
+      "replacement": "მოდუსი"
+    },
+    {
+      "id": "gl-spinoza-conatus",
+      "type": "glossary",
+      "pattern": "conatus",
+      "replacement": "თვითშენახვის სწრაფვა"
+    },
+    {
+      "id": "gl-schopenhauer-will",
+      "type": "glossary",
+      "pattern": "Wille zum Leben",
+      "replacement": "სიცოცხლის ნება"
+    },
+    {
+      "id": "gl-schopenhauer-vorstellung",
+      "type": "glossary",
+      "pattern": "Vorstellung",
+      "replacement": "წარმოდგენა"
+    },
+    {
+      "id": "gl-kierkegaard-angst",
+      "type": "glossary",
+      "pattern": "Angst",
+      "replacement": "ეგზისტენციალური შიში"
+    },
+    {
+      "id": "gl-kierkegaard-faith",
+      "type": "glossary",
+      "pattern": "leap of faith",
+      "replacement": "რწმენის ნახტომი"
+    },
+    {
+      "id": "gl-kierkegaard-knight",
+      "type": "glossary",
+      "pattern": "knight of faith",
+      "replacement": "რწმენის რაინდი"
+    },
+    {
+      "id": "gl-homer-polytropos",
+      "type": "glossary",
+      "pattern": "polytropos",
+      "replacement": "მრავალტანჯული"
+    },
+    {
+      "id": "gl-homer-kleos",
+      "type": "glossary",
+      "pattern": "kleos aphthiton",
+      "replacement": "უხრწნელი დიდება"
+    },
+    {
+      "id": "gl-homer-menis",
+      "type": "glossary",
+      "pattern": "menis",
+      "replacement": "მრისხანება"
+    },
+    {
+      "id": "gl-phil-quiddity",
+      "type": "glossary",
+      "pattern": "quidditas",
+      "replacement": "რაობა"
+    },
+    {
+      "id": "gl-phil-haecceity",
+      "type": "glossary",
+      "pattern": "haecceitas",
+      "replacement": "ესეობა"
+    },
+    {
+      "id": "gl-phil-noumenon",
+      "type": "glossary",
+      "pattern": "noumenon",
+      "replacement": "ნოუმენი"
+    },
+    {
+      "id": "gl-phil-phenomenon",
+      "type": "glossary",
+      "pattern": "phenomenon",
+      "replacement": "ფენომენი"
+    },
+    {
+      "id": "gl-phil-teleology",
+      "type": "glossary",
+      "pattern": "teleology",
+      "replacement": "ტელეოლოგია"
+    },
+    {
+      "id": "gl-phil-dialectic",
+      "type": "glossary",
+      "pattern": "dialectic",
+      "replacement": "დიალექტიკა"
+    },
+    {
+      "id": "gl-phil-transcendence",
+      "type": "glossary",
+      "pattern": "transcendence",
+      "replacement": "ტრანსცენდენცია"
+    },
+    {
+      "id": "gl-phil-immanence",
+      "type": "glossary",
+      "pattern": "immanence",
+      "replacement": "იმანენტურობა"
+    },
+    {
+      "id": "gl-lit-anaphora",
+      "type": "glossary",
+      "pattern": "anaphora",
+      "replacement": "ანაფორა"
+    },
+    {
+      "id": "gl-lit-epiphora",
+      "type": "glossary",
+      "pattern": "epiphora",
+      "replacement": "ეპიფორა"
+    },
+    {
+      "id": "gl-lit-alliteration",
+      "type": "glossary",
+      "pattern": "alliteration",
+      "replacement": "ალიტერაცია"
+    },
+    {
+      "id": "gl-lit-hyperbole",
+      "type": "glossary",
+      "pattern": "hyperbole",
+      "replacement": "ჰიპერბოლა"
+    },
+    {
+      "id": "gl-lit-metaphor",
+      "type": "glossary",
+      "pattern": "metaphor",
+      "replacement": "მეტაფორა"
+    },
+    {
+      "id": "gl-lit-metonymy",
+      "type": "glossary",
+      "pattern": "metonymy",
+      "replacement": "მეტონიმია"
+    },
+    {
+      "id": "gl-lit-synecdoche",
+      "type": "glossary",
+      "pattern": "synecdoche",
+      "replacement": "სინეკდოქე"
+    },
+    {
+      "id": "gl-lit-litotes",
+      "type": "glossary",
+      "pattern": "litotes",
+      "replacement": "ლიტოტესი"
+    },
+    {
+      "id": "gl-hist-autonomy",
+      "type": "glossary",
+      "pattern": "authenticity",
+      "replacement": "თვითმყოფადობა"
+    },
+    {
+      "id": "gl-hist-sovereignty",
+      "type": "glossary",
+      "pattern": "statehood",
+      "replacement": "სახელმწიფოებრიობა"
+    },
+    {
+      "id": "gl-hist-historiography",
+      "type": "glossary",
+      "pattern": "historiography",
+      "replacement": "ისტორიოგრაფია"
+    },
+    {
+      "id": "gl-hist-primary-source",
+      "type": "glossary",
+      "pattern": "primary source",
+      "replacement": "პირველწყარო"
+    },
+    {
+      "id": "gl-hist-annals",
+      "type": "glossary",
+      "pattern": "chronicles",
+      "replacement": "მატიანე"
+    },
+    {
+      "id": "gl-hist-hagiography",
+      "type": "glossary",
+      "pattern": "hagiography",
+      "replacement": "ჰაგიოგრაფია"
     }
   ],
   "updated_at": "2026-09-17T14:59:30.376602+00:00",

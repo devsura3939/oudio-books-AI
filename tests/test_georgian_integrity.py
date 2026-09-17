@@ -195,13 +195,13 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             self.assertEqual(polished, expected, f"Adjective truncation failed for '{raw}': got '{polished}'")
 
     def test_13_autonomous_training_pack_eval(self):
-        """Verify that the active rule pack scores 100% with zero regressions across all 420+ benchmark cases."""
+        """Verify that the active rule pack scores 100% with zero regressions across all 500+ benchmark cases."""
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 420, "Expected at least 420 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 420, "Expected at least 420 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 32, "Active pack version must be at least 32")
+        self.assertGreaterEqual(len(cases), 500, "Expected at least 500 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 530, "Expected at least 530 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 34, "Active pack version must be at least 34")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
@@ -492,6 +492,66 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         for raw, expected in pairs:
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Habitual/conditional failed for '{raw}': got '{polished}'")
+
+    def test_29_reciprocal_pronoun_concord(self):
+        """Verify that reciprocal pronouns ერთმანეთ- / ერთიმეორე- reject Ergative marker."""
+        pairs = [
+            ("ერთმანეთმა დაინახეს", "ერთმანეთი დაინახეს"),
+            ("ერთმანეთმა შეხედეს", "ერთმანეთს შეხედეს"),
+            ("ერთმანეთმა უთხრეს", "ერთმანეთს უთხრეს"),
+            ("ერთმანეთმა გაუგეს", "ერთმანეთს გაუგეს"),
+            ("ერთმანეთმა იპოვეს", "ერთმანეთი იპოვეს"),
+            ("ერთმანეთმა გააკეთეს", "ერთმანეთს დაეხმარნენ"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Reciprocal concord failed for '{raw}': got '{polished}'")
+
+    def test_30_optative_and_permissive_mood(self):
+        """Verify synthetic optative and permissive mood particles დაე, ნეტავ, იქნებ."""
+        pairs = [
+            ("ნება მიეცით წავიდეს", "დაე წავიდეს"),
+            ("ნება მიეცით მას წავიდეს", "დაე წავიდეს"),
+            ("ნება მიეცით იყოს", "დაე იყოს"),
+            ("მინდა, რომ ვიცოდე", "ნეტავ ვიცოდე"),
+            ("მინდა, რომ შემეძლოს", "ნეტავ შემეძლოს"),
+            ("შესაძლოა მოვიდეს", "იქნებ მოვიდეს"),
+            ("შესაძლოა გაიგოს", "იქნებ გაიგოს"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Optative/permissive failed for '{raw}': got '{polished}'")
+
+    def test_31_dynamic_action_inchoatives(self):
+        """Verify dynamic synthetic root inchoatives replacing analytical დაიწყო + masdar."""
+        pairs = [
+            ("დაიწყო სიმღერა", "ამღერდა"),
+            ("დაიწყო ტირილი", "ატირდა"),
+            ("დაიწყო ლაპარაკი", "ალაპარაკდა"),
+            ("დაიწყო ნათება", "აენთო"),
+            ("დაიწყო ფიქრი", "დაფიქრდა"),
+            ("დაიწყო კანკალი", "აკანკალდა"),
+            ("დაიწყო ყვირილი", "აყვირდა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Inchoative synthesis failed for '{raw}': got '{polished}'")
+
+    def test_32_correlative_proportional_degree(self):
+        """Verify deictic coordinate binominals and proportional correlative degree."""
+        pairs = [
+            ("აქ და იქ", "აქა-იქ"),
+            ("აქ და იქით", "აქეთ-იქით"),
+            ("უფრო და უფრო მეტი", "სულ უფრო მეტი"),
+            ("უფრო და უფრო ნაკლები", "სულ უფრო ნაკლები"),
+            ("უფრო და უფრო რთული", "სულ უფრო რთული"),
+            ("უფრო და უფრო კარგი", "სულ უფრო კარგი"),
+            ("რაც მეტად, მით მეტად", "რაც უფრო, მით უფრო"),
+            ("რაც უფრო, უფრო", "რაც უფრო, მით უფრო"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Correlative/proportional degree failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":

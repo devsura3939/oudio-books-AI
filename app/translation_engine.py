@@ -425,6 +425,22 @@ OFFLINE_LITERARY_EXEMPLARS = [
      "ოსტატის მარჯვენა მარად ცოცხლობს ქვაში."),
     (r"all multiplicity is unified in the one transcendent source\.?",
      "ყოველი სიმრავლე ერთ უზენაეს საწყისში ერთიანდება."),
+    (r"the highest endeavor of the mind and its highest virtue is to understand things by the third kind of knowledge\.?",
+     "გონების უმაღლესი სწრაფვა და მისი უზენაესი სათნოებაა საგანთა შეცნობა შემეცნების მესამე გვარით."),
+    (r"the intellectual love of god is the very love of god with which god loves himself\.?",
+     "ღვთის ინტელექტუალური სიყვარული არის სწორედ ის სიყვარული, რომლითაც ღმერთს საკუთარი თავი უყვარს."),
+    (r"the world is my representation:? this is a truth which holds good for everything that lives and knows\.?",
+     "სამყარო ჩემი წარმოდგენაა — ეს არის ჭეშმარიტება, რომელიც სავალდებულოა ყოველი ცოცხალი და შემმეცნებელი არსებისთვის."),
+    (r"faith is the highest passion in a man\.?",
+     "რწმენა ადამიანში უმაღლესი ვნებაა."),
+    (r"sing in me,? muse,? and through me tell the story of that man skilled in all ways of contending\.?",
+     "მიამბე, მუზავ, იმ მრავალტანჯულ კაცზე, რომელმაც მრავალი გზა განვლო."),
+    (r"the beauty of your face is like the radiant morning star\.?",
+     "შენი პირის მშვენება ცისკრის ვარსკვლავივით ბრწყინავს."),
+    (r"the passing world is fleeting like a shadow,? only virtue endures\.?",
+     "წუთისოფელი ჩრდილივით წარმავალია, მხოლოდ სათნოება რჩება მარადიულად."),
+    (r"the history of a nation is the mirror of its spiritual life and culture\.?",
+     "ერის ისტორია მისი სულიერი ცხოვრებისა და კულტურის სარკეა."),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),
@@ -615,6 +631,11 @@ def translate_with_gemini(
                 "23. FREQUENTATIVE HABITUAL ASPECT: Express habitual past with imperfect verb + '-ხოლმე' ('ამბობდა ხოლმე', 'აკეთებდა ხოლმე') instead of '*ადრე აკეთებდა ხოლმე' or '*ჩვევად ჰქონდა'.\n"
                 "24. CONDITIONAL & MODAL CLARITY: Use direct conditional and modal subordinators ('თუკი', 'თუ', 'როდესაც', 'შესაძლებელია, რომ', 'შეუძლებელია, რომ') instead of bulky '*იმ შემთხვევაში, თუკი'.\n"
                 "25. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
+                "26. RECIPROCAL PRONOUNS: Reciprocal 'ერთმანეთი' can NEVER take Ergative case ('*ერთმანეთმა'). Use plural subjects and 'ერთმანეთი'/'ერთმანეთს' ('მათ ერთმანეთი დაინახეს', 'ერთმანეთს შეხედეს').\n"
+                "27. OPTATIVE & PERMISSIVE MOOD: Use 'დაე' + Optative ('დაე წავიდეს', 'დაე იყოს'), 'ნეტავ' + Subjunctive ('ნეტავ ვიცოდე') instead of clumsy '*ნება მიეცით წავიდეს'.\n"
+                "28. SYNTHETIC INCHOATIVES: Express inception of action with synthetic preverbs ('ამღერდა', 'ატირდა', 'ალაპარაკდა', 'აენთო', 'დაფიქრდა') instead of '*დაიწყო სიმღერა/ტირილი'.\n"
+                "29. DEICTIC COORDINATE ADVERBS: Use authentic binominal adverbs ('აქეთ-იქით', 'აქა-იქ', 'წინ და უკან', 'დღეიდან მოყოლებული') instead of '*აქ და იქ'.\n"
+                "30. CORRELATIVE DEGREE: Use correlative structures 'რაც უფრო... მით უფრო...' and 'სულ უფრო მეტი' instead of '*უფრო და უფრო მეტი'.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -703,6 +724,11 @@ def translate_with_kona(
                 "24. CONDITIONAL & MODAL CLARITY: Use direct conditional and modal subordinators ('თუკი', 'თუ', 'როდესაც', 'შესაძლებელია, რომ', 'შეუძლებელია, რომ') instead of bulky '*იმ შემთხვევაში, თუკი'.\n"
                 "25. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
                 "26. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms into natural Georgian while accurately preserving publisher names and addresses.\n"
+                "27. RECIPROCAL PRONOUNS: Reciprocal 'ერთმანეთი' can NEVER take Ergative case ('*ერთმანეთმა'). Use plural subjects and 'ერთმანეთი'/'ერთმანეთს' ('მათ ერთმანეთი დაინახეს', 'ერთმანეთს შეხედეს').\n"
+                "28. OPTATIVE & PERMISSIVE MOOD: Use 'დაე' + Optative ('დაე წავიდეს', 'დაე იყოს'), 'ნეტავ' + Subjunctive ('ნეტავ ვიცოდე') instead of clumsy '*ნება მიეცით წავიდეს'.\n"
+                "29. SYNTHETIC INCHOATIVES: Express inception of action with synthetic preverbs ('ამღერდა', 'ატირდა', 'ალაპარაკდა', 'აენთო', 'დაფიქრდა') instead of '*დაიწყო სიმღერა/ტირილი'.\n"
+                "30. DEICTIC COORDINATE ADVERBS: Use authentic binominal adverbs ('აქეთ-იქით', 'აქა-იქ', 'წინ და უკან', 'დღეიდან მოყოლებული') instead of '*აქ და იქ'.\n"
+                "31. CORRELATIVE DEGREE: Use correlative structures 'რაც უფრო... მით უფრო...' and 'სულ უფრო მეტი' instead of '*უფრო და უფრო მეტი'.\n"
                 "Output ONLY the Georgian translation."
             )
             user_parts = []

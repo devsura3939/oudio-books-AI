@@ -4275,5 +4275,939 @@
       "grammar",
       "chikobava"
     ]
+  },
+  {
+    "id": "case-syntax-ka-308",
+    "kind": "autofix",
+    "source": "ერთმანეთმა დაინახეს",
+    "expected": "ერთმანეთი დაინახეს",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "concord",
+      "ergative_ban"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-309",
+    "kind": "autofix",
+    "source": "ერთმანეთმა შეხედეს",
+    "expected": "ერთმანეთს შეხედეს",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "concord",
+      "dative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-310",
+    "kind": "autofix",
+    "source": "ერთმანეთმა უთხრეს",
+    "expected": "ერთმანეთს უთხრეს",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "concord",
+      "dative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-311",
+    "kind": "autofix",
+    "source": "ერთმანეთმა გაუგეს",
+    "expected": "ერთმანეთს გაუგეს",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "concord",
+      "dative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-312",
+    "kind": "autofix",
+    "source": "ერთმანეთმა იპოვეს",
+    "expected": "ერთმანეთი იპოვეს",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "concord",
+      "nominative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-313",
+    "kind": "autofix",
+    "source": "ერთმანეთმა გააკეთეს",
+    "expected": "ერთმანეთს დაეხმარნენ",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "concord",
+      "assistance"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-314",
+    "kind": "autofix",
+    "source": "მათ ერთმანეთმა დაუძახეს",
+    "expected": "მათ ერთმანეთს დაუძახეს",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "concord",
+      "dative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-315",
+    "kind": "autofix",
+    "source": "ერთმანეთმა გადახედეს",
+    "expected": "ერთმანეთს გადახედეს",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "concord",
+      "dative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-316",
+    "kind": "autofix",
+    "source": "ერთიმეორემ დაინახეს",
+    "expected": "ერთიმეორე დაინახეს",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "concord",
+      "nominative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-317",
+    "kind": "autofix",
+    "source": "ერთიმეორემ შეხედეს",
+    "expected": "ერთიმეორეს შეხედეს",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "concord",
+      "dative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-318",
+    "kind": "autofix",
+    "source": "ერთმანეთის სიყვარული ყველაფერს სძლევს.",
+    "expected": "ერთმანეთის სიყვარული ყველაფერს სძლევს.",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-319",
+    "kind": "autofix",
+    "source": "მათ ერთმანეთი უსიტყვოდ გაიგეს.",
+    "expected": "მათ ერთმანეთი უსიტყვოდ გაიგეს.",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-320",
+    "kind": "autofix",
+    "source": "ისინი ერთმანეთს მხარში ედგნენ.",
+    "expected": "ისინი ერთმანეთს მხარში ედგნენ.",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-321",
+    "kind": "autofix",
+    "source": "ერთმანეთის პატივისცემა მშვიდობის საფუძველია.",
+    "expected": "ერთმანეთის პატივისცემა მშვიდობის საფუძველია.",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-322",
+    "kind": "autofix",
+    "source": "არტურ შოპენჰაუერი: ადამიანები ერთმანეთს ემსგავსებიან ტანჯვისა და ნების სწრაფვაში.",
+    "expected": "არტურ შოპენჰაუერი: ადამიანები ერთმანეთს ემსგავსებიან ტანჯვისა და ნების სწრაფვაში.",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "philosophy",
+      "schopenhauer"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-323",
+    "kind": "autofix",
+    "source": "ბარუხ სპინოზა: გონებით მართული ადამიანები ერთმანეთისთვის ყველაზე სასარგებლონი არიან.",
+    "expected": "ბარუხ სპინოზა: გონებით მართული ადამიანები ერთმანეთისთვის ყველაზე სასარგებლონი არიან.",
+    "weight": 1.0,
+    "tags": [
+      "reciprocal",
+      "philosophy",
+      "spinoza"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-324",
+    "kind": "autofix",
+    "source": "ნება მიეცით წავიდეს",
+    "expected": "დაე წავიდეს",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "permissive",
+      "dae"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-325",
+    "kind": "autofix",
+    "source": "ნება მიეცით მას წავიდეს",
+    "expected": "დაე წავიდეს",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "permissive",
+      "dae"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-326",
+    "kind": "autofix",
+    "source": "ნება მიეცით იყოს",
+    "expected": "დაე იყოს",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "permissive",
+      "dae"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-327",
+    "kind": "autofix",
+    "source": "ნება მიეცით მას იყოს",
+    "expected": "დაე იყოს",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "permissive",
+      "dae"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-328",
+    "kind": "autofix",
+    "source": "მინდა, რომ ვიცოდე",
+    "expected": "ნეტავ ვიცოდე",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "netav"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-329",
+    "kind": "autofix",
+    "source": "მინდა, რომ შემეძლოს",
+    "expected": "ნეტავ შემეძლოს",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "netav"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-330",
+    "kind": "autofix",
+    "source": "მინდა რომ ვიცოდე",
+    "expected": "ნეტავ ვიცოდე",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "netav"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-331",
+    "kind": "autofix",
+    "source": "მინდა რომ შემეძლოს",
+    "expected": "ნეტავ შემეძლოს",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "netav"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-332",
+    "kind": "autofix",
+    "source": "შესაძლოა მოვიდეს",
+    "expected": "იქნებ მოვიდეს",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "ikneb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-333",
+    "kind": "autofix",
+    "source": "შესაძლოა გაიგოს",
+    "expected": "იქნებ გაიგოს",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "ikneb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-334",
+    "kind": "autofix",
+    "source": "იქნებ რომ მოვიდეს",
+    "expected": "იქნებ მოვიდეს",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "ikneb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-335",
+    "kind": "autofix",
+    "source": "იქნებ რომ გაიგოს",
+    "expected": "იქნებ გაიგოს",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "ikneb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-336",
+    "kind": "autofix",
+    "source": "დაე აღსრულდეს სიმართლე და გაბრწყინდეს ქვეყანა.",
+    "expected": "დაე აღსრულდეს სიმართლე და გაბრწყინდეს ქვეყანა.",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-337",
+    "kind": "autofix",
+    "source": "ნეტავ შემეძლოს შენი დარდის გაზიარება.",
+    "expected": "ნეტავ შემეძლოს შენი დარდის გაზიარება.",
+    "weight": 1.0,
+    "tags": [
+      "optative",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-338",
+    "kind": "autofix",
+    "source": "სიორენ კირკეგორი: რწმენა არის უმაღლესი ვნება ადამიანის სულში.",
+    "expected": "სიორენ კირკეგორი: რწმენა არის უმაღლესი ვნება ადამიანის სულში.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "philosophy",
+      "kierkegaard"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-339",
+    "kind": "autofix",
+    "source": "ჰომეროსი: მრისხანება მიმღერე, ქალღმერთო, აქილევს პელევსის ძისა.",
+    "expected": "ჰომეროსი: მრისხანება მიმღერე, ქალღმერთო, აქილევს პელევსის ძისა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "classic",
+      "homer"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-340",
+    "kind": "autofix",
+    "source": "დაიწყო სიმღერა",
+    "expected": "ამღერდა",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-341",
+    "kind": "autofix",
+    "source": "დაიწყო ტირილი",
+    "expected": "ატირდა",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-342",
+    "kind": "autofix",
+    "source": "დაიწყო ლაპარაკი",
+    "expected": "ალაპარაკდა",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-343",
+    "kind": "autofix",
+    "source": "დაიწყო ნათება",
+    "expected": "აენთო",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-344",
+    "kind": "autofix",
+    "source": "დაიწყო ფიქრი",
+    "expected": "დაფიქრდა",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-345",
+    "kind": "autofix",
+    "source": "დაიწყო კანკალი",
+    "expected": "აკანკალდა",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-346",
+    "kind": "autofix",
+    "source": "დაიწყო ყვირილი",
+    "expected": "აყვირდა",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-347",
+    "kind": "autofix",
+    "source": "დაიწყო დუღილი",
+    "expected": "ადუღდა",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-348",
+    "kind": "autofix",
+    "source": "დაიწყო ყვავილობა",
+    "expected": "აყვავდა",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-349",
+    "kind": "autofix",
+    "source": "დაიწყო ციმციმი",
+    "expected": "აციმციმდა",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-350",
+    "kind": "autofix",
+    "source": "მთელი დარბაზი ერთხმად ამღერდა.",
+    "expected": "მთელი დარბაზი ერთხმად ამღერდა.",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-351",
+    "kind": "autofix",
+    "source": "ბავშვი უეცრად ატირდა და დედას ჩაეხუტა.",
+    "expected": "ბავშვი უეცრად ატირდა და დედას ჩაეხუტა.",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-352",
+    "kind": "autofix",
+    "source": "სანთელი კვლავ აენთო სიბნელეში.",
+    "expected": "სანთელი კვლავ აენთო სიბნელეში.",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-353",
+    "kind": "autofix",
+    "source": "მგზავრი ღრმად დაფიქრდა განვლილ გზაზე.",
+    "expected": "მგზავრი ღრმად დაფიქრდა განვლილ გზაზე.",
+    "weight": 1.0,
+    "tags": [
+      "inchoative",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-354",
+    "kind": "autofix",
+    "source": "ბესიკი: ტანო ტატანო, გულწამტანო, უცხოდ მარებო, ზილფო კავებო, მომკლავებო, შუქთა მფენარო.",
+    "expected": "ბესიკი: ტანო ტატანო, გულწამტანო, უცხოდ მარებო, ზილფო კავებო, მომკლავებო, შუქთა მფენარო.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "besiki",
+      "poetry"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-355",
+    "kind": "autofix",
+    "source": "ალექსანდრე ჭავჭავაძე: გოგჩა, ტბა მშვენიერი, მიმზიდველი და წყნარი.",
+    "expected": "ალექსანდრე ჭავჭავაძე: გოგჩა, ტბა მშვენიერი, მიმზიდველი და წყნარი.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "chavchavadze",
+      "romanticism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-356",
+    "kind": "autofix",
+    "source": "აქ და იქ",
+    "expected": "აქა-იქ",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "binomial"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-357",
+    "kind": "autofix",
+    "source": "აქ და იქით",
+    "expected": "აქეთ-იქით",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "binomial"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-358",
+    "kind": "autofix",
+    "source": "აქეთ და იქით",
+    "expected": "აქეთ-იქით",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "binomial"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-359",
+    "kind": "autofix",
+    "source": "ზემოთ და ქვემოთ",
+    "expected": "ზემოთ-ქვემოთ",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "binomial"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-360",
+    "kind": "autofix",
+    "source": "დღიდან მოყოლებული",
+    "expected": "დღეიდან მოყოლებული",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "temporal"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-361",
+    "kind": "autofix",
+    "source": "დღიდან დღემდე",
+    "expected": "დღითი დღე",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "temporal"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-362",
+    "kind": "autofix",
+    "source": "კარიდან კარამდე",
+    "expected": "კარდაკარ",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "binomial"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-363",
+    "kind": "autofix",
+    "source": "სახლიდან სახლამდე",
+    "expected": "სახლდასახლ",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "binomial"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-364",
+    "kind": "autofix",
+    "source": "ველზე აქა-იქ შემორჩენილი იყო თოვლის ნაფლეთები.",
+    "expected": "ველზე აქა-იქ შემორჩენილი იყო თოვლის ნაფლეთები.",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-365",
+    "kind": "autofix",
+    "source": "ბავშვები აქეთ-იქით დარბოდნენ ეზოში.",
+    "expected": "ბავშვები აქეთ-იქით დარბოდნენ ეზოში.",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-366",
+    "kind": "autofix",
+    "source": "მზე ზემოთ-ქვემოთ ექცეოდა ტალღების რიტმში.",
+    "expected": "მზე ზემოთ-ქვემოთ ექცეოდა ტალღების რიტმში.",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-367",
+    "kind": "autofix",
+    "source": "დღეიდან მოყოლებული ახალი ცხოვრება იწყება.",
+    "expected": "დღეიდან მოყოლებული ახალი ცხოვრება იწყება.",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-368",
+    "kind": "autofix",
+    "source": "მისი ჯანმრთელობა დღითი დღე უმჯობესდებოდა.",
+    "expected": "მისი ჯანმრთელობა დღითი დღე უმჯობესდებოდა.",
+    "weight": 1.0,
+    "tags": [
+      "deictic",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-369",
+    "kind": "autofix",
+    "source": "ივანე ჯავახიშვილი: ქართველი ერის ისტორია არის უწყვეტი ბრძოლა სულიერი და ეროვნული თვითმყოფადობის გადასარჩენად.",
+    "expected": "ივანე ჯავახიშვილი: ქართველი ერის ისტორია არის უწყვეტი ბრძოლა სულიერი და ეროვნული თვითმყოფადობის გადასარჩენად.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "history",
+      "javakhishvili"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-370",
+    "kind": "autofix",
+    "source": "ჰომეროსი: მიამბე, მუზავ, იმ მრავალტანჯულ ქმარზე, ვინც ტროას წმინდა ციხესიმაგრის დამხობის შემდეგ დიდხანს ხეტიალობდა.",
+    "expected": "ჰომეროსი: მიამბე, მუზავ, იმ მრავალტანჯულ ქმარზე, ვინც ტროას წმინდა ციხესიმაგრის დამხობის შემდეგ დიდხანს ხეტიალობდა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "classic",
+      "homer"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-371",
+    "kind": "autofix",
+    "source": "ილია ჭავჭავაძე: ქვეყნის სამსახური ყველას მოვალეობაა, ვისაც კი გონება გაუნათდა და გული უცემს.",
+    "expected": "ილია ჭავჭავაძე: ქვეყნის სამსახური ყველას მოვალეობაა, ვისაც კი გონება გაუნათდა და გული უცემს.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "ilia",
+      "enlightenment"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-372",
+    "kind": "autofix",
+    "source": "უფრო და უფრო მეტი",
+    "expected": "სულ უფრო მეტი",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "correlative",
+      "proportional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-373",
+    "kind": "autofix",
+    "source": "უფრო და უფრო ნაკლები",
+    "expected": "სულ უფრო ნაკლები",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "correlative",
+      "proportional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-374",
+    "kind": "autofix",
+    "source": "უფრო და უფრო რთული",
+    "expected": "სულ უფრო რთული",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "correlative",
+      "proportional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-375",
+    "kind": "autofix",
+    "source": "უფრო და უფრო კარგი",
+    "expected": "სულ უფრო კარგი",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "correlative",
+      "proportional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-376",
+    "kind": "autofix",
+    "source": "უფრო და უფრო ღრმა",
+    "expected": "სულ უფრო ღრმა",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "correlative",
+      "proportional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-377",
+    "kind": "autofix",
+    "source": "უფრო და უფრო სწრაფი",
+    "expected": "სულ უფრო სწრაფი",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "correlative",
+      "proportional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-378",
+    "kind": "autofix",
+    "source": "უფრო და უფრო ნათელი",
+    "expected": "სულ უფრო ნათელი",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "correlative",
+      "proportional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-379",
+    "kind": "autofix",
+    "source": "რაც მეტად, მით მეტად",
+    "expected": "რაც უფრო, მით უფრო",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "correlative",
+      "proportional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-380",
+    "kind": "autofix",
+    "source": "რაც უფრო, უფრო",
+    "expected": "რაც უფრო, მით უფრო",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "correlative",
+      "proportional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-381",
+    "kind": "autofix",
+    "source": "რაც მეტი, მით მეტი",
+    "expected": "რაც უფრო მეტი, მით უფრო მეტი",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "correlative",
+      "proportional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-382",
+    "kind": "autofix",
+    "source": "სულ უფრო მეტი ადამიანი ინტერესდება ქართული კულტურით.",
+    "expected": "სულ უფრო მეტი ადამიანი ინტერესდება ქართული კულტურით.",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-383",
+    "kind": "autofix",
+    "source": "საკითხი სულ უფრო რთული და კომპლექსური ხდებოდა.",
+    "expected": "საკითხი სულ უფრო რთული და კომპლექსური ხდებოდა.",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-384",
+    "kind": "autofix",
+    "source": "რაც უფრო მეტს კითხულობდა, მით უფრო მეტი ცოდნა ემატებოდა.",
+    "expected": "რაც უფრო მეტს კითხულობდა, მით უფრო მეტი ცოდნა ემატებოდა.",
+    "weight": 1.0,
+    "tags": [
+      "degree",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-385",
+    "kind": "autofix",
+    "source": "აკაკი წერეთელი: განთიადი მოახლოვდა, მზე ამოვა მალე და გაანათებს მთელ ქართლ-კახეთს.",
+    "expected": "აკაკი წერეთელი: განთიადი მოახლოვდა, მზე ამოვა მალე და გაანათებს მთელ ქართლ-კახეთს.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "akaki",
+      "poetry"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-386",
+    "kind": "autofix",
+    "source": "ვაჟა-ფშაველა: მტერსაც კი უნდა დაუფასო ვაჟკაცობა და ღირსება ბრძოლის ველზე.",
+    "expected": "ვაჟა-ფშაველა: მტერსაც კი უნდა დაუფასო ვაჟკაცობა და ღირსება ბრძოლის ველზე.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "vazha",
+      "honor"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-387",
+    "kind": "autofix",
+    "source": "შოთა რუსთაველი: რაცა ვის რა ბედმან მისცეს, დასჯერდეს და მას უბნობდეს.",
+    "expected": "შოთა რუსთაველი: რაცა ვის რა ბედმან მისცეს, დასჯერდეს და მას უბნობდეს.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "rustaveli",
+      "wisdom"
+    ]
   }
 ]

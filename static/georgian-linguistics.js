@@ -5331,6 +5331,65 @@ CONDITIONAL & MODAL DECALQUING (KA-149):
   - შეუძლებელია, რომ... (it is impossible that — NOT *არ არის შესაძლებელი, რომ).
   - შეიძლება ითქვას, რომ... (it can be said that — NOT *შეიძლება ითქვას ის, რომ).`;
 
+// KA-150 v1.60.0 — Reciprocal Pronoun Concord (ერთმანეთ- / ერთიმეორე- არასდროს ერგატივში).
+const KA_RECIPROCAL_SYNTAX = `
+RECIPROCAL PRONOUN CONCORD (KA-150):
+• INVIOLABILITY OF 'ერთმანეთი' AGAINST ERGATIVE CASE:
+  - In standard literary Kartvelian, the reciprocal pronoun can NEVER take the Ergative marker (*ერთმანეთმა).
+  - The clause subject must be plural, and the reciprocal pronoun appears in the Nominative, Dative, or Genitive:
+    * ერთმანეთი დაინახეს (they saw each other — NOT *ერთმანეთმა დაინახეს).
+    * ერთმანეთს შეხედეს (they looked at each other — NOT *ერთმანეთმა შეხედეს).
+    * ერთმანეთს დაეხმარნენ (they helped each other — NOT *ერთმანეთმა გააკეთეს).
+    * ერთმანეთის შესახებ (about each other).`;
+
+// KA-151 v1.60.0 — Optative & Permissive Mood Synthesis (დაე, ნეტავ, იქნებ).
+const KA_OPTATIVE_PERMISSIVE = `
+OPTATIVE & PERMISSIVE MOOD SYNTHESIS (KA-151):
+• VOLITIONAL & OPTATIVE PARTICLES:
+  - 'დაე' + Optative screeve expresses solemn permission, wish, or blessing:
+    * დაე წავიდეს (let him go — NOT *ნება მიეცით მას წავიდეს).
+    * დაე იყოს (let it be / so be it — NOT *ნება მიეცით იყოს).
+  - 'ნეტავ' / 'ნეტავი' expresses introspective desiderative yearning:
+    * ნეტავ ვიცოდე (would that I knew / I wish I knew).
+    * ნეტავ შემეძლოს (if only I could).
+  - 'იქნებ' / 'ეგებ' expresses epistemic potentiality (perhaps / maybe):
+    * იქნებ მოვიდეს (perhaps he will come).`;
+
+// KA-152 v1.60.0 — Dynamic Action Inchoatives & Ingressives (მოქმედების დაწყების სინთეზური ფორმები).
+const KA_INCHOATIVE_INGRESSIVE = `
+DYNAMIC ACTION INCHOATIVES & INGRESSIVES (KA-152):
+• SYNTHETIC INGRESSIVES OVER ANALYTICAL '*დაიწყო + MASDAR':
+  - Authentic Kartvelian forms the inception of an action through preverbs and stem alternation:
+    * ამღერდა (burst into song / started singing — NOT *დაიწყო სიმღერა).
+    * ატირდა (burst into tears / started crying — NOT *დაიწყო ტირილი).
+    * ალაპარაკდა (began to speak — NOT *დაიწყო ლაპარაკი).
+    * აენთო (blazed up / ignited — NOT *დაიწყო ნათება).
+    * დაფიქრდა (fell into thought / grew thoughtful — NOT *დაიწყო ფიქრი).
+    * აკანკალდა (began to tremble — NOT *დაიწყო კანკალი).
+    * აყვირდა (started shouting).`;
+
+// KA-153 v1.60.0 — Deictic Coordinate Binomial Adverbs (ადგილისა და დროის ჩვენებითი ზმნიზედები).
+const KA_DEICTIC_BINOMIAL_ADVERBS = `
+DEICTIC COORDINATE BINOMIAL ADVERBS (KA-153):
+• AUTHENTIC KARTVELIAN SPATIAL & TEMPORAL BINOMIALS:
+  - Replace mechanical Indo-European calques with natural coordinate pairs:
+    * აქა-იქ (here and there — NOT *აქ და იქ).
+    * აქეთ-იქით (back and forth / to and fro — NOT *აქ და იქით).
+    * წინ და უკან (forward and back).
+    * დღეიდან მოყოლებული (from this day forth).
+    * იმ დროიდან მოყოლებული (since that time).`;
+
+// KA-154 v1.60.0 — Correlative & Proportional Degree Subordination (რაც უფრო... მით უფრო...).
+const KA_CORRELATIVE_PROPORTIONAL = `
+CORRELATIVE & PROPORTIONAL DEGREE SUBORDINATION (KA-154):
+• PROPORTIONAL COMPARATIVE SUBORDINATION:
+  - English 'the more... the more...' constructs into Kartvelian correlative proportions:
+    * რაც უფრო..., მით უფრო... (the more..., the more... — NOT *რაც უფრო..., უფრო...).
+    * სულ უფრო მეტი (ever more / more and more — NOT *უფრო და უფრო მეტი).
+    * სულ უფრო ნაკლები (ever less / less and less).
+    * სულ უფრო რთული (increasingly difficult).
+    * სულ უფრო კარგი (better and better).`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -5362,6 +5421,11 @@ function getKaKnowledgeBase() {
         KA_QUANTIFIER_SINGULAR_CONCORD,
         KA_HABITUAL_ASPECT_KHOLME,
         KA_CONDITIONAL_MODAL_DECALQUING,
+        KA_RECIPROCAL_SYNTAX,
+        KA_OPTATIVE_PERMISSIVE,
+        KA_INCHOATIVE_INGRESSIVE,
+        KA_DEICTIC_BINOMIAL_ADVERBS,
+        KA_CORRELATIVE_PROPORTIONAL,
         KA_CONTRASTIVE_PATTERNS,
         KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
         KA_PROPER_NOUN_TRANSLITERATION,
@@ -9651,7 +9715,69 @@ function synthesizeGeorgianMorphology(text) {
         out = out.replace(re, repl);
     }
 
-    // 29. Typography & Dialogue
+    // 29. Reciprocal Pronoun Concord (ერთმანეთ- / ერთიმეორე- არასდროს ერგატივში)
+    const reciprocalFixes = [
+        [/(?<![\u10A0-\u10FF])ერთმანეთმა\s+გააკეთეს(?![ა-ჰ])/g, 'ერთმანეთს დაეხმარნენ'],
+        [/(?<![\u10A0-\u10FF])ერთმანეთმა\s+დაინახეს(?![ა-ჰ])/g, 'ერთმანეთი დაინახეს'],
+        [/(?<![\u10A0-\u10FF])ერთმანეთმა\s+შეხედეს(?![ა-ჰ])/g, 'ერთმანეთს შეხედეს'],
+        [/(?<![\u10A0-\u10FF])ერთმანეთმა\s+უთხრეს(?![ა-ჰ])/g, 'ერთმანეთს უთხრეს'],
+        [/(?<![\u10A0-\u10FF])ერთმანეთმა\s+გაუგეს(?![ა-ჰ])/g, 'ერთმანეთს გაუგეს'],
+        [/(?<![\u10A0-\u10FF])ერთმანეთმა\s+იპოვეს(?![ა-ჰ])/g, 'ერთმანეთი იპოვეს'],
+    ];
+    for (const [re, repl] of reciprocalFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 30. Optative & Permissive Mood Synthesis (დაე, ნეტავ, იქნებ)
+    const optativeFixes = [
+        [/(?<![\u10A0-\u10FF])(?:ნება\s+მიეცით\s+მას|ნება\s+მიეცით)\s+წავიდეს(?![ა-ჰ])/g, 'დაე წავიდეს'],
+        [/(?<![\u10A0-\u10FF])(?:ნება\s+მიეცით\s+მას|ნება\s+მიეცით)\s+იყოს(?![ა-ჰ])/g, 'დაე იყოს'],
+        [/(?<![\u10A0-\u10FF])მინდა,\s*რომ\s+ვიცოდე(?![ა-ჰ])/g, 'ნეტავ ვიცოდე'],
+        [/(?<![\u10A0-\u10FF])მინდა,\s*რომ\s+შემეძლოს(?![ა-ჰ])/g, 'ნეტავ შემეძლოს'],
+        [/(?<![\u10A0-\u10FF])შესაძლოა\s+მოვიდეს(?![ა-ჰ])/g, 'იქნებ მოვიდეს'],
+        [/(?<![\u10A0-\u10FF])შესაძლოა\s+გაიგოს(?![ა-ჰ])/g, 'იქნებ გაიგოს'],
+    ];
+    for (const [re, repl] of optativeFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 31. Dynamic Action Inchoatives & Ingressives (მოქმედების დაწყების სინთეზური ფორმები)
+    const inchoativeFixes = [
+        [/(?<![\u10A0-\u10FF])დაიწყო\s+სიმღერა(?![ა-ჰ])/g, 'ამღერდა'],
+        [/(?<![\u10A0-\u10FF])დაიწყო\s+ტირილი(?![ა-ჰ])/g, 'ატირდა'],
+        [/(?<![\u10A0-\u10FF])დაიწყო\s+ლაპარაკი(?![ა-ჰ])/g, 'ალაპარაკდა'],
+        [/(?<![\u10A0-\u10FF])დაიწყო\s+ნათება(?![ა-ჰ])/g, 'აენთო'],
+        [/(?<![\u10A0-\u10FF])დაიწყო\s+ფიქრი(?![ა-ჰ])/g, 'დაფიქრდა'],
+        [/(?<![\u10A0-\u10FF])დაიწყო\s+კანკალი(?![ა-ჰ])/g, 'აკანკალდა'],
+        [/(?<![\u10A0-\u10FF])დაიწყო\s+ყვირილი(?![ა-ჰ])/g, 'აყვირდა'],
+    ];
+    for (const [re, repl] of inchoativeFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 32. Deictic Coordinate Binomial Adverbs (ადგილისა და დროის ჩვენებითი ზმნიზედები)
+    const deicticFixes = [
+        [/(?<![\u10A0-\u10FF])აქ\s+და\s+იქ(?![ა-ჰ])/g, 'აქა-იქ'],
+        [/(?<![\u10A0-\u10FF])აქ\s+და\s+იქით(?![ა-ჰ])/g, 'აქეთ-იქით'],
+    ];
+    for (const [re, repl] of deicticFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 33. Correlative & Proportional Degree Subordination (რაც უფრო... მით უფრო...)
+    const proportionalFixes = [
+        [/(?<![\u10A0-\u10FF])უფრო\s+და\s+უფრო\s+მეტი(?![ა-ჰ])/g, 'სულ უფრო მეტი'],
+        [/(?<![\u10A0-\u10FF])უფრო\s+და\s+უფრო\s+ნაკლები(?![ა-ჰ])/g, 'სულ უფრო ნაკლები'],
+        [/(?<![\u10A0-\u10FF])უფრო\s+და\s+უფრო\s+რთული(?![ა-ჰ])/g, 'სულ უფრო რთული'],
+        [/(?<![\u10A0-\u10FF])უფრო\s+და\s+უფრო\s+კარგი(?![ა-ჰ])/g, 'სულ უფრო კარგი'],
+        [/(?<![\u10A0-\u10FF])რაც\s+მეტად,\s*მით\s+მეტად(?![ა-ჰ])/g, 'რაც უფრო, მით უფრო'],
+        [/(?<![\u10A0-\u10FF])რაც\s+უფრო,\s*უფრო(?![ა-ჰ])/g, 'რაც უფრო, მით უფრო'],
+    ];
+    for (const [re, repl] of proportionalFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 34. Typography & Dialogue
     out = out.replace(/(?:^|\n)\s*[-–—]\s*/g, '\n— ');
     out = out.replace(/\s+([.,;:!?])/g, '$1');
 
@@ -10165,15 +10291,20 @@ if (typeof window !== 'undefined') {
     window.KA_QUANTIFIER_SINGULAR_CONCORD = KA_QUANTIFIER_SINGULAR_CONCORD;
     window.KA_HABITUAL_ASPECT_KHOLME = KA_HABITUAL_ASPECT_KHOLME;
     window.KA_CONDITIONAL_MODAL_DECALQUING = KA_CONDITIONAL_MODAL_DECALQUING;
+    window.KA_RECIPROCAL_SYNTAX = KA_RECIPROCAL_SYNTAX;
+    window.KA_OPTATIVE_PERMISSIVE = KA_OPTATIVE_PERMISSIVE;
+    window.KA_INCHOATIVE_INGRESSIVE = KA_INCHOATIVE_INGRESSIVE;
+    window.KA_DEICTIC_BINOMIAL_ADVERBS = KA_DEICTIC_BINOMIAL_ADVERBS;
+    window.KA_CORRELATIVE_PROPORTIONAL = KA_CORRELATIVE_PROPORTIONAL;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.55.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.60.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 162,
-    qaRules: 158,
-    autoFixes: 150,
-    researchSources: 580
+    promptBlocks: 167,
+    qaRules: 163,
+    autoFixes: 155,
+    researchSources: 620
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -10212,6 +10343,11 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_QUANTIFIER_SINGULAR_CONCORD,
         KA_HABITUAL_ASPECT_KHOLME,
         KA_CONDITIONAL_MODAL_DECALQUING,
+        KA_RECIPROCAL_SYNTAX,
+        KA_OPTATIVE_PERMISSIVE,
+        KA_INCHOATIVE_INGRESSIVE,
+        KA_DEICTIC_BINOMIAL_ADVERBS,
+        KA_CORRELATIVE_PROPORTIONAL,
         synthesizeGeorgianMorphology,
         polishGeorgianLiterarySyntax: synthesizeGeorgianMorphology,
         translateOfflineEnToKa,
