@@ -5209,5 +5209,917 @@
       "rustaveli",
       "wisdom"
     ]
+  },
+  {
+    "id": "case-syntax-ka-388",
+    "kind": "autofix",
+    "source": "ნელა და ნელა",
+    "expected": "ნელ-ნელა",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "reduplication"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-389",
+    "kind": "autofix",
+    "source": "ცოტა და ცოტა",
+    "expected": "ცოტ-ცოტა",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "reduplication"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-390",
+    "kind": "autofix",
+    "source": "სწრაფად და სწრაფად",
+    "expected": "სწრაფ-სწრაფად",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "reduplication"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-391",
+    "kind": "autofix",
+    "source": "ბევრჯერ და ბევრჯერ",
+    "expected": "მრავალგზის",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "reduplication"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-392",
+    "kind": "autofix",
+    "source": "ის ნელა და ნელა მიიწევდა წინ.",
+    "expected": "ის ნელ-ნელა მიიწევდა წინ.",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "reduplication"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-393",
+    "kind": "autofix",
+    "source": "წყალი ცოტა და ცოტა იწურებოდა.",
+    "expected": "წყალი ცოტ-ცოტა იწურებოდა.",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "reduplication"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-394",
+    "kind": "autofix",
+    "source": "ცხენოსანი სწრაფად და სწრაფად მიაჭენებდა ცხენს.",
+    "expected": "ცხენოსანი სწრაფ-სწრაფად მიაჭენებდა ცხენს.",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "reduplication"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-395",
+    "kind": "autofix",
+    "source": "მან ბევრჯერ და ბევრჯერ სცადა გამარჯვება.",
+    "expected": "მან მრავალგზის სცადა გამარჯვება.",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "reduplication"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-396",
+    "kind": "autofix",
+    "source": "ნელ-ნელა იფანტებოდა დილის ნისლი.",
+    "expected": "ნელ-ნელა იფანტებოდა დილის ნისლი.",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-397",
+    "kind": "autofix",
+    "source": "მზემ ცოტ-ცოტა გაათბო გაყინული მიწა.",
+    "expected": "მზემ ცოტ-ცოტა გაათბო გაყინული მიწა.",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-398",
+    "kind": "autofix",
+    "source": "გული სწრაფ-სწრაფად უცემდა სიხარულისგან.",
+    "expected": "გული სწრაფ-სწრაფად უცემდა სიხარულისგან.",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-399",
+    "kind": "autofix",
+    "source": "მრავალგზის გამოცდილი მეგობარი არასდროს გიღალატებს.",
+    "expected": "მრავალგზის გამოცდილი მეგობარი არასდროს გიღალატებს.",
+    "weight": 1.0,
+    "tags": [
+      "iterative",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-400",
+    "kind": "autofix",
+    "source": "არისტოტელე: სრულყოფილება არის არა ერთჯერადი ქმედება, არამედ განმეორებადი ჩვევა.",
+    "expected": "არისტოტელე: სრულყოფილება არის არა ერთჯერადი ქმედება, არამედ განმეორებადი ჩვევა.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "aristotle"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-401",
+    "kind": "autofix",
+    "source": "არისტოტელე: ტრაგედია არის სერიოზული, დასრულებული და გარკვეული სიდიდის მქონე მოქმედების მიბაძვა.",
+    "expected": "არისტოტელე: ტრაგედია არის სერიოზული, დასრულებული და გარკვეული სიდიდის მქონე მოქმედების მიბაძვა.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "aristotle"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-402",
+    "kind": "autofix",
+    "source": "არისტოტელე: პოეზია უფრო ფილოსოფიური და სერიოზულია, ვიდრე ისტორია.",
+    "expected": "არისტოტელე: პოეზია უფრო ფილოსოფიური და სერიოზულია, ვიდრე ისტორია.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "aristotle"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-403",
+    "kind": "autofix",
+    "source": "არისტოტელე: ყოველგვარი ხელოვნება და ყოველგვარი კვლევა რაიმე სიკეთისკენ ისწრაფვის.",
+    "expected": "არისტოტელე: ყოველგვარი ხელოვნება და ყოველგვარი კვლევა რაიმე სიკეთისკენ ისწრაფვის.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "aristotle"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-404",
+    "kind": "autofix",
+    "source": "ამ საკითხის შესახებ საუბრის დროს",
+    "expected": "ამ საკითხზე მსჯელობისას",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syncretism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-405",
+    "kind": "autofix",
+    "source": "იმასთან დაკავშირებით, რომ",
+    "expected": "იმის გამო, რომ",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syncretism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-406",
+    "kind": "autofix",
+    "source": "იმ მიზეზით, რომ",
+    "expected": "რადგან",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syncretism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-407",
+    "kind": "autofix",
+    "source": "იმის გამოისობით, რომ",
+    "expected": "ვინაიდან",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syncretism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-408",
+    "kind": "autofix",
+    "source": "რაც შეეხება იმას, რომ",
+    "expected": "რაც შეეხება",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syncretism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-409",
+    "kind": "autofix",
+    "source": "ამ საკითხის შესახებ საუბრის დროს მრავალი ახალი აზრი გაჩნდა.",
+    "expected": "ამ საკითხზე მსჯელობისას მრავალი ახალი აზრი გაჩნდა.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syncretism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-410",
+    "kind": "autofix",
+    "source": "იმასთან დაკავშირებით, რომ დრო ცოტა იყო, გადაწყვეტილება სწრაფად მიიღეს.",
+    "expected": "იმის გამო, რომ დრო ცოტა იყო, გადაწყვეტილება სწრაფად მიიღეს.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syncretism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-411",
+    "kind": "autofix",
+    "source": "იმ მიზეზით, რომ წვიმდა, მგზავრობა გადაიდო.",
+    "expected": "რადგან წვიმდა, მგზავრობა გადაიდო.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syncretism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-412",
+    "kind": "autofix",
+    "source": "იმის გამოისობით, რომ სიმართლე გაირკვა, მშვიდობა დამყარდა.",
+    "expected": "ვინაიდან სიმართლე გაირკვა, მშვიდობა დამყარდა.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syncretism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-413",
+    "kind": "autofix",
+    "source": "რაც შეეხება იმას, რომ საქმე დასრულდა, ყველანი კმაყოფილნი დარჩნენ.",
+    "expected": "რაც შეეხება საქმე დასრულდა, ყველანი კმაყოფილნი დარჩნენ.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "syncretism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-414",
+    "kind": "autofix",
+    "source": "ამ თემაზე მსჯელობისას სიმართლე გამოიკვეთა.",
+    "expected": "ამ თემაზე მსჯელობისას სიმართლე გამოიკვეთა.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-415",
+    "kind": "autofix",
+    "source": "რადგან დრო ამოიწურა, კრება დაიხურა.",
+    "expected": "რადგან დრო ამოიწურა, კრება დაიხურა.",
+    "weight": 1.0,
+    "tags": [
+      "postposition",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-416",
+    "kind": "autofix",
+    "source": "ფრიდრიხ ნიცშე: ვინც ურჩხულებს ებრძვის, უნდა უფრთხილდეს, რომ თვითონაც არ გადაიქცეს ურჩხულად.",
+    "expected": "ფრიდრიხ ნიცშე: ვინც ურჩხულებს ებრძვის, უნდა უფრთხილდეს, რომ თვითონაც არ გადაიქცეს ურჩხულად.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "nietzsche"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-417",
+    "kind": "autofix",
+    "source": "ფრიდრიხ ნიცშე: თუ დიდხანს ჩაჰყურებ უფსკრულს, უფსკრულიც შემოგხედავს შენ.",
+    "expected": "ფრიდრიხ ნიცშე: თუ დიდხანს ჩაჰყურებ უფსკრულს, უფსკრულიც შემოგხედავს შენ.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "nietzsche"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-418",
+    "kind": "autofix",
+    "source": "ფრიდრიხ ნიცშე: რაც არ მკლავს, მაძლიერებს.",
+    "expected": "ფრიდრიხ ნიცშე: რაც არ მკლავს, მაძლიერებს.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "nietzsche"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-419",
+    "kind": "autofix",
+    "source": "ფრიდრიხ ნიცშე: ადამიანში მთავარი ისაა, რომ იგი ხიდია და არა მიზანი.",
+    "expected": "ფრიდრიხ ნიცშე: ადამიანში მთავარი ისაა, რომ იგი ხიდია და არა მიზანი.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "nietzsche"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-420",
+    "kind": "autofix",
+    "source": "კითხვის დროს",
+    "expected": "კითხვისას",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-421",
+    "kind": "autofix",
+    "source": "საუბრის დროს",
+    "expected": "საუბრისას",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-422",
+    "kind": "autofix",
+    "source": "წერის დროს",
+    "expected": "წერისას",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-423",
+    "kind": "autofix",
+    "source": "ფიქრის დროს",
+    "expected": "ფიქრისას",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-424",
+    "kind": "autofix",
+    "source": "დანახვის მომენტში",
+    "expected": "დანახვისთანავე",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb",
+      "anteriority"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-425",
+    "kind": "autofix",
+    "source": "მოსვლის მომენტში",
+    "expected": "მოსვლისთანავე",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb",
+      "anteriority"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-426",
+    "kind": "autofix",
+    "source": "გასვლის მომენტში",
+    "expected": "გასვლისთანავე",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb",
+      "anteriority"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-427",
+    "kind": "autofix",
+    "source": "წიგნის კითხვის დროს ახალი სამყარო გადაიშალა.",
+    "expected": "წიგნის კითხვისას ახალი სამყარო გადაიშალა.",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-428",
+    "kind": "autofix",
+    "source": "საუბრის დროს სიმართლე გამჟღავნდა.",
+    "expected": "საუბრისას სიმართლე გამჟღავნდა.",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-429",
+    "kind": "autofix",
+    "source": "წერილის წერის დროს ცრემლი მოადგა თვალზე.",
+    "expected": "წერილის წერისას ცრემლი მოადგა თვალზე.",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-430",
+    "kind": "autofix",
+    "source": "ღრმა ფიქრის დროს სიჩუმე ჩამოწვა.",
+    "expected": "ღრმა ფიქრისას სიჩუმე ჩამოწვა.",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "converb"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-431",
+    "kind": "autofix",
+    "source": "მტრის დანახვისთანავე მეომრებმა მახვილები იშიშვლეს.",
+    "expected": "მტრის დანახვისთანავე მეომრებმა მახვილები იშიშვლეს.",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-432",
+    "kind": "autofix",
+    "source": "შინისაკენ მიმავალ გზაზე ფიქრებში ჩაიძირა.",
+    "expected": "შინისაკენ მიმავალ გზაზე ფიქრებში ჩაიძირა.",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-433",
+    "kind": "autofix",
+    "source": "ჟან-ჟაკ რუსო: ადამიანი იბადება თავისუფალი, მაგრამ ყველგან მას ბორკილები ადევს.",
+    "expected": "ჟან-ჟაკ რუსო: ადამიანი იბადება თავისუფალი, მაგრამ ყველგან მას ბორკილები ადევს.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "rousseau"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-434",
+    "kind": "autofix",
+    "source": "ჟან-ჟაკ რუსო: მხოლოდ საყოველთაო ნებას ძალუძს სახელმწიფოს ძალების წარმართვა მისი დაფუძნების მიზნის შესაბამისად.",
+    "expected": "ჟან-ჟაკ რუსო: მხოლოდ საყოველთაო ნებას ძალუძს სახელმწიფოს ძალების წარმართვა მისი დაფუძნების მიზნის შესაბამისად.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "rousseau"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-435",
+    "kind": "autofix",
+    "source": "ჟან-ჟაკ რუსო: ბუნებრივ მდგომარეობაში ადამიანი კეთილი და გულუბრყვილოა.",
+    "expected": "ჟან-ჟაკ რუსო: ბუნებრივ მდგომარეობაში ადამიანი კეთილი და გულუბრყვილოა.",
+    "weight": 1.0,
+    "tags": [
+      "philosophy",
+      "rousseau"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-436",
+    "kind": "autofix",
+    "source": "გიორგიმ, თავდადებული მეომარი,",
+    "expected": "გიორგიმ, თავდადებულმა მეომარმა,",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "concord",
+      "ergative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-437",
+    "kind": "autofix",
+    "source": "მეფემ, ბრძენი მმართველი,",
+    "expected": "მეფემ, ბრძენმა მმართველმა,",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "concord",
+      "ergative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-438",
+    "kind": "autofix",
+    "source": "ავტორმა, ცნობილი მეცნიერი,",
+    "expected": "ავტორმა, ცნობილმა მეცნიერმა,",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "concord",
+      "ergative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-439",
+    "kind": "autofix",
+    "source": "შოთამ, დიდებული პოეტი,",
+    "expected": "შოთამ, დიდებულმა პოეტმა,",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "concord",
+      "ergative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-440",
+    "kind": "autofix",
+    "source": "გიორგიმ, თავდადებული მეომარი, დაამარცხა მტერი.",
+    "expected": "გიორგიმ, თავდადებულმა მეომარმა, დაამარცხა მტერი.",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "concord",
+      "ergative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-441",
+    "kind": "autofix",
+    "source": "მეფემ, ბრძენი მმართველი, გამოსცა ბრძანება.",
+    "expected": "მეფემ, ბრძენმა მმართველმა, გამოსცა ბრძანება.",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "concord",
+      "ergative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-442",
+    "kind": "autofix",
+    "source": "ავტორმა, ცნობილი მეცნიერი, დაწერა ახალი წიგნი.",
+    "expected": "ავტორმა, ცნობილმა მეცნიერმა, დაწერა ახალი წიგნი.",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "concord",
+      "ergative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-443",
+    "kind": "autofix",
+    "source": "შოთამ, დიდებული პოეტი, შექმნა უკვდავი პოემა.",
+    "expected": "შოთამ, დიდებულმა პოეტმა, შექმნა უკვდავი პოემა.",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "concord",
+      "ergative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-444",
+    "kind": "autofix",
+    "source": "დავითმა, ძლევამოსილმა ხელმწიფემ, გააერთიანა სამეფო.",
+    "expected": "დავითმა, ძლევამოსილმა ხელმწიფემ, გააერთიანა სამეფო.",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-445",
+    "kind": "autofix",
+    "source": "თამარმა, მნათობმა დედოფალმა, აღამაღლა ქვეყნის დიდება.",
+    "expected": "თამარმა, მნათობმა დედოფალმა, აღამაღლა ქვეყნის დიდება.",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-446",
+    "kind": "autofix",
+    "source": "ოსტატმა, გამოცდილმა მშენებელმა, ააგო ციხესიმაგრე.",
+    "expected": "ოსტატმა, გამოცდილმა მშენებელმა, ააგო ციხესიმაგრე.",
+    "weight": 1.0,
+    "tags": [
+      "appositive",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-447",
+    "kind": "autofix",
+    "source": "ალექსანდრე ყაზბეგი: მთამ არ იცის სხვა ბატონი, გარდა ცის თავისუფლებისა.",
+    "expected": "ალექსანდრე ყაზბეგი: მთამ არ იცის სხვა ბატონი, გარდა ცის თავისუფლებისა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "kazbegi"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-448",
+    "kind": "autofix",
+    "source": "ალექსანდრე ყაზბეგი: თავისუფლება მთიელის უპირველესი სუნთქვა და სიცოცხლეა.",
+    "expected": "ალექსანდრე ყაზბეგი: თავისუფლება მთიელის უპირველესი სუნთქვა და სიცოცხლეა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "kazbegi"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-449",
+    "kind": "autofix",
+    "source": "ილია ჭავჭავაძე: განდეგილი ლოცულობდა მიუვალ მყინვარზე მთელი ქვეყნის ცოდვების გამოსასყიდად.",
+    "expected": "ილია ჭავჭავაძე: განდეგილი ლოცულობდა მიუვალ მყინვარზე მთელი ქვეყნის ცოდვების გამოსასყიდად.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "ilia",
+      "gandegili"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-450",
+    "kind": "autofix",
+    "source": "ვაჟა-ფშაველა: მინდიამ გაიგო ბალახთა და ხეთა საიდუმლო ენა.",
+    "expected": "ვაჟა-ფშაველა: მინდიამ გაიგო ბალახთა და ხეთა საიდუმლო ენა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "vazha",
+      "mvidia"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-451",
+    "kind": "autofix",
+    "source": "გალაკტიონ ტაბიძე: დაე მკრთალმა მთვარემ გაანათოს მყუდრო ხეობა.",
+    "expected": "გალაკტიონ ტაბიძე: დაე მკრთალმა მთვარემ გაანათოს მყუდრო ხეობა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "galaktion",
+      "poetry"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-452",
+    "kind": "autofix",
+    "source": "მიუხედავად იმისა, რომ გვიან იყო,",
+    "expected": "თუმცა გვიან იყო,",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "subordination"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-453",
+    "kind": "autofix",
+    "source": "მიუხედავად იმისა, რომ რთული იყო,",
+    "expected": "თუმცა რთული იყო,",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "subordination"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-454",
+    "kind": "autofix",
+    "source": "იმის მიუხედავად, რომ",
+    "expected": "თუმცა",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "subordination"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-455",
+    "kind": "autofix",
+    "source": "თუნდაც რომ მოვიდეს",
+    "expected": "თუნდაც მოვიდეს",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "subordination"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-456",
+    "kind": "autofix",
+    "source": "თუნდაც რომ გააკეთოს",
+    "expected": "თუნდაც გააკეთოს",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "subordination"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-457",
+    "kind": "autofix",
+    "source": "მიუხედავად იმისა, რომ გვიან იყო, მგზავრი მაინც გაუდგა გზას.",
+    "expected": "თუმცა გვიან იყო, მგზავრი მაინც გაუდგა გზას.",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "subordination"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-458",
+    "kind": "autofix",
+    "source": "მიუხედავად იმისა, რომ რთული იყო, საქმე წარმატებით დასრულდა.",
+    "expected": "თუმცა რთული იყო, საქმე წარმატებით დასრულდა.",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "subordination"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-459",
+    "kind": "autofix",
+    "source": "თუნდაც რომ მოვიდეს მტერი, ჩვენ არ შევუშინდებით.",
+    "expected": "თუნდაც მოვიდეს მტერი, ჩვენ არ შევუშინდებით.",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "subordination"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-460",
+    "kind": "autofix",
+    "source": "თუნდაც რომ გააკეთოს შეცდომა, გამოცდილებას შეიძენს.",
+    "expected": "თუნდაც გააკეთოს შეცდომა, გამოცდილებას შეიძენს.",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "subordination"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-461",
+    "kind": "autofix",
+    "source": "თუმცა ქარი მძვინვარებდა, გემი მაინც წინ მიიწევდა.",
+    "expected": "თუმცა ქარი მძვინვარებდა, გემი მაინც წინ მიიწევდა.",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-462",
+    "kind": "autofix",
+    "source": "მართალია გზა გრძელი იყო, მაგრამ მიზანი მიღწეულ იქნა ღირსეულად.",
+    "expected": "მართალია გზა გრძელი იყო, მაგრამ მიზანი მიღწეულ იქნა ღირსეულად.",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-463",
+    "kind": "autofix",
+    "source": "თუნდაც მთელი ქვეყანა აღსდგეს, სიმართლე მაინც გაიმარჯვებს.",
+    "expected": "თუნდაც მთელი ქვეყანა აღსდგეს, სიმართლე მაინც გაიმარჯვებს.",
+    "weight": 1.0,
+    "tags": [
+      "concessive",
+      "literature",
+      "preservation"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-464",
+    "kind": "autofix",
+    "source": "გალაკტიონ ტაბიძე: მთაწმინდის მთვარე მშვიდად დასცქერის მძინარე თბილისს.",
+    "expected": "გალაკტიონ ტაბიძე: მთაწმინდის მთვარე მშვიდად დასცქერის მძინარე თბილისს.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "galaktion",
+      "mtatsminda"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-465",
+    "kind": "autofix",
+    "source": "აკაკი შანიძე: ქართული ზმნის მრავალპირიანობა და სუბიექტურ-ობიექტური შეთანხმება მსოფლიო ენათა საგანძურია.",
+    "expected": "აკაკი შანიძე: ქართული ზმნის მრავალპირიანობა და სუბიექტურ-ობიექტური შეთანხმება მსოფლიო ენათა საგანძურია.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "shanidze",
+      "polypersonalism"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-466",
+    "kind": "autofix",
+    "source": "არნოლდ ჩიქობავა: იბერიულ-კავკასიური ენათმეცნიერების შესწავლა ავლენს ენის უძველეს სინთეზურ სტრუქტურას.",
+    "expected": "არნოლდ ჩიქობავა: იბერიულ-კავკასიური ენათმეცნიერების შესწავლა ავლენს ენის უძველეს სინთეზურ სტრუქტურას.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "chikobava",
+      "structure"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-467",
+    "kind": "autofix",
+    "source": "შოთა რუსთაველი: ბოროტსა სძლია კეთილმან, არსება მისი გრძელია.",
+    "expected": "შოთა რუსთაველი: ბოროტსა სძლია კეთილმან, არსება მისი გრძელია.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "rustaveli",
+      "eternal"
+    ]
   }
 ]

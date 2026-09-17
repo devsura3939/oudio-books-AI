@@ -441,6 +441,22 @@ OFFLINE_LITERARY_EXEMPLARS = [
      "წუთისოფელი ჩრდილივით წარმავალია, მხოლოდ სათნოება რჩება მარადიულად."),
     (r"the history of a nation is the mirror of its spiritual life and culture\.?",
      "ერის ისტორია მისი სულიერი ცხოვრებისა და კულტურის სარკეა."),
+    (r"tragedy is an imitation of an action that is serious,? complete,? and of a certain magnitude\.?",
+     "ტრაგედია არის სერიოზული, დასრულებული და გარკვეული სიდიდის მქონე მოქმედების მიბაძვა."),
+    (r"through pity and fear it accomplishes the catharsis of such emotions\.?",
+     "თანაგრძნობისა და შიშის მეშვეობით იგი ახდენს მსგავს ემოციათა კათარზისს."),
+    (r"man is a rope,? tied between beast and ubermensch - a rope over an abyss\.?",
+     "ადამიანი არის თოკი, გაბმული მხეცსა და ზეკაცს შორის — თოკი უფსკრულზე."),
+    (r"my formula for greatness in a human being is amor fati\.?",
+     "ჩემი ფორმულა ადამიანში სიდიადისთვის არის ამორ ფატი — საკუთარი ბედისწერის სიყვარული."),
+    (r"man is born free,? and everywhere he is in chains\.?",
+     "ადამიანი იბადება თავისუფალი, მაგრამ ყველგან მას ბორკილები ადევს."),
+    (r"the general will alone can direct the forces of the state according to the object of its institution\.?",
+     "მხოლოდ საყოველთაო ნებას ძალუძს სახელმწიფოს ძალების წარმართვა მისი დაფუძნების მიზნის შესაბამისად."),
+    (r"the mountain knows no master except the freedom of the sky\.?",
+     "მთამ არ იცის სხვა ბატონი, გარდა ცის თავისუფლებისა."),
+    (r"let the pale moon shine over the quiet valley\.?",
+     "დაე მკრთალმა მთვარემ გაანათოს მყუდრო ხეობა."),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),
@@ -636,6 +652,11 @@ def translate_with_gemini(
                 "28. SYNTHETIC INCHOATIVES: Express inception of action with synthetic preverbs ('ამღერდა', 'ატირდა', 'ალაპარაკდა', 'აენთო', 'დაფიქრდა') instead of '*დაიწყო სიმღერა/ტირილი'.\n"
                 "29. DEICTIC COORDINATE ADVERBS: Use authentic binominal adverbs ('აქეთ-იქით', 'აქა-იქ', 'წინ და უკან', 'დღეიდან მოყოლებული') instead of '*აქ და იქ'.\n"
                 "30. CORRELATIVE DEGREE: Use correlative structures 'რაც უფრო... მით უფრო...' and 'სულ უფრო მეტი' instead of '*უფრო და უფრო მეტი'.\n"
+                "31. ITERATIVE REDUPLICATION: Use canonical hyphenated reduplication ('ნელ-ნელა', 'ცოტ-ცოტა', 'სწრაფ-სწრაფად', 'მრავალგზის') instead of analytical '*ნელა და ნელა'.\n"
+                "32. POSTPOSITION SYNCRETISM: Avoid stacked bureaucratic postpositions ('*ამ საკითხის შესახებ საუბრის დროს' -> 'ამ საკითხზე მსჯელობისას', '*იმასთან დაკავშირებით, რომ' -> 'იმის გამო, რომ').\n"
+                "33. SYNTHETIC TEMPORAL CONVERBS: Use synthetic converbs in '-ას' / '-ისას' ('კითხვისას', 'საუბრისას', 'წერისას', 'ფიქრისას', 'დანახვისთანავე') instead of clunky subordinate clauses with 'დროს' or 'მომენტში'.\n"
+                "34. APPOSITIVE CASE CONCORD: Postposed appositives and determinatives must agree in case with the head noun ('გიორგიმ, თავდადებულმა მეომარმა,', 'მეფემ, ბრძენმა მმართველმა,').\n"
+                "35. CONCESSIVE SYNTHESIS: Use authentic Kartvelian concessive markers ('თუმცა', 'მართალია... მაგრამ', 'თუნდაც') instead of heavy Russian calques like '*მიუხედავად იმისა, რომ'.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -729,6 +750,11 @@ def translate_with_kona(
                 "29. SYNTHETIC INCHOATIVES: Express inception of action with synthetic preverbs ('ამღერდა', 'ატირდა', 'ალაპარაკდა', 'აენთო', 'დაფიქრდა') instead of '*დაიწყო სიმღერა/ტირილი'.\n"
                 "30. DEICTIC COORDINATE ADVERBS: Use authentic binominal adverbs ('აქეთ-იქით', 'აქა-იქ', 'წინ და უკან', 'დღეიდან მოყოლებული') instead of '*აქ და იქ'.\n"
                 "31. CORRELATIVE DEGREE: Use correlative structures 'რაც უფრო... მით უფრო...' and 'სულ უფრო მეტი' instead of '*უფრო და უფრო მეტი'.\n"
+                "32. ITERATIVE REDUPLICATION: Use canonical hyphenated reduplication ('ნელ-ნელა', 'ცოტ-ცოტა', 'სწრაფ-სწრაფად', 'მრავალგზის') instead of analytical '*ნელა და ნელა'.\n"
+                "33. POSTPOSITION SYNCRETISM: Avoid stacked bureaucratic postpositions ('*ამ საკითხის შესახებ საუბრის დროს' -> 'ამ საკითხზე მსჯელობისას', '*იმასთან დაკავშირებით, რომ' -> 'იმის გამო, რომ').\n"
+                "34. SYNTHETIC TEMPORAL CONVERBS: Use synthetic converbs in '-ას' / '-ისას' ('კითხვისას', 'საუბრისას', 'წერისას', 'ფიქრისას', 'დანახვისთანავე') instead of clunky subordinate clauses with 'დროს' or 'მომენტში'.\n"
+                "35. APPOSITIVE CASE CONCORD: Postposed appositives and determinatives must agree in case with the head noun ('გიორგიმ, თავდადებულმა მეომარმა,', 'მეფემ, ბრძენმა მმართველმა,').\n"
+                "36. CONCESSIVE SYNTHESIS: Use authentic Kartvelian concessive markers ('თუმცა', 'მართალია... მაგრამ', 'თუნდაც') instead of heavy Russian calques like '*მიუხედავად იმისა, რომ'.\n"
                 "Output ONLY the Georgian translation."
             )
             user_parts = []

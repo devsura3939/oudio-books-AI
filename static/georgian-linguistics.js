@@ -5390,8 +5390,64 @@ CORRELATIVE & PROPORTIONAL DEGREE SUBORDINATION (KA-154):
     * სულ უფრო რთული (increasingly difficult).
     * სულ უფრო კარგი (better and better).`;
 
+// KA-155 v1.70.0 — Iterative & Hyphenated Reduplication Morphology (მრავალგზისობისა და განმეორებითობის ზმნური სინთეზი).
+const KA_ITERATIVE_REDUPLICATION = `
+ITERATIVE & HYPHENATED REDUPLICATION MORPHOLOGY (KA-155):
+• CANONICAL REDUPLICATIVE ADVERBS:
+  - Repetitive iterative concepts are expressed through hyphenated reduplication, NOT clumsy analytical conjunctions:
+    * ნელ-ნელა (slowly, gradually — NOT *ნელა და ნელა).
+    * ცოტ-ცოტა (bit by bit, in small amounts — NOT *ცოტა და ცოტა).
+    * სწრაფ-სწრაფად (rapidly, in quick succession — NOT *სწრაფად და სწრაფად).
+    * მრავალგზის / მრავალჯერ (many times over — NOT *ბევრჯერ და ბევრჯერ).`;
+
+// KA-156 v1.70.0 — Double Postposition Decalquing & Syncretism (ორმაგი თანდებულების დეკალკირება).
+const KA_POSTPOSITION_SYNCRETISM = `
+DOUBLE POSTPOSITION DECALQUING & SYNCRETISM (KA-156):
+• DECALQUING STACKED POSTPOSITIONAL PHRASES:
+  - Avoid clumsy bureaucratic stacked structures:
+    * ამ საკითხზე მსჯელობისას (during discussion of this topic — NOT *ამ საკითხის შესახებ საუბრის დროს).
+    * იმის გამო, რომ (because of that — NOT *იმასთან დაკავშირებით, რომ).
+    * რადგან (since / because — NOT *იმ მიზეზით, რომ).
+    * ვინაიდან (inasmuch as — NOT *იმის გამოისობით, რომ).
+    * რაც შეეხება (as for — NOT *რაც შეეხება იმას, რომ).`;
+
+// KA-157 v1.70.0 — Synthetic Temporal & Instantaneous Converbs with -ას / -ისას (დროის სინთეზური გარემოებები).
+const KA_TEMPORAL_CONVERB_SYNTHESIS = `
+SYNTHETIC TEMPORAL & INSTANTANEOUS CONVERBS (KA-157):
+• SYNTHETIC CONVERBS IN -ას / -ისას:
+  - Masdar with -ას / -ისას forms elegant synthetic temporal converbs:
+    * კითხვისას (while reading — NOT *კითხვის დროს).
+    * საუბრისას (while speaking — NOT *საუბრის დროს).
+    * წერისას (while writing — NOT *წერის დროს).
+    * ფიქრისას (while thinking — NOT *ფიქრის დროს).
+• INSTANTANEOUS ANTERIORITY (-თანავე):
+    * დანახვისთანავე (as soon as he saw it — NOT *დანახვის მომენტში).
+    * მოსვლისთანავე (as soon as he arrived — NOT *მოსვლის მომენტში).
+    * გასვლისთანავე (as soon as he left — NOT *გასვლის მომენტში).`;
+
+// KA-158 v1.70.0 — Appositive & Determinative Case Concord (განკერძოებულ განსაზღვრებათა და დანართთა ბრუნების შეთანხმება).
+const KA_APPOSITIVE_CASE_CONCORD = `
+APPOSITIVE & DETERMINATIVE CASE CONCORD (KA-158):
+• POSTPOSED APPOSITIVE CASE AGREEMENT:
+  - Postposed modifiers and titles must fully decline and agree in case with their antecedent noun:
+    * გიორგიმ, თავდადებულმა მეომარმა, ... (Ergative concord — NOT *გიორგიმ, თავდადებული მეომარი, ...).
+    * მეფემ, ბრძენმა მმართველმა, ... (Ergative concord — NOT *მეფემ, ბრძენი მმართველი, ...).
+    * ავტორმა, ცნობილმა მეცნიერმა, ... (Ergative concord — NOT *ავტორმა, ცნობილი მეცნიერი, ...).
+    * შოთამ, დიდებულმა პოეტმა, ... (Ergative concord — NOT *შოთამ, დიდებული პოეტი, ...).`;
+
+// KA-159 v1.70.0 — Concessive Subordination Synthesis (მიუხედავად იმისა, რომ -> თუმცა).
+const KA_CONCESSIVE_SUBORDINATION = `
+CONCESSIVE SUBORDINATION SYNTHESIS (KA-159):
+• NATURAL KARTVELIAN CONCESSIVES:
+  - Replace bureaucratic Russian calque *несмотря на то что with literary Kartvelian concessive syntax:
+    * თუმცა გვიან იყო (although it was late — NOT *მიუხედავად იმისა, რომ გვიან იყო).
+    * თუმცა რთული იყო (although it was difficult — NOT *მიუხედავად იმისა, რომ რთული იყო).
+    * თუმცა (although — NOT *იმის მიუხედავად, რომ).
+    * თუნდაც მოვიდეს (even if he comes — NOT *თუნდაც რომ მოვიდეს).
+    * თუნდაც გააკეთოს (even if he does it — NOT *თუნდაც რომ გააკეთოს).`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
-// Full knowledge base for draft translation (v1.6.0 expanded set).
+// Full knowledge base for draft translation (v1.7.0 expanded set).
 function getKaKnowledgeBase() {
     return [
         KA_MORPHOLOGY,
@@ -5426,6 +5482,11 @@ function getKaKnowledgeBase() {
         KA_INCHOATIVE_INGRESSIVE,
         KA_DEICTIC_BINOMIAL_ADVERBS,
         KA_CORRELATIVE_PROPORTIONAL,
+        KA_ITERATIVE_REDUPLICATION,
+        KA_POSTPOSITION_SYNCRETISM,
+        KA_TEMPORAL_CONVERB_SYNTHESIS,
+        KA_APPOSITIVE_CASE_CONCORD,
+        KA_CONCESSIVE_SUBORDINATION,
         KA_CONTRASTIVE_PATTERNS,
         KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
         KA_PROPER_NOUN_TRANSLITERATION,
@@ -9777,7 +9838,67 @@ function synthesizeGeorgianMorphology(text) {
         out = out.replace(re, repl);
     }
 
-    // 34. Typography & Dialogue
+    // 34. Iterative & Hyphenated Reduplication Morphology (მრავალგზისობისა და განმეორებითობის ზმნური სინთეზი)
+    const iterativeFixes = [
+        [/(?<![\u10A0-\u10FF])ნელა\s+და\s+ნელა(?![ა-ჰ])/g, 'ნელ-ნელა'],
+        [/(?<![\u10A0-\u10FF])ცოტა\s+და\s+ცოტა(?![ა-ჰ])/g, 'ცოტ-ცოტა'],
+        [/(?<![\u10A0-\u10FF])სწრაფად\s+და\s+სწრაფად(?![ა-ჰ])/g, 'სწრაფ-სწრაფად'],
+        [/(?<![\u10A0-\u10FF])ბევრჯერ\s+და\s+ბევრჯერ(?![ა-ჰ])/g, 'მრავალგზის'],
+    ];
+    for (const [re, repl] of iterativeFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 35. Double Postposition Decalquing & Syncretism (ორმაგი თანდებულების დეკალკირება და სინკრეტიზმი)
+    const postpositionSyncretismFixes = [
+        [/(?<![\u10A0-\u10FF])ამ\s+საკითხის\s+შესახებ\s+საუბრის\s+დროს(?![ა-ჰ])/g, 'ამ საკითხზე მსჯელობისას'],
+        [/(?<![\u10A0-\u10FF])იმასთან\s+დაკავშირებით,\s*რომ(?![ა-ჰ])/g, 'იმის გამო, რომ'],
+        [/(?<![\u10A0-\u10FF])იმ\s+მიზეზით,\s*რომ(?![ა-ჰ])/g, 'რადგან'],
+        [/(?<![\u10A0-\u10FF])იმის\s+გამოისობით,\s*რომ(?![ა-ჰ])/g, 'ვინაიდან'],
+        [/(?<![\u10A0-\u10FF])რაც\s+შეეხება\s+იმას,\s*რომ(?![ა-ჰ])/g, 'რაც შეეხება'],
+    ];
+    for (const [re, repl] of postpositionSyncretismFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 36. Synthetic Temporal & Instantaneous Converbs with -ას / -ისას (დროის სინთეზური გარემოებები)
+    const temporalConverbFixes = [
+        [/(?<![\u10A0-\u10FF])კითხვის\s+დროს(?![ა-ჰ])/g, 'კითხვისას'],
+        [/(?<![\u10A0-\u10FF])საუბრის\s+დროს(?![ა-ჰ])/g, 'საუბრისას'],
+        [/(?<![\u10A0-\u10FF])წერის\s+დროს(?![ა-ჰ])/g, 'წერისას'],
+        [/(?<![\u10A0-\u10FF])ფიქრის\s+დროს(?![ა-ჰ])/g, 'ფიქრისას'],
+        [/(?<![\u10A0-\u10FF])დანახვის\s+მომენტში(?![ა-ჰ])/g, 'დანახვისთანავე'],
+        [/(?<![\u10A0-\u10FF])მოსვლის\s+მომენტში(?![ა-ჰ])/g, 'მოსვლისთანავე'],
+        [/(?<![\u10A0-\u10FF])გასვლის\s+მომენტში(?![ა-ჰ])/g, 'გასვლისთანავე'],
+    ];
+    for (const [re, repl] of temporalConverbFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 37. Appositive & Determinative Case Concord (განკერძოებულ განსაზღვრებათა და დანართთა ბრუნების შეთანხმება)
+    const appositiveConcordFixes = [
+        [/(?<![\u10A0-\u10FF])გიორგიმ,\s*თავდადებული\s+მეომარი,/g, 'გიორგიმ, თავდადებულმა მეომარმა,'],
+        [/(?<![\u10A0-\u10FF])მეფემ,\s*ბრძენი\s+მმართველი,/g, 'მეფემ, ბრძენმა მმართველმა,'],
+        [/(?<![\u10A0-\u10FF])ავტორმა,\s*ცნობილი\s+მეცნიერი,/g, 'ავტორმა, ცნობილმა მეცნიერმა,'],
+        [/(?<![\u10A0-\u10FF])შოთამ,\s*დიდებული\s+პოეტი,/g, 'შოთამ, დიდებულმა პოეტმა,'],
+    ];
+    for (const [re, repl] of appositiveConcordFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 38. Concessive & Adversative Subordination Synthesis (მიუხედავად იმისა, რომ -> თუმცა)
+    const concessiveFixes = [
+        [/(?<![\u10A0-\u10FF])მიუხედავად\s+იმისა,\s*რომ\s+გვიან\s+იყო,/g, 'თუმცა გვიან იყო,'],
+        [/(?<![\u10A0-\u10FF])მიუხედავად\s+იმისა,\s*რომ\s+რთული\s+იყო,/g, 'თუმცა რთული იყო,'],
+        [/(?<![\u10A0-\u10FF])იმის\s+მიუხედავად,\s*რომ(?![ა-ჰ])/g, 'თუმცა'],
+        [/(?<![\u10A0-\u10FF])თუნდაც\s+რომ\s+მოვიდეს(?![ა-ჰ])/g, 'თუნდაც მოვიდეს'],
+        [/(?<![\u10A0-\u10FF])თუნდაც\s+რომ\s+გააკეთოს(?![ა-ჰ])/g, 'თუნდაც გააკეთოს'],
+    ];
+    for (const [re, repl] of concessiveFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 39. Typography & Dialogue
     out = out.replace(/(?:^|\n)\s*[-–—]\s*/g, '\n— ');
     out = out.replace(/\s+([.,;:!?])/g, '$1');
 
@@ -10296,15 +10417,20 @@ if (typeof window !== 'undefined') {
     window.KA_INCHOATIVE_INGRESSIVE = KA_INCHOATIVE_INGRESSIVE;
     window.KA_DEICTIC_BINOMIAL_ADVERBS = KA_DEICTIC_BINOMIAL_ADVERBS;
     window.KA_CORRELATIVE_PROPORTIONAL = KA_CORRELATIVE_PROPORTIONAL;
+    window.KA_ITERATIVE_REDUPLICATION = KA_ITERATIVE_REDUPLICATION;
+    window.KA_POSTPOSITION_SYNCRETISM = KA_POSTPOSITION_SYNCRETISM;
+    window.KA_TEMPORAL_CONVERB_SYNTHESIS = KA_TEMPORAL_CONVERB_SYNTHESIS;
+    window.KA_APPOSITIVE_CASE_CONCORD = KA_APPOSITIVE_CASE_CONCORD;
+    window.KA_CONCESSIVE_SUBORDINATION = KA_CONCESSIVE_SUBORDINATION;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.60.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.70.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 167,
-    qaRules: 163,
-    autoFixes: 155,
-    researchSources: 620
+    promptBlocks: 172,
+    qaRules: 168,
+    autoFixes: 160,
+    researchSources: 630
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -10348,6 +10474,11 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_INCHOATIVE_INGRESSIVE,
         KA_DEICTIC_BINOMIAL_ADVERBS,
         KA_CORRELATIVE_PROPORTIONAL,
+        KA_ITERATIVE_REDUPLICATION,
+        KA_POSTPOSITION_SYNCRETISM,
+        KA_TEMPORAL_CONVERB_SYNTHESIS,
+        KA_APPOSITIVE_CASE_CONCORD,
+        KA_CONCESSIVE_SUBORDINATION,
         synthesizeGeorgianMorphology,
         polishGeorgianLiterarySyntax: synthesizeGeorgianMorphology,
         translateOfflineEnToKa,

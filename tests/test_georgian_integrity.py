@@ -112,7 +112,7 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             ("მისტერ რუმფოარდმა უპასუხა.", "მისტერ რამფორდმა უპასუხა."),
             ("რუმფოორდი იდგა დარბაზში.", "რამფორდი იდგა დარბაზში."),
             ("უინსონ ნიილის რუმფოორდი", "უინსტონ ნაილს რამფორდი"),
-            ("რუმფორდთან საუბრის დროს", "რამფორდთან საუბრის დროს")
+            ("რუმფორდთან საუბრის დროს", "რამფორდთან საუბრისას")
         ]
         for raw, expected in variants:
             polished = synthesize_georgian_morphology(raw)
@@ -123,7 +123,7 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         cases = [
             ("— მალაქჩის მუდმივი", "— მალაქი კონსტანტი"),
             ("მუდმივი Constant-ის მიერ", "კონსტანტის მიერ"),
-            ("მუდმივთან საუბრის დროს", "კონსტანტთან საუბრის დროს"),
+            ("მუდმივთან საუბრის დროს", "კონსტანტთან საუბრისას"),
             ("მუდმივი, რომელიც რამფორდთან საუბრობდა", "კონსტანტი, რომელიც რამფორდთან საუბრობდა"),
             ("რა მუდმივი ჰქონდა გონებაში", "რა ჰქონდა კონსტანტს გონებაში")
         ]
@@ -199,9 +199,9 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 500, "Expected at least 500 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 530, "Expected at least 530 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 34, "Active pack version must be at least 34")
+        self.assertGreaterEqual(len(cases), 580, "Expected at least 580 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 620, "Expected at least 620 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 36, "Active pack version must be at least 36")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
@@ -552,6 +552,65 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         for raw, expected in pairs:
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Correlative/proportional degree failed for '{raw}': got '{polished}'")
+
+    def test_33_iterative_reduplication_morphology(self):
+        """Verify iterative and hyphenated reduplicative morphology replacing analytical conjunctions."""
+        pairs = [
+            ("ნელა და ნელა", "ნელ-ნელა"),
+            ("ცოტა და ცოტა", "ცოტ-ცოტა"),
+            ("სწრაფად და სწრაფად", "სწრაფ-სწრაფად"),
+            ("ბევრჯერ და ბევრჯერ", "მრავალგზის"),
+            ("ის ნელა და ნელა მიიწევდა წინ.", "ის ნელ-ნელა მიიწევდა წინ."),
+            ("მან ბევრჯერ და ბევრჯერ სცადა გამარჯვება.", "მან მრავალგზის სცადა გამარჯვება."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Iterative morphology failed for '{raw}': got '{polished}'")
+
+    def test_34_double_postposition_syncretism(self):
+        """Verify double postposition decalquing and synthetic case governance."""
+        pairs = [
+            ("ამ საკითხის შესახებ საუბრის დროს", "ამ საკითხზე მსჯელობისას"),
+            ("იმასთან დაკავშირებით, რომ", "იმის გამო, რომ"),
+            ("იმ მიზეზით, რომ", "რადგან"),
+            ("იმის გამოისობით, რომ", "ვინაიდან"),
+            ("რაც შეეხება იმას, რომ", "რაც შეეხება"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Postposition syncretism failed for '{raw}': got '{polished}'")
+
+    def test_35_synthetic_temporal_converbs(self):
+        """Verify synthetic temporal and instantaneous converbs (-ას / -ისას / -თანავე)."""
+        pairs = [
+            ("კითხვის დროს", "კითხვისას"),
+            ("საუბრის დროს", "საუბრისას"),
+            ("წერის დროს", "წერისას"),
+            ("ფიქრის დროს", "ფიქრისას"),
+            ("დანახვის მომენტში", "დანახვისთანავე"),
+            ("მოსვლის მომენტში", "მოსვლისთანავე"),
+            ("გასვლის მომენტში", "გასვლისთანავე"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Temporal converb failed for '{raw}': got '{polished}'")
+
+    def test_36_appositive_concord_and_concessive_synthesis(self):
+        """Verify appositive case concord and synthetic concessive subordination."""
+        pairs = [
+            ("გიორგიმ, თავდადებული მეომარი, დაამარცხა მტერი.", "გიორგიმ, თავდადებულმა მეომარმა, დაამარცხა მტერი."),
+            ("მეფემ, ბრძენი მმართველი, გამოსცა ბრძანება.", "მეფემ, ბრძენმა მმართველმა, გამოსცა ბრძანება."),
+            ("ავტორმა, ცნობილი მეცნიერი, დაწერა ახალი წიგნი.", "ავტორმა, ცნობილმა მეცნიერმა, დაწერა ახალი წიგნი."),
+            ("შოთამ, დიდებული პოეტი, შექმნა პოემა.", "შოთამ, დიდებულმა პოეტმა, შექმნა პოემა."),
+            ("მიუხედავად იმისა, რომ გვიან იყო, წავედით.", "თუმცა გვიან იყო, წავედით."),
+            ("მიუხედავად იმისა, რომ რთული იყო, შევძელით.", "თუმცა რთული იყო, შევძელით."),
+            ("იმის მიუხედავად, რომ", "თუმცა"),
+            ("თუნდაც რომ მოვიდეს", "თუნდაც მოვიდეს"),
+            ("თუნდაც რომ გააკეთოს", "თუნდაც გააკეთოს"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Appositive/concessive failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":
