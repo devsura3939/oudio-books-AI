@@ -361,6 +361,30 @@ OFFLINE_LITERARY_EXEMPLARS = [
      "ნუ ტირი წარსულზე, იბრძოლე მომავლისთვის!"),
     (r"do not surrender to despair!?|do not surrender to despair\.?",
      "ნუ დანებდები სასოწარკვეთას!"),
+    (r"words without wisdom are like food without salt\.?",
+     "უსიბრძნო სიტყვა უმარილო საჭმელს ჰგავს."),
+    (r"truth is a sword that cuts through all deception\.?",
+     "ჭეშმარიტება მახვილია, რომელიც ყოველგვარ სიცრუეს კვეთს."),
+    (r"a wise man builds a bridge where a fool builds a wall\.?",
+     "ბრძენი ხიდს აშენებს იქ, სადაც სულელი კედელს აღმართავს."),
+    (r"he who seeks only his own benefit will lose the love of his brothers\.?",
+     "ვინც მხოლოდ საკუთარ სარგებელს ეძებს, ძმათა სიყვარულს დაკარგავს."),
+    (r"the great master built a cathedral of eternal stone\.?",
+     "დიდოსტატმა მარადიული ქვის ტაძარი ააშენა."),
+    (r"only art can triumph over time and mortality\.?",
+     "მხოლოდ ხელოვნებას ძალუძს სძლიოს დროსა და მოკვდავებას."),
+    (r"we suffer more often in imagination than in reality\.?",
+     "ჩვენ უფრო ხშირად წარმოსახვაში ვიტანჯებით, ვიდრე სინამდვილეში."),
+    (r"he is a wise man who does not grieve for the things which he has not,? but rejoices for those which he has\.?",
+     "ბრძენია ის, ვინც არ გლოვობს იმას, რაც არ გააჩნია, არამედ ხარობს იმით, რაც აქვს."),
+    (r"the most certain sign of wisdom is cheerfulness\.?",
+     "სიბრძნის ყველაზე უტყუარი ნიშანი სულიერი სიმხნევეა."),
+    (r"the author has written a profound book\.?",
+     "ავტორს ღრმა წიგნი დაუწერია."),
+    (r"the king had given the strict order\.?",
+     "მეფეს მკაცრი ბრძანება გაუცია."),
+    (r"the master had built the ancient fortress\.?",
+     "ოსტატს უძველესი ციხესიმაგრე აუშენებია."),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),
@@ -528,11 +552,14 @@ def translate_with_gemini(
                 "Strict Literary Rules:\n"
                 "1. TOPIC-FOCUS ARCHITECTURE: Arrange sentence constituents naturally with the focused element immediately before the finite verb (Topic-Focus preverbal position). Avoid mechanical English SVO word-order calques.\n"
                 "2. CASE CONCORD (SERIES II & EXPERIENCER): Transitive and Medial verbs in the Series II Aorist screeve require Ergative subjects (-მა / -მ: 'ქარმა დაუბერა', 'მზემ გაანათა', 'ბავშვმა იტირა', 'აზრმა გაუელვა', 'მეფემ თქვა'). Experiencer verbs of perception, volition, and emotion take Dative subjects (მას უნდა/უყვარს/ახსოვს/სჭირდება/სურს).\n"
-                "3. PROHIBITIVE NEGATION: For negative imperatives and prohibitions, ALWAYS use the prohibitive particle 'ნუ' (ნუ წახვალ, ნუ გეშინია, ნუ ტირი, ნუ დაივიწყებ, ნუ დარდობ, ნუ ჩქარობ), NEVER declarative/subjunctive '*არ წახვიდე' or '*არ შეგეშინდეს'.\n"
-                "4. PROPER NAMES: Transliterate proper names and character names phonetically into Georgian; NEVER translate names as common adjectives or nouns (e.g. 'Constant' -> 'კონსტანტი', 'Malachi Constant' -> 'მალაქი კონსტანტი', 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი').\n"
-                "5. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე, and dative -ს), vowel-ending adjectives drop -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', 'ახალ სახლში', NOT 'უცნობი სივრცეში').\n"
-                "6. COMPOUND CONNECTORS: Use authentic Georgian compound literary connectors: 'არა მხოლოდ... არამედ... კიდეც' (not only... but also), 'თუმცა... მაინც' (although... still), 'როგორც კი... მაშინვე' (as soon as... immediately).\n"
-                "7. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
+                "3. SERIES III EVIDENTIAL INVERSION: In Series III (Perfect / Pluperfect screeves, often paired with 'თურმე'), transitive verbs undergo inversion where the logical subject takes Dative (-ს: 'ავტორს დაუწერია', 'მეფეს უბრძანებია', 'ოსტატს აუშენებია') and the direct object takes Nominative.\n"
+                "4. PARTICIPIAL CLAUSES: Prefer elegant Georgian participial constructions (მიმღეობები: 'დაწერილი წიგნი', 'აშენებული ტაძარი', 'მომავალი თაობა', 'სათქმელი სიტყვა') over repetitive and clumsy 'რომელიც' subordinate clauses.\n"
+                "5. PROHIBITIVE NEGATION: For negative imperatives and prohibitions, ALWAYS use the prohibitive particle 'ნუ' (ნუ წახვალ, ნუ გეშინია, ნუ ტირი, ნუ დაივიწყებ, ნუ დარდობ, ნუ ჩქარობ), NEVER declarative/subjunctive '*არ წახვიდე' or '*არ შეგეშინდეს'.\n"
+                "6. PROPER NAMES: Transliterate proper names and character names phonetically into Georgian; NEVER translate names as common adjectives or nouns (e.g. 'Constant' -> 'კონსტანტი', 'Malachi Constant' -> 'მალაქი კონსტანტი', 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი').\n"
+                "7. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე, and dative -ს), vowel-ending adjectives drop -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', 'ახალ სახლში', NOT 'უცნობი სივრცეში').\n"
+                "8. COMPOUND CONNECTORS: Use authentic Georgian compound literary connectors: 'არა მხოლოდ... არამედ... კიდეც' (not only... but also), 'თუმცა... მაინც' (although... still), 'როგორც კი... მაშინვე' (as soon as... immediately).\n"
+                "9. PREVERB DEIXIS & DIALOGUE QUOTATIVES: Use correct directional preverbs ('მოვიდა' towards speaker vs 'წავიდა' away) and bound quotative enclitics ('-ო', '-მეთქი', '-თქო') in reported speech.\n"
+                "10. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -570,6 +597,7 @@ def translate_with_kona(
     Runs 100% locally on the OCI VM with zero API keys and zero cost ($0.00/mo).
     Enforces natural Georgian syntax (flexible SOV/OVS order, topic-comment focus),
     transitive aorist ergative concord (-მა), experiencer dative inversion (მას უნდა/უყვარს/ახსოვს/აქვს),
+    Series III evidential inversion (ავტორს დაუწერია), participial clauses,
     anti-calques, and complete clause closures without truncation.
     Equipped with an adaptive circuit breaker to avoid serial stalling when under heavy CPU load.
     """
@@ -593,17 +621,20 @@ def translate_with_kona(
                 "Never stop or leave a sentence unfinished in the middle.\n"
                 "3. CASE CONCORD & MORPHOLOGY:\n"
                 "   - Transitive and Medial verbs in the Aorist screeve require Ergative subject (-მა / -მ: 'ავტორმა თქვა', 'ქარმა დაუბერა', 'მზემ გაანათა', 'ბავშვმა იტირა', 'აზრმა გაუელვა').\n"
+                "   - Series III (Perfect / Pluperfect evidentials with თურმე) require Dative subject (-ს: 'ავტორს დაუწერია', 'მეფეს უბრძანებია', 'ოსტატს აუშენებია').\n"
                 "   - Experiencer verbs of perception, volition, and emotion take Dative subjects (მას უნდა, მას უყვარს, მას ახსოვს, მას აქვს, მას სურს, მას მოსწონს).\n"
                 "   - Use proper postposition syncopation (კუმშვა/კვეცა: ქალაქში, წყლიდან, მთაზე).\n"
-                "4. PROHIBITIVE NEGATION: For negative imperatives, ALWAYS use the prohibitive particle 'ნუ' (ნუ წახვალ, ნუ გეშინია, ნუ ტირი, ნუ დაივიწყებ), NEVER declarative '*არ წახვიდე'.\n"
-                "5. ANTI-CALQUES: Avoid literal English calques (use 'მოხდა' instead of 'ადგილი ჰქონდა', "
+                "4. PARTICIPIAL CLAUSES: Use concise Georgian participles (დაწერილი წიგნი, აშენებული ტაძარი, მომავალი თაობა, სათქმელი სიტყვა) instead of clumsy 'რომელიც' subordinate clauses.\n"
+                "5. PROHIBITIVE NEGATION: For negative imperatives, ALWAYS use the prohibitive particle 'ნუ' (ნუ წახვალ, ნუ გეშინია, ნუ ტირი, ნუ დაივიწყებ), NEVER declarative '*არ წახვიდე'.\n"
+                "6. ANTI-CALQUES: Avoid literal English calques (use 'მოხდა' instead of 'ადგილი ჰქონდა', "
                 "'გადაწყვიტა' instead of 'მიიღო გადაწყვეტილება', 'როლი შეასრულა' instead of 'ითამაშა როლი').\n"
-                "6. PRESERVATION: Retain all names, numbers, dialogue marks, and meaning accurately.\n"
-                "7. PROPER NOUNS & CHARACTERS: Never translate proper nouns as common adjectives or nouns! 'Constant' is a character's name ('მალაქი კონსტანტი', 'კონსტანტმა', 'კონსტანტს'), NEVER translate it as 'მუდმივი' or 'მუდმივმა'. 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი'.\n"
-                "8. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე), adjectives drop nominative -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', NOT 'უცნობი სივრცეში').\n"
-                "9. COMPOUND CONNECTORS: Use natural Georgian compound connectors: 'არა მხოლოდ... არამედ... კიდეც', 'თუმცა... მაინც', 'როგორც კი... მაშინვე'.\n"
-                "10. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
-                "11. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
+                "7. PRESERVATION: Retain all names, numbers, dialogue marks, and meaning accurately.\n"
+                "8. PROPER NOUNS & CHARACTERS: Never translate proper nouns as common adjectives or nouns! 'Constant' is a character's name ('მალაქი კონსტანტი', 'კონსტანტმა', 'კონსტანტს'), NEVER translate it as 'მუდმივი' or 'მუდმივმა'. 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი'.\n"
+                "9. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე), adjectives drop nominative -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', NOT 'უცნობი სივრცეში').\n"
+                "10. COMPOUND CONNECTORS: Use natural Georgian compound connectors: 'არა მხოლოდ... არამედ... კიდეც', 'თუმცა... მაინც', 'როგორც კი... მაშინვე'.\n"
+                "11. PREVERB DEIXIS & DIALOGUE QUOTATIVES: Respect speaker orientation in preverbs ('მოვიდა' vs 'წავიდა') and attach quotative enclitics ('-ო', '-მეთქი', '-თქო') in dialogue.\n"
+                "12. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
+                "13. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
                 "Output ONLY the Georgian translation."
             )
             user_parts = []

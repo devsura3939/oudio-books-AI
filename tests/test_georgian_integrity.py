@@ -195,17 +195,65 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             self.assertEqual(polished, expected, f"Adjective truncation failed for '{raw}': got '{polished}'")
 
     def test_13_autonomous_training_pack_eval(self):
-        """Verify that the active rule pack scores 100% with zero regressions across all 165+ benchmark cases."""
+        """Verify that the active rule pack scores 100% with zero regressions across all 220+ benchmark cases."""
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 165, "Expected at least 165 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 170, "Expected at least 170 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 27, "Active pack version must be at least 27")
+        self.assertGreaterEqual(len(cases), 220, "Expected at least 220 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 225, "Expected at least 225 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 28, "Active pack version must be at least 28")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
         self.assertEqual(eval_res["qa_false_positives"], 0, f"QA false positives found: {eval_res['qa_false_positives']}")
+
+    def test_14_series_iii_evidential_inversion(self):
+        """Verify that transitive verbs in Series III (Perfect/Pluperfect) take Dative subjects."""
+        pairs = [
+            ("ავტორმა დაუწერია", "ავტორს დაუწერია"),
+            ("ოსტატმა აუშენებია", "ოსტატს აუშენებია"),
+            ("მეფემ უბრძანებია", "მეფეს უბრძანებია"),
+            ("მეცნიერმა შეუმჩნევია", "მეცნიერს შეუმჩნევია"),
+            ("მხედარმა გაუგია", "მხედარს გაუგია"),
+            ("დედამ დაუბარებია", "დედას დაუბარებია"),
+            ("მან დაუწერია", "მას დაუწერია"),
+            ("მან დაეწერა", "მას დაეწერა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Series III inversion failed for '{raw}': got '{polished}'")
+
+    def test_15_participial_clauses_and_preverbs(self):
+        """Verify participial clause synthesis and directional preverb deictics."""
+        pairs = [
+            ("წიგნი, რომელიც დაიწერა", "დაწერილი წიგნი"),
+            ("ხელნაწერი, რომელიც დაიწერა", "დაწერილი ხელნაწერი"),
+            ("ტაძარი, რომელიც აშენდა", "აშენებული ტაძარი"),
+            ("თაობა, რომელიც მოდის", "მომავალი თაობა"),
+            ("სიტყვა, რომელიც უნდა ითქვას", "სათქმელი სიტყვა"),
+            ("საქმე, რომელიც უნდა გაკეთდეს", "საკეთებელი საქმე"),
+            ("აქ წავიდა", "აქ მოვიდა"),
+            ("აქ წაიღო", "აქ მოიტანა"),
+            ("იქ მოვიდა", "იქ წავიდა"),
+            ("იქ მოიტანა", "იქ წაიღო"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Participial/preverb synthesis failed for '{raw}': got '{polished}'")
+
+    def test_16_dialogue_quotative_enclitics_and_idioms(self):
+        """Verify dialogue quotative bound enclitic attachment and literary idioms."""
+        pairs = [
+            ("მოვალ - ო", "მოვალ-ო"),
+            ("გითხარი მეთქი", "გითხარი-მეთქი"),
+            ("დაბრუნდეს თქო", "დაბრუნდეს-თქო"),
+            ("მისცა ადგილი", "ადგილი დაუთმო"),
+            ("მიიღო მონაწილეობა", "მონაწილეობა მიიღო"),
+            ("ჰქონდა ადგილი", "მოხდა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Quotative/idiom synthesis failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":

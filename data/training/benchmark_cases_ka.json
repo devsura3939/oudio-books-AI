@@ -1648,5 +1648,390 @@
     "weight": 1.0,
     "origin": "ocr_repair",
     "note": "OCR postposition and adjective hyphenation noise restoration"
+  },
+  {
+    "id": "case-syntax-ka-53",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ავტორმა დაუწერია ეს წიგნი.",
+    "expected": "ავტორს დაუწერია ეს წიგნი."
+  },
+  {
+    "id": "case-syntax-ka-54",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ოსტატმა აუშენებია უძველესი ტაძარი.",
+    "expected": "ოსტატს აუშენებია უძველესი ტაძარი."
+  },
+  {
+    "id": "case-syntax-ka-55",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მეფემ უბრძანებია ლაშქრის შეკრება.",
+    "expected": "მეფეს უბრძანებია ლაშქრის შეკრება."
+  },
+  {
+    "id": "case-syntax-ka-56",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მეცნიერმა შეუმჩნევია უცნაური ნიშანი.",
+    "expected": "მეცნიერს შეუმჩნევია უცნაური ნიშანი."
+  },
+  {
+    "id": "case-syntax-ka-57",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მხედარმა გაუგია საგანგაშო ამბავი.",
+    "expected": "მხედარს გაუგია საგანგაშო ამბავი."
+  },
+  {
+    "id": "case-syntax-ka-58",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მკითხველმა გაუგია მწერლის ჩანაფიქრი.",
+    "expected": "მკითხველს გაუგია მწერლის ჩანაფიქრი."
+  },
+  {
+    "id": "case-syntax-ka-59",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მოწაფემ უსწავლია უძველესი ენა.",
+    "expected": "მოწაფეს უსწავლია უძველესი ენა."
+  },
+  {
+    "id": "case-syntax-ka-60",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მგზავრმა უნახავს შორეული მხარე.",
+    "expected": "მგზავრს უნახავს შორეული მხარე."
+  },
+  {
+    "id": "case-syntax-ka-61",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მწერალმა აღუწერია ბრძოლის სურათი.",
+    "expected": "მწერალს აღუწერია ბრძოლის სურათი."
+  },
+  {
+    "id": "case-syntax-ka-62",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ხალხმა გაუკეთებია დიდი საქმე.",
+    "expected": "ხალხს გაუკეთებია დიდი საქმე."
+  },
+  {
+    "id": "case-syntax-ka-63",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ადამიანმა უპოვია დაკარგული იმედი.",
+    "expected": "ადამიანს უპოვია დაკარგული იმედი."
+  },
+  {
+    "id": "case-syntax-ka-64",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ბრძენმა შეუქმნია მარადიული იგავი.",
+    "expected": "ბრძენს შეუქმნია მარადიული იგავი."
+  },
+  {
+    "id": "case-syntax-ka-65",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მეომარმა მოუსმენია წინამძღოლის რჩევა.",
+    "expected": "მეომარს მოუსმენია წინამძღოლის რჩევა."
+  },
+  {
+    "id": "case-syntax-ka-66",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "დედამ დაუბარებია თავისი შვილისთვის.",
+    "expected": "დედას დაუბარებია თავისი შვილისთვის."
+  },
+  {
+    "id": "case-syntax-ka-67",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მამამ გაუგზავნია საპატიო წერილი.",
+    "expected": "მამას გაუგზავნია საპატიო წერილი."
+  },
+  {
+    "id": "case-syntax-ka-68",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მან დაუწერია ღრმა თხზულება.",
+    "expected": "მას დაუწერია ღრმა თხზულება."
+  },
+  {
+    "id": "case-syntax-ka-69",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "წიგნი, რომელიც დაიწერა, სიბრძნით აღსავსე იყო.",
+    "expected": "დაწერილი წიგნი, სიბრძნით აღსავსე იყო."
+  },
+  {
+    "id": "case-syntax-ka-70",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ხელნაწერი, რომელიც დაიწერა, საგანძურში ინახებოდა.",
+    "expected": "დაწერილი ხელნაწერი, საგანძურში ინახებოდა."
+  },
+  {
+    "id": "case-syntax-ka-71",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ტაძარი, რომელიც აშენდა, ცას უერთდებოდა.",
+    "expected": "აშენებული ტაძარი, ცას უერთდებოდა."
+  },
+  {
+    "id": "case-syntax-ka-72",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "თაობა, რომელიც მოდის, თავისუფლებას დაიცავს.",
+    "expected": "მომავალი თაობა, თავისუფლებას დაიცავს."
+  },
+  {
+    "id": "case-syntax-ka-73",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "სიტყვა, რომელიც უნდა ითქვას, დროულად უნდა წარმოითქვას.",
+    "expected": "სათქმელი სიტყვა, დროულად უნდა წარმოითქვას."
+  },
+  {
+    "id": "case-syntax-ka-74",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "საქმე, რომელიც უნდა გაკეთდეს, დაუყოვნებლივ დაიწყე.",
+    "expected": "საკეთებელი საქმე, დაუყოვნებლივ დაიწყე."
+  },
+  {
+    "id": "case-syntax-ka-75",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "The author has written a profound book.",
+    "expected": "ავტორს ღრმა წიგნი დაუწერია."
+  },
+  {
+    "id": "case-syntax-ka-76",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "The king had given the strict order.",
+    "expected": "მეფეს მკაცრი ბრძანება გაუცია."
+  },
+  {
+    "id": "case-syntax-ka-77",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "The master had built the ancient fortress.",
+    "expected": "ოსტატს უძველესი ციხესიმაგრე აუშენებია."
+  },
+  {
+    "id": "case-syntax-ka-78",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "Words without wisdom are like food without salt.",
+    "expected": "უსიბრძნო სიტყვა უმარილო საჭმელს ჰგავს."
+  },
+  {
+    "id": "case-syntax-ka-79",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მგზავრი აქ წავიდა და დაისვენა.",
+    "expected": "მგზავრი აქ მოვიდა და დაისვენა."
+  },
+  {
+    "id": "case-syntax-ka-80",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მესიკვდილემ აქ წაიღო საიდუმლო წერილი.",
+    "expected": "მესიკვდილემ აქ მოიტანა საიდუმლო წერილი."
+  },
+  {
+    "id": "case-syntax-ka-81",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მეომარი იქ მოვიდა და შეუერთდა ლაშქარს.",
+    "expected": "მეომარი იქ წავიდა და შეუერთდა ლაშქარს."
+  },
+  {
+    "id": "case-syntax-ka-82",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მან ნადავლი იქ მოიტანა თავის სახლში.",
+    "expected": "მან ნადავლი იქ წაიღო თავის სახლში."
+  },
+  {
+    "id": "case-syntax-ka-83",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "Truth is a sword that cuts through all deception.",
+    "expected": "ჭეშმარიტება მახვილია, რომელიც ყოველგვარ სიცრუეს კვეთს."
+  },
+  {
+    "id": "case-syntax-ka-84",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "A wise man builds a bridge where a fool builds a wall.",
+    "expected": "ბრძენი ხიდს აშენებს იქ, სადაც სულელი კედელს აღმართავს."
+  },
+  {
+    "id": "case-syntax-ka-85",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "He who seeks only his own benefit will lose the love of his brothers.",
+    "expected": "ვინც მხოლოდ საკუთარ სარგებელს ეძებს, ძმათა სიყვარულს დაკარგავს."
+  },
+  {
+    "id": "case-syntax-ka-86",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "The great master built a cathedral of eternal stone.",
+    "expected": "დიდოსტატმა მარადიული ქვის ტაძარი ააშენა."
+  },
+  {
+    "id": "case-syntax-ka-87",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "Only art can triumph over time and mortality.",
+    "expected": "მხოლოდ ხელოვნებას ძალუძს სძლიოს დროსა და მოკვდავებას."
+  },
+  {
+    "id": "case-syntax-ka-88",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "We suffer more often in imagination than in reality.",
+    "expected": "ჩვენ უფრო ხშირად წარმოსახვაში ვიტანჯებით, ვიდრე სინამდვილეში."
+  },
+  {
+    "id": "case-syntax-ka-89",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მან დაიყვირა: მოვალ - ო!",
+    "expected": "მან დაიყვირა: მოვალ-ო!"
+  },
+  {
+    "id": "case-syntax-ka-90",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ხომ გითხარი, არ მინდა მეთქი.",
+    "expected": "ხომ გითხარი, არ მინდა-მეთქი."
+  },
+  {
+    "id": "case-syntax-ka-91",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "უთხარი მას, დაუყოვნებლივ დაბრუნდეს თქო.",
+    "expected": "უთხარი მას, დაუყოვნებლივ დაბრუნდეს-თქო."
+  },
+  {
+    "id": "case-syntax-ka-92",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has.",
+    "expected": "ბრძენია ის, ვინც არ გლოვობს იმას, რაც არ გააჩნია, არამედ ხარობს იმით, რაც აქვს."
+  },
+  {
+    "id": "case-syntax-ka-93",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "The most certain sign of wisdom is cheerfulness.",
+    "expected": "სიბრძნის ყველაზე უტყუარი ნიშანი სულიერი სიმხნევეა."
+  },
+  {
+    "id": "case-syntax-ka-94",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მან მოხუცს მისცა ადგილი.",
+    "expected": "მან მოხუცს ადგილი დაუთმო."
+  },
+  {
+    "id": "case-syntax-ka-95",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მეცნიერმა კრებაში მიიღო მონაწილეობა.",
+    "expected": "მეცნიერმა კრებაში მონაწილეობა მიიღო."
+  },
+  {
+    "id": "case-syntax-ka-96",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "სარდალმა სწრაფი გააკეთა გადაწყვეტილება.",
+    "expected": "სარდალმა სწრაფი გადაწყვეტილება მიიღო."
+  },
+  {
+    "id": "case-syntax-ka-97",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ქალაქში უცნაურ მოვლენას ჰქონდა ადგილი.",
+    "expected": "ქალაქში უცნაურ მოვლენას მოხდა."
+  },
+  {
+    "id": "case-syntax-ka-98",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ის დაუწერია ცნობილ მწერალს.",
+    "expected": "მას დაუწერია ცნობილ მწერალს."
+  },
+  {
+    "id": "case-syntax-ka-99",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მან დაეწერა წერილი გამთენიისას.",
+    "expected": "მას დაეწერა წერილი გამთენიისას."
+  },
+  {
+    "id": "case-syntax-ka-100",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მან აეშენებინა ციხე სიმაგრეში.",
+    "expected": "მას აეშენებინა ციხე სიმაგრეში."
+  },
+  {
+    "id": "case-syntax-ka-101",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მეფემ ებრძანა თავისი ჯარისთვის.",
+    "expected": "მეფეს ებრძანა თავისი ჯარისთვის."
+  },
+  {
+    "id": "case-syntax-ka-102",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ავტორმა შეემჩნია შეცდომა ტექსტში.",
+    "expected": "ავტორს შეემჩნია შეცდომა ტექსტში."
+  },
+  {
+    "id": "case-syntax-ka-103",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ოსტატმა გაეგო საიდუმლო ხერხი.",
+    "expected": "ოსტატს გაეგო საიდუმლო ხერხი."
+  },
+  {
+    "id": "case-syntax-ka-104",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მეცნიერმა ესწავლა უძველესი სიბრძნე.",
+    "expected": "მეცნიერს ესწავლა უძველესი სიბრძნე."
+  },
+  {
+    "id": "case-syntax-ka-105",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მხედარმა ენახა მტრის ბანაკი.",
+    "expected": "მხედარს ენახა მტრის ბანაკი."
+  },
+  {
+    "id": "case-syntax-ka-106",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "მწერალმა აღეწერა გმირის ცხოვრება.",
+    "expected": "მწერალს აღეწერა გმირის ცხოვრება."
+  },
+  {
+    "id": "case-syntax-ka-107",
+    "kind": "translate",
+    "weight": 1.0,
+    "source": "ადამიანმა გაეკეთებინა სწორი არჩევანი.",
+    "expected": "ადამიანს გაეკეთებინა სწორი არჩევანი."
   }
 ]

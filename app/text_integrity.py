@@ -293,7 +293,67 @@ def polish_georgian_literary_syntax(text: str) -> str:
         t
     )
 
-    # 6. Typography & Dialogue
+    # 6. Series III Evidential Inversion (თურმეობითი I/II - Subject takes Dative -ს)
+    series_iii_verbs = (
+        r'(?:დაუწერია|დაეწერა|აუშენებია|აეშენებინა|უბრძანებია|ებრძანა|შეუმჩნევია|შეემჩნია|'
+        r'გაუგია|გაეგო|უსწავლია|ესწავლა|უნახავს|ენახა|აღუწერია|აღეწერა|გაუკეთებია|გაეკეთებინა|'
+        r'უპოვია|ეპოვა|შეუქმნია|შეექმნა|მოუსმენია|მოესმინა|გაუგზავნია|გაეგზავნა|შეუტყვია|'
+        r'დაუვიწყებია|დაევიწყებინა|უთქვამს|ეთქვა|დაუბარებია|გაუჩენია)'
+    )
+    series_iii_consonant_subjects = r'(?:ავტორ|ოსტატ|მეცნიერ|მხედარ|მკითხველ|მოწაფ|მგზავრ|მწერალ|ხალხ|ადამიან|კაც|ქალ|მეომარ|ბრძენ)'
+    # Consonant subject in Ergative (-მა) before Series III verb -> convert to Dative (-ს)
+    t = re.sub(
+        r'(?<![\u10A0-\u10FF])(' + series_iii_consonant_subjects + r')მა(\s+(?:[ა-ჰ]+\s+)?' + series_iii_verbs + r')(?![ა-ჰ])',
+        r'\g<1>ს\g<2>',
+        t
+    )
+    # Vowel subject in Ergative (-მ) before Series III verb -> convert to Dative (-ს)
+    t = re.sub(
+        r'(?<![\u10A0-\u10FF])(მეფე|დედა|მამა)მ(\s+(?:[ა-ჰ]+\s+)?' + series_iii_verbs + r')(?![ა-ჰ])',
+        r'\g<1>ს\g<2>',
+        t
+    )
+    # Pronoun inversion in Series III: მან/ის -> მას
+    t = re.sub(
+        r'(?<![\u10A0-\u10FF])(?:მან|ის)(\s+(?:[ა-ჰ]+\s+)?' + series_iii_verbs + r')(?![ა-ჰ])',
+        r'მას\g<1>',
+        t
+    )
+
+    # 7. Participial Clause Restructuring (მიმღეობური კონსტრუქციები)
+    participial_replacements = [
+        (r'(?<![\u10A0-\u10FF])წიგნი,\s*რომელიც\s+დაიწერა(?![ა-ჰ])', 'დაწერილი წიგნი'),
+        (r'(?<![\u10A0-\u10FF])ხელნაწერი,\s*რომელიც\s+დაიწერა(?![ა-ჰ])', 'დაწერილი ხელნაწერი'),
+        (r'(?<![\u10A0-\u10FF])ტაძარი,\s*რომელიც\s+აშენდა(?![ა-ჰ])', 'აშენებული ტაძარი'),
+        (r'(?<![\u10A0-\u10FF])თაობა,\s*რომელიც\s+მოდის(?![ა-ჰ])', 'მომავალი თაობა'),
+        (r'(?<![\u10A0-\u10FF])სიტყვა,\s*რომელიც\s+უნდა\s+ითქვას(?![ა-ჰ])', 'სათქმელი სიტყვა'),
+        (r'(?<![\u10A0-\u10FF])საქმე,\s*რომელიც\s+უნდა\s+გაკეთდეს(?![ა-ჰ])', 'საკეთებელი საქმე'),
+    ]
+    for pat, repl in participial_replacements:
+        t = re.sub(pat, repl, t)
+
+    # 8. Deictic Directional Preverb Distinctions (აქ მო- vs იქ წა-/მი-)
+    t = re.sub(r'(?<![\u10A0-\u10FF])აქ\s+წავიდა(?![ა-ჰ])', 'აქ მოვიდა', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])აქ\s+წაიღო(?![ა-ჰ])', 'აქ მოიტანა', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])იქ\s+მოვიდა(?![ა-ჰ])', 'იქ წავიდა', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])იქ\s+მოიტანა(?![ა-ჰ])', 'იქ წაიღო', t)
+
+    # 9. Direct Speech Quotatives & Enclitic Normalization (-ო, მეთქი, თქო)
+    t = re.sub(r'(?<=[\u10D0-\u10FA])\s+-\s*ო\b', '-ო', t)
+    t = re.sub(r'(?<=[\u10D0-\u10FA])\s+მეთქი\b', '-მეთქი', t)
+    t = re.sub(r'(?<=[\u10D0-\u10FA])\s+თქო\b', '-თქო', t)
+
+    # 10. Sulkhan-Saba & Classical Literature Idioms
+    phraseologisms = [
+        (r'(?<![\u10A0-\u10FF])მისცა\s+ადგილი(?![ა-ჰ])', 'ადგილი დაუთმო'),
+        (r'(?<![\u10A0-\u10FF])მიიღო\s+მონაწილეობა(?![ა-ჰ])', 'მონაწილეობა მიიღო'),
+        (r'(?<![\u10A0-\u10FF])გააკეთა\s+გადაწყვეტილება(?![ა-ჰ])', 'გადაწყვეტილება მიიღო'),
+        (r'(?<![\u10A0-\u10FF])ჰქონდა\s+ადგილი(?![ა-ჰ])', 'მოხდა'),
+    ]
+    for pat, repl in phraseologisms:
+        t = re.sub(pat, repl, t)
+
+    # 11. Typography & Dialogue
     t = re.sub(r'(?:^|\n)\s*[-–—]\s*', r'\n— ', t)
     t = re.sub(r'\s+([.,;:!?])', r'\1', t)
 

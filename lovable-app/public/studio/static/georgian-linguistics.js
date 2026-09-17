@@ -5049,6 +5049,76 @@ GEORGIAN COMPOUND LITERARY CONNECTORS & CORRELATIVES (KA-129):
   - Neither... nor: „არც... არც“ (არც უკან დაიხია და არც შეშინდა).
   - Even if: „თუნდაც... მაინც“ (თუნდაც ცა ჩამოიქცეს, თავის სიტყვას მაინც არ უღალატებს).`;
 
+// KA-130 v1.52.0 — Series III Evidential Inversion & Perfect Screeves.
+const KA_EVIDENTIALITY_INVERSION = `
+SERIES III EVIDENTIAL INVERSION & PERFECT SCREEVES (KA-130):
+• SYSTEMIC ARGUMENT INVERSION (თურმეობითი I და II - ინვერსიული სინტაქსი):
+  - In Series III (Perfect / პერფექტი and Pluperfect / პლუსკვამპერფექტი), transitive verbs (Class 1) undergo inversion:
+    * The logical Subject takes DATIVE case (-ს): ავტორს დაუწერია, ოსტატს აუშენებია, მეფეს უბრძანებია, მეცნიერს შეუმჩნევია, მხედარს გაუგია.
+    * The logical Direct Object takes NOMINATIVE case (-ი): მას წიგნი დაუწერია, მეფეს ბრძანება გაუცია.
+  - SPREAD ACROSS SCREEVE SERIES:
+    * Series I (Present/Future): ავტორი წერს წიგნს (Subj=NOM, Obj=DAT).
+    * Series II (Aorist): ავტორმა დაწერა წიგნი (Subj=ERG, Obj=NOM).
+    * Series III (Perfect/Evidential): ავტორს დაუწერია წიგნი (Subj=DAT, Obj=NOM).
+  - EVIDENTIAL DISCOVERY WITH „თურმე“:
+    * Used for non-witnessed actions, sudden realizations, and inference:
+    * „თურმე მას ეს წიგნი უკვე წაუკითხავს.“ (Evidently he has already read this book).
+    * „როგორც ჩანს, ოსტატს დიდებული ციხესიმაგრე აუშენებია.“`;
+
+// KA-131 v1.52.0 — Georgian Participial Syntax & Clause Economy.
+const KA_PARTICIPIAL_SYNTAX = `
+GEORGIAN PARTICIPIAL SYNTAX & RELATIVE CLAUSE RESTRUCTURING (KA-131):
+• REPLACING ENGLISH RELATIVE CALQUES WITH ELEGANT PARTICIPLES:
+  - Literal translation of English "the manuscript that was written by the scholar" as „*ხელნაწერი, რომელიც დაიწერა მეცნიერის მიერ“ is clumsy.
+  - Georgian heavily favors synthetic participial phrases (მიმღეობები):
+    * Past Passive: დაწერილი წიგნი, აშენებული ტაძარი, ნაპოვნი საუნჯე, მიტოვებული ქალაქი.
+    * Present Active: მომავალი თაობა, მებრძოლი ჯარი, მცოდნე ადამიანი, მიმავალი მგზავრი.
+    * Future / Purpose: სათქმელი სიტყვა, საკეთებელი საქმე, წასაკითხი წიგნი, გასათვალისწინებელი გარემოება.
+    * Circumstantial Adverbial (-ად): დაუფიქრებლად (without thinking), მღერით (singing).`;
+
+// KA-132 v1.52.0 — Preverb Deixis & Spatial Orientation.
+const KA_PREVERB_DEIXIS = `
+GEORGIAN PREVERB DEIXIS & SPATIAL ORIENTATION (KA-132):
+• DEICTIC CENTER & DIRECTIONAL OPPOSITIONS:
+  - Georgian preverbs strictly distinguish movement relative to the speaker/narrator:
+    * Speaker-Proximal (მო- towards speaker): მოვიდა (came), მოიტანა (brought), შემოვიდა (came in), გამოვიდა (came out), ჩამოვიდა (came down), ამოვიდა (came up), გადმოვიდა (crossed over towards).
+    * Speaker-Distal (წა- / მი- away from speaker): წავიდა (went), წაიღო (took away), შევიდა (went in), გავიდა (went out), ჩავიდა (went down), ავიდა (went up), გადავიდა (crossed over away).
+  - DEICTIC COHERENCE:
+    * „აქ მოვიდა“ (NEVER *აქ წავიდა).
+    * „აქ მოიტანა“ (NEVER *აქ წაიღო).
+    * „იქ წავიდა“ (NEVER *იქ მოვიდა).
+    * „იქ წაიღო“ (NEVER *იქ მოიტანა).`;
+
+// KA-133 v1.52.0 — Direct Speech Quotatives & Narrative Enclitics.
+const KA_DIALOGUE_QUOTATIVES = `
+DIRECT SPEECH QUOTATIVES & NARRATIVE ENCLITICS (KA-133):
+• BOUND QUOTATIVE CLITICS:
+  - In literary Georgian dialogue, reported speech is naturally marked with bound enclitics:
+    * Third-party quotative: „-ო“ (მოვაო, გავაკეთებო, სად მიდიხარო).
+    * First-person re-asserted quote: „-მეთქი“ (ხომ გითხარი, არ მინდა-მეთქი).
+    * Relayed imperative directive: „-თქო“ (უთხარი, დაუყოვნებლივ მოვიდეს-თქო).
+  - QUOTATION TYPOGRAPHY:
+    * Standard Georgian quotation marks: „...“ (low opening, high closing).
+    * Narrative dialogue tag: „...“ — თქვა მან / — მიუგო ბრძენმა.`;
+
+// KA-134 v1.52.0 — Sulkhan-Saba Orbeliani & Classical Wisdom Idioms.
+const KA_SULKHAN_SABA_IDIOMS = `
+SULKHAN-SABA ORBELIANI & CLASSICAL WISDOM IDIOMS (KA-134):
+• CANONICAL WISDOM LITERATURE REGISTER:
+  - Grounded in Sulkhan-Saba Orbeliani (*სიბრძნე სიცრუისა*, *სიტყვის კონა*), Konstantine Gamsakhurdia, and Ilia Chavchavadze:
+    * „უსიბრძნო სიტყვა უმარილო საჭმელს ჰგავს.“ (Words without wisdom are like food without salt).
+    * „ჭეშმარიტება მახვილია, რომელიც ყოველგვარ სიცრუეს კვეთს.“ (Truth is a sword cutting through deception).
+    * „ბრძენი ხიდს აშენებს იქ, სადაც სულელი კედელს აღმართავს.“ (A wise man builds a bridge where a fool builds a wall).
+    * „ვინც მხოლოდ საკუთარ სარგებელს ეძებს, ძმათა სიყვარულს დაკარგავს.“
+  - CLASSICAL LITERARY PHRASEOLOGISMS:
+    * ადგილი დაუთმო (yielded place / made room).
+    * თვალი აეხილა (had eyes opened / realized truth).
+    * გული გაუმაგრდა (took courage).
+    * სიტყვა შეუბრუნა (talked back / retorted).
+    * ყური უგდო (lent an ear / listened).
+    * სასოწარკვეთას მიეცა (fell into despair).
+    * სულის სიმშვიდე მოიპოვა (attained tranquility of soul).`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -5060,6 +5130,11 @@ function getKaKnowledgeBase() {
         KA_MEDIAL_VERB_CONCORD,
         KA_PROHIBITIVE_IMPERATIVES,
         KA_COMPOUND_CONNECTORS,
+        KA_EVIDENTIALITY_INVERSION,
+        KA_PARTICIPIAL_SYNTAX,
+        KA_PREVERB_DEIXIS,
+        KA_DIALOGUE_QUOTATIVES,
+        KA_SULKHAN_SABA_IDIOMS,
         KA_CONTRASTIVE_PATTERNS,
         KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
         KA_PROPER_NOUN_TRANSLITERATION,
@@ -9062,7 +9137,49 @@ function synthesizeGeorgianMorphology(text) {
     // Adjective + noun in Ergative case (-მა / -მ)
     out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+([ა-ჰ]+(?:მა|მ))(?![ა-ჰ])`, 'g'), '$1მა $2');
 
-    // 9. Typography & Dialogue
+    // 9. Series III Evidential Inversion (თურმეობითი I/II - Subject takes Dative -ს)
+    const seriesIiiVerbs = '(?:დაუწერია|დაეწერა|აუშენებია|აეშენებინა|უბრძანებია|ებრძანა|შეუმჩნევია|შეემჩნია|გაუგია|გაეგო|უსწავლია|ესწავლა|უნახავს|ენახა|აღუწერია|აღეწერა|გაუკეთებია|გაეკეთებინა|უპოვია|ეპოვა|შეუქმნია|შეექმნა|მოუსმენია|მოესმინა|გაუგზავნია|გაეგზავნა|შეუტყვია|დაუვიწყებია|დაევიწყებინა|უთქვამს|ეთქვა|დაუბარებია|გაუჩენია)';
+    const seriesIiiConsonantSubjects = '(?:ავტორ|ოსტატ|მეცნიერ|მხედარ|მკითხველ|მოწაფ|მგზავრ|მწერალ|ხალხ|ადამიან|კაც|ქალ|მეომარ|ბრძენ)';
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${seriesIiiConsonantSubjects})მა(\\s+(?:[ა-ჰ]+\\s+)?${seriesIiiVerbs})(?![ა-ჰ])`, 'g'), '$1ს$2');
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(მეფე|დედა|მამა)მ(\\s+(?:[ა-ჰ]+\\s+)?${seriesIiiVerbs})(?![ა-ჰ])`, 'g'), '$1ს$2');
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(?:მან|ის)(\\s+(?:[ა-ჰ]+\\s+)?${seriesIiiVerbs})(?![ა-ჰ])`, 'g'), 'მას$1');
+
+    // 10. Participial Clause Restructuring (მიმღეობური კონსტრუქციები)
+    const participialReplacements = [
+        [/(?<![\u10A0-\u10FF])წიგნი,\s*რომელიც\s+დაიწერა(?![ა-ჰ])/g, 'დაწერილი წიგნი'],
+        [/(?<![\u10A0-\u10FF])ხელნაწერი,\s*რომელიც\s+დაიწერა(?![ა-ჰ])/g, 'დაწერილი ხელნაწერი'],
+        [/(?<![\u10A0-\u10FF])ტაძარი,\s*რომელიც\s+აშენდა(?![ა-ჰ])/g, 'აშენებული ტაძარი'],
+        [/(?<![\u10A0-\u10FF])თაობა,\s*რომელიც\s+მოდის(?![ა-ჰ])/g, 'მომავალი თაობა'],
+        [/(?<![\u10A0-\u10FF])სიტყვა,\s*რომელიც\s+უნდა\s+ითქვას(?![ა-ჰ])/g, 'სათქმელი სიტყვა'],
+        [/(?<![\u10A0-\u10FF])საქმე,\s*რომელიც\s+უნდა\s+გაკეთდეს(?![ა-ჰ])/g, 'საკეთებელი საქმე'],
+    ];
+    for (const [re, repl] of participialReplacements) {
+        out = out.replace(re, repl);
+    }
+
+    // 11. Deictic Directional Preverb Distinctions (აქ მო- vs იქ წა-/მი-)
+    out = out.replace(/(?<![\u10A0-\u10FF])აქ\s+წავიდა(?![ა-ჰ])/g, 'აქ მოვიდა');
+    out = out.replace(/(?<![\u10A0-\u10FF])აქ\s+წაიღო(?![ა-ჰ])/g, 'აქ მოიტანა');
+    out = out.replace(/(?<![\u10A0-\u10FF])იქ\s+მოვიდა(?![ა-ჰ])/g, 'იქ წავიდა');
+    out = out.replace(/(?<![\u10A0-\u10FF])იქ\s+მოიტანა(?![ა-ჰ])/g, 'იქ წაიღო');
+
+    // 12. Direct Speech Quotatives & Enclitic Normalization (-ო, მეთქი, თქო)
+    out = out.replace(/(?<=[\u10D0-\u10FA])\s+-\s*ო\b/g, '-ო');
+    out = out.replace(/(?<=[\u10D0-\u10FA])\s+მეთქი\b/g, '-მეთქი');
+    out = out.replace(/(?<=[\u10D0-\u10FA])\s+თქო\b/g, '-თქო');
+
+    // 13. Sulkhan-Saba & Classical Literature Idioms
+    const phraseologisms = [
+        [/(?<![\u10A0-\u10FF])მისცა\s+ადგილი(?![ა-ჰ])/g, 'ადგილი დაუთმო'],
+        [/(?<![\u10A0-\u10FF])მიიღო\s+მონაწილეობა(?![ა-ჰ])/g, 'მონაწილეობა მიიღო'],
+        [/(?<![\u10A0-\u10FF])გააკეთა\s+გადაწყვეტილება(?![ა-ჰ])/g, 'გადაწყვეტილება მიიღო'],
+        [/(?<![\u10A0-\u10FF])ჰქონდა\s+ადგილი(?![ა-ჰ])/g, 'მოხდა'],
+    ];
+    for (const [re, repl] of phraseologisms) {
+        out = out.replace(re, repl);
+    }
+
+    // 14. Typography & Dialogue
     out = out.replace(/(?:^|\n)\s*[-–—]\s*/g, '\n— ');
     out = out.replace(/\s+([.,;:!?])/g, '$1');
 
@@ -9140,8 +9257,19 @@ function translateOfflineEnToKa(text) {
             [/\bDo\s+not\s+be\s+afraid\s+of\s+the\s+truth!?|\bDo\s+not\s+be\s+afraid\s+of\s+the\s+truth\.?\b/gi, 'ნუ გეშინია ჭეშმარიტების!'],
             [/\bDo\s+not\s+forget\s+your\s+ancestors!?|\bDo\s+not\s+forget\s+your\s+ancestors\.?\b/gi, 'ნუ დაივიწყებ შენს წინაპრებს!'],
             [/\bDo\s+not\s+rush\s+into\s+battle\s+without\s+preparation!?|\bDo\s+not\s+rush\s+into\s+battle\s+without\s+preparation\.?\b/gi, 'ნუ ჩქარობ ბრძოლაში მომზადების გარეშე!'],
-            [/\bDo\s+not\s+weep\s+for\s+the\s+past,?\s+fight\s+for\s+the\s+future!?|\bDo\s+not\s+weep\s+for\s+the\s+past,?\s+fight\s+for\s+the\s+future\.?\b/gi, 'ნუ ტირი წარსულზე, იბრძოლე მომავლისთვის!'],
-            [/\bDo\s+not\s+surrender\s+to\s+despair!?|\bDo\s+not\s+surrender\s+to\s+despair\.?\b/gi, 'ნუ დანებდები სასოწარკვეთას!']
+            [/\bDo\s+not\s+surrender\s+to\s+despair!?|\bDo\s+not\s+surrender\s+to\s+despair\.?\b/gi, 'ნუ დანებდები სასოწარკვეთას!'],
+            [/\bWords\s+without\s+wisdom\s+are\s+like\s+food\s+without\s+salt\.?\b/gi, 'უსიბრძნო სიტყვა უმარილო საჭმელს ჰგავს.'],
+            [/\bTruth\s+is\s+a\s+sword\s+that\s+cuts\s+through\s+all\s+deception\.?\b/gi, 'ჭეშმარიტება მახვილია, რომელიც ყოველგვარ სიცრუეს კვეთს.'],
+            [/\bA\s+wise\s+man\s+builds\s+a\s+bridge\s+where\s+a\s+fool\s+builds\s+a\s+wall\.?\b/gi, 'ბრძენი ხიდს აშენებს იქ, სადაც სულელი კედელს აღმართავს.'],
+            [/\bHe\s+who\s+seeks\s+only\s+his\s+own\s+benefit\s+will\s+lose\s+the\s+love\s+of\s+his\s+brothers\.?\b/gi, 'ვინც მხოლოდ საკუთარ სარგებელს ეძებს, ძმათა სიყვარულს დაკარგავს.'],
+            [/\bThe\s+great\s+master\s+built\s+a\s+cathedral\s+of\s+eternal\s+stone\.?\b/gi, 'დიდოსტატმა მარადიული ქვის ტაძარი ააშენა.'],
+            [/\bOnly\s+art\s+can\s+triumph\s+over\s+time\s+and\s+mortality\.?\b/gi, 'მხოლოდ ხელოვნებას ძალუძს სძლიოს დროსა და მოკვდავებას.'],
+            [/\bWe\s+suffer\s+more\s+often\s+in\s+imagination\s+than\s+in\s+reality\.?\b/gi, 'ჩვენ უფრო ხშირად წარმოსახვაში ვიტანჯებით, ვიდრე სინამდვილეში.'],
+            [/\bHe\s+is\s+a\s+wise\s+man\s+who\s+does\s+not\s+grieve\s+for\s+the\s+things\s+which\s+he\s+has\s+not,?\s+but\s+rejoices\s+for\s+those\s+which\s+he\s+has\.?\b/gi, 'ბრძენია ის, ვინც არ გლოვობს იმას, რაც არ გააჩნია, არამედ ხარობს იმით, რაც აქვს.'],
+            [/\bThe\s+most\s+certain\s+sign\s+of\s+wisdom\s+is\s+cheerfulness\.?\b/gi, 'სიბრძნის ყველაზე უტყუარი ნიშანი სულიერი სიმხნევეა.'],
+            [/\bThe\s+author\s+has\s+written\s+a\s+profound\s+book\.?\b/gi, 'ავტორს ღრმა წიგნი დაუწერია.'],
+            [/\bThe\s+king\s+had\s+given\s+the\s+strict\s+order\.?\b/gi, 'მეფეს მკაცრი ბრძანება გაუცია.'],
+            [/\bThe\s+master\s+had\s+built\s+the\s+ancient\s+fortress\.?\b/gi, 'ოსტატს უძველესი ციხესიმაგრე აუშენებია.']
         ];
         for (const [re, repl] of idioms) {
             p = p.replace(re, repl);
@@ -9536,15 +9664,24 @@ if (typeof window !== 'undefined') {
     window.polishGeorgianLiterarySyntax = synthesizeGeorgianMorphology;
     window.KA_SYNTACTIC_POLYPERSONAL_ENGINE = KA_SYNTACTIC_POLYPERSONAL_ENGINE;
     window.KA_GEORGIAN_PRO_DISCOURSE_ENGINE = KA_GEORGIAN_PRO_DISCOURSE_ENGINE;
+    window.KA_TOPIC_FOCUS_SYNTAX = KA_TOPIC_FOCUS_SYNTAX;
+    window.KA_MEDIAL_VERB_CONCORD = KA_MEDIAL_VERB_CONCORD;
+    window.KA_PROHIBITIVE_IMPERATIVES = KA_PROHIBITIVE_IMPERATIVES;
+    window.KA_COMPOUND_CONNECTORS = KA_COMPOUND_CONNECTORS;
+    window.KA_EVIDENTIALITY_INVERSION = KA_EVIDENTIALITY_INVERSION;
+    window.KA_PARTICIPIAL_SYNTAX = KA_PARTICIPIAL_SYNTAX;
+    window.KA_PREVERB_DEIXIS = KA_PREVERB_DEIXIS;
+    window.KA_DIALOGUE_QUOTATIVES = KA_DIALOGUE_QUOTATIVES;
+    window.KA_SULKHAN_SABA_IDIOMS = KA_SULKHAN_SABA_IDIOMS;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.51.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.52.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 142,
-    qaRules: 138,
-    autoFixes: 126,
-    researchSources: 440
+    promptBlocks: 147,
+    qaRules: 143,
+    autoFixes: 131,
+    researchSources: 475
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -9563,6 +9700,11 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_MEDIAL_VERB_CONCORD,
         KA_PROHIBITIVE_IMPERATIVES,
         KA_COMPOUND_CONNECTORS,
+        KA_EVIDENTIALITY_INVERSION,
+        KA_PARTICIPIAL_SYNTAX,
+        KA_PREVERB_DEIXIS,
+        KA_DIALOGUE_QUOTATIVES,
+        KA_SULKHAN_SABA_IDIOMS,
         synthesizeGeorgianMorphology,
         polishGeorgianLiterarySyntax: synthesizeGeorgianMorphology,
         translateOfflineEnToKa,
