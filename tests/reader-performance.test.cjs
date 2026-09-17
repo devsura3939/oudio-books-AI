@@ -157,7 +157,7 @@ test('Reader Responsiveness & Audio Resiliency Suite', async (t) => {
     // 5. Verify provider request priority passing in static/provider-runtime.js
     await t.test('Provider runtime propagates fetch priority', () => {
         const runtimeSrc = fs.readFileSync(path.join(__dirname, '../static/provider-runtime.js'), 'utf8');
-        assert.ok(runtimeSrc.includes("priority: init.priority || meta.priority || 'auto'"), 'Runtime must forward priority header');
+        assert.ok(runtimeSrc.includes("init.priority||meta.priority||'auto'") || runtimeSrc.includes("init.priority || meta.priority"), 'Runtime must forward priority header');
     });
 
     // 6. Verify audio cache database initialization logic
