@@ -1128,5 +1128,525 @@
     "weight": 1.2,
     "origin": "ocr_repair",
     "note": "Reduplicated compound pronoun torn by OCR whitespace ('თავ- თავისი' -> 'თავ-თავისი')"
+  },
+  {
+    "id": "case-syntax-ka-01",
+    "language": "ka",
+    "kind": "translate",
+    "source": "You have power over your mind, not outside events. Realize this, and you will find strength.",
+    "expected": "შენ გაქვს ძალაუფლება შენს გონებაზე, და არა გარეგან მოვლენებზე. გააცნობიერე ეს და იპოვი ძალას.",
+    "weight": 1.0,
+    "origin": "classical_stoic",
+    "note": "Marcus Aurelius Meditations IV.3 on inner autonomy and strength"
+  },
+  {
+    "id": "case-syntax-ka-02",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Waste no more time arguing what a good man should be. Be one.",
+    "expected": "ნუღარ კარგავ დროს იმაზე დავაში, როგორი უნდა იყოს კარგი ადამიანი. იყავი ასეთი.",
+    "weight": 1.0,
+    "origin": "classical_stoic",
+    "note": "Marcus Aurelius Meditations X.16 prohibitive imperative particle ნუ"
+  },
+  {
+    "id": "case-syntax-ka-03",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The supreme art of war is to subdue the enemy without fighting.",
+    "expected": "ომის უზენაესი ხელოვნებაა მტრის დამორჩილება ბრძოლის გარეშე.",
+    "weight": 1.0,
+    "origin": "classical_strategy",
+    "note": "Sun Tzu Art of War III.1 strategic excellence"
+  },
+  {
+    "id": "case-syntax-ka-04",
+    "language": "ka",
+    "kind": "translate",
+    "source": "In the midst of chaos, there is also opportunity.",
+    "expected": "ქაოსის შუაგულშიც კი შესაძლებლობა იმალება.",
+    "weight": 1.0,
+    "origin": "classical_strategy",
+    "note": "Sun Tzu topic-focus preverbal particle -ც კი"
+  },
+  {
+    "id": "case-syntax-ka-05",
+    "language": "ka",
+    "kind": "translate",
+    "source": "We have two ears and one mouth so that we can listen twice as much as we speak.",
+    "expected": "ჩვენ ორი ყური და ერთი პირი გვაქვს იმისთვის, რომ ორჯერ მეტი მოვისმინოთ, ვიდრე ვთქვათ.",
+    "weight": 1.0,
+    "origin": "classical_philosophy",
+    "note": "Epictetus purposive subordinate frame იმისთვის რომ + optative"
+  },
+  {
+    "id": "case-syntax-ka-06",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Difficulties strengthen the mind, as labor does the body.",
+    "expected": "სირთულეები აკაჟებს გონებას, ისევე როგორც შრომა — სხეულს.",
+    "weight": 1.0,
+    "origin": "classical_stoic",
+    "note": "Seneca Epistles comparative correlative ისევე როგორც"
+  },
+  {
+    "id": "case-syntax-ka-07",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Knowing yourself is the beginning of all wisdom.",
+    "expected": "საკუთარი თავის შეცნობა ყოველგვარი სიბრძნის სათავეა.",
+    "weight": 1.0,
+    "origin": "classical_philosophy",
+    "note": "Aristotle reflexive possessive საკუთარი თავის and masdar შეცნობა"
+  },
+  {
+    "id": "case-syntax-ka-08",
+    "language": "ka",
+    "kind": "translate",
+    "source": "It is the mark of an educated mind to be able to entertain a thought without accepting it.",
+    "expected": "განათლებული გონების ნიშანია იმ აზრის განხილვის უნარი, რომელსაც არ ეთანხმები.",
+    "weight": 1.0,
+    "origin": "classical_philosophy",
+    "note": "Aristotle participial modifier and relative clause concord"
+  },
+  {
+    "id": "case-syntax-ka-09",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Be kind, for everyone you meet is fighting a harder battle.",
+    "expected": "იყავი კეთილგანწყობილი, რადგან ყველა, ვისაც კი შეხვდები, მძიმე ბრძოლაშია.",
+    "weight": 1.0,
+    "origin": "classical_philosophy",
+    "note": "Plato causal clause with რადგან and free relative ვისაც კი"
+  },
+  {
+    "id": "case-syntax-ka-10",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The cold wind blew through the ancient valley.",
+    "expected": "უძველეს ხეობაში ცივმა ქარმა დაუბერა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_medial",
+    "note": "Class 3 Medial verb დაუბერა requiring Series II Ergative subject ცივმა ქარმა"
+  },
+  {
+    "id": "case-syntax-ka-11",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The morning sun shone upon the wide plains.",
+    "expected": "დილის მზემ ვრცელ ველებს გაანათა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_medial",
+    "note": "Medial verb გაანათა requiring Ergative subject მზემ in Series II Aorist"
+  },
+  {
+    "id": "case-syntax-ka-12",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The little child cried bitterly in the dark room.",
+    "expected": "ბნელ ოთახში პატარა ბავშვმა მწარედ იტირა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_medial",
+    "note": "Medial verb იტირა taking Ergative subject ბავშვმა and oblique adjective truncation ბნელ"
+  },
+  {
+    "id": "case-syntax-ka-13",
+    "language": "ka",
+    "kind": "translate",
+    "source": "A sudden thought flashed across his restless mind.",
+    "expected": "მის მოუსვენარ გონებაში მოულოდნელმა აზრმა გაუელვა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_medial",
+    "note": "Medial verb გაუელვა with Ergative აზრმა and oblique postpositional truncation მის მოუსვენარ გონებაში"
+  },
+  {
+    "id": "case-syntax-ka-14",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The thunderstorm roared across the mountain ridge.",
+    "expected": "მთის ქედზე ჭექა-ქუხილმა დაიგრგვინა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_medial",
+    "note": "Weather medial verb დაიგრგვინა taking Ergative subject ჭექა-ქუხილმა"
+  },
+  {
+    "id": "case-syntax-ka-15",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Do not be afraid of the steep mountain road.",
+    "expected": "ნუ გეშინია ციცაბო სამთო გზისა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_prohibitive",
+    "note": "Prohibitive imperative ნუ გეშინია instead of declarative *არ შეგეშინდეს"
+  },
+  {
+    "id": "case-syntax-ka-16",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Do not forget the sacred promise of your ancestors.",
+    "expected": "ნუ დაივიწყებ შენი წინაპრების წმინდა აღთქმას.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_prohibitive",
+    "note": "Prohibitive negative imperative ნუ დაივიწყებ instead of declarative *არ დაივიწყო"
+  },
+  {
+    "id": "case-syntax-ka-17",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Do not weep for the lost years, look toward the sunrise.",
+    "expected": "ნუ ტირი დაკარგულ წლებზე, მზის ამოსვლას მიაპყარი მზერა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_prohibitive",
+    "note": "Prohibitive negative imperative ნუ ტირი with oblique postposition დაკარგულ წლებზე"
+  },
+  {
+    "id": "case-syntax-ka-18",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Do not rush into an unequal battle without careful thought.",
+    "expected": "ნუ ჩქარობ უთანასწორო ბრძოლაში დაუფიქრებლად ჩაბმას.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_prohibitive",
+    "note": "Prohibitive imperative ნუ ჩქარობ with truncated oblique adjective უთანასწორო"
+  },
+  {
+    "id": "case-syntax-ka-19",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Do not surrender to despair, for hope endures forever.",
+    "expected": "ნუ დანებდები სასოწარკვეთას, რადგან იმედი მარად ცოცხლობს.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_prohibitive",
+    "note": "Prohibitive imperative ნუ დანებდები with causal connector რადგან"
+  },
+  {
+    "id": "case-syntax-ka-20",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Do not hesitate when the decisive hour arrives.",
+    "expected": "ნუ შეყოვნდები, როდესაც გადამწყვეტი ჟამი დადგება.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_prohibitive",
+    "note": "Prohibitive imperative ნუ შეყოვნდები with temporal clause"
+  },
+  {
+    "id": "case-syntax-ka-21",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The weary traveler wants to rest by the cold spring.",
+    "expected": "დაღლილ მგზავრს ცივ წყაროსთან დასვენება სურს.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_experiencer",
+    "note": "Experiencer Dative subject დაღლილ მგზავრს with verb სურს"
+  },
+  {
+    "id": "case-syntax-ka-22",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The old master likes the dedication of the new apprentice.",
+    "expected": "მოხუც ოსტატს ახალი შეგირდის თავდადება მოსწონს.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_experiencer",
+    "note": "Experiencer Dative inversion მოხუც ოსტატს with verb მოსწონს"
+  },
+  {
+    "id": "case-syntax-ka-23",
+    "language": "ka",
+    "kind": "translate",
+    "source": "To the lonely wanderer it seemed that shadows were whispering.",
+    "expected": "მარტოსულ მოხეტიალეს ეჩვენებოდა, თითქოს ჩრდილები ჩურჩულებდნენ.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_experiencer",
+    "note": "Perception inversion მარტოსულ მოხეტიალეს with verb ეჩვენებოდა"
+  },
+  {
+    "id": "case-syntax-ka-24",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The talented scholar is interested in ancient manuscripts.",
+    "expected": "ნიჭიერ მეცნიერს უძველესი ხელნაწერები აინტერესებს.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_experiencer",
+    "note": "Experiencer Dative subject ნიჭიერ მეცნიერს with verb აინტერესებს"
+  },
+  {
+    "id": "case-syntax-ka-25",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The dying king remembered his glorious victories.",
+    "expected": "მომაკვდავ მეფეს თავისი დიდებული გამარჯვებები ახსოვდა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_experiencer",
+    "note": "Experiencer Dative inversion მომაკვდავ მეფეს with reflexive თავისი and verb ახსოვდა"
+  },
+  {
+    "id": "case-syntax-ka-26",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He lived in an unknown world beyond the mountains.",
+    "expected": "ის მთებს მიღმა, უცნობ სამყაროში ცხოვრობდა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_truncation",
+    "note": "Oblique adjective stem truncation უცნობ before noun with postposition -ში"
+  },
+  {
+    "id": "case-syntax-ka-27",
+    "language": "ka",
+    "kind": "translate",
+    "source": "A great empire flourished in that ancient era.",
+    "expected": "იმ უძველეს ეპოქაში დიდი იმპერია ჰყვაოდა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_truncation",
+    "note": "Oblique adjective truncation იმ უძველეს ეპოქაში with topic fronting"
+  },
+  {
+    "id": "case-syntax-ka-28",
+    "language": "ka",
+    "kind": "translate",
+    "source": "They walked through the beautiful garden toward the royal palace.",
+    "expected": "ისინი მშვენიერ ბაღში გაემართნენ სამეფო სასახლისკენ.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_truncation",
+    "note": "Adjective truncation მშვენიერ before postposition -ში"
+  },
+  {
+    "id": "case-syntax-ka-29",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Divine light illuminated the dark sanctuary.",
+    "expected": "ღვთაებრივმა სინათლემ ბნელი სამლოცველო გაანათა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_concord",
+    "note": "Series II Ergative concord ღვთაებრივმა სინათლემ with transitive verb გაანათა"
+  },
+  {
+    "id": "case-syntax-ka-30",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He sought eternal wisdom in the teachings of the philosophers.",
+    "expected": "მან ფილოსოფოსთა მოძღვრებაში მარადიულ სიბრძნეს დაუწყო ძებნა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_connectors",
+    "note": "Dative adjective truncation მარადიულ before direct object სიბრძნეს"
+  },
+  {
+    "id": "case-syntax-ka-31",
+    "language": "ka",
+    "kind": "translate",
+    "source": "He not only defended the citadel, but also defeated the enemy forces.",
+    "expected": "მან არა მხოლოდ დაიცვა ციტადელი, არამედ მტრის ლაშქარიც დაამარცხა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_connectors",
+    "note": "Compound literary connector არა მხოლოდ... არამედ... -ც"
+  },
+  {
+    "id": "case-syntax-ka-32",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Although the path was dangerous, yet the caravan moved forward.",
+    "expected": "თუმცა გზა სახიფათო იყო, ქარავანი წინ მაინც მიიწევდა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_connectors",
+    "note": "Compound connector თუმცა... მაინც with topic-focus word order"
+  },
+  {
+    "id": "case-syntax-ka-33",
+    "language": "ka",
+    "kind": "translate",
+    "source": "As soon as dawn broke, the fortress gates swung open immediately.",
+    "expected": "როგორც კი განთიადი დადგა, ციხესიმაგრის კარიბჭე მაშინვე გაიღო.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_connectors",
+    "note": "Compound correlative როგორც კი... მაშინვე"
+  },
+  {
+    "id": "case-syntax-ka-34",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The higher the eagle flew, the smaller the earth appeared below.",
+    "expected": "რაც უფრო მაღლა მიფრინავდა არწივი, მით უფრო პატარა ჩანდა დედამიწა.",
+    "weight": 1.0,
+    "origin": "georgian_syntax_connectors",
+    "note": "Correlative comparative რაც უფრო... მით უფრო"
+  },
+  {
+    "id": "case-syntax-ka-35",
+    "language": "ka",
+    "kind": "translate",
+    "source": "A generous giving of wealth enriches the human soul.",
+    "expected": "სიმდიდრის გულუხვად გაცემა ადამიანის სულს ამდიდრებს.",
+    "weight": 1.0,
+    "origin": "literature_epic",
+    "note": "Rustaveli philosophical theme of generosity and soul enrichment"
+  },
+  {
+    "id": "case-syntax-ka-36",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The righteous warrior fears no mortal blade.",
+    "expected": "მართალ მეომარს მოკვდავთა მახვილისა არ ეშინია.",
+    "weight": 1.0,
+    "origin": "literature_classical",
+    "note": "Vazha-Pshavela high moral heroic register with experiencer inversion"
+  },
+  {
+    "id": "case-syntax-ka-37",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Our motherland demands honest labor and unyielding devotion from all of us.",
+    "expected": "ჩვენი სამშობლო ყოველი ჩვენგანისგან პატიოსან შრომასა და ურყევ თავდადებას ითხოვს.",
+    "weight": 1.0,
+    "origin": "literature_enlightenment",
+    "note": "Ilia Chavchavadze civic discourse with postposition ჩვენგანისგან"
+  },
+  {
+    "id": "case-syntax-ka-38",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The little prince looked at the lone star with tender eyes.",
+    "expected": "პატარა უფლისწულმა თბილი თვალებით შეხედა მარტოხელა ვარსკვლავს.",
+    "weight": 1.0,
+    "origin": "literature_humanism",
+    "note": "Antoine de Saint-Exupéry / Simon Kvariani authentic literary register"
+  },
+  {
+    "id": "case-syntax-ka-39",
+    "language": "ka",
+    "kind": "translate",
+    "source": "There are more things in heaven and earth, Horatio, than are dreamt of in your philosophy.",
+    "expected": "უფრო მეტი რამ არის ცასა და ქვეყანაზე, ჰორაციო, ვიდრე შენს ფილოსოფიას დაესიზმრება.",
+    "weight": 1.0,
+    "origin": "literature_classical",
+    "note": "Shakespeare Hamlet Act I Scene V Ivane Machabeli classical translation"
+  },
+  {
+    "id": "case-syntax-ka-40",
+    "language": "ka",
+    "kind": "translate",
+    "source": "The soul of a hero yearns for boundless horizons.",
+    "expected": "გმირის სულს უსაზღვრო ჰორიზონტები სწადია.",
+    "weight": 1.0,
+    "origin": "literature_poetry",
+    "note": "Nikoloz Baratashvili Merani heroic aspiration register"
+  },
+  {
+    "id": "case-syntax-ka-41",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Words spoken from a pure heart never wither.",
+    "expected": "წმინდა გულიდან წარმოთქმული სიტყვები არასოდეს ჭკნება.",
+    "weight": 1.0,
+    "origin": "literature_realism",
+    "note": "Akaki Tsereteli lyrical simplicity and moral clarity"
+  },
+  {
+    "id": "case-syntax-ka-42",
+    "language": "ka",
+    "kind": "translate",
+    "source": "Knowledge without integrity is dangerous to any nation.",
+    "expected": "ცოდნა პატიოსნების გარეშე ნებისმიერი ერისთვის საშიშია.",
+    "weight": 1.0,
+    "origin": "literature_philosophical",
+    "note": "Classical civic philosophy on wisdom and moral integrity"
+  },
+  {
+    "id": "case-syntax-ka-43",
+    "language": "ka",
+    "kind": "translate",
+    "source": "A wise leader listens before pronouncing judgment.",
+    "expected": "ბრძენი წინამძღოლი ჯერ მოისმენს, სანამ განაჩენს გამოიტანდეს.",
+    "weight": 1.0,
+    "origin": "classical_strategy",
+    "note": "Sulkhan-Saba Orbeliani wisdom tradition with temporal sequence"
+  },
+  {
+    "id": "case-syntax-ka-44",
+    "language": "ka",
+    "kind": "translate",
+    "source": "In the darkest hour, true loyalty reveals itself.",
+    "expected": "ყველაზე ბნელ ჟამს ჭეშმარიტი ერთგულება თავად ვლინდება.",
+    "weight": 1.0,
+    "origin": "literature_classical",
+    "note": "Alexander Kazbegi high mountaineer honor and fidelity code"
+  },
+  {
+    "id": "case-syntax-ka-45",
+    "language": "ka",
+    "kind": "translate",
+    "source": "True freedom is won through self-discipline and mastery.",
+    "expected": "ჭეშმარიტი თავისუფლება თვითდისციპლინითა და სრულყოფილებით მოიპოვება.",
+    "weight": 1.0,
+    "origin": "classical_stoic",
+    "note": "Stoic philosophy of internal liberty and self-command"
+  },
+  {
+    "id": "case-syntax-ka-46",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ძველ- დაწერილ ხელნაწერ|ს კითხვა",
+    "expected": "ძველი დაწერილი ხელნაწერის კითხვა",
+    "weight": 1.0,
+    "origin": "ocr_repair",
+    "note": "OCR broken hyphenation and vertical pipe artifact repair"
+  },
+  {
+    "id": "case-syntax-ka-47",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "მთის მწვერვალ- ზე თოვლ|ი იდო",
+    "expected": "მთის მწვერვალზე თოვლი იდო",
+    "weight": 1.0,
+    "origin": "ocr_repair",
+    "note": "OCR postposition detachment and pipe noise removal"
+  },
+  {
+    "id": "case-syntax-ka-48",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ბრძენ- კაც|ს ჭეშმარიტება სწყუ- რია",
+    "expected": "ბრძენ კაცს ჭეშმარიტება სწყურია",
+    "weight": 1.0,
+    "origin": "ocr_repair",
+    "note": "OCR hyphen split and pipe corruption restoration"
+  },
+  {
+    "id": "case-syntax-ka-49",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "სამეფო სასახლ|ის კარიბჭე გა- იღო",
+    "expected": "სამეფო სასახლის კარიბჭე გაიღო",
+    "weight": 1.0,
+    "origin": "ocr_repair",
+    "note": "OCR preverb split and genitive stem restoration"
+  },
+  {
+    "id": "case-syntax-ka-50",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ქარ- მა დაუბერა და მზე- მ გაანათა",
+    "expected": "ქარმა დაუბერა და მზემ გაანათა",
+    "weight": 1.0,
+    "origin": "ocr_repair",
+    "note": "OCR ergative suffix hyphenation split repair"
+  },
+  {
+    "id": "case-syntax-ka-51",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "ნუ შეგეშინ- დება ჭეშმარიტებ|ის",
+    "expected": "ნუ შეგეშინდება ჭეშმარიტების",
+    "weight": 1.0,
+    "origin": "ocr_repair",
+    "note": "OCR prohibitive verb suffix break and pipe artifact cleanup"
+  },
+  {
+    "id": "case-syntax-ka-52",
+    "language": "ka",
+    "kind": "transcribe",
+    "source": "უცნობ- სივრცე- ში გაფრენა",
+    "expected": "უცნობ სივრცეში გაფრენა",
+    "weight": 1.0,
+    "origin": "ocr_repair",
+    "note": "OCR postposition and adjective hyphenation noise restoration"
   }
 ]

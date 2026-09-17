@@ -108,17 +108,34 @@ def synthesize_georgian_morphology(text: str) -> str:
     t = re.sub(r'(?<![\u10A0-\u10FF])(' + subjects_i + r')ი(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მა\g<2>', t)
     t = re.sub(r'(?<![\u10A0-\u10FF])(მეფე|მელა|გოგო|დედა|მამა|ძმა|დეიდა|ბიძა|სახელმწიფო|სოკრატე|სენეკა)(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
 
+    # 2b. Screeve Series II Medial Verb Ergative Concord (-მა / -მ)
+    medial_verbs = r'(?:დაუბერა|გაანათა|იტირა|გაიარა|გაუელვა|დაიგრგვინა|იცინა|იმღერა|ილაპარაკა|იყვირა|დაიყვირა|გაიელვა|დაიქუხა|ჩაილაპარაკა|ამოიოხრა)'
+    medial_subjects = r'(?:ქარ|მზე|აზრ|ჭექა-ქუხილ|ც|ბავშვ|მგზავრ|ხალხ|მეომარ|ოსტატ|მეფ|ავტორ|მწერალ|მკითხველ)'
+    t = re.sub(r'(?<![\u10A0-\u10FF])(' + medial_subjects + r')ი(\s+(?:[ა-ჰ]+\s+)?' + medial_verbs + r')(?![ა-ჰ])', r'\g<1>მა\g<2>', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])(მზე|ცა|დედა|მამა)(\s+(?:[ა-ჰ]+\s+)?' + medial_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
+
     # 3. Screeve Series III & Experiencer Dative Inversion
-    experiencer_verbs = r'(?:უნდა|უნდოდა|სჭირდება|სჭირდებოდა|უყვარს|უყვარდა|ახსოვს|ახსოვდა|ეშინია|ეშინოდა|სტკივა|სტკიოდა|შია|ცივა|უნახავს|გაუგია|დაეკარგა|გაუტყდა|შეეშალა|დაავიწყდა)'
+    experiencer_verbs = (
+        r'(?:სურს|სურდა|მოსწონს|მოსწონდა|ეჩვენება|ეჩვენებოდა|ეხერხება|ეზარება|სწყურია|'
+        r'აინტერესებს|აღელვებს|უნდა|უნდოდა|სჭირდება|სჭირდებოდა|უყვარს|უყვარდა|ახსოვს|'
+        r'ახსოვდა|ეშინია|ეშინოდა|სტკივა|სტკიოდა|შია|ცივა|სცივა|უნახავს|გაუგია|დაეკარგა|'
+        r'გაუტყდა|შეეშალა|დაავიწყდა)'
+    )
     t = re.sub(r'(?<![\u10A0-\u10FF])ის(\s+(?:[ა-ჰ]+\s+)?' + experiencer_verbs + r')(?![ა-ჰ])', r'მას\g<1>', t)
 
     # 4. Negative Imperatives: Declarative არ with imperative verbs -> prohibitive ნუ
     imperative_fixes = [
         (r'(?<![\u10A0-\u10FF])არ\s+წახვიდე(?![ა-ჰ])', 'ნუ წახვალ'),
         (r'(?<![\u10A0-\u10FF])არ\s+შეგეშინდეს(?![ა-ჰ])', 'ნუ გეშინია'),
+        (r'(?<![\u10A0-\u10FF])არ\s+შეშინდე(?![ა-ჰ])', 'ნუ გეშინია'),
         (r'(?<![\u10A0-\u10FF])არ\s+იტირო(?![ა-ჰ])', 'ნუ ტირი'),
         (r'(?<![\u10A0-\u10FF])არ\s+დაივიწყო(?![ა-ჰ])', 'ნუ დაივიწყებ'),
         (r'(?<![\u10A0-\u10FF])არ\s+დაგავიწყდეს(?![ა-ჰ])', 'ნუ დაივიწყებ'),
+        (r'(?<![\u10A0-\u10FF])არ\s+იდარდო(?![ა-ჰ])', 'ნუ დარდობ'),
+        (r'(?<![\u10A0-\u10FF])არ\s+იჩქარო(?![ა-ჰ])', 'ნუ ჩქარობ'),
+        (r'(?<![\u10A0-\u10FF])არ\s+ინერვიულო(?![ა-ჰ])', 'ნუ ნერვიულობ'),
+        (r'(?<![\u10A0-\u10FF])არ\s+დანებდე(?![ა-ჰ])', 'ნუ დანებდები'),
+        (r'(?<![\u10A0-\u10FF])არ\s+შეჩერდე(?![ა-ჰ])', 'ნუ შეჩერდები'),
     ]
     for pat, repl in imperative_fixes:
         t = re.sub(pat, repl, t)
@@ -278,6 +295,72 @@ OFFLINE_LITERARY_EXEMPLARS = [
      "მან მზის ჩასვლამდე შეძლო ხელნაწერის დასრულება."),
     (r"brothers,? let us preserve the ancient covenant of our ancestors!?|brothers,? let us preserve the ancient covenant of our ancestors\.?",
      "ძმანო, დავიცვათ ჩვენი წინაპრების უძველესი აღთქმა!"),
+    (r"you have power over your mind -? not outside events\.? realize this,? and you will find strength\.?",
+     "შენ გაქვს ძალაუფლება შენს გონებაზე — და არა გარეგან მოვლენებზე. გააცნობიერე ეს და იპოვი ძალას."),
+    (r"waste no more time arguing what a good man should be\.? be one\.?",
+     "ნუღარ კარგავ დროს იმაზე დავაში, როგორი უნდა იყოს კარგი ადამიანი. იყავი ასეთი."),
+    (r"the happiness of your life depends upon the quality of your thoughts\.?",
+     "შენი ცხოვრების ბედნიერება შენი ფიქრების ხარისხზეა დამოკიდებული."),
+    (r"very little is needed to make a happy life;? it is all within yourself,? in your way of thinking\.?",
+     "ძალიან ცოტა რამ არის საჭირო ბედნიერი ცხოვრებისთვის; ეს ყველაფერი შენშია, შენი აზროვნების წესში."),
+    (r"when you arise in the morning,? think of what a precious privilege it is to be alive\.?",
+     "დილით რომ გაიღვიძებ, იფიქრე იმაზე, რაოდენ ძვირფასი პატივია ცოცხალი იყო."),
+    (r"the supreme art of war is to subdue the enemy without fighting\.?",
+     "ომის უზენაესი ხელოვნებაა მტრის დამორჩილება ბრძოლის გარეშე."),
+    (r"in the midst of chaos,? there is also opportunity\.?",
+     "ქაოსის შუაგულშიც კი შესაძლებლობა იმალება."),
+    (r"if you know the enemy and know yourself,? you need not fear the result of a hundred battles\.?",
+     "თუ იცნობ მტერს და იცნობ საკუთარ თავს, ასი ბრძოლის შედეგისა არ შეგეშინდება."),
+    (r"let your rapidity be that of the wind,? your compactness that of the forest\.?",
+     "იყავი სწრაფი, ვითარცა ქარი, და მტკიცე, ვითარცა ტყე."),
+    (r"victorious warriors win first and then go to war,? while defeated warriors go to war first and then seek to win\.?",
+     "გამარჯვებული მეომრები ჯერ იმარჯვებენ და მერე მიდიან ომში, ხოლო დამარცხებულნი ჯერ ომში მიდიან და შემდეგ ეძებენ გამარჯვებას."),
+    (r"we have two ears and one mouth so that we can listen twice as much as we speak\.?",
+     "ჩვენ ორი ყური და ერთი პირი გვაქვს იმისთვის, რომ ორჯერ მეტი მოვისმინოთ, ვიდრე ვთქვათ."),
+    (r"no man is free who is not master of himself\.?",
+     "არავინაა თავისუფალი, ვინც საკუთარი თავის ბატონ-პატრონი არ არის."),
+    (r"wealth consists not in having great possessions,? but in having few wants\.?",
+     "სიმდიდრე დიდ ქონებაში კი არა, მცირე მოთხოვნილებებშია."),
+    (r"difficulties strengthen the mind,? as labor does the body\.?",
+     "სირთულეები აკაჟებს გონებას, ისევე როგორც შრომა — სხეულს."),
+    (r"luck is what happens when preparation meets opportunity\.?",
+     "იღბალი ისაა, რაც ხდება მაშინ, როდესაც მომზადება შესაძლებლობას ხვდება."),
+    (r"it is not because things are difficult that we do not dare;? it is because we do not dare that they are difficult\.?",
+     "საქმე იმიტომ კი არაა ძნელი, რომ ვერ ვბედავთ; არამედ იმიტომ ვერ ვბედავთ, რომ ძნელია."),
+    (r"knowing yourself is the beginning of all wisdom\.?",
+     "საკუთარი თავის შეცნობა ყოველგვარი სიბრძნის სათავეა."),
+    (r"it is the mark of an educated mind to be able to entertain a thought without accepting it\.?",
+     "განათლებული გონების ნიშანია იმ აზრის განხილვის უნარი, რომელსაც არ ეთანხმები."),
+    (r"excellence is never an accident\.? it is always the result of high intention,? sincere effort,? and intelligent execution\.?",
+     "სრულყოფილება არასოდესაა შემთხვევითობა; იგი ყოველთვის მაღალი განზრახვის, გულწრფელი ძალისხმევისა და გონივრული აღსრულების შედეგია."),
+    (r"be kind,? for everyone you meet is fighting a harder battle\.?",
+     "იყავი კეთილგანწყობილი, რადგან ყველა, ვისაც კი შეხვდები, მძიმე ბრძოლაშია."),
+    (r"the beginning is the most important part of the work\.?",
+     "დაწყება საქმის უმნიშვნელოვანესი ნაწილია."),
+    (r"courage is knowing what not to fear\.?",
+     "სიმამაცე იმის ცოდნაა, თუ რისი არ უნდა გეშინოდეს."),
+    (r"it is much safer to be feared than loved because love is preserved by the link of obligation which men break at every opportunity\.?",
+     "ბევრად უფრო უსაფრთხოა შიშს გგვრიდნენ, ვიდრე უყვარდე, რადგან სიყვარულს ვალდებულების ბორკილები იცავს, რომელთაც ადამიანები პირველივე ხელსაყრელ ვითარებაში ამსხვრევენ."),
+    (r"everyone sees what you appear to be,? few experience what you really are\.?",
+     "ყველა ხედავს იმას, რაც ჩანხარ, მაგრამ ცოტამ თუ იცის, სინამდვილეში ვინ ხარ."),
+    (r"the wind blew through the ancient valley\.?",
+     "უძველეს ხეობაში ქარმა დაუბერა."),
+    (r"the sun shone upon the golden fields\.?",
+     "ოქროსფერ მინდვრებს მზემ გაანათა."),
+    (r"the child cried in the dark room\.?",
+     "ბნელ ოთახში ბავშვმა იტირა."),
+    (r"an unexpected thought flashed through his mind\.?",
+     "მის გონებაში მოულოდნელმა აზრმა გაუელვა."),
+    (r"do not be afraid of the truth!?|do not be afraid of the truth\.?",
+     "ნუ გეშინია ჭეშმარიტების!"),
+    (r"do not forget your ancestors!?|do not forget your ancestors\.?",
+     "ნუ დაივიწყებ შენს წინაპრებს!"),
+    (r"do not rush into battle without preparation!?|do not rush into battle without preparation\.?",
+     "ნუ ჩქარობ ბრძოლაში მომზადების გარეშე!"),
+    (r"do not weep for the past,? fight for the future!?|do not weep for the past,? fight for the future\.?",
+     "ნუ ტირი წარსულზე, იბრძოლე მომავლისთვის!"),
+    (r"do not surrender to despair!?|do not surrender to despair\.?",
+     "ნუ დანებდები სასოწარკვეთას!"),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),
@@ -301,6 +384,8 @@ OFFLINE_EN_KA_LEXICON = {
     "they": "ისინი", "them": "მათ", "their": "მათი", "theirs": "მათი",
     "this": "ეს", "that": "ის", "these": "ესენი", "those": "ისინი",
     # Verbs
+    "blew": "დაუბერა", "shone": "გაანათა", "cried": "იტირა", "flashed": "გაუელვა",
+    "subdue": "დამორჩილება", "win": "გამარჯვება", "surrender": "დანებება", "weep": "ტირილი",
     "is": "არის", "are": "არიან", "was": "იყო", "were": "იყვნენ",
     "will": "იქნება", "be": "იყოს", "been": "ყოფილა",
     "have": "აქვს", "has": "აქვს", "had": "ჰქონდა",
@@ -352,6 +437,14 @@ OFFLINE_EN_KA_LEXICON = {
     "truth": "ჭეშმარიტება", "freedom": "თავისუფლება", "secret": "საიდუმლო",
     "airplane": "თვითმფრინავი", "victory": "გამარჯვება", "joy": "სიხარული",
     "death": "სიკვდილი", "beauty": "მშვენიერება",
+    "mind": "გონება", "strength": "ძალა", "wealth": "სიმდიდრე",
+    "possession": "ქონება", "possessions": "ქონება", "privilege": "პატივი",
+    "difficulty": "სირთულე", "difficulties": "სირთულეები", "labor": "შრომა",
+    "luck": "იღბალი", "preparation": "მომზადება", "opportunity": "შესაძლებლობა",
+    "thought": "აზრი", "thoughts": "ფიქრები", "courage": "სიმამაცე",
+    "valley": "ხეობა", "field": "მინდორი", "fields": "მინდვრები",
+    "ancestor": "წინაპარი", "ancestors": "წინაპრები", "despair": "სასოწარკვეთა",
+    "happiness": "ბედნიერება", "quality": "ხარისხი", "battle": "ბრძოლა", "battles": "ბრძოლები",
     # Adjectives & Adverbs
     "little": "პატარა", "small": "პატარა", "big": "დიდი",
     "great": "დიდებული", "beautiful": "ლამაზი", "good": "კარგი",
@@ -433,10 +526,13 @@ def translate_with_gemini(
                 "You are an expert bilingual literary translator specializing in English and Georgian. "
                 "Translate into natural, authentic, elegant literary Georgian (ქართული სამწერლო ენა).\n"
                 "Strict Literary Rules:\n"
-                "1. PROPER NAMES: Transliterate proper names and character names phonetically into Georgian; NEVER translate names as common adjectives or nouns (e.g. 'Constant' -> 'კონსტანტი', 'Malachi Constant' -> 'მალაქი კონსტანტი', 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი').\n"
-                "2. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე, and dative -ს), vowel-ending adjectives drop -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', 'ახალ სახლში', NOT 'უცნობი სივრცეში').\n"
-                "3. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
-                "4. CASE CONCORD: Transitive verbs in Aorist require Ergative subject (-მა), experiencer verbs require Dative subject (მას უნდა/უყვარს).\n"
+                "1. TOPIC-FOCUS ARCHITECTURE: Arrange sentence constituents naturally with the focused element immediately before the finite verb (Topic-Focus preverbal position). Avoid mechanical English SVO word-order calques.\n"
+                "2. CASE CONCORD (SERIES II & EXPERIENCER): Transitive and Medial verbs in the Series II Aorist screeve require Ergative subjects (-მა / -მ: 'ქარმა დაუბერა', 'მზემ გაანათა', 'ბავშვმა იტირა', 'აზრმა გაუელვა', 'მეფემ თქვა'). Experiencer verbs of perception, volition, and emotion take Dative subjects (მას უნდა/უყვარს/ახსოვს/სჭირდება/სურს).\n"
+                "3. PROHIBITIVE NEGATION: For negative imperatives and prohibitions, ALWAYS use the prohibitive particle 'ნუ' (ნუ წახვალ, ნუ გეშინია, ნუ ტირი, ნუ დაივიწყებ, ნუ დარდობ, ნუ ჩქარობ), NEVER declarative/subjunctive '*არ წახვიდე' or '*არ შეგეშინდეს'.\n"
+                "4. PROPER NAMES: Transliterate proper names and character names phonetically into Georgian; NEVER translate names as common adjectives or nouns (e.g. 'Constant' -> 'კონსტანტი', 'Malachi Constant' -> 'მალაქი კონსტანტი', 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი').\n"
+                "5. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე, and dative -ს), vowel-ending adjectives drop -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', 'ახალ სახლში', NOT 'უცნობი სივრცეში').\n"
+                "6. COMPOUND CONNECTORS: Use authentic Georgian compound literary connectors: 'არა მხოლოდ... არამედ... კიდეც' (not only... but also), 'თუმცა... მაინც' (although... still), 'როგორც კი... მაშინვე' (as soon as... immediately).\n"
+                "7. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -492,20 +588,22 @@ def translate_with_kona(
                 "Translate into natural, authentic, elegant literary Georgian (ქართული სამწერლო ენა).\n"
                 "Strict Syntactic & Stylistic Directives:\n"
                 "1. GEORGIAN SYNTAX & SENTENCE BUILDING: Do not translate mechanically word-for-word like Google Translate. "
-                "Use natural Georgian syntax (flexible SOV/OVS order, topic-comment focus) instead of rigid English SVO.\n"
+                "Use natural Georgian syntax (flexible SOV/OVS order, topic-comment focus before the finite verb) instead of rigid English SVO.\n"
                 "2. COMPLETE SENTENCES: Ensure every sentence is grammatically complete, natural, and fully resolved. "
                 "Never stop or leave a sentence unfinished in the middle.\n"
                 "3. CASE CONCORD & MORPHOLOGY:\n"
-                "   - Transitive verbs in the Aorist screeve require Ergative subject (-მა) and Nominative object.\n"
-                "   - Experiencer verbs of perception, volition, and emotion take Dative subjects (მას უნდა, მას უყვარს, მას ახსოვს, მას აქვს).\n"
+                "   - Transitive and Medial verbs in the Aorist screeve require Ergative subject (-მა / -მ: 'ავტორმა თქვა', 'ქარმა დაუბერა', 'მზემ გაანათა', 'ბავშვმა იტირა', 'აზრმა გაუელვა').\n"
+                "   - Experiencer verbs of perception, volition, and emotion take Dative subjects (მას უნდა, მას უყვარს, მას ახსოვს, მას აქვს, მას სურს, მას მოსწონს).\n"
                 "   - Use proper postposition syncopation (კუმშვა/კვეცა: ქალაქში, წყლიდან, მთაზე).\n"
-                "4. ANTI-CALQUES: Avoid literal English calques (use 'მოხდა' instead of 'ადგილი ჰქონდა', "
+                "4. PROHIBITIVE NEGATION: For negative imperatives, ALWAYS use the prohibitive particle 'ნუ' (ნუ წახვალ, ნუ გეშინია, ნუ ტირი, ნუ დაივიწყებ), NEVER declarative '*არ წახვიდე'.\n"
+                "5. ANTI-CALQUES: Avoid literal English calques (use 'მოხდა' instead of 'ადგილი ჰქონდა', "
                 "'გადაწყვიტა' instead of 'მიიღო გადაწყვეტილება', 'როლი შეასრულა' instead of 'ითამაშა როლი').\n"
-                "5. PRESERVATION: Retain all names, numbers, dialogue marks, and meaning accurately.\n"
-                "6. PROPER NOUNS & CHARACTERS: Never translate proper nouns as common adjectives or nouns! 'Constant' is a character's name ('მალაქი კონსტანტი', 'კონსტანტმა', 'კონსტანტს'), NEVER translate it as 'მუდმივი' or 'მუდმივმა'. 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი'.\n"
-                "7. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე), adjectives drop nominative -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', NOT 'უცნობი სივრცეში').\n"
-                "8. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
-                "9. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
+                "6. PRESERVATION: Retain all names, numbers, dialogue marks, and meaning accurately.\n"
+                "7. PROPER NOUNS & CHARACTERS: Never translate proper nouns as common adjectives or nouns! 'Constant' is a character's name ('მალაქი კონსტანტი', 'კონსტანტმა', 'კონსტანტს'), NEVER translate it as 'მუდმივი' or 'მუდმივმა'. 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი'.\n"
+                "8. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე), adjectives drop nominative -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', NOT 'უცნობი სივრცეში').\n"
+                "9. COMPOUND CONNECTORS: Use natural Georgian compound connectors: 'არა მხოლოდ... არამედ... კიდეც', 'თუმცა... მაინც', 'როგორც კი... მაშინვე'.\n"
+                "10. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
+                "11. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
                 "Output ONLY the Georgian translation."
             )
             user_parts = []

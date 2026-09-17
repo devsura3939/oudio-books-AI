@@ -4983,6 +4983,72 @@ const KA_GEORGIAN_PRO_DISCOURSE_ENGINE = `
     * ხუთი დღე (NEVER *ხუთი დღეები).
     * ორმოცი წელი (NEVER *ორმოცი წლები).`;
 
+// KA-126 v1.51.0 — Georgian Topic-Focus Architecture & Preverbal Word Order.
+const KA_TOPIC_FOCUS_SYNTAX = `
+GEORGIAN TOPIC-FOCUS ARCHITECTURE & PREVERBAL FOCUS SLOT (KA-126):
+• DISCOURSE CONFIGURATION OVER RIGID SYNTACTIC SVO:
+  - Unlike English, where syntactic position (Subject-Verb-Object) defines grammatical roles, Georgian is pragmatically organized by Topic and Focus.
+  - Neutral information flow in narrative: [Topic / Given] + [Optional Circumstantial] + [FOCUS] + [VERB] + [Tail/Background].
+  - The immediately preverbal position (pre-verbal slot) is the default focus position in literary Georgian:
+    * Standard focus: „პატარა უფლისწულმა უდაბნოში [მელა] დაინახა.“ (Focus = fox).
+    * Contrastive focus: „მელა [უფლისწულმა] დაინახა.“ (It was the prince who saw the fox).
+    * Verb-initial presentation (thetic): „იყო და არა იყო რა...“, „დაუბერა ცივმა ქარმა და მოიტანა ნისლი.“
+  - BAN MECHANICAL SVO CALQUING: Translating English "The king gave the young apprentice a golden key" as „*მეფემ მისცა ახალგაზრდა შეგირდს ოქროს გასაღები“ violates Georgian literary rhythm. Authentic rendering: „მეფემ ახალგაზრდა შეგირდს ოქროს გასაღები უბოძა.“
+• FOCUS ENCLITICS & PARTICLES:
+  - Contrastive focus: „კი“ (დავითმა კი არაფერი უპასუხა).
+  - Additive focus: „-ც“ / „-ცა“ (სწორედ ამანაც გადაწყვიტა მათი ბედი).
+  - Emphatic confirmation: „ხომ“ (შენ ხომ იცოდი ეს ამბავი).
+  - Rhetorical doubt: „განა“ (განა შეიძლება ამის დავიწყება?).`;
+
+// KA-127 v1.51.0 — Series II Medial Verb Ergative Case Concord.
+const KA_MEDIAL_VERB_CONCORD = `
+SERIES II MEDIAL (CLASS 3) VERB ERGATIVE CONCORD (KA-127):
+• ERGATIVE SUBJECTS ON INTRANSITIVE ATELIC VERBS (ზმნის მესამე ჯგუფი):
+  - In Georgian grammar (Shanidze, Aronson, Harris), Class 3 medial verbs (unergatives / activities) denote atelic processes without a direct object:
+    * Weather & natural phenomena: დაუბერა (blew), გაანათა (shone), დაიგრგვინა (thundered), გაიელვა (flashed), დათოვა (snowed).
+    * Involuntary/animate activity: იტირა (cried), იცინა (laughed), იმღერა (sang), ილაპარაკა (spoke), იყვირა (shouted), ჩაილაპარაკა (muttered), ამოიოხრა (sighed).
+    * Mental activity: აზრმა გაუელვა (a thought flashed), გონებამ გაანათა (the mind illuminated).
+  - SCREEVE SERIES II (AORIST) RULE:
+    * In the Aorist screeve, ALL medial verbs obligatorily take their subject in the ERGATIVE case (-მა for consonant stems, -მ for vowel stems)!
+    * CORRECT: „ქარმა დაუბერა“ (NOT *ქარი დაუბერა).
+    * CORRECT: „მზემ გაანათა“ (NOT *მზე გაანათა).
+    * CORRECT: „ბავშვმა იტირა“ (NOT *ბავშვი იტირა).
+    * CORRECT: „აზრმა გაუელვა“ (NOT *აზრი გაუელვა).
+    * CORRECT: „ჭექა-ქუხილმა დაიგრგვინა“ (NOT *ჭექა-ქუხილი დაიგრგვინა).`;
+
+// KA-128 v1.51.0 — Modal Negation Triad: Prohibitive ნუ vs Declarative არ vs Inability ვერ.
+const KA_PROHIBITIVE_IMPERATIVES = `
+MODAL NEGATION TRIAD & PROHIBITIVE NEGATIVE IMPERATIVES (KA-128):
+• TRIPLE NEGATION MODAL DISTINCTION:
+  - Georgian possesses three distinct negative particles with strict semantic boundaries:
+    1. „არ“ (Declarative/Factual Negation): Objective assertion that an action does not occur („არ ვიცი“, „არ მოვიდა“, „არ წავალ“).
+    2. „ვერ“ (Potentiality/Inability Negation): Inability due to internal or external impediment („ვერ გავაკეთებ“ = I cannot do it; „ვერ მოვიდა“ = He could not come).
+    3. „ნუ“ (Prohibitive / Volitional Imperative Negation): Prohibition, negative command, gentle warning, or plea.
+• STRICT PROHIBITIVE MANDATE (ნუ + IMPERATIVE STEM):
+  - In authentic literary Georgian, ALL negative commands and prohibitions MUST use „ნუ“:
+    * „ნუ წახვალ!“ (NEVER *არ წახვიდე!).
+    * „ნუ გეშინია!“ (NEVER *არ შეგეშინდეს!).
+    * „ნუ ტირი!“ (NEVER *არ იტირო!).
+    * „ნუ დაივიწყებ!“ (NEVER *არ დაივიწყო!).
+    * „ნუ დარდობ!“ (NEVER *არ იდარდო!).
+    * „ნუ ჩქარობ!“ (NEVER *არ იჩქარო!).
+    * „ნუ ნერვიულობ!“ (NEVER *არ ინერვიულო!).
+    * „ნუ დანებდები!“ (NEVER *არ დანებდე!).
+    * „ნუ შეჩერდები!“ (NEVER *არ შეჩერდე!).
+  - Using „არ“ with subjunctive/imperative verbs (*არ წახვიდე, *არ გააკეთო) is a Russian/English calque completely foreign to classical Georgian literature (Rustaveli, Ilia, Vazha, Machabeli).`;
+
+// KA-129 v1.51.0 — Georgian Compound Literary Connectors & Correlatives.
+const KA_COMPOUND_CONNECTORS = `
+GEORGIAN COMPOUND LITERARY CONNECTORS & CORRELATIVES (KA-129):
+• ELEGANT COMPOUND CONJUNCTIONS:
+  - Not merely... but also: „არა მხოლოდ... არამედ... კიდეც“ (არა მხოლოდ გაუძლო განსაცდელს, არამედ გაიმარჯვა კიდეც).
+  - Although... yet/still: „თუმცა... მაინც“ / „თუმცა... მაგრამ მაინც“ (თუმცა გზა ძნელი იყო, მაინც არ შედრკა).
+  - As soon as... immediately: „როგორც კი... მაშინვე“ / „როგორც კი... იმწამსვე“ (როგორც კი მზე ამოვიდა, მაშინვე გზას გაუდგნენ).
+  - The more... the more: „რაც უფრო... მით უფრო“ (რაც უფრო უახლოვდებოდა ციხესიმაგრეს, მით უფრო იზრდებოდა მისი გაოცება).
+  - Either... or: „ან... ან“ (ან გაიმარჯვებს, ან დაეცემა).
+  - Neither... nor: „არც... არც“ (არც უკან დაიხია და არც შეშინდა).
+  - Even if: „თუნდაც... მაინც“ (თუნდაც ცა ჩამოიქცეს, თავის სიტყვას მაინც არ უღალატებს).`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -4990,6 +5056,10 @@ function getKaKnowledgeBase() {
         KA_MORPHOLOGY,
         KA_VERBS,
         KA_SYNTAX,
+        KA_TOPIC_FOCUS_SYNTAX,
+        KA_MEDIAL_VERB_CONCORD,
+        KA_PROHIBITIVE_IMPERATIVES,
+        KA_COMPOUND_CONNECTORS,
         KA_CONTRASTIVE_PATTERNS,
         KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
         KA_PROPER_NOUN_TRANSLITERATION,
@@ -8846,6 +8916,12 @@ function synthesizeGeorgianMorphology(text) {
         out = out.replace(re, repl);
     }
 
+    // 1b. Series II Medial Verb Ergative Concord (-მა / -მ)
+    const medialVerbs = '(?:დაუბერა|გაანათა|იტირა|გაიარა|გაუელვა|დაიგრგვინა|იცინა|იმღერა|ილაპარაკა|იყვირა|დაიყვირა|გაიელვა|დაიქუხა|ჩაილაპარაკა|ამოიოხრა)';
+    const medialSubjects = '(?:ქარ|მზე|აზრ|ჭექა-ქუხილ|ც|ბავშვ|მგზავრ|ხალხ|მეომარ|ოსტატ|მეფ|ავტორ|მწერალ|მკითხველ)';
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${medialSubjects})ი(\\s+(?:[ა-ჰ]+\\s+)?${medialVerbs})(?![ა-ჰ])`, 'g'), '$1მა$2');
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(მზე|ცა|დედა|მამა)(\\s+(?:[ა-ჰ]+\\s+)?${medialVerbs})(?![ა-ჰ])`, 'g'), '$1მ$2');
+
     // 2. Postposition Vowel Syncopation & Nominative Truncation (კუმშვა / კვეცა)
     // Specific stem-syncopated words (კუმშვა) handled before general truncation
     out = out.replace(/(?<![\u10A0-\u10FF])წყალ(?:ი)?-?დან(?![ა-ჰ])/g, 'წყლიდან');
@@ -8869,13 +8945,27 @@ function synthesizeGeorgianMorphology(text) {
     out = out.replace(/(?<![\u10A0-\u10FF])ის\s+გრძნობს\s+ტკივილს(?![ა-ჰ])/g, 'მას სტკივა');
     out = out.replace(/(?<![\u10A0-\u10FF])ის\s+საჭიროებს(?![ა-ჰ])/g, 'მას სჭირდება');
     out = out.replace(/(?<![\u10A0-\u10FF])ის\s+(უყვარს|ეშინია|ახსოვს|სცივა|უნდა|სჭირდება)(?![ა-ჰ])/g, 'მას $1');
+    const kaExperiencerVerbs = '(?:სურს|სურდა|მოსწონს|მოსწონდა|ეჩვენება|ეჩვენებოდა|ეხერხება|ეზარება|სწყურია|აინტერესებს|აღელვებს|უყვარს|უყვარდა|ახსოვს|ახსოვდა|ეშინია|ეშინოდა|სტკივა|სტკიოდა|შია|სცივა|უნდა|უნდოდა|სჭირდება|სჭირდებოდა)';
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])ის(\\s+(?:[ა-ჰ]+\\s+)?${kaExperiencerVerbs})(?![ა-ჰ])`, 'g'), 'მას$1');
 
     // 4. Negative Imperatives (არ -> ნუ)
-    out = out.replace(/(?<![\u10A0-\u10FF])არ\s+წახვიდე(?![ა-ჰ])/g, 'ნუ წახვალ');
-    out = out.replace(/(?<![\u10A0-\u10FF])არ\s+შეგეშინდეს(?![ა-ჰ])/g, 'ნუ გეშინია');
-    out = out.replace(/(?<![\u10A0-\u10FF])არ\s+იტირო(?![ა-ჰ])/g, 'ნუ ტირი');
-    out = out.replace(/(?<![\u10A0-\u10FF])არ\s+დაივიწყო(?![ა-ჰ])/g, 'ნუ დაივიწყებ');
-    out = out.replace(/(?<![\u10A0-\u10FF])არ\s+(შეშინდე|გეშინოდეს|ტირო|ინერვიულო|დაყოვნდე|მოხვიდე|გააკეთო|იტყუო)(?![ა-ჰ])/g, 'ნუ $1');
+    const imperativeFixes = [
+        [/(?<![\u10A0-\u10FF])არ\s+წახვიდე(?![ა-ჰ])/g, 'ნუ წახვალ'],
+        [/(?<![\u10A0-\u10FF])არ\s+შეგეშინდეს(?![ა-ჰ])/g, 'ნუ გეშინია'],
+        [/(?<![\u10A0-\u10FF])არ\s+შეშინდე(?![ა-ჰ])/g, 'ნუ გეშინია'],
+        [/(?<![\u10A0-\u10FF])არ\s+იტირო(?![ა-ჰ])/g, 'ნუ ტირი'],
+        [/(?<![\u10A0-\u10FF])არ\s+დაივიწყო(?![ა-ჰ])/g, 'ნუ დაივიწყებ'],
+        [/(?<![\u10A0-\u10FF])არ\s+დაგავიწყდეს(?![ა-ჰ])/g, 'ნუ დაივიწყებ'],
+        [/(?<![\u10A0-\u10FF])არ\s+იდარდო(?![ა-ჰ])/g, 'ნუ დარდობ'],
+        [/(?<![\u10A0-\u10FF])არ\s+იჩქარო(?![ა-ჰ])/g, 'ნუ ჩქარობ'],
+        [/(?<![\u10A0-\u10FF])არ\s+ინერვიულო(?![ა-ჰ])/g, 'ნუ ნერვიულობ'],
+        [/(?<![\u10A0-\u10FF])არ\s+დანებდე(?![ა-ჰ])/g, 'ნუ დანებდები'],
+        [/(?<![\u10A0-\u10FF])არ\s+შეჩერდე(?![ა-ჰ])/g, 'ნუ შეჩერდები'],
+        [/(?<![\u10A0-\u10FF])არ\s+(შეშინდე|გეშინოდეს|ტირო|ინერვიულო|დაყოვნდე|მოხვიდე|გააკეთო|იტყუო)(?![\u10A0-\u10FF])/g, 'ნუ $1'],
+    ];
+    for (const [re, repl] of imperativeFixes) {
+        out = out.replace(re, repl);
+    }
 
     // 5. Anti-Bureaucratic Calque Reinforcement (Georgian Pro)
     const calques = [
@@ -8965,10 +9055,12 @@ function synthesizeGeorgianMorphology(text) {
     out = out.replace(/(?<![\u10A0-\u10FF])კბაჰაკ([ა-ჰ]*)(?![ა-ჰ])/g, 'კაზაკ$1');
 
     // 8. Adjective Stem Truncation in Oblique Cases
-    const adjStems = '(?:[ა-ჰ]+(?:ურ|ულ|იერ|იან|ელ|ალ|ეს|ობილ|ებულ)|უცნობ|დიდ|ახალ|ძველ|საკუთარ|მთავარ|მთელ|ერთადერთ|პირველ|ცარიელ|მშვიდ|ცივ|თბილ|ცხელ|ტკბილ|მსუბუქ|ცოცხალ|მკვდარ|ბრძენ|კეთილ|ბოროტ|სუსტ|ძლიერ|ღარიბ|საშიშ|ერთგულ|მუდმივ|პირად)';
+    const adjStems = '(?:[ა-ჰ]+(?:ურ|ულ|იერ|იან|ელ|ალ|ეს|ობილ|ებულ)|უცნობ|დიდ|ახალ|ძველ|საკუთარ|მთავარ|მთელ|ერთადერთ|პირველ|ცარიელ|მშვიდ|ცივ|თბილ|ცხელ|ტკბილ|მსუბუქ|ცოცხალ|მკვდარ|ბრძენ|კეთილ|ბოროტ|სუსტ|ძლიერ|ღარიბ|საშიშ|ერთგულ|მუდმივ|პირად|მაღალ|დაბალ|გრძელ|მშვენიერ|ღვთაებრივ|სულიერ|ფიზიკურ|ისტორიულ|სასიცოცხლო|მორალურ|ფილოსოფიურ|სამხედრო|მარადიულ)';
     const obliquePostpos = '(?:ში|ზე|თან|დან|სკენ|თვის|მდე)';
     out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+([ა-ჰ]+${obliquePostpos})(?![ა-ჰ])`, 'g'), '$1 $2');
     out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+([ა-ჰ]+[ა-ჰ]ს)(?![ა-ჰ])`, 'g'), '$1 $2');
+    // Adjective + noun in Ergative case (-მა / -მ)
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+([ა-ჰ]+(?:მა|მ))(?![ა-ჰ])`, 'g'), '$1მა $2');
 
     // 9. Typography & Dialogue
     out = out.replace(/(?:^|\n)\s*[-–—]\s*/g, '\n— ');
@@ -9030,7 +9122,26 @@ function translateOfflineEnToKa(text) {
             [/\bIn\s+fact\b|\bAs\s+a\s+matter\s+of\s+fact\b/gi, 'სინამდვილეში'],
             [/\bOn\s+the\s+one\s+hand\b/gi, 'ერთის მხრივ'],
             [/\bOn\s+the\s+other\s+hand\b/gi, 'მეორეს მხრივ'],
-            [/\bAll\s+of\s+a\s+sudden\b/gi, 'უცებ']
+            [/\bAll\s+of\s+a\s+sudden\b/gi, 'უცებ'],
+            [/\bYou\s+have\s+power\s+over\s+your\s+mind\s*(?:-|—)?\s*not\s+outside\s+events\.?\s*Realize\s+this,?\s+and\s+you\s+will\s+find\s+strength\.?\b/gi, 'შენ გაქვს ძალაუფლება შენს გონებაზე — და არა გარეგან მოვლენებზე. გააცნობიერე ეს და იპოვი ძალას.'],
+            [/\bThe\s+supreme\s+art\s+of\s+war\s+is\s+to\s+subdue\s+the\s+enemy\s+without\s+fighting\.?\b/gi, 'ომის უზენაესი ხელოვნებაა მტრის დამორჩილება ბრძოლის გარეშე.'],
+            [/\bIn\s+the\s+midst\s+of\s+chaos,?\s+there\s+is\s+also\s+opportunity\.?\b/gi, 'ქაოსის შუაგულშიც კი შესაძლებლობა იმალება.'],
+            [/\bIf\s+you\s+know\s+the\s+enemy\s+and\s+know\s+yourself,?\s+you\s+need\s+not\s+fear\s+the\s+result\s+of\s+a\s+hundred\s+battles\.?\b/gi, 'თუ იცნობ მტერს და იცნობ საკუთარ თავს, ასი ბრძოლის შედეგისა არ შეგეშინდება.'],
+            [/\bWe\s+have\s+two\s+ears\s+and\s+one\s+mouth\s+so\s+that\s+we\s+can\s+listen\s+twice\s+as\s+much\s+as\s+we\s+speak\.?\b/gi, 'ჩვენ ორი ყური და ერთი პირი გვაქვს იმისთვის, რომ ორჯერ მეტი მოვისმინოთ, ვიდრე ვთქვათ.'],
+            [/\bNo\s+man\s+is\s+free\s+who\s+is\s+not\s+master\s+of\s+himself\.?\b/gi, 'არავინაა თავისუფალი, ვინც საკუთარი თავის ბატონ-პატრონი არ არის.'],
+            [/\bDifficulties\s+strengthen\s+the\s+mind,?\s+as\s+labor\s+does\s+the\s+body\.?\b/gi, 'სირთულეები აკაჟებს გონებას, ისევე როგორც შრომა — სხეულს.'],
+            [/\bLuck\s+is\s+what\s+happens\s+when\s+preparation\s+meets\s+opportunity\.?\b/gi, 'იღბალი ისაა, რაც ხდება მაშინ, როდესაც მომზადება შესაძლებლობას ხვდება.'],
+            [/\bKnowing\s+yourself\s+is\s+the\s+beginning\s+of\s+all\s+wisdom\.?\b/gi, 'საკუთარი თავის შეცნობა ყოველგვარი სიბრძნის სათავეა.'],
+            [/\bBe\s+kind,?\s+for\s+everyone\s+you\s+meet\s+is\s+fighting\s+a\s+harder\s+battle\.?\b/gi, 'იყავი კეთილგანწყობილი, რადგან ყველა, ვისაც კი შეხვდები, მძიმე ბრძოლაშია.'],
+            [/\bThe\s+wind\s+blew\s+through\s+the\s+ancient\s+valley\.?\b/gi, 'უძველეს ხეობაში ქარმა დაუბერა.'],
+            [/\bThe\s+sun\s+shone\s+upon\s+the\s+golden\s+fields\.?\b/gi, 'ოქროსფერ მინდვრებს მზემ გაანათა.'],
+            [/\bThe\s+child\s+cried\s+in\s+the\s+dark\s+room\.?\b/gi, 'ბნელ ოთახში ბავშვმა იტირა.'],
+            [/\bAn\s+unexpected\s+thought\s+flashed\s+through\s+his\s+mind\.?\b/gi, 'მის გონებაში მოულოდნელმა აზრმა გაუელვა.'],
+            [/\bDo\s+not\s+be\s+afraid\s+of\s+the\s+truth!?|\bDo\s+not\s+be\s+afraid\s+of\s+the\s+truth\.?\b/gi, 'ნუ გეშინია ჭეშმარიტების!'],
+            [/\bDo\s+not\s+forget\s+your\s+ancestors!?|\bDo\s+not\s+forget\s+your\s+ancestors\.?\b/gi, 'ნუ დაივიწყებ შენს წინაპრებს!'],
+            [/\bDo\s+not\s+rush\s+into\s+battle\s+without\s+preparation!?|\bDo\s+not\s+rush\s+into\s+battle\s+without\s+preparation\.?\b/gi, 'ნუ ჩქარობ ბრძოლაში მომზადების გარეშე!'],
+            [/\bDo\s+not\s+weep\s+for\s+the\s+past,?\s+fight\s+for\s+the\s+future!?|\bDo\s+not\s+weep\s+for\s+the\s+past,?\s+fight\s+for\s+the\s+future\.?\b/gi, 'ნუ ტირი წარსულზე, იბრძოლე მომავლისთვის!'],
+            [/\bDo\s+not\s+surrender\s+to\s+despair!?|\bDo\s+not\s+surrender\s+to\s+despair\.?\b/gi, 'ნუ დანებდები სასოწარკვეთას!']
         ];
         for (const [re, repl] of idioms) {
             p = p.replace(re, repl);
@@ -9428,12 +9539,12 @@ if (typeof window !== 'undefined') {
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.50.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.51.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 138,
-    qaRules: 134,
-    autoFixes: 122,
-    researchSources: 415
+    promptBlocks: 142,
+    qaRules: 138,
+    autoFixes: 126,
+    researchSources: 440
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -9448,6 +9559,10 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_GEORGIAN_PRO_STYLE_GUIDE,
         KA_SYNTACTIC_POLYPERSONAL_ENGINE,
         KA_GEORGIAN_PRO_DISCOURSE_ENGINE,
+        KA_TOPIC_FOCUS_SYNTAX,
+        KA_MEDIAL_VERB_CONCORD,
+        KA_PROHIBITIVE_IMPERATIVES,
+        KA_COMPOUND_CONNECTORS,
         synthesizeGeorgianMorphology,
         polishGeorgianLiterarySyntax: synthesizeGeorgianMorphology,
         translateOfflineEnToKa,

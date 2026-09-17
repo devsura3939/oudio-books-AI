@@ -131,6 +131,82 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             polished = synthesize_georgian_morphology(raw)
             self.assertIn(expected, polished, f"Failed for '{raw}': got '{polished}'")
 
+    def test_09_medial_verb_ergative_concord(self):
+        """Verify that Class 3 medial intransitive verbs require Series II Ergative case subjects."""
+        pairs = [
+            ("ქარი დაუბერა", "ქარმა დაუბერა"),
+            ("მზე გაანათა", "მზემ გაანათა"),
+            ("ბავშვი იტირა", "ბავშვმა იტირა"),
+            ("აზრი გაუელვა", "აზრმა გაუელვა"),
+            ("ჭექა-ქუხილი დაიგრგვინა", "ჭექა-ქუხილმა დაიგრგვინა"),
+            ("ცივი ქარი დაუბერა", "ცივმა ქარმა დაუბერა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertIn(expected, polished, f"Medial verb concord failed for '{raw}': got '{polished}'")
+
+    def test_10_prohibitive_negative_imperatives(self):
+        """Verify that negative commands/imperatives strictly use the prohibitive particle ნუ."""
+        pairs = [
+            ("არ წახვიდე!", "ნუ წახვალ!"),
+            ("არ შეგეშინდეს!", "ნუ გეშინია!"),
+            ("არ შეშინდე!", "ნუ გეშინია!"),
+            ("არ იტირო!", "ნუ ტირი!"),
+            ("არ დაივიწყო!", "ნუ დაივიწყებ!"),
+            ("არ დაგავიწყდეს!", "ნუ დაივიწყებ!"),
+            ("არ იდარდო!", "ნუ დარდობ!"),
+            ("არ იჩქარო!", "ნუ ჩქარობ!"),
+            ("არ ინერვიულო!", "ნუ ნერვიულობ!"),
+            ("არ დანებდე!", "ნუ დანებდები!"),
+            ("არ შეჩერდე!", "ნუ შეჩერდები!"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Prohibitive negation failed for '{raw}': got '{polished}'")
+
+    def test_11_experiencer_dative_inversion(self):
+        """Verify that experiencer verbs of perception, volition and emotion take Dative subjects."""
+        pairs = [
+            ("ის სურს", "მას სურს"),
+            ("ის მოსწონს", "მას მოსწონს"),
+            ("ის ეჩვენება", "მას ეჩვენება"),
+            ("ის აინტერესებს", "მას აინტერესებს"),
+            ("ის უყვარს", "მას უყვარს"),
+            ("ის ახსოვს", "მას ახსოვს"),
+            ("ის ეშინია", "მას ეშინია"),
+            ("ის სჭირდება", "მას სჭირდება"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Experiencer dative inversion failed for '{raw}': got '{polished}'")
+
+    def test_12_extended_oblique_adjective_truncation(self):
+        """Verify truncation of consonant-stem adjectives in oblique cases and before postpositions."""
+        pairs = [
+            ("მშვენიერი ბაღში", "მშვენიერ ბაღში"),
+            ("ღვთაებრივი სინათლეში", "ღვთაებრივ სინათლეში"),
+            ("სულიერი სიმშვიდეს", "სულიერ სიმშვიდეს"),
+            ("მარადიული სიბრძნეს", "მარადიულ სიბრძნეს"),
+            ("ახალი ეპოქაში", "ახალ ეპოქაში"),
+            ("დიდი ქალაქში", "დიდ ქალაქში"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Adjective truncation failed for '{raw}': got '{polished}'")
+
+    def test_13_autonomous_training_pack_eval(self):
+        """Verify that the active rule pack scores 100% with zero regressions across all 165+ benchmark cases."""
+        from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
+        pack = load_active_pack("ka")
+        cases = load_benchmark_cases("ka")
+        self.assertGreaterEqual(len(cases), 165, "Expected at least 165 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 170, "Expected at least 170 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 27, "Active pack version must be at least 27")
+        eval_res = evaluate_pack(pack.get("items", []), cases)
+        self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
+        self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
+        self.assertEqual(eval_res["qa_false_positives"], 0, f"QA false positives found: {eval_res['qa_false_positives']}")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
