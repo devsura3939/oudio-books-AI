@@ -712,12 +712,23 @@
                 }
             }
         };
+ 
+        window.toggleGatePassword = function(id, button) {
+            var input = document.getElementById(id);
+            if (!input) return;
+            var show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            button.textContent = show ? 'Hide' : 'Show';
+            button.setAttribute('aria-label', (show ? 'Hide' : 'Show') + ' password');
+            button.setAttribute('aria-pressed', String(show));
+        };
 
-        window.switchGateMode = function(mode) {
+        window.switchGateMode = function(mode, email) {
             var signInForm = document.getElementById('gateSignInForm');
             var registerForm = document.getElementById('gateRegisterForm');
             var forgotForm = document.getElementById('gateForgotForm');
             var resetForm = document.getElementById('gateResetForm');
+            var verifyCard = document.getElementById('gateVerifyEmailCard');
             var tabs = document.getElementById('gateTabs');
             var tabSignIn = document.getElementById('gateTabSignIn');
             var tabRegister = document.getElementById('gateTabRegister');
@@ -726,10 +737,26 @@
             window.setGateError('');
             window.setGateSuccess('');
 
-            if (mode === 'reset') {
+            var resend = document.getElementById('gateResendConfirmation');
+            if (resend) resend.classList.toggle('hidden', mode !== 'signin' && mode !== 'register');
+
+            if (mode === 'verify-email') {
                 if (signInForm) signInForm.classList.add('hidden');
                 if (registerForm) registerForm.classList.add('hidden');
                 if (forgotForm) forgotForm.classList.add('hidden');
+                if (resetForm) resetForm.classList.add('hidden');
+                if (verifyCard) verifyCard.classList.remove('hidden');
+                if (tabs) tabs.classList.add('hidden');
+                if (subtitle) subtitle.textContent = 'Please confirm your email address to activate your account';
+                if (email) {
+                    var emailBadge = document.getElementById('gateVerifyEmailBadge');
+                    if (emailBadge) emailBadge.textContent = email;
+                }
+            } else if (mode === 'reset') {
+                if (signInForm) signInForm.classList.add('hidden');
+                if (registerForm) registerForm.classList.add('hidden');
+                if (forgotForm) forgotForm.classList.add('hidden');
+                if (verifyCard) verifyCard.classList.add('hidden');
                 if (resetForm) resetForm.classList.remove('hidden');
                 if (tabs) tabs.classList.add('hidden');
                 if (subtitle) subtitle.textContent = 'Create a secure new password for your account';
@@ -739,6 +766,7 @@
                 if (signInForm) signInForm.classList.add('hidden');
                 if (forgotForm) forgotForm.classList.add('hidden');
                 if (resetForm) resetForm.classList.add('hidden');
+                if (verifyCard) verifyCard.classList.add('hidden');
                 if (registerForm) registerForm.classList.remove('hidden');
                 if (tabs) tabs.classList.remove('hidden');
                 if (tabSignIn) {
@@ -748,12 +776,13 @@
                     tabRegister.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
                 }
                 if (subtitle) subtitle.textContent = 'Create your free Studio account to sync books across devices';
-                var regInput = document.getElementById('gateRegEmail');
+                var regInput = document.getElementById('gateRegUsername') || document.getElementById('gateRegEmail');
                 if (regInput) regInput.focus();
             } else if (mode === 'forgot') {
                 if (signInForm) signInForm.classList.add('hidden');
                 if (registerForm) registerForm.classList.add('hidden');
                 if (resetForm) resetForm.classList.add('hidden');
+                if (verifyCard) verifyCard.classList.add('hidden');
                 if (forgotForm) forgotForm.classList.remove('hidden');
                 if (tabs) tabs.classList.add('hidden');
                 if (subtitle) subtitle.textContent = 'Enter your email to receive a password reset recovery link';
@@ -768,6 +797,7 @@
                 if (registerForm) registerForm.classList.add('hidden');
                 if (forgotForm) forgotForm.classList.add('hidden');
                 if (resetForm) resetForm.classList.add('hidden');
+                if (verifyCard) verifyCard.classList.add('hidden');
                 if (signInForm) signInForm.classList.remove('hidden');
                 if (tabs) tabs.classList.remove('hidden');
                 if (tabSignIn) {
@@ -824,6 +854,36 @@
                     clearInterval(poll);
                     if (btn) { btn.disabled = false; btn.textContent = "Send Recovery Link"; }
                     if (window._realHandleGateForgot) window._realHandleGateForgot();
+                    else window.setGateError('The sign-in service could not load. Reload this page to retry.');
+                }
+            }, 80);
+        };
+
+        window.handleGateSetNewPassword = function() {
+            if (window._realHandleGateSetNewPassword) return window._realHandleGateSetNewPassword();
+            var btn = document.getElementById('btnGateSetNewPassword');
+            if (btn && btn.disabled) return;
+            if (btn) { btn.disabled = true; btn.textContent = 'Connecting...'; }
+            var started = Date.now();
+            var poll = setInterval(function() {
+                if (window._realHandleGateSetNewPassword || Date.now() - started > 8000) {
+                    clearInterval(poll);
+                    if (btn) { btn.disabled = false; btn.textContent = "Update Password & Enter Studio"; }
+                    if (window._realHandleGateSetNewPassword) window._realHandleGateSetNewPassword();
+                    else window.setGateError('The service could not load. Reload this page to retry.');
+                }
+            }, 80);
+        };
+
+        window.resendGateConfirmation = function() {
+            if (window._realResendGateConfirmation) return window._realResendGateConfirmation();
+            var btn = document.getElementById('btnGateResendVerification') || document.getElementById('gateResendConfirmation');
+            if (btn && btn.disabled) return;
+            var started = Date.now();
+            var poll = setInterval(function() {
+                if (window._realResendGateConfirmation || Date.now() - started > 8000) {
+                    clearInterval(poll);
+                    if (window._realResendGateConfirmation) window._realResendGateConfirmation();
                     else window.setGateError('The sign-in service could not load. Reload this page to retry.');
                 }
             }, 80);
@@ -902,13 +962,29 @@
             <!-- 2. Register Form -->
             <form id="gateRegisterForm" onsubmit="event.preventDefault(); handleGateRegister();" class="hidden space-y-4">
                 <div class="space-y-1.5">
-                    <label class="block text-xs font-medium text-on-surface-variant" for="gateRegEmail">Email Address</label>
-                    <input type="email" id="gateRegEmail" placeholder="name@example.com" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required autocomplete="email">
+                    <label class="block text-xs font-medium text-on-surface-variant" for="gateRegUsername">Username</label>
+                    <div class="relative">
+                        <input type="text" id="gateRegUsername" placeholder="alex_reader" class="w-full glass-input rounded-xl p-3.5 pl-10 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required minlength="3" maxlength="30" autocomplete="username">
+                        <span class="material-symbols-outlined absolute left-3 top-3.5 text-on-surface-variant text-lg pointer-events-none">alternate_email</span>
+                    </div>
                 </div>
 
                 <div class="space-y-1.5">
-                    <label class="block text-xs font-medium text-on-surface-variant" for="gateRegPassword">Create password</label>
+                    <label class="block text-xs font-medium text-on-surface-variant" for="gateRegEmail">Email Address</label>
+                    <div class="relative">
+                        <input type="email" id="gateRegEmail" placeholder="name@example.com" class="w-full glass-input rounded-xl p-3.5 pl-10 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required autocomplete="email">
+                        <span class="material-symbols-outlined absolute left-3 top-3.5 text-on-surface-variant text-lg pointer-events-none">mail</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-medium text-on-surface-variant" for="gateRegPassword">Create Password</label>
                     <div class="auth-password-field"><input type="password" id="gateRegPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required minlength="6" autocomplete="new-password"><button type="button" onclick="toggleGatePassword('gateRegPassword', this)" aria-label="Show password" aria-controls="gateRegPassword" aria-pressed="false">Show</button></div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-medium text-on-surface-variant" for="gateRegPasswordRepeat">Repeat Password</label>
+                    <div class="auth-password-field"><input type="password" id="gateRegPasswordRepeat" placeholder="••••••••" class="w-full glass-input rounded-xl p-3.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required minlength="6" autocomplete="new-password"><button type="button" onclick="toggleGatePassword('gateRegPasswordRepeat', this)" aria-label="Show password" aria-controls="gateRegPasswordRepeat" aria-pressed="false">Show</button></div>
                 </div>
 
                 <!-- Remember Me Checkbox -->
@@ -928,6 +1004,39 @@
                     Already registered? <button type="button" id="gateBtnToSignInFromReg" onclick="switchGateMode('signin')" class="text-primary-container underline hover:brightness-125 cursor-pointer active:scale-95">Log In</button>
                 </p>
             </form>
+
+            <!-- Dedicated Email Verification Notice Screen -->
+            <div id="gateVerifyEmailCard" class="hidden space-y-5 text-center py-2">
+                <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-primary-container/30 to-secondary/20 border border-primary-container/40 flex items-center justify-center shadow-[0_0_30px_rgba(0,240,255,0.25)]">
+                    <span class="material-symbols-outlined text-primary-fixed text-3xl animate-pulse">mark_email_read</span>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="text-xl font-bold text-white tracking-tight">Check Your Email</h3>
+                    <p class="text-xs text-on-surface-variant leading-relaxed">
+                        We sent a verification link to<br>
+                        <strong id="gateVerifyEmailBadge" class="text-primary-fixed font-semibold">your email address</strong>
+                    </p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-surface-container border border-white/10 text-xs text-left text-on-surface-variant space-y-2">
+                    <div class="flex items-start gap-2.5">
+                        <span class="material-symbols-outlined text-base text-primary-fixed shrink-0 mt-0.5">check_circle</span>
+                        <span>Click the confirmation link in the email to approve your account.</span>
+                    </div>
+                    <div class="flex items-start gap-2.5">
+                        <span class="material-symbols-outlined text-base text-on-surface-variant shrink-0 mt-0.5">folder_open</span>
+                        <span>If you don't see it within a minute, check your Spam / Junk folder.</span>
+                    </div>
+                </div>
+                <div class="space-y-2 pt-1">
+                    <button type="button" id="btnGateResendVerification" onclick="resendGateConfirmation()" class="w-full py-3 bg-white/10 hover:bg-white/15 text-white font-bold text-xs rounded-xl transition border border-white/15 flex items-center justify-center gap-2 cursor-pointer active:scale-95">
+                        <span class="material-symbols-outlined text-base">forward_to_inbox</span>
+                        <span id="btnGateResendVerificationText">Resend Verification Email</span>
+                    </button>
+                    <button type="button" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-transparent hover:bg-white/5 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition text-center cursor-pointer active:scale-95">
+                        ← Back to Sign In
+                    </button>
+                </div>
+            </div>
 
             <!-- 3. Forgot Password Form -->
             <form id="gateForgotForm" onsubmit="event.preventDefault(); handleGateForgot();" class="hidden space-y-4">
@@ -1849,6 +1958,11 @@
                     <span class="hidden md:inline">Translate</span>
                 </button>
 
+                <button onclick="elevateCurrentChapterProse()" id="btnElevateProse" class="reader-btn px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition text-georgian-gold border border-georgian-gold/30 hover:bg-georgian-gold/10" title="Reflow and Elevate Georgian Prose & Morphology">
+                    <span class="material-symbols-outlined text-base">auto_fix_high</span>
+                    <span class="hidden lg:inline">Elevate Prose</span>
+                </button>
+
                 <button onclick="openModal('voiceModal')" class="reader-btn px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition text-primary-fixed border border-primary-fixed/20" title="TTS & Audio Settings">
                     <span class="material-symbols-outlined text-base">record_voice_over</span>
                     <span class="hidden md:inline">Voice Settings</span>
@@ -2432,6 +2546,15 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                 </div>
             </div>
 
+            <!-- Bilingual Refining Notice (Shown when retranslating active translated book) -->
+            <div id="wbRefiningModeBanner" class="hidden p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-200">
+                <span class="material-symbols-outlined text-amber-400 text-base mt-0.5">auto_awesome</span>
+                <div>
+                    <span class="font-bold text-amber-300">Bilingual Refining Engine Active:</span>
+                    <span> Comparing English source with Georgian text to elevate prose, reflow paragraphs, harmonize character names (Constant, Rumfoord, Kazak), and resolve grammatical/morphosyntactic defects.</span>
+                </div>
+            </div>
+
             <!-- Detailed live chunk log + chapter queue side by side on wide screens -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="p-2.5 rounded-xl bg-black/40 border border-white/10">
@@ -2486,6 +2609,11 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         Stop Translation
                     </button>
                 </div>
+                <!-- Secondary Option: Discard Georgian and Translate from Scratch -->
+                <button id="wbResetScratchBtn" onclick="confirmResetAndTranslateFromScratch()" class="hidden w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white/75 hover:text-white text-xs font-semibold border border-white/10 transition flex items-center justify-center gap-2 cursor-pointer">
+                    <span class="material-symbols-outlined text-sm text-neutral-400">restart_alt</span>
+                    <span>↺ Discard Georgian & Translate from Scratch</span>
+                </button>
             </div>
             <button id="wbRetryButton" hidden onclick="startWholeBookTranslation(true)" class="studio-primary w-full">Retry from last accepted segment</button>
         </div>
@@ -3115,30 +3243,30 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
       });
     </script>
 
-    <script src="static/library-sync.js?v=1.53.4"></script>
-    <script src="static/supabase-store.js?v=1.53.4"></script>
-    <script src="static/engine-core.js?v=1.53.4"></script>
-    <script src="static/provider-runtime.js?v=1.53.4"></script>
-    <script src="static/studio-ui.js?v=1.53.4"></script>
-    <script src="static/training-client.js?v=1.53.4"></script>
-    <script src="static/job-store.js?v=1.53.4"></script>
-            <script src="static/training-runner.js?v=1.53.4"></script>
-    <script src="static/training-studio.js?v=1.53.4"></script>
-    <script src="static/narration.js?v=1.53.4"></script>
-    <script src="static/model-discovery.js?v=1.53.4"></script>
-    <script src="static/ai-settings.js?v=1.53.4"></script>
-    <script src="static/lm-studio.js?v=1.53.4&release=2"></script>
-    <script src="static/translation-phases.js?v=1.53.4&release=3"></script>
-    <script src="static/local-translation.js?v=1.53.4"></script>
-    <script src="static/translation-machine.js?v=1.53.4"></script>
-    <script src="static/book-structure.js?v=1.53.4"></script>
-    <script src="static/app.js?v=1.53.4&release=4"></script>
-    <script src="static/reading-state.js?v=1.53.4&release=3"></script>
-    <script src="static/reading-ui.js?v=1.53.4&release=3"></script>
-    <script src="static/repair-review.js?v=1.53.4"></script>
-    <script src="static/georgian-linguistics.js?v=1.53.4"></script>
-    <script src="static/engine-pack.js?v=1.53.4"></script>
-    <script src="static/scanner.js?v=1.53.4"></script>
+    <script src="static/library-sync.js?v=1.53.5"></script>
+    <script src="static/supabase-store.js?v=1.53.5"></script>
+    <script src="static/engine-core.js?v=1.53.5"></script>
+    <script src="static/provider-runtime.js?v=1.53.5"></script>
+    <script src="static/studio-ui.js?v=1.53.5"></script>
+    <script src="static/training-client.js?v=1.53.5"></script>
+    <script src="static/job-store.js?v=1.53.5"></script>
+            <script src="static/training-runner.js?v=1.53.5"></script>
+    <script src="static/training-studio.js?v=1.53.5"></script>
+    <script src="static/narration.js?v=1.53.5"></script>
+    <script src="static/model-discovery.js?v=1.53.5"></script>
+    <script src="static/ai-settings.js?v=1.53.5"></script>
+    <script src="static/lm-studio.js?v=1.53.5&release=5"></script>
+    <script src="static/translation-phases.js?v=1.53.5&release=5"></script>
+    <script src="static/local-translation.js?v=1.53.5"></script>
+    <script src="static/translation-machine.js?v=1.53.5"></script>
+    <script src="static/book-structure.js?v=1.53.5"></script>
+    <script src="static/app.js?v=1.53.5&release=5"></script>
+    <script src="static/reading-state.js?v=1.53.5&release=5"></script>
+    <script src="static/reading-ui.js?v=1.53.5&release=5"></script>
+    <script src="static/repair-review.js?v=1.53.5"></script>
+    <script src="static/georgian-linguistics.js?v=1.53.5"></script>
+    <script src="static/engine-pack.js?v=1.53.5"></script>
+    <script src="static/scanner.js?v=1.53.5"></script>
 
 
 <div id="studioActionStatus" role="status" aria-live="polite" hidden></div>

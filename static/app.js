@@ -3588,7 +3588,8 @@ function checkAuthState() {
 
 function updateAuthUI() {
     const emailClean = (currentUser?.email || '').trim().toLowerCase();
-    const isAdmin = (emailClean === 'ananiadevsurashvili@gmail.com');
+    const isVerified = Boolean(verifiedAuthUserId && currentUser?.id && verifiedAuthUserId === currentUser.id);
+    const isAdmin = Boolean(isVerified && emailClean === 'ananiadevsurashvili@gmail.com');
     document.querySelectorAll('[data-admin-build]').forEach(el => { el.hidden = !isAdmin; });
 
     // 1. Desktop Top Bar Pill
@@ -3702,7 +3703,7 @@ function updateAuthUI() {
                 mobileNavServerStats.innerHTML = `<span class="material-symbols-outlined text-[20px] text-emerald-400">dns</span><span>Server Stats (OCI)</span>`;
             }
         }
-        const curHash = (window.location.hash || '').replace('#', '').trim();
+        const curHash = (typeof window !== 'undefined' ? window.location?.hash || '' : '').replace('#', '').trim();
         if (curHash === 'server-stats') {
             if (typeof navigate === 'function') navigate('server-stats');
             else if (typeof loadServerStats === 'function') loadServerStats(true);
@@ -3738,7 +3739,7 @@ function updateAuthUI() {
     const mobileUserName = document.getElementById('mobileNavUserName');
     if (mobileUserName) {
         if (currentUser) {
-            const name = currentUser.email.split('@')[0];
+            const name = currentUser.username || currentUser.email.split('@')[0];
             mobileUserName.textContent = isAdmin ? `${name} (Admin)` : name;
         } else {
             mobileUserName.textContent = "Sign In";
@@ -3746,7 +3747,7 @@ function updateAuthUI() {
     }
 
     if (currentUser) {
-        const name = currentUser.email.split('@')[0];
+        const name = currentUser.username || currentUser.email.split('@')[0];
         if (DOM.sideNavUserName) DOM.sideNavUserName.textContent = isAdmin ? `${name} (👑 Admin)` : name;
         if (DOM.topAvatarBadge) DOM.topAvatarBadge.textContent = name.charAt(0).toUpperCase();
         if (DOM.userNavSection) {
@@ -4161,7 +4162,7 @@ function updateAuthGateVisibility() {
     }
 }
 
-function switchGateMode(mode) {
+function switchGateMode(mode, email) {
     authCallbackResult = null;
     if (recoveryReady && mode !== 'reset') {
         recoveryReady = false;
@@ -4173,6 +4174,7 @@ function switchGateMode(mode) {
     const registerForm = document.getElementById('gateRegisterForm');
     const forgotForm = document.getElementById('gateForgotForm');
     const resetForm = document.getElementById('gateResetForm');
+    const verifyCard = document.getElementById('gateVerifyEmailCard');
     const tabs = document.getElementById('gateTabs');
     const tabSignIn = document.getElementById('gateTabSignIn');
     const tabRegister = document.getElementById('gateTabRegister');
@@ -4181,10 +4183,23 @@ function switchGateMode(mode) {
     setGateError('');
     setGateSuccess('');
 
-    if (mode === 'reset') {
+    if (mode === 'verify-email') {
         if (signInForm) signInForm.classList.add('hidden');
         if (registerForm) registerForm.classList.add('hidden');
         if (forgotForm) forgotForm.classList.add('hidden');
+        if (resetForm) resetForm.classList.add('hidden');
+        if (verifyCard) verifyCard.classList.remove('hidden');
+        if (tabs) tabs.classList.add('hidden');
+        if (subtitle) subtitle.textContent = 'Please confirm your email address to activate your account';
+        if (email) {
+            const emailBadge = document.getElementById('gateVerifyEmailBadge');
+            if (emailBadge) emailBadge.textContent = email;
+        }
+    } else if (mode === 'reset') {
+        if (signInForm) signInForm.classList.add('hidden');
+        if (registerForm) registerForm.classList.add('hidden');
+        if (forgotForm) forgotForm.classList.add('hidden');
+        if (verifyCard) verifyCard.classList.add('hidden');
         if (resetForm) resetForm.classList.remove('hidden');
         if (tabs) tabs.classList.add('hidden');
         if (subtitle) subtitle.textContent = 'Create a secure new password for your account';
@@ -4194,21 +4209,23 @@ function switchGateMode(mode) {
         if (signInForm) signInForm.classList.add('hidden');
         if (forgotForm) forgotForm.classList.add('hidden');
         if (resetForm) resetForm.classList.add('hidden');
+        if (verifyCard) verifyCard.classList.add('hidden');
         if (registerForm) registerForm.classList.remove('hidden');
         if (tabs) tabs.classList.remove('hidden');
         if (tabSignIn) {
-            tabSignIn.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all';
+            tabSignIn.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95';
         }
         if (tabRegister) {
-            tabRegister.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold';
+            tabRegister.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
         }
         if (subtitle) subtitle.textContent = 'Create your free Studio account to sync books across devices';
-        const regInput = document.getElementById('gateRegEmail');
+        const regInput = document.getElementById('gateRegUsername') || document.getElementById('gateRegEmail');
         if (regInput) regInput.focus();
     } else if (mode === 'forgot') {
         if (signInForm) signInForm.classList.add('hidden');
         if (registerForm) registerForm.classList.add('hidden');
         if (resetForm) resetForm.classList.add('hidden');
+        if (verifyCard) verifyCard.classList.add('hidden');
         if (forgotForm) forgotForm.classList.remove('hidden');
         if (tabs) tabs.classList.add('hidden');
         if (subtitle) subtitle.textContent = 'Enter your email to receive a password reset recovery link';
@@ -4223,13 +4240,14 @@ function switchGateMode(mode) {
         if (registerForm) registerForm.classList.add('hidden');
         if (forgotForm) forgotForm.classList.add('hidden');
         if (resetForm) resetForm.classList.add('hidden');
+        if (verifyCard) verifyCard.classList.add('hidden');
         if (signInForm) signInForm.classList.remove('hidden');
         if (tabs) tabs.classList.remove('hidden');
         if (tabSignIn) {
-            tabSignIn.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold';
+            tabSignIn.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
         }
         if (tabRegister) {
-            tabRegister.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all';
+            tabRegister.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95';
         }
         if (subtitle) subtitle.textContent = 'Your books, ready to read and listen.';
     }
@@ -4273,7 +4291,7 @@ async function handleGateSignIn() {
     const btn = document.getElementById('btnGateSignIn');
     const origHtml = btn ? btn.innerHTML : '';
 
-    if (!email || !email.includes('@')) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         setGateError('Please enter a valid email address.');
         return;
     }
@@ -4292,11 +4310,22 @@ async function handleGateSignIn() {
     try {
         await login(email, password, rememberMe);
         if (!currentUser) {
-            const modalErr = document.getElementById('authErrorMsg')?.textContent;
-            if (modalErr) setGateError(modalErr);
+            const modalErr = document.getElementById('authErrorMsg')?.textContent || '';
+            if (modalErr.toLowerCase().includes('email not confirmed') || modalErr.toLowerCase().includes('confirm your email')) {
+                if (typeof switchGateMode === 'function') switchGateMode('verify-email', email);
+                setGateError('Your email address is not verified yet. Please check your inbox to approve your account.');
+            } else if (modalErr) {
+                setGateError(modalErr);
+            }
         }
     } catch (e) {
-        setGateError(e.message || 'Could not log in. Please check your credentials.');
+        const errMsg = e.message || 'Could not log in. Please check your credentials.';
+        if (errMsg.toLowerCase().includes('email not confirmed') || errMsg.toLowerCase().includes('confirm your email')) {
+            if (typeof switchGateMode === 'function') switchGateMode('verify-email', email);
+            setGateError('Your email address is not verified yet. Please check your inbox to approve your account.');
+        } else {
+            setGateError(errMsg);
+        }
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -4307,18 +4336,37 @@ async function handleGateSignIn() {
 
 async function handleGateRegister() {
     if (document.getElementById('btnGateRegister')?.disabled) return;
+    const username = (document.getElementById('gateRegUsername')?.value || '').trim();
     const email = (document.getElementById('gateRegEmail')?.value || '').trim();
     const password = (document.getElementById('gateRegPassword')?.value || '');
+    const passwordRepeat = (document.getElementById('gateRegPasswordRepeat')?.value || '');
     const rememberMe = Boolean(document.getElementById('gateRegRememberMe')?.checked);
     const btn = document.getElementById('btnGateRegister');
     const origHtml = btn ? btn.innerHTML : '';
 
-    if (!email || !email.includes('@')) {
+    if (!username || username.length < 3) {
+        setGateError('Please choose a username (minimum 3 characters).');
+        document.getElementById('gateRegUsername')?.focus();
+        return;
+    }
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+        setGateError('Username can only contain letters, numbers, and underscores (3-30 characters).');
+        document.getElementById('gateRegUsername')?.focus();
+        return;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         setGateError('Please enter a valid email address.');
+        document.getElementById('gateRegEmail')?.focus();
         return;
     }
     if (!password || password.length < 6) {
         setGateError('Password must be at least 6 characters.');
+        document.getElementById('gateRegPassword')?.focus();
+        return;
+    }
+    if (password !== passwordRepeat) {
+        setGateError('Passwords do not match. Please re-enter.');
+        document.getElementById('gateRegPasswordRepeat')?.focus();
         return;
     }
 
@@ -4326,11 +4374,11 @@ async function handleGateRegister() {
     setGateSuccess('');
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Registering...</span>';
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Creating Account...</span>';
     }
 
     try {
-        await register(email, password, rememberMe);
+        await register(email, password, rememberMe, username);
     } catch (e) {
         setGateError(e.message || 'Registration failed.');
     } finally {
@@ -4342,18 +4390,42 @@ async function handleGateRegister() {
 }
 
 async function resendGateConfirmation() {
-    const btn = document.getElementById('gateResendConfirmation');
+    const btn = document.getElementById('btnGateResendVerification') || document.getElementById('gateResendConfirmation');
     if (btn?.disabled) return;
-    const registering = !document.getElementById('gateRegisterForm')?.classList.contains('hidden');
-    const input = document.getElementById(registering ? 'gateRegEmail' : 'gateEmail');
-    if (!input?.value || !input.checkValidity()) { setGateError('Enter your email address first.'); input?.focus(); return; }
+    const badgeEmail = document.getElementById('gateVerifyEmailBadge')?.textContent?.trim();
+    const regEmail = document.getElementById('gateRegEmail')?.value?.trim();
+    const signinEmail = document.getElementById('gateEmail')?.value?.trim();
+    const emailToUse = (badgeEmail && badgeEmail.includes('@')) ? badgeEmail : (regEmail || signinEmail);
+
+    if (!emailToUse || !emailToUse.includes('@')) {
+        setGateError('Enter your email address first.');
+        return;
+    }
     if (btn) btn.disabled = true;
+    const btnTextEl = document.getElementById('btnGateResendVerificationText');
+    const origText = btnTextEl ? btnTextEl.textContent : (btn.textContent || 'Resend Verification Email');
+
     try {
-        const res = await window.LuminaStore?.resendConfirmation(input.value);
+        const res = await window.LuminaStore?.resendConfirmation(emailToUse);
         if (!res?.success) throw new Error(res?.error?.message || 'Could not request a confirmation email.');
-        setGateSuccess('Confirmation email requested. Check your inbox and spam folder before trying again.');
-    } catch (error) { setGateError(error.message); }
-    finally { if (btn) btn.disabled = false; }
+        setGateSuccess(`Verification email sent to ${emailToUse}. Check your inbox and spam folder.`);
+        let countdown = 30;
+        const interval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                if (btnTextEl) btnTextEl.textContent = `Resend in ${countdown}s`;
+                else if (btn) btn.textContent = `Resend in ${countdown}s`;
+            } else {
+                clearInterval(interval);
+                if (btn) btn.disabled = false;
+                if (btnTextEl) btnTextEl.textContent = origText;
+                else if (btn) btn.textContent = origText;
+            }
+        }, 1000);
+    } catch (error) {
+        setGateError(error.message || 'Could not send verification email.');
+        if (btn) btn.disabled = false;
+    }
 }
 
 function toggleGatePassword(id, button) {
@@ -4372,7 +4444,7 @@ async function handleGateForgot() {
     const btn = document.getElementById('btnGateForgot');
     const origHtml = btn ? btn.innerHTML : '';
 
-    if (!email || !email.includes('@')) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         setGateError('Please enter a valid email address.');
         return;
     }
@@ -4575,7 +4647,7 @@ async function sendPasswordReset() {
 
 async function login(email, password, rememberParam) {
     email = (email || '').trim();
-    if (!email || !email.includes('@')) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         setAuthError('Please enter a valid email address.');
         return;
     }
@@ -4722,9 +4794,9 @@ async function login(email, password, rememberParam) {
     }
 }
 
-async function register(email, password, rememberParam) {
+async function register(email, password, rememberParam, username) {
     email = (email || '').trim();
-    if (!email || !email.includes('@')) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         setAuthError('Please enter a valid email address.');
         return;
     }
@@ -4752,18 +4824,29 @@ async function register(email, password, rememberParam) {
             const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error('Registration timed out. Please check your network connection.')), 12000)
             );
-            const res = await Promise.race([window.LuminaStore.signUp(email, password), timeoutPromise]);
+            const res = await Promise.race([window.LuminaStore.signUp(email, password, { username: username }), timeoutPromise]);
             if (res.success) {
-                if (!res.session) {
+                const isConfirmed = Boolean(res.user?.email_confirmed_at);
+                if (!res.session || !isConfirmed) {
                     const loginEmail = document.getElementById('gateEmail');
                     if (loginEmail) loginEmail.value = email;
-                    setAuthSuccess('Check your email to confirm your account, then sign in. If you already have an account, use Sign In or Forgot password.');
+                    const forgotEmail = document.getElementById('gateForgotEmail');
+                    if (forgotEmail) forgotEmail.value = email;
+
+                    if (typeof window.switchGateMode === 'function') {
+                        window.switchGateMode('verify-email', email);
+                    }
+                    setAuthSuccess('Check your email to confirm your account and approve registration, then sign in.');
                     return;
                 }
                 await login(email, password, rememberMe);
                 return;
             } else {
-                setAuthError('Registration error: ' + (res.error?.message || 'Could not register user.'));
+                const errMsg = res.error?.message || 'Could not register user.';
+                setAuthError('Registration error: ' + errMsg);
+                if (typeof setGateError === 'function') {
+                    setGateError(errMsg);
+                }
                 return;
             }
         }
@@ -4840,7 +4923,27 @@ window._realHandleGateSignIn = handleGateSignIn;
 window._realHandleGateRegister = handleGateRegister;
 window._realHandleGateForgot = handleGateForgot;
 window._realHandleGateSetNewPassword = handleGateSetNewPassword;
+window.toggleGatePassword = toggleGatePassword;
+window.resendGateConfirmation = resendGateConfirmation;
+window._realResendGateConfirmation = resendGateConfirmation;
 window.updateAuthGateVisibility = updateAuthGateVisibility;
+try {
+    Object.defineProperty(window, 'recoveryReady', {
+        get: () => recoveryReady,
+        set: (v) => { recoveryReady = v; },
+        configurable: true
+    });
+    Object.defineProperty(window, 'currentUser', {
+        get: () => currentUser,
+        set: (v) => { currentUser = v; },
+        configurable: true
+    });
+    Object.defineProperty(window, 'verifiedAuthUserId', {
+        get: () => verifiedAuthUserId,
+        set: (v) => { verifiedAuthUserId = v; },
+        configurable: true
+    });
+} catch (e) {}
 window.recoverAllLocalBooks = recoverAllLocalBooks;
 window.loadBooks = loadBooks;
 window.navToSection = navToSection;
@@ -5604,18 +5707,24 @@ function cleanReaderTypography(text) {
 
 function prepareChapterSentences(rawText) {
     const cleaned = cleanReaderTypography(rawText);
-    const rawParas = cleaned.split(/\n\s*\n+/).map(p => p.trim()).filter(Boolean);
+    let reflowed = (typeof EngbotCore !== 'undefined' && EngbotCore.reflowNarrativeParagraphs)
+        ? EngbotCore.reflowNarrativeParagraphs(cleaned)
+        : cleaned;
+    if (readerLang === 'ka' && typeof synthesizeGeorgianMorphology === 'function') {
+        try { reflowed = synthesizeGeorgianMorphology(reflowed); } catch (e) { /* ignore */ }
+    }
+    const rawParas = reflowed.split(/\n\s*\n+/).map(p => p.trim()).filter(Boolean);
     const allSentences = [];
 
+    let gIdx = 0;
     if (rawParas.length <= 1) {
         // Flat text without clear paragraph breaks
-        const rawSents = splitIntoNaturalSentences(cleaned).map(x => x.trim()).filter(Boolean);
+        const rawSents = splitIntoNaturalSentences(reflowed).map(x => x.trim()).filter(Boolean);
         rawSents.forEach((sText, idx) => {
             const isParaBreak = idx === rawSents.length - 1;
-            allSentences.push({ text: sText, globalIndex: idx, isParaBreak });
+            allSentences.push({ text: sText, globalIndex: gIdx++, isParaBreak });
         });
     } else {
-        let gIdx = 0;
         rawParas.forEach(para => {
             const pSents = splitIntoNaturalSentences(para).map(x => x.trim()).filter(Boolean);
             pSents.forEach((sText, sIdx) => {
@@ -5625,8 +5734,8 @@ function prepareChapterSentences(rawText) {
         });
     }
 
-    if (allSentences.length === 0 && cleaned.length > 0) {
-        allSentences.push({ text: cleaned, globalIndex: 0, isParaBreak: true });
+    if (allSentences.length === 0 && reflowed.length > 0) {
+        allSentences.push({ text: reflowed, globalIndex: 0, isParaBreak: true });
     }
     return allSentences;
 }
@@ -5821,6 +5930,65 @@ function repaginateKeepingPosition(explicitIndex) {
     if (saved) window.EngbotReadingUI.restore(saved);
 }
 window.repaginateKeepingPosition = repaginateKeepingPosition;
+
+async function elevateCurrentChapterProse() {
+    if (!readerActive || !readerBook) {
+        showToast('Please open a book in the reader first.', 'warning');
+        return;
+    }
+    const chap = readerBook.chapters.find(c => String(c.id) === String(readerChapterId));
+    if (!chap) {
+        showToast('Active chapter not found.', 'warning');
+        return;
+    }
+
+    showToast('✨ Elevating and reflowing chapter prose...', 'info');
+
+    // 1. Reflow English source
+    if (chap.text_content || chap.text) {
+        const rawEn = chap.text_content || chap.text || '';
+        chap.text_content = (typeof EngbotCore !== 'undefined' && EngbotCore.reflowNarrativeParagraphs)
+            ? EngbotCore.reflowNarrativeParagraphs(rawEn)
+            : rawEn;
+        chap.text = chap.text_content;
+    }
+
+    // 2. Reflow and polish Georgian
+    const rawKa = chap.text_ka || (chap.metadata && chap.metadata.text_ka) || '';
+    if (rawKa) {
+        let elevatedKa = (typeof EngbotCore !== 'undefined' && EngbotCore.reflowNarrativeParagraphs)
+            ? EngbotCore.reflowNarrativeParagraphs(rawKa)
+            : rawKa;
+        if (typeof synthesizeGeorgianMorphology === 'function') {
+            try { elevatedKa = synthesizeGeorgianMorphology(elevatedKa); } catch (e) { /* ignore */ }
+        }
+        chap.text_ka = elevatedKa;
+        if (chap.metadata) {
+            chap.metadata.text_ka = elevatedKa;
+            chap.metadata.literary_elevated = true;
+        }
+    }
+
+    // 3. Immediately re-paginate reader so user sees flowing prose instantly
+    paginateChapter();
+    renderCurrentPage();
+
+    // 4. Persist to Supabase if connected
+    try {
+        if (typeof supabase !== 'undefined' && supabase && supabase.from) {
+            const updatePayload = {
+                text_content: chap.text_content || chap.text,
+                metadata: chap.metadata || { text_ka: chap.text_ka, literary_elevated: true }
+            };
+            await supabase.from('chapters').update(updatePayload).eq('id', chap.id);
+        }
+    } catch (e) {
+        console.warn('[reader] failed to sync elevated chapter to Supabase:', e);
+    }
+
+    showToast('✨ Chapter prose elevated: flowing paragraphs & syntax protected!', 'success');
+}
+window.elevateCurrentChapterProse = elevateCurrentChapterProse;
 
 function scheduleRepaginate() {
     clearTimeout(readerRepaginateTimer);
@@ -8094,18 +8262,18 @@ function buildTranslationChunks(chapterText, targetCharLimit = 1800, maxSentence
     return { chunks, chunkSentenceCounts, separators };
 }
 
-async function startWholeBookTranslation(resume = false) {
+async function startWholeBookTranslation(resume = false, forceFromScratch = false) {
     if (isTranslatingWholeBook) { restoreTranslationPanel(); return; }
     if (typeof navigator !== 'undefined' && navigator.locks && currentBook) {
         return navigator.locks.request(tjobKey(currentBook.id), {ifAvailable:true}, async lock => {
             if (!lock) { showToast('This book is already being translated in another tab.', 'info'); return; }
-            return runWholeBookTranslation(resume);
+            return runWholeBookTranslation(resume, forceFromScratch);
         });
     }
-    return runWholeBookTranslation(resume);
+    return runWholeBookTranslation(resume, forceFromScratch);
 }
 
-async function runWholeBookTranslation(resume = false) {
+async function runWholeBookTranslation(resume = false, forceFromScratch = false) {
     if (!currentBook?.chapters?.length) return;
     if (isTranslatingWholeBook) { restoreTranslationPanel(); return; }
     const targetBook = currentBook;
@@ -8128,9 +8296,27 @@ async function runWholeBookTranslation(resume = false) {
     optionalAiDisabledUntil = 0;
     optionalAiCorrectionsUsed = 0;
     window.EngbotProviders?.reset();
-    setTranslationStage('Preparing');
-    if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `Preparing ${targetName} translation · ${targetBook.chapters.length} chapters`;
-    if (DOM.wbSentenceCounter) DOM.wbSentenceCounter.textContent = 'Preparing source segments…';
+
+    const saved = await loadTranslationJob(targetBook.id);
+    const hasExistingTranslation = (targetBook.chapters || []).some(c => (c[field] && c[field].trim()) || (c.metadata?.[field] && c.metadata[field].trim()));
+    const isRefining = targetLang === 'ka' && !forceFromScratch && (saved?.mode === 'refine' || (!saved && !resume && hasExistingTranslation));
+
+    const refineBanner = document.getElementById('wbRefiningModeBanner');
+    if (refineBanner) refineBanner.classList.toggle('hidden', !isRefining);
+    const resetScratchBtn = document.getElementById('wbResetScratchBtn');
+    if (resetScratchBtn) resetScratchBtn.classList.toggle('hidden', !isRefining);
+
+    setTranslationStage(isRefining ? 'Refining' : 'Preparing');
+    if (DOM.wbChapterLabel) {
+        DOM.wbChapterLabel.textContent = isRefining
+            ? `✨ Refining ${targetName} Edition · ${targetBook.chapters.length} chapters`
+            : `Preparing ${targetName} translation · ${targetBook.chapters.length} chapters`;
+    }
+    if (DOM.wbSentenceCounter) {
+        DOM.wbSentenceCounter.textContent = isRefining
+            ? 'Auditing bilingual syntax, morphology & literary cadence…'
+            : 'Preparing source segments…';
+    }
     if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '0%';
     if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '0%';
     const retryButton = document.getElementById('wbRetryButton');
@@ -8144,8 +8330,21 @@ async function runWholeBookTranslation(resume = false) {
     if (DOM.wbChunkRate) DOM.wbChunkRate.textContent = '0 chunks/min';
     if (DOM.wbCharCounter) DOM.wbCharCounter.textContent = '0 characters accepted';
     try {
-        const saved = await loadTranslationJob(targetBook.id);
-        job = saved?.targetLang === targetLang ? saved : { bookId: targetBook.id, title: targetBook.title, targetLang, chapters: {} };
+        if (isRefining) {
+            job = (saved && saved.mode === 'refine' && saved.targetLang === targetLang) ? saved : {
+                bookId: targetBook.id,
+                title: targetBook.title,
+                targetLang,
+                mode: 'refine',
+                chapters: {},
+                ownerId,
+                status: 'running',
+                totalChapters: targetBook.chapters.length,
+                chapterIdx: 0
+            };
+        } else {
+            job = (saved?.targetLang === targetLang && saved.mode !== 'refine') ? saved : { bookId: targetBook.id, title: targetBook.title, targetLang, chapters: {} };
+        }
         job.chapters ||= {};
         job.ownerId = ownerId;
         job.status = 'running';
@@ -8175,6 +8374,132 @@ async function runWholeBookTranslation(resume = false) {
         }
         await saveTranslationJob(job);
         buildChapterQueue(targetBook, job);
+
+        if (window.LuminaStore?.createJob && usingCloud) {
+            cloudJob = await window.LuminaStore.createJob(targetBook.id, isRefining ? 'refine' : 'parse', job.totalChapters, isRefining ? `Refining ${targetName} edition` : `Translating to ${targetName}`);
+        }
+
+        if (isRefining) {
+            let completed = job.chapterIdx || 0;
+            for (let index = job.chapterIdx || 0; index < targetBook.chapters.length; index++) {
+                checkOwner();
+                if (cancelTranslationFlag) break;
+                const chapter = targetBook.chapters[index];
+                const source = chapter.text_content || chapter.text || '';
+                let draft = chapter[field] || chapter.metadata?.[field] || '';
+
+                job.chapterIdx = index;
+                await saveTranslationJob(job);
+                updateChapterQueueStatus(index, -1);
+
+                if (DOM.wbChapterLabel) {
+                    DOM.wbChapterLabel.textContent = `✨ Refining Chapter ${index + 1} of ${job.totalChapters}: ${chapter.title || 'Chapter ' + (index + 1)}`;
+                }
+                if (DOM.wbSentenceCounter) {
+                    DOM.wbSentenceCounter.textContent = `Auditing bilingual syntax & morphology…`;
+                }
+                if (DOM.wbLiveOriginal) DOM.wbLiveOriginal.textContent = source.slice(0, 300) + (source.length > 300 ? '…' : '');
+                if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = draft ? draft.slice(0, 300) + (draft.length > 300 ? '…' : '') : 'Refining narrative prose…';
+
+                // 1. Reflow English source paragraphs
+                if (typeof EngbotCore !== 'undefined' && EngbotCore.reflowNarrativeParagraphs && source) {
+                    chapter.text_content = EngbotCore.reflowNarrativeParagraphs(source);
+                    chapter.text = chapter.text_content;
+                }
+
+                // 2. Draft fallback if chapter was not translated yet
+                let refined = draft;
+                if (!refined || !refined.trim()) {
+                    if (typeof translateChunkSmart === 'function') {
+                        refined = await translateChunkSmart(source, targetLang, '', '');
+                    } else if (typeof translateChunkAI === 'function') {
+                        refined = await translateChunkAI(source, targetLang, '', '', true);
+                    }
+                }
+
+                // 3. Reflow Georgian narrative paragraphs
+                if (typeof EngbotCore !== 'undefined' && EngbotCore.reflowNarrativeParagraphs && refined) {
+                    refined = EngbotCore.reflowNarrativeParagraphs(refined);
+                }
+
+                // 4. Synthesize Georgian morphology (ergatives, stem syncopation, experiencer dative)
+                if (targetLang === 'ka' && typeof synthesizeGeorgianMorphology === 'function') {
+                    try { refined = synthesizeGeorgianMorphology(refined); } catch (e) { console.warn('Morphology synthesis notice:', e); }
+                }
+
+                // 5. Polish Georgian literary syntax & character entities
+                if (targetLang === 'ka' && typeof polishGeorgianLiterarySyntax === 'function') {
+                    try { refined = polishGeorgianLiterarySyntax(refined); } catch (e) { console.warn('Literary polish notice:', e); }
+                }
+
+                // 6. Translate / refine chapter heading
+                chapter['title_' + targetLang] = await translateChapterHeading(chapter, targetLang, translationRequestController?.signal);
+
+                // 7. Commit refined chapter state & history
+                checkOwner();
+                chapter.translation_history ||= [];
+                if (chapter[field] && chapter[field] !== refined) {
+                    chapter.translation_history.push({ language: targetLang, text: chapter[field], savedAt: new Date().toISOString() });
+                }
+                chapter[field] = refined;
+                chapter.metadata = chapter.metadata || {};
+                chapter.metadata[field] = refined;
+                chapter.metadata.literary_elevated = true;
+                chapter.metadata.refined_at = new Date().toISOString();
+                chapter.metadata.refining_engine = 'bilingual-v1';
+                chapter.status = 'done';
+                chapter.translation_state ||= {};
+                chapter.translation_state[targetLang] = { status: 'complete', source, mode: 'refine', refinedAt: new Date().toISOString() };
+
+                await saveBookToDB(targetBook);
+                completed++;
+                job.chapterIdx = index + 1;
+                await saveTranslationJob(job);
+                updateChapterQueueStatus(-1, index);
+
+                const pct = Math.round((completed / job.totalChapters) * 100);
+                if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = `${pct}%`;
+                if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = `${pct}%`;
+                if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'running', `${completed} chapters refined`);
+
+                // Live Reader synchronization:
+                if (typeof readerActive !== 'undefined' && readerActive && typeof readerBook !== 'undefined' && readerBook && String(readerBook.id) === String(targetBook.id)) {
+                    readerBook.chapters = targetBook.chapters;
+                    if (!readerBook.translatedLangs) readerBook.translatedLangs = [];
+                    if (!readerBook.translatedLangs.includes(targetLang)) readerBook.translatedLangs.push(targetLang);
+                    if (typeof readerChapterId !== 'undefined' && String(readerChapterId) === String(chapter.id)) {
+                        if (typeof paginateChapter === 'function') paginateChapter();
+                        if (typeof renderCurrentPage === 'function') renderCurrentPage();
+                    }
+                    if (typeof renderToCDrawerList === 'function') renderToCDrawerList();
+                }
+            }
+
+            if (cancelTranslationFlag) {
+                job.status = 'paused';
+                await saveTranslationJob(job);
+                if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'failed', 'Paused by user');
+                return;
+            }
+            if (completed !== job.totalChapters) throw new Error('Refining is incomplete');
+            checkOwner();
+            targetBook.translatedLangs = [...new Set([...(targetBook.translatedLangs || []), targetLang])];
+            job.telemetry.completedAt = Date.now();
+            targetBook.translation_telemetry = JSON.parse(JSON.stringify(job.telemetry));
+            await saveBookToDB(targetBook);
+            await saveTranslatedBookEdition(targetBook, targetLang);
+            if (cloudJob) await cloudJob.update(completed, job.totalChapters, 'done', `${targetName} edition refined`);
+            await clearTranslationJob(targetBook.id);
+            if (DOM.wbChapterLabel) DOM.wbChapterLabel.textContent = `${targetName} edition refined and elevated`;
+            if (DOM.wbProgressPct) DOM.wbProgressPct.textContent = '100%';
+            if (DOM.wbProgressBar) DOM.wbProgressBar.style.width = '100%';
+            setTranslationStage('Complete');
+            updateMiniDock();
+            if (typeof updateWbStartReadingButton === 'function') updateWbStartReadingButton(job, targetBook);
+            if (typeof renderAdminTranslationTelemetry === 'function') renderAdminTranslationTelemetry(job, targetBook);
+            showToast(`✨ ${targetName} edition successfully refined and elevated.`, 'success');
+            return;
+        }
         if (typeof aiTranslationAvailable === 'function' && aiTranslationAvailable() && !job.glossaryChecked && !targetBook.glossary?.length) {
             const sample = targetBook.chapters.slice(0, 2).map(c => c.text || '').join('\n\n').slice(0, 3000);
             if (sample.length > 80) {
@@ -8351,6 +8676,7 @@ async function runWholeBookTranslation(resume = false) {
             chapter.translation_history ||= [];
             if (chapter[field] && chapter[field] !== translated) chapter.translation_history.push({language:targetLang, text:chapter[field], savedAt:new Date().toISOString()});
             chapter[field] = translated;
+            chapter.status = 'done';
             chapter.translation_state ||= {};
             chapter.translation_state[targetLang] = {status:'complete', source, config};
             await saveBookToDB(targetBook);
@@ -8422,7 +8748,11 @@ async function runWholeBookTranslation(resume = false) {
         if (resumeBtn) {
             resumeBtn.classList.remove('hidden');
             resumeBtn.style.display = '';
-            if (resumeText) resumeText.textContent = `▶ Continue Translation (from Chapter ${(job?.chapterIdx || 0) + 1})`;
+            if (resumeText) {
+                resumeText.textContent = job?.mode === 'refine'
+                    ? `▶ Continue Refining (from Chapter ${(job?.chapterIdx || 0) + 1})`
+                    : `▶ Continue Translation (from Chapter ${(job?.chapterIdx || 0) + 1})`;
+            }
         }
         showToast(`Translation incomplete: ${error.message} Click Continue to resume.`, 'error');
     } finally {
@@ -8447,6 +8777,30 @@ function skipCurrentTranslationSegment() {
     }
 }
 if (typeof window !== 'undefined') window.skipCurrentTranslationSegment = skipCurrentTranslationSegment;
+
+async function confirmResetAndTranslateFromScratch() {
+    if (!currentBook) return;
+    const ok = confirm('Do you want to discard the existing Georgian translation and re-translate this book from scratch?');
+    if (!ok) return;
+    const targetLang = EngbotCore.bookSourceLanguage(currentBook) === 'ka' ? 'en' : 'ka';
+    const field = 'text_' + targetLang;
+    (currentBook.chapters || []).forEach(chap => {
+        chap[field] = '';
+        if (chap.metadata) {
+            chap.metadata[field] = '';
+            delete chap.metadata.literary_elevated;
+            delete chap.metadata.refined_at;
+            delete chap.metadata.refining_engine;
+        }
+        if (chap.translation_state) delete chap.translation_state[targetLang];
+    });
+    currentBook.translatedLangs = (currentBook.translatedLangs || []).filter(l => l !== targetLang);
+    await clearTranslationJob(currentBook.id);
+    await saveBookToDB(currentBook);
+    showToast('Reset complete. Starting translation from scratch…', 'info');
+    return startWholeBookTranslation(false, true);
+}
+if (typeof window !== 'undefined') window.confirmResetAndTranslateFromScratch = confirmResetAndTranslateFromScratch;
 
 function updateTranslationControls(running) {
     const button = document.getElementById('wbDismissButton');
@@ -11039,7 +11393,10 @@ async function selectBook(bookId, autoPlayFirst = false) {
     if (DOM.btnTranslateWholeBookText && DOM.btnTranslateWholeBook) {
         if (isThisBookResumable) {
             const chapNum = (resumableJob.chapterIdx || 0) + 1;
-            DOM.btnTranslateWholeBookText.textContent = `▶ Continue Translation (from Chapter ${chapNum})`;
+            const isRefiningJob = resumableJob.mode === 'refine';
+            DOM.btnTranslateWholeBookText.textContent = isRefiningJob
+                ? `✨ Continue Refining (from Chapter ${chapNum})`
+                : `▶ Continue Translation (from Chapter ${chapNum})`;
             DOM.btnTranslateWholeBook.classList.add('ring-2', 'ring-georgian-gold', 'bg-georgian-gold/20');
             DOM.btnTranslateWholeBook.onclick = () => startWholeBookTranslation(true);
         } else if (sourceLang === 'ka') {
@@ -11047,7 +11404,7 @@ async function selectBook(bookId, autoPlayFirst = false) {
             DOM.btnTranslateWholeBook.classList.remove('ring-2', 'ring-georgian-gold', 'bg-georgian-gold/20');
             DOM.btnTranslateWholeBook.onclick = () => startWholeBookTranslation(false);
         } else {
-            DOM.btnTranslateWholeBookText.textContent = hasKa ? "Re-translate Whole Book (Georgian)" : "Translate Book (Georgian)";
+            DOM.btnTranslateWholeBookText.textContent = hasKa ? "✨ Refine Georgian Edition (Quality Polish)" : "Translate Book (Georgian)";
             DOM.btnTranslateWholeBook.classList.remove('ring-2', 'ring-georgian-gold', 'bg-georgian-gold/20');
             DOM.btnTranslateWholeBook.onclick = () => startWholeBookTranslation(false);
         }

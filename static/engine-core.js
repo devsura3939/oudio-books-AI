@@ -218,5 +218,70 @@
             ? Math.round(declaredSeconds) : Math.round(words / 140 * 60);
         return { words, seconds };
     }
-    return { transliterationLeak, normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, naturalSentences, cleanVerbatim, readingText, headingSource, localizedHeading, chapterTitle, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats, reviewDecision, bookSourceLanguage };
+    function reflowNarrativeParagraphs(text) {
+        if (!text || typeof text !== 'string') return '';
+        const clean = cleanVerbatim(text);
+        if (!clean) return '';
+
+        const lines = clean.split(/\r?\n/);
+        const paragraphs = [];
+        let curPara = '';
+
+        const headingPat = /^(?:chapter|part|book|section|volume|თავი|ნაწილი|წიგნი)\s+(?:\d+|[ivxlcdm]+|[ა-ჰ]+)\b/iu;
+        const abbrevPat = /\b(?:Mr|Mrs|Ms|Dr|Prof|Gen|Col|Capt|Lt|Sr|Jr|St|Rev|Hon|No|Vol|Ch|pp?|e\.g|i\.e|vs|etc|ე\.ი|ე\.წ|ა\.შ|სხვ)\.$/iu;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) {
+                if (curPara) {
+                    const endsTerminal = /[.!?…჻]["'”’»“\])}]?\s*$/u.test(curPara) && !abbrevPat.test(curPara);
+                    const isDangling = /[,;:—–-]\s*$/u.test(curPara) ||
+                        /\b(?:the|a|an|and|or|of|to|in|on|at|by|for|with|as|is|was|were|that|this|his|her|its|their|და|თუ|რომ|როგორც|მაგრამ|ხოლო|ან)\s*$/iu.test(curPara);
+                    if (endsTerminal && !isDangling) {
+                        paragraphs.push(curPara);
+                        curPara = '';
+                    }
+                }
+                continue;
+            }
+
+            // Word-break hyphenation at line end (e.g. "mate-" + "rialization" -> "materialization")
+            if (curPara && /[\p{L}\p{N}]-$/u.test(curPara) && /^[\p{L}\p{N}]/u.test(line)) {
+                curPara = curPara.slice(0, -1) + line;
+                continue;
+            }
+
+            const isHeading = headingPat.test(line);
+            const isDialogue = /^[—–\-\u2014\u2013„"“]/.test(line);
+
+            if (!curPara) {
+                curPara = line;
+                continue;
+            }
+
+            if (isHeading || isDialogue) {
+                paragraphs.push(curPara);
+                curPara = line;
+                continue;
+            }
+
+            const curEndsTerminal = /[.!?…჻]["'”’»“\])}]?\s*$/u.test(curPara) && !abbrevPat.test(curPara);
+            const curDangling = /[,;:—–-]\s*$/u.test(curPara) ||
+                /\b(?:the|a|an|and|or|of|to|in|on|at|by|for|with|as|is|was|were|that|this|his|her|its|their|და|თუ|რომ|როგორც|მაგრამ|ხოლო|ან)\s*$/iu.test(curPara);
+            const lineStartsLower = /^[\p{Ll}\p{Lo},;:—–-]/u.test(line);
+
+            if (!curEndsTerminal || curDangling || lineStartsLower) {
+                curPara = curPara + ' ' + line;
+            } else {
+                curPara = curPara + ' ' + line;
+            }
+        }
+
+        if (curPara) {
+            paragraphs.push(curPara);
+        }
+
+        return paragraphs.join('\n\n');
+    }
+    return { transliterationLeak, normalizeLanguage, scriptCounts, detectLanguage, assessTranslation, splitText, naturalSentences, cleanVerbatim, readingText, headingSource, localizedHeading, chapterTitle, repairIsAcceptable, geminiModels, providerOutputComplete, chapterStats, reviewDecision, bookSourceLanguage, reflowNarrativeParagraphs };
 });

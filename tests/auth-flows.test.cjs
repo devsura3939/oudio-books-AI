@@ -107,3 +107,20 @@ test('auth initialization cannot erase the completed email-link result',()=>{
  context.updateAuthGateVisibility();
  assert.equal(context.authCallbackResult,'error');
 });
+test('registration markup contains username, repeat password, and verification card',()=>{
+ const html=fs.readFileSync('index.html','utf8');
+ const gate=html.slice(html.indexOf('<div id="authGateScreen"'),html.indexOf('<!-- ════════════════ App Main Container'));
+ assert.match(gate,/id="gateRegUsername"/);
+ assert.match(gate,/id="gateRegPasswordRepeat"/);
+ assert.match(gate,/id="gateVerifyEmailCard"/);
+ assert.match(gate,/id="gateVerifyEmailBadge"/);
+ assert.match(gate,/id="btnGateResendVerification"/);
+});
+test('signUp includes username metadata in options payload',async()=>{
+ const {store,calls}=setup(undefined,{signUp:()=>({data:{user:{id:'new_u'},session:null}})});
+ const res=await store.signUp('reader@example.test','secret123',{username:'alex_reader'});
+ assert.equal(res.success,true);
+ assert.equal(calls[0][1].options.data.username,'alex_reader');
+ assert.equal(calls[0][1].options.emailRedirectTo,'https://devsura3939.github.io/oudio-books-AI/');
+});
+

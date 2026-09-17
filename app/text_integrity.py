@@ -113,3 +113,149 @@ def vision_prompt(language="auto", hint=None):
         "Return only plain text, or [[NO_TEXT]] if there is no text. "
         + (f"Context hints (not evidence for missing words): {hint}" if hint else "")
     )
+
+
+def reflow_narrative_paragraphs(text: str) -> str:
+    """Reassemble hard-wrapped lines and cross-page sentences into natural flowing paragraphs."""
+    if not text or not isinstance(text, str):
+        return ""
+
+    clean = text.replace("\r\n", "\n").replace("\r", "\n").replace("\x00", "").strip()
+    if not clean:
+        return ""
+
+    lines = clean.split("\n")
+    paragraphs = []
+    cur_para = ""
+
+    heading_pat = re.compile(
+        r'^(?:chapter|part|book|section|volume|თავი|ნაწილი|წიგნი)\s+(?:\d+|[ivxlcdm]+|[ა-ჰ]+)\b',
+        re.IGNORECASE
+    )
+    abbrev_pat = re.compile(
+        r'\b(?:Mr|Mrs|Ms|Dr|Prof|Gen|Col|Capt|Lt|Sr|Jr|St|Rev|Hon|No|Vol|Ch|pp?|e\.g|i\.e|vs|etc|ე\.ი|ე\.წ|ა\.შ|სხვ)\.$',
+        re.IGNORECASE
+    )
+
+    for line in lines:
+        s = line.strip()
+        if not s:
+            if cur_para:
+                ends_terminal = bool(re.search(r'[.!?…჻]["\'”’»“\])}]?\s*$', cur_para)) and not abbrev_pat.search(cur_para)
+                is_dangling = (
+                    bool(re.search(r'[,;:—–-]\s*$', cur_para)) or
+                    bool(re.search(r'\b(?:the|a|an|and|or|of|to|in|on|at|by|for|with|as|is|was|were|that|this|his|her|its|their|და|თუ|რომ|როგორც|მაგრამ|ხოლო|ან)\s*$', cur_para, re.I))
+                )
+                if ends_terminal and not is_dangling:
+                    paragraphs.append(cur_para)
+                    cur_para = ""
+            continue
+
+        if cur_para and re.search(r'[\w]-$', cur_para) and re.match(r'^[\w]', s):
+            cur_para = cur_para[:-1] + s
+            continue
+
+        is_heading = bool(heading_pat.match(s))
+        is_dialogue = bool(re.match(r'^[—–\-\u2014\u2013„"“]', s))
+
+        if not cur_para:
+            cur_para = s
+            continue
+
+        if is_heading or is_dialogue:
+            paragraphs.append(cur_para)
+            cur_para = s
+            continue
+
+        cur_ends_terminal = bool(re.search(r'[.!?…჻]["\'”’»“\])}]?\s*$', cur_para)) and not abbrev_pat.search(cur_para)
+        cur_dangling = (
+            bool(re.search(r'[,;:—–-]\s*$', cur_para)) or
+            bool(re.search(r'\b(?:the|a|an|and|or|of|to|in|on|at|by|for|with|as|is|was|were|that|this|his|her|its|their|და|თუ|რომ|როგორც|მაგრამ|ხოლო|ან)\s*$', cur_para, re.I))
+        )
+        line_starts_lower = bool(re.match(r'^[a-z\u10D0-\u10FA,;:—–-]', s))
+
+        if not cur_ends_terminal or cur_dangling or line_starts_lower:
+            cur_para = cur_para + " " + s
+        else:
+            cur_para = cur_para + " " + s
+
+    if cur_para:
+        paragraphs.append(cur_para)
+
+    return "\n\n".join(paragraphs)
+
+
+def polish_georgian_literary_syntax(text: str) -> str:
+    """Enhance Georgian literary text with strict morphosyntactic and entity preservation:
+    - Proper noun and character name protection (Constant -> კონსტანტი, Kazak -> კაზაკი, Rumfoord -> რამფორდი)
+    - Adjective stem truncation in oblique cases (უცნობ სივრცეში, დიდ სამყაროში, ახალ წიგნში)
+    - Dialogue and typography formatting (— em-dash, clean punctuation)
+    """
+    if not text or not isinstance(text, str):
+        return ""
+    t = text
+
+    # 1. Character Name & Literary Entity Protection
+    # Malachi Constant (კონსტანტი / კონსტანტმა)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მალაქ(?:ჩ)?(?:ი|ის|ს|მა)?\s+მუდმივ([ა-ჰ]*)(?![ა-ჰ])', r'მალაქი კონსტანტ\1', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მისტერ(?:ი)?\s+მუდმივ([ა-ჰ]*)(?![ა-ჰ])', r'მისტერ კონსტანტ\1', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მუდმივი\s+Constant-?(?:ის)?', 'კონსტანტის', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მუდმივთან(?![ა-ჰ])', 'კონსტანტთან', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მუდმივი\s+საქმეების(?![ა-ჰ])', 'კონსტანტის საქმეების', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])მუდმივად\s+გადასცა(?![ა-ჰ])', 'კონსტანტს გადასცა', t)
+    t = re.sub(r'(?<![\u10A0-\u10FF])რა\s+მუდმივ(?:ი)?\s+ჰქონდა(?![ა-ჰ])', 'რა ჰქონდა კონსტანტს', t)
+
+    # Ergative: მუდმივმა -> კონსტანტმა
+    t = re.sub(r'(?<![\u10A0-\u10FF])მუდმივმა(?![ა-ჰ])', 'კონსტანტმა', t)
+
+    # Relative clauses: მუდმივი, რომელიც / რომელმაც / რომლის
+    t = re.sub(r'(?<![\u10A0-\u10FF])მუდმივი,\s*რომელ', 'კონსტანტი, რომელ', t)
+
+    # Nominative/Subject verbs: მუდმივი + action verb
+    subject_verbs = (
+        r'(?:ჩამოსრიალდა|მოხიბლული|გამოფხიზლდა|გაიქცა|მიჰყვებოდა|უყურებდა|იდგა|გაჩერდა|'
+        r'შევიდა|იჯდა|ფიქრობდა|გრძნობდა|დარჩა|ელოდა|გააკეთა|არ\s+მოძრაობდა|არ\s+იყო|'
+        r'იყო\s+მამაკაცი|რომელიც|რომელმაც|კვლავ\s+უყურებდა|ჩაძირული|გახდა)'
+    )
+    t = re.sub(r'(?<![\u10A0-\u10FF])მუდმივი(\s+' + subject_verbs + r')(?![ა-ჰ])', r'კონსტანტი\1', t)
+
+    # Adverbial mistranslations of Constant: მუდმივად + personal action
+    t = re.sub(r'(?<![\u10A0-\u10FF])მუდმივად\s+შეეძლო(?![ა-ჰ])', 'კონსტანტს შეეძლო', t)
+    t = re.sub(
+        r'(?<![\u10A0-\u10FF])მუდმივად(\s+(?:გაჩერდა|გაიქცა|ჩაეშვა|ჩხრეკავდა|აკეთებდა|აპირებდა))(?![ა-ჰ])',
+        r'კონსტანტი\1',
+        t
+    )
+
+    # Winston Niles Rumfoord (უინსტონ ნაილს რამფორდი)
+    t = re.sub(r'(?<![\u10A0-\u10FF])რ(?:უმ|უფ)ფ?[ოაუე]*(?:რ[ოაუე]*|ულ|ორ)?დ-?([ა-ჰ]*)(?![ა-ჰ])', r'რამფორდ\1', t)
+    t = re.sub(r'ქალბატონ(?:ი|მა)?\s+რამფორდ(?:მა)?', 'ქალბატონმა რამფორდმა', t)
+    t = re.sub(r'(?:უინსონ|ვინსონ|ჰიმნი)\s+ნი(?:ილ|ილს|ილის|ლის|ლ)?\s+რამფორდ([ა-ჰ]*)', r'უინსტონ ნაილს რამფორდ\1', t)
+
+    # Kazak (კაზაკი)
+    t = re.sub(r'(?<![\u10A0-\u10FF])კბაჰაკ([ა-ჰ]*)(?![ა-ჰ])', r'კაზაკ\1', t)
+
+    # 2. Adjective Stem Truncation in Oblique Cases (კვეცა ირებრივ ბრუნვებში / თანდებულებში)
+    adj_stems = r'(?:[ა-ჰ]+(?:ურ|ულ|იერ|იან|ელ|ალ|ეს|ობილ|ებულ)|უცნობ|დიდ|ახალ|ძველ|საკუთარ|მთავარ|მთელ|ერთადერთ|პირველ|ცარიელ|მშვიდ|ცივ|თბილ|ცხელ|ტკბილ|მსუბუქ|ცოცხალ|მკვდარ|ბრძენ|კეთილ|ბოროტ|სუსტ|ძლიერ|ღარიბ|საშიშ|ერთგულ|პირად)'
+    oblique_postpositions = r'(?:ში|ზე|თან|დან|სკენ|თვის|მდე)'
+
+    # Adjective + noun with postposition: e.g. "უცნობი სივრცეში" -> "უცნობ სივრცეში"
+    t = re.sub(
+        r'(?<![\u10A0-\u10FF])(' + adj_stems + r')ი\s+([ა-ჰ]+' + oblique_postpositions + r')(?![ა-ჰ])',
+        r'\1 \2',
+        t
+    )
+
+    # Adjective + noun in dative case (-ს): e.g. "უცნობი ადამიანს" -> "უცნობ ადამიანს"
+    t = re.sub(
+        r'(?<![\u10A0-\u10FF])(' + adj_stems + r')ი\s+([ა-ჰ]+[ა-ჰ]ს)(?![ა-ჰ])',
+        r'\1 \2',
+        t
+    )
+
+    # 3. Typography & Dialogue
+    t = re.sub(r'(?:^|\n)\s*[-–—]\s*', r'\n— ', t)
+    t = re.sub(r'\s+([.,;:!?])', r'\1', t)
+
+    return t.strip()
+

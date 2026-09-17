@@ -39,7 +39,7 @@
             .sort((a, b) => b.count - a.count)[0];
         const gutter = candidate?.count >= Math.max(3, rows.length * 0.4) ? candidate.x : null;
         const join = parts => parts.reduce((text, item, i) => text + (i && !/\s$/.test(text) && !/^\s/.test(item.text) && item.x - parts[i - 1].end > item.size * 0.12 ? ' ' : '') + item.text, '').trim();
-        const render = list => list.map((r, i) => (i && list[i - 1].y - r.y > Math.max(r.size, list[i - 1].size) * 1.8 ? '\n' : '') + join(r.parts)).filter(Boolean).join('\n');
+        const render = list => list.map((r, i) => (i && list[i - 1].y - r.y > Math.max(r.size, list[i - 1].size) * 2.5 ? '\n' : '') + join(r.parts)).filter(Boolean).join('\n');
         if (gutter === null) return render(rows);
         const columns = rows.filter(r => r.parts.some(p => p.end < gutter) && r.parts.some(p => p.x > gutter));
         const top = Math.max(...columns.map(r => r.y)), bottom = Math.min(...columns.map(r => r.y));
@@ -83,7 +83,12 @@
             const entry = outline.find(e => e.page === page.index);
             if (entry) begin(entry.title, page.index, 'pdf-outline');
             if (!current) begin(isKa ? 'შესავალი ნაწილი' : 'Opening', page.index, hasOutline ? 'pdf-outline' : 'page');
-            if (current.text) current.text += '\n\n';
+            if (current.text) {
+                const endsTerminal = /[.!?…჻]["'”’»“\])}]?\s*$/u.test(current.text.trim());
+                const curDangling = /[,;:—–-]\s*$/u.test(current.text.trim()) ||
+                    /\b(?:the|a|an|and|or|of|to|in|on|at|by|for|with|as|is|was|were|that|this|his|her|its|their|და|თუ|რომ|როგორც|მაგრამ|ხოლო|ან)\s*$/iu.test(current.text.trim());
+                current.text += (!endsTerminal || curDangling) ? ' ' : '\n\n';
+            }
             for (const line of page.text.split('\n')) {
                 // Page numbers and repeated running headers are retained as text, never promoted to chapters.
                 if (!hasOutline && heading(line) && (edgeCounts.get(line.trim()) || 0) < 3) { begin(line.trim(), page.index, 'heading'); headingCount++; }

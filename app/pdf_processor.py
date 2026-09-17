@@ -5,6 +5,7 @@ from pathlib import Path
 from pypdf import PdfReader
 
 from app.models import Chapter, BookData
+from app.text_integrity import reflow_narrative_paragraphs
 
 CHAPTER_PATTERNS = [
     re.compile(r'^\s*(chapter\s+(?:[0-9]+|[ivxlcdm]+))\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
@@ -117,7 +118,7 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
                     if pno < len(page_texts) and page_texts[pno]:
                         chap_texts.append(page_texts[pno])
                 
-                full_chap_text = "\n\n".join(chap_texts).strip()
+                full_chap_text = reflow_narrative_paragraphs("\n\n".join(chap_texts)).strip()
                 words = len(full_chap_text.split())
                 est_duration = (words / 150.0) * 60.0
                 
@@ -163,7 +164,7 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
                     if pno < len(page_texts) and page_texts[pno]:
                         chap_texts.append(page_texts[pno])
                 
-                full_chap_text = "\n\n".join(chap_texts).strip()
+                full_chap_text = reflow_narrative_paragraphs("\n\n".join(chap_texts)).strip()
                 words = len(full_chap_text.split())
                 est_duration = (words / 150.0) * 60.0
                 
@@ -190,7 +191,7 @@ def extract_pdf_data(pdf_path: Path) -> BookData:
                 if pno < len(page_texts) and page_texts[pno]:
                     chap_texts.append(page_texts[pno])
             
-            full_chap_text = "\n\n".join(chap_texts).strip()
+            full_chap_text = reflow_narrative_paragraphs("\n\n".join(chap_texts)).strip()
             words = len(full_chap_text.split())
             est_duration = (words / 150.0) * 60.0
             

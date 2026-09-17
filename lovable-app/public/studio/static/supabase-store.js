@@ -343,16 +343,29 @@
     }
   }
 
-  async function signUp(email, password) {
+  async function signUp(email, password, options) {
     var c = ensureClient();
     if (!c) return { error: { message: "Supabase SDK not loaded" } };
     var cleanEmail = String(email || "").trim();
     var redirectUrl = authRedirectUrl();
+    var signUpOptions = { emailRedirectTo: redirectUrl };
+    if (options && typeof options === "object") {
+      if (options.data) {
+        signUpOptions.data = Object.assign({}, options.data);
+      } else if (options.username) {
+        signUpOptions.data = { username: String(options.username).trim() };
+      }
+      if (options.emailRedirectTo) {
+        signUpOptions.emailRedirectTo = options.emailRedirectTo;
+      }
+    } else if (typeof options === "string" && options.trim()) {
+      signUpOptions.data = { username: options.trim() };
+    }
     try {
       var res = await c.auth.signUp({
         email: cleanEmail,
         password: password,
-        options: { emailRedirectTo: redirectUrl }
+        options: signUpOptions
       });
       if (!res.error && res.data && res.data.user) {
         if (res.data.session) userId = res.data.user.id;
@@ -726,6 +739,7 @@
         title: chapter.title || "Chapter " + (index + 1),
         text_content: chapter.text || "",
         word_count: chapter.word_count || wordCount(chapter.text),
+        status: chapter.status || (chapter.text_ka ? 'done' : 'pending') || 'pending',
         metadata: {
           studio_id: chapter.id ?? index + 1,
           text_ka: chapter.text_ka || null,
@@ -853,10 +867,11 @@
         var changed = window.EngbotLibrarySync ? window.EngbotLibrarySync.changedRows(chapters,previous,'chapter_index') : chapters;
         changed = changed.map(function(chapter) {
           var old = previous.find(function(c){return c.chapter_index===chapter.chapter_index;});
+          var resolvedStatus = chapter.status || (old ? old.status : null) || (chapter.metadata?.text_ka ? 'done' : 'pending') || 'pending';
           if (old && (old.text_content!==chapter.text_content || (old.metadata?.text_ka || null)!==chapter.metadata.text_ka)) {
-            return Object.assign({},chapter,{status:'pending'});
+            return Object.assign({},chapter,{status: chapter.status || 'pending'});
           }
-          return chapter;
+          return Object.assign({},chapter,{status: resolvedStatus});
         });
         for (var start=0;start<changed.length;start+=50) {
           checkOwner();

@@ -8836,6 +8836,11 @@ function synthesizeGeorgianMorphology(text) {
         [new RegExp(`(?<![\\u10A0-\\u10FF])მგელი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'მგელმა'],
         [new RegExp(`(?<![\\u10A0-\\u10FF])ადამიანი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'ადამიანმა'],
         [new RegExp(`(?<![\\u10A0-\\u10FF])მეგობარი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'მეგობარმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])კონსტანტი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'კონსტანტმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])მალაქი\\s+კონსტანტი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'მალაქი კონსტანტმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])რამფორდი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'რამფორდმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])უინსტონ\\s+ნაილს\\s+რამფორდი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'უინსტონ ნაილს რამფორდმა'],
+        [new RegExp(`(?<![\\u10A0-\\u10FF])კაზაკი(?=\\s+${aoristVerbs})(?![ა-ჰ])`, 'g'), 'კაზაკმა'],
     ];
     for (const [re, repl] of ergativeReplacements) {
         out = out.replace(re, repl);
@@ -8930,6 +8935,44 @@ function synthesizeGeorgianMorphology(text) {
     });
     // Strip remaining isolated English articles before Georgian words
     out = out.replace(/\b(?:the|a|an)\s+([\u10A0-\u10FF])/gi, '$1');
+
+    // 7. Character Name & Literary Entity Protection
+    // Malachi Constant (კონსტანტი / კონსტანტმა)
+    out = out.replace(/(?<![\u10A0-\u10FF])მალაქ(?:ჩ)?(?:ი|ის|ს|მა)?\s+მუდმივ([ა-ჰ]*)(?![ა-ჰ])/g, 'მალაქი კონსტანტ$1');
+    out = out.replace(/(?<![\u10A0-\u10FF])მისტერ(?:ი)?\s+მუდმივ([ა-ჰ]*)(?![ა-ჰ])/g, 'მისტერ კონსტანტ$1');
+    out = out.replace(/(?<![\u10A0-\u10FF])მუდმივი\s+Constant-?(?:ის)?/g, 'კონსტანტის');
+    out = out.replace(/(?<![\u10A0-\u10FF])მუდმივთან(?![ა-ჰ])/g, 'კონსტანტთან');
+    out = out.replace(/(?<![\u10A0-\u10FF])მუდმივი\s+საქმეების(?![ა-ჰ])/g, 'კონსტანტის საქმეების');
+    out = out.replace(/(?<![\u10A0-\u10FF])მუდმივად\s+გადასცა(?![ა-ჰ])/g, 'კონსტანტს გადასცა');
+    out = out.replace(/(?<![\u10A0-\u10FF])რა\s+მუდმივ(?:ი)?\s+ჰქონდა(?![ა-ჰ])/g, 'რა ჰქონდა კონსტანტს');
+    out = out.replace(/(?<![\u10A0-\u10FF])მუდმივმა(?![ა-ჰ])/g, 'კონსტანტმა');
+    out = out.replace(/(?<![\u10A0-\u10FF])მუდმივი,\s*რომელ/g, 'კონსტანტი, რომელ');
+
+    // Nominative/Subject verbs: მუდმივი + action verb
+    const kaSubjectVerbs = '(?:ჩამოსრიალდა|მოხიბლული|გამოფხიზლდა|გაიქცა|მიჰყვებოდა|უყურებდა|იდგა|გაჩერდა|შევიდა|იჯდა|ფიქრობდა|გრძნობდა|დარჩა|ელოდა|გააკეთა|არ\\s+მოძრაობდა|არ\\s+იყო|იყო\\s+მამაკაცი|რომელიც|რომელმაც|კვლავ\\s+უყურებდა|ჩაძირული|გახდა)';
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])მუდმივი(\\s+${kaSubjectVerbs})(?![ა-ჰ])`, 'g'), 'კონსტანტი$1');
+
+    // Adverbial mistranslations of Constant
+    out = out.replace(/(?<![\u10A0-\u10FF])მუდმივად\s+შეეძლო(?![ა-ჰ])/g, 'კონსტანტს შეეძლო');
+    out = out.replace(/(?<![\u10A0-\u10FF])მუდმივად(\s+(?:გაჩერდა|გაიქცა|ჩაეშვა|ჩხრეკავდა|აკეთებდა|აპირებდა))(?![ა-ჰ])/g, 'კონსტანტი$1');
+
+    // Winston Niles Rumfoord (უინსტონ ნაილს რამფორდი)
+    out = out.replace(/(?<![\u10A0-\u10FF])რ(?:უმ|უფ)ფ?[ოაუე]*(?:რ[ოაუე]*|ულ|ორ)?დ-?([ა-ჰ]*)(?![ა-ჰ])/g, 'რამფორდ$1');
+    out = out.replace(/ქალბატონ(?:ი|მა)?\s+რამფორდ(?:მა)?/g, 'ქალბატონმა რამფორდმა');
+    out = out.replace(/(?:უინსონ|ვინსონ|ჰიმნი)\s+ნი(?:ილ|ილს|ილის|ლის|ლ)?\s+რამფორდ([ა-ჰ]*)/g, 'უინსტონ ნაილს რამფორდ$1');
+
+    // Kazak (კაზაკი)
+    out = out.replace(/(?<![\u10A0-\u10FF])კბაჰაკ([ა-ჰ]*)(?![ა-ჰ])/g, 'კაზაკ$1');
+
+    // 8. Adjective Stem Truncation in Oblique Cases
+    const adjStems = '(?:[ა-ჰ]+(?:ურ|ულ|იერ|იან|ელ|ალ|ეს|ობილ|ებულ)|უცნობ|დიდ|ახალ|ძველ|საკუთარ|მთავარ|მთელ|ერთადერთ|პირველ|ცარიელ|მშვიდ|ცივ|თბილ|ცხელ|ტკბილ|მსუბუქ|ცოცხალ|მკვდარ|ბრძენ|კეთილ|ბოროტ|სუსტ|ძლიერ|ღარიბ|საშიშ|ერთგულ|მუდმივ|პირად)';
+    const obliquePostpos = '(?:ში|ზე|თან|დან|სკენ|თვის|მდე)';
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+([ა-ჰ]+${obliquePostpos})(?![ა-ჰ])`, 'g'), '$1 $2');
+    out = out.replace(new RegExp(`(?<![\\u10A0-\\u10FF])(${adjStems})ი\\s+([ა-ჰ]+[ა-ჰ]ს)(?![ა-ჰ])`, 'g'), '$1 $2');
+
+    // 9. Typography & Dialogue
+    out = out.replace(/(?:^|\n)\s*[-–—]\s*/g, '\n— ');
+    out = out.replace(/\s+([.,;:!?])/g, '$1');
 
     return out;
 }
@@ -9378,6 +9421,8 @@ function translateOfflineEnToKa(text) {
 if (typeof window !== 'undefined') {
     window.translateOfflineEnToKa = translateOfflineEnToKa;
     window.synthesizeGeorgianMorphology = synthesizeGeorgianMorphology;
+    window.correctGeorgianMorphology = correctGeorgianMorphology;
+    window.polishGeorgianLiterarySyntax = synthesizeGeorgianMorphology;
     window.KA_SYNTACTIC_POLYPERSONAL_ENGINE = KA_SYNTACTIC_POLYPERSONAL_ENGINE;
     window.KA_GEORGIAN_PRO_DISCOURSE_ENGINE = KA_GEORGIAN_PRO_DISCOURSE_ENGINE;
 }
@@ -9404,6 +9449,7 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_SYNTACTIC_POLYPERSONAL_ENGINE,
         KA_GEORGIAN_PRO_DISCOURSE_ENGINE,
         synthesizeGeorgianMorphology,
+        polishGeorgianLiterarySyntax: synthesizeGeorgianMorphology,
         translateOfflineEnToKa,
         getKaKnowledgeBase,
         getKaCompactRules,

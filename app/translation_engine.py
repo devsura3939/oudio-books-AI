@@ -5,7 +5,7 @@ import time
 import threading
 import concurrent.futures
 from typing import Optional
-from app.text_integrity import normalize_language, detect_language, split_bounded, translation_is_valid
+from app.text_integrity import normalize_language, detect_language, split_bounded, translation_is_valid, polish_georgian_literary_syntax, reflow_narrative_paragraphs
 
 try:
     from google import genai
@@ -103,8 +103,8 @@ def synthesize_georgian_morphology(text: str) -> str:
     t = re.sub(r'([ა-ჰ]+[ბგდვზთკლმნპჟრსტუფქღყშჩცძწჭხჯჰ])(?:ი)?-დან(?![ა-ჰ])', r'\g<1>იდან', t)
 
     # 2. Screeve Series II Transitive Aorist Ergative Concord (-მა / -მ)
-    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა|გამოაცხადა|დადო|დაასრულა|შეამჩნია|აღმოაჩინა|ააშენებინა|დააწერინა|დაალევინა|გააკეთებინა|აიშენა|აუშენა|შეიკერა|შეუკერა)'
-    subjects_i = r'(?:პატარა\s+უფლისწულ|უფლისწულ|მარკუს\s+ავრელიუს|არისტოტელ|პლატონ|ჰომეროს|შექსპირ|ციცერონ|სენეკ|ეპიქტეტ|მაკიაველ|მოგზაურ|მეცნიერ|ფილოსოფოს|კაც|ბავშვ|ბიჭ|ქალ|ავტორ|ვარდ|მგელ|ადამიან|მეგობარ|მწერალ|პოეტ|ექიმ|ოსტატ|მასწავლებელ|შეგირდ|პროფესორ|კონსტანტინე\s+არსაკიძ|არსაკიძ|თეიმურაზ\s+ხევისთავ|ჯაყო|კვაჭი|იაკობ\s+ცურტაველ|იოანე\s+საბანისძ|დავით\s+გურამიშვილ|მკითხველ(?:მა)?\s+მეცნიერ)'
+    aorist_verbs = r'(?:დაინახა|თქვა|გააკეთა|მოისმინა|დაწერა|გადაწყვიტა|გააღო|შექმნა|იპოვა|მოკლა|წაიკითხა|უპასუხა|გახსნა|ჩაკეტა|მოძებნა|დაკარგა|შეიყვარა|მიატოვა|გაუგზავნა|მოუყვა|გამოაცხადა|დადო|დაასრულა|შეამჩნია|აღმოაჩინა|ააშენებინა|დააწერინა|დაალევინა|გააკეთებინა|აიშენა|აუშენა|შეიკერა|შეუკერა|გაიღიმა|ჩაიცინა|ამოიოხრა|ჩაილაპარაკა|მიუგო|მიმართა)'
+    subjects_i = r'(?:პატარა\s+უფლისწულ|უფლისწულ|მარკუს\s+ავრელიუს|არისტოტელ|პლატონ|ჰომეროს|შექსპირ|ციცერონ|სენეკ|ეპიქტეტ|მაკიაველ|მოგზაურ|მეცნიერ|ფილოსოფოს|კაც|ბავშვ|ბიჭ|ქალ|ავტორ|ვარდ|მგელ|ადამიან|მეგობარ|მწერალ|პოეტ|ექიმ|ოსტატ|მასწავლებელ|შეგირდ|პროფესორ|კონსტანტინე\s+არსაკიძ|არსაკიძ|თეიმურაზ\s+ხევისთავ|ჯაყო|კვაჭი|იაკობ\s+ცურტაველ|იოანე\s+საბანისძ|დავით\s+გურამიშვილ|მკითხველ(?:მა)?\s+მეცნიერ|კონსტანტ|მალაქი\s+კონსტანტ|რამფორდ|უინსტონ\s+ნაილს\s+რამფორდ|კაზაკ)'
     t = re.sub(r'(?<![\u10A0-\u10FF])(' + subjects_i + r')ი(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მა\g<2>', t)
     t = re.sub(r'(?<![\u10A0-\u10FF])(მეფე|მელა|გოგო|დედა|მამა|ძმა|დეიდა|ბიძა|სახელმწიფო|სოკრატე|სენეკა)(\s+(?:[ა-ჰ]+\s+)?' + aorist_verbs + r')(?![ა-ჰ])', r'\g<1>მ\g<2>', t)
 
@@ -157,6 +157,7 @@ def synthesize_georgian_morphology(text: str) -> str:
     t = re.sub(r'\b(?:of|of\s+the)\s+([ა-ჰ]+?)(?:ი)?(?![ა-ჰ])', lambda m: (m.group(1)[:-1] if m.group(1).endswith('ი') else m.group(1)) + 'ის', t, flags=re.IGNORECASE)
     t = re.sub(r'\b(?:the|a|an)\s+([\u10A0-\u10FF])', r'\g<1>', t, flags=re.IGNORECASE)
 
+    t = polish_georgian_literary_syntax(t)
     return t
 
 
@@ -430,13 +431,16 @@ def translate_with_gemini(
             client = genai.Client(api_key=api_key, http_options={"timeout": 6000})
             sys_inst = (
                 "You are an expert bilingual literary translator specializing in English and Georgian. "
-                "Translate into natural, authentic, elegant literary Georgian (ქართული სამწერლო ენა). "
-                "Enforce natural Georgian syntax (flexible SOV/OVS), transitive aorist ergative concord (-მა), "
-                "dative experiencers, and complete clause closures. Preserve all proper names, numbers, and dialogue markers. "
+                "Translate into natural, authentic, elegant literary Georgian (ქართული სამწერლო ენა).\n"
+                "Strict Literary Rules:\n"
+                "1. PROPER NAMES: Transliterate proper names and character names phonetically into Georgian; NEVER translate names as common adjectives or nouns (e.g. 'Constant' -> 'კონსტანტი', 'Malachi Constant' -> 'მალაქი კონსტანტი', 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი').\n"
+                "2. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე, and dative -ს), vowel-ending adjectives drop -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', 'ახალ სახლში', NOT 'უცნობი სივრცეში').\n"
+                "3. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
+                "4. CASE CONCORD: Transitive verbs in Aorist require Ergative subject (-მა), experiencer verbs require Dative subject (მას უნდა/უყვარს).\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
-                "Translate into natural, fluent literary English. Preserve all names and numbers. "
+                "Translate into natural, fluent literary English prose. Preserve all names and numbers. "
                 "Output ONLY the final translation without commentary."
             )
             user_parts = []
@@ -498,7 +502,10 @@ def translate_with_kona(
                 "4. ANTI-CALQUES: Avoid literal English calques (use 'მოხდა' instead of 'ადგილი ჰქონდა', "
                 "'გადაწყვიტა' instead of 'მიიღო გადაწყვეტილება', 'როლი შეასრულა' instead of 'ითამაშა როლი').\n"
                 "5. PRESERVATION: Retain all names, numbers, dialogue marks, and meaning accurately.\n"
-                "6. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
+                "6. PROPER NOUNS & CHARACTERS: Never translate proper nouns as common adjectives or nouns! 'Constant' is a character's name ('მალაქი კონსტანტი', 'კონსტანტმა', 'კონსტანტს'), NEVER translate it as 'მუდმივი' or 'მუდმივმა'. 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი'.\n"
+                "7. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე), adjectives drop nominative -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', NOT 'უცნობი სივრცეში').\n"
+                "8. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
+                "9. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
                 "Output ONLY the Georgian translation."
             )
             user_parts = []
@@ -535,9 +542,9 @@ def translate_with_kona(
                 "temperature": 0.1,
                 "frequency_penalty": 0.3,
                 "presence_penalty": 0.2,
-                "max_tokens": min(512, max(64, len(text) * 2))
+                "max_tokens": min(1536, max(128, int(len(text) * 2.5)))
             },
-            timeout=6.0
+            timeout=12.0
         )
         elapsed = time.time() - t0
         if resp.status_code == 200:
@@ -683,8 +690,11 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
     # first so quota exhaustion cannot stop a valid translation.
     correction_key = api_key or os.environ.get("GEMINI_API_KEY")
 
+    # Reflow input text into cohesive narrative paragraphs
+    reflowed_text = reflow_narrative_paragraphs(text)
+
     # Split into paragraphs to maintain narrative structure
-    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    paragraphs = [p.strip() for p in reflowed_text.split("\n\n") if p.strip()]
     if not paragraphs:
         paragraphs = [text.strip()]
 
