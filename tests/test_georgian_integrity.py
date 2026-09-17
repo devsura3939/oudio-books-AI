@@ -195,13 +195,13 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             self.assertEqual(polished, expected, f"Adjective truncation failed for '{raw}': got '{polished}'")
 
     def test_13_autonomous_training_pack_eval(self):
-        """Verify that the active rule pack scores 100% with zero regressions across all 350+ benchmark cases."""
+        """Verify that the active rule pack scores 100% with zero regressions across all 420+ benchmark cases."""
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 350, "Expected at least 350 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 350, "Expected at least 350 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 30, "Active pack version must be at least 30")
+        self.assertGreaterEqual(len(cases), 420, "Expected at least 420 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 420, "Expected at least 420 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 32, "Active pack version must be at least 32")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
@@ -407,6 +407,91 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         for raw, expected in pairs:
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Supine/mirative failed for '{raw}': got '{polished}'")
+
+    def test_25_synthetic_passive_vs_analytical_ikna(self):
+        """Verify synthetic root-passives and active plurals replace bureaucratic '*იქნა' calques."""
+        pairs = [
+            ("იქნა მიღებული", "მიიღეს"),
+            ("მიღებულ იქნა", "მიიღეს"),
+            ("იქნა გადაწყვეტილი", "გადაწყდა"),
+            ("გადაწყვეტილ იქნა", "გადაწყდა"),
+            ("იქნა აშენებული", "აშენდა"),
+            ("აშენებულ იქნა", "აშენდა"),
+            ("იქნა დაწერილი", "დაიწერა"),
+            ("დაწერილ იქნა", "დაიწერა"),
+            ("იქნა ნათქვამი", "ითქვა"),
+            ("ნათქვამ იქნა", "ითქვა"),
+            ("იქნა გამოცხადებული", "გამოცხადდა"),
+            ("იქნა აღმოჩენილი", "აღმოაჩინეს"),
+            ("იქნა შექმნილი", "შეიქმნა"),
+            ("იქნა გადარჩენილი", "გადარჩა"),
+            ("იქნა დანგრეული", "დაინგრა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Synthetic passive failed for '{raw}': got '{polished}'")
+
+    def test_26_version_vowel_and_causative_synthesis(self):
+        """Verify synthetic version vowels (სათავისო/სასხვისო) and synthetic causatives."""
+        pairs = [
+            ("მან გააკეთა მისთვის", "მან გაუკეთა მას"),
+            ("მან დაწერა მისთვის", "მან დაუწერა მას"),
+            ("მან მოამზადა მისთვის", "მან მოუმზადა მას"),
+            ("მან შექმნა მისთვის", "მან შეუქმნა მას"),
+            ("მან აიძულა გაეკეთებინა", "გააკეთებინა"),
+            ("მან აიძულა რომ გაეკეთებინა", "გააკეთებინა"),
+            ("მან აიძულა დაეწერა", "დააწერინა"),
+            ("მან აიძულა ეთქვა", "ათქმევინა"),
+            ("მან აიძულა წაეკითხა", "წააკითხა"),
+            ("მან აიძულა აეშენებინა", "ააშენებინა"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Version/causative synthesis failed for '{raw}': got '{polished}'")
+
+    def test_27_numeral_and_quantifier_singular_concord(self):
+        """Verify extended partitive & quantitative singular concord after numerals and quantifiers."""
+        pairs = [
+            ("ხუთი წუთები", "ხუთი წუთი"),
+            ("ათი საათები", "ათი საათი"),
+            ("სამი წლები", "სამი წელი"),
+            ("ოცი დღეები", "ოცი დღე"),
+            ("უამრავი ადამიანები", "უამრავი ადამიანი"),
+            ("ბევრი წიგნები", "ბევრი წიგნი"),
+            ("რამდენიმე პრობლემები", "რამდენიმე პრობლემა"),
+            ("ასი კაცები", "ასი კაცი"),
+            ("ათასი ქალები", "ათასი ქალი"),
+            ("ცოტა ბავშვები", "ცოტა ბავშვი"),
+            ("ასობით ადამიანები", "ასობით ადამიანი"),
+            ("ათასობით ადამიანები", "ათასობით ადამიანი"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Quantifier concord failed for '{raw}': got '{polished}'")
+
+    def test_28_habitual_aspect_and_conditional_decalquing(self):
+        """Verify frequentative habitual aspect with -ხოლმე and concise conditional/modal syntax."""
+        pairs = [
+            ("ჰქონდა ჩვევა, რომ ეთქვა", "ამბობდა ხოლმე"),
+            ("ჩვევად ჰქონდა ეთქვა", "ამბობდა ხოლმე"),
+            ("ჰქონდა ჩვევა, რომ გაეკეთებინა", "აკეთებდა ხოლმე"),
+            ("ჩვევად ჰქონდა გაეკეთებინა", "აკეთებდა ხოლმე"),
+            ("ჰქონდა ჩვევა, რომ ეფიქრა", "ფიქრობდა ხოლმე"),
+            ("ჩვევად ჰქონდა ეფიქრა", "ფიქრობდა ხოლმე"),
+            ("ადრე აკეთებდა ხოლმე", "აკეთებდა ხოლმე"),
+            ("ყოველთვის ამბობდა ხოლმე", "ამბობდა ხოლმე"),
+            ("ჩვეულებრივ ამბობდა ხოლმე", "ამბობდა ხოლმე"),
+            ("იმ შემთხვევაში, თუკი", "თუკი"),
+            ("იმ შემთხვევაში, თუ", "თუ"),
+            ("იმ შემთხვევაში, როდესაც", "როდესაც"),
+            ("ეს არის შესაძლებელი, რომ", "შესაძლებელია, რომ"),
+            ("ეს შესაძლებელია, რომ", "შესაძლებელია, რომ"),
+            ("არ არის შესაძლებელი, რომ", "შეუძლებელია, რომ"),
+            ("შეიძლება ითქვას ის, რომ", "შეიძლება ითქვას, რომ"),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Habitual/conditional failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":

@@ -5267,6 +5267,70 @@ EPISTEMIC & MIRATIVE DISCOURSE PARTICLES (KA-144):
   - 'ხომ' is positioned immediately before the predicate for topic-focus emphasis: „ეს ხომ სიმართლეა?“
   - 'განა' and 'ნუთუ' introduce rhetorical and incredulous inquiries: „განა შესაძლებელია?“, „ნუთუ მართლა?“.`;
 
+// KA-145 v1.55.0 — Synthetic Dynamic Passive Decalquing (ვნებითი გვარის სინთეზი vs *იქნა).
+const KA_SYNTHETIC_PASSIVE_DECALQUING = `
+SYNTHETIC DYNAMIC PASSIVE DECALQUING (KA-145):
+• SYNTHETIC ROOT PASSIVES OVER BUREAUCRATIC '*იქნა':
+  - Russian/English calques using analytical 'იქნა + participle' (*იქნა მიღებული, *იქნა გადაწყვეტილი) violate natural Kartvelian syntax:
+    * გადაწყდა / გადაწყვიტეს (was decided — NOT *იქნა გადაწყვეტილი / *გადაწყვეტილ იქნა).
+    * მიიღეს / გადაწყდა (was accepted/adopted — NOT *იქნა მიღებული).
+    * აშენდა (was built — NOT *იქნა აშენებული / *აშენებულ იქნა).
+    * დაიწერა (was written — NOT *იქნა დაწერილი).
+    * ითქვა (was said — NOT *იქნა ნათქვამი).
+    * გამოცხადდა (was announced — NOT *იქნა გამოცხადებული).
+    * აღმოაჩინეს (was discovered — NOT *იქნა აღმოჩენილი).`;
+
+// KA-146 v1.55.0 — Synthetic Version Vowels & Causatives (ქცევის პრეფიქსები და კაუზატივი).
+const KA_VERSION_VOWEL_CAUSATIVE = `
+SYNTHETIC VERSION VOWELS & CAUSATIVES (KA-146):
+• SYNTHETIC VERSION VOWELS (სათავისო 'ი-' / სასხვისო 'უ-'):
+  - Transitive benefit or self-interest is encoded morphologically via version prefixes:
+    * მან გაუკეთა მას (he made it for him — NOT *მან გააკეთა მისთვის).
+    * მან დაუწერა მას (he wrote it for him — NOT *მან დაწერა მისთვის).
+    * მან მოუმზადა მას (he prepared it for him — NOT *მან მოამზადა მისთვის).
+    * მან შეუქმნა მას (he created it for him — NOT *მან შექმნა მისთვის).
+• SYNTHETIC CAUSATIVE SUFFIXATION ('-ინებ', '-ევინებ'):
+  - Induced action synthesizes into causative verbs:
+    * გააკეთებინა (made him do — NOT *აიძულა გაეკეთებინა).
+    * დააწერინა (made him write — NOT *აიძულა დაეწერა).
+    * ათქმევინა (made him say — NOT *აიძულა ეთქვა).
+    * ააშენებინა (made him build — NOT *აიძულა აეშენებინა).`;
+
+// KA-147 v1.55.0 — Extended Quantifier & Numeral Singular Concord (მხოლობითი რიცხვი).
+const KA_QUANTIFIER_SINGULAR_CONCORD = `
+QUANTIFIER & NUMERAL SINGULAR CONCORD (KA-147):
+• MANDATORY SINGULAR NOUN AFTER QUANTIFIERS:
+  - Any noun modified by numerals or indefinite quantifiers (ბევრი, ცოტა, რამდენიმე, უამრავი, ათასი, მილიონი) MUST be in the singular:
+    * სამი წიგნი (three books — NEVER *სამი წიგნები).
+    * ბევრი ადამიანი (many people — NEVER *ბევრი ადამიანები).
+    * რამდენიმე დღე (several days — NEVER *რამდენიმე დღეები).
+    * უამრავი პრობლემა (countless problems — NEVER *უამრავი პრობლემები).
+    * ათასი წელი (a thousand years — NEVER *ათასი წლები).
+    * ხუთი წუთი (five minutes — NEVER *ხუთი წუთები).
+    * ასობით ადამიანი (hundreds of people — NEVER *ასობით ადამიანები).`;
+
+// KA-148 v1.55.0 — Frequentative Habitual Aspect with '-ხოლმე' (ჩვეულებითი ფორმები).
+const KA_HABITUAL_ASPECT_KHOLME = `
+FREQUENTATIVE HABITUAL ASPECT WITH '-ხოლმე' (KA-148):
+• BOUND HABITUAL PARTICLE '-ხოლმე':
+  - Past habitual action ("used to", "would frequently") is rendered using the imperfect screeve + bound '-ხოლმე':
+    * ამბობდა ხოლმე (used to say — NOT *ჩვევად ჰქონდა ეთქვა / *ადრე ამბობდა ხოლმე).
+    * აკეთებდა ხოლმე (used to do — NOT *ჩვევად ჰქონდა გაეკეთებინა).
+    * ფიქრობდა ხოლმე (used to think).
+    * დადიოდა ხოლმე (used to walk/go).`;
+
+// KA-149 v1.55.0 — Conditional & Modal Decalquing (პირობითი და შესაძლებლობითი კილო).
+const KA_CONDITIONAL_MODAL_DECALQUING = `
+CONDITIONAL & MODAL DECALQUING (KA-149):
+• CONCISE CONDITIONAL SUBORDINATION:
+  - Eliminate verbose circumlocutions like '*იმ შემთხვევაში, თუკი':
+    * თუკი... / თუ... (in the event that / if — NOT *იმ შემთხვევაში, თუკი).
+    * როდესაც... (when — NOT *იმ შემთხვევაში, როდესაც).
+• MODAL SYNTHESIS:
+  - შესაძლებელია, რომ... (it is possible that — NOT *ეს არის შესაძლებელი, რომ).
+  - შეუძლებელია, რომ... (it is impossible that — NOT *არ არის შესაძლებელი, რომ).
+  - შეიძლება ითქვას, რომ... (it can be said that — NOT *შეიძლება ითქვას ის, რომ).`;
+
 // ── 2. ASSEMBLY HELPERS ─────────────────────────────────────────────────────
 // Full knowledge base for draft translation (v1.6.0 expanded set).
 function getKaKnowledgeBase() {
@@ -5293,6 +5357,11 @@ function getKaKnowledgeBase() {
         KA_PROHIBITIVE_INABILITY_NEGATIVE_CONCORD,
         KA_PURPOSIVE_SUPINE_SYNTHESIS,
         KA_EPISTEMIC_MIRATIVE_PARTICLES,
+        KA_SYNTHETIC_PASSIVE_DECALQUING,
+        KA_VERSION_VOWEL_CAUSATIVE,
+        KA_QUANTIFIER_SINGULAR_CONCORD,
+        KA_HABITUAL_ASPECT_KHOLME,
+        KA_CONDITIONAL_MODAL_DECALQUING,
         KA_CONTRASTIVE_PATTERNS,
         KA_EXPERIENCER_FRAMES_COMPREHENSIVE,
         KA_PROPER_NOUN_TRANSLITERATION,
@@ -9504,7 +9573,85 @@ function synthesizeGeorgianMorphology(text) {
         out = out.replace(re, repl);
     }
 
-    // 24. Typography & Dialogue
+    // 24. Analytical Passive Elimination & Dynamic Passive Restoration (იქნა + მიმღეობა -> ვნებითი/მოქმედებითი)
+    const analyticalPassiveFixes = [
+        [/(?<![\u10A0-\u10FF])(?:იქნა\s+მიღებული|მიღებულ\s+იქნა)(?![ა-ჰ])/g, 'მიიღეს'],
+        [/(?<![\u10A0-\u10FF])(?:იქნა\s+გადაწყვეტილი|გადაწყვეტილ\s+იქნა)(?![ა-ჰ])/g, 'გადაწყდა'],
+        [/(?<![\u10A0-\u10FF])(?:იქნა\s+აშენებული|აშენებულ\s+იქნა)(?![ა-ჰ])/g, 'აშენდა'],
+        [/(?<![\u10A0-\u10FF])(?:იქნა\s+დაწერილი|დაწერილ\s+იქნა)(?![ა-ჰ])/g, 'დაიწერა'],
+        [/(?<![\u10A0-\u10FF])(?:იქნა\s+ნათქვამი|ნათქვამ\s+იქნა)(?![ა-ჰ])/g, 'ითქვა'],
+        [/(?<![\u10A0-\u10FF])(?:იქნა\s+გამოცხადებული|გამოცხადებულ\s+იქნა)(?![ა-ჰ])/g, 'გამოცხადდა'],
+        [/(?<![\u10A0-\u10FF])(?:იქნა\s+აღმოჩენილი|აღმოჩენილ\s+იქნა)(?![ა-ჰ])/g, 'აღმოაჩინეს'],
+        [/(?<![\u10A0-\u10FF])(?:იქნა\s+შექმნილი|შექმნილ\s+იქნა)(?![ა-ჰ])/g, 'შეიქმნა'],
+        [/(?<![\u10A0-\u10FF])(?:იქნა\s+გადარჩენილი|გადარჩენილ\s+იქნა)(?![ა-ჰ])/g, 'გადარჩა'],
+        [/(?<![\u10A0-\u10FF])(?:იქნა\s+დანგრეული|დანგრეულ\s+იქნა)(?![ა-ჰ])/g, 'დაინგრა'],
+    ];
+    for (const [re, repl] of analyticalPassiveFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 25. Synthetic Version Vowels & Causative Alignment (ქცევა: სათავისო/სასხვისო/კაუზატივი)
+    const versionCausativeFixes = [
+        [/(?<![\u10A0-\u10FF])მან\s+გააკეთა\s+მისთვის(?![ა-ჰ])/g, 'მან გაუკეთა მას'],
+        [/(?<![\u10A0-\u10FF])მან\s+დაწერა\s+მისთვის(?![ა-ჰ])/g, 'მან დაუწერა მას'],
+        [/(?<![\u10A0-\u10FF])მან\s+მოამზადა\s+მისთვის(?![ა-ჰ])/g, 'მან მოუმზადა მას'],
+        [/(?<![\u10A0-\u10FF])მან\s+შექმნა\s+მისთვის(?![ა-ჰ])/g, 'მან შეუქმნა მას'],
+        [/(?<![\u10A0-\u10FF])(?:(?:მან|მას)\s+)?აიძულა\s+(?:რომ\s+)?გაეკეთებინა(?![ა-ჰ])/g, 'გააკეთებინა'],
+        [/(?<![\u10A0-\u10FF])(?:(?:მან|მას)\s+)?აიძულა\s+(?:რომ\s+)?დაეწერა(?![ა-ჰ])/g, 'დააწერინა'],
+        [/(?<![\u10A0-\u10FF])(?:(?:მან|მას)\s+)?აიძულა\s+(?:რომ\s+)?ეთქვა(?![ა-ჰ])/g, 'ათქმევინა'],
+        [/(?<![\u10A0-\u10FF])(?:(?:მან|მას)\s+)?აიძულა\s+(?:რომ\s+)?წაეკითხა(?![ა-ჰ])/g, 'წააკითხა'],
+        [/(?<![\u10A0-\u10FF])(?:(?:მან|მას)\s+)?აიძულა\s+(?:რომ\s+)?აეშენებინა(?![ა-ჰ])/g, 'ააშენებინა'],
+    ];
+    for (const [re, repl] of versionCausativeFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 26. Extended Partitive & Quantitative Singular Concord (რიცხვითი სახელისა და მსაზღვრელის მხოლობითი)
+    const quantifierSingularFixes = [
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი|ოცი|ასი|ათასი|მილიონი|ბევრი|ცოტა|რამდენიმე|უამრავი|მრავალი)\s+წუთები(?![ა-ჰ])/g, '$1 წუთი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი|ოცი|ასი|ათასი|მილიონი|ბევრი|ცოტა|რამდენიმე|უამრავი|მრავალი)\s+საათები(?![ა-ჰ])/g, '$1 საათი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი|ოცი|ასი|ათასი|მილიონი|ბევრი|ცოტა|რამდენიმე|უამრავი|მრავალი)\s+წლები(?![ა-ჰ])/g, '$1 წელი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი|ოცი|ასი|ათასი|მილიონი|ბევრი|ცოტა|რამდენიმე|უამრავი|მრავალი)\s+დღეები(?![ა-ჰ])/g, '$1 დღე'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი|ოცი|ასი|ათასი|მილიონი|ბევრი|ცოტა|რამდენიმე|უამრავი|მრავალი)\s+ადამიანები(?![ა-ჰ])/g, '$1 ადამიანი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი|ოცი|ასი|ათასი|მილიონი|ბევრი|ცოტა|რამდენიმე|უამრავი|მრავალი)\s+წიგნები(?![ა-ჰ])/g, '$1 წიგნი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი|ოცი|ასი|ათასი|მილიონი|ბევრი|ცოტა|რამდენიმე|უამრავი|მრავალი)\s+პრობლემები(?![ა-ჰ])/g, '$1 პრობლემა'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი|ოცი|ასი|ათასი|მილიონი|ბევრი|ცოტა|რამდენიმე|უამრავი|მრავალი)\s+კაცები(?![ა-ჰ])/g, '$1 კაცი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი|ოცი|ასი|ათასი|მილიონი|ბევრი|ცოტა|რამდენიმე|უამრავი|მრავალი)\s+ქალები(?![ა-ჰ])/g, '$1 ქალი'],
+        [/(?<![\u10A0-\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი|ოცი|ასი|ათასი|მილიონი|ბევრი|ცოტა|რამდენიმე|უამრავი|მრავალი)\s+ბავშვები(?![ა-ჰ])/g, '$1 ბავშვი'],
+        [/(?<![\u10A0-\u10FF])ასობით\s+ადამიანები(?![ა-ჰ])/g, 'ასობით ადამიანი'],
+        [/(?<![\u10A0-\u10FF])ათასობით\s+ადამიანები(?![ა-ჰ])/g, 'ათასობით ადამიანი'],
+    ];
+    for (const [re, repl] of quantifierSingularFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 27. Frequentative Habitual Aspect with -ხოლმე & Decalquing (ჩვეულებითი ფორმები)
+    const habitualFixes = [
+        [/(?<![\u10A0-\u10FF])(?:ჰქონდა\s+ჩვევა,\s*რომ\s+ეთქვა|ჩვევად\s+ჰქონდა\s+ეთქვა)(?![ა-ჰ])/g, 'ამბობდა ხოლმე'],
+        [/(?<![\u10A0-\u10FF])(?:ჰქონდა\s+ჩვევა,\s*რომ\s+გაეკეთებინა|ჩვევად\s+ჰქონდა\s+გაეკეთებინა)(?![ა-ჰ])/g, 'აკეთებდა ხოლმე'],
+        [/(?<![\u10A0-\u10FF])(?:ჰქონდა\s+ჩვევა,\s*რომ\s+ეფიქრა|ჩვევად\s+ჰქონდა\s+ეფიქრა)(?![ა-ჰ])/g, 'ფიქრობდა ხოლმე'],
+        [/(?<![\u10A0-\u10FF])ადრე\s+აკეთებდა\s+ხოლმე(?![ა-ჰ])/g, 'აკეთებდა ხოლმე'],
+        [/(?<![\u10A0-\u10FF])ყოველთვის\s+ამბობდა\s+ხოლმე(?![ა-ჰ])/g, 'ამბობდა ხოლმე'],
+        [/(?<![\u10A0-\u10FF])ჩვეულებრივ\s+ამბობდა\s+ხოლმე(?![ა-ჰ])/g, 'ამბობდა ხოლმე'],
+    ];
+    for (const [re, repl] of habitualFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 28. Conditional & Modal Circumlocution Reduction (პირობითი და შესაძლებლობითი კილო)
+    const conditionalModalFixes = [
+        [/(?<![\u10A0-\u10FF])იმ\s+შემთხვევაში,\s*თუკი(?![ა-ჰ])/g, 'თუკი'],
+        [/(?<![\u10A0-\u10FF])იმ\s+შემთხვევაში,\s*თუ(?![ა-ჰ])/g, 'თუ'],
+        [/(?<![\u10A0-\u10FF])იმ\s+შემთხვევაში,\s*როდესაც(?![ა-ჰ])/g, 'როდესაც'],
+        [/(?<![\u10A0-\u10FF])(?:ეს\s+არის\s+შესაძლებელი,\s*რომ|ეს\s+შესაძლებელია,\s*რომ)(?![ა-ჰ])/g, 'შესაძლებელია, რომ'],
+        [/(?<![\u10A0-\u10FF])არ\s+არის\s+შესაძლებელი,\s*რომ(?![ა-ჰ])/g, 'შეუძლებელია, რომ'],
+        [/(?<![\u10A0-\u10FF])შეიძლება\s+ითქვას\s+ის,\s*რომ(?![ა-ჰ])/g, 'შეიძლება ითქვას, რომ'],
+    ];
+    for (const [re, repl] of conditionalModalFixes) {
+        out = out.replace(re, repl);
+    }
+
+    // 29. Typography & Dialogue
     out = out.replace(/(?:^|\n)\s*[-–—]\s*/g, '\n— ');
     out = out.replace(/\s+([.,;:!?])/g, '$1');
 
@@ -10013,15 +10160,20 @@ if (typeof window !== 'undefined') {
     window.KA_PROHIBITIVE_INABILITY_NEGATIVE_CONCORD = KA_PROHIBITIVE_INABILITY_NEGATIVE_CONCORD;
     window.KA_PURPOSIVE_SUPINE_SYNTHESIS = KA_PURPOSIVE_SUPINE_SYNTHESIS;
     window.KA_EPISTEMIC_MIRATIVE_PARTICLES = KA_EPISTEMIC_MIRATIVE_PARTICLES;
+    window.KA_SYNTHETIC_PASSIVE_DECALQUING = KA_SYNTHETIC_PASSIVE_DECALQUING;
+    window.KA_VERSION_VOWEL_CAUSATIVE = KA_VERSION_VOWEL_CAUSATIVE;
+    window.KA_QUANTIFIER_SINGULAR_CONCORD = KA_QUANTIFIER_SINGULAR_CONCORD;
+    window.KA_HABITUAL_ASPECT_KHOLME = KA_HABITUAL_ASPECT_KHOLME;
+    window.KA_CONDITIONAL_MODAL_DECALQUING = KA_CONDITIONAL_MODAL_DECALQUING;
 }
 
 // ── 5. REGISTRIES (for status panel display) ────────────────────────────────
-const GEORGIAN_KNOWLEDGE_VERSION = '1.54.0';
+const GEORGIAN_KNOWLEDGE_VERSION = '1.55.0';
 const GEORGIAN_KNOWLEDGE_STATS = {
-    promptBlocks: 157,
-    qaRules: 153,
-    autoFixes: 143,
-    researchSources: 550
+    promptBlocks: 162,
+    qaRules: 158,
+    autoFixes: 150,
+    researchSources: 580
 };
 
 // ── 6. NODE EXPORT (test harness mirror) ────────────────────────────────────
@@ -10055,6 +10207,11 @@ if (typeof module !== 'undefined' && module.exports) {
         KA_PROHIBITIVE_INABILITY_NEGATIVE_CONCORD,
         KA_PURPOSIVE_SUPINE_SYNTHESIS,
         KA_EPISTEMIC_MIRATIVE_PARTICLES,
+        KA_SYNTHETIC_PASSIVE_DECALQUING,
+        KA_VERSION_VOWEL_CAUSATIVE,
+        KA_QUANTIFIER_SINGULAR_CONCORD,
+        KA_HABITUAL_ASPECT_KHOLME,
+        KA_CONDITIONAL_MODAL_DECALQUING,
         synthesizeGeorgianMorphology,
         polishGeorgianLiterarySyntax: synthesizeGeorgianMorphology,
         translateOfflineEnToKa,

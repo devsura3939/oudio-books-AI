@@ -3464,5 +3464,816 @@
       "grammar",
       "chikobava"
     ]
+  },
+  {
+    "id": "case-syntax-ka-238",
+    "kind": "autofix",
+    "source": "კრებაზე ახალი კანონი იქნა მიღებული.",
+    "expected": "კრებაზე ახალი კანონი მიიღეს.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-239",
+    "kind": "autofix",
+    "source": "საბჭოს მიერ საკითხი იქნა გადაწყვეტილი.",
+    "expected": "საბჭოს მიერ საკითხი გადაწყდა.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-240",
+    "kind": "autofix",
+    "source": "ქალაქში უძველესი ტაძარი იქნა აშენებული.",
+    "expected": "ქალაქში უძველესი ტაძარი აშენდა.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-241",
+    "kind": "autofix",
+    "source": "ავტორის მიერ ახალი წიგნი იქნა დაწერილი.",
+    "expected": "ავტორის მიერ ახალი წიგნი დაიწერა.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-242",
+    "kind": "autofix",
+    "source": "მეფის მიერ ბრძანება იქნა ნათქვამი.",
+    "expected": "მეფის მიერ ბრძანება ითქვა.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-243",
+    "kind": "autofix",
+    "source": "საზეიმოდ იქნა გამოცხადებული გამარჯვება.",
+    "expected": "საზეიმოდ გამოცხადდა გამარჯვება.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-244",
+    "kind": "autofix",
+    "source": "უდაბნოში ახალი საგანძური იქნა აღმოჩენილი.",
+    "expected": "უდაბნოში ახალი საგანძური აღმოაჩინეს.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-245",
+    "kind": "autofix",
+    "source": "მიღებულ იქნა მნიშვნელოვანი გადაწყვეტილება.",
+    "expected": "მიიღეს მნიშვნელოვანი გადაწყვეტილება.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-246",
+    "kind": "autofix",
+    "source": "გადაწყვეტილ იქნა საქმის დასრულება.",
+    "expected": "გადაწყდა საქმის დასრულება.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-247",
+    "kind": "autofix",
+    "source": "აშენებულ იქნა ახალი ციხესიმაგრე.",
+    "expected": "აშენდა ახალი ციხესიმაგრე.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-248",
+    "kind": "autofix",
+    "source": "დაწერილ იქნა ბრძნული ტრაქტატი.",
+    "expected": "დაიწერა ბრძნული ტრაქტატი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-249",
+    "kind": "autofix",
+    "source": "ნათქვამ იქნა გადამწყვეტი სიტყვა.",
+    "expected": "ითქვა გადამწყვეტი სიტყვა.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-250",
+    "kind": "autofix",
+    "source": "გამოცხადებულ იქნა მშვიდობა.",
+    "expected": "გამოცხადდა მშვიდობა.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-251",
+    "kind": "autofix",
+    "source": "იქნა გადარჩენილი მრავალი სიცოცხლე.",
+    "expected": "გადარჩა მრავალი სიცოცხლე.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "passive",
+      "decalquing"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-252",
+    "kind": "autofix",
+    "source": "მან გააკეთა მისთვის საჩუქარი.",
+    "expected": "მან გაუკეთა მას საჩუქარი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "version",
+      "benefactive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-253",
+    "kind": "autofix",
+    "source": "მან დაწერა მისთვის წერილი.",
+    "expected": "მან დაუწერა მას წერილი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "version",
+      "benefactive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-254",
+    "kind": "autofix",
+    "source": "მან მოამზადა მისთვის სადილი.",
+    "expected": "მან მოუმზადა მას სადილი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "version",
+      "benefactive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-255",
+    "kind": "autofix",
+    "source": "მან შექმნა მისთვის სამყარო.",
+    "expected": "მან შეუქმნა მას სამყარო.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "version",
+      "benefactive"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-256",
+    "kind": "autofix",
+    "source": "ოსტატმა მან აიძულა გაეკეთებინა საქმე.",
+    "expected": "ოსტატმა გააკეთებინა საქმე.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "causative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-257",
+    "kind": "autofix",
+    "source": "მასწავლებელმა მან აიძულა დაეწერა თხზულება.",
+    "expected": "მასწავლებელმა დააწერინა თხზულება.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "causative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-258",
+    "kind": "autofix",
+    "source": "მოსამართლემ მან აიძულა ეთქვა სიმართლე.",
+    "expected": "მოსამართლემ ათქმევინა სიმართლე.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "causative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-259",
+    "kind": "autofix",
+    "source": "მან აიძულა წაეკითხა ძველი ხელნაწერი.",
+    "expected": "წააკითხა ძველი ხელნაწერი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "causative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-260",
+    "kind": "autofix",
+    "source": "მეფემ მან აიძულა აეშენებინა ციხე.",
+    "expected": "მეფემ ააშენებინა ციხე.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "causative"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-261",
+    "kind": "autofix",
+    "source": "პლატონი: გამოუკვლეველი ცხოვრება არ ღირს ადამიანისთვის.",
+    "expected": "პლატონი: გამოუკვლეველი ცხოვრება არ ღირს ადამიანისთვის.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "plato"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-262",
+    "kind": "autofix",
+    "source": "არისტოტელე: სწავლის ძირი მწარეა, მაგრამ ნაყოფი ტკბილი.",
+    "expected": "არისტოტელე: სწავლის ძირი მწარეა, მაგრამ ნაყოფი ტკბილი.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "aristotle"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-263",
+    "kind": "autofix",
+    "source": "რუსთაველი: სიცრუე ყოველთა უბედურებათა სათავეა.",
+    "expected": "რუსთაველი: სიცრუე ყოველთა უბედურებათა სათავეა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "rustaveli"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-264",
+    "kind": "autofix",
+    "source": "ვაჟა-ფშაველა: ფიზიკური ძალით სულის დამორჩილება შეუძლებელია.",
+    "expected": "ვაჟა-ფშაველა: ფიზიკური ძალით სულის დამორჩილება შეუძლებელია.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "vazha"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-265",
+    "kind": "autofix",
+    "source": "იოანე პეტრიწი: ყოველი სიმრავლე ერთ უზენაეს საწყისში ერთიანდება.",
+    "expected": "იოანე პეტრიწი: ყოველი სიმრავლე ერთ უზენაეს საწყისში ერთიანდება.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "petritsi"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-266",
+    "kind": "autofix",
+    "source": "დარჩა მხოლოდ ხუთი წუთები.",
+    "expected": "დარჩა მხოლოდ ხუთი წუთი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-267",
+    "kind": "autofix",
+    "source": "გავიდა სამი საათები.",
+    "expected": "გავიდა სამი საათი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-268",
+    "kind": "autofix",
+    "source": "მოედანზე იდგა ბევრი ადამიანები.",
+    "expected": "მოედანზე იდგა ბევრი ადამიანი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-269",
+    "kind": "autofix",
+    "source": "თაროზე ეწყო სამი წიგნები.",
+    "expected": "თაროზე ეწყო სამი წიგნი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-270",
+    "kind": "autofix",
+    "source": "გამოჩნდა რამდენიმე დღეები.",
+    "expected": "გამოჩნდა რამდენიმე დღე.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-271",
+    "kind": "autofix",
+    "source": "ჩვენ წინაშეა უამრავი პრობლემები.",
+    "expected": "ჩვენ წინაშეა უამრავი პრობლემა.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-272",
+    "kind": "autofix",
+    "source": "გავიდა ათასი წლები.",
+    "expected": "გავიდა ათასი წელი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-273",
+    "kind": "autofix",
+    "source": "დარბაზში შემოვიდა ორი კაცები.",
+    "expected": "დარბაზში შემოვიდა ორი კაცი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-274",
+    "kind": "autofix",
+    "source": "სხდომას ესწრებოდა ოთხი ქალები.",
+    "expected": "სხდომას ესწრებოდა ოთხი ქალი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-275",
+    "kind": "autofix",
+    "source": "ეზოში თამაშობდა ათი ბავშვები.",
+    "expected": "ეზოში თამაშობდა ათი ბავშვი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-276",
+    "kind": "autofix",
+    "source": "ქუჩაში გამოვიდა ასობით ადამიანები.",
+    "expected": "ქუჩაში გამოვიდა ასობით ადამიანი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-277",
+    "kind": "autofix",
+    "source": "ტაძართან შეიკრიბა ათასობით ადამიანები.",
+    "expected": "ტაძართან შეიკრიბა ათასობით ადამიანი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-278",
+    "kind": "autofix",
+    "source": "დარჩა ცოტა წუთები მოსაფიქრებლად.",
+    "expected": "დარჩა ცოტა წუთი მოსაფიქრებლად.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-279",
+    "kind": "autofix",
+    "source": "მრავალი წლები გავიდა მას შემდეგ.",
+    "expected": "მრავალი წელი გავიდა მას შემდეგ.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "quantifier",
+      "singular"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-280",
+    "kind": "autofix",
+    "source": "მოხუცს ჰქონდა ჩვევა, რომ ეთქვა ჭეშმარიტება.",
+    "expected": "მოხუცს ამბობდა ხოლმე ჭეშმარიტება.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "habitual",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-281",
+    "kind": "autofix",
+    "source": "მას ჩვევად ჰქონდა ეთქვა ეს სიტყვები.",
+    "expected": "მას ამბობდა ხოლმე ეს სიტყვები.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "habitual",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-282",
+    "kind": "autofix",
+    "source": "ოსტატს ჰქონდა ჩვევა, რომ გაეკეთებინა საუკეთესო.",
+    "expected": "ოსტატს აკეთებდა ხოლმე საუკეთესო.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "habitual",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-283",
+    "kind": "autofix",
+    "source": "მას ჩვევად ჰქონდა გაეკეთებინა სიკეთე.",
+    "expected": "მას აკეთებდა ხოლმე სიკეთე.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "habitual",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-284",
+    "kind": "autofix",
+    "source": "ბრძენს ჰქონდა ჩვევა, რომ ეფიქრა მარადისობაზე.",
+    "expected": "ბრძენს ფიქრობდა ხოლმე მარადისობაზე.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "habitual",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-285",
+    "kind": "autofix",
+    "source": "მას ჩვევად ჰქონდა ეფიქრა მომავალზე.",
+    "expected": "მას ფიქრობდა ხოლმე მომავალზე.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "habitual",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-286",
+    "kind": "autofix",
+    "source": "იგი ადრე აკეთებდა ხოლმე ამ საქმეს.",
+    "expected": "იგი აკეთებდა ხოლმე ამ საქმეს.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "habitual",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-287",
+    "kind": "autofix",
+    "source": "იგი ყოველთვის ამბობდა ხოლმე სიმართლეს.",
+    "expected": "იგი ამბობდა ხოლმე სიმართლეს.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "habitual",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-288",
+    "kind": "autofix",
+    "source": "იგი ჩვეულებრივ ამბობდა ხოლმე ამას.",
+    "expected": "იგი ამბობდა ხოლმე ამას.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "habitual",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-289",
+    "kind": "autofix",
+    "source": "ილია ჭავჭავაძე: მოძრაობა და მხოლოდ მოძრაობა არის ქვეყნის ღონე და სიცოცხლე.",
+    "expected": "ილია ჭავჭავაძე: მოძრაობა და მხოლოდ მოძრაობა არის ქვეყნის ღონე და სიცოცხლე.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "ilia"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-290",
+    "kind": "autofix",
+    "source": "კონსტანტინე გამსახურდია: სვეტიცხოველი არის ცაში ატყორცნილი სიმფონია ლოდებისა.",
+    "expected": "კონსტანტინე გამსახურდია: სვეტიცხოველი არის ცაში ატყორცნილი სიმფონია ლოდებისა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "gamsakhurdia"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-291",
+    "kind": "autofix",
+    "source": "გალაკტიონ ტაბიძე: ქარი ქრის, ქარი ქრის, ქარი ქრის, ფოთლები მიჰქრიან ქარდაქარ.",
+    "expected": "გალაკტიონ ტაბიძე: ქარი ქრის, ქარი ქრის, ქარი ქრის, ფოთლები მიჰქრიან ქარდაქარ.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "galaktion"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-292",
+    "kind": "autofix",
+    "source": "ნიკოლოზ ბარათაშვილი: გასწი, მერანო, შენს ჭენებას არა აქვს სამზღვარი!",
+    "expected": "ნიკოლოზ ბარათაშვილი: გასწი, მერანო, შენს ჭენებას არა აქვს სამზღვარი!",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "baratashvili"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-293",
+    "kind": "autofix",
+    "source": "მიხეილ ჯავახიშვილი: ადამიანმა საკუთარი მიწისა და ღირსებისთვის უკანასკნელ ამოსუნთქვამდე უნდა იბრძოლოს.",
+    "expected": "მიხეილ ჯავახიშვილი: ადამიანმა საკუთარი მიწისა და ღირსებისთვის უკანასკნელ ამოსუნთქვამდე უნდა იბრძოლოს.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "javakhishvili"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-294",
+    "kind": "autofix",
+    "source": "იმ შემთხვევაში, თუკი მტერი შემოესევა ქვეყანას.",
+    "expected": "თუკი მტერი შემოესევა ქვეყანას.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "conditional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-295",
+    "kind": "autofix",
+    "source": "იმ შემთხვევაში, თუ დრო მოვა.",
+    "expected": "თუ დრო მოვა.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "conditional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-296",
+    "kind": "autofix",
+    "source": "იმ შემთხვევაში, როდესაც საქმე დასრულდება.",
+    "expected": "როდესაც საქმე დასრულდება.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "conditional"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-297",
+    "kind": "autofix",
+    "source": "ეს არის შესაძლებელი, რომ გამარჯვება მოვიპოვოთ.",
+    "expected": "შესაძლებელია, რომ გამარჯვება მოვიპოვოთ.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "modal"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-298",
+    "kind": "autofix",
+    "source": "ეს შესაძლებელია, რომ სიმართლე გაირკვეს.",
+    "expected": "შესაძლებელია, რომ სიმართლე გაირკვეს.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "modal"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-299",
+    "kind": "autofix",
+    "source": "არ არის შესაძლებელი, რომ სული დამარცხდეს.",
+    "expected": "შეუძლებელია, რომ სული დამარცხდეს.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "modal"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-300",
+    "kind": "autofix",
+    "source": "შეიძლება ითქვას ის, რომ ხელოვნება უკვდავია.",
+    "expected": "შეიძლება ითქვას, რომ ხელოვნება უკვდავია.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "modal"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-301",
+    "kind": "autofix",
+    "source": "სულხან-საბა ორბელიანი: ცოდნა ადამიანის ულევი სიმდიდრეა.",
+    "expected": "სულხან-საბა ორბელიანი: ცოდნა ადამიანის ულევი სიმდიდრეა.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "saba"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-302",
+    "kind": "autofix",
+    "source": "მარკუს ავრელიუსი: შენი ცხოვრების ბედნიერება შენი ფიქრების ხარისხზეა დამოკიდებული.",
+    "expected": "მარკუს ავრელიუსი: შენი ცხოვრების ბედნიერება შენი ფიქრების ხარისხზეა დამოკიდებული.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "aurelius"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-303",
+    "kind": "autofix",
+    "source": "იმანუელ კანტი: ორი რამ ავსებს სულს მუდამ ახალი და მზარდი აღტაცებითა და მოწიწებით: ვარსკვლავებით მოჭედილი ცა ჩემ ზემოთ და ზნეობრივი კანონი ჩემში.",
+    "expected": "იმანუელ კანტი: ორი რამ ავსებს სულს მუდამ ახალი და მზარდი აღტაცებითა და მოწიწებით: ვარსკვლავებით მოჭედილი ცა ჩემ ზემოთ და ზნეობრივი კანონი ჩემში.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "kant"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-304",
+    "kind": "autofix",
+    "source": "რენე დეკარტი: ვაზროვნებ, მაშასადამე ვარსებობ.",
+    "expected": "რენე დეკარტი: ვაზროვნებ, მაშასადამე ვარსებობ.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "descartes"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-305",
+    "kind": "autofix",
+    "source": "ფრიდრიხ ნიცშე: ვისაც აქვს სიცოცხლის არსი, თითქმის ნებისმიერ განსაცდელს გაუძლებს.",
+    "expected": "ფრიდრიხ ნიცშე: ვისაც აქვს სიცოცხლის არსი, თითქმის ნებისმიერ განსაცდელს გაუძლებს.",
+    "weight": 1.0,
+    "tags": [
+      "literature",
+      "nietzsche"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-306",
+    "kind": "autofix",
+    "source": "აკაკი შანიძე: ქართული ენის გრამატიკის საფუძვლები და ზმნის პოლიპერსონალიზმი.",
+    "expected": "აკაკი შანიძე: ქართული ენის გრამატიკის საფუძვლები და ზმნის პოლიპერსონალიზმი.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "shanidze"
+    ]
+  },
+  {
+    "id": "case-syntax-ka-307",
+    "kind": "autofix",
+    "source": "არნოლდ ჩიქობავა: იბერიულ-კავკასიური ენათმეცნიერება და ქართული ენის ერგატიული კონსტრუქცია.",
+    "expected": "არნოლდ ჩიქობავა: იბერიულ-კავკასიური ენათმეცნიერება და ქართული ენის ერგატიული კონსტრუქცია.",
+    "weight": 1.0,
+    "tags": [
+      "grammar",
+      "chikobava"
+    ]
   }
 ]

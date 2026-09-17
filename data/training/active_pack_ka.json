@@ -1,5 +1,5 @@
 {
-  "version": 30,
+  "version": 32,
   "language": "ka",
   "score": 100.0,
   "enabled": true,
@@ -3497,10 +3497,562 @@
       "type": "glossary",
       "pattern": "privative circumfix",
       "replacement": "უარყოფითი ცირკუმფიქსი"
+    },
+    {
+      "id": "af-passive-1",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:იქნა\\s+მიღებული|მიღებულ\\s+იქნა)(?![\\u10A0-\\u10FF])",
+      "replacement": "მიიღეს"
+    },
+    {
+      "id": "af-passive-2",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:იქნა\\s+გადაწყვეტილი|გადაწყვეტილ\\s+იქნა)(?![\\u10A0-\\u10FF])",
+      "replacement": "გადაწყდა"
+    },
+    {
+      "id": "af-passive-3",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:იქნა\\s+აშენებული|აშენებულ\\s+იქნა)(?![\\u10A0-\\u10FF])",
+      "replacement": "აშენდა"
+    },
+    {
+      "id": "af-passive-4",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:იქნა\\s+დაწერილი|დაწერილ\\s+იქნა)(?![\\u10A0-\\u10FF])",
+      "replacement": "დაიწერა"
+    },
+    {
+      "id": "af-passive-5",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:იქნა\\s+ნათქვამი|ნათქვამ\\s+იქნა)(?![\\u10A0-\\u10FF])",
+      "replacement": "ითქვა"
+    },
+    {
+      "id": "af-passive-6",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:იქნა\\s+გამოცხადებული|გამოცხადებულ\\s+იქნა)(?![\\u10A0-\\u10FF])",
+      "replacement": "გამოცხადდა"
+    },
+    {
+      "id": "af-passive-7",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:იქნა\\s+აღმოჩენილი|აღმოჩენილ\\s+იქნა)(?![\\u10A0-\\u10FF])",
+      "replacement": "აღმოაჩინეს"
+    },
+    {
+      "id": "af-passive-8",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:იქნა\\s+გადარჩენილი|გადარჩენილ\\s+იქნა)(?![\\u10A0-\\u10FF])",
+      "replacement": "გადარჩა"
+    },
+    {
+      "id": "af-version-1",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მან\\s+გააკეთა\\s+მისთვის(?![\\u10A0-\\u10FF])",
+      "replacement": "მან გაუკეთა მას"
+    },
+    {
+      "id": "af-version-2",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მან\\s+დაწერა\\s+მისთვის(?![\\u10A0-\\u10FF])",
+      "replacement": "მან დაუწერა მას"
+    },
+    {
+      "id": "af-version-3",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მან\\s+მოამზადა\\s+მისთვის(?![\\u10A0-\\u10FF])",
+      "replacement": "მან მოუმზადა მას"
+    },
+    {
+      "id": "af-version-4",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მან\\s+შექმნა\\s+მისთვის(?![\\u10A0-\\u10FF])",
+      "replacement": "მან შეუქმნა მას"
+    },
+    {
+      "id": "af-causative-1",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მან\\s+აიძულა\\s+(?:რომ\\s+)?გაეკეთებინა(?![\\u10A0-\\u10FF])",
+      "replacement": "გააკეთებინა"
+    },
+    {
+      "id": "af-causative-2",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მან\\s+აიძულა\\s+(?:რომ\\s+)?დაეწერა(?![\\u10A0-\\u10FF])",
+      "replacement": "დააწერინა"
+    },
+    {
+      "id": "af-causative-3",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მან\\s+აიძულა\\s+(?:რომ\\s+)?ეთქვა(?![\\u10A0-\\u10FF])",
+      "replacement": "ათქმევინა"
+    },
+    {
+      "id": "af-causative-4",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მან\\s+აიძულა\\s+(?:რომ\\s+)?წაეკითხა(?![\\u10A0-\\u10FF])",
+      "replacement": "წააკითხა"
+    },
+    {
+      "id": "af-causative-5",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მან\\s+აიძულა\\s+(?:რომ\\s+)?აეშენებინა(?![\\u10A0-\\u10FF])",
+      "replacement": "ააშენებინა"
+    },
+    {
+      "id": "af-quant-1",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(ხუთი|სამი|ორი|ოთხი|ათი|ასობით|ათასობით)\\s+წუთები(?![\\u10A0-\\u10FF])",
+      "replacement": "\\1 წუთი"
+    },
+    {
+      "id": "af-habitual-1",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:ჰქონდა\\s+ჩვევა,\\s*რომ\\s+ეთქვა|ჩვევად\\s+ჰქონდა\\s+ეთქვა)(?![\\u10A0-\\u10FF])",
+      "replacement": "ამბობდა ხოლმე"
+    },
+    {
+      "id": "af-cond-1",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])იმ\\s+შემთხვევაში,\\s*თუკი(?![\\u10A0-\\u10FF])",
+      "replacement": "თუკი"
+    },
+    {
+      "id": "pb-dyn-passive",
+      "type": "prompt_block",
+      "pattern": "KA_SYNTHETIC_PASSIVE_DECALQUING",
+      "replacement": "Strict dynamic passive synthesis: root passives (დაიწერა, აშენდა, გადაწყდა) over *იქნა calques."
+    },
+    {
+      "id": "pb-version-caus",
+      "type": "prompt_block",
+      "pattern": "KA_VERSION_VOWEL_CAUSATIVE",
+      "replacement": "Synthetic version vowels (სათავისო ი-, სასხვისო უ-) and causatives (-ინებ, -ევინებ)."
+    },
+    {
+      "id": "pb-quant-singular",
+      "type": "prompt_block",
+      "pattern": "KA_QUANTIFIER_SINGULAR_CONCORD",
+      "replacement": "Mandatory singular noun after numerals and quantifiers (სამი წიგნი, ბევრი ადამიანი)."
+    },
+    {
+      "id": "pb-habitual-kholme",
+      "type": "prompt_block",
+      "pattern": "KA_HABITUAL_ASPECT_KHOLME",
+      "replacement": "Past frequentative habitual aspect with imperfect verb + -ხოლმე."
+    },
+    {
+      "id": "pb-cond-modal",
+      "type": "prompt_block",
+      "pattern": "KA_CONDITIONAL_MODAL_DECALQUING",
+      "replacement": "Concise conditional and modal decalquing (თუკი, თუ, შესაძლებელია, რომ)."
+    },
+    {
+      "id": "gl-term-21",
+      "type": "glossary",
+      "pattern": "platonic idea",
+      "replacement": "პლატონური იდეა"
+    },
+    {
+      "id": "gl-term-22",
+      "type": "glossary",
+      "pattern": "anamnesis",
+      "replacement": "ანამნეზისი"
+    },
+    {
+      "id": "gl-term-23",
+      "type": "glossary",
+      "pattern": "eudaimonia",
+      "replacement": "ეუდემონია"
+    },
+    {
+      "id": "gl-term-24",
+      "type": "glossary",
+      "pattern": "telos",
+      "replacement": "თელოსი"
+    },
+    {
+      "id": "gl-term-25",
+      "type": "glossary",
+      "pattern": "catharsis",
+      "replacement": "კათარსისი"
+    },
+    {
+      "id": "gl-term-26",
+      "type": "glossary",
+      "pattern": "teleology",
+      "replacement": "ტელეოლოგია"
+    },
+    {
+      "id": "gl-term-27",
+      "type": "glossary",
+      "pattern": "ontological argument",
+      "replacement": "ონტოლოგიური არგუმენტი"
+    },
+    {
+      "id": "gl-term-28",
+      "type": "glossary",
+      "pattern": "epistemology",
+      "replacement": "ეპისტემოლოგია"
+    },
+    {
+      "id": "gl-term-29",
+      "type": "glossary",
+      "pattern": "transcendental dialectic",
+      "replacement": "ტრანსცენდენტალური დიალექტიკა"
+    },
+    {
+      "id": "gl-term-30",
+      "type": "glossary",
+      "pattern": "methodic doubt",
+      "replacement": "მეთოდური ეჭვი"
+    },
+    {
+      "id": "gl-term-31",
+      "type": "glossary",
+      "pattern": "cogito ergo sum",
+      "replacement": "ვაზროვნებ, მაშასადამე ვარსებობ"
+    },
+    {
+      "id": "gl-term-32",
+      "type": "glossary",
+      "pattern": "neoplatonism",
+      "replacement": "ნეოპლატონიზმი"
+    },
+    {
+      "id": "gl-term-33",
+      "type": "glossary",
+      "pattern": "divine emanation",
+      "replacement": "ღვთაებრივი ემანაცია"
+    },
+    {
+      "id": "gl-term-34",
+      "type": "glossary",
+      "pattern": "stoic wisdom",
+      "replacement": "სტოიკური სიბრძნე"
+    },
+    {
+      "id": "gl-term-35",
+      "type": "glossary",
+      "pattern": "inner citadel",
+      "replacement": "შინაგანი ციტადელი"
+    },
+    {
+      "id": "gl-term-36",
+      "type": "glossary",
+      "pattern": "moral virtue",
+      "replacement": "ზნეობრივი სათნოება"
+    },
+    {
+      "id": "gl-term-37",
+      "type": "glossary",
+      "pattern": "rational soul",
+      "replacement": "მოაზროვნე სული"
+    },
+    {
+      "id": "gl-term-38",
+      "type": "glossary",
+      "pattern": "highest good",
+      "replacement": "უმაღლესი სიკეთე"
+    },
+    {
+      "id": "gl-term-39",
+      "type": "glossary",
+      "pattern": "pure reason",
+      "replacement": "წმინდა გონება"
+    },
+    {
+      "id": "gl-term-40",
+      "type": "glossary",
+      "pattern": "practical judgment",
+      "replacement": "პრაქტიკული განსჯა"
+    },
+    {
+      "id": "gl-term-41",
+      "type": "glossary",
+      "pattern": "synthetic passive",
+      "replacement": "სინთეზური ვნებითი"
+    },
+    {
+      "id": "gl-term-42",
+      "type": "glossary",
+      "pattern": "dynamic passive",
+      "replacement": "დინამიკური ვნებითი"
+    },
+    {
+      "id": "gl-term-43",
+      "type": "glossary",
+      "pattern": "static passive",
+      "replacement": "სტატიკური ვნებითი"
+    },
+    {
+      "id": "gl-term-44",
+      "type": "glossary",
+      "pattern": "subjective version",
+      "replacement": "სათავისო ქცევა"
+    },
+    {
+      "id": "gl-term-45",
+      "type": "glossary",
+      "pattern": "objective version",
+      "replacement": "სასხვისო ქცევა"
+    },
+    {
+      "id": "gl-term-46",
+      "type": "glossary",
+      "pattern": "neutral version",
+      "replacement": "საარვისო ქცევა"
+    },
+    {
+      "id": "gl-term-47",
+      "type": "glossary",
+      "pattern": "superessive version",
+      "replacement": "ზედაპირული ქცევა"
+    },
+    {
+      "id": "gl-term-48",
+      "type": "glossary",
+      "pattern": "morphological causative",
+      "replacement": "მორფოლოგიური კაუზატივი"
+    },
+    {
+      "id": "gl-term-49",
+      "type": "glossary",
+      "pattern": "habitual aspect",
+      "replacement": "ჩვეულებითი ასპექტი"
+    },
+    {
+      "id": "gl-term-50",
+      "type": "glossary",
+      "pattern": "frequentative clitic",
+      "replacement": "განმეორებითი კლიტიკა"
+    },
+    {
+      "id": "gl-term-51",
+      "type": "glossary",
+      "pattern": "partitive quantifier",
+      "replacement": "ნაწილობითი კვანტიფიკატორი"
+    },
+    {
+      "id": "gl-term-52",
+      "type": "glossary",
+      "pattern": "singular concord",
+      "replacement": "მხოლობითის შეთანხმება"
+    },
+    {
+      "id": "gl-term-53",
+      "type": "glossary",
+      "pattern": "conditional screeve",
+      "replacement": "პირობითი მწკრივი"
+    },
+    {
+      "id": "gl-term-54",
+      "type": "glossary",
+      "pattern": "optative screeve",
+      "replacement": "კავშირებითი II"
+    },
+    {
+      "id": "gl-term-55",
+      "type": "glossary",
+      "pattern": "conjunctive subordinator",
+      "replacement": "მაკავშირებელი დაქვემდებარება"
+    },
+    {
+      "id": "gl-term-56",
+      "type": "glossary",
+      "pattern": "polysegmental clause",
+      "replacement": "პოლისეგმენტური წინადადება"
+    },
+    {
+      "id": "gl-term-57",
+      "type": "glossary",
+      "pattern": "the knight in the panthers skin",
+      "replacement": "ვეფხისტყაოსანი"
+    },
+    {
+      "id": "gl-term-58",
+      "type": "glossary",
+      "pattern": "aluda ketelauri",
+      "replacement": "ალუდა ქეთელაური"
+    },
+    {
+      "id": "gl-term-59",
+      "type": "glossary",
+      "pattern": "host and guest",
+      "replacement": "სტუმარ-მასპინძელი"
+    },
+    {
+      "id": "gl-term-60",
+      "type": "glossary",
+      "pattern": "the right hand of the grand master",
+      "replacement": "დიდოსტატის მარჯვენა"
+    },
+    {
+      "id": "gl-term-61",
+      "type": "glossary",
+      "pattern": "merani",
+      "replacement": "მერანი"
+    },
+    {
+      "id": "gl-term-62",
+      "type": "glossary",
+      "pattern": "is that a man",
+      "replacement": "კაცია-ადამიანი?!"
+    },
+    {
+      "id": "gl-term-63",
+      "type": "glossary",
+      "pattern": "letters of a traveler",
+      "replacement": "მგზავრის წერილები"
+    },
+    {
+      "id": "gl-term-64",
+      "type": "glossary",
+      "pattern": "the serpent skin",
+      "replacement": "გველის პერანგი"
+    },
+    {
+      "id": "gl-term-65",
+      "type": "glossary",
+      "pattern": "elements of theology commentary",
+      "replacement": "ღვთისმეტყველების საწყისთა განმარტება"
+    },
+    {
+      "id": "gl-term-66",
+      "type": "glossary",
+      "pattern": "life of saint nino",
+      "replacement": "წმინდა ნინოს ცხოვრება"
+    },
+    {
+      "id": "gl-term-67",
+      "type": "glossary",
+      "pattern": "martyrdom of saint shushanik",
+      "replacement": "შუშანიკის წამება"
+    },
+    {
+      "id": "af-quant-hours",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(სამი|ორი|ოთხი|ხუთი|ათი)\\s+საათები(?![\\u10A0-\\u10FF])",
+      "replacement": "\\1 საათი"
+    },
+    {
+      "id": "af-quant-days",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(რამდენიმე|ორი|სამი|ოთხი|ხუთი|ათი)\\s+დღეები(?![\\u10A0-\\u10FF])",
+      "replacement": "\\1 დღე"
+    },
+    {
+      "id": "af-quant-problems",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(უამრავი|ბევრი|რამდენიმე)\\s+პრობლემები(?![\\u10A0-\\u10FF])",
+      "replacement": "\\1 პრობლემა"
+    },
+    {
+      "id": "af-quant-years",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(ათასი|ასი|მილიონი|მრავალი)\\s+წლები(?![\\u10A0-\\u10FF])",
+      "replacement": "\\1 წელი"
+    },
+    {
+      "id": "af-quant-men",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი)\\s+კაცები(?![\\u10A0-\\u10FF])",
+      "replacement": "\\1 კაცი"
+    },
+    {
+      "id": "af-quant-women",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი)\\s+ქალები(?![\\u10A0-\\u10FF])",
+      "replacement": "\\1 ქალი"
+    },
+    {
+      "id": "af-quant-children",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(ორი|სამი|ოთხი|ხუთი|ათი)\\s+ბავშვები(?![\\u10A0-\\u10FF])",
+      "replacement": "\\1 ბავშვი"
+    },
+    {
+      "id": "af-quant-hundreds",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ასობით\\s+ადამიანები(?![\\u10A0-\\u10FF])",
+      "replacement": "ასობით ადამიანი"
+    },
+    {
+      "id": "af-quant-thousands",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ათასობით\\s+ადამიანები(?![\\u10A0-\\u10FF])",
+      "replacement": "ათასობით ადამიანი"
+    },
+    {
+      "id": "af-quant-few-mins",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ცოტა\\s+წუთები(?![\\u10A0-\\u10FF])",
+      "replacement": "ცოტა წუთი"
+    },
+    {
+      "id": "af-habitual-make",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:ჰქონდა\\s+ჩვევა,\\s*რომ\\s+გაეკეთებინა|ჩვევად\\s+ჰქონდა\\s+გაეკეთებინა)(?![\\u10A0-\\u10FF])",
+      "replacement": "აკეთებდა ხოლმე"
+    },
+    {
+      "id": "af-habitual-think",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:ჰქონდა\\s+ჩვევა,\\s*რომ\\s+ეფიქრა|ჩვევად\\s+ჰქონდა\\s+ეფიქრა)(?![\\u10A0-\\u10FF])",
+      "replacement": "ფიქრობდა ხოლმე"
+    },
+    {
+      "id": "af-habitual-adre",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ადრე\\s+აკეთებდა\\s+ხოლმე(?![\\u10A0-\\u10FF])",
+      "replacement": "აკეთებდა ხოლმე"
+    },
+    {
+      "id": "af-habitual-always",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ყოველთვის\\s+ამბობდა\\s+ხოლმე(?![\\u10A0-\\u10FF])",
+      "replacement": "ამბობდა ხოლმე"
+    },
+    {
+      "id": "af-habitual-usually",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ჩვეულებრივ\\s+ამბობდა\\s+ხოლმე(?![\\u10A0-\\u10FF])",
+      "replacement": "ამბობდა ხოლმე"
+    },
+    {
+      "id": "af-cond-if",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])იმ\\s+შემთხვევაში,\\s*თუ(?![\\u10A0-\\u10FF])",
+      "replacement": "თუ"
+    },
+    {
+      "id": "af-cond-when",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])იმ\\s+შემთხვევაში,\\s*როდესაც(?![\\u10A0-\\u10FF])",
+      "replacement": "როდესაც"
+    },
+    {
+      "id": "af-modal-possible",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:ეს\\s+არის\\s+შესაძლებელი,\\s*რომ|ეს\\s+შესაძლებელია,\\s*რომ)(?![\\u10A0-\\u10FF])",
+      "replacement": "შესაძლებელია, რომ"
+    },
+    {
+      "id": "af-modal-impossible",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])არ\\s+არის\\s+შესაძლებელი,\\s*რომ(?![\\u10A0-\\u10FF])",
+      "replacement": "შეუძლებელია, რომ"
+    },
+    {
+      "id": "af-modal-can-say",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])შეიძლება\\s+ითქვას\\s+ის,\\s*რომ(?![\\u10A0-\\u10FF])",
+      "replacement": "შეიძლება ითქვას, რომ"
     }
   ],
   "updated_at": "2026-09-17T14:59:30.376602+00:00",
   "last_score": 100.0,
   "last_evaluated_at": "2026-09-17T14:59:30.376602+00:00",
-  "benchmark_cases_count": 280
+  "benchmark_cases_count": 420
 }

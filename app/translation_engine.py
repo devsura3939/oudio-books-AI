@@ -409,6 +409,22 @@ OFFLINE_LITERARY_EXEMPLARS = [
      "ცოდნა უდიდესი სიმდიდრეა და გონების ჭეშმარიტი ნათელი."),
     (r"a man must fight for his land and honor until the last breath\.?",
      "ადამიანმა საკუთარი მიწისა და ღირსებისთვის უკანასკნელ ამოსუნთქვამდე უნდა იბრძოლოს."),
+    (r"the unexamined life is not worth living\.?",
+     "გამოუკვლეველი ცხოვრება არ ღირს ადამიანისთვის."),
+    (r"we are what we repeatedly do;? excellence,? then,? is not an act,? but a habit\.?",
+     "ჩვენ ვართ ის, რასაც განუწყვეტლივ ვაკეთებთ; მაშასადამე, სრულყოფილება არის არა ერთჯერადი ქმედება, არამედ ჩვევა."),
+    (r"the roots of education are bitter,? but the fruit is sweet\.?",
+     "სწავლის ძირი მწარეა, მაგრამ ნაყოფი ტკბილი."),
+    (r"falsehood is the root of all misfortunes\.?",
+     "სიცრუე ყოველთა უბედურებათა სათავეა."),
+    (r"what is a man without a homeland:? a homeless wanderer without name\.?",
+     "რა არის კაცი უსამშობლოდ: უსახლკარო და უსახელო მოხეტიალე."),
+    (r"the soul cannot be conquered by physical force\.?",
+     "ფიზიკური ძალით სულის დამორჩილება შეუძლებელია."),
+    (r"the hands of the master live forever in stone\.?",
+     "ოსტატის მარჯვენა მარად ცოცხლობს ქვაში."),
+    (r"all multiplicity is unified in the one transcendent source\.?",
+     "ყოველი სიმრავლე ერთ უზენაეს საწყისში ერთიანდება."),
     (r"once upon a time(?:,)? there was a little prince(?:,)? who lived on a planet",
      "იყო და არა იყო რა, ცხოვრობდა ერთი პატარა უფლისწული, რომელიც თავის პლანეტაზე მკვიდრობდა"),
     (r"once upon a time", "იყო და არა იყო რა"),
@@ -593,7 +609,12 @@ def translate_with_gemini(
                 "17. PROHIBITIVE & INABILITY NEGATIVE CONCORD: Commands use prohibitive pronouns with 'ნუ' ('ნურაფერს ნუ გააკეთებ', 'ნურასოდეს ნუ დაივიწყებ', 'ნურსად ნუ წახვალ'). Inability uses 'ვერ' ('ვერავინ შეძლო', 'ვერაფერი შევძელი').\n"
                 "18. PURPOSIVE SUPINES: Prefer synthetic purpose supines in 'სა-...-ოდ' / '-ად' ('გასაგებად', 'სანახავად', 'სასწავლად', 'სათქმელად', 'გადასარჩენად') over bulky 'იმისთვის, რომ'.\n"
                 "19. MIRATIVE & DISCOURSE PARTICLES: Match non-witnessed inference 'თურმე' with Series III evidentials ('თურმე დავიწყებია', 'თურმე მოსულა'). Place discourse tags 'ხომ', 'განა', 'ნუთუ' in natural preverbal position.\n"
-                "20. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
+                "20. DYNAMIC PASSIVE SYNTHESIS: Use synthetic dynamic passives ('დაიწერა', 'აშენდა', 'გადაწყდა', 'ითქვა', 'მიიღეს') instead of bureaucratic calques with '*იქნა'.\n"
+                "21. VERSION & CAUSATIVE SYNTHESIS: Use verbal version vowels (სათავისო 'ი-', სასხვისო 'უ-') and causative suffixes ('-ინებ', '-ევინებ') over analytical external phrases ('*მისთვის გააკეთა' -> 'გაუკეთა მას', '*აიძულა გაეკეთებინა' -> 'გააკეთებინა').\n"
+                "22. QUANTIFIER SINGULAR CONCORD: Quantifiers (ბევრი, ცოტა, რამდენიმე, უამრავი, ათასი) and numerals strictly require singular nouns ('სამი წიგნი', 'ბევრი ადამიანი', NOT '*სამი წიგნები').\n"
+                "23. FREQUENTATIVE HABITUAL ASPECT: Express habitual past with imperfect verb + '-ხოლმე' ('ამბობდა ხოლმე', 'აკეთებდა ხოლმე') instead of '*ადრე აკეთებდა ხოლმე' or '*ჩვევად ჰქონდა'.\n"
+                "24. CONDITIONAL & MODAL CLARITY: Use direct conditional and modal subordinators ('თუკი', 'თუ', 'როდესაც', 'შესაძლებელია, რომ', 'შეუძლებელია, რომ') instead of bulky '*იმ შემთხვევაში, თუკი'.\n"
+                "25. PARAGRAPH COHESION: Preserve multi-sentence paragraph narrative without splitting sentences into artificial lines.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -675,8 +696,13 @@ def translate_with_kona(
                 "17. POSTPOSITIONS & TEMPORAL CLITICS: Postpositions follow nouns ('ამის შესახებ'). Use instantaneous '-თანავე' ('დანახვისთანავე') and terminative '-მდე' ('დილამდე').\n"
                 "18. PROHIBITIVE & INABILITY CONCORD: Commands use prohibitive pronouns with 'ნუ' ('ნურაფერს ნუ გააკეთებ', 'ნურასოდეს ნუ დაივიწყებ'). Inability uses 'ვერ' ('ვერავინ შეძლო').\n"
                 "19. PURPOSIVE SUPINES & MIRATIVES: Use synthetic 'სა-...-ოდ' supines ('გასაგებად', 'სანახავად') and match 'თურმე' with Series III evidentials ('თურმე დავიწყებია').\n"
-                "20. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
-                "21. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms (e.g. 'Printed and bound in', 'by', 'for') into natural Georgian while accurately preserving publisher names, entity titles, and street addresses without repetitive loops.\n"
+                "20. DYNAMIC PASSIVE SYNTHESIS: Use synthetic dynamic passives ('დაიწერა', 'აშენდა', 'გადაწყდა', 'ითქვა', 'მიიღეს') instead of bureaucratic calques with '*იქნა'.\n"
+                "21. VERSION & CAUSATIVE SYNTHESIS: Use verbal version vowels (სათავისო 'ი-', სასხვისო 'უ-') and causative suffixes ('-ინებ', '-ევინებ') over analytical external phrases ('*მისთვის გააკეთა' -> 'გაუკეთა მას', '*აიძულა გაეკეთებინა' -> 'გააკეთებინა').\n"
+                "22. QUANTIFIER SINGULAR CONCORD: Quantifiers (ბევრი, ცოტა, რამდენიმე, უამრავი, ათასი) and numerals strictly require singular nouns ('სამი წიგნი', 'ბევრი ადამიანი', NOT '*სამი წიგნები').\n"
+                "23. FREQUENTATIVE HABITUAL ASPECT: Express habitual past with imperfect verb + '-ხოლმე' ('ამბობდა ხოლმე', 'აკეთებდა ხოლმე') instead of '*ადრე აკეთებდა ხოლმე' or '*ჩვევად ჰქონდა'.\n"
+                "24. CONDITIONAL & MODAL CLARITY: Use direct conditional and modal subordinators ('თუკი', 'თუ', 'როდესაც', 'შესაძლებელია, რომ', 'შეუძლებელია, რომ') instead of bulky '*იმ შემთხვევაში, თუკი'.\n"
+                "25. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
+                "26. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms into natural Georgian while accurately preserving publisher names and addresses.\n"
                 "Output ONLY the Georgian translation."
             )
             user_parts = []
