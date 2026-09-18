@@ -610,6 +610,7 @@
           title: row.title,
           text: row.text_content,
           word_count: row.word_count,
+          status: row.status,
         });
         if (cmeta.text_ka) chapter.text_ka = cmeta.text_ka;
         if (cmeta.estimated_duration_sec) {
@@ -757,15 +758,42 @@
             }
           } catch (_) {}
         }
-        if (!snapshot) throw readError;
+        if (!snapshot) {
+          try {
+            var directFall = await client.from("books").select("*").eq("user_id", userId).order("created_at", { ascending: true });
+            if (!directFall.error && directFall.data && directFall.data.length > 0) {
+              var fRows = directFall.data;
+              var fChapters = await client.from("chapters").select("*").in("book_id", fRows.map(function (r) { return r.id; }));
+              var fByBook = {};
+              (fChapters.data || []).forEach(function (row) { (fByBook[row.book_id] = fByBook[row.book_id] || []).push(row); });
+              return fRows.map(function (row) { return toStudioBook(row, fByBook[row.id]); });
+            }
+          } catch (_) {}
+          throw readError;
+        }
       }
-      incrementalLibrary.takeDeletedBooks().forEach(function(book) {
-        if (libraryChangeCallback) libraryChangeCallback({table:'books',payload:{eventType:'DELETE',old:book}});
-      });
-      var indexed = {};
-      snapshot.chapters.forEach(function (chapter) {(indexed[chapter.book_id] ||= []).push(chapter);});
-      return snapshot.books.sort(function(a,b) {return String(a.created_at).localeCompare(String(b.created_at));})
-        .map(function(book) {return toStudioBook(book,indexed[book.id] || []);});
+      if (snapshot && Array.isArray(snapshot.books) && snapshot.books.length > 0) {
+        incrementalLibrary.takeDeletedBooks().forEach(function(book) {
+          if (libraryChangeCallback) libraryChangeCallback({table:'books',payload:{eventType:'DELETE',old:book}});
+        });
+        var indexed = {};
+        snapshot.chapters.forEach(function (chapter) {(indexed[chapter.book_id] ||= []).push(chapter);});
+        return snapshot.books.sort(function(a,b) {return String(a.created_at).localeCompare(String(b.created_at));})
+          .map(function(book) {return toStudioBook(book,indexed[book.id] || []);});
+      }
+      // If incremental sync reported 0 books, verify against direct PostgREST before returning empty
+      try {
+        var directCheck = await client.from("books").select("*").eq("user_id", userId).order("created_at", { ascending: true });
+        if (!directCheck.error && directCheck.data && directCheck.data.length > 0) {
+          var cRows = directCheck.data;
+          var cChapters = await client.from("chapters").select("*").in("book_id", cRows.map(function (r) { return r.id; }));
+          var cByBook = {};
+          (cChapters.data || []).forEach(function (row) { (cByBook[row.book_id] = cByBook[row.book_id] || []).push(row); });
+          if (incrementalLibrary) incrementalLibrary.invalidate();
+          return cRows.map(function (row) { return toStudioBook(row, cByBook[row.id]); });
+        }
+      } catch (_) {}
+      return [];
     }
     var books = await client
       .from("books")
@@ -1158,5 +1186,6 @@
     unsubscribeLibraryChanges: unsubscribeLibraryChanges,
     createJob: createJob,
     fetchActiveEnginePack: fetchActiveEnginePack,
+    invalidate: function () { if (incrementalLibrary) incrementalLibrary.invalidate(); },
   };
 })();
