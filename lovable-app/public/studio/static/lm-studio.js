@@ -36,7 +36,12 @@
         const accountKey = () => owner() ? 'engbot_lm_studio:' + owner() : null;
         const status = text => { if (field('lmStudioStatus')) field('lmStudioStatus').textContent = text; };
         function settings() { try { const key = accountKey(); return key ? JSON.parse(storage.getItem(key) || 'null') : null; } catch { return null; } }
-        function headers(token) { return {'Content-Type': 'application/json', ...(token ? {Authorization: 'Bearer ' + token} : {})}; }
+        function headers(token, contentType = 'application/json') {
+            return {
+                ...(contentType ? {'Content-Type': contentType} : {}),
+                ...(token ? {Authorization: 'Bearer ' + token} : {})
+            };
+        }
         function input() { return {url: endpoint(field('lmStudioUrl').value), token: field('lmStudioToken').value.trim()}; }
         function options(models, selected) {
             const select = field('lmStudioModel'); if (!select) return;
@@ -62,14 +67,14 @@
             discovery?.abort(); const controller = new AbortController(); discovery = controller; detected = null;
             const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]);
             try {
-                const response = await fetchImpl(normalized + '/models', {headers: headers(token), signal});
+                const response = await fetchImpl(normalized + '/models', {headers: headers(token, null), signal});
                 if (!response.ok) throw Error(response.status === 401 || response.status === 403 ? 'LM Studio rejected the token. Check its authentication settings.' : 'LM Studio model discovery failed (HTTP ' + response.status + ').');
                 const models = modelList(await response.json()); signal.throwIfAborted();
                 if (account !== accountKey()) throw Error('Account changed. Detect models again.');
                 if (!models.length) throw Error('No text models found. Download or load a chat model in LM Studio.');
                 let profiles = {};
                 try {
-                    const native = await fetchImpl(normalized.replace(/\/v1$/, '/api/v1/models'), {headers: headers(token), signal: AbortSignal.any([signal, AbortSignal.timeout(3000)])});
+                    const native = await fetchImpl(normalized.replace(/\/v1$/, '/api/v1/models'), {headers: headers(token, null), signal: AbortSignal.any([signal, AbortSignal.timeout(3000)])});
                     if (native.ok) profiles = modelProfiles(await native.json());
                 } catch { /* OpenAI-compatible proxies may omit the native metadata API. */ }
                 signal.throwIfAborted();
@@ -120,7 +125,7 @@
             const saved = settings(), account = accountKey(); if (!saved?.enabled) return;
             runtimeProfile = {account, model:saved.model, profile:{context:4096,loaded:false}};
             try {
-                const response = await fetchImpl(endpoint(saved.url).replace(/\/v1$/, '/api/v1/models'), {headers: headers(saved.token), signal: AbortSignal.any([AbortSignal.timeout(3000), ...(parent ? [parent] : [])])});
+                const response = await fetchImpl(endpoint(saved.url).replace(/\/v1$/, '/api/v1/models'), {headers: headers(saved.token, null), signal: AbortSignal.any([AbortSignal.timeout(3000), ...(parent ? [parent] : [])])});
                 const profiles = response.ok ? modelProfiles(await response.json()) : {};
                 if (account === accountKey()) runtimeProfile = {account, model: saved.model, profile: profiles[saved.model] || {context:4096, loaded:false}};
             } catch { parent?.throwIfAborted(); }
@@ -144,7 +149,20 @@
                 const payload = native
                     ? {model:saved.model,input:prompt,system_prompt:systemPrompt || '',temperature,max_output_tokens:outputTokens,reasoning:'off',store:false,stream:false,integrations:[]}
                     : {model:saved.model,messages:[...(systemPrompt ? [{role:'system',content:systemPrompt}] : []),{role:'user',content:prompt}],temperature,max_tokens:outputTokens,stream:false};
-                const response = await fetchImpl(url, {method:'POST',headers:headers(saved.token),signal,body:JSON.stringify(payload)});
+                const bodyStr = JSON.stringify(payload);
+                let response = null;
+                // For local endpoints without auth token, prefer text/plain simple request
+                // to avoid triggering buggy CORS OPTIONS preflights in LM Studio
+                if (!saved.token && !native) {
+                    try {
+                        response = await fetchImpl(url, {method:'POST',headers:{'Content-Type':'text/plain'},signal,body:bodyStr});
+                    } catch (_) {
+                        response = null;
+                    }
+                }
+                if (!response || (!response.ok && response.status === 415)) {
+                    response = await fetchImpl(url, {method:'POST',headers:headers(saved.token),signal,body:bodyStr});
+                }
                 if (!response.ok) throw Error('LM Studio unavailable (HTTP ' + response.status + ').');
                 const data = await response.json(); signal.throwIfAborted();
                 if (account !== accountKey()) return null;
@@ -160,7 +178,10 @@
                 status('Local AI (' + (saved.model || 'model') + ') responded.'); return choice.message.content.trim();
             } catch (error) {
                 parent?.throwIfAborted();
-                cooldown = {account, until: now() + 60000}; status(error.message || 'LM Studio is unavailable.'); return null;
+                cooldown = {account, until: now() + 60000};
+                const isCors = /Failed to fetch|NetworkError|CORS|preflight/i.test(error.message || '');
+                status(isCors ? 'LM Studio connection failed. Verify LM Studio server is running on port 1234 with "Enable CORS" turned ON.' : (error.message || 'LM Studio is unavailable.'));
+                return null;
             } finally { if (active === controller) active = null; }
         }
         async function json(prompt, {parse, validateResponse = () => true, ...opts}) {

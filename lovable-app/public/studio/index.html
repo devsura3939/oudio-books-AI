@@ -2852,6 +2852,12 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
             <div class="glass-panel rounded-2xl p-4 mt-4 space-y-3">
                 <h3 class="text-sm font-semibold">LM Studio / Local LLM · Primary AI Engine</h3>
                 <p class="text-xs text-on-surface-variant">Connect any local model (e.g. Qwen 2.5 27B, Llama, Mistral). When active, your local model runs first as the primary engine for high-accuracy translation, OCR text repair, and reading assistance—with server and cloud models acting as collaborators and backups.</p>
+                <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex items-start gap-2.5">
+                    <span class="material-symbols-outlined text-base text-amber-400 shrink-0 mt-0.5">info</span>
+                    <div>
+                        <strong class="text-white">Required in LM Studio:</strong> In the <strong>Developer / Local Server</strong> tab, ensure the <strong>"Enable CORS"</strong> toggle is switched <strong>ON</strong> so the browser can send requests to your local model.
+                    </div>
+                </div>
                 <label class="block text-xs" for="lmStudioUrl">LM Studio server address</label>
                 <input id="lmStudioUrl" type="url" value="http://localhost:1234/v1" class="w-full glass-input rounded-xl px-4 py-3 text-sm" autocomplete="off">
                 <label class="block text-xs" for="lmStudioToken">API token · optional unless authentication is enabled</label>

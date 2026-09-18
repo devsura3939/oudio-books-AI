@@ -8033,7 +8033,14 @@ function getPhaseTranslator() {
             localAvailable: () => !!window.EngbotLmStudio?.available(),
             cloudAvailable: () => !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl),
             assess: assessTranslation,
-            onStage: stage => {setTranslationStage(stage); if (/LM Studio|Cloud AI/.test(stage)) recordEngineUse('ai');},
+            onStage: stage => {
+                setTranslationStage(stage);
+                if (/LM Studio/.test(stage)) recordEngineUse('lm_studio');
+                else if (/Cloud AI/.test(stage)) recordEngineUse('cloud_ai');
+                else if (/Machine|Deterministic/.test(stage)) recordEngineUse('rules');
+                else if (/Local neural/.test(stage)) recordEngineUse('offline');
+                else recordEngineUse('ai');
+            },
             localPrimary: true,
         });
     }
@@ -8574,6 +8581,21 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
             totalChars: 0,
             totalWords: 0
         };
+        if (window.EngbotLmStudio?.enabled()) {
+            const localMod = window.EngbotLmStudio.settings()?.model || 'Local Model';
+            job.telemetry.primaryModel = `LM Studio · ${localMod}`;
+            job.telemetry.host = 'Local Machine (LM Studio · GPU/CPU)';
+            job.telemetry.cost = '$0.00 (Local Private Inference)';
+        } else if (customProviderModel) {
+            job.telemetry.primaryModel = `Custom · ${customProviderModel}`;
+            job.telemetry.host = customProviderUrl || 'Custom LLM Server';
+        } else if (openRouterModel) {
+            job.telemetry.primaryModel = `OpenRouter · ${openRouterModel}`;
+            job.telemetry.host = 'OpenRouter Cloud';
+        } else if (geminiModel) {
+            job.telemetry.primaryModel = `Gemini · ${geminiModel}`;
+            job.telemetry.host = 'Google AI Cloud';
+        }
         if (saved?.minimized) {
             minimizeTranslationPanel();
         } else {
@@ -9189,7 +9211,13 @@ function renderAdminTranslationTelemetry(job = null, book = null) {
         const pct = Math.round((count / sumEngineChunks) * 100);
         let displayName = eng.toUpperCase();
         let badgeColor = 'bg-georgian-gold/20 text-georgian-gold border-georgian-gold/40';
-        if (eng.includes('kona') || eng === 'server') {
+        if (eng.includes('lm_studio') || eng === 'local_ai') {
+            displayName = 'LM Studio · ' + (window.EngbotLmStudio?.settings()?.model || 'Local Model');
+            badgeColor = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+        } else if (eng.includes('cloud_ai')) {
+            displayName = 'Cloud AI Pass';
+            badgeColor = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40';
+        } else if (eng.includes('kona') || eng === 'server') {
             displayName = 'Tbilisi AI Lab Kona-2 (Q4_K_M · OCI)';
             badgeColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
         } else if (eng.includes('gemini')) {
@@ -9244,14 +9272,14 @@ function renderAdminTranslationTelemetry(job = null, book = null) {
                 <div class="text-[10px] text-on-surface-variant">${charSpeed} chars/sec · ${timeStr}</div>
             </div>
             <div class="p-2 rounded-xl bg-white/5 border border-white/10">
-                <div class="text-on-surface-variant text-[10px]">Cloud Host</div>
-                <div class="text-white font-bold truncate text-[11px]">Oracle Cloud A1</div>
-                <div class="text-[10px] text-emerald-400">4 OCPU · 24GB RAM</div>
+                <div class="text-on-surface-variant text-[10px]">Host Environment</div>
+                <div class="text-white font-bold truncate text-[11px]">${window.EngbotLmStudio?.enabled() ? 'Local Machine' : (tel.host?.split('(')[0]?.trim() || 'Oracle Cloud A1')}</div>
+                <div class="text-[10px] ${window.EngbotLmStudio?.enabled() ? 'text-cyan-400' : 'text-emerald-400'}">${window.EngbotLmStudio?.enabled() ? 'LM Studio · GPU/CPU Acceleration' : '4 OCPU · 24GB RAM'}</div>
             </div>
             <div class="p-2 rounded-xl bg-white/5 border border-white/10">
                 <div class="text-on-surface-variant text-[10px]">Infrastructure Cost</div>
                 <div class="text-emerald-300 font-bold font-mono text-xs">$0.00 / month</div>
-                <div class="text-[10px] text-on-surface-variant">OCI Free Tier Always-Free</div>
+                <div class="text-[10px] text-on-surface-variant">${window.EngbotLmStudio?.enabled() ? 'Local Private Inference' : 'OCI Free Tier Always-Free'}</div>
             </div>
         </div>
         <div class="pt-2 border-t border-white/5 space-y-2">
@@ -9259,7 +9287,7 @@ function renderAdminTranslationTelemetry(job = null, book = null) {
             ${engineRows}
         </div>
         <div class="pt-1 flex items-center justify-between text-[10px] text-on-surface-variant border-t border-white/5">
-            <span>Primary AI: <strong class="text-white">${tel.primaryModel || 'Kona-2 Small 3.8B Q4_K_M'}</strong></span>
+            <span>Primary AI: <strong class="text-white">${window.EngbotLmStudio?.enabled() ? ('LM Studio · ' + (window.EngbotLmStudio.settings()?.model || 'Local Model')) : (tel.primaryModel || 'Kona-2 Small 3.8B Q4_K_M')}</strong></span>
             <span class="text-indigo-300">Admin: ananiadevsurashvili@gmail.com</span>
         </div>
     `;

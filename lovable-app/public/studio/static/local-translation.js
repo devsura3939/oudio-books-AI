@@ -47,7 +47,7 @@
                 }catch(_){}
             }
             if(!healthy){
-                throw Error('Cannot connect. Check the server address, ensure CORS is enabled, or verify connection token.');
+                throw Error('Cannot connect or model not ready. Install and start the translation server, check address, ensure CORS is enabled, or verify connection token.');
             }
             if(key()!==account)throw Error('Account changed. Connect again from your current account.');
             storage.setItem(account,JSON.stringify({url:endpoint,token:tokenClean,type:isLlm?'llm':'argos'}));
