@@ -26,8 +26,10 @@
                 const response=await fetchImpl(endpoint+'/health',{headers:{...(tokenClean?{Authorization:'Bearer '+tokenClean}:{})},signal:AbortSignal.timeout(6000)});
                 if(response.ok){
                     const data=await response.json();
-                    if(data&&data.ready===false&&data.error)throw Error(data.error);
-                    healthy=true;
+                    if(data && (data.ready === false || (Array.isArray(data.languages) && !['en','ka'].every(l=>data.languages.includes(l))))){
+                        throw Error(data.error || 'Install the English–Georgian model on the server first.');
+                    }
+                    if(data && data.ready) healthy=true;
                 }
             }catch(err){
                 if(err&&err.message&&!/fetch|connect|failed|timeout|abort|network/i.test(err.message))throw err;
