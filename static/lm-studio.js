@@ -150,17 +150,12 @@
                     ? {model:saved.model,input:prompt,system_prompt:systemPrompt || '',temperature,max_output_tokens:outputTokens,reasoning:'off',store:false,stream:false,integrations:[]}
                     : {model:saved.model,messages:[...(systemPrompt ? [{role:'system',content:systemPrompt}] : []),{role:'user',content:prompt}],temperature,max_tokens:outputTokens,stream:false};
                 const bodyStr = JSON.stringify(payload);
-                let response = null;
-                // For local endpoints without auth token, prefer text/plain simple request
-                // to avoid triggering buggy CORS OPTIONS preflights in LM Studio
-                if (!saved.token && !native) {
-                    try {
-                        response = await fetchImpl(url, {method:'POST',headers:{'Content-Type':'text/plain'},signal,body:bodyStr});
-                    } catch (_) {
-                        response = null;
-                    }
-                }
-                if (!response || (!response.ok && response.status === 415)) {
+                const isLoopback = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(saved.url).hostname);
+                const reqHeaders = (!saved.token && !native && isLoopback)
+                    ? {'Content-Type': 'text/plain'}
+                    : headers(saved.token);
+                let response = await fetchImpl(url, {method:'POST',headers:reqHeaders,signal,body:bodyStr});
+                if (!response.ok && response.status === 415 && reqHeaders['Content-Type'] === 'text/plain') {
                     response = await fetchImpl(url, {method:'POST',headers:headers(saved.token),signal,body:bodyStr});
                 }
                 if (!response.ok) throw Error('LM Studio unavailable (HTTP ' + response.status + ').');
