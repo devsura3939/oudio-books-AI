@@ -583,7 +583,23 @@
   }
 
   function isReady() {
-    return Boolean(client && userId);
+    if (!client) return false;
+    if (userId) return true;
+    try {
+      var saved = sessionStorage.getItem("lumina_auth_user") || (localStorage.getItem("lumina_remember_me") === "true" ? localStorage.getItem("lumina_auth_user") : null);
+      if (saved) {
+        var parsed = JSON.parse(saved);
+        if (parsed && parsed.id && (parsed.id.length >= 32 || !parsed.id.startsWith("usr_"))) {
+          userId = parsed.id;
+          return true;
+        }
+      }
+    } catch (e) {}
+    if (typeof currentUser !== "undefined" && currentUser && currentUser.id && (currentUser.id.length >= 32 || !currentUser.id.startsWith("usr_"))) {
+      userId = currentUser.id;
+      return true;
+    }
+    return false;
   }
 
   function wordCount(text) {
@@ -869,7 +885,7 @@
           var old = previous.find(function(c){return c.chapter_index===chapter.chapter_index;});
           var resolvedStatus = chapter.status || (old ? old.status : null) || (chapter.metadata?.text_ka ? 'done' : 'pending') || 'pending';
           if (old && (old.text_content!==chapter.text_content || (old.metadata?.text_ka || null)!==chapter.metadata.text_ka)) {
-            return Object.assign({},chapter,{status: chapter.status || 'pending'});
+            return Object.assign({},chapter,{status: 'pending'});
           }
           return Object.assign({},chapter,{status: resolvedStatus});
         });
@@ -1162,6 +1178,7 @@
     isReady: isReady,
     getClient: getClient,
     getUserId: function () { return userId; },
+    setUserId: function (id) { if (id) { userId = id; if (incrementalLibrary) incrementalLibrary.invalidate(); } },
     signIn: signIn,
     signUp: signUp,
     signOut: signOut,

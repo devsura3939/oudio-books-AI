@@ -656,7 +656,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <link rel="stylesheet" href="static/styles.css?v=1.53.4&settings=2">
-    <link rel="stylesheet" href="static/studio-ui.css?v=1.53.4">
+    <link rel="stylesheet" href="static/studio-ui.css?v=1.54.0&release=10">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
@@ -1363,13 +1363,20 @@
                     <svg hidden aria-hidden="true"><circle id="heroProgressCircle" stroke-dasharray="289" stroke-dashoffset="289"></circle></svg>
                 </button>
                 <div class="hero-copy">
-                    <p class="hero-eyebrow">Continue your story</p>
-                    <span id="heroGeorgianBadge" hidden></span>
+                    <div class="hero-eyebrow-row flex items-center gap-2 flex-wrap mb-1">
+                        <p class="hero-eyebrow mb-0">Continue your story</p>
+                        <span id="heroGeorgianBadge" class="hidden px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/40"></span>
+                    </div>
                     <h2 id="heroTitle">Choose your next read</h2>
+                    <div class="hero-meta-row flex items-center gap-2 flex-wrap mb-2">
+                        <span id="heroAuthor" class="text-xs text-on-surface-variant font-medium"></span>
+                        <span id="heroMetaStats" class="text-xs text-primary-fixed-dim font-medium"></span>
+                    </div>
                     <span id="heroSubtitleHeader" hidden>Now reading</span>
                     <p id="heroLiveSubtitle">Select a book from your library to get started.</p>
                     <div class="hero-actions">
-                        <button type="button" class="studio-primary" onclick="openCurrentBookInReader()"><span class="material-symbols-outlined">menu_book</span>Open reader</button>
+                        <button type="button" id="heroActionPlayBtn" class="studio-primary hero-btn-listen" onclick="togglePlayPause()"><span class="material-symbols-outlined" id="heroBtnPlayIcon">play_arrow</span><span id="heroBtnPlayText">Listen now</span></button>
+                        <button type="button" class="studio-secondary hero-btn-read" onclick="openCurrentBookInReader()"><span class="material-symbols-outlined">menu_book</span>Open reader</button>
                         <div class="hero-progress"><span id="heroProgressText">0% completed</span><div class="hero-track"><div id="heroProgressBarInner" style="width:0%"></div></div></div>
                     </div>
                 </div>
@@ -3243,30 +3250,30 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
       });
     </script>
 
-    <script src="static/library-sync.js?v=1.53.5"></script>
-    <script src="static/supabase-store.js?v=1.53.6"></script>
-    <script src="static/engine-core.js?v=1.53.5"></script>
-    <script src="static/provider-runtime.js?v=1.53.5"></script>
-    <script src="static/studio-ui.js?v=1.53.5"></script>
-    <script src="static/training-client.js?v=1.53.5"></script>
-    <script src="static/job-store.js?v=1.53.5"></script>
-            <script src="static/training-runner.js?v=1.53.5"></script>
-    <script src="static/training-studio.js?v=1.53.5"></script>
-    <script src="static/narration.js?v=1.53.5"></script>
-    <script src="static/model-discovery.js?v=1.53.5"></script>
-    <script src="static/ai-settings.js?v=1.53.9&release=9"></script>
-    <script src="static/lm-studio.js?v=1.53.9&release=9"></script>
-    <script src="static/translation-phases.js?v=1.53.9&release=9"></script>
-    <script src="static/local-translation.js?v=1.53.9&release=9"></script>
-    <script src="static/translation-machine.js?v=1.53.9&release=9"></script>
-    <script src="static/book-structure.js?v=1.53.9&release=9"></script>
-    <script src="static/app.js?v=1.53.9&release=9"></script>
-    <script src="static/reading-state.js?v=1.53.9&release=9"></script>
-    <script src="static/reading-ui.js?v=1.53.9&release=9"></script>
-    <script src="static/repair-review.js?v=1.53.9&release=9"></script>
-    <script src="static/georgian-linguistics.js?v=1.53.9&release=9"></script>
-    <script src="static/engine-pack.js?v=1.53.9&release=9"></script>
-    <script src="static/scanner.js?v=1.53.9&release=9"></script>
+    <script src="static/library-sync.js?v=1.54.0&release=10"></script>
+    <script src="static/supabase-store.js?v=1.54.0&release=10"></script>
+    <script src="static/engine-core.js?v=1.54.0&release=10"></script>
+    <script src="static/provider-runtime.js?v=1.54.0&release=10"></script>
+    <script src="static/studio-ui.js?v=1.54.0&release=10"></script>
+    <script src="static/training-client.js?v=1.54.0&release=10"></script>
+    <script src="static/job-store.js?v=1.54.0&release=10"></script>
+            <script src="static/training-runner.js?v=1.54.0&release=10"></script>
+    <script src="static/training-studio.js?v=1.54.0&release=10"></script>
+    <script src="static/narration.js?v=1.54.0&release=10"></script>
+    <script src="static/model-discovery.js?v=1.54.0&release=10"></script>
+    <script src="static/ai-settings.js?v=1.54.0&release=10"></script>
+    <script src="static/lm-studio.js?v=1.54.0&release=10"></script>
+    <script src="static/translation-phases.js?v=1.54.0&release=10"></script>
+    <script src="static/local-translation.js?v=1.54.0&release=10"></script>
+    <script src="static/translation-machine.js?v=1.54.0&release=10"></script>
+    <script src="static/book-structure.js?v=1.54.0&release=10"></script>
+    <script src="static/app.js?v=1.54.0&release=10"></script>
+    <script src="static/reading-state.js?v=1.54.0&release=10"></script>
+    <script src="static/reading-ui.js?v=1.54.0&release=10"></script>
+    <script src="static/repair-review.js?v=1.54.0&release=10"></script>
+    <script src="static/georgian-linguistics.js?v=1.54.0&release=10"></script>
+    <script src="static/engine-pack.js?v=1.54.0&release=10"></script>
+    <script src="static/scanner.js?v=1.54.0&release=10"></script>
 
 
 <div id="studioActionStatus" role="status" aria-live="polite" hidden></div>

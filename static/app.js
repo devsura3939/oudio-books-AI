@@ -2007,6 +2007,11 @@ function cacheDOM() {
         heroProgressBarInner: document.getElementById('heroProgressBarInner'),
         heroPlayIcon: document.getElementById('heroPlayIcon'),
         heroGeorgianBadge: document.getElementById('heroGeorgianBadge'),
+        heroAuthor: document.getElementById('heroAuthor'),
+        heroMetaStats: document.getElementById('heroMetaStats'),
+        heroActionPlayBtn: document.getElementById('heroActionPlayBtn'),
+        heroBtnPlayIcon: document.getElementById('heroBtnPlayIcon'),
+        heroBtnPlayText: document.getElementById('heroBtnPlayText'),
 
         chaptersContainer: document.getElementById('chaptersContainer'),
         chaptersList: document.getElementById('chaptersList'),
@@ -2699,16 +2704,19 @@ async function recoverAllLocalBooks() {
     for (const book of recoveredBooks) {
         if (isBookDeleted(book)) continue;
         // Strict isolation: Never cross-sync books belonging to another account!
-        if (book.user_id && currentUid !== 'guest' && book.user_id !== currentUid) {
+        const bUid = String(book.user_id || '').toLowerCase();
+        const curId = String(currentUser?.id || currentUid || '').toLowerCase();
+        const curEmail = String(currentUser?.email || '').toLowerCase();
+        if (book.user_id && currentUid !== 'guest' && bUid !== curId && bUid !== curEmail && book.user_id !== 'guest') {
             continue;
         }
-        // Do not silently adopt an unowned local file into whichever account
-        // happens to sign in on this device.
-        if (currentUid !== 'guest' && !book.user_id) continue;
+        if (currentUid !== 'guest' && (!book.user_id || book.user_id === 'guest')) {
+            book.user_id = currentUid;
+        }
         try {
             await saveBookToLocalDB(book);
         } catch (e) {}
-        if (usingCloud && currentUid !== 'guest' && book.user_id === currentUid && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
+        if (usingCloud && currentUid !== 'guest' && (book.user_id === currentUid || (currentUser && book.user_id === currentUser.id)) && window.LuminaStore && typeof window.LuminaStore.saveBook === 'function') {
             window.LuminaStore.saveBook(book).catch(e => console.warn('[recovery] Cloud sync error:', e));
         }
     }
@@ -2729,6 +2737,17 @@ async function readAllStudioBooks() {
     if (usingCloud && window.LuminaStore) {
         try {
             cloudBooks = await window.LuminaStore.getAllBooks();
+            if (cloudBooks && cloudBooks.length > 0 && db) {
+                const uid = getCurrentUserId();
+                for (const cb of cloudBooks) {
+                    if (isBookDeleted(cb) || isDemoBook(cb)) continue;
+                    try {
+                        if (!cb.user_id && uid !== 'guest') cb.user_id = uid;
+                        const mtx = db.transaction('books', 'readwrite');
+                        mtx.objectStore('books').put(cb);
+                    } catch (_) {}
+                }
+            }
         } catch (err) {
             console.error('[store] Supabase read failed, falling back to local copy:', err);
         }
@@ -2837,12 +2856,17 @@ function saveBookToLocalDB(book) {
     const uid = getCurrentUserId();
     if (isDemoBook(book)) return Promise.resolve();
     if (book.user_id && uid !== 'guest' && String(book.user_id) !== String(uid)) {
-        return Promise.reject(new Error('Cannot save a book owned by another account'));
+        const isSelf = typeof currentUser !== 'undefined' && currentUser &&
+            (String(book.user_id).toLowerCase() === String(currentUser.id || '').toLowerCase() ||
+             String(book.user_id).toLowerCase() === String(currentUser.email || '').toLowerCase());
+        if (!isSelf) {
+            return Promise.reject(new Error('Cannot save a book owned by another account'));
+        }
     }
     if (book.user_id && uid === 'guest' && book.user_id !== 'guest') {
         return Promise.reject(new Error('Sign in to access this book'));
     }
-    if (!book.user_id && uid !== 'guest') {
+    if ((!book.user_id || book.user_id === 'guest') && uid !== 'guest') {
         book.user_id = uid;
     }
     return new Promise((resolve, reject) => {
@@ -2860,18 +2884,31 @@ function getAllLocalBooks() {
         req.onsuccess = () => {
             const uid = getCurrentUserId();
             const all = req.result || [];
-            // Strict account shelf isolation: authenticated users only see rows
-            // tagged with their Supabase id; guests only see guest/offline rows.
+            // Strict account shelf isolation with graceful local claiming:
+            // Authenticated users see books matching their UUID, their email, or guest/unassigned offline books.
+            // Guest sees guest/offline books.
             const filtered = all.filter(b => {
                 if (!b || isBookDeleted(b) || isDemoBook(b)) return false;
                 if (uid === 'guest') {
                     return !b.user_id || b.user_id === 'guest';
                 }
-                // Never expose an unowned local file to whichever account
-                // happens to sign in on this device.
-                // Canonical ownership predicate: book.user_id === uid.
-                return b.user_id === uid;
+                const bUid = String(b.user_id || '').toLowerCase();
+                const curId = String(currentUser?.id || uid || '').toLowerCase();
+                const curEmail = String(currentUser?.email || '').toLowerCase();
+                return bUid === curId || (curEmail && bUid === curEmail) || !b.user_id || b.user_id === 'guest';
             });
+            // Auto-adopt any unassigned or guest books into the active user session
+            if (uid !== 'guest') {
+                filtered.forEach(b => {
+                    if (!b.user_id || b.user_id === 'guest') {
+                        b.user_id = uid;
+                        try {
+                            const wtx = db.transaction('books', 'readwrite');
+                            wtx.objectStore('books').put(b);
+                        } catch (_) {}
+                    }
+                });
+            }
             resolve(filtered);
         };
         req.onerror = (e) => reject(e);
@@ -3655,6 +3692,10 @@ function checkAuthState() {
         }
     }
     if (currentUser && currentUser.email) {
+        invalidateStudioLibrary();
+        if (window.LuminaStore && typeof window.LuminaStore.setUserId === 'function' && currentUser.id) {
+            window.LuminaStore.setUserId(currentUser.id);
+        }
         try {
             restoreAccountSettingsForCurrentUser();
         } catch (e) {}
@@ -4840,8 +4881,15 @@ async function login(email, password, rememberParam) {
 
         // Re-initialize database store with newly acquired Supabase credentials
         if (window.LuminaStore) {
+            if (typeof window.LuminaStore.setUserId === 'function') {
+                window.LuminaStore.setUserId(currentUser.id);
+            }
             usingCloud = await window.LuminaStore.init();
+            if (typeof window.LuminaStore.invalidate === 'function') {
+                window.LuminaStore.invalidate();
+            }
         }
+        invalidateStudioLibrary();
         await purgeLegacyDemoBooks();
         subscribeToLibraryRealtime();
 
@@ -10330,10 +10378,17 @@ function togglePlayPause() {
         }
     }
 
-    if (!currentPlayingChapterId) {
-        const book = currentBook || (books && books.length > 0 ? books[0] : null);
+    if (!currentPlayingChapterId || !isPlaying) {
+        let book = currentBook;
+        if (!book) {
+            getAllBooks().then(all => {
+                if (all && all.length > 0) {
+                    selectBook(all[0].id, true);
+                }
+            }).catch(() => {});
+            return;
+        }
         if (book && book.chapters && book.chapters.length > 0) {
-            if (!currentBook) currentBook = book;
             const targetChap = book.lastPlayedChapterId 
                 ? (book.chapters.find(c => String(c.id) === String(book.lastPlayedChapterId)) || book.chapters[0])
                 : book.chapters[0];
@@ -10377,7 +10432,13 @@ function togglePlayPause() {
 function updatePlayerUIState(speaking) {
     if (DOM.dockPlayIcon) DOM.dockPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
     if (DOM.heroPlayIcon) DOM.heroPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
+    if (DOM.heroBtnPlayIcon) DOM.heroBtnPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
+    if (DOM.heroBtnPlayText) DOM.heroBtnPlayText.textContent = speaking ? 'Pause' : 'Listen now';
     if (DOM.readerPlayIcon) DOM.readerPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
+    if (DOM.heroPlayBtn) {
+        if (speaking) DOM.heroPlayBtn.classList.add('is-playing');
+        else DOM.heroPlayBtn.classList.remove('is-playing');
+    }
     if (DOM.dockVisualizer) {
         if (speaking) DOM.dockVisualizer.classList.remove('hidden');
         else DOM.dockVisualizer.classList.add('hidden');
@@ -11606,8 +11667,23 @@ async function selectBook(bookId, autoPlayFirst = false) {
     const stats = getBookStats(currentBook);
 
     // Update Hero UI
-    DOM.heroCover.src = currentBook.coverUrl;
-    DOM.heroTitle.textContent = window.EngbotUI.displayTitle(currentBook.title);
+    const title = window.EngbotUI.displayTitle(currentBook.title);
+    const cover = currentBook.coverUrl && !currentBook.coverUrl.includes('undefined') ? currentBook.coverUrl : generateDynamicStudioCover(title);
+    if (DOM.heroCover) {
+        DOM.heroCover.src = cover;
+        DOM.heroCover.onerror = () => {
+            DOM.heroCover.src = generateDynamicStudioCover(title);
+        };
+    }
+    if (DOM.heroTitle) DOM.heroTitle.textContent = title;
+    if (DOM.heroAuthor) {
+        const author = currentBook.author && currentBook.author !== 'Unknown author' ? currentBook.author : '';
+        DOM.heroAuthor.textContent = author ? `By ${author}` : '';
+        DOM.heroAuthor.style.display = author ? 'inline' : 'none';
+    }
+    if (DOM.heroMetaStats) {
+        DOM.heroMetaStats.textContent = `${stats.chaptersCount} chapters · ~${stats.totalFormattedTime}`;
+    }
 
     const hasKa = bookHasGeorgian(currentBook);
     if (DOM.heroGeorgianBadge) {
@@ -11662,6 +11738,12 @@ async function selectBook(bookId, autoPlayFirst = false) {
             } else {
                 playChapterAudio(lastChap.id);
             }
+        };
+    }
+    if (DOM.heroActionPlayBtn) {
+        DOM.heroActionPlayBtn.onclick = (e) => {
+            if (e && e.preventDefault) e.preventDefault();
+            togglePlayPause();
         };
     }
 
