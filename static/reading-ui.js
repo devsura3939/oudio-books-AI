@@ -50,6 +50,28 @@
     }
     async function choose(book, mode, preferredChapter, language) {
         const owner = getCurrentUserId();
+        if (mode === 'listen' || preferredChapter != null) {
+            let saved = null;
+            try {
+                const key = 'engbot_reading_v1:' + owner + ':' + book.id;
+                const cached = JSON.parse(localStorage.getItem(key) || '{}');
+                saved = cached['position:' + language]?.value;
+            } catch (_) {}
+            void store.load(book).catch(() => {});
+            if (preferredChapter != null) {
+                if (saved && String(saved.chapterId) === String(preferredChapter)) {
+                    return saved;
+                }
+                return { chapterId: preferredChapter, language, sentence: 0 };
+            }
+            if (saved && book.chapters?.some(c => String(c.id) === String(saved.chapterId))) {
+                return saved;
+            }
+            if (book.chapters && book.chapters.length > 0) {
+                return { chapterId: book.chapters[0].id, language, sentence: 0 };
+            }
+            return null;
+        }
         const el = dialog(mode === 'read' ? 'Open your book' : 'Listen to your book');
         const subtitle = document.createElement('p'); subtitle.textContent = book.title; el.append(subtitle);
         const status = document.createElement('p'); status.textContent = 'Loading your saved places…'; el.append(status);

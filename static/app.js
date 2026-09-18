@@ -100,6 +100,7 @@ const SILENT_AUDIO_URI = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEA
 
 // Whole Book Translation State
 let isTranslatingWholeBook = false;
+let isAcquiringTranslationLock = false;
 let cancelTranslationFlag = false;
 let translationRequestController = null;
 
@@ -8410,13 +8411,31 @@ function buildTranslationChunks(chapterText, targetCharLimit = 1800, maxSentence
 
 async function startWholeBookTranslation(resume = false, forceFromScratch = false) {
     if (isTranslatingWholeBook) { restoreTranslationPanel(); return; }
-    if (typeof navigator !== 'undefined' && navigator.locks && currentBook) {
-        return navigator.locks.request(tjobKey(currentBook.id), {ifAvailable:true}, async lock => {
-            if (!lock) { showToast('This book is already being translated in another tab.', 'info'); return; }
-            return runWholeBookTranslation(resume, forceFromScratch);
-        });
+    if (isAcquiringTranslationLock) return;
+    isAcquiringTranslationLock = true;
+    try {
+        if (typeof navigator !== 'undefined' && navigator.locks && currentBook) {
+            const key = tjobKey(currentBook.id);
+            try {
+                let acquired = false;
+                await navigator.locks.request(key, { ifAvailable: true }, async lock => {
+                    if (lock) {
+                        acquired = true;
+                        return runWholeBookTranslation(resume, forceFromScratch);
+                    }
+                });
+                if (acquired) return;
+                return await navigator.locks.request(key, { steal: true }, async lock => {
+                    return runWholeBookTranslation(resume, forceFromScratch);
+                });
+            } catch (_) {
+                return await runWholeBookTranslation(resume, forceFromScratch);
+            }
+        }
+        return await runWholeBookTranslation(resume, forceFromScratch);
+    } finally {
+        isAcquiringTranslationLock = false;
     }
-    return runWholeBookTranslation(resume, forceFromScratch);
 }
 
 async function runWholeBookTranslation(resume = false, forceFromScratch = false) {
@@ -10311,8 +10330,13 @@ function togglePlayPause() {
     }
 
     if (!currentPlayingChapterId) {
-        if (currentBook && currentBook.chapters.length > 0) {
-            playChapterAudio(currentBook.chapters[0].id);
+        const book = currentBook || (books && books.length > 0 ? books[0] : null);
+        if (book && book.chapters && book.chapters.length > 0) {
+            if (!currentBook) currentBook = book;
+            const targetChap = book.lastPlayedChapterId 
+                ? (book.chapters.find(c => String(c.id) === String(book.lastPlayedChapterId)) || book.chapters[0])
+                : book.chapters[0];
+            playChapterAudio(targetChap.id);
         }
         return;
     }
@@ -11630,7 +11654,14 @@ async function selectBook(bookId, autoPlayFirst = false) {
     DOM.heroProgressCircle.style.strokeDashoffset = 289 - (289 * pct / 100);
 
     if (lastChap) {
-        DOM.heroPlayBtn.onclick = () => playChapterAudio(lastChap.id);
+        DOM.heroPlayBtn.onclick = (e) => {
+            if (e && e.preventDefault) e.preventDefault();
+            if (isPlaying) {
+                togglePlayPause();
+            } else {
+                playChapterAudio(lastChap.id);
+            }
+        };
     }
 
     DOM.chaptersContainer.classList.remove('hidden');

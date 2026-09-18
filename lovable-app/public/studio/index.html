@@ -1357,7 +1357,7 @@
             <!-- Hero Section: Continue Listening & Reading -->
             <div class="workspace-heading"><div><h2>Your library</h2><p>A little listening. A little discovery.</p></div><span class="workspace-icon material-symbols-outlined" aria-hidden="true">auto_stories</span></div>
             <section id="heroSection" aria-label="Continue reading">
-                <button type="button" id="heroPlayBtn" aria-label="Play or pause current book" title="Play / Pause">
+                <button type="button" id="heroPlayBtn" onclick="togglePlayPause()" aria-label="Play or pause current book" title="Play / Pause">
                     <img id="heroCover" src="" alt="Current book cover">
                     <span class="hero-play"><span class="material-symbols-outlined" id="heroPlayIcon">play_arrow</span></span>
                     <svg hidden aria-hidden="true"><circle id="heroProgressCircle" stroke-dasharray="289" stroke-dashoffset="289"></circle></svg>
@@ -1890,7 +1890,7 @@
                 <button id="btnPlayerRewind" class="text-on-surface-variant hover:text-primary-fixed transition p-1 rounded-full" title="Rewind Sentence">
                     <span class="material-symbols-outlined text-xl md:text-2xl">replay_10</span>
                 </button>
-                <button id="btnPlayerPlayPause" class="bg-primary-container text-on-primary-container rounded-full w-10 h-10 md:w-11 md:h-11 shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center flex-shrink-0">
+                <button id="btnPlayerPlayPause" onclick="togglePlayPause()" class="bg-primary-container text-on-primary-container rounded-full w-10 h-10 md:w-11 md:h-11 shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center flex-shrink-0">
                     <span class="material-symbols-outlined text-[24px] md:text-[26px]" id="dockPlayIcon" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                 </button>
                 <button id="btnPlayerForward" class="text-on-surface-variant hover:text-primary-fixed transition p-1 rounded-full" title="Forward Sentence">
@@ -3254,19 +3254,19 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
     <script src="static/training-studio.js?v=1.53.5"></script>
     <script src="static/narration.js?v=1.53.5"></script>
     <script src="static/model-discovery.js?v=1.53.5"></script>
-    <script src="static/ai-settings.js?v=1.53.8&release=8"></script>
-    <script src="static/lm-studio.js?v=1.53.8&release=8"></script>
-    <script src="static/translation-phases.js?v=1.53.8&release=8"></script>
-    <script src="static/local-translation.js?v=1.53.8&release=8"></script>
-    <script src="static/translation-machine.js?v=1.53.8&release=8"></script>
-    <script src="static/book-structure.js?v=1.53.8&release=8"></script>
-    <script src="static/app.js?v=1.53.8&release=8"></script>
-    <script src="static/reading-state.js?v=1.53.8&release=8"></script>
-    <script src="static/reading-ui.js?v=1.53.8&release=8"></script>
-    <script src="static/repair-review.js?v=1.53.8&release=8"></script>
-    <script src="static/georgian-linguistics.js?v=1.53.8&release=8"></script>
-    <script src="static/engine-pack.js?v=1.53.8&release=8"></script>
-    <script src="static/scanner.js?v=1.53.8&release=8"></script>
+    <script src="static/ai-settings.js?v=1.53.9&release=9"></script>
+    <script src="static/lm-studio.js?v=1.53.9&release=9"></script>
+    <script src="static/translation-phases.js?v=1.53.9&release=9"></script>
+    <script src="static/local-translation.js?v=1.53.9&release=9"></script>
+    <script src="static/translation-machine.js?v=1.53.9&release=9"></script>
+    <script src="static/book-structure.js?v=1.53.9&release=9"></script>
+    <script src="static/app.js?v=1.53.9&release=9"></script>
+    <script src="static/reading-state.js?v=1.53.9&release=9"></script>
+    <script src="static/reading-ui.js?v=1.53.9&release=9"></script>
+    <script src="static/repair-review.js?v=1.53.9&release=9"></script>
+    <script src="static/georgian-linguistics.js?v=1.53.9&release=9"></script>
+    <script src="static/engine-pack.js?v=1.53.9&release=9"></script>
+    <script src="static/scanner.js?v=1.53.9&release=9"></script>
 
 
 <div id="studioActionStatus" role="status" aria-live="polite" hidden></div>
