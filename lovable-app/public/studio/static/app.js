@@ -2227,6 +2227,8 @@ function stopLibraryRealtime() {
     if (window.LuminaStore && typeof window.LuminaStore.unsubscribeLibraryChanges === 'function') {
         window.LuminaStore.unsubscribeLibraryChanges();
     }
+}
+
 // ════════════════ Low-End Device & Concurrency Optimization Engine ════════════════
 function isLowTierHardware() {
     if (typeof navigator === 'undefined') return false;
