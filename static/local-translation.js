@@ -19,14 +19,39 @@
         async function connect(url,token){
             const account=key();if(!account)throw Error('Sign in before connecting a translation server.');
             const endpoint=normalizeEndpoint(url);
-            if(!String(token||'').trim())throw Error('Enter the connection token printed by your server.');
-            const response=await fetchImpl(endpoint+'/health',{headers:{Authorization:'Bearer '+token.trim()},signal:AbortSignal.timeout(10000)});
-            if(!response.ok)throw Error('Cannot connect. Check the server address and connection token.');
-            const data=await response.json();
-            if(!data.ready||!['en','ka'].every(l=>data.languages?.includes(l)))throw Error('Install the English–Georgian model on the server first.');
+            const tokenClean=String(token||'').trim();
+            let isLlm=false;
+            let healthy=false;
+            try{
+                const response=await fetchImpl(endpoint+'/health',{headers:{...(tokenClean?{Authorization:'Bearer '+tokenClean}:{})},signal:AbortSignal.timeout(6000)});
+                if(response.ok){
+                    const data=await response.json();
+                    if(data&&data.ready===false&&data.error)throw Error(data.error);
+                    healthy=true;
+                }
+            }catch(err){
+                if(err&&err.message&&!/fetch|connect|failed|timeout|abort|network/i.test(err.message))throw err;
+            }
+            if(!healthy){
+                try{
+                    const base=endpoint.replace(/\/+$/,'');
+                    const modelsUrl=base.endsWith('/v1')?base+'/models':base+'/v1/models';
+                    const probe=await fetchImpl(modelsUrl,{headers:{...(tokenClean?{Authorization:'Bearer '+tokenClean}:{})},signal:AbortSignal.timeout(6000)});
+                    if(probe.ok){
+                        const mData=await probe.json();
+                        if(Array.isArray(mData?.data)||Array.isArray(mData?.models)){
+                            healthy=true;
+                            isLlm=true;
+                        }
+                    }
+                }catch(_){}
+            }
+            if(!healthy){
+                throw Error('Cannot connect. Check the server address, ensure CORS is enabled, or verify connection token.');
+            }
             if(key()!==account)throw Error('Account changed. Connect again from your current account.');
-            storage.setItem(account,JSON.stringify({url:endpoint,token:token.trim()}));
-            status('Connected. Local neural translation can run without API credits.');
+            storage.setItem(account,JSON.stringify({url:endpoint,token:tokenClean,type:isLlm?'llm':'argos'}));
+            status(isLlm?'Connected local LLM. Free translation ready without API credits.':'Connected. Local neural translation can run without API credits.');
         }
         async function enable(){const button=document?.getElementById('enableLocalTranslation');if(button)button.disabled=true;status('Checking translation server…');try{await connect(document.getElementById('localTranslationEndpoint').value,document.getElementById('localTranslationToken').value);}catch(error){status(error.message);}finally{if(button)button.disabled=false;}}
         function stop(){controller?.abort();controller=null;}
@@ -38,13 +63,35 @@
             const own=new AbortController();controller=own;
             const signal=AbortSignal.any([own.signal,AbortSignal.timeout(180000),...(parent?[parent]:[])]);
             try{
-                status('Local neural model is translating…');
-                const response=await fetchImpl(normalizeEndpoint(saved.url)+'/translate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+saved.token},body:JSON.stringify({text,source_lang:sourceLang,target_lang:targetLang}),signal});
-                if(!response.ok)throw Error(response.status===429?'Local model busy; trying another translation engine.':'Local model unavailable; trying another translation engine.');
-                const data=await response.json();signal.throwIfAborted();
+                status('Local model is translating…');
+                let translatedText=null;
+                if(saved.type==='llm'){
+                    const base=normalizeEndpoint(saved.url);
+                    const chatUrl=base.endsWith('/v1')?base+'/chat/completions':base+'/v1/chat/completions';
+                    const prompt=`Translate the following text from English into natural, literary Georgian. Output ONLY the translated text with preserved formatting.\n\n${text}`;
+                    const res=await fetchImpl(chatUrl,{
+                        method:'POST',
+                        headers:{'Content-Type':'application/json',...(saved.token?{Authorization:'Bearer '+saved.token}:{})},
+                        body:JSON.stringify({
+                            messages:[{role:'user',content:prompt}],
+                            temperature:0.1,
+                            max_tokens:Math.min(8192,Math.max(1024,text.length*3))
+                        }),
+                        signal
+                    });
+                    if(!res.ok)throw Error('Local model busy (HTTP '+res.status+'); trying another translation engine.');
+                    const resData=await res.json();
+                    translatedText=resData.choices?.[0]?.message?.content?.trim()||null;
+                }else{
+                    const response=await fetchImpl(normalizeEndpoint(saved.url)+'/translate',{method:'POST',headers:{'Content-Type':'application/json',...(saved.token?{Authorization:'Bearer '+saved.token}:{})},body:JSON.stringify({text,source_lang:sourceLang,target_lang:targetLang}),signal});
+                    if(!response.ok)throw Error(response.status===429?'Local model busy; trying another translation engine.':'Local model unavailable; trying another translation engine.');
+                    const data=await response.json();
+                    translatedText=data.success===true&&typeof data.translated==='string'?data.translated:null;
+                }
+                signal.throwIfAborted();
                 if(key()!==account)return null;
-                status('Local neural translation complete.');
-                return data.success===true&&typeof data.translated==='string'?data.translated:null;
+                status('Local translation complete.');
+                return translatedText;
             }catch(error){parent?.throwIfAborted();status(error.message);return null;}
             finally{if(controller===own)controller=null;}
         }

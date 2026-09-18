@@ -123,3 +123,10 @@ test('Optional editing caps do not strand a book when cloud is the only working 
  assert.equal(await engine.translate(source,'ka'),edited);
  assert.equal(engine.snapshot().cloudCalls,49);
 });
+
+test('When localPrimary is configured and local is available, local draft runs first as primary engine',async()=>{
+    const {engine,calls}=setup({localPrimary:true});
+    assert.equal(await engine.translate(source,'ka',{mode:'quality'}),edited);
+    assert.deepEqual(calls,['local','review']);
+});
+

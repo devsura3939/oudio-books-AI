@@ -6848,6 +6848,12 @@ function readerForwardSentence() {
 async function callGeminiJSON(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null, validateResponse = () => true, signal } = {}) {
     const opts = {temperature, maxTokens, retries, systemPrompt, validateResponse, signal: signal || translationRequestController?.signal};
     if (!window.EngbotLmStudio?.enabled()) return callCloudJSON(prompt, opts);
+    if (window.EngbotLmStudio.withPrimary) {
+        return window.EngbotLmStudio.withPrimary(
+            cloudSignal => callCloudJSON(prompt, {...opts, signal: cloudSignal}),
+            prompt, {...opts, parse: parseModelJSON}
+        );
+    }
     return window.EngbotLmStudio.withFallback(
         cloudSignal => callCloudJSON(prompt, {...opts, signal: cloudSignal}),
         prompt, {...opts, parse: parseModelJSON}
@@ -7979,6 +7985,7 @@ function getPhaseTranslator() {
             cloudAvailable: () => !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl),
             assess: assessTranslation,
             onStage: stage => {setTranslationStage(stage); if (/LM Studio|Cloud AI/.test(stage)) recordEngineUse('ai');},
+            localPrimary: true,
         });
     }
     return phaseTranslator;
@@ -12173,9 +12180,6 @@ async function repairTextLinguisticAIChunk(text, lang) {
 
     // Step 1: In-house rule-based cleaning & syllable repair
     let cleaned = EngbotCore.cleanVerbatim(text);
-
-    // Step 2: Try AI reconstruction if Gemini, OpenRouter, or /api/ai is available
-    const geminiKey = (localStorage.getItem('geminiApiKey') || geminiApiKey || '').trim();
     const isKa = lang === 'ka' || lang === 'kat' || (text.match(/[\u10A0-\u10FF]/g) || []).length > 20;
 
     const prompt = `Proofread this ${isKa ? 'Georgian' : 'English'} OCR passage conservatively.
@@ -12184,6 +12188,19 @@ Do not reconstruct missing words from context, paraphrase, modernize, summarize,
 Return the FULL corrected passage, plain text only. Your proposal will be reviewed against the original.
 Text to restore:
 ${cleaned}`;
+
+    // Step 2: Try Primary Local Model (LM Studio e.g. Qwen 27B) - fast, free, private
+    if (window.EngbotLmStudio?.enabled?.() && window.EngbotLmStudio?.available?.()) {
+        try {
+            const lmRepair = await window.EngbotLmStudio.text(prompt, {temperature: 0.1, maxTokens: 4096});
+            if (lmRepair && lmRepair.length > 20) return lmRepair.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
+        } catch (e) {
+            console.warn('[repair] local LM Studio repair notice:', e);
+        }
+    }
+
+    // Step 3: Try AI reconstruction if Gemini, OpenRouter, Groq, Custom Provider, or /api/ai is available
+    const geminiKey = (localStorage.getItem('geminiApiKey') || geminiApiKey || '').trim();
 
     let prefModel = localStorage.getItem('geminiModel') || geminiModel || 'gemini-2.5-flash';
     prefModel = EngbotCore.geminiModels(prefModel)[0];
@@ -12287,9 +12304,6 @@ ${cleaned}`;
             return cpOut.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
         }
     }
-
-    const lmRepair = await window.EngbotLmStudio?.text(prompt, {temperature: 0.1, maxTokens: 4096});
-    if (lmRepair && lmRepair.length > 20) return lmRepair.replace(/^```(?:[a-z]*\n)?/i, '').replace(/\n?```$/i, '').trim();
 
     try {
         const res = await fetch('/api/ai', {

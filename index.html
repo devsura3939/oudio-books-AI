@@ -2843,8 +2843,8 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
             </div>
 
             <div class="glass-panel rounded-2xl p-4 mt-4 space-y-3">
-                <h3 class="text-sm font-semibold">LM Studio · Local translation editor</h3>
-                <p class="text-xs text-on-surface-variant">Your model edits machine translations against the source and reviews difficult passages. Cloud AI helps when local work needs repair or a periodic quality check.</p>
+                <h3 class="text-sm font-semibold">LM Studio / Local LLM · Primary AI Engine</h3>
+                <p class="text-xs text-on-surface-variant">Connect any local model (e.g. Qwen 2.5 27B, Llama, Mistral). When active, your local model runs first as the primary engine for high-accuracy translation, OCR text repair, and reading assistance—with server and cloud models acting as collaborators and backups.</p>
                 <label class="block text-xs" for="lmStudioUrl">LM Studio server address</label>
                 <input id="lmStudioUrl" type="url" value="http://localhost:1234/v1" class="w-full glass-input rounded-xl px-4 py-3 text-sm" autocomplete="off">
                 <label class="block text-xs" for="lmStudioToken">API token · optional unless authentication is enabled</label>
@@ -2855,19 +2855,19 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                 <button id="lmStudioDetect" type="button" onclick="EngbotLmStudio.detectFromUI()" class="px-4 py-3 rounded-xl bg-white/10 text-sm font-semibold">Detect models</button>
                 <label class="block text-xs" for="lmStudioModel">Available text model</label>
                 <select id="lmStudioModel" class="w-full min-w-0 glass-input rounded-xl px-4 py-3 text-sm" aria-label="LM Studio model"><option value="">Detect models to choose one</option></select>
-                <label class="flex gap-3 items-center text-sm py-2"><input id="lmStudioEnabled" type="checkbox" class="w-5 h-5">Use for translation phases and AI backup</label>
-                <p class="text-xs text-on-surface-variant">Quality mode edits every segment and reviews difficult passages. Budget mode focuses on difficult passages. Local work continues after the cloud budget is spent. Model context is checked before each book.</p>
+                <label class="flex gap-3 items-center text-sm py-2"><input id="lmStudioEnabled" type="checkbox" class="w-5 h-5">Use as primary engine for translation, OCR repair, and AI tasks</label>
+                <p class="text-xs text-on-surface-variant">Runs privately on your GPU/CPU with unlimited tokens. High-intelligence local models translate full books, repair OCR errors, and draft Georgian prose without spending API credits.</p>
                 <div class="flex flex-wrap gap-2">
-                    <button type="button" onclick="EngbotLmStudio.saveFromUI()" class="px-4 py-3 rounded-xl bg-primary-container text-on-primary-container font-bold text-sm">Save local model</button>
+                    <button type="button" onclick="EngbotLmStudio.saveFromUI()" class="px-4 py-3 rounded-xl bg-primary-container text-on-primary-container font-bold text-sm">Save primary model</button>
                     <button type="button" onclick="EngbotLmStudio.disconnect()" class="px-4 py-3 rounded-xl bg-white/5 text-sm">Disconnect</button>
                 </div>
-                <p id="lmStudioStatus" role="status" aria-live="polite" class="text-xs text-on-surface-variant">Start LM Studio’s server and enable CORS, then detect models.</p>
+                <p id="lmStudioStatus" role="status" aria-live="polite" class="text-xs text-on-surface-variant">Start LM Studio’s server (port 1234, CORS enabled) and click "Detect models".</p>
                 <p class="text-xs text-on-surface-variant">Saved for this account on this device. Keep LM Studio running. On a phone, localhost refers to the phone; use a reachable HTTPS address for your computer. Model language quality varies. <a href="https://lmstudio.ai/docs/developer/core/server/settings" target="_blank" rel="noopener" class="underline">LM Studio setup</a></p>
             </div>
 
             <div class="glass-panel rounded-2xl p-4 mt-4 space-y-3">
-                <h3 class="text-sm font-semibold">Translation without API credits</h3>
-                <p class="text-xs text-on-surface-variant">Connect the English-to-Georgian translation server. It runs on your computer or your own server; the browser stays responsive. Translations can still need review.</p>
+                <h3 class="text-sm font-semibold">Dedicated Translation Server · Fast Local Engine</h3>
+                <p class="text-xs text-on-surface-variant">Connect a dedicated local translation server (port 8766) or any local OpenAI-compatible endpoint. Works without external API credits.</p>
                 <label class="block text-xs" for="localTranslationEndpoint">Server address</label>
                 <input id="localTranslationEndpoint" type="url" value="http://127.0.0.1:8766" class="w-full p-3 rounded-xl bg-white/5 border border-white/15" autocomplete="off">
                 <label class="block text-xs" for="localTranslationToken">Connection token</label>
@@ -2877,7 +2877,7 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                     <button type="button" onclick="EngbotLocalTranslation.disable()" class="px-4 py-3 rounded-xl bg-white/5 text-sm">Disconnect</button>
                     <a href="https://github.com/devsura3939/oudio-books-AI/blob/main/local-engine/README.md" target="_blank" rel="noopener" class="px-4 py-3 text-sm underline">Server setup</a>
                 </div>
-                <p id="localTranslationStatus" role="status" aria-live="polite" class="text-xs text-on-surface-variant">Saved only for your account on this device. On a phone, use a reachable HTTPS server address.</p>
+                <p id="localTranslationStatus" role="status" aria-live="polite" class="text-xs text-on-surface-variant">Saved for your account on this device. Accepts dedicated translator servers or OpenAI-compatible backends.</p>
             </div>
 
             <div id="aiKeyStatusPanel" class="hidden rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2">
@@ -3254,19 +3254,19 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
     <script src="static/training-studio.js?v=1.53.5"></script>
     <script src="static/narration.js?v=1.53.5"></script>
     <script src="static/model-discovery.js?v=1.53.5"></script>
-    <script src="static/ai-settings.js?v=1.53.5"></script>
-    <script src="static/lm-studio.js?v=1.53.5&release=5"></script>
-    <script src="static/translation-phases.js?v=1.53.5&release=5"></script>
-    <script src="static/local-translation.js?v=1.53.5"></script>
-    <script src="static/translation-machine.js?v=1.53.5"></script>
-    <script src="static/book-structure.js?v=1.53.5"></script>
-    <script src="static/app.js?v=1.53.7&release=7"></script>
-    <script src="static/reading-state.js?v=1.53.5&release=5"></script>
-    <script src="static/reading-ui.js?v=1.53.5&release=5"></script>
-    <script src="static/repair-review.js?v=1.53.5"></script>
-    <script src="static/georgian-linguistics.js?v=1.53.5"></script>
-    <script src="static/engine-pack.js?v=1.53.5"></script>
-    <script src="static/scanner.js?v=1.53.5"></script>
+    <script src="static/ai-settings.js?v=1.53.8&release=8"></script>
+    <script src="static/lm-studio.js?v=1.53.8&release=8"></script>
+    <script src="static/translation-phases.js?v=1.53.8&release=8"></script>
+    <script src="static/local-translation.js?v=1.53.8&release=8"></script>
+    <script src="static/translation-machine.js?v=1.53.8&release=8"></script>
+    <script src="static/book-structure.js?v=1.53.8&release=8"></script>
+    <script src="static/app.js?v=1.53.8&release=8"></script>
+    <script src="static/reading-state.js?v=1.53.8&release=8"></script>
+    <script src="static/reading-ui.js?v=1.53.8&release=8"></script>
+    <script src="static/repair-review.js?v=1.53.8&release=8"></script>
+    <script src="static/georgian-linguistics.js?v=1.53.8&release=8"></script>
+    <script src="static/engine-pack.js?v=1.53.8&release=8"></script>
+    <script src="static/scanner.js?v=1.53.8&release=8"></script>
 
 
 <div id="studioActionStatus" role="status" aria-live="polite" hidden></div>

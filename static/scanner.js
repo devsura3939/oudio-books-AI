@@ -90,15 +90,17 @@
   }
 
   function visionStatusPill() {
+    const hasLocal = !!(window.EngbotLmStudio?.enabled?.());
+    const localModel = hasLocal ? (window.EngbotLmStudio.settings()?.model || 'Local Model') : '';
     const hasGemini = !!(localStorage.getItem("geminiApiKey") || "").trim();
     const hasOR = !!(localStorage.getItem("openRouterApiKey") || "").trim();
-    const active = hasGemini ? "Gemini assistance configured" : hasOR ? "OpenRouter assistance configured" : "Optional AI assistance";
+    const active = hasLocal ? `Primary: ${localModel} (collaborating with cloud)` : hasGemini ? "Gemini assistance configured" : hasOR ? "OpenRouter assistance configured" : "Optional AI assistance";
     return `
       <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
         <div class="flex items-center gap-2 overflow-hidden">
-          <span class="material-symbols-outlined text-base ${hasGemini || hasOR ? 'text-primary-fixed' : 'text-on-surface-variant'}">neurology</span>
+          <span class="material-symbols-outlined text-base ${hasLocal || hasGemini || hasOR ? 'text-primary-fixed' : 'text-on-surface-variant'}">neurology</span>
           <div class="truncate">
-            <span class="text-white font-medium text-[11px] block truncate">Local Georgian &amp; English OCR</span>
+            <span class="text-white font-medium text-[11px] block truncate">${hasLocal ? 'Local AI Active · ' + localModel : 'Local Georgian &amp; English OCR'}</span>
             <span class="text-[10px] text-on-surface-variant">${active} · review difficult pages</span>
           </div>
         </div>
@@ -983,6 +985,50 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
   function canUseNeuralOCR() { return state.tier0 !== false || Date.now() >= state.neuralRetryAt; }
 
   async function ocrGateway(dataUrl, lang, hint) {
+    // 0. Primary Local LLM Vision (LM Studio with Vision Model, e.g. Qwen2-VL or local vision)
+    if (window.EngbotLmStudio?.enabled?.() && window.EngbotLmStudio?.available?.()) {
+      try {
+        const saved = window.EngbotLmStudio.settings();
+        if (saved && saved.url && saved.model) {
+          const promptRules = getVisionPrompt(lang, hint);
+          const lmUrl = saved.url.replace(/\/+$/, '') + '/chat/completions';
+          const headers = { "Content-Type": "application/json" };
+          if (saved.token) headers["Authorization"] = "Bearer " + saved.token;
+          const lmRes = await fetch(lmUrl, {
+            method: "POST",
+            signal: AbortSignal.timeout(20000),
+            headers,
+            body: JSON.stringify({
+              model: saved.model,
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    { type: "text", text: promptRules },
+                    { type: "image_url", image_url: { url: dataUrl } }
+                  ]
+                }
+              ],
+              temperature: 0.1,
+              max_tokens: 8192
+            })
+          });
+          if (lmRes.ok) {
+            const lmData = await lmRes.json();
+            let text = (lmData.choices?.[0]?.message?.content ?? "").trim();
+            if (text === "[[NO_TEXT]]") text = "";
+            text = text.replace(/^```(?:[a-z]*\n)?/i, "").replace(/\n?```$/i, "").trim();
+            if (text && text.length > 5) {
+              state.tier0 = true;
+              return { text, engine: "local-vision (" + saved.model + ")" };
+            }
+          }
+        }
+      } catch (lmErr) {
+        // Text-only model or local server rejection, proceed smoothly to cloud/local OCR
+      }
+    }
+
     const geminiKey = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("geminiApiKey") || "") : (localStorage.getItem("geminiApiKey") || "").trim());
     const openRouterKey = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("openRouterApiKey") || "") : (localStorage.getItem("openRouterApiKey") || "").trim());
 

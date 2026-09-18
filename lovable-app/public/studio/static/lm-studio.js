@@ -54,7 +54,7 @@
             const eye = field('lmStudioTokenToggle'); if (eye) { eye.setAttribute('aria-label', 'Show LM Studio token'); eye.querySelector('span').textContent = 'visibility'; }
             field('lmStudioEnabled').checked = Boolean(saved?.enabled);
             options(saved?.models || (saved?.model ? [saved.model] : []), saved?.model);
-            status(saved ? 'Saved on this device. ' + (saved.enabled ? 'Translation phases and backup enabled.' : 'Backup disabled.') : 'Start LM Studio’s server and enable CORS, then detect models.');
+            status(saved ? 'Saved on this device. ' + (saved.enabled ? 'Primary local engine active (' + (saved.model || 'model selected') + ').' : 'Local engine disabled.') : 'Start LM Studio’s server and enable CORS, then detect models.');
         }
         async function detect(url, token = '') {
             const account = accountKey(); if (!account) throw Error('Sign in before connecting LM Studio.');
@@ -101,7 +101,7 @@
             active?.abort(); cooldown = null; runtimeProfile = null;
             const profiles = detected?.account === account && detected.url === next.url && detected.token === next.token ? detected.profiles : previous?.profiles || {};
             storage.setItem(account, JSON.stringify({url: next.url, token: next.token, model: next.model, models: catalog, profiles, enabled: Boolean(next.enabled)}));
-            status(next.enabled ? 'Saved. LM Studio will edit translations and back up unavailable AI providers.' : 'Saved. Automatic backup is disabled.');
+            status(next.enabled ? 'Saved. LM Studio (' + next.model + ') is active as primary engine for translation, repair, and assistance.' : 'Saved. Local model is disabled.');
         }
         function saveFromUI() {
             if (!field('lmStudioUrl')) return true;
@@ -135,7 +135,7 @@
             if (outputTokens < Math.min(maxTokens, 256)) { status('Local model context is too small for this request. Preserving the accepted draft.'); return null; }
             const controller = new AbortController(); active = controller;
             const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(Math.max(1, Math.min(timeoutMs, requestTimeoutMs))), ...(parent ? [parent] : [])]);
-            status('LM Studio backup is working…');
+            status('Local AI (' + (saved.model || 'model') + ') is working…');
             try {
                 // Use the documented native control only when the model advertises it.
                 // Focused editing does not need an unbounded hidden reasoning preamble.
@@ -153,11 +153,11 @@
                     if (!Array.isArray(output) || output.some(item => !['message','reasoning'].includes(item.type)) || !Number.isFinite(count) || count >= outputTokens) throw Error('LM Studio returned incomplete output.');
                     const messages = output.filter(item => item.type === 'message');
                     if (messages.length !== 1 || typeof messages[0].content !== 'string' || !messages[0].content.trim()) throw Error('LM Studio returned no complete translation.');
-                    status('LM Studio responded.'); return messages[0].content.trim();
+                    status('Local AI (' + (saved.model || 'model') + ') responded.'); return messages[0].content.trim();
                 }
                 const choice = data?.choices?.[0];
                 if (!['stop', 'eos', 'end_turn'].includes(choice?.finish_reason) || typeof choice?.message?.content !== 'string' || !choice.message.content.trim()) throw Error('LM Studio returned incomplete output. Try a model with a larger context window.');
-                status('LM Studio backup responded.'); return choice.message.content.trim();
+                status('Local AI (' + (saved.model || 'model') + ') responded.'); return choice.message.content.trim();
             } catch (error) {
                 parent?.throwIfAborted();
                 cooldown = {account, until: now() + 60000}; status(error.message || 'LM Studio is unavailable.'); return null;
@@ -182,7 +182,19 @@
             } finally { clearTimeout(timer); controller.abort(); }
             return json(prompt, opts);
         }
-        return {settings, enabled, available, profile, prepare, fillSettings, detect, detectFromUI, save, saveFromUI, disconnect, text, json, withFallback};
+        async function withPrimary(cloud, prompt, opts) {
+            if (!enabled()) return cloud(opts.signal);
+            if (available()) {
+                try {
+                    const res = await json(prompt, opts);
+                    if (res !== null && res !== undefined) return res;
+                } catch (e) {
+                    opts.signal?.throwIfAborted();
+                }
+            }
+            return cloud(opts.signal);
+        }
+        return {settings, enabled, available, profile, prepare, fillSettings, detect, detectFromUI, save, saveFromUI, disconnect, text, json, withFallback, withPrimary};
     }
     return {create, endpoint, modelList, modelProfiles, estimateTokens};
 });

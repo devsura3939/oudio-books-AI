@@ -111,3 +111,24 @@ test('Native output at its token limit cannot be accepted as complete',async()=>
         return new Response(JSON.stringify({output:[{type:'message',content:'{"translation":"cut"}'}],stats:{total_output_tokens:JSON.parse(opts.body).max_output_tokens}}));
     });await connect(f.client);assert.equal(await f.client.json('source',{parse:JSON.parse}),null);
 });
+
+test('withPrimary executes local model first; cloud is called only if local fails',async()=>{
+    let localCalls=0, cloudCalls=0;
+    const {client}=fixture(async(url)=>{
+        if(url.endsWith('/models'))return models();
+        localCalls++;
+        return response();
+    });
+    await connect(client);
+    const opts={parse:JSON.parse,validateResponse:r=>!!r.translation};
+    const out=await client.withPrimary(async()=>{cloudCalls++;return {translation:'cloud'};},'source',opts);
+    assert.deepEqual(out,{translation:'ქართული ტექსტი'});
+    assert.equal(localCalls,1);
+    assert.equal(cloudCalls,0);
+
+    client.save({...client.settings(),enabled:false});
+    const out2=await client.withPrimary(async()=>{cloudCalls++;return {translation:'cloud'};},'source',opts);
+    assert.deepEqual(out2,{translation:'cloud'});
+    assert.equal(cloudCalls,1);
+});
+

@@ -49,7 +49,7 @@
             parent?.throwIfAborted(); return result;
         } finally { clearTimeout(timer); signal.removeEventListener('abort',abort); own.abort(); }
     }
-    function create({machine, local, cloud, localAvailable = () => false, cloudAvailable = () => false, assess, onStage = () => {}, now = Date.now, maxCloudCalls = 48, maxCloudTokens = 180000, localTimeoutMs = 90000, cloudTimeoutMs = 20000, recoveryTimeoutMs = 75000, phaseTimeoutMs = 150000}) {
+    function create({machine, local, cloud, localAvailable = () => false, cloudAvailable = () => false, assess, onStage = () => {}, now = Date.now, maxCloudCalls = 48, maxCloudTokens = 180000, localTimeoutMs = 90000, cloudTimeoutMs = 20000, recoveryTimeoutMs = 75000, phaseTimeoutMs = 150000, localPrimary = false}) {
         let state, cloudUntil = 0;
         function reset(previous = {}) {
             state = {segments:Math.max(0,Number(previous.segments)||0),difficultSegments:Math.max(0,Number(previous.difficultSegments)||0),localCalls:Math.max(0,Number(previous.localCalls)||0),cloudCalls:Math.max(0,Number(previous.cloudCalls)||0),reservedCloudTokens:Math.max(0,Number(previous.reservedCloudTokens)||0)};
@@ -58,13 +58,10 @@
         reset();
         async function translate(source, target, {before = '', after = '', glossary = '', complexity = 0, mode = 'budget', signal} = {}) {
             signal?.throwIfAborted(); state.segments++;
-            onStage('Machine translation');
-            let baseline = await machine(source, target, signal); signal?.throwIfAborted();
-            if (!assess(source,baseline,target).ok) baseline = null;
-            let candidate = baseline, localCandidate = false, issues = [], uncertainty = false, cloudUsed = false;
             const difficult = risk(source,complexity), began = now();
             if (difficult) state.difficultSegments++;
             const remaining = () => Math.max(0, phaseTimeoutMs - (now() - began));
+            let baseline = null, candidate = null, localCandidate = false, issues = [], uncertainty = false, cloudUsed = false;
             const data = () => ({source,draft:candidate,baseline,target,before,after,glossary,issues});
             const valid = value => {
                 value = normalizeOutput(source,value);
@@ -94,8 +91,29 @@
                 const result = normalizeOutput(source,await bounded(s => cloud(prompt,{signal:s,temperature:0.1,maxTokens:outputBudget,retries:0,validateResponse:valid,systemPrompt:'You are a source-faithful bilingual literary editor. Return only the requested JSON.'}),signal,Math.min(baseline ? cloudTimeoutMs : recoveryTimeoutMs,remaining())));
                 if (!valid(result)) {cloudUntil = now() + 60000; return null;} return result;
             }
+            // When local model is primary, draft directly from source across all segments
+            if (localPrimary && localAvailable()) {
+                const drafted = await runLocal('draft');
+                if (valid(drafted)) {
+                    candidate = drafted.translation;
+                    localCandidate = true;
+                    uncertainty = drafted.uncertain === true;
+                }
+            }
+            // If local primary did not yield candidate or is disabled, run machine baseline
+            if (!candidate) {
+                onStage('Machine translation');
+                baseline = await machine(source, target, signal); signal?.throwIfAborted();
+                if (!assess(source,baseline,target).ok) baseline = null;
+                candidate = baseline;
+            } else if (mode === 'quality' && (difficult || uncertainty)) {
+                try {
+                    const m = await machine(source, target, signal);
+                    if (assess(source,m,target).ok) baseline = m;
+                } catch (_) {}
+            }
             // Paid budgets never cap local work. In quality mode every segment gets an editing attempt.
-            if (localAvailable() && (mode === 'quality' || difficult || !baseline)) {
+            if (!localCandidate && localAvailable() && (mode === 'quality' || difficult || !baseline)) {
                 const edited = await runLocal(baseline ? 'edit' : 'draft');
                 if (valid(edited)) {candidate = edited.translation;localCandidate = true;uncertainty = edited.uncertain === true;}
             }
