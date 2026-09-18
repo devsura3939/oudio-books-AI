@@ -18,7 +18,8 @@ try:
     with urllib.request.urlopen(req) as resp:
         data = json.loads(resp.read().decode("utf-8"))
         print("STATUS:", resp.status)
-        print("TRANSLATION:", data.get("translation"))
+        print("TRANSLATION:", data.get("translated"))
         print("ENGINE:", data.get("engine"))
+        print("SUCCESS:", data.get("success"))
 except Exception as e:
     print("ERROR:", e)
