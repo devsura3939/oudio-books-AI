@@ -169,8 +169,9 @@
                     status('Local AI (' + (saved.model || 'model') + ') responded.'); return messages[0].content.trim();
                 }
                 const choice = data?.choices?.[0];
-                if (!['stop', 'eos', 'end_turn'].includes(choice?.finish_reason) || typeof choice?.message?.content !== 'string' || !choice.message.content.trim()) throw Error('LM Studio returned incomplete output. Try a model with a larger context window.');
-                status('Local AI (' + (saved.model || 'model') + ') responded.'); return choice.message.content.trim();
+                const content = typeof choice?.message?.content === 'string' ? choice.message.content.trim() : '';
+                if (!content) throw Error('LM Studio returned empty output. Try a model with a larger context window.');
+                status('Local AI (' + (saved.model || 'model') + ') responded.'); return content;
             } catch (error) {
                 parent?.throwIfAborted();
                 cooldown = {account, until: now() + 60000};
@@ -178,6 +179,22 @@
                 status(isCors ? 'LM Studio connection failed. Verify LM Studio server is running on port 1234 with "Enable CORS" turned ON.' : (error.message || 'LM Studio is unavailable.'));
                 return null;
             } finally { if (active === controller) active = null; }
+        }
+        function resetCooldown() {
+            cooldown = null;
+        }
+        async function translateDirect(sourceText, targetLang = 'ka', { signal: parent, contextBefore = '', contextAfter = '', timeoutMs = 60000 } = {}) {
+            if (!sourceText || !sourceText.trim() || !enabled()) return null;
+            const isKa = targetLang === 'ka';
+            const langName = isKa ? 'Georgian' : 'English';
+            const sysMsg = isKa
+                ? 'You are an expert bilingual literary translator into Georgian. Translate the given text faithfully, preserving all proper names, numbers, dialogue, and natural literary tone. Output ONLY the direct Georgian translation, without preamble, explanations, markdown formatting, or JSON wrapper.'
+                : 'You are an expert bilingual literary translator into English. Translate the given text faithfully. Output ONLY the direct English translation, without preamble, explanations, markdown formatting, or JSON wrapper.';
+            let prompt = '';
+            if (contextBefore) prompt += `[Preceding Context]: ${contextBefore.slice(-250)}\n\n`;
+            prompt += `Text to translate into ${langName}:\n${sourceText.trim()}\n\nTranslation:`;
+            if (contextAfter) prompt += `\n\n[Following Context]: ${contextAfter.slice(0, 250)}`;
+            return await text(prompt, { systemPrompt: sysMsg, temperature: 0.1, maxTokens: Math.min(4096, Math.max(512, sourceText.length * 3)), signal: parent, timeoutMs });
         }
         async function json(prompt, {parse, validateResponse = () => true, ...opts}) {
             const output = await text(prompt, opts); if (!output) return null;
@@ -210,7 +227,7 @@
             }
             return cloud(opts.signal);
         }
-        return {settings, enabled, available, profile, prepare, fillSettings, detect, detectFromUI, save, saveFromUI, disconnect, text, json, withFallback, withPrimary};
+        return {settings, enabled, available, profile, prepare, fillSettings, detect, detectFromUI, save, saveFromUI, disconnect, text, json, withFallback, withPrimary, resetCooldown, translateDirect};
     }
     return {create, endpoint, modelList, modelProfiles, estimateTokens};
 });

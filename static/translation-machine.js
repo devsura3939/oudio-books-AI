@@ -132,6 +132,26 @@
             signal?.throwIfAborted();
             // The connected model can be replaced independently of the app.
             if (valid(source, fallback, targetLang)) { onEngine('offline'); return fallback; }
+
+            // Emergency local AI fallback: if server, google, and mymemory failed or are paused,
+            // directly check if a connected local LM Studio model is ready to translate!
+            if (typeof root !== 'undefined' && root.EngbotLmStudio?.available?.()) {
+                try {
+                    const lmDirect = await root.EngbotLmStudio.translateDirect(source, targetLang, {
+                        signal,
+                        contextBefore: options?.context_before || '',
+                        contextAfter: options?.context_after || '',
+                        timeoutMs: 45000
+                    });
+                    if (valid(source, lmDirect, targetLang)) {
+                        const result = accept(lmDirect, 'lm_studio');
+                        if (result) return result;
+                    }
+                } catch (_) {
+                    signal?.throwIfAborted();
+                }
+            }
+
             return null;
         }
         async function translate(text, sourceLang, targetLang, signal, options = {}) {
@@ -148,7 +168,15 @@
             }
             return outputs.join('');
         }
-        return { translate, failures:()=>Array.from(failures,([provider,reason])=>({provider,reason})), clear: () => { cache.clear(); cacheChars = 0; cooldown.clear(); failures.clear(); } };
+        function resetCooldowns() { cooldown.clear(); }
+        function unpause(provider) { if (provider) cooldown.delete(provider); else cooldown.clear(); }
+        return {
+            translate,
+            failures: () => Array.from(failures, ([provider, reason]) => ({ provider, reason })),
+            clear: () => { cache.clear(); cacheChars = 0; cooldown.clear(); failures.clear(); },
+            resetCooldowns,
+            unpause
+        };
     }
     return { partition, complete, create };
 });

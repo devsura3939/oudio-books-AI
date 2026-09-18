@@ -8258,6 +8258,18 @@ async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, 
     return null;
 }
 
+function isComplexOrHighValueSegment(text, score = 0) {
+    if (!text || !text.trim()) return false;
+    const clean = text.trim();
+    if (score >= 22) return true;
+    if (/[„“”"']|^\s*[-—]\s+/.test(clean)) return true;
+    if (/\b(?:never|neither|nor|barely|scarcely|hardly|unless|without|although|meanwhile|nonetheless)\b/i.test(clean)) return true;
+    if (/(?:არასოდეს|ვერ|ნუ|აღარ|ვეღარ|როდესაც|რადგან|თუმცა)/u.test(clean)) return true;
+    if (clean.length > 200 || (clean.match(/[,;:—]/g) || []).length >= 4) return true;
+    return false;
+}
+window.isComplexOrHighValueSegment = isComplexOrHighValueSegment;
+
 // Tier router. The deterministic engine always runs first and supplies the
 // accepted baseline. Tier A is an optional correction pass for difficult
 // chunks; provider failure, quota exhaustion, malformed review, or timeout
@@ -8272,13 +8284,27 @@ async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', 
             glossary:typeof getBookGlossaryBlock === 'function' ? getBookGlossaryBlock() : '',
             signal:translationRequestController?.signal,
         });
-        if (!translated) {
-            const providerFailure = window.EngbotProviders?.getFailure()?.message;
-            if (providerFailure) lastTranslationFailure += ` AI recovery: ${providerFailure}`;
-            if (!window.EngbotLmStudio?.available() && !window.EngbotLocalTranslation?.enabled()) lastTranslationFailure += ' No local model is connected on this device.';
-            lastTranslationFailure += ' Accepted work is saved; retry resumes this segment.';
+        if (translated && assessTranslation(clean, translated, targetLang).ok) {
+            return translated;
         }
-        return translated;
+        // Direct LM Studio emergency fallback if phase pipeline returned null
+        if (window.EngbotLmStudio?.available()) {
+            try {
+                const directLm = await window.EngbotLmStudio.translateDirect(clean, targetLang, {
+                    contextBefore, contextAfter, signal: translationRequestController?.signal, timeoutMs: 45000
+                });
+                if (directLm && assessTranslation(clean, directLm, targetLang).ok) {
+                    setTranslationStage('LM Studio · Direct translation');
+                    recordEngineUse('lm_studio');
+                    return directLm;
+                }
+            } catch (_) {}
+        }
+        const providerFailure = window.EngbotProviders?.getFailure()?.message;
+        if (providerFailure) lastTranslationFailure += ` AI recovery: ${providerFailure}`;
+        if (!window.EngbotLmStudio?.available() && !window.EngbotLocalTranslation?.enabled()) lastTranslationFailure += ' No local model is connected on this device.';
+        lastTranslationFailure += ' Accepted work is saved; retry resumes this segment.';
+        return null;
     }
     const complex = score > SMART_ROUTE_EASY_THRESHOLD;
     if (complex) smartRoutingStats.complex++; else smartRoutingStats.easy++;
@@ -8553,6 +8579,12 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
     optionalAiDisabledUntil = 0;
     optionalAiCorrectionsUsed = 0;
     window.EngbotProviders?.reset();
+    if (typeof translationMachine === 'function') {
+        try { translationMachine().clear(); } catch (_) {}
+    }
+    if (typeof window !== 'undefined' && window.EngbotLmStudio?.resetCooldown) {
+        try { window.EngbotLmStudio.resetCooldown(); } catch (_) {}
+    }
 
     const saved = await loadTranslationJob(targetBook.id);
     const hasExistingTranslation = (targetBook.chapters || []).some(c => (c[field] && c[field].trim()) || (c.metadata?.[field] && c.metadata[field].trim()));
@@ -8579,6 +8611,12 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
     const retryButton = document.getElementById('wbRetryButton');
     if (retryButton) { retryButton.hidden = true; retryButton.onclick = async () => {
         if (getCurrentUserId() !== ownerId) { showToast('Sign in to the original account to resume this book.', 'error'); return; }
+        if (typeof translationMachine === 'function') {
+            try { translationMachine().clear(); } catch (_) {}
+        }
+        if (typeof window !== 'undefined' && window.EngbotLmStudio?.resetCooldown) {
+            try { window.EngbotLmStudio.resetCooldown(); } catch (_) {}
+        }
         await selectBook(targetBook.id);
         if (String(currentBook?.id) === String(targetBook.id)) return startWholeBookTranslation(true);
     }; }
@@ -8864,17 +8902,19 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                         : translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true));
                 }
 
-                // 12-second safety timeout race for smart routing
+                // Dynamic safety timeout race for smart routing
                 if (typeof translateChunkSmart === 'function' && typeof translateChunkLocal === 'function') {
                     let segTimer;
+                    const isComplex = isComplexOrHighValueSegment(chunks[i], scoreChunkComplexity(chunks[i]));
+                    const stallLimit = (window.EngbotLmStudio?.enabled() && (isRefining || isComplex)) ? 45000 : 15000;
                     const segTimeout = new Promise(resolve => {
-                        segTimer = setTimeout(() => resolve('__STALL__'), 12000);
+                        segTimer = setTimeout(() => resolve('__STALL__'), stallLimit);
                     });
                     try {
                         const raceRes = await Promise.race([chunkPromise, segTimeout]);
                         clearTimeout(segTimer);
                         if (raceRes === '__STALL__') {
-                            console.warn(`[Translation] Chunk ${i + 1} took >12s; auto-recovering with fast neural translation`);
+                            console.warn(`[Translation] Chunk ${i + 1} took >${stallLimit / 1000}s; auto-recovering with fast neural translation`);
                             output = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
                         } else {
                             output = raceRes;
@@ -8899,9 +8939,26 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                 if (cancelTranslationFlag) { lookaheadPromise = null; lookaheadIndex = -1; break; } // Late provider responses cannot commit after stop.
                 checkOwner();
                 let assessment = assessTranslation(chunks[i], output, targetLang);
-                if (!assessment.ok && typeof translateChunkLocal === 'function') {
-                    // Try one fast local neural attempt before rejecting
+                if (!assessment.ok && window.EngbotLmStudio?.available()) {
+                    // Tier 1 Auto-Recovery: Try LM Studio direct translation if smart phase or fast engine produced empty/invalid output
                     try {
+                        setTranslationStage('LM Studio · Auto-recovering segment');
+                        const lmDirect = await window.EngbotLmStudio.translateDirect(chunks[i], targetLang, {
+                            contextBefore: chunks[i - 1] || '',
+                            contextAfter: chunks[i + 1] || '',
+                            timeoutMs: 45000
+                        });
+                        if (lmDirect && assessTranslation(chunks[i], lmDirect, targetLang).ok) {
+                            output = lmDirect;
+                            assessment = { ok: true };
+                            lastTranslationEngine = 'lm_studio';
+                        }
+                    } catch (_) {}
+                }
+                if (!assessment.ok && typeof translateChunkLocal === 'function') {
+                    // Tier 2 Auto-Recovery: Clear cooldowns and try fast neural translation once more
+                    try {
+                        if (typeof translationMachine === 'function') translationMachine().unpause();
                         const fallbackOut = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
                         if (fallbackOut && assessTranslation(chunks[i], fallbackOut, targetLang).ok) {
                             output = fallbackOut;
@@ -8910,10 +8967,50 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                     } catch (_) {}
                 }
                 if (!assessment.ok) {
+                    // Tier 3 Auto-Recovery: Sentence-by-sentence decomposition
+                    try {
+                        const sentences = EngbotCore.naturalSentences(chunks[i]);
+                        if (sentences.length > 1) {
+                            const parts = [];
+                            let allSucceeded = true;
+                            for (const sent of sentences) {
+                                let sTrans = null;
+                                if (window.EngbotLmStudio?.available()) {
+                                    sTrans = await window.EngbotLmStudio.translateDirect(sent, targetLang, { timeoutMs: 25000 });
+                                }
+                                if (!sTrans) {
+                                    sTrans = await translateSingleSentence(sent, targetLang);
+                                }
+                                if (sTrans && assessTranslation(sent, sTrans, targetLang).ok) {
+                                    parts.push(sTrans);
+                                } else {
+                                    allSucceeded = false;
+                                    break;
+                                }
+                            }
+                            if (allSucceeded && parts.length === sentences.length) {
+                                const joined = parts.join(' ');
+                                if (assessTranslation(chunks[i], joined, targetLang).ok) {
+                                    output = joined;
+                                    assessment = { ok: true };
+                                }
+                            }
+                        }
+                    } catch (_) {}
+                }
+                if (!assessment.ok) {
                     const isMetadata = /(?:printed|bound|published|copyright|edition|london|street|road|lane|house|press|books|company|ltd|inc|shps|isbn)\b/i.test(chunks[i]);
                     if (output && (assessment.reason === 'wrong_script_ratio' || isMetadata)) {
                         assessment = { ok: true };
                     } else if (isMetadata && !output) {
+                        output = chunks[i];
+                        assessment = { ok: true };
+                    }
+                }
+                if (!assessment.ok) {
+                    // Final Safety Net: If this segment stubbornly failed all providers and contains minimal letters (symbols/nums)
+                    const letterChars = (chunks[i].match(/\p{L}/gu) || []).length;
+                    if (letterChars < 12) {
                         output = chunks[i];
                         assessment = { ok: true };
                     }
