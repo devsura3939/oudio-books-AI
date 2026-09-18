@@ -8411,8 +8411,9 @@ function buildTranslationChunks(chapterText, targetCharLimit = 1800, maxSentence
 
 async function startWholeBookTranslation(resume = false, forceFromScratch = false) {
     if (isTranslatingWholeBook) { restoreTranslationPanel(); return; }
-    if (isAcquiringTranslationLock) return;
-    isAcquiringTranslationLock = true;
+    const lockScope = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null);
+    if (lockScope?._isAcquiringTranslationLock) return;
+    if (lockScope) lockScope._isAcquiringTranslationLock = true;
     try {
         if (typeof navigator !== 'undefined' && navigator.locks && currentBook) {
             const key = tjobKey(currentBook.id);
@@ -8434,7 +8435,7 @@ async function startWholeBookTranslation(resume = false, forceFromScratch = fals
         }
         return await runWholeBookTranslation(resume, forceFromScratch);
     } finally {
-        isAcquiringTranslationLock = false;
+        if (lockScope) lockScope._isAcquiringTranslationLock = false;
     }
 }
 
