@@ -96,6 +96,42 @@ let currentElevenAudio = null;
 // Lock-Screen Background Audio Keep-Alive & Wake Lock State
 let backgroundKeepAliveAudio = null;
 let screenWakeLock = null;
+let currentAudioVolume = 1.0;
+let isAudioMuted = false;
+let _silentBlobUrl = null;
+
+function generateSilentWavBlobUrl(durationSec = 5, sampleRate = 8000) {
+    try {
+        const numSamples = Math.floor(sampleRate * durationSec);
+        const dataSize = numSamples * 2;
+        const buffer = new ArrayBuffer(44 + dataSize);
+        const view = new DataView(buffer);
+        
+        // RIFF header
+        view.setUint8(0, 0x52); view.setUint8(1, 0x49); view.setUint8(2, 0x46); view.setUint8(3, 0x46); // 'RIFF'
+        view.setUint32(4, 36 + dataSize, true);
+        view.setUint8(8, 0x57); view.setUint8(9, 0x41); view.setUint8(10, 0x56); view.setUint8(11, 0x45); // 'WAVE'
+        
+        // fmt chunk
+        view.setUint8(12, 0x66); view.setUint8(13, 0x6D); view.setUint8(14, 0x74); view.setUint8(15, 0x20); // 'fmt '
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true); // PCM format
+        view.setUint16(22, 1, true); // 1 channel mono
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true); // block align
+        view.setUint16(34, 16, true); // 16-bit
+        
+        // data chunk
+        view.setUint8(36, 0x64); view.setUint8(37, 0x61); view.setUint8(38, 0x74); view.setUint8(39, 0x61); // 'data'
+        view.setUint32(40, dataSize, true);
+        
+        const blob = new Blob([view], { type: 'audio/wav' });
+        return URL.createObjectURL(blob);
+    } catch (e) {
+        return 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+    }
+}
 const SILENT_AUDIO_URI = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
 
 // Whole Book Translation State
@@ -9318,10 +9354,16 @@ function initBackgroundAudioKeepAlive() {
     }
     if (!backgroundKeepAliveAudio) {
         try {
-            backgroundKeepAliveAudio = new Audio(SILENT_AUDIO_URI);
+            if (!_silentBlobUrl) {
+                _silentBlobUrl = generateSilentWavBlobUrl(5);
+            }
+            backgroundKeepAliveAudio = new Audio(_silentBlobUrl || SILENT_AUDIO_URI);
             backgroundKeepAliveAudio.id = 'backgroundKeepAliveAudio';
             backgroundKeepAliveAudio.loop = true;
             backgroundKeepAliveAudio.volume = 0.001;
+            backgroundKeepAliveAudio.playsInline = true;
+            backgroundKeepAliveAudio.setAttribute('playsinline', '');
+            backgroundKeepAliveAudio.setAttribute('webkit-playsinline', '');
             document.body.appendChild(backgroundKeepAliveAudio);
         } catch (e) {
             console.warn('[KeepAlive] Audio element creation error:', e);
@@ -9340,10 +9382,12 @@ function startBackgroundKeepAlive() {
             initBackgroundAudioKeepAlive();
         }
         if (backgroundKeepAliveAudio && backgroundKeepAliveAudio.paused) {
-            backgroundKeepAliveAudio.play().catch(err => {
-                // Audio autoplay might wait for user gesture, which is fine
-                console.debug('[KeepAlive] Silent audio play deferred or auto-play prevented:', err && err.message);
-            });
+            const p = backgroundKeepAliveAudio.play();
+            if (p && p.catch) {
+                p.catch(err => {
+                    console.debug('[KeepAlive] Silent audio play deferred or auto-play prevented:', err && err.message);
+                });
+            }
         }
     } catch (e) {
         console.warn('[KeepAlive] Failed to start silent audio:', e);
@@ -9371,7 +9415,6 @@ async function requestScreenWakeLock() {
                 screenWakeLock = null;
             });
         } catch (e) {
-            // Wake lock may fail if battery saver is active or document is hidden
             console.debug('[WakeLock] Request failed:', e && e.message);
         }
     }
@@ -9399,6 +9442,48 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /**
+ * High-resolution absolute artwork generator for mobile lock screen & notification panel
+ */
+function getMediaSessionArtwork(coverUrl, bookTitle) {
+    if (coverUrl && typeof coverUrl === 'string' && coverUrl.trim().length > 0) {
+        let fullUrl = coverUrl;
+        if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://') && !fullUrl.startsWith('data:') && !fullUrl.startsWith('blob:')) {
+            try {
+                fullUrl = new URL(fullUrl.replace(/^\//, ''), window.location.origin + '/').href;
+            } catch (e) {
+                fullUrl = window.location.origin + '/' + fullUrl.replace(/^\//, '');
+            }
+        }
+        return [
+            { src: fullUrl, sizes: '96x96', type: 'image/png' },
+            { src: fullUrl, sizes: '128x128', type: 'image/png' },
+            { src: fullUrl, sizes: '192x192', type: 'image/png' },
+            { src: fullUrl, sizes: '256x256', type: 'image/png' },
+            { src: fullUrl, sizes: '384x384', type: 'image/png' },
+            { src: fullUrl, sizes: '512x512', type: 'image/png' }
+        ];
+    }
+    const cleanTitle = (bookTitle || 'Oudio Audiobook').replace(/[<>&"]/g, '');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+        <defs>
+            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#090d16"/>
+                <stop offset="50%" stop-color="#1e1b4b"/>
+                <stop offset="100%" stop-color="#312e81"/>
+            </linearGradient>
+        </defs>
+        <rect width="512" height="512" fill="url(#g)"/>
+        <circle cx="256" cy="210" r="100" fill="#00f0ff" fill-opacity="0.12" stroke="#00f0ff" stroke-width="4"/>
+        <polygon points="230,170 310,210 230,250" fill="#00f0ff"/>
+        <text x="256" y="360" fill="#ffffff" font-family="system-ui, sans-serif" font-size="28" font-weight="700" text-anchor="middle">${cleanTitle}</text>
+        <text x="256" y="400" fill="#a5b4fc" font-family="system-ui, sans-serif" font-size="18" text-anchor="middle">Lumina Audio</text>
+    </svg>`;
+    return [
+        { src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg), sizes: '512x512', type: 'image/svg+xml' }
+    ];
+}
+
+/**
  * Updates OS lock-screen Media Session controls, artwork, title, author, and chapter info
  */
 function updateMediaSession() {
@@ -9408,19 +9493,10 @@ function updateMediaSession() {
         const bookTitle = (currentBook && currentBook.title) ? currentBook.title : 'Audiobook';
         const author = (currentBook && currentBook.author) ? currentBook.author : 'Lumina Audio';
         const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
-        const chapterTitle = currentChap ? currentChap.title : `Chapter ${currentPlayingChapterId || 1}`;
+        const chapterTitle = currentChap ? (window.EngbotCore ? window.EngbotCore.chapterTitle(currentChap, currentLang) : currentChap.title) : `Chapter ${currentPlayingChapterId || 1}`;
         
         let coverUrl = (currentBook && currentBook.coverUrl) ? currentBook.coverUrl : '';
-        if (coverUrl && !coverUrl.startsWith('http') && !coverUrl.startsWith('data:') && !coverUrl.startsWith('blob:')) {
-            coverUrl = window.location.origin + '/' + coverUrl.replace(/^\//, '');
-        }
-
-        const artwork = coverUrl ? [
-            { src: coverUrl, sizes: '96x96', type: 'image/png' },
-            { src: coverUrl, sizes: '128x128', type: 'image/png' },
-            { src: coverUrl, sizes: '256x256', type: 'image/png' },
-            { src: coverUrl, sizes: '512x512', type: 'image/png' }
-        ] : [];
+        const artwork = getMediaSessionArtwork(coverUrl, bookTitle);
 
         navigator.mediaSession.metadata = new MediaMetadata({
             title: chapterTitle,
@@ -9432,12 +9508,16 @@ function updateMediaSession() {
         navigator.mediaSession.playbackState = (isPlaying && !isPaused) ? 'playing' : 'paused';
 
         // Update position state if supported
-        if ('setPositionState' in navigator.mediaSession && currentChap && currentChap.estimated_duration_sec) {
+        if ('setPositionState' in navigator.mediaSession && currentChap) {
+            const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
+            const chapDuration = (chapStats && chapStats.seconds) 
+                ? chapStats.seconds 
+                : (currentChap.estimated_duration_sec || (sentenceQueue && sentenceQueue.length > 0 ? sentenceQueue.length * 4 : 60));
             try {
                 navigator.mediaSession.setPositionState({
-                    duration: Math.max(1, currentChap.estimated_duration_sec),
+                    duration: Math.max(1, chapDuration),
                     playbackRate: currentGlobalSpeed || 1.0,
-                    position: Math.min(secondsElapsed, currentChap.estimated_duration_sec)
+                    position: Math.min(secondsElapsed, chapDuration)
                 });
             } catch (posErr) {}
         }
@@ -9446,6 +9526,37 @@ function updateMediaSession() {
     }
 }
 window.updateMediaSession = updateMediaSession;
+
+/**
+ * Volume and Mute helpers
+ */
+function toggleMuteAudio() {
+    isAudioMuted = !isAudioMuted;
+    const effectiveVol = isAudioMuted ? 0 : currentAudioVolume;
+    if (currentElevenAudio) {
+        currentElevenAudio.volume = effectiveVol;
+    }
+    const icon = isAudioMuted ? 'volume_off' : (currentAudioVolume < 0.5 ? 'volume_down' : 'volume_up');
+    const dockVol = document.getElementById('dockVolumeIcon');
+    if (dockVol) dockVol.textContent = icon;
+    showToast(isAudioMuted ? 'Audio muted' : `Volume: ${Math.round(currentAudioVolume * 100)}%`, 'info');
+}
+window.toggleMuteAudio = toggleMuteAudio;
+
+function setAudioVolume(vol) {
+    currentAudioVolume = Math.max(0, Math.min(1, vol));
+    if (currentAudioVolume > 0 && isAudioMuted) {
+        isAudioMuted = false;
+    }
+    const effectiveVol = isAudioMuted ? 0 : currentAudioVolume;
+    if (currentElevenAudio) {
+        currentElevenAudio.volume = effectiveVol;
+    }
+    const icon = (isAudioMuted || currentAudioVolume === 0) ? 'volume_off' : (currentAudioVolume < 0.5 ? 'volume_down' : 'volume_up');
+    const dockVol = document.getElementById('dockVolumeIcon');
+    if (dockVol) dockVol.textContent = icon;
+}
+window.setAudioVolume = setAudioVolume;
 
 /**
  * Registers Media Session hardware / headphone / lock-screen action handlers
@@ -9481,12 +9592,32 @@ function initMediaSessionHandlers() {
             secondsElapsed = Math.max(0, secondsElapsed - seekSec);
             currentSentenceIndex = Math.max(0, currentSentenceIndex - 2);
             speakCurrentSentence();
+            updateMediaSession();
         }],
         ['seekforward', (details) => {
             const seekSec = (details && details.seekOffset) ? details.seekOffset : 10;
             secondsElapsed += seekSec;
             currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 2);
             speakCurrentSentence();
+            updateMediaSession();
+        }],
+        ['seekto', (details) => {
+            if (details && typeof details.seekTime === 'number' && sentenceQueue && sentenceQueue.length > 0) {
+                const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
+                const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
+                const totalDuration = (chapStats && chapStats.seconds) 
+                    ? chapStats.seconds 
+                    : ((currentChap && currentChap.estimated_duration_sec) ? currentChap.estimated_duration_sec : (sentenceQueue.length * 4));
+                const seekRatio = Math.max(0, Math.min(1, details.seekTime / totalDuration));
+                secondsElapsed = Math.round(details.seekTime);
+                currentSentenceIndex = Math.min(sentenceQueue.length - 1, Math.floor(seekRatio * sentenceQueue.length));
+                if (isPlaying && !isPaused) {
+                    speakCurrentSentence();
+                } else if (readerActive) {
+                    highlightReaderSentence(currentSentenceIndex);
+                }
+                updateMediaSession();
+            }
         }],
         ['stop', () => {
             stopSpeech();
@@ -9685,6 +9816,7 @@ function speakStandardSentence(text, lang) {
 
     utter.rate = currentGlobalSpeed * (lang === 'ka' ? 0.92 : 1.0);
     utter.pitch = currentPitch;
+    utter.volume = isAudioMuted ? 0 : currentAudioVolume;
 
     utter.onstart = () => {
         if (myToken !== currentSpeechToken) {
@@ -9700,11 +9832,13 @@ function speakStandardSentence(text, lang) {
         if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
         currentSentenceIndex++;
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
+        const pauseTime = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
+        const delay = document.hidden ? Math.min(50, pauseTime) : pauseTime;
         utteranceTimeout = setTimeout(() => {
             if (myToken === currentSpeechToken && isPlaying && !isPaused) {
                 speakCurrentSentence();
             }
-        }, window.EngbotNarration.pauseMs(text, currentGlobalSpeed));
+        }, delay);
     };
 
     utter.onerror = (e) => {
@@ -9937,6 +10071,10 @@ async function speakGatewayNeural(text, lang) {
         if (!audioToPlay) throw new Error('gateway audio unavailable');
 
         currentElevenAudio = audioToPlay;
+        currentElevenAudio.volume = isAudioMuted ? 0 : currentAudioVolume;
+        currentElevenAudio.playsInline = true;
+        currentElevenAudio.setAttribute('playsinline', '');
+        currentElevenAudio.setAttribute('webkit-playsinline', '');
         currentElevenAudio.playbackRate = currentGlobalSpeed;
 
         startBackgroundKeepAlive();
@@ -9948,11 +10086,13 @@ async function speakGatewayNeural(text, lang) {
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
-            setTimeout(() => {
+            const delay = document.hidden ? Math.min(50, breathDelay) : breathDelay;
+            if (utteranceTimeout) clearTimeout(utteranceTimeout);
+            utteranceTimeout = setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
                 currentSentenceIndex++;
                 speakCurrentSentence();
-            }, breathDelay);
+            }, delay);
         };
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
@@ -10111,6 +10251,10 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
         }
 
         currentElevenAudio = audioToPlay;
+        currentElevenAudio.volume = isAudioMuted ? 0 : currentAudioVolume;
+        currentElevenAudio.playsInline = true;
+        currentElevenAudio.setAttribute('playsinline', '');
+        currentElevenAudio.setAttribute('webkit-playsinline', '');
         currentElevenAudio.playbackRate = currentGlobalSpeed;
 
         startBackgroundKeepAlive();
@@ -10125,11 +10269,13 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
-            setTimeout(() => {
+            const delay = document.hidden ? Math.min(50, breathDelay) : breathDelay;
+            if (utteranceTimeout) clearTimeout(utteranceTimeout);
+            utteranceTimeout = setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
                 currentSentenceIndex++;
                 speakCurrentSentence();
-            }, breathDelay);
+            }, delay);
         };
 
         currentElevenAudio.onerror = () => {
@@ -10230,9 +10376,13 @@ async function speakElevenLabsSentence(text, lang = null) {
 
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
+        audio.volume = isAudioMuted ? 0 : currentAudioVolume;
+        audio.playsInline = true;
+        audio.setAttribute('playsinline', '');
+        audio.setAttribute('webkit-playsinline', '');
         audio._engbotObjectUrl = audioUrl;
         currentElevenAudio = audio;
-        audio.playbackRate = currentGlobalSpeed;
+        currentElevenAudio.playbackRate = currentGlobalSpeed;
 
         startBackgroundKeepAlive();
         requestScreenWakeLock();
@@ -10242,13 +10392,14 @@ async function speakElevenLabsSentence(text, lang = null) {
             URL.revokeObjectURL(audioUrl);
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             const breathDelay = window.EngbotNarration.pauseMs(textToRead, currentGlobalSpeed);
+            const delay = document.hidden ? Math.min(50, breathDelay) : breathDelay;
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
                 if (myToken === currentSpeechToken && isPlaying && !isPaused) {
                     currentSentenceIndex++;
                     speakCurrentSentence();
                 }
-            }, breathDelay);
+            }, delay);
         };
 
         audio.onerror = () => {
@@ -10369,7 +10520,22 @@ async function playChapterAudio(chapId, startSentenceIdx, forceReload = false) {
     DOM.playerDock.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
     DOM.playerDock.classList.add('translate-y-0', 'opacity-100');
 
-    DOM.dockCover.src = currentBook.coverUrl;
+    const dockFallback = document.getElementById('dockCoverFallback');
+    if (currentBook.coverUrl) {
+        DOM.dockCover.src = currentBook.coverUrl;
+        DOM.dockCover.classList.remove('hidden');
+        if (dockFallback) dockFallback.classList.add('hidden');
+    } else {
+        DOM.dockCover.src = '';
+        DOM.dockCover.classList.add('hidden');
+        if (dockFallback) dockFallback.classList.remove('hidden');
+    }
+    DOM.dockCover.onerror = () => {
+        DOM.dockCover.classList.add('hidden');
+        const fb = document.getElementById('dockCoverFallback');
+        if (fb) fb.classList.remove('hidden');
+    };
+
     DOM.dockTitle.textContent = EngbotCore.chapterTitle(chap, currentLang);
     DOM.dockSubtitle.textContent = currentBook.title;
     if (DOM.playerTotalTime) DOM.playerTotalTime.textContent = formatTime(EngbotCore.chapterStats(chap).seconds);
@@ -10394,7 +10560,16 @@ async function playChapterAudio(chapId, startSentenceIdx, forceReload = false) {
     }
 }
 
+let _lastPlayPauseToggle = 0;
+
 function togglePlayPause() {
+    const now = Date.now();
+    if (now - _lastPlayPauseToggle < 250) {
+        console.debug('[Player] Debouncing play/pause toggle');
+        return;
+    }
+    _lastPlayPauseToggle = now;
+
     if (readerActive && readerBook) {
         // If reader is open and audio is stopped or on a different chapter, start reading from current page
         if (!isPlaying || String(currentPlayingChapterId) !== String(readerChapterId)) {
@@ -10459,6 +10634,15 @@ function togglePlayPause() {
 
 function updatePlayerUIState(speaking) {
     if (DOM.dockPlayIcon) DOM.dockPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
+    if (DOM.btnPlayerPlayPause) {
+        DOM.btnPlayerPlayPause.setAttribute('aria-label', speaking ? 'Pause audio' : 'Play audio');
+        DOM.btnPlayerPlayPause.setAttribute('title', speaking ? 'Pause' : 'Play');
+        if (speaking) {
+            DOM.btnPlayerPlayPause.classList.add('ring-2', 'ring-cyan-400/60', 'shadow-[0_0_25px_rgba(0,240,255,0.6)]');
+        } else {
+            DOM.btnPlayerPlayPause.classList.remove('ring-2', 'ring-cyan-400/60', 'shadow-[0_0_25px_rgba(0,240,255,0.6)]');
+        }
+    }
     if (DOM.heroPlayIcon) DOM.heroPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
     if (DOM.heroBtnPlayIcon) DOM.heroBtnPlayIcon.textContent = speaking ? 'pause' : 'play_arrow';
     if (DOM.heroBtnPlayText) DOM.heroBtnPlayText.textContent = speaking ? 'Pause' : 'Listen now';
@@ -10498,6 +10682,22 @@ function startTimer() {
     timerInterval = setInterval(() => {
         secondsElapsed++;
         if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+        if (secondsElapsed % 2 === 0 && 'mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+            const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
+            if (currentChap) {
+                const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
+                const chapDuration = (chapStats && chapStats.seconds) 
+                    ? chapStats.seconds 
+                    : (currentChap.estimated_duration_sec || (sentenceQueue && sentenceQueue.length > 0 ? sentenceQueue.length * 4 : 60));
+                try {
+                    navigator.mediaSession.setPositionState({
+                        duration: Math.max(1, chapDuration),
+                        playbackRate: currentGlobalSpeed || 1.0,
+                        position: Math.min(secondsElapsed, chapDuration)
+                    });
+                } catch (e) {}
+            }
+        }
     }, 1000);
 }
 
@@ -11957,8 +12157,13 @@ function setupEventListeners() {
     if (DOM.btnPlayerRewind) {
         DOM.btnPlayerRewind.addEventListener('click', () => {
             if (sentenceQueue.length > 0) {
+                secondsElapsed = Math.max(0, secondsElapsed - 10);
                 currentSentenceIndex = Math.max(0, currentSentenceIndex - 2);
+                if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+                const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
+                if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
                 if (isPlaying && !isPaused) speakCurrentSentence();
+                updateMediaSession();
             }
         });
     }
@@ -11966,21 +12171,95 @@ function setupEventListeners() {
     if (DOM.btnPlayerForward) {
         DOM.btnPlayerForward.addEventListener('click', () => {
             if (sentenceQueue.length > 0) {
+                secondsElapsed += 10;
                 currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 2);
+                if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+                const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
+                if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
                 if (isPlaying && !isPaused) speakCurrentSentence();
+                updateMediaSession();
             }
         });
     }
 
     if (DOM.playerProgressContainer) {
-        DOM.playerProgressContainer.addEventListener('click', (e) => {
+        const progressContainer = DOM.playerProgressContainer;
+        const seekTooltip = document.getElementById('playerSeekTooltip');
+        let isScrubbing = false;
+
+        const handleSeek = (clientX) => {
             if (!sentenceQueue || sentenceQueue.length === 0) return;
-            const rect = DOM.playerProgressContainer.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
+            const rect = progressContainer.getBoundingClientRect();
+            const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
             const pct = Math.max(0, Math.min(1, clickX / rect.width));
-            currentSentenceIndex = Math.floor(pct * sentenceQueue.length);
-            if (isPlaying && !isPaused) speakCurrentSentence();
+            
+            const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
+            const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
+            const totalDuration = (chapStats && chapStats.seconds) 
+                ? chapStats.seconds 
+                : ((currentChap && currentChap.estimated_duration_sec) ? currentChap.estimated_duration_sec : (sentenceQueue.length * 4));
+            
+            secondsElapsed = Math.round(pct * totalDuration);
+            currentSentenceIndex = Math.min(sentenceQueue.length - 1, Math.floor(pct * sentenceQueue.length));
+
+            if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${Math.round(pct * 100)}%`;
+            if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+
+            if (isPlaying && !isPaused) {
+                speakCurrentSentence();
+            } else if (readerActive) {
+                highlightReaderSentence(currentSentenceIndex);
+            }
+            updateMediaSession();
+        };
+
+        progressContainer.addEventListener('click', (e) => {
+            handleSeek(e.clientX);
         });
+
+        progressContainer.addEventListener('mousemove', (e) => {
+            if (!seekTooltip || !sentenceQueue || sentenceQueue.length === 0) return;
+            const rect = progressContainer.getBoundingClientRect();
+            const hoverX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+            const pct = hoverX / rect.width;
+            
+            const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
+            const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
+            const totalDuration = (chapStats && chapStats.seconds) 
+                ? chapStats.seconds 
+                : ((currentChap && currentChap.estimated_duration_sec) ? currentChap.estimated_duration_sec : (sentenceQueue.length * 4));
+            
+            const hoverSec = Math.round(pct * totalDuration);
+            seekTooltip.textContent = formatTime(hoverSec);
+            seekTooltip.style.left = `${hoverX}px`;
+            seekTooltip.classList.remove('hidden', 'opacity-0');
+            seekTooltip.classList.add('opacity-100');
+        });
+
+        progressContainer.addEventListener('mouseleave', () => {
+            if (seekTooltip) {
+                seekTooltip.classList.add('opacity-0');
+                setTimeout(() => { if (seekTooltip && seekTooltip.classList.contains('opacity-0')) seekTooltip.classList.add('hidden'); }, 150);
+            }
+        });
+
+        // Touch scrubbing support on mobile
+        progressContainer.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches.length > 0) {
+                isScrubbing = true;
+                handleSeek(e.touches[0].clientX);
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (isScrubbing && e.touches && e.touches.length > 0) {
+                handleSeek(e.touches[0].clientX);
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            if (isScrubbing) isScrubbing = false;
+        }, { passive: true });
     }
 
     if (DOM.voiceModalSelect) {
