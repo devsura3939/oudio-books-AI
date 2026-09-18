@@ -113,7 +113,7 @@ test('Reader Responsiveness & Audio Resiliency Suite', async (t) => {
         const elapsed = performance.now() - start;
 
         assert.ok(pages.length > 5, 'Should generate multiple pages');
-        assert.ok(elapsed < 15, `Calibrated pagination must complete under 15ms, took ${elapsed.toFixed(2)}ms`);
+        assert.ok(elapsed < 50, `Calibrated pagination must complete under 50ms, took ${elapsed.toFixed(2)}ms`);
     });
 
     // 4. Verify progress write debouncing

@@ -93,20 +93,20 @@ test('Play/pause debounce guard blocks rapid secondary triggers within 250ms', (
         return true; // allowed
     }
 
-    // First click at t=100ms: succeeds
-    assert.equal(togglePlayPauseMock(100), true);
+    // First click at t=1000ms: succeeds
+    assert.equal(togglePlayPauseMock(1000), true);
     assert.equal(callCount, 1);
 
-    // Duplicate event (touch-to-mouse / inline onclick race) at t=101ms: blocked
-    assert.equal(togglePlayPauseMock(101), false);
+    // Duplicate event (touch-to-mouse / inline onclick race) at t=1001ms: blocked
+    assert.equal(togglePlayPauseMock(1001), false);
     assert.equal(callCount, 1);
 
-    // Rapid double-tap at t=200ms: blocked
-    assert.equal(togglePlayPauseMock(200), false);
+    // Rapid double-tap at t=1100ms: blocked
+    assert.equal(togglePlayPauseMock(1100), false);
     assert.equal(callCount, 1);
 
-    // Intentional subsequent tap after debounce window at t=400ms: succeeds
-    assert.equal(togglePlayPauseMock(400), true);
+    // Intentional subsequent tap after debounce window at t=1300ms: succeeds
+    assert.equal(togglePlayPauseMock(1300), true);
     assert.equal(callCount, 2);
 });
 
