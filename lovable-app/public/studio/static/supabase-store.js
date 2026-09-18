@@ -698,7 +698,7 @@
       var extra = {};
       Object.keys(chapter).forEach(function (k) {
         if (
-          ["id", "row_id", "title", "text", "text_ka", "word_count", "estimated_duration_sec"].indexOf(
+          ["id", "row_id", "title", "text", "text_ka", "word_count", "estimated_duration_sec", "status"].indexOf(
             k,
           ) === -1
         ) {
