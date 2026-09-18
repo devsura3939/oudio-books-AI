@@ -1,8 +1,8 @@
 (function (root, factory) {
-    const api = factory();
+    const api = factory(root);
     if (typeof module === 'object' && module.exports) module.exports = api;
     else root.EngbotTranslationMachine = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
     'use strict';
     const encoder = new TextEncoder();
     // Exact UTF-8 partitions: provider limits count bytes, not Georgian letters.
@@ -135,9 +135,10 @@
 
             // Emergency local AI fallback: if server, google, and mymemory failed or are paused,
             // directly check if a connected local LM Studio model is ready to translate!
-            if (typeof root !== 'undefined' && root.EngbotLmStudio?.available?.()) {
+            const lmClient = (typeof globalThis !== 'undefined' && globalThis.EngbotLmStudio) || (typeof window !== 'undefined' && window.EngbotLmStudio) || (typeof root !== 'undefined' ? root.EngbotLmStudio : null);
+            if (lmClient?.available?.()) {
                 try {
-                    const lmDirect = await root.EngbotLmStudio.translateDirect(source, targetLang, {
+                    const lmDirect = await lmClient.translateDirect(source, targetLang, {
                         signal,
                         contextBefore: options?.context_before || '',
                         contextAfter: options?.context_after || '',
