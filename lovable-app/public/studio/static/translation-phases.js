@@ -30,7 +30,11 @@
     }
     function normalizeOutput(source, value) {
         if (!value) return null;
-        if (typeof value === 'string' && value.trim()) return { translation: value.trim(), uncertain: false };
+        if (typeof value === 'string' && value.trim()) {
+            const trimmed = value.trim();
+            const paras = trimmed.split(/\n\s*\n/).map((text, id) => ({ id, text }));
+            return { translation: trimmed, paragraphs: paras, uncertain: false };
+        }
         if (typeof value !== 'object') return null;
         if (Object.prototype.hasOwnProperty.call(value, 'paragraphs')) {
             const count = source.trim().split(/\n\s*\n/).length;
@@ -38,8 +42,16 @@
             if (value.paragraphs.some((p,id) => !p || p.id !== id || typeof p.text !== 'string' || !p.text.trim() || /\n\s*\n/.test(p.text.trim()))) return null;
             return {...value, translation:value.paragraphs.map(p=>p.text.trim()).join('\n\n')};
         }
-        if (typeof value.translation === 'string' && value.translation.trim()) return value;
-        if (typeof value.text === 'string' && value.text.trim()) return { ...value, translation: value.text.trim(), uncertain: value.uncertain === true };
+        if (typeof value.translation === 'string' && value.translation.trim()) {
+            const trimmed = value.translation.trim();
+            const paras = trimmed.split(/\n\s*\n/).map((text, id) => ({ id, text }));
+            return { ...value, translation: trimmed, paragraphs: paras, uncertain: value.uncertain === true };
+        }
+        if (typeof value.text === 'string' && value.text.trim()) {
+            const trimmed = value.text.trim();
+            const paras = trimmed.split(/\n\s*\n/).map((text, id) => ({ id, text }));
+            return { ...value, translation: trimmed, paragraphs: paras, uncertain: value.uncertain === true };
+        }
         return null;
     }
     async function bounded(fn, parent, milliseconds) {

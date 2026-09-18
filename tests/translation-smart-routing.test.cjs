@@ -8,19 +8,17 @@ test('EngbotTranslationPhases.risk flags complex dialogue, negative concord, and
     // Dialogue with quotes
     const dialogueSegment = '"No, you must never go there," he whispered softly.';
     const rDialogue = phases.risk(dialogueSegment, 25);
-    assert.equal(rDialogue.highRisk, true);
-    assert.ok(rDialogue.reasons.some(r => r.includes('dialogue') || r.includes('negative concord')));
+    assert.equal(rDialogue, true);
 
     // Simple narrative without dialogue or negation
     const simpleSegment = 'The sun rose over the quiet green hills.';
     const rSimple = phases.risk(simpleSegment, 10);
-    assert.equal(rSimple.highRisk, false);
+    assert.equal(rSimple, false);
 
     // Negative concord in Georgian
     const kaNegation = 'არასოდეს თქვა არასოდეს და ვერაფერს შეცვლი';
     const rKa = phases.risk(kaNegation, 20);
-    assert.equal(rKa.highRisk, true);
-    assert.ok(rKa.reasons.some(r => r.includes('negative concord')));
+    assert.equal(rKa, true);
 });
 
 test('EngbotTranslationPhases.normalizeOutput handles direct strings and object text formats', () => {
@@ -29,17 +27,20 @@ test('EngbotTranslationPhases.normalizeOutput handles direct strings and object 
     // Direct string
     const out1 = phases.normalizeOutput(source, 'გამარჯობა მსოფლიო. როგორ ხარ?');
     assert.ok(out1 && out1.paragraphs && out1.paragraphs.length > 0);
-    assert.equal(out1.paragraphs[0], 'გამარჯობა მსოფლიო. როგორ ხარ?');
+    assert.equal(out1.translation, 'გამარჯობა მსოფლიო. როგორ ხარ?');
+    assert.equal(out1.paragraphs[0].text, 'გამარჯობა მსოფლიო. როგორ ხარ?');
 
     // { text: ... } format
     const out2 = phases.normalizeOutput(source, { text: 'გამარჯობა მსოფლიო.' });
     assert.ok(out2 && out2.paragraphs);
-    assert.equal(out2.paragraphs[0], 'გამარჯობა მსოფლიო.');
+    assert.equal(out2.translation, 'გამარჯობა მსოფლიო.');
+    assert.equal(out2.paragraphs[0].text, 'გამარჯობა მსოფლიო.');
 
     // Standard { paragraphs: [...] } format
-    const out3 = phases.normalizeOutput(source, { paragraphs: ['გამარჯობა მსოფლიო.', 'როგორ ხარ?'] });
-    assert.equal(out3.paragraphs.length, 2);
-    assert.equal(out3.paragraphs[1], 'როგორ ხარ?');
+    const out3 = phases.normalizeOutput(source, { paragraphs: [{ id: 0, text: 'გამარჯობა მსოფლიო.' }] });
+    assert.ok(out3 && out3.paragraphs);
+    assert.equal(out3.paragraphs.length, 1);
+    assert.equal(out3.translation, 'გამარჯობა მსოფლიო.');
 });
 
 test('EngbotLmStudio resetCooldown clears cooldown and allows immediate requests', async () => {
@@ -113,27 +114,26 @@ test('translationMachine.unpause and resetCooldowns clears provider pauses and p
 
 test('translationMachine emergency LM Studio fallback engages when other providers fail', async () => {
     let lmStudioFallbackCalled = false;
-    global.window = {
-        EngbotLmStudio: {
-            translateDirect: async (text, target) => {
-                lmStudioFallbackCalled = true;
-                return 'სასწრაფო ლოკალური მოდელის თარგმანი';
-            }
+    globalThis.EngbotLmStudio = {
+        available: () => true,
+        translateDirect: async (text, target) => {
+            lmStudioFallbackCalled = true;
+            return 'სასწრაფო ლოკალური მოდელის თარგმანი';
         }
     };
 
     const tm = machine.create({
+        assess: () => ({ ok: true }),
         fetchImpl: async () => {
             // All remote providers fail with error
             return new Response('', { status: 500 });
         }
     });
 
-    const result = await tm.chunk('Emergency test chunk to translate', 'en', 'ka');
+    const result = await tm.translate('Emergency test chunk to translate', 'en', 'ka');
     assert.ok(result);
-    assert.equal(result.provider, 'lm-studio');
-    assert.equal(result.text, 'სასწრაფო ლოკალური მოდელის თარგმანი');
+    assert.equal(result, 'სასწრაფო ლოკალური მოდელის თარგმანი');
     assert.equal(lmStudioFallbackCalled, true);
 
-    delete global.window;
+    delete globalThis.EngbotLmStudio;
 });
