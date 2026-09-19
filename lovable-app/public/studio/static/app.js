@@ -9812,32 +9812,83 @@ let currentSpeechToken = 0;
 // Bumped only on a real stop/seek/chapter change — NOT when advancing to the
 // next sentence — so the rolling prefetch window survives sentence transitions.
 let narrationGeneration = 0;
+let sentenceRetryCount = 0;
 
-function pauseFailedNarration(token) {
+function pauseFailedNarration(token, reason = '') {
     if (token !== currentSpeechToken || !isPlaying || isPaused) return;
+    if (sentenceRetryCount < 2) {
+        sentenceRetryCount++;
+        console.warn(`[Narration] Transient failure on sentence ${currentSentenceIndex}. Auto-retrying (attempt ${sentenceRetryCount})...`);
+        setTimeout(() => {
+            if (token === currentSpeechToken && isPlaying && !isPaused) {
+                speakCurrentSentence();
+            }
+        }, 800 * sentenceRetryCount);
+        return;
+    }
+    sentenceRetryCount = 0;
     isPaused = true;
     isSpeakingLock = false;
     updatePlayerUIState(false);
-    showToast('Voice playback is unavailable. Your place is saved; press Play to retry this sentence or choose another voice.', 'error');
+    showToast(
+        reason ? `Voice playback paused (${reason}). Press Play to resume.` : 'Voice playback is temporarily unavailable. Your place is saved; press Play to retry this sentence or choose another voice.',
+        'error'
+    );
 }
 
 function playUltimateFallbackTTS(text, lang, token) {
-    const chunks = window.EngbotNarration.chunks(text, 200);
+    const chunks = (window.EngbotNarration && window.EngbotNarration.chunks)
+        ? window.EngbotNarration.chunks(text, 200)
+        : [text];
     let index = 0;
     const playChunk = () => {
         if (token !== currentSpeechToken || !isPlaying || isPaused) return;
         if (index >= chunks.length) {
+            sentenceRetryCount = 0;
             currentSentenceIndex++;
             speakCurrentSentence();
             return;
         }
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(chunks[index])}`;
-        const audio = new Audio(url);
+        const chunkText = chunks[index];
+        // Tier A: Direct Server Neural audio endpoint
+        const serverUrl = `${getTTSApiEndpoint()}?text=${encodeURIComponent(chunkText)}&preset=${encodeURIComponent(selectedEngbotPreset(lang))}&lang=${encodeURIComponent(lang)}`;
+        const audio = new Audio(serverUrl);
         currentElevenAudio = audio;
         audio.playbackRate = currentGlobalSpeed;
+        audio.playsInline = true;
+        audio.setAttribute('playsinline', '');
+        audio.setAttribute('webkit-playsinline', '');
+        audio.volume = isAudioMuted ? 0 : currentAudioVolume;
         audio.onended = () => { index++; playChunk(); };
-        audio.onerror = () => pauseFailedNarration(token);
-        audio.play().catch(() => pauseFailedNarration(token));
+        audio.onerror = () => {
+            // Tier B: Web Speech API fallback
+            if ('speechSynthesis' in window) {
+                const utter = new SpeechSynthesisUtterance(chunkText);
+                utter.lang = lang === 'ka' ? 'ka-GE' : 'en-US';
+                utter.rate = currentGlobalSpeed * (lang === 'ka' ? 0.92 : 1.0);
+                utter.pitch = currentPitch;
+                utter.volume = isAudioMuted ? 0 : currentAudioVolume;
+                utter.onend = () => { index++; playChunk(); };
+                utter.onerror = () => pauseFailedNarration(token, 'Speech synthesis error');
+                window.speechSynthesis.speak(utter);
+            } else {
+                pauseFailedNarration(token, 'Audio playback failed');
+            }
+        };
+        audio.play().catch(() => {
+            if ('speechSynthesis' in window) {
+                const utter = new SpeechSynthesisUtterance(chunkText);
+                utter.lang = lang === 'ka' ? 'ka-GE' : 'en-US';
+                utter.rate = currentGlobalSpeed * (lang === 'ka' ? 0.92 : 1.0);
+                utter.pitch = currentPitch;
+                utter.volume = isAudioMuted ? 0 : currentAudioVolume;
+                utter.onend = () => { index++; playChunk(); };
+                utter.onerror = () => pauseFailedNarration(token, 'Speech synthesis error');
+                window.speechSynthesis.speak(utter);
+            } else {
+                pauseFailedNarration(token, 'Audio play interrupted');
+            }
+        });
     };
     startBackgroundKeepAlive();
     requestScreenWakeLock();
@@ -9990,13 +10041,19 @@ function prefetchCacheTake(index) {
 }
 
 // ── Neural narration through the app's own TTS endpoint ─────────────────────
-// speechSynthesis is unreliable inside a mobile browser (and has no Georgian
-// voice at all on Android), and the free HF edge-tts mirrors are frequently
-// down — both meant "press play, hear nothing". /api/tts returns a real audio
-// file from the Lovable AI Gateway, which plays everywhere. A 404 (static
-// hosting) disables the tier and the original engines take over untouched.
-let gatewayTTSAvailable = !_isStaticHost;
+// Returns high-fidelity MP3 neural audio (Microsoft Neural Edge-TTS ka-GE & en)
+// from the server backend on Oracle Cloud VM (92.5.71.162.sslip.io).
+// Plays natively and reliably across mobile browsers (Android/iOS) even on GitHub Pages.
+let gatewayTTSAvailable = true;
+let gatewayConsecutiveFailures = 0;
 const gatewayTTSCache = new Map(); // `${preset}|${text}` -> blob url
+
+function getTTSApiEndpoint() {
+    const configured = typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL;
+    if (configured) return `${configured.replace(/\/+$/, '')}/api/tts`;
+    if (_isStaticHost) return 'https://92.5.71.162.sslip.io/api/tts';
+    return '/api/tts';
+}
 
 function gatewayPresetForLang(lang) {
     return selectedEngbotPreset(lang === 'ka' ? 'ka' : 'en');
@@ -10020,13 +10077,15 @@ window.clearNarrationBuffers = clearNarrationBuffers;
 
 
 async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority = 'high') {
-    if (!gatewayTTSAvailable) return null;
+    if (!gatewayTTSAvailable && gatewayConsecutiveFailures >= 3) return null;
     const preset = overridePreset || gatewayPresetForLang(lang);
     const spoken = lang === 'ka'
         ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), detectSentenceType(text, 'ka'))
         : applyEnglishProsody(verbalizeEnglishTextForTTS(text), detectSentenceType(text, 'en'));
     if (!spoken || !spoken.trim()) return null;
 
+    const v = engbotVoice(preset);
+    const edgeVoice = v ? v.edgeVoice : (lang === 'ka' ? 'ka-GE-GiorgiNeural' : 'en-GB-RyanNeural');
     const key = preset + '|' + spoken;
     if (gatewayTTSCache.has(key)) return gatewayTTSCache.get(key);
 
@@ -10035,7 +10094,7 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority
         const cachedBlob = await getAudioFromPersistentCache(key);
         if (cachedBlob) {
             const url = URL.createObjectURL(cachedBlob);
-            if (gatewayTTSCache.size > 60) {
+            if (gatewayTTSCache.size > 80) {
                 const oldest = gatewayTTSCache.keys().next().value;
                 try { URL.revokeObjectURL(gatewayTTSCache.get(oldest)); } catch (e) {}
                 gatewayTTSCache.delete(oldest);
@@ -10048,28 +10107,39 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority
     }
 
     try {
-        const res = await window.EngbotProviders.request('/api/tts', {
+        const ttsEndpoint = getTTSApiEndpoint();
+        const res = await window.EngbotProviders.request(ttsEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: spoken.slice(0, 3800), preset }),
+            body: JSON.stringify({
+                text: spoken.slice(0, 3800),
+                preset,
+                voice: edgeVoice,
+                rate: currentGlobalSpeed,
+                pitch: currentPitch,
+                lang
+            }),
             priority: priority || 'high',
-        }, { timeoutMs: 16_000, provider: 'Lumina TTS gateway', priority: priority || 'high' });
+        }, { timeoutMs: 18_000, provider: 'Lumina TTS gateway', priority: priority || 'high' });
 
-        // Only disable gateway on fatal unauthorized/not-found codes
-        if (res.status === 404 || res.status === 401 || res.status === 403 || res.status === 402) {
-            gatewayTTSAvailable = false;
-            console.warn('[Lumina TTS] gateway unavailable (' + res.status + ') — using browser/HF engines.');
-            return null;
-        }
         if (!res.ok) {
-            console.warn('[Lumina TTS] gateway returned non-ok status (' + res.status + ') — transient failure.');
+            gatewayConsecutiveFailures++;
+            console.warn('[Lumina TTS] server returned non-ok status (' + res.status + ')');
+            if (res.status === 404 || res.status === 401 || res.status === 403) {
+                if (gatewayConsecutiveFailures >= 3) {
+                    gatewayTTSAvailable = false;
+                }
+            }
             return null;
         }
+
+        gatewayConsecutiveFailures = 0;
+        gatewayTTSAvailable = true;
         const blob = await res.blob();
         saveAudioToPersistentCache(key, blob);
 
         const url = URL.createObjectURL(blob);
-        if (gatewayTTSCache.size > 60) {
+        if (gatewayTTSCache.size > 80) {
             const oldest = gatewayTTSCache.keys().next().value;
             try { URL.revokeObjectURL(gatewayTTSCache.get(oldest)); } catch (e) {}
             gatewayTTSCache.delete(oldest);
@@ -10077,7 +10147,7 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority
         gatewayTTSCache.set(key, url);
         return url;
     } catch (e) {
-        // Do NOT permanently set gatewayTTSAvailable = false on transient timeouts or network drops!
+        gatewayConsecutiveFailures++;
         console.warn('[Lumina TTS] gateway transient failure — will retry or fallback for this sentence:', e && e.message);
         return null;
     }
@@ -10182,8 +10252,9 @@ async function speakGatewayNeural(text, lang) {
 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
+            sentenceRetryCount = 0;
             const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
-            const delay = document.hidden ? Math.min(50, breathDelay) : breathDelay;
+            const delay = document.hidden ? 0 : breathDelay;
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
@@ -10193,10 +10264,17 @@ async function speakGatewayNeural(text, lang) {
         };
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
-            speakStandardSentence(text, lang);
+            console.warn('[speakGatewayNeural] Audio playback error — falling back to free neural/standard');
+            speakFreeNeural(text, lang);
         };
 
-        await currentElevenAudio.play();
+        try {
+            await currentElevenAudio.play();
+        } catch (playErr) {
+            console.warn('[speakGatewayNeural] play() was deferred by browser policy, unlocking:', playErr);
+            ensureAudioUnlocked();
+            await currentElevenAudio.play();
+        }
         isSpeakingLock = false;
     } catch (e) {
         if (myToken !== currentSpeechToken) return;

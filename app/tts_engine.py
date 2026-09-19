@@ -2,7 +2,7 @@ import asyncio
 import re
 import os
 import hashlib
-from typing import List, Dict, Callable, Optional, AsyncGenerator
+from typing import List, Dict, Callable, Optional, AsyncGenerator, Union
 from pathlib import Path
 import edge_tts
 
@@ -252,3 +252,145 @@ async def generate_voice_preview(
         await communicate.save(str(filepath))
         
     return f"/api/audio/preview/{filename}"
+
+
+TTS_CACHE_DIR = AUDIO_DIR / "tts_cache"
+TTS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+PRESET_TO_EDGE_VOICE: Dict[str, str] = {
+    # 🇬🇪 Georgian Presets
+    "ka-male": "ka-GE-GiorgiNeural",
+    "ka-actor": "ka-GE-GiorgiNeural",
+    "ka-female": "ka-GE-EkaNeural",
+    "ka-soft": "ka-GE-EkaNeural",
+    "ka-ge-giorgi": "ka-GE-GiorgiNeural",
+    "ka-ge-eka": "ka-GE-EkaNeural",
+
+    # 🇬🇧 English British Presets
+    "en-gb-male": "en-GB-RyanNeural",
+    "en-gb-female": "en-GB-SoniaNeural",
+    "en-gb-libby": "en-GB-LibbyNeural",
+    "en-gb-thomas": "en-GB-ThomasNeural",
+
+    # 🇺🇸 English American Presets
+    "en-us-storyteller": "en-US-ChristopherNeural",
+    "en-us-aria": "en-US-AriaNeural",
+    "en-us-male": "en-US-GuyNeural",
+    "en-us-female": "en-US-JennyNeural",
+    "en-us-eric": "en-US-EricNeural",
+    "en-us-ava": "en-US-AvaNeural",
+    "en-neutral": "en-US-AriaNeural",
+
+    # 🌍 Multilingual
+    "multi-puck": "en-US-GuyNeural",
+    "multi-fenrir": "en-US-ChristopherNeural",
+}
+
+def resolve_tts_voice(preset: Optional[str] = None, voice: Optional[str] = None, text: str = "", lang: Optional[str] = None) -> str:
+    """Intelligently map presets or custom voice IDs to verified Edge-TTS neural voices."""
+    if voice and isinstance(voice, str) and voice.strip():
+        # Strip descriptive labels like 'ka-GE-GiorgiNeural - ka-GE (Male)'
+        clean = voice.split(" - ")[0].split("(")[0].strip()
+        if clean:
+            return clean
+
+    if preset and isinstance(preset, str) and preset.strip():
+        clean_preset = preset.strip().lower()
+        if clean_preset.startswith("preset:"):
+            clean_preset = clean_preset[7:]
+        if clean_preset in PRESET_TO_EDGE_VOICE:
+            return PRESET_TO_EDGE_VOICE[clean_preset]
+
+    # Inspect language or text characters
+    is_ka = (lang and str(lang).lower().startswith("ka")) or bool(re.search(r"[\u10A0-\u10FF]", text))
+    if is_ka:
+        return "ka-GE-GiorgiNeural"
+    return "en-GB-RyanNeural"
+
+def format_tts_rate(rate) -> str:
+    """Normalize speech rate delta into Edge-TTS percentage format (e.g. '+0%', '-10%')."""
+    if rate is None:
+        return "+0%"
+    if isinstance(rate, (int, float)):
+        # If passed as speed multiplier (e.g. 1.2x)
+        if 0.2 <= rate <= 3.0:
+            pct = int(round((float(rate) - 1.0) * 100))
+        else:
+            pct = int(round(float(rate)))
+        return f"{pct:+d}%"
+    s = str(rate).strip()
+    if s.endswith("%"):
+        return s if s.startswith(("+", "-")) else f"+{s}"
+    try:
+        f = float(s)
+        if 0.2 <= f <= 3.0:
+            pct = int(round((f - 1.0) * 100))
+        else:
+            pct = int(round(f))
+        return f"{pct:+d}%"
+    except Exception:
+        return "+0%"
+
+def format_tts_pitch(pitch) -> str:
+    """Normalize pitch delta into Edge-TTS Hertz format (e.g. '+0Hz', '-2Hz')."""
+    if pitch is None:
+        return "+0Hz"
+    if isinstance(pitch, (int, float)):
+        hz = int(round(float(pitch)))
+        return f"{hz:+d}Hz"
+    s = str(pitch).strip()
+    if s.endswith("Hz"):
+        return s if s.startswith(("+", "-")) else f"+{s}"
+    try:
+        hz = int(round(float(s)))
+        return f"{hz:+d}Hz"
+    except Exception:
+        return "+0Hz"
+
+async def synthesize_single_speech(
+    text: str,
+    preset: Optional[str] = None,
+    voice: Optional[str] = None,
+    rate: Union[str, float] = "+0%",
+    pitch: Union[str, float] = "+0Hz",
+    lang: Optional[str] = None
+) -> bytes:
+    """Synthesizes a single sentence or paragraph directly to MP3 audio bytes with LRU disk caching."""
+    chosen_voice = resolve_tts_voice(preset=preset, voice=voice, text=text, lang=lang)
+    rate_str = format_tts_rate(rate)
+    pitch_str = format_tts_pitch(pitch)
+
+    is_ka = chosen_voice.startswith("ka-") or (lang and str(lang).lower().startswith("ka")) or bool(re.search(r"[\u10A0-\u10FF]", text))
+    spoken_text = verbalize_georgian_for_tts(text) if is_ka else text
+
+    # Compute cache key
+    key = f"{chosen_voice}_{rate_str}_{pitch_str}_{spoken_text.strip()}"
+    hash_key = hashlib.sha256(key.encode("utf-8")).hexdigest()[:24]
+    cache_path = TTS_CACHE_DIR / f"{hash_key}.mp3"
+
+    if cache_path.exists() and cache_path.stat().st_size > 0:
+        return cache_path.read_bytes()
+
+    communicate = edge_tts.Communicate(
+        text=spoken_text,
+        voice=chosen_voice,
+        rate=rate_str,
+        pitch=pitch_str
+    )
+
+    audio_data = bytearray()
+    async for chunk_data in communicate.stream():
+        if chunk_data["type"] == "audio":
+            audio_data.extend(chunk_data["data"])
+
+    if not audio_data:
+        raise RuntimeError(f"Edge-TTS returned no audio for voice '{chosen_voice}'")
+
+    audio_bytes = bytes(audio_data)
+    try:
+        cache_path.write_bytes(audio_bytes)
+    except Exception as err:
+        print(f"[tts_engine] Disk cache write failed: {err}")
+
+    return audio_bytes
+

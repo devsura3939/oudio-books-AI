@@ -22,7 +22,7 @@ from app.models import (
 from app.pdf_processor import extract_pdf_data
 from app.tts_engine import (
     get_available_voices, synthesize_text_to_file,
-    generate_voice_preview, PREVIEW_DIR
+    generate_voice_preview, synthesize_single_speech, PREVIEW_DIR
 )
 from app.storage import (
     save_book_session, get_book_session, tag_mp3_metadata,
@@ -111,6 +111,67 @@ async def preview_voice(req: PreviewVoiceRequest):
         )
         return {"preview_url": url}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/tts")
+@app.get("/api/tts")
+async def tts_endpoint(
+    req: Request,
+    text: Optional[str] = None,
+    preset: Optional[str] = None,
+    voice: Optional[str] = None,
+    rate: Optional[str] = None,
+    pitch: Optional[str] = None,
+    lang: Optional[str] = None
+):
+    """
+    High-performance, zero-friction single-sentence Neural TTS endpoint.
+    Produces high-fidelity audio (MP3) for Georgian, English, and international books.
+    Works seamlessly across mobile browsers (Android/iOS) without Web Speech API limits.
+    """
+    try:
+        body = {}
+        if req.method == "POST":
+            try:
+                body = await req.json()
+            except Exception:
+                body = {}
+
+        target_text = body.get("text") or text or ""
+        target_text = str(target_text).strip()
+        if not target_text:
+            raise HTTPException(status_code=400, detail="Text is required for TTS synthesis")
+
+        target_preset = body.get("preset") or preset or ""
+        target_voice = body.get("voice") or voice or ""
+        target_rate = body.get("rate") if body.get("rate") is not None else (rate or "+0%")
+        target_pitch = body.get("pitch") if body.get("pitch") is not None else (pitch or "+0Hz")
+        target_lang = body.get("lang") or body.get("language") or lang or ""
+
+        audio_bytes = await synthesize_single_speech(
+            text=target_text,
+            preset=target_preset,
+            voice=target_voice,
+            rate=target_rate,
+            pitch=target_pitch,
+            lang=target_lang
+        )
+
+        return Response(
+            content=audio_bytes,
+            media_type="audio/mpeg",
+            headers={
+                "Content-Type": "audio/mpeg",
+                "Cache-Control": "public, max-age=86400",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[api/tts] Synthesis failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/server-translate")
