@@ -9814,9 +9814,9 @@ let currentSpeechToken = 0;
 let narrationGeneration = 0;
 let sentenceRetryCount = 0;
 
-function pauseFailedNarration(token, reason = '') {
+function pauseFailedNarration(token, reason = '', forcePause = false) {
     if (token !== currentSpeechToken || !isPlaying || isPaused) return;
-    if (sentenceRetryCount < 2) {
+    if (!forcePause && sentenceRetryCount < 2) {
         sentenceRetryCount++;
         console.warn(`[Narration] Transient failure on sentence ${currentSentenceIndex}. Auto-retrying (attempt ${sentenceRetryCount})...`);
         setTimeout(() => {
@@ -9850,45 +9850,52 @@ function playUltimateFallbackTTS(text, lang, token) {
             return;
         }
         const chunkText = chunks[index];
-        // Tier A: Direct Server Neural audio endpoint
-        const serverUrl = `${getTTSApiEndpoint()}?text=${encodeURIComponent(chunkText)}&preset=${encodeURIComponent(selectedEngbotPreset(lang))}&lang=${encodeURIComponent(lang)}`;
-        const audio = new Audio(serverUrl);
+        const serverEndpoint = (typeof getTTSApiEndpoint === 'function')
+            ? getTTSApiEndpoint()
+            : 'https://92.5.71.162.sslip.io/api/tts';
+        const preset = (typeof selectedEngbotPreset === 'function')
+            ? selectedEngbotPreset(lang)
+            : (lang === 'ka' ? 'ka-male' : 'en-gb-male');
+        const url = `${serverEndpoint}?ie=UTF-8&tl=${encodeURIComponent(lang)}&client=tw-ob&q=${encodeURIComponent(chunkText)}&text=${encodeURIComponent(chunkText)}&preset=${encodeURIComponent(preset)}`;
+        const audio = new Audio(url);
         currentElevenAudio = audio;
         audio.playbackRate = currentGlobalSpeed;
-        audio.playsInline = true;
-        audio.setAttribute('playsinline', '');
-        audio.setAttribute('webkit-playsinline', '');
-        audio.volume = isAudioMuted ? 0 : currentAudioVolume;
+        if (typeof audio.setAttribute === 'function') {
+            audio.playsInline = true;
+            audio.setAttribute('playsinline', '');
+            audio.setAttribute('webkit-playsinline', '');
+        }
+        if (typeof isAudioMuted !== 'undefined') {
+            audio.volume = isAudioMuted ? 0 : currentAudioVolume;
+        }
         audio.onended = () => { index++; playChunk(); };
         audio.onerror = () => {
-            // Tier B: Web Speech API fallback
-            if ('speechSynthesis' in window) {
+            if ('speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined') {
                 const utter = new SpeechSynthesisUtterance(chunkText);
                 utter.lang = lang === 'ka' ? 'ka-GE' : 'en-US';
                 utter.rate = currentGlobalSpeed * (lang === 'ka' ? 0.92 : 1.0);
-                utter.pitch = currentPitch;
-                utter.volume = isAudioMuted ? 0 : currentAudioVolume;
                 utter.onend = () => { index++; playChunk(); };
-                utter.onerror = () => pauseFailedNarration(token, 'Speech synthesis error');
+                utter.onerror = () => pauseFailedNarration(token, 'Speech synthesis error', true);
                 window.speechSynthesis.speak(utter);
             } else {
-                pauseFailedNarration(token, 'Audio playback failed');
+                pauseFailedNarration(token, 'Audio playback failed', true);
             }
         };
-        audio.play().catch(() => {
-            if ('speechSynthesis' in window) {
-                const utter = new SpeechSynthesisUtterance(chunkText);
-                utter.lang = lang === 'ka' ? 'ka-GE' : 'en-US';
-                utter.rate = currentGlobalSpeed * (lang === 'ka' ? 0.92 : 1.0);
-                utter.pitch = currentPitch;
-                utter.volume = isAudioMuted ? 0 : currentAudioVolume;
-                utter.onend = () => { index++; playChunk(); };
-                utter.onerror = () => pauseFailedNarration(token, 'Speech synthesis error');
-                window.speechSynthesis.speak(utter);
-            } else {
-                pauseFailedNarration(token, 'Audio play interrupted');
-            }
-        });
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(() => {
+                if ('speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined') {
+                    const utter = new SpeechSynthesisUtterance(chunkText);
+                    utter.lang = lang === 'ka' ? 'ka-GE' : 'en-US';
+                    utter.rate = currentGlobalSpeed * (lang === 'ka' ? 0.92 : 1.0);
+                    utter.onend = () => { index++; playChunk(); };
+                    utter.onerror = () => pauseFailedNarration(token, 'Speech synthesis error', true);
+                    window.speechSynthesis.speak(utter);
+                } else {
+                    pauseFailedNarration(token, 'Audio play interrupted', true);
+                }
+            });
+        }
     };
     startBackgroundKeepAlive();
     requestScreenWakeLock();
