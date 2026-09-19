@@ -16,8 +16,59 @@ let currentBook = null;
 let currentPlayingChapterId = null;
 let isPlaying = false;
 let isPaused = false;
-let isUserManuallyNavigating = false;
-let currentGlobalSpeed = 1.0;
+let currentGlobalSpeed = (function() {
+    try {
+        const saved = parseFloat(localStorage.getItem('lumina_playback_speed'));
+        if (!isNaN(saved) && saved >= 0.5 && saved <= 2.0) {
+            return Math.round(saved * 20) / 20;
+        }
+    } catch (_) {}
+    return 1.0;
+})();
+try { window.currentGlobalSpeed = currentGlobalSpeed; } catch (_) {}
+
+function applyAudioPlaybackRate(audio, speed = currentGlobalSpeed) {
+    if (!audio) return;
+    const rate = Math.min(2, Math.max(0.5, Math.round((speed || 1.0) * 20) / 20));
+    try { audio.defaultPlaybackRate = rate; } catch (e) {}
+    try { audio.playbackRate = rate; } catch (e) {}
+    try {
+        if (!audio._rateListenersBound && typeof audio.addEventListener === 'function') {
+            audio._rateListenersBound = true;
+            const reapply = () => {
+                try {
+                    const r = Math.min(2, Math.max(0.5, currentGlobalSpeed || 1.0));
+                    audio.defaultPlaybackRate = r;
+                    audio.playbackRate = r;
+                } catch (_) {}
+            };
+            audio.addEventListener('play', reapply);
+            audio.addEventListener('loadedmetadata', reapply);
+            audio.addEventListener('canplay', reapply);
+        }
+    } catch (e) {}
+}
+window.applyAudioPlaybackRate = applyAudioPlaybackRate;
+
+function initGlobalPlaybackSpeed() {
+    try {
+        const saved = parseFloat(localStorage.getItem('lumina_playback_speed'));
+        if (!isNaN(saved) && saved >= 0.5 && saved <= 2.0) {
+            currentGlobalSpeed = Math.round(saved * 20) / 20;
+        }
+    } catch (_) {}
+    try { window.currentGlobalSpeed = currentGlobalSpeed; } catch (_) {}
+    const text = `${currentGlobalSpeed.toFixed(2)}x`;
+    if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = text;
+    if (DOM.btnDockSpeedMobile) DOM.btnDockSpeedMobile.textContent = text;
+    if (DOM.modalSpeedSlider) DOM.modalSpeedSlider.value = currentGlobalSpeed;
+    if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = text;
+    const badgeDesktop = document.getElementById('playerSpeedBadgeDesktop');
+    if (badgeDesktop) badgeDesktop.textContent = text;
+    const badgeMobile = document.getElementById('btnPlayerSpeedMobile');
+    if (badgeMobile) badgeMobile.textContent = text;
+}
+window.initGlobalPlaybackSpeed = initGlobalPlaybackSpeed;
 let currentPitch = 1.0;
 let currentLang = 'en'; // 'en' or 'ka'
 let selectedVoiceURI = '';
@@ -2148,6 +2199,7 @@ function cacheDOM() {
 async function init() {
     if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
     cacheDOM();
+    initGlobalPlaybackSpeed();
     initBackgroundAudioKeepAlive();
     initMediaSessionHandlers();
     checkAuthState(); // Immediately lock dashboard if not authenticated
@@ -3663,13 +3715,103 @@ function closeMobileNav() {
     }
 }
 
+function jumpToBookmark(chapterId, sentenceIndex) {
+    closeToCDrawer();
+    const chapNum = Number(chapterId);
+    const targetChapId = isNaN(chapNum) ? chapterId : chapNum;
+    if (String(readerChapterId) !== String(targetChapId)) {
+        onReaderChapterChange(targetChapId);
+    }
+    setTimeout(() => {
+        if (readerSentenceToPageMap && typeof readerSentenceToPageMap[sentenceIndex] === 'number') {
+            readerCurrentPage = readerSentenceToPageMap[sentenceIndex] + 1;
+            renderCurrentPage();
+        }
+        highlightReaderSentence(sentenceIndex);
+        const targetEl = document.getElementById(`rsentence_${sentenceIndex}`);
+        if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetEl.classList.add('reading-resume-anchor');
+            setTimeout(() => targetEl.classList.remove('reading-resume-anchor'), 2500);
+        }
+        if (isPlaying && String(currentPlayingChapterId) === String(targetChapId)) {
+            currentSentenceIndex = sentenceIndex;
+            speakCurrentSentence();
+        }
+    }, 160);
+}
+window.jumpToBookmark = jumpToBookmark;
+
+function removeBookmarkFromTOC(slot) {
+    const book = readerBook || currentBook;
+    if (book && typeof window.EngbotReadingUI?.removeBookmark === 'function') {
+        window.EngbotReadingUI.removeBookmark(book, slot);
+        if (typeof showToast === 'function') showToast('Bookmark deleted', 'info');
+        renderToCDrawerList();
+        if (readerActive) renderCurrentPage();
+        if (DOM.chaptersList) renderChaptersList();
+    }
+}
+window.removeBookmarkFromTOC = removeBookmarkFromTOC;
+
 function renderToCDrawerList() {
     if (!DOM.tocDrawerList || !readerBook) return;
     DOM.tocDrawerList.innerHTML = '';
 
+    const allBookmarks = (typeof window.EngbotReadingUI?.getBookmarks === 'function')
+        ? window.EngbotReadingUI.getBookmarks(readerBook, readerActive ? readerLang : null)
+        : [];
+
+    // 1. Dedicated Bookmarks Section at Top if any exist
+    if (allBookmarks.length > 0) {
+        const bmSection = document.createElement('div');
+        bmSection.className = 'mb-4 pb-3 border-b border-white/10 space-y-2';
+        bmSection.innerHTML = `
+            <div class="flex items-center justify-between px-1 mb-1.5">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-georgian-gold flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-sm">bookmark</span>
+                    <span>Bookmarks (${allBookmarks.length})</span>
+                </span>
+            </div>
+            <div class="space-y-1.5" id="tocBookmarksContainer"></div>
+        `;
+        const bmContainer = bmSection.querySelector('#tocBookmarksContainer');
+        allBookmarks.forEach(bm => {
+            const chap = readerBook.chapters.find(c => String(c.id) === String(bm.chapterId));
+            const chapTitle = chap ? EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang) : `Chapter ${bm.chapterId}`;
+            const item = document.createElement('div');
+            item.className = 'toc-bookmark-item flex items-center justify-between gap-2.5';
+            item.onclick = () => jumpToBookmark(bm.chapterId, bm.sentence);
+            item.innerHTML = `
+                <div class="overflow-hidden min-w-0 flex-1">
+                    <p class="text-xs font-semibold text-white truncate flex items-center gap-1">
+                        <span class="material-symbols-outlined text-xs text-georgian-gold flex-shrink-0">bookmark</span>
+                        <span>${escapeHtml(bm.label || 'Bookmark')}</span>
+                    </p>
+                    <p class="text-[10px] text-on-surface-variant truncate mt-0.5">${escapeHtml(chapTitle)} • "${escapeHtml((bm.anchor || '').slice(0, 70))}"</p>
+                </div>
+                <button type="button" onclick="event.stopPropagation(); removeBookmarkFromTOC('${escapeHtml(bm.slot)}')" class="p-1 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-red-400 transition" title="Delete bookmark">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                </button>
+            `;
+            bmContainer.appendChild(item);
+        });
+        DOM.tocDrawerList.appendChild(bmSection);
+    }
+
+    // 2. Chapters Section Header
+    const chHeader = document.createElement('div');
+    chHeader.className = 'px-1 mb-1.5 flex items-center justify-between';
+    chHeader.innerHTML = `
+        <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Chapters (${readerBook.chapters.length})</span>
+    `;
+    DOM.tocDrawerList.appendChild(chHeader);
+
+    // 3. Chapters List with Bookmark Badges
     readerBook.chapters.forEach((chap, idx) => {
         const isCurrent = String(chap.id) === String(readerChapterId);
         const hasKa = !!(chap.text_ka && chap.text_ka.trim().length > 0) || chap.translation_state?.ka?.status === 'complete';
+        const chapBms = allBookmarks.filter(b => String(b.chapterId) === String(chap.id));
         const btn = document.createElement('button');
         btn.className = `w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-3 ${isCurrent ? 'bg-primary-container/20 border-primary-container/50 text-white font-bold' : 'bg-white/5 border-white/10 hover:bg-white/10 text-on-surface'}`;
         btn.onclick = () => {
@@ -3677,16 +3819,24 @@ function renderToCDrawerList() {
             onReaderChapterChange(chap.id);
         };
 
+        const bmBadge = chapBms.length > 0
+            ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold font-bold border border-georgian-gold/30 flex items-center gap-0.5 flex-shrink-0"><span class="material-symbols-outlined text-xs">bookmark</span>${chapBms.length}</span>`
+            : '';
+
         btn.innerHTML = `
-            <div class="overflow-hidden">
+            <div class="overflow-hidden min-w-0 flex-1">
                 <p class="text-xs truncate">${idx + 1}. ${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</p>
                 <p class="text-[10px] text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(EngbotCore.chapterStats(chap).seconds)}</p>
             </div>
-            ${hasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-georgian-gold/20 text-georgian-gold font-bold">🇬🇪</span>' : ''}
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+                ${bmBadge}
+                ${hasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-georgian-gold/20 text-georgian-gold font-bold">🇬🇪</span>' : ''}
+            </div>
         `;
         DOM.tocDrawerList.appendChild(btn);
     });
 }
+
 
 // ── Authentication ──────────────────────────────────────────────────────────
 function checkAuthState() {
@@ -5626,7 +5776,7 @@ async function testVoicePreview(presetId) {
         const url = await fetchNeuralSpeechAudioUrl(text, voiceId, rateDelta, pitchDelta, 'en');
         if (url) {
             const audio = new Audio(url);
-            audio.playbackRate = currentGlobalSpeed;
+            applyAudioPlaybackRate(audio, currentGlobalSpeed);
             window._voicePreviewAudio = audio;
             await audio.play();
             return;
@@ -5658,7 +5808,7 @@ async function testGeorgianVoicePreview(presetId) {
         const url = await fetchNeuralSpeechAudioUrl(text, voiceId, rateDelta, pitchDelta, 'ka');
         if (url) {
             const audio = new Audio(url);
-            audio.playbackRate = currentGlobalSpeed;
+            applyAudioPlaybackRate(audio, currentGlobalSpeed);
             window._voicePreviewAudio = audio;
             await audio.play();
             return;
@@ -5680,7 +5830,7 @@ async function previewGatewayVoice(text, lang, overridePreset = null) {
             try { window._voicePreviewAudio.pause(); } catch (e) {}
         }
         const audio = new Audio(url);
-        audio.playbackRate = currentGlobalSpeed;
+        applyAudioPlaybackRate(audio, currentGlobalSpeed);
         window._voicePreviewAudio = audio;
         await audio.play();
         return true;
@@ -6277,6 +6427,78 @@ function initReaderGestures() {
 }
 window.initReaderGestures = initReaderGestures;
 
+function showReaderBookmarkOptions(slot, sentenceIndex) {
+    if (!readerBook) return;
+    const all = (typeof window.EngbotReadingUI?.getBookmarks === 'function')
+        ? window.EngbotReadingUI.getBookmarks(readerBook)
+        : [];
+    const bm = all.find(b => b.slot === slot);
+    if (!bm) return;
+
+    const el = document.createElement('dialog');
+    el.className = 'reading-dialog';
+    el.innerHTML = `
+        <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="material-symbols-outlined text-georgian-gold">bookmark</span>
+                <h3 class="text-sm font-bold text-white truncate">${escapeHtml(bm.label || 'Saved Bookmark')}</h3>
+            </div>
+            <button type="button" class="p-1 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-white" id="btnCloseBmDialog">
+                <span class="material-symbols-outlined text-base">close</span>
+            </button>
+        </div>
+        <p class="text-xs text-on-surface-variant italic mb-4 line-clamp-3">"${escapeHtml(bm.anchor || '')}"</p>
+        <div class="space-y-2">
+            <button type="button" id="btnBmPlayHere" class="w-full py-2.5 px-3 rounded-xl bg-primary-container text-on-primary-container text-xs font-bold flex items-center justify-center gap-1.5 transition hover:brightness-110">
+                <span class="material-symbols-outlined text-base">play_arrow</span>
+                <span>Play from Here</span>
+            </button>
+            <button type="button" id="btnBmRemove" class="w-full py-2 px-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-red-500/25 transition">
+                <span class="material-symbols-outlined text-base">delete</span>
+                <span>Remove Bookmark</span>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(el);
+    el.showModal();
+
+    const close = () => { el.close(); el.remove(); };
+    el.querySelector('#btnCloseBmDialog').onclick = close;
+    el.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
+
+    el.querySelector('#btnBmPlayHere').onclick = () => {
+        close();
+        if (typeof onReaderSentenceClick === 'function') {
+            onReaderSentenceClick(sentenceIndex);
+        }
+    };
+
+    el.querySelector('#btnBmRemove').onclick = () => {
+        close();
+        if (typeof window.EngbotReadingUI?.removeBookmark === 'function') {
+            window.EngbotReadingUI.removeBookmark(readerBook, slot);
+            if (typeof showToast === 'function') showToast('Bookmark removed', 'info');
+            renderCurrentPage();
+            if (DOM.tocDrawerList) renderToCDrawerList();
+            if (DOM.chaptersList) renderChaptersList();
+        }
+    };
+}
+window.showReaderBookmarkOptions = showReaderBookmarkOptions;
+
+function refreshBookmarksUI(targetBook) {
+    if (readerActive && readerBook && (!targetBook || String(readerBook.id) === String(targetBook.id))) {
+        renderCurrentPage();
+    }
+    if (DOM.tocDrawerList && readerBook) {
+        renderToCDrawerList();
+    }
+    if (DOM.chaptersList && currentBook) {
+        renderChaptersList();
+    }
+}
+window.refreshBookmarksUI = refreshBookmarksUI;
+
 function renderCurrentPage() {
     window.EngbotReadingUI?.followAudio();
     if (readerActive) requestAnimationFrame(() => window.EngbotReadingUI?.capture('read'));
@@ -6297,6 +6519,13 @@ function renderCurrentPage() {
 
     const isWidescreen = window.innerWidth >= 900;
     const isDual = readerMode === 'dual' && isWidescreen;
+
+    const activeBookmarks = (readerBook && typeof window.EngbotReadingUI?.getBookmarks === 'function')
+        ? window.EngbotReadingUI.getBookmarks(readerBook, readerActive ? readerLang : null)
+        : [];
+    const chapBookmarks = activeBookmarks.filter(b => String(b.chapterId) === String(readerChapterId));
+    const bookmarkMap = new Map();
+    chapBookmarks.forEach(b => bookmarkMap.set(Number(b.sentence), b));
 
     let html = '';
 
@@ -6322,7 +6551,10 @@ function renderCurrentPage() {
 
         readerPages.forEach(p => {
             p.forEach(item => {
-                pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${escapeHtml(item.text)}</span> `);
+                const bm = bookmarkMap.get(Number(item.globalIndex));
+                const bmClass = bm ? ' bookmarked-sentence has-bookmark' : '';
+                const pinHtml = bm ? `<span class="reader-bookmark-pin" title="Bookmark: ${escapeHtml(bm.label || 'Saved bookmark')}" onclick="event.stopPropagation(); showReaderBookmarkOptions('${escapeHtml(bm.slot)}', ${item.globalIndex})"><span class="material-symbols-outlined text-[13px] text-georgian-gold align-middle">bookmark</span></span>` : '';
+                pBuffer.push(`<span class="reader-sentence${bmClass}" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${pinHtml}${escapeHtml(item.text)}</span> `);
                 if (item.isParaBreak) {
                     const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
                     html += `<p class="book-prose indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
@@ -6335,6 +6567,7 @@ function renderCurrentPage() {
         if (pBuffer.length > 0) {
             html += `<p class="book-prose indent-6">${pBuffer.join('')}</p>`;
         }
+
 
         html += `
                 </div>
@@ -6403,6 +6636,13 @@ function renderCurrentPage() {
 }
 
 function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPage, spineClass) {
+    const activeBookmarks = (readerBook && typeof window.EngbotReadingUI?.getBookmarks === 'function')
+        ? window.EngbotReadingUI.getBookmarks(readerBook, readerActive ? readerLang : null)
+        : [];
+    const chapBookmarks = activeBookmarks.filter(b => String(b.chapterId) === String(readerChapterId));
+    const bookmarkMap = new Map();
+    chapBookmarks.forEach(b => bookmarkMap.set(Number(b.sentence), b));
+
     let cardHtml = `
         <div class="book-page-card ${spineClass}">
             <div class="book-page-text-flow">
@@ -6424,7 +6664,10 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
     let isFirstParagraph = isFirstPage;
 
     sentences.forEach((item, idx) => {
-        pBuffer.push(`<span class="reader-sentence" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${escapeHtml(item.text)}</span> `);
+        const bm = bookmarkMap.get(Number(item.globalIndex));
+        const bmClass = bm ? ' bookmarked-sentence has-bookmark' : '';
+        const pinHtml = bm ? `<span class="reader-bookmark-pin" title="Bookmark: ${escapeHtml(bm.label || 'Saved bookmark')}" onclick="event.stopPropagation(); showReaderBookmarkOptions('${escapeHtml(bm.slot)}', ${item.globalIndex})"><span class="material-symbols-outlined text-[13px] text-georgian-gold align-middle">bookmark</span></span>` : '';
+        pBuffer.push(`<span class="reader-sentence${bmClass}" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${pinHtml}${escapeHtml(item.text)}</span> `);
 
         if (item.isParaBreak || idx === sentences.length - 1) {
             const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
@@ -9859,7 +10102,11 @@ function playUltimateFallbackTTS(text, lang, token) {
         const url = `${serverEndpoint}?ie=UTF-8&tl=${encodeURIComponent(lang)}&client=tw-ob&q=${encodeURIComponent(chunkText)}&text=${encodeURIComponent(chunkText)}&preset=${encodeURIComponent(preset)}`;
         const audio = new Audio(url);
         currentElevenAudio = audio;
-        audio.playbackRate = currentGlobalSpeed;
+        if (typeof applyAudioPlaybackRate === 'function') {
+            applyAudioPlaybackRate(audio, currentGlobalSpeed);
+        } else {
+            try { audio.playbackRate = currentGlobalSpeed; } catch (e) {}
+        }
         if (typeof audio.setAttribute === 'function') {
             audio.playsInline = true;
             audio.setAttribute('playsinline', '');
@@ -10122,7 +10369,7 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority
                 text: spoken.slice(0, 3800),
                 preset,
                 voice: edgeVoice,
-                rate: currentGlobalSpeed,
+                rate: 1.0,
                 pitch: currentPitch,
                 lang
             }),
@@ -10191,6 +10438,7 @@ function prefetchNextGatewaySentence(index, lang, retryCount = 0) {
         if (url) {
             const audio = new Audio(url);
             audio.preload = 'auto';
+            applyAudioPlaybackRate(audio, currentGlobalSpeed);
             try { audio.load(); } catch (e) {}
             prefetchCachePut(index, audio);
         } else if (retryCount < 2 && isPlaying && !isPaused) {
@@ -10249,7 +10497,7 @@ async function speakGatewayNeural(text, lang) {
         currentElevenAudio.playsInline = true;
         currentElevenAudio.setAttribute('playsinline', '');
         currentElevenAudio.setAttribute('webkit-playsinline', '');
-        currentElevenAudio.playbackRate = currentGlobalSpeed;
+        applyAudioPlaybackRate(currentElevenAudio, currentGlobalSpeed);
 
         startBackgroundKeepAlive();
         requestScreenWakeLock();
@@ -10437,7 +10685,7 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
         currentElevenAudio.playsInline = true;
         currentElevenAudio.setAttribute('playsinline', '');
         currentElevenAudio.setAttribute('webkit-playsinline', '');
-        currentElevenAudio.playbackRate = currentGlobalSpeed;
+        applyAudioPlaybackRate(currentElevenAudio, currentGlobalSpeed);
 
         startBackgroundKeepAlive();
         requestScreenWakeLock();
@@ -10564,7 +10812,7 @@ async function speakElevenLabsSentence(text, lang = null) {
         audio.setAttribute('webkit-playsinline', '');
         audio._engbotObjectUrl = audioUrl;
         currentElevenAudio = audio;
-        currentElevenAudio.playbackRate = currentGlobalSpeed;
+        applyAudioPlaybackRate(currentElevenAudio, currentGlobalSpeed);
 
         startBackgroundKeepAlive();
         requestScreenWakeLock();
@@ -11010,15 +11258,34 @@ async function saveTranslatedBookEdition(originalBook, targetLang = 'ka') {
 window.saveTranslatedBookEdition = saveTranslatedBookEdition;
 
 function setGlobalSpeed(value) {
+    let parsed = parseFloat(value);
+    if (isNaN(parsed)) parsed = 1.0;
+    const clamped = Math.min(2, Math.max(0.5, Math.round(parsed * 20) / 20));
     // Fine 0.05 steps across 0.50x–2.00x, applied live to whatever is playing
     // (no restart, so the sentence is not repeated on every nudge).
-    const clamped = Math.min(2, Math.max(0.5, Math.round(value * 20) / 20));
     currentGlobalSpeed = clamped;
-    if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = `${clamped.toFixed(2)}x`;
-    if (DOM.btnDockSpeedMobile) DOM.btnDockSpeedMobile.textContent = `${clamped.toFixed(2)}x`;
+    try { window.currentGlobalSpeed = clamped; } catch (_) {}
+    try {
+        localStorage.setItem('lumina_playback_speed', clamped.toFixed(2));
+    } catch (_) {}
+
+    const text = `${clamped.toFixed(2)}x`;
+    if (DOM.btnDockSpeed) DOM.btnDockSpeed.textContent = text;
+    if (DOM.btnDockSpeedMobile) DOM.btnDockSpeedMobile.textContent = text;
     if (DOM.modalSpeedSlider) DOM.modalSpeedSlider.value = clamped;
-    if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = `${clamped.toFixed(2)}x`;
-    if (currentElevenAudio) currentElevenAudio.playbackRate = clamped;
+    if (DOM.modalSpeedVal) DOM.modalSpeedVal.textContent = text;
+    const badgeDesktop = document.getElementById('playerSpeedBadgeDesktop');
+    if (badgeDesktop) badgeDesktop.textContent = text;
+    const badgeMobile = document.getElementById('btnPlayerSpeedMobile');
+    if (badgeMobile) badgeMobile.textContent = text;
+
+    if (currentElevenAudio) {
+        applyAudioPlaybackRate(currentElevenAudio, clamped);
+    }
+    if (window._voicePreviewAudio) {
+        applyAudioPlaybackRate(window._voicePreviewAudio, clamped);
+    }
+
     // Browser speechSynthesis cannot change rate mid-utterance: re-speak the
     // current sentence at the new rate so the change is audible immediately.
     if (isPlaying && !isPaused && !currentElevenAudio &&
@@ -11030,15 +11297,21 @@ function setGlobalSpeed(value) {
         } catch (e) { /* ignore */ }
     }
 }
+window.setGlobalSpeed = setGlobalSpeed;
 
 function cycleSpeed() {
     const next = currentGlobalSpeed >= 2 ? 0.5 : currentGlobalSpeed + 0.05;
     setGlobalSpeed(next);
 }
+window.cycleSpeed = cycleSpeed;
+window.cyclePlayerSpeed = cycleSpeed;
 
 function nudgeSpeed(delta) {
     setGlobalSpeed(currentGlobalSpeed + delta);
 }
+window.nudgeSpeed = nudgeSpeed;
+window.adjustSpeedByStep = nudgeSpeed;
+
 
 function togglePlaybackLanguage() {
     if (!currentBook) return;
@@ -12232,6 +12505,10 @@ function renderChaptersList() {
     if (!currentBook || !DOM.chaptersList) return;
     const fragment = document.createDocumentFragment();
 
+    const activeBookmarks = (typeof window.EngbotReadingUI?.getBookmarks === 'function')
+        ? window.EngbotReadingUI.getBookmarks(currentBook)
+        : [];
+
     currentBook.chapters.forEach((chap, idx) => {
         const isCurrent = String(currentPlayingChapterId) === String(chap.id);
         const isSpeaking = isCurrent && isPlaying && !isPaused;
@@ -12239,9 +12516,14 @@ function renderChaptersList() {
         const isCurrentlyTranslating = isTranslatingWholeBook && !chapHasKa;
         const resumableJob = typeof findResumableTranslationJob === 'function' ? findResumableTranslationJob() : null;
         const isNextToTranslate = resumableJob && String(resumableJob.bookId) === String(currentBook.id) && resumableJob.chapterIdx === idx && !isTranslatingWholeBook;
+        const chapBms = activeBookmarks.filter(b => String(b.chapterId) === String(chap.id));
 
         const div = document.createElement('div');
         div.className = `glass-panel rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all ${isSpeaking ? 'border-primary-container/60 bg-primary-container/10 shadow-[0_0_20px_rgba(0,240,255,0.15)]' : 'hover:bg-white/5'}`;
+
+        const bmBadge = chapBms.length > 0
+            ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 font-bold flex items-center gap-0.5" title="${chapBms.length} bookmark${chapBms.length === 1 ? '' : 's'} in this chapter"><span class="material-symbols-outlined text-[11px]">bookmark</span>${chapBms.length}</span>`
+            : '';
 
         div.innerHTML = `
             <div class="flex items-center gap-3.5 min-w-0 flex-grow">
@@ -12251,6 +12533,7 @@ function renderChaptersList() {
                 <div class="overflow-hidden">
                     <h4 class="font-semibold text-white text-xs sm:text-base truncate flex items-center gap-2">
                         ${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}
+                        ${bmBadge}
                         ${chapHasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 font-bold">🇬🇪</span>' : ''}
                         ${isCurrentlyTranslating ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold animate-pulse">⏳ Translating</span>' : ''}
                     </h4>

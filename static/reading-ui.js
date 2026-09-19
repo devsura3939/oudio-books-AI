@@ -102,11 +102,53 @@
                 for (const [slot, entry] of marks) {
                     const row = document.createElement('div'); row.className = 'reading-bookmark'; controls.append(row);
                     button(row, entry.value.label || entry.value.anchor || 'Saved bookmark', () => finish(entry.value));
-                    const remove = button(row, 'Remove', () => { store.save(book, slot, { deleted: true }, true); row.remove(); });
+                    const remove = button(row, 'Remove', () => {
+                        store.save(book, slot, { deleted: true }, true);
+                        row.remove();
+                        notifyBookmarksChanged(book);
+                    });
                     remove.setAttribute('aria-label', 'Remove bookmark ' + (entry.value.label || ''));
                 }
             }).catch(() => { status.textContent = 'Could not load saved places. Close and try again.'; });
         });
+    }
+    function notifyBookmarksChanged(book) {
+        try {
+            if (typeof window.refreshBookmarksUI === 'function') {
+                window.refreshBookmarksUI(book);
+            }
+        } catch (_) {}
+    }
+    function getBookmarks(book, language) {
+        if (!book) return [];
+        try {
+            const entries = store.entries(book);
+            return Object.entries(entries || {})
+                .filter(([slot, entry]) => slot.startsWith('bookmark:') && entry?.value && !entry.value.deleted && (!language || entry.value.language === language))
+                .map(([slot, entry]) => ({
+                    slot,
+                    id: slot.replace(/^bookmark:/, ''),
+                    ...entry.value
+                }))
+                .sort((a, b) => {
+                    if (String(a.chapterId) !== String(b.chapterId)) {
+                        return Number(a.chapterId) - Number(b.chapterId);
+                    }
+                    return (a.sentence || 0) - (b.sentence || 0);
+                });
+        } catch (_) {
+            return [];
+        }
+    }
+    function removeBookmark(book, slot) {
+        if (!book || !slot) return false;
+        try {
+            store.save(book, slot, { deleted: true }, true);
+            notifyBookmarksChanged(book);
+            return true;
+        } catch (_) {
+            return false;
+        }
     }
     function bookmark() {
         const saved = current(); if (!saved) { showToast('Open a book or start listening first.', 'info'); return; }
@@ -115,7 +157,12 @@
         input.value = `${saved.book.chapters.find(c => String(c.id) === String(saved.value.chapterId)).title} · sentence ${saved.value.sentence + 1}`; el.append(input);
         closeDialog = () => { el.close(); el.remove(); activeDialog = null; closeDialog = null; };
         button(el, 'Save bookmark', () => {
-            try { store.save(saved.book, 'bookmark:' + crypto.randomUUID(), { ...saved.value, label: input.value.trim() || saved.value.anchor }, true); closeDialog(); showToast('Bookmark saved.', 'success'); }
+            try {
+                store.save(saved.book, 'bookmark:' + crypto.randomUUID(), { ...saved.value, label: input.value.trim() || saved.value.anchor }, true);
+                closeDialog();
+                showToast('Bookmark saved.', 'success');
+                notifyBookmarksChanged(saved.book);
+            }
             catch (_) { showToast('Bookmark could not be saved.', 'error'); }
         }, true);
         button(el, 'Cancel', () => closeDialog()); el.addEventListener('cancel', () => closeDialog()); el.showModal(); input.select();
@@ -148,5 +195,5 @@
     window.addEventListener('pagehide', () => { capture(undefined, true); store.flush(); });
     window.addEventListener('online', () => store.flush());
     window.addEventListener('focus', () => store.flush());
-    window.EngbotReadingUI = { choose, capture, bookmark, restore, readIndex, followAudio, releaseScrollAnchor, store };
+    window.EngbotReadingUI = { choose, capture, bookmark, restore, readIndex, followAudio, releaseScrollAnchor, store, getBookmarks, removeBookmark, notifyBookmarksChanged };
 })();
