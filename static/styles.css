@@ -692,3 +692,28 @@ select optgroup {
 #gateSubtitle { line-height:1.6; }
 
 #authGateScreen button[type=submit] { background:#7bd8c8; color:#082c29; box-shadow:none; }
+
+/* ── Resume Playback / Reading Floating Banner ── */
+#luminaResumeBanner {
+    animation: bannerSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes bannerSlideUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+    }
+}
+.reading-resume-anchor {
+    position: relative;
+    background: rgba(0, 240, 255, 0.2) !important;
+    border-radius: 4px;
+    animation: resumeAnchorPulse 2.5s ease-out 2;
+}
+@keyframes resumeAnchorPulse {
+    0% { background: rgba(0, 240, 255, 0.45); box-shadow: 0 0 15px rgba(0, 240, 255, 0.6); }
+    100% { background: rgba(0, 240, 255, 0.18); box-shadow: none; }
+}

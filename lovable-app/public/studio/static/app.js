@@ -2195,6 +2195,288 @@ function cacheDOM() {
     };
 }
 
+// ── Session Continuity Engine (Page Refresh Persistence) ───────────────────
+const LUMINA_ACTIVE_SESSION_KEY = 'lumina_active_session';
+const LUMINA_LAST_BOOK_KEY = 'lumina_last_active_book_id';
+
+function saveActiveSession(trigger = '') {
+    try {
+        const owner = typeof getCurrentUserId === 'function' ? getCurrentUserId() : null;
+        if (!owner) return;
+
+        const activeBook = (typeof readerActive !== 'undefined' && readerActive) ? readerBook : currentBook;
+        if (!activeBook || !activeBook.id) return;
+
+        const isReader = Boolean(typeof readerActive !== 'undefined' && readerActive);
+        const activeChapterId = isReader
+            ? readerChapterId
+            : ((typeof currentPlayingChapterId !== 'undefined' && currentPlayingChapterId !== null && currentPlayingChapterId !== undefined)
+                ? currentPlayingChapterId
+                : (activeBook.chapters?.[0]?.id || 1));
+
+        let activeSentenceIndex = 0;
+        if (isReader && window.EngbotReadingUI && typeof window.EngbotReadingUI.readIndex === 'function') {
+            activeSentenceIndex = window.EngbotReadingUI.readIndex();
+        } else if (typeof currentSentenceIndex !== 'undefined') {
+            activeSentenceIndex = currentSentenceIndex || 0;
+        }
+
+        const activeLang = isReader ? (readerLang || 'en') : (currentLang || 'en');
+
+        let anchor = '';
+        const activeChapter = activeBook.chapters?.find(c => String(c.id) === String(activeChapterId)) || activeBook.chapters?.[0];
+        if (activeChapter && typeof prepareChapterSentences === 'function') {
+            try {
+                let rawText = '';
+                if (activeLang === 'ka') {
+                    rawText = (activeChapter.text_ka && activeChapter.text_ka.trim().length > 0) ? activeChapter.text_ka : (activeChapter.text || '');
+                } else {
+                    rawText = activeChapter.text_en || activeChapter.text || '';
+                }
+                const sentences = prepareChapterSentences(rawText);
+                if (sentences && sentences[activeSentenceIndex]) {
+                    anchor = (sentences[activeSentenceIndex].text || sentences[activeSentenceIndex] || '').slice(0, 180);
+                }
+            } catch (_) {}
+        }
+
+        const session = {
+            userId: owner,
+            bookId: String(activeBook.id),
+            chapterId: activeChapterId,
+            sentenceIndex: Math.max(0, activeSentenceIndex),
+            anchor: anchor,
+            lang: activeLang || 'en',
+            mode: isReader ? 'read' : ((typeof isPlaying !== 'undefined' && isPlaying) ? 'listen' : 'browse'),
+            readerActive: isReader,
+            readerMode: typeof readerMode !== 'undefined' ? readerMode : 'dual',
+            readerPage: typeof readerCurrentPage !== 'undefined' ? readerCurrentPage : 1,
+            wasPlaying: Boolean(typeof isPlaying !== 'undefined' && isPlaying && typeof isPaused !== 'undefined' && !isPaused),
+            updatedAt: Date.now()
+        };
+
+        localStorage.setItem(LUMINA_ACTIVE_SESSION_KEY, JSON.stringify(session));
+        localStorage.setItem(LUMINA_LAST_BOOK_KEY, String(activeBook.id));
+
+        if (window.EngbotReadingUI && typeof window.EngbotReadingUI.capture === 'function') {
+            window.EngbotReadingUI.capture(isReader ? 'read' : ((typeof isPlaying !== 'undefined' && isPlaying) ? 'listen' : undefined), trigger === 'unload');
+        }
+    } catch (_) {}
+}
+window.saveActiveSession = saveActiveSession;
+
+function setupPlayerDockForResume(book, chapterId, sentenceIndex = 0, lang = 'en') {
+    if (!book) return;
+    currentBook = book;
+    const chap = book.chapters?.find(c => String(c.id) === String(chapterId)) || book.chapters?.[0];
+    if (!chap) return;
+
+    currentPlayingChapterId = chap.id;
+
+    if (currentBook.lang === 'ka' || currentBook.isTranslatedEdition || (typeof bookHasGeorgian === 'function' && bookHasGeorgian(currentBook))) {
+        currentLang = 'ka';
+    } else {
+        currentLang = lang || 'en';
+    }
+
+    let textToRead = chap['text_' + currentLang] || chap.text;
+    if (!textToRead && chap.text) textToRead = chap.text;
+
+    if (typeof prepareChapterSentences === 'function') {
+        const preparedAudioSentences = prepareChapterSentences(textToRead);
+        sentenceQueue = preparedAudioSentences.map(x => x.text);
+    } else {
+        sentenceQueue = [textToRead || ''];
+    }
+
+    currentSentenceIndex = Math.min(sentenceIndex, Math.max(0, sentenceQueue.length - 1));
+    secondsElapsed = 0;
+    isPlaying = true;
+    isPaused = true;
+    isUserManuallyNavigating = false;
+
+    if (DOM.playerDock) {
+        DOM.playerDock.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+        DOM.playerDock.classList.add('translate-y-0', 'opacity-100');
+    }
+
+    const dockFallback = document.getElementById('dockCoverFallback');
+    if (DOM.dockCover) {
+        if (currentBook.coverUrl) {
+            DOM.dockCover.src = currentBook.coverUrl;
+            DOM.dockCover.classList.remove('hidden');
+            if (dockFallback) dockFallback.classList.add('hidden');
+        } else {
+            DOM.dockCover.src = '';
+            DOM.dockCover.classList.add('hidden');
+            if (dockFallback) dockFallback.classList.remove('hidden');
+        }
+    }
+
+    if (DOM.dockTitle) {
+        DOM.dockTitle.textContent = (typeof EngbotCore !== 'undefined' && EngbotCore.chapterTitle)
+            ? EngbotCore.chapterTitle(chap, currentLang)
+            : chap.title;
+    }
+    if (DOM.dockSubtitle) {
+        DOM.dockSubtitle.textContent = currentBook.title;
+    }
+    if (DOM.playerTotalTime && typeof EngbotCore !== 'undefined' && EngbotCore.chapterStats) {
+        DOM.playerTotalTime.textContent = formatTime(EngbotCore.chapterStats(chap).seconds);
+    }
+
+    if (DOM.playerProgressBar && sentenceQueue.length > 0) {
+        const pct = Math.min(100, Math.max(0, (currentSentenceIndex / sentenceQueue.length) * 100));
+        DOM.playerProgressBar.style.width = `${pct.toFixed(1)}%`;
+    }
+
+    if (typeof updatePlayerUIState === 'function') updatePlayerUIState(false);
+    if (typeof updateLangToggleUI === 'function') updateLangToggleUI();
+    if (typeof renderChaptersList === 'function') renderChaptersList();
+}
+window.setupPlayerDockForResume = setupPlayerDockForResume;
+
+function showResumeFloatingNotification(book, chapterId, sentenceIndex, isReader) {
+    try {
+        if (typeof document === 'undefined') return;
+        const old = document.getElementById('luminaResumeBanner');
+        if (old) old.remove();
+
+        const chap = book?.chapters?.find(c => String(c.id) === String(chapterId)) || book?.chapters?.[0];
+        const chapTitle = chap ? ((typeof EngbotCore !== 'undefined' && EngbotCore.chapterTitle) ? EngbotCore.chapterTitle(chap, currentLang) : chap.title) : 'Chapter';
+        const bookTitle = (typeof window.EngbotUI !== 'undefined' && window.EngbotUI.displayTitle) ? window.EngbotUI.displayTitle(book.title) : (book.title || 'Audiobook');
+        const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        const banner = document.createElement('div');
+        banner.id = 'luminaResumeBanner';
+        banner.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] max-w-[92vw] sm:max-w-md w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-surface-container-high/95 text-white border border-primary/40 shadow-2xl backdrop-blur-2xl transition-all duration-300';
+        banner.setAttribute('role', 'alert');
+        banner.innerHTML = `
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <span class="material-symbols-outlined text-primary text-2xl flex-shrink-0 animate-pulse">${isReader ? 'auto_stories' : 'headphones'}</span>
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-bold text-white truncate">${esc(bookTitle)}</p>
+                    <p class="text-[11px] text-on-surface-variant truncate">${esc(chapTitle)} · sentence ${sentenceIndex + 1}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <button id="btnBannerResumePlay" class="px-3 py-1.5 rounded-xl bg-primary text-on-primary text-xs font-bold flex items-center gap-1 shadow-md hover:scale-105 active:scale-95 transition">
+                    <span class="material-symbols-outlined text-sm">play_arrow</span> Resume
+                </button>
+                <button id="btnBannerResumeDismiss" class="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-white/10 transition" title="Dismiss">
+                    <span class="material-symbols-outlined text-base">close</span>
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(banner);
+
+        const btnPlay = banner.querySelector('#btnBannerResumePlay');
+        if (btnPlay) {
+            btnPlay.onclick = (e) => {
+                e.stopPropagation();
+                banner.remove();
+                if (typeof isPaused !== 'undefined' && isPaused) {
+                    togglePlayPause();
+                } else if (typeof isPlaying !== 'undefined' && !isPlaying) {
+                    playChapterAudio(chapterId, sentenceIndex);
+                }
+            };
+        }
+
+        const btnDismiss = banner.querySelector('#btnBannerResumeDismiss');
+        if (btnDismiss) {
+            btnDismiss.onclick = (e) => {
+                e.stopPropagation();
+                banner.remove();
+            };
+        }
+
+        setTimeout(() => {
+            if (banner.parentNode) {
+                banner.style.opacity = '0';
+                banner.style.transform = 'translate(-50%, 10px)';
+                setTimeout(() => banner.remove(), 300);
+            }
+        }, 16000);
+    } catch (_) {}
+}
+window.showResumeFloatingNotification = showResumeFloatingNotification;
+
+async function restoreLastActiveSessionOrFirstBook(books) {
+    if (!books || !books.length) return;
+
+    let savedSession = null;
+    try {
+        const raw = localStorage.getItem(LUMINA_ACTIVE_SESSION_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            const currentUid = typeof getCurrentUserId === 'function' ? getCurrentUserId() : null;
+            if (parsed && parsed.bookId && (!parsed.userId || parsed.userId === currentUid)) {
+                savedSession = parsed;
+            }
+        }
+    } catch (_) {}
+
+    let targetBook = null;
+    if (savedSession && savedSession.bookId) {
+        targetBook = books.find(b => String(b.id) === String(savedSession.bookId));
+    }
+
+    if (!targetBook) {
+        try {
+            const lastBookId = localStorage.getItem(LUMINA_LAST_BOOK_KEY);
+            if (lastBookId) {
+                targetBook = books.find(b => String(b.id) === String(lastBookId));
+            }
+        } catch (_) {}
+    }
+
+    if (!targetBook) {
+        targetBook = books[0];
+        savedSession = null;
+    }
+
+    await selectBook(targetBook.id, false);
+
+    if (!savedSession) return;
+
+    const chapterExists = targetBook.chapters && targetBook.chapters.some(c => String(c.id) === String(savedSession.chapterId));
+    const targetChapterId = chapterExists ? savedSession.chapterId : (targetBook.chapters?.[0]?.id || 1);
+    const targetSentenceIdx = Math.max(0, savedSession.sentenceIndex || 0);
+    const targetLang = savedSession.lang || 'en';
+
+    // Case 1: The user was READING when they refreshed the page
+    if (savedSession.readerActive) {
+        try {
+            const pos = {
+                chapterId: targetChapterId,
+                language: targetLang,
+                sentence: targetSentenceIdx,
+                anchor: savedSession.anchor || '',
+                mode: 'read'
+            };
+            await openReader(targetBook.id, targetChapterId, targetLang, pos);
+
+            // If they were also listening while reading, prepare the player dock inside reader
+            if (savedSession.wasPlaying) {
+                setupPlayerDockForResume(targetBook, targetChapterId, targetSentenceIdx, targetLang);
+                showResumeFloatingNotification(targetBook, targetChapterId, targetSentenceIdx, true);
+            }
+            return;
+        } catch (e) {
+            console.warn('[restore] Failed to restore reader:', e);
+        }
+    }
+
+    // Case 2: The user was LISTENING (reader closed)
+    if (savedSession.wasPlaying || savedSession.mode === 'listen' || savedSession.sentenceIndex > 0) {
+        setupPlayerDockForResume(targetBook, targetChapterId, targetSentenceIdx, targetLang);
+        showResumeFloatingNotification(targetBook, targetChapterId, targetSentenceIdx, false);
+    }
+}
+window.restoreLastActiveSessionOrFirstBook = restoreLastActiveSessionOrFirstBook;
+
 // ── Initialization ──────────────────────────────────────────────────────────
 async function init() {
     if (typeof resolveAndPreserveAllAiKeys === 'function') resolveAndPreserveAllAiKeys();
@@ -2227,7 +2509,7 @@ async function init() {
 
         const books = await getAllBooks();
         if (books.length > 0) {
-            selectBook(books[0].id, false);
+            await restoreLastActiveSessionOrFirstBook(books);
         }
     }
 
@@ -5198,6 +5480,8 @@ async function logout() {
     try {
         localStorage.removeItem('lumina_auth_user');
         localStorage.removeItem('lumina_remember_me');
+        localStorage.removeItem(LUMINA_ACTIVE_SESSION_KEY);
+        localStorage.removeItem(LUMINA_LAST_BOOK_KEY);
         localStorage.setItem('lumina_explicitly_logged_out', 'true');
         // Clear all Supabase auth tokens so they cannot revive session
         for (let i = localStorage.length - 1; i >= 0; i--) {
@@ -5928,6 +6212,7 @@ async function openReader(bookId, chapterId, lang = 'en', savedPosition = null) 
     DOM.readerView.dataset.readerLang = readerLang;
     DOM.readerView.dataset.eyeComfort = localStorage.getItem('lumina_reader_comfort') === 'true' ? 'true' : 'false';
     document.body.style.overflow = 'hidden';
+    saveActiveSession('openReader');
 
     DOM.readerBookTitle.textContent = window.EngbotUI?.displayTitle(readerBook.title) || readerBook.title;
     updateReaderLangUI();
@@ -5950,6 +6235,7 @@ function closeReader() {
     readerActive = false;
     DOM.readerView.classList.remove('active');
     document.body.style.overflow = 'auto';
+    saveActiveSession('closeReader');
 }
 
 function onReaderChapterChange(targetChapId) {
@@ -5960,6 +6246,7 @@ function onReaderChapterChange(targetChapId) {
 
     readerChapterId = matched.id;
     readerCurrentPage = 1;
+    saveActiveSession('readerChapterChange');
 
     paginateChapter();
     renderCurrentPage();
@@ -6501,7 +6788,10 @@ window.refreshBookmarksUI = refreshBookmarksUI;
 
 function renderCurrentPage() {
     window.EngbotReadingUI?.followAudio();
-    if (readerActive) requestAnimationFrame(() => window.EngbotReadingUI?.capture('read'));
+    if (readerActive) {
+        requestAnimationFrame(() => window.EngbotReadingUI?.capture('read'));
+        saveActiveSession('readerProgress');
+    }
     if (!readerBook || !DOM.readerPageSpread) return;
     const chap = readerBook.chapters.find(c => String(c.id) === String(readerChapterId));
     if (!chap) return;
@@ -9982,6 +10272,7 @@ window.initMediaSessionHandlers = initMediaSessionHandlers;
 async function speakCurrentSentence() {
     window.EngbotReadingUI?.capture('listen');
     if (!isPlaying || isPaused) return;
+    saveActiveSession('speakSentence');
 
     if (currentSentenceIndex >= sentenceQueue.length) {
         stopSpeech();
@@ -10977,6 +11268,7 @@ async function playChapterAudio(chapId, startSentenceIdx, forceReload = false) {
     updateMediaSession();
     speakCurrentSentence();
     renderChaptersList();
+    saveActiveSession('playChapter');
 
     if (readerActive) {
         readerChapterId = chap.id;
@@ -11043,6 +11335,7 @@ function togglePlayPause() {
         stopTimer();
         updatePlayerUIState(false);
         updateMediaSession();
+        saveActiveSession('pause');
     } else if (isPlaying && isPaused) {
         isPaused = false;
         startTimer();
@@ -11057,6 +11350,7 @@ function togglePlayPause() {
             speakCurrentSentence();
         }
         updatePlayerUIState(true);
+        saveActiveSession('resume');
     } else {
         playChapterAudio(currentPlayingChapterId);
     }
@@ -11105,6 +11399,7 @@ function stopSpeech() {
     stopTimer();
     updatePlayerUIState(false);
     updateMediaSession();
+    saveActiveSession('stopSpeech');
 }
 
 function startTimer() {
@@ -12318,6 +12613,7 @@ async function selectBook(bookId, autoPlayFirst = false) {
     if (selection !== bookSelectionRevision) return;
     currentBook = books.find(b => String(b.id) === String(bookId));
     if (!currentBook) return;
+    saveActiveSession('selectBook');
 
     if (!currentBook.translatedLangs) currentBook.translatedLangs = [];
     const hasGeorgianText = (currentBook.chapters || []).some(c =>
@@ -12573,6 +12869,9 @@ function formatTime(sec) {
 
 // ── Event Listeners Binding ─────────────────────────────────────────────────
 function setupEventListeners() {
+    window.addEventListener('beforeunload', () => saveActiveSession('beforeunload'));
+    window.addEventListener('pagehide', () => saveActiveSession('pagehide'));
+
     // Host bridge navigation listener (for Lovable app shell and embedded frames)
     window.addEventListener('message', (e) => {
         if (!e || !e.data) return;
