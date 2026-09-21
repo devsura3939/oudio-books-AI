@@ -2247,7 +2247,14 @@ function saveActiveSession(trigger = '') {
             sentenceIndex: Math.max(0, activeSentenceIndex),
             anchor: anchor,
             lang: activeLang || 'en',
-            mode: isReader ? 'read' : ((typeof isPlaying !== 'undefined' && isPlaying) ? 'listen' : 'browse'),
+            mode: isReader ? 'read' : (
+                (typeof isPlaying !== 'undefined' && isPlaying) ? 'listen' :
+                // Also treat as 'listen' when audio was paused (isPlaying+isPaused) or
+                // when a chapter was loaded at a meaningful sentence position
+                (typeof currentPlayingChapterId !== 'undefined' && currentPlayingChapterId != null &&
+                 typeof activeSentenceIndex !== 'undefined' && activeSentenceIndex > 0) ? 'listen' :
+                'browse'
+            ),
             readerActive: isReader,
             readerMode: typeof readerMode !== 'undefined' ? readerMode : 'dual',
             readerPage: typeof readerCurrentPage !== 'undefined' ? readerCurrentPage : 1,
@@ -2469,8 +2476,15 @@ async function restoreLastActiveSessionOrFirstBook(books) {
         }
     }
 
-    // Case 2: The user was LISTENING (reader closed)
-    if (savedSession.wasPlaying || savedSession.mode === 'listen' || savedSession.sentenceIndex > 0) {
+    // Case 2: The user was LISTENING (reader closed) – show resume dock/banner
+    // Gate: any saved session where audio was engaged (mode=listen, was playing,
+    // had progressed into a chapter, or had a non-first chapter loaded).
+    const hadAudioSession = savedSession.wasPlaying ||
+        savedSession.mode === 'listen' ||
+        savedSession.sentenceIndex > 0 ||
+        (targetSentenceIdx > 0) ||
+        (chapterExists && String(targetChapterId) !== String(targetBook.chapters?.[0]?.id));
+    if (hadAudioSession) {
         setupPlayerDockForResume(targetBook, targetChapterId, targetSentenceIdx, targetLang);
         showResumeFloatingNotification(targetBook, targetChapterId, targetSentenceIdx, false);
     }
@@ -6226,7 +6240,14 @@ async function openReader(bookId, chapterId, lang = 'en', savedPosition = null) 
         }
         renderCurrentPage();
         initReaderGestures();
-        if (savedPosition) window.EngbotReadingUI?.restore(savedPosition);
+        if (savedPosition) {
+            // Sync language to final resolved readerLang — openReader() may override lang
+            // (e.g., Georgian sibling book), and EngbotReading.resolve() bails if language mismatches.
+            const posToRestore = savedPosition.language === readerLang
+                ? savedPosition
+                : { ...savedPosition, language: readerLang };
+            window.EngbotReadingUI?.restore(posToRestore);
+        }
     });
 }
 

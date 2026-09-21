@@ -374,4 +374,120 @@ test('Session persistence and refresh resumption: Reading & Listening', async (t
         await ctx.restoreLastActiveSessionOrFirstBook(books);
         assert.equal(selectedBookId, 'book-default', 'Must fall back gracefully to books[0]');
     });
+
+    await t.test('Subtest 6: Paused audio session (wasPlaying=false, mode=listen) still triggers Case 2 resume banner', async () => {
+        // Regression: before fix, saveActiveSession saved mode='browse' for paused sessions,
+        // so hadAudioSession was false and the resume dock/banner were never shown.
+        // After fix: mode is saved as 'listen' for any chapter/audio engagement,
+        // so the gate (savedSession.mode === 'listen') picks it up.
+        const pausedSession = {
+            userId: 'user-test-456',
+            bookId: 'book-paused',
+            chapterId: 3,
+            sentenceIndex: 5,       // non-zero — was deep into the chapter
+            lang: 'en',
+            mode: 'listen',         // fix: now saved as 'listen', not 'browse'
+            readerActive: false,
+            wasPlaying: false,      // was explicitly paused by user
+            updatedAt: Date.now()
+        };
+
+        const { ctx, elements } = createMockEnvironment({
+            'lumina_active_session': JSON.stringify(pausedSession)
+        });
+
+        let selectedBookId = null;
+        ctx.selectBook = async (id) => { selectedBookId = id; };
+
+        vm.runInContext(`
+            let readerActive = false;
+            let currentBook = null;
+            let readerBook = null;
+            let currentPlayingChapterId = null;
+            let currentSentenceIndex = 0;
+            let currentLang = 'en';
+            let readerLang = 'en';
+            let readerChapterId = null;
+            let readerMode = 'dual';
+            let readerCurrentPage = 1;
+            let isPlaying = false;
+            let isPaused = false;
+            let isUserManuallyNavigating = false;
+            let secondsElapsed = 0;
+            let sentenceQueue = [];
+
+            ${source.slice(source.indexOf('const LUMINA_ACTIVE_SESSION_KEY ='), source.indexOf('// ── Initialization'))}
+        `, ctx);
+
+        const books = [
+            {
+                id: 'book-paused',
+                title: 'Paused Book',
+                chapters: [
+                    { id: 1, title: 'Ch 1', text: 'A.' },
+                    { id: 2, title: 'Ch 2', text: 'B.' },
+                    { id: 3, title: 'Ch 3', text: 'One. Two. Three. Four. Five. Six.' }
+                ]
+            }
+        ];
+
+        await ctx.restoreLastActiveSessionOrFirstBook(books);
+
+        // Verify the same side-effects as Subtest 4 (player dock shown, state set)
+        assert.equal(selectedBookId, 'book-paused', 'Must select the paused book');
+        assert.equal(vm.runInContext('currentPlayingChapterId', ctx), 3, 'currentPlayingChapterId must be set to ch 3');
+        assert.equal(vm.runInContext('currentSentenceIndex', ctx), 5, 'currentSentenceIndex must be restored to 5');
+        assert.equal(vm.runInContext('isPlaying', ctx), true, 'isPlaying must be set true by setupPlayerDockForResume');
+        assert.equal(vm.runInContext('isPaused', ctx), true, 'isPaused must be set true by setupPlayerDockForResume');
+        assert.ok(elements.playerDock.classList.contains('translate-y-0'), 'Player dock must be visible for paused session');
+        assert.ok(ctx.document.body.children.length > 0, 'Resume floating notification banner must be added to body');
+    });
+
+    await t.test('Subtest 7: Language mismatch in openReader restore is corrected before calling EngbotReadingUI.restore()', () => {
+        // Regression: when the Georgian sibling book logic overrides readerLang from 'en' to 'ka',
+        // savedPosition.language remained 'en', causing EngbotReading.resolve() to return 0.
+        // Fix: openReader lines 6243-6249 now spread { ...savedPosition, language: readerLang }
+        // when savedPosition.language !== readerLang before calling window.EngbotReadingUI.restore().
+        //
+        // We test the exact fix snippet in isolation — no need to run the full openReader().
+
+        let restoreCalledWith = null;
+
+        // Extract just the relevant code block from openReader (the language-sync + restore call)
+        const fixSnippet = source.slice(
+            source.indexOf('// Sync language to final resolved readerLang'),
+            source.indexOf('window.EngbotReadingUI?.restore(posToRestore);') +
+                'window.EngbotReadingUI?.restore(posToRestore);'.length
+        );
+
+        // Scenario A: languages match — savedPosition passed through unchanged
+        {
+            let called = null;
+            const ctxA = vm.createContext({
+                savedPosition: { chapterId: 1, language: 'en', sentence: 2, anchor: null, mode: 'read' },
+                readerLang: 'en',
+                window: { EngbotReadingUI: { restore: (p) => { called = p; } } }
+            });
+            vm.runInContext(fixSnippet, ctxA);
+            assert.ok(called !== null, 'Scenario A: restore() must be called when languages match');
+            assert.equal(called.language, 'en', 'Scenario A: language must remain en');
+            assert.equal(called, ctxA.savedPosition, 'Scenario A: exact same object passed (no spread needed)');
+        }
+
+        // Scenario B: Georgian override — savedPosition.language='en' but readerLang='ka'
+        {
+            let called = null;
+            const ctxB = vm.createContext({
+                savedPosition: { chapterId: 1, language: 'en', sentence: 2, anchor: null, mode: 'read' },
+                readerLang: 'ka',
+                window: { EngbotReadingUI: { restore: (p) => { called = p; } } }
+            });
+            vm.runInContext(fixSnippet, ctxB);
+            assert.ok(called !== null, 'Scenario B: restore() must be called even after language override');
+            assert.equal(called.language, 'ka', 'Scenario B: language must be corrected to ka (the final readerLang)');
+            assert.notEqual(called, ctxB.savedPosition, 'Scenario B: a new spread object must be created, not the original');
+            assert.equal(called.sentence, 2, 'Scenario B: sentence index must be preserved in the spread');
+        }
+    });
 });
+
