@@ -137,3 +137,62 @@ test('translationMachine emergency LM Studio fallback engages when other provide
 
     delete globalThis.EngbotLmStudio;
 });
+
+test('EngbotLmStudio.abort cleans up active controller without error', async () => {
+    const values = new Map();
+    const storage = { getItem: k => values.get(k), setItem: (k, v) => values.set(k, v), removeItem: k => values.delete(k) };
+    const client = lmStudio.create({ storage, owner: () => 'test_user', fetchImpl: async () => new Response('{}') });
+    assert.ok(typeof client.abort === 'function');
+    // Calling abort when idle should not throw
+    assert.doesNotThrow(() => client.abort());
+});
+
+test('Hybrid load balancer routes to server/cloud AI when local AI is slow or busy', async () => {
+    let localCalls = 0;
+    let cloudCalls = 0;
+    const baseline = 'ეს არის მანქანური თარგმანი.';
+    const edited = 'ეს არის დახვეწილი ლიტერატურული თარგმანი.';
+
+    // Simulated local model that reports slow/busy
+    let localSlow = false;
+    const engine = phases.create({
+        machine: async () => baseline,
+        localAvailable: () => !localSlow,
+        cloudAvailable: () => true,
+        assess: () => ({ ok: true }),
+        local: async (prompt) => {
+            localCalls++;
+            return prompt.startsWith('Audit') ? { verdict: 'approved', errors: [] } : { translation: edited };
+        },
+        cloud: async () => {
+            cloudCalls++;
+            return { translation: edited };
+        },
+        localPrimary: true,
+        maxCloudCalls: 1000,
+        maxCloudTokens: 10000000,
+    });
+
+    const difficultSource = '"Never surrender," the commander shouted with fierce resolve.';
+
+    // Pass 1: Local is fast and available -> routes to local (draft + review)
+    localSlow = false;
+    const res1 = await engine.translate(difficultSource, 'ka', { mode: 'quality', complexity: 25 });
+    assert.equal(res1, edited);
+    assert.equal(localCalls, 2); // Local draft + local review
+    assert.equal(cloudCalls, 0);
+
+    // Pass 2: Local becomes slow/busy -> routes to cloud/server AI for reassurance
+    localSlow = true;
+    const res2 = await engine.translate(difficultSource, 'ka', { mode: 'quality', complexity: 25 });
+    assert.equal(res2, edited);
+    assert.equal(localCalls, 2); // Not called because local was slow!
+    assert.equal(cloudCalls, 1); // Cloud AI stepped in to cover the segment!
+
+    // Pass 3: Continues to reassure across segments without 48-call truncation
+    for (let i = 0; i < 50; i++) {
+        await engine.translate(difficultSource, 'ka', { mode: 'quality', complexity: 25 });
+    }
+    assert.equal(cloudCalls, 51); // Ran past 48 calls without cutting off!
+});
+

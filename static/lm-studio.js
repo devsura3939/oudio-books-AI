@@ -183,6 +183,12 @@
         function resetCooldown() {
             cooldown = null;
         }
+        function abort() {
+            if (active) {
+                try { active.abort(); } catch (_) {}
+                active = null;
+            }
+        }
         async function translateDirect(sourceText, targetLang = 'ka', { signal: parent, contextBefore = '', contextAfter = '', timeoutMs = 60000 } = {}) {
             if (!sourceText || !sourceText.trim() || !enabled()) return null;
             const isKa = targetLang === 'ka';
@@ -227,7 +233,7 @@
             }
             return cloud(opts.signal);
         }
-        return {settings, enabled, available, profile, prepare, fillSettings, detect, detectFromUI, save, saveFromUI, disconnect, text, json, withFallback, withPrimary, resetCooldown, translateDirect};
+        return {settings, enabled, available, profile, prepare, fillSettings, detect, detectFromUI, save, saveFromUI, disconnect, text, json, withFallback, withPrimary, resetCooldown, translateDirect, abort};
     }
     return {create, endpoint, modelList, modelProfiles, estimateTokens};
 });

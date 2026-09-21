@@ -8064,7 +8064,32 @@ async function applyGeorgianQaGate(text) {
 // Tier counters: ai = Tier A (your multi-pass pipeline), rules = Tier B (in-house
 // rule engine, no LLM), raw = Tier C (unrepaired MT), failed = nothing worked.
 // The legacy keys stay as aliases so older call sites keep counting.
-const translationEngineStats = { ai: 0, rules: 0, raw: 0, failed: 0, gemini: 0, google: 0, mymemory: 0 };
+const translationEngineStats = { ai: 0, rules: 0, raw: 0, failed: 0, gemini: 0, google: 0, mymemory: 0, lm_studio: 0, cloud_ai: 0, server: 0, offline: 0 };
+
+// Local LM Studio Latency Tracker & Dynamic Balancer
+const localLatencyHistory = [];
+let localConsecutiveSlowCount = 0;
+function recordLocalLatency(durationMs, success = true) {
+    if (!success) {
+        localLatencyHistory.push(45000);
+        localConsecutiveSlowCount++;
+    } else {
+        localLatencyHistory.push(durationMs);
+        if (durationMs > 22000) localConsecutiveSlowCount++;
+        else localConsecutiveSlowCount = Math.max(0, localConsecutiveSlowCount - 1);
+    }
+    if (localLatencyHistory.length > 5) localLatencyHistory.shift();
+}
+function isLocalSlow() {
+    if (localConsecutiveSlowCount >= 2) return true;
+    if (localLatencyHistory.length < 2) return false;
+    const avg = localLatencyHistory.reduce((a, b) => a + b, 0) / localLatencyHistory.length;
+    return avg > 22000;
+}
+function resetLocalLatency() {
+    localLatencyHistory.length = 0;
+    localConsecutiveSlowCount = 0;
+}
 
 let translationEngineStatusEl = null;
 let translationStage = '';
@@ -8107,10 +8132,10 @@ function setTranslationEngineStatusEl(el) {
 function renderTranslationEngineStatus() {
     if (!translationEngineStatusEl) return;
     const s = translationEngineStats;
-    const ai = s.ai + s.gemini;
-    const rules = s.rules + s.google;
-    const raw = s.raw + s.mymemory;
-    const total = ai + rules + raw + s.failed;
+    const ai = (s.ai || 0) + (s.gemini || 0) + (s.lm_studio || 0) + (s.cloud_ai || 0) + (s.server || 0);
+    const rules = (s.rules || 0) + (s.google || 0);
+    const raw = (s.raw || 0) + (s.mymemory || 0) + (s.offline || 0);
+    const total = ai + rules + raw + (s.failed || 0);
     if (total === 0) {
         translationEngineStatusEl.innerHTML = '<span class="text-on-surface-variant">Engine: waiting…</span>';
         return;
@@ -8128,6 +8153,7 @@ function renderTranslationEngineStatus() {
 function recordEngineUse(engine) {
     lastTranslationEngine = engine;
     if (engine in translationEngineStats) translationEngineStats[engine]++;
+    else translationEngineStats[engine] = 1;
     renderTranslationEngineStatus();
 }
 
@@ -8597,9 +8623,19 @@ function getPhaseTranslator() {
         phaseTranslatorOwner = owner;
         phaseTranslator = window.EngbotTranslationPhases.create({
             machine: (source, target) => deterministicTranslateChunk(source, target),
-            local: (prompt, options) => window.EngbotLmStudio?.json(prompt, {...options, parse:parseModelJSON}),
+            local: async (prompt, options) => {
+                const t0 = Date.now();
+                try {
+                    const res = await window.EngbotLmStudio?.json(prompt, {...options, parse:parseModelJSON});
+                    recordLocalLatency(Date.now() - t0, !!res);
+                    return res;
+                } catch (err) {
+                    recordLocalLatency(Date.now() - t0, false);
+                    throw err;
+                }
+            },
             cloud: (prompt, options) => callCloudJSON(prompt, options),
-            localAvailable: () => !!window.EngbotLmStudio?.available(),
+            localAvailable: () => !!(window.EngbotLmStudio?.available() && !isLocalSlow()),
             cloudAvailable: () => !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl),
             assess: assessTranslation,
             onStage: stage => {
@@ -8611,6 +8647,8 @@ function getPhaseTranslator() {
                 else recordEngineUse('ai');
             },
             localPrimary: true,
+            maxCloudCalls: 100000,
+            maxCloudTokens: 1000000000,
         });
     }
     return phaseTranslator;
@@ -8698,14 +8736,13 @@ async function runOptionalAiCall(fn, timeoutMs = OPTIONAL_AI_TIMEOUT_MS) {
 
 function shouldUseOptionalAi(clean, targetLang, baseline, complexity) {
     if (!aiTranslationAvailable() || Date.now() < optionalAiDisabledUntil) return false;
-    if (optionalAiCorrectionsUsed >= OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB) return false;
-    // Long, rare-vocabulary, quoted or structurally dense chunks are where a
-    // correction pass changes the result. Easy chunks stay entirely local so a
-    // free-tier key is not spent on work the deterministic engine already did.
+    const maxCorrections = (typeof isTranslatingWholeBook !== 'undefined' && isTranslatingWholeBook) ? 100000 : (typeof OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB !== 'undefined' ? OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB : 48);
+    if (optionalAiCorrectionsUsed >= maxCorrections) return false;
+    if (typeof isDoubtedOrComplicatedSegment === 'function' && isDoubtedOrComplicatedSegment(clean, baseline, complexity)) return true;
     if (complexity >= 35) return true;
     if (targetLang === 'ka' && typeof validateGeorgianTranslation === 'function') {
         try {
-            return validateGeorgianTranslation(baseline || '').some(issue => issue && issue.severity === 'blocking');
+            return validateGeorgianTranslation(baseline || '').some(issue => issue && (issue.severity === 'blocking' || issue.severity === 'major'));
         } catch (error) { /* non-fatal */ }
     }
     return false;
@@ -8729,7 +8766,8 @@ async function editTranslationDraft(clean, baseline, targetLang, contextBefore, 
 }
 
 async function runOptionalAiCorrection(clean, targetLang, contextBefore, contextAfter, deep, baseline = null) {
-    if (optionalAiCorrectionsUsed >= OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB) return null;
+    const maxCorrections = (typeof isTranslatingWholeBook !== 'undefined' && isTranslatingWholeBook) ? 100000 : (typeof OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB !== 'undefined' ? OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB : 48);
+    if (optionalAiCorrectionsUsed >= maxCorrections) return null;
     optionalAiCorrectionsUsed++;
     const controller = new AbortController();
     const parent = typeof translationRequestController !== 'undefined' ? translationRequestController?.signal : null;
@@ -8791,15 +8829,30 @@ async function translateChunkAI(clean, targetLang, contextBefore, contextAfter, 
     return null;
 }
 
-function isComplexOrHighValueSegment(text, score = 0) {
+function isDoubtedOrComplicatedSegment(text, baseline = '', score = 0) {
     if (!text || !text.trim()) return false;
     const clean = text.trim();
-    if (score >= 22) return true;
+    if (score >= 18) return true;
     if (/[„“”"']|^\s*[-—]\s+/.test(clean)) return true;
-    if (/\b(?:never|neither|nor|barely|scarcely|hardly|unless|without|although|meanwhile|nonetheless)\b/i.test(clean)) return true;
-    if (/(?:არასოდეს|ვერ|ნუ|აღარ|ვეღარ|როდესაც|რადგან|თუმცა)/u.test(clean)) return true;
-    if (clean.length > 200 || (clean.match(/[,;:—]/g) || []).length >= 4) return true;
+    if (/\b(?:never|neither|nor|barely|scarcely|hardly|unless|without|although|meanwhile|nonetheless|cannot|not|seldom|rarely)\b/i.test(clean)) return true;
+    if (/(?:არასოდეს|ვერ|ნუ|აღარ|ვეღარ|არც|არაფერ|აღარავინ|როდესაც|რადგან|თუმცა)/u.test(clean)) return true;
+    if (clean.length > 140 || (clean.match(/[,;:—]/g) || []).length >= 3) return true;
+    if (baseline) {
+        if (/(?:მიიღო\s+გადაწყვეტილება|ადგილი\s+ჰქონდა|ითამაშა\s+როლი|გააკეთა\s+ღიმილი|გააკეთა\s+არჩევანი|საფუძველი\s+ჩაუყარა)/u.test(baseline)) return true;
+        if (typeof validateGeorgianTranslation === 'function') {
+            try {
+                const issues = validateGeorgianTranslation(baseline);
+                if (issues && issues.some(i => i && (i.severity === 'blocking' || i.severity === 'major' || i.type === 'syntax'))) return true;
+            } catch (_) {}
+        }
+    }
+    if (typeof translationBudgetMode !== 'undefined' && translationBudgetMode === 'quality') return true;
     return false;
+}
+window.isDoubtedOrComplicatedSegment = isDoubtedOrComplicatedSegment;
+
+function isComplexOrHighValueSegment(text, score = 0) {
+    return isDoubtedOrComplicatedSegment(text, '', score);
 }
 window.isComplexOrHighValueSegment = isComplexOrHighValueSegment;
 
@@ -8821,7 +8874,7 @@ async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', 
             return translated;
         }
         // Direct LM Studio emergency fallback if phase pipeline returned null
-        if (window.EngbotLmStudio?.available()) {
+        if (window.EngbotLmStudio?.available() && !isLocalSlow()) {
             try {
                 const directLm = await window.EngbotLmStudio.translateDirect(clean, targetLang, {
                     contextBefore, contextAfter, signal: translationRequestController?.signal, timeoutMs: 45000
@@ -8830,6 +8883,17 @@ async function translateChunkSmart(text, targetLang = 'ka', contextBefore = '', 
                     setTranslationStage('LM Studio · Direct translation');
                     recordEngineUse('lm_studio');
                     return directLm;
+                }
+            } catch (_) {}
+        }
+        // Server / Cloud AI direct recovery fallback if local was null or failed
+        if (aiTranslationAvailable()) {
+            try {
+                const cloudRecovery = await translateChunkAI(clean, targetLang, contextBefore, contextAfter, true, translationRequestController?.signal);
+                if (cloudRecovery && assessTranslation(clean, cloudRecovery, targetLang).ok) {
+                    setTranslationStage('Cloud AI · Reassurance');
+                    recordEngineUse('cloud_ai');
+                    return cloudRecovery;
                 }
             } catch (_) {}
         }
@@ -9438,8 +9502,12 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                 // Dynamic safety timeout race for smart routing
                 if (typeof translateChunkSmart === 'function' && typeof translateChunkLocal === 'function') {
                     let segTimer;
-                    const isComplex = isComplexOrHighValueSegment(chunks[i], scoreChunkComplexity(chunks[i]));
-                    const stallLimit = (window.EngbotLmStudio?.enabled() && (isRefining || isComplex)) ? 45000 : 15000;
+                    const isDoubted = isDoubtedOrComplicatedSegment(chunks[i], '', scoreChunkComplexity(chunks[i]));
+                    const hasCloud = !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl);
+                    // Give local AI adequate time (40s-60s), but if no local model is connected or if cloud is sole provider, use snappy timeout
+                    const stallLimit = window.EngbotLmStudio?.enabled()
+                        ? (isDoubted ? 60000 : 40000)
+                        : (hasCloud ? 25000 : 15000);
                     const segTimeout = new Promise(resolve => {
                         segTimer = setTimeout(() => resolve('__STALL__'), stallLimit);
                     });
@@ -9447,14 +9515,38 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                         const raceRes = await Promise.race([chunkPromise, segTimeout]);
                         clearTimeout(segTimer);
                         if (raceRes === '__STALL__') {
-                            console.warn(`[Translation] Chunk ${i + 1} took >${stallLimit / 1000}s; auto-recovering with fast neural translation`);
-                            output = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
+                            console.warn(`[Translation] Chunk ${i + 1} took >${stallLimit / 1000}s; offloading slow segment`);
+                            window.EngbotLmStudio?.abort?.();
+                            recordLocalLatency(stallLimit, false);
+                            // If local was slow, cover doubted/complicated part with server-side / cloud AI
+                            if (hasCloud) {
+                                try {
+                                    setTranslationStage('Server AI · Offload recovery');
+                                    output = await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', isDoubted);
+                                    if (output && assessTranslation(chunks[i], output, targetLang).ok) {
+                                        lastTranslationEngine = 'cloud_ai';
+                                    }
+                                } catch (_) {}
+                            }
+                            if (!output || !assessTranslation(chunks[i], output, targetLang).ok) {
+                                output = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
+                            }
                         } else {
                             output = raceRes;
                         }
                     } catch (raceErr) {
                         clearTimeout(segTimer);
-                        output = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
+                        if (hasCloud) {
+                            try {
+                                output = await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', isDoubted);
+                                if (output && assessTranslation(chunks[i], output, targetLang).ok) {
+                                    lastTranslationEngine = 'cloud_ai';
+                                }
+                            } catch (_) {}
+                        }
+                        if (!output || !assessTranslation(chunks[i], output, targetLang).ok) {
+                            output = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
+                        }
                     }
                 } else {
                     output = await chunkPromise;
@@ -9472,8 +9564,8 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                 if (cancelTranslationFlag) { lookaheadPromise = null; lookaheadIndex = -1; break; } // Late provider responses cannot commit after stop.
                 checkOwner();
                 let assessment = assessTranslation(chunks[i], output, targetLang);
-                if (!assessment.ok && window.EngbotLmStudio?.available()) {
-                    // Tier 1 Auto-Recovery: Try LM Studio direct translation if smart phase or fast engine produced empty/invalid output
+                if (!assessment.ok && window.EngbotLmStudio?.available() && !isLocalSlow()) {
+                    // Tier 1 Auto-Recovery: Try LM Studio direct translation if smart phase produced empty/invalid output
                     try {
                         setTranslationStage('LM Studio · Auto-recovering segment');
                         const lmDirect = await window.EngbotLmStudio.translateDirect(chunks[i], targetLang, {
@@ -9488,8 +9580,20 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                         }
                     } catch (_) {}
                 }
+                if (!assessment.ok && typeof translateChunkAI === 'function' && aiTranslationAvailable()) {
+                    // Tier 2 Auto-Recovery: Try Server-Side / Cloud AI recovery
+                    try {
+                        setTranslationStage('Server AI · Auto-recovering segment');
+                        const cloudOut = await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true);
+                        if (cloudOut && assessTranslation(chunks[i], cloudOut, targetLang).ok) {
+                            output = cloudOut;
+                            assessment = { ok: true };
+                            lastTranslationEngine = 'cloud_ai';
+                        }
+                    } catch (_) {}
+                }
                 if (!assessment.ok && typeof translateChunkLocal === 'function') {
-                    // Tier 2 Auto-Recovery: Clear cooldowns and try fast neural translation once more
+                    // Tier 3 Auto-Recovery: Clear cooldowns and try fast neural translation once more
                     try {
                         if (typeof translationMachine === 'function') translationMachine().unpause();
                         const fallbackOut = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
@@ -9880,8 +9984,8 @@ function renderAdminTranslationTelemetry(job = null, book = null) {
         if (eng.includes('lm_studio') || eng === 'local_ai') {
             displayName = 'LM Studio · ' + (window.EngbotLmStudio?.settings()?.model || 'Local Model');
             badgeColor = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
-        } else if (eng.includes('cloud_ai')) {
-            displayName = 'Cloud AI Pass';
+        } else if (eng.includes('cloud_ai') || eng === 'ai') {
+            displayName = 'Server / Cloud AI Pass';
             badgeColor = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40';
         } else if (eng.includes('kona') || eng === 'server') {
             displayName = 'Tbilisi AI Lab Kona-2 (Q4_K_M · OCI)';

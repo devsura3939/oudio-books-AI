@@ -8,7 +8,7 @@
     const estimate = text => Math.ceil(new TextEncoder().encode(String(text || '')).length / 2);
     function segmentLimit(context = 4096) { return Math.max(300, Math.min(1400, Math.floor((context - 2000) / 5))); }
     function risk(source, complexity = 0) {
-        return complexity >= 22 || /\d|[„“”"']|^\s*[-—]\s+|\b(?:not|never|neither|nor|unless|without|although|meanwhile|nonetheless)\b|(?:არასოდეს|ვერ|ნუ|არ\s|თუ\s|როდესაც|რადგან|თუმცა)/iu.test(source);
+        return complexity >= 22 || /\d|[„“”"']|^\s*[-—]\s+|\b(?:not|never|neither|nor|barely|scarcely|hardly|unless|without|although|meanwhile|nonetheless|cannot)\b|(?:არასოდეს|ვერ|ნუ|აღარ|ვეღარ|არც|არ\s|თუ\s|როდესაც|რადგან|თუმცა)/iu.test(source);
     }
     function reviewResult(value, source) {
         if (!value || !['approved','needs_revision'].includes(value.verdict) || !Array.isArray(value.errors)) return null;
