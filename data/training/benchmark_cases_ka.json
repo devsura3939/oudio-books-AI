@@ -8439,5 +8439,353 @@
       "directional",
       "phrasal"
     ]
+  },
+  {
+    "id": "case-env-meteo-01",
+    "kind": "translate",
+    "source": "შუადღისას წვიმამ დაიწყო მძიმედ წვიმა ქუჩებში.",
+    "expected": "შუადღისას კოკისპირულად გაწვიმდა ქუჩებში.",
+    "weight": 1.0,
+    "tags": [
+      "environmental",
+      "meteorological",
+      "rain"
+    ]
+  },
+  {
+    "id": "case-env-meteo-02",
+    "kind": "translate",
+    "source": "საღამოს წვიმა წამოვიდა მძიმედ მინდორზე.",
+    "expected": "საღამოს კოკისპირულად გაწვიმდა მინდორზე.",
+    "weight": 1.0,
+    "tags": [
+      "environmental",
+      "meteorological",
+      "rain"
+    ]
+  },
+  {
+    "id": "case-env-meteo-03",
+    "kind": "translate",
+    "source": "ჭექა-ქუხილმა გააგორა მთებზე შორს.",
+    "expected": "მთებში ქუხილმა დაიგრგვინა შორს.",
+    "weight": 1.0,
+    "tags": [
+      "environmental",
+      "thunder",
+      "mountains"
+    ]
+  },
+  {
+    "id": "case-env-meteo-04",
+    "kind": "translate",
+    "source": "დილით ნისლი დაჯდა ხეობაზე ჩუმად.",
+    "expected": "დილით ხეობას ნისლი ჩამოწვა ჩუმად.",
+    "weight": 1.0,
+    "tags": [
+      "environmental",
+      "fog",
+      "valley"
+    ]
+  },
+  {
+    "id": "case-env-meteo-05",
+    "kind": "translate",
+    "source": "ღამით ცივი ქარი ყვიროდა ხეებში.",
+    "expected": "ღამით ცივი ქარი ხეებში ღმუოდა.",
+    "weight": 1.0,
+    "tags": [
+      "environmental",
+      "wind",
+      "trees"
+    ]
+  },
+  {
+    "id": "case-env-meteo-06",
+    "kind": "translate",
+    "source": "მზე სცემდა დაუნდობლად უდაბნოში.",
+    "expected": "მზე დაუნდობლად აჭერდა უდაბნოში.",
+    "weight": 1.0,
+    "tags": [
+      "environmental",
+      "sun",
+      "desert"
+    ]
+  },
+  {
+    "id": "case-resultative-01",
+    "kind": "translate",
+    "source": "ღამის ბოლოს ცეცხლმა თავი დაწვა ნელა.",
+    "expected": "ღამის ბოლოს ცეცხლი ჩაქრა ნელა.",
+    "weight": 1.0,
+    "tags": [
+      "resultative",
+      "fire",
+      "extinguish"
+    ]
+  },
+  {
+    "id": "case-resultative-02",
+    "kind": "translate",
+    "source": "ბანაკში ცეცხლი დაიწვა თვითონ დილამდე.",
+    "expected": "ბანაკში ცეცხლი ჩაქრა დილამდე.",
+    "weight": 1.0,
+    "tags": [
+      "resultative",
+      "fire",
+      "burn_out"
+    ]
+  },
+  {
+    "id": "case-resultative-03",
+    "kind": "translate",
+    "source": "ზაფხულის სიცხეში მდინარე გაიქცა მშრალი.",
+    "expected": "ზაფხულის სიცხეში მდინარე დაშრა.",
+    "weight": 1.0,
+    "tags": [
+      "resultative",
+      "river",
+      "dry"
+    ]
+  },
+  {
+    "id": "case-resultative-04",
+    "kind": "translate",
+    "source": "საათმა ტიკტიკით გაუშვა წუთები ოთახში.",
+    "expected": "საათი წუთებს ითვლიდა ოთახში.",
+    "weight": 1.0,
+    "tags": [
+      "resultative",
+      "clock",
+      "time"
+    ]
+  },
+  {
+    "id": "case-resultative-05",
+    "kind": "translate",
+    "source": "ფანჯრის შუშა დაიმსხვრა ნაჭრებში იატაკზე.",
+    "expected": "ფანჯრის შუშა ნამსხვრევებად იქცა იატაკზე.",
+    "weight": 1.0,
+    "tags": [
+      "resultative",
+      "glass",
+      "shatter"
+    ]
+  },
+  {
+    "id": "case-resultative-06",
+    "kind": "translate",
+    "source": "მისი ხმა გაფერმკრთალდა სიჩუმეში ნელა.",
+    "expected": "მისი ხმა თანდათან მიწყდა ნელა.",
+    "weight": 1.0,
+    "tags": [
+      "resultative",
+      "sound",
+      "fade"
+    ]
+  },
+  {
+    "id": "case-psych-volition-01",
+    "kind": "translate",
+    "source": "მოულოდნელად ის იყო სიტყვების დანაკარგში.",
+    "expected": "მოულოდნელად სიტყვა ვეღარ მოეძებნა.",
+    "weight": 1.0,
+    "tags": [
+      "psychological",
+      "volition",
+      "speechless"
+    ]
+  },
+  {
+    "id": "case-psych-volition-02",
+    "kind": "translate",
+    "source": "პასუხის დროს სიტყვების დაკარგვაში იყო.",
+    "expected": "პასუხის დროს სიტყვა ვეღარ მოეძებნა.",
+    "weight": 1.0,
+    "tags": [
+      "psychological",
+      "volition",
+      "speechless"
+    ]
+  },
+  {
+    "id": "case-psych-volition-03",
+    "kind": "translate",
+    "source": "მან შეადგინა თავისი გონება ერთხელ და ყველასთვის წასვლაზე.",
+    "expected": "მან საბოლოოდ გადაწყვიტა წასვლაზე.",
+    "weight": 1.0,
+    "tags": [
+      "psychological",
+      "decision",
+      "mind"
+    ]
+  },
+  {
+    "id": "case-psych-volition-04",
+    "kind": "translate",
+    "source": "მას ჰქონდა ცუდი გრძნობა ამაზე მთელი დღე.",
+    "expected": "ცუდი წინათგრძნობა ჰქონდა მთელი დღე.",
+    "weight": 1.0,
+    "tags": [
+      "psychological",
+      "intuition",
+      "foreboding"
+    ]
+  },
+  {
+    "id": "case-psych-volition-05",
+    "kind": "translate",
+    "source": "მან ეს გულთან აიღო ძალიან.",
+    "expected": "მან გულთან ახლოს მიიტანა ძალიან.",
+    "weight": 1.0,
+    "tags": [
+      "psychological",
+      "affective",
+      "heart"
+    ]
+  },
+  {
+    "id": "case-psych-volition-06",
+    "kind": "translate",
+    "source": "მან აიღო ეს გულში ღრმად.",
+    "expected": "მან გულთან ახლოს მიიტანა ღრმად.",
+    "weight": 1.0,
+    "tags": [
+      "psychological",
+      "affective",
+      "heart"
+    ]
+  },
+  {
+    "id": "case-psych-volition-07",
+    "kind": "translate",
+    "source": "უცნობი თავის გვერდით იყო სიბრაზით დარბაზში.",
+    "expected": "უცნობი განრისხებისგან ჭკუაზე აღარ იყო დარბაზში.",
+    "weight": 1.0,
+    "tags": [
+      "psychological",
+      "affective",
+      "furious"
+    ]
+  },
+  {
+    "id": "case-cognition-01",
+    "kind": "translate",
+    "source": "ეს გათენდა მასზე, რომ სიმართლე სხვა იყო.",
+    "expected": "უეცრად მიხვდა, რომ სიმართლე სხვა იყო.",
+    "weight": 1.0,
+    "tags": [
+      "cognitive",
+      "epiphany",
+      "realization"
+    ]
+  },
+  {
+    "id": "case-cognition-02",
+    "kind": "translate",
+    "source": "დარტყმის შემდეგ ის მოვიდა თავის გრძნობებში.",
+    "expected": "დარტყმის შემდეგ გონს მოეგო.",
+    "weight": 1.0,
+    "tags": [
+      "cognitive",
+      "consciousness",
+      "recovery"
+    ]
+  },
+  {
+    "id": "case-cognition-03",
+    "kind": "translate",
+    "source": "მან დაინახა მოტყუების გავლით მაშინვე.",
+    "expected": "მან სიცრუე მაშინვე ამოიცნო მაშინვე.",
+    "weight": 1.0,
+    "tags": [
+      "cognitive",
+      "perception",
+      "deception"
+    ]
+  },
+  {
+    "id": "case-cognition-04",
+    "kind": "translate",
+    "source": "მან მიიღო გარანტირებულად მათი დახმარება.",
+    "expected": "მან თავისთავად ცხადად მიიჩნია მათი დახმარება.",
+    "weight": 1.0,
+    "tags": [
+      "cognitive",
+      "presumption",
+      "granted"
+    ]
+  },
+  {
+    "id": "case-cognition-05",
+    "kind": "translate",
+    "source": "საუბარში მან დაკარგა დროის კვალი სრულიად.",
+    "expected": "საუბარში დროის შეგრძნება დაკარგა სრულიად.",
+    "weight": 1.0,
+    "tags": [
+      "cognitive",
+      "temporal",
+      "time_tracking"
+    ]
+  },
+  {
+    "id": "case-intensifier-01",
+    "kind": "translate",
+    "source": "მოხუცი იჯდა ღრმად ფიქრში ბაღში.",
+    "expected": "მოხუცი იჯდა ფიქრებში ჩაძირული ბაღში.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "posture",
+      "deep_thought"
+    ]
+  },
+  {
+    "id": "case-intensifier-02",
+    "kind": "translate",
+    "source": "ეს წერილი მოვიდა ლურჯიდან გარეთ დღეს.",
+    "expected": "ეს წერილი მოვიდა მოულოდნელად დღეს.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "idiom",
+      "out_of_blue"
+    ]
+  },
+  {
+    "id": "case-intensifier-03",
+    "kind": "translate",
+    "source": "ისინი მივიდნენ ყველა შანსების წინააღმდეგ მიზნამდე.",
+    "expected": "ისინი მივიდნენ ყოველგვარი დაბრკოლების მიუხედავად მიზნამდე.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "concessive",
+      "against_odds"
+    ]
+  },
+  {
+    "id": "case-intensifier-04",
+    "kind": "translate",
+    "source": "ეს სიმართლეა ეჭვის ჩრდილის მიღმა ყოველთვის.",
+    "expected": "ეს სიმართლეა ეჭვგარეშეა ყოველთვის.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "epistemic",
+      "beyond_doubt"
+    ]
+  },
+  {
+    "id": "case-intensifier-05",
+    "kind": "translate",
+    "source": "მან შეამოწმა ციხესიმაგრე ზემოდან ქვემომდე გუშინ.",
+    "expected": "მან შეამოწმა ციხესიმაგრე თავიდან ბოლომდე გუშინ.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "spatial",
+      "top_to_bottom"
+    ]
   }
 ]

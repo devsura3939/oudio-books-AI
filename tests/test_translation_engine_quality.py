@@ -180,3 +180,17 @@ def test_auditory_posture_motion_and_idiom_calques_rejected_and_cleaned():
     assert "ზურგი შეაქცია" in cleaned
     assert "ძალზე იშვიათად" in cleaned
 
+
+def test_weather_resultative_and_cognitive_calques_rejected_and_cleaned():
+    """Verify Rule Groups 66-70: meteorological verbs, resultatives, volition, cognition, and intensifiers."""
+    source = "The rain poured down heavily, the fire burned itself out, he was at a loss for words, it dawned on him, and he sat deep in thought."
+    bad_cand = "წვიმამ დაიწყო მძიმედ წვიმა, ცეცხლმა თავი დაწვა, ის იყო სიტყვების დანაკარგში, ეს გათენდა მასზე, რომ დაჯდა ღრმად ფიქრში."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject meteorological, resultative, and cognitive calques"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "კოკისპირულად გაწვიმდა" in cleaned
+    assert "ცეცხლი ჩაქრა" in cleaned
+    assert "სიტყვა ვეღარ მოეძებნა" in cleaned
+    assert "უეცრად მიხვდა, რომ" in cleaned
+    assert "ფიქრებში ჩაძირული" in cleaned
+

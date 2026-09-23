@@ -199,9 +199,9 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 770, "Expected at least 770 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 880, "Expected at least 880 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 41, "Active pack version must be at least 41")
+        self.assertGreaterEqual(len(cases), 800, "Expected at least 800 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 920, "Expected at least 920 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 42, "Active pack version must be at least 42")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
@@ -996,6 +996,74 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         for raw, expected in pairs:
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Motion directional failed for '{raw}': got '{polished}'")
+
+    def test_65_environmental_meteorological_verbs(self):
+        """Verify environmental and meteorological impersonal verbs (Rule Group 66)."""
+        pairs = [
+            ("შუადღისას წვიმამ დაიწყო მძიმედ წვიმა ქუჩებში.", "შუადღისას კოკისპირულად გაწვიმდა ქუჩებში."),
+            ("საღამოს წვიმა წამოვიდა მძიმედ მინდორზე.", "საღამოს კოკისპირულად გაწვიმდა მინდორზე."),
+            ("ჭექა-ქუხილმა გააგორა მთებზე შორს.", "მთებში ქუხილმა დაიგრგვინა შორს."),
+            ("დილით ნისლი დაჯდა ხეობაზე ჩუმად.", "დილით ხეობას ნისლი ჩამოწვა ჩუმად."),
+            ("ღამით ცივი ქარი ყვიროდა ხეებში.", "ღამით ცივი ქარი ხეებში ღმუოდა."),
+            ("მზე სცემდა დაუნდობლად უდაბნოში.", "მზე დაუნდობლად აჭერდა უდაბნოში."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Meteorological verb failed for '{raw}': got '{polished}'")
+
+    def test_66_phrasal_resultatives_state_change(self):
+        """Verify phrasal resultatives and state-change aspectuals (Rule Group 67)."""
+        pairs = [
+            ("ღამის ბოლოს ცეცხლმა თავი დაწვა ნელა.", "ღამის ბოლოს ცეცხლი ჩაქრა ნელა."),
+            ("ბანაკში ცეცხლი დაიწვა თვითონ დილამდე.", "ბანაკში ცეცხლი ჩაქრა დილამდე."),
+            ("ზაფხულის სიცხეში მდინარე გაიქცა მშრალი.", "ზაფხულის სიცხეში მდინარე დაშრა."),
+            ("საათმა ტიკტიკით გაუშვა წუთები ოთახში.", "საათი წუთებს ითვლიდა ოთახში."),
+            ("ფანჯრის შუშა დაიმსხვრა ნაჭრებში იატაკზე.", "ფანჯრის შუშა ნამსხვრევებად იქცა იატაკზე."),
+            ("მისი ხმა გაფერმკრთალდა სიჩუმეში ნელა.", "მისი ხმა თანდათან მიწყდა ნელა."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Resultative aspect failed for '{raw}': got '{polished}'")
+
+    def test_67_psychological_volition_dispositional(self):
+        """Verify psychological volition and dispositional idioms (Rule Group 68)."""
+        pairs = [
+            ("მოულოდნელად სიტყვების დანაკარგში იყო.", "მოულოდნელად სიტყვა ვეღარ მოეძებნა."),
+            ("პასუხის დროს სიტყვების დაკარგვაში იყო.", "პასუხის დროს სიტყვა ვეღარ მოეძებნა."),
+            ("მან შეადგინა თავისი გონება ერთხელ და ყველასთვის წასვლაზე.", "მან საბოლოოდ გადაწყვიტა წასვლაზე."),
+            ("მას ჰქონდა ცუდი გრძნობა ამაზე მთელი დღე.", "მას ცუდი წინათგრძნობა ჰქონდა მთელი დღე."),
+            ("მან ეს გულთან აიღო ძალიან.", "მან გულთან ახლოს მიიტანა ძალიან."),
+            ("უცნობი თავის გვერდით იყო სიბრაზით დარბაზში.", "უცნობი განრისხებისგან ჭკუაზე აღარ იყო დარბაზში."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Psychological volition failed for '{raw}': got '{polished}'")
+
+    def test_68_cognitive_perception_realization(self):
+        """Verify cognitive perception and realization idioms (Rule Group 69)."""
+        pairs = [
+            ("ეს გათენდა მასზე, რომ სიმართლე სხვა იყო.", "უეცრად მიხვდა, რომ სიმართლე სხვა იყო."),
+            ("დარტყმის შემდეგ ის მოვიდა თავის გრძნობებში.", "დარტყმის შემდეგ ის გონს მოეგო."),
+            ("მან დაინახა მოტყუების გავლით.", "მან სიცრუე მაშინვე ამოიცნო."),
+            ("მან მიიღო გარანტირებულად მათი დახმარება.", "მან თავისთავად ცხადად მიიჩნია მათი დახმარება."),
+            ("საუბარში მან დაკარგა დროის კვალი სრულიად.", "საუბარში მან დროის შეგრძნება დაკარგა სრულიად."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Cognitive perception failed for '{raw}': got '{polished}'")
+
+    def test_69_collocational_intensifiers_spatial(self):
+        """Verify collocational intensifiers and bound spatial preverbs (Rule Group 70)."""
+        pairs = [
+            ("მოხუცი იჯდა ღრმად ფიქრში ბაღში.", "მოხუცი იჯდა ფიქრებში ჩაძირული ბაღში."),
+            ("ეს წერილი მოვიდა ლურჯიდან გარეთ დღეს.", "ეს წერილი მოვიდა მოულოდნელად დღეს."),
+            ("ისინი მივიდნენ ყველა შანსების წინააღმდეგ მიზნამდე.", "ისინი მივიდნენ ყოველგვარი დაბრკოლების მიუხედავად მიზნამდე."),
+            ("ეს სიმართლეა ეჭვის ჩრდილის მიღმა ყოველთვის.", "ეს სიმართლეა ეჭვგარეშეა ყოველთვის."),
+            ("მან შეამოწმა ციხესიმაგრე ზემოდან ქვემომდე გუშინ.", "მან შეამოწმა ციხესიმაგრე თავიდან ბოლომდე გუშინ."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Intensifier collocation failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":

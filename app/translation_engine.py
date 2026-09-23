@@ -165,7 +165,7 @@ def clean_georgian_morphology(text: str) -> str:
         # Psychological & Mental State Collocations
         (r'(?<![\u10A0-\u10FF])(?:(?:მისი|თავისი)\s+)?გონება\s+დაკარგა(?![ა-ჰ])', 'ჭკუიდან შეიშალა'),
         (r'(?<![\u10A0-\u10FF])დაკარგა\s+(?:(?:მისი|თავისი)\s+)?გონება(?![ა-ჰ])', 'ჭკუიდან შეიშალა'),
-        (r'(?<![\u10A0-\u10FF])(?:გააკეთა|შეადგინა)\s+(?:(?:მისი|თავისი)\s+)?გონება(?![ა-ჰ])', 'გადაწყვიტა'),
+        (r'(?<![\u10A0-\u10FF])(?:გააკეთა|შეადგინა)\s+(?:(?:მისი|თავისი)\s+)?გონება(?!\s+ერთხელ\s+და\s+ყველასთვის)(?![ა-ჰ])', 'გადაწყვიტა'),
         (r'(?<![\u10A0-\u10FF])შეცვალა\s+(?:(?:მისი|თავისი)\s+)?გონება(?![ა-ჰ])', 'გადაიფიქრა'),
         (r'(?<![\u10A0-\u10FF])შეინახა\s+გონებაში(?![ა-ჰ])', 'გაითვალისწინა'),
         (r'(?<![\u10A0-\u10FF])შეინახეთ\s+გონებაში(?![ა-ჰ])', 'გაითვალისწინეთ'),
@@ -268,6 +268,36 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])მოშორებით\s+შეხედა(?![ა-ჰ])', 'მზერა აარიდა'),
         (r'(?<![\u10A0-\u10FF])მზერა\s+ესროლა(?![ა-ჰ])', 'თვალი შეავლო'),
         (r'(?<![\u10A0-\u10FF])მხედველობა\s+დაიჭირა(?![ა-ჰ])', 'თვალი მოჰკრა'),
+        # Environmental & Meteorological Verbs
+        (r'(?<![\u10A0-\u10FF])(?:წვიმამ\s+დაიწყო\s+მძიმედ\s+წვიმა|წვიმა\s+წამოვიდა\s+მძიმედ)(?![ა-ჰ])', 'კოკისპირულად გაწვიმდა'),
+        (r'(?<![\u10A0-\u10FF])ჭექა-ქუხილმა\s+გააგორა\s+მთებზე(?![ა-ჰ])', 'მთებში ქუხილმა დაიგრგვინა'),
+        (r'(?<![\u10A0-\u10FF])ნისლი\s+დაჯდა\s+ხეობაზე(?![ა-ჰ])', 'ხეობას ნისლი ჩამოწვა'),
+        (r'(?<![\u10A0-\u10FF])ქარი\s+ყვიროდა\s+ხეებში(?![ა-ჰ])', 'ქარი ხეებში ღმუოდა'),
+        (r'(?<![\u10A0-\u10FF])მზე\s+სცემდა\s+დაუნდობლად(?![ა-ჰ])', 'მზე დაუნდობლად აჭერდა'),
+        # Phrasal Resultatives & State-Change Aspectuals
+        (r'(?<![\u10A0-\u10FF])(?:ცეცხლმა\s+თავი\s+დაწვა|ცეცხლი\s+დაიწვა\s+თვითონ)(?![ა-ჰ])', 'ცეცხლი ჩაქრა'),
+        (r'(?<![\u10A0-\u10FF])მდინარე\s+გაიქცა\s+მშრალი(?![ა-ჰ])', 'მდინარე დაშრა'),
+        (r'(?<![\u10A0-\u10FF])საათმა\s+ტიკტიკით\s+გაუშვა\s+წუთები(?![ა-ჰ])', 'საათი წუთებს ითვლიდა'),
+        (r'(?<![\u10A0-\u10FF])შუშა\s+დაიმსხვრა\s+ნაჭრებში(?![ა-ჰ])', 'შუშა ნამსხვრევებად იქცა'),
+        (r'(?<![\u10A0-\u10FF])ხმა\s+გაფერმკრთალდა\s+სიჩუმეში(?![ა-ჰ])', 'ხმა თანდათან მიწყდა'),
+        # Psychological Volition & Dispositional Adjectives
+        (r'(?<![\u10A0-\u10FF])(?:(?:იყო\s+)?სიტყვების\s+(?:დანაკარგში|დაკარგვაში)(?:\s+იყო)?)(?![ა-ჰ])', 'სიტყვა ვეღარ მოეძებნა'),
+        (r'(?<![\u10A0-\u10FF])(?:(?:შეადგინა\s+თავისი\s+გონება|გადაწყვიტა)\s+ერთხელ\s+და\s+ყველასთვის|გონება\s+ერთხელ\s+და\s+ყველასთვის)(?![ა-ჰ])', 'საბოლოოდ გადაწყვიტა'),
+        (r'(?<![\u10A0-\u10FF])ჰქონდა\s+ცუდი\s+გრძნობა\s+ამაზე(?![ა-ჰ])', 'ცუდი წინათგრძნობა ჰქონდა'),
+        (r'(?<![\u10A0-\u10FF])(?:ეს\s+გულთან\s+აიღო|აიღო\s+ეს\s+გულში)(?![ა-ჰ])', 'გულთან ახლოს მიიტანა'),
+        (r'(?<![\u10A0-\u10FF])თავის\s+გვერდით\s+იყო\s+სიბრაზით(?![ა-ჰ])', 'განრისხებისგან ჭკუაზე აღარ იყო'),
+        # Cognitive Perception & Realization Idioms
+        (r'(?<![\u10A0-\u10FF])ეს\s+გათენდა\s+მასზე,\s*რომ(?![ა-ჰ])', 'უეცრად მიხვდა, რომ'),
+        (r'(?<![\u10A0-\u10FF])მოვიდა\s+თავის\s+გრძნობებში(?![ა-ჰ])', 'გონს მოეგო'),
+        (r'(?<![\u10A0-\u10FF])დაინახა\s+მოტყუების\s+გავლით(?![ა-ჰ])', 'სიცრუე მაშინვე ამოიცნო'),
+        (r'(?<![\u10A0-\u10FF])მიიღო\s+გარანტირებულად(?![ა-ჰ])', 'თავისთავად ცხადად მიიჩნია'),
+        (r'(?<![\u10A0-\u10FF])დაკარგა\s+დროის\s+კვალი(?![ა-ჰ])', 'დროის შეგრძნება დაკარგა'),
+        # Collocational Intensifiers & Bound Spatial Preverbs
+        (r'(?<![\u10A0-\u10FF])ღრმად\s+ფიქრში(?![ა-ჰ])', 'ფიქრებში ჩაძირული'),
+        (r'(?<![\u10A0-\u10FF])ლურჯიდან\s+გარეთ(?![ა-ჰ])', 'მოულოდნელად'),
+        (r'(?<![\u10A0-\u10FF])ყველა\s+შანსების\s+წინააღმდეგ(?![ა-ჰ])', 'ყოველგვარი დაბრკოლების მიუხედავად'),
+        (r'(?<![\u10A0-\u10FF])ეჭვის\s+ჩრდილის\s+მიღმა(?![ა-ჰ])', 'ეჭვგარეშეა'),
+        (r'(?<![\u10A0-\u10FF])ზემოდან\s+ქვემომდე(?![ა-ჰ])', 'თავიდან ბოლომდე'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -896,6 +926,11 @@ def translate_with_gemini(
                 "56. PHYSICAL POSTURE: 'sat cross-legged' -> 'ფეხმორთხმით იჯდა' (NOT '*გადაჯვარედინებული ფეხებით'), 'stood on tiptoe' -> 'ფეხის წვერებზე იდგა', 'fell on knees' -> 'მუხლებზე დაემხო', 'crossed arms' -> 'გულზე ხელები დაიკრიფა', 'bowed head' -> 'თავი დახარა'.\n"
                 "57. DEGREE & INTENSIFIERS: 'by and large' -> 'მთლიანობაში', 'once in a blue moon' -> 'ძალზე იშვიათად', 'through and through' -> 'თავიდან ბოლომდე', 'safe and sound' -> 'ცოცხალ-ჯანსაღი', 'slowly but surely' -> 'ნელა, მაგრამ შეუპოვრად'.\n"
                 "58. MOTION DIRECTIONALS: 'turned back' -> 'გამობრუნდა' (NOT '*მობრუნდა უკან'), 'turned away' -> 'ზურგი შეაქცია', 'looked away' -> 'მზერა აარიდა', 'cast a glance' -> 'თვალი შეავლო', 'caught sight of' -> 'თვალი მოჰკრა'.\n"
+                "59. ENVIRONMENTAL & METEOROLOGICAL: 'it rained heavily' -> 'კოკისპირულად გაწვიმდა' (NOT '*წვიმამ დაიწყო მძიმედ წვიმა'), 'thunder rolled' -> 'ქუხილმა დაიგრგვინა', 'fog settled' -> 'ნისლი ჩამოწვა', 'wind howled' -> 'ქარი ღმუოდა / ზუზუნებდა', 'sun beat down' -> 'მზე დაუნდობლად აჭერდა'.\n"
+                "60. RESULTATIVE ASPECT: 'burned itself out' -> 'ცეცხლი ჩაქრა' (NOT '*თავი დაწვა'), 'river ran dry' -> 'მდინარე დაშრა', 'clock ticked away' -> 'საათი წუთებს ითვლიდა', 'shattered into pieces' -> 'ნამსხვრევებად იქცა', 'faded into silence' -> 'თანდათან მიწყდა'.\n"
+                "61. PSYCHOLOGICAL VOLITION: 'at a loss for words' -> 'სიტყვა ვეღარ მოეძებნა' (NOT '*სიტყვების დანაკარგში იყო'), 'made up mind once and for all' -> 'საბოლოოდ გადაწყვიტა', 'bad feeling' -> 'ცუდი წინათგრძნობა', 'took to heart' -> 'გულთან ახლოს მიიტანა', 'beside himself with anger' -> 'განრისხებისგან ჭკუაზე აღარ იყო'.\n"
+                "62. COGNITIVE REALIZATION: 'dawned on him that' -> 'უეცრად მიხვდა, რომ' (NOT '*გათენდა მასზე'), 'came to senses' -> 'გონს მოეგო', 'saw through deception' -> 'სიცრუე მაშინვე ამოიცნო', 'took for granted' -> 'თავისთავად ცხადად მიიჩნია', 'lost track of time' -> 'დროის შეგრძნება დაკარგა'.\n"
+                "63. COLLOCATIONAL INTENSIFIERS: 'deep in thought' -> 'ფიქრებში ჩაძირული' (NOT '*ღრმად ფიქრში'), 'out of the blue' -> 'მოულოდნელად / მეხივით', 'against all odds' -> 'ყოველგვარი დაბრკოლების მიუხედავად', 'beyond shadow of doubt' -> 'ეჭვგარეშეა', 'from top to bottom' -> 'თავიდან ბოლომდე'.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -1014,7 +1049,12 @@ def translate_with_local_llm(
             "23. Posture verbs: 'sat cross-legged' -> 'ფეხმორთხმით იჯდა', 'stood on tiptoe' -> 'ფეხის წვერებზე იდგა'.\n"
             "24. Degree particles: 'by and large' -> 'მთლიანობაში', 'once in a blue moon' -> 'ძალზე იშვიათად'.\n"
             "25. Directionals: 'turned away' -> 'ზურგი შეაქცია', 'looked away' -> 'მზერა აარიდა'.\n"
-            "26. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
+            "26. Weather & nature: 'it rained heavily' -> 'კოკისპირულად გაწვიმდა', 'thunder rolled' -> 'ქუხილმა დაიგრგვინა', 'fog settled' -> 'ნისლი ჩამოწვა'.\n"
+            "27. Resultative aspect: 'burned itself out' -> 'ცეცხლი ჩაქრა', 'river ran dry' -> 'მდინარე დაშრა', 'shattered' -> 'ნამსხვრევებად იქცა'.\n"
+            "28. Psychological volition: 'at a loss for words' -> 'სიტყვა ვეღარ მოეძებნა', 'made up mind' -> 'საბოლოოდ გადაწყვიტა'.\n"
+            "29. Cognitive realization: 'dawned on him that' -> 'უეცრად მიხვდა, რომ', 'came to senses' -> 'გონს მოეგო'.\n"
+            "30. Intensifiers: 'deep in thought' -> 'ფიქრებში ჩაძირული', 'out of the blue' -> 'მოულოდნელად', 'beyond doubt' -> 'ეჭვგარეშეა'.\n"
+            "31. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
             if target_lang == "ka" else
             "You are an expert bilingual literary translator into English. Output ONLY the translation."
         )
