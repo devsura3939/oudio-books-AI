@@ -26,8 +26,23 @@ def test_raw_machine_calques_rejected_by_validator():
 
 def test_morphology_cleaner_fixes_calques():
     """Verify clean_georgian_morphology cleans calqued patterns."""
-    raw = "კაცობრიობა გამოიყურებოდა გარეგნულად. მან ისინი გაფრინდა კოსმოსში. ეს უბედური აგენტები იპოვეს სიმართლე."
+    raw = "კაცობრიობა გამოიყურებოდა გარეგნულად. მან ისინი გაფრინდა კოსმოსში. ეს უბედური აგენტები იპოვეს სიმართლე. გიმკრეკის რელიგიები და თავსატეხების ყუთები."
     cleaned = clean_georgian_morphology(raw)
     assert "მზერას გარეთ მიაპყრობდა" in cleaned
     assert "კოსმოსში გატყორცნა ისინი" in cleaned
     assert "ამ უბედურმა აგენტებმა იპოვეს" in cleaned
+    assert "იაფფასიანი რელიგიები" in cleaned
+    assert "შინაგან საიდუმლოებებში" in cleaned
+
+
+def test_ai_settings_endpoint():
+    """Verify that /api/settings/ai-status reports configuration."""
+    from starlette.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    res = client.get("/api/settings/ai-status")
+    assert res.status_code == 200
+    data = res.json()
+    assert "gemini_configured" in data
+    assert "gemini_model" in data
+

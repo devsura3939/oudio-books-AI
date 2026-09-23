@@ -6,6 +6,7 @@ import os
 import shutil
 from typing import Dict, List, Optional
 from pathlib import Path
+import re
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
@@ -203,6 +204,66 @@ async def server_translate(req: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/settings/ai-status")
+async def get_ai_status():
+    """Returns availability and status of server and cloud AI engines."""
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    return JSONResponse({
+        "gemini_configured": bool(gemini_key),
+        "gemini_model": "gemini-2.5-flash",
+        "server_ollama_url": os.environ.get("KONA_OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions"),
+        "primary_engine": "gemini-2.5-flash" if gemini_key else "kona2-small-3.8B",
+    })
+
+
+@app.post("/api/settings/ai-key")
+async def save_ai_key(req: Request):
+    """
+    Saves and activates the Gemini API key in memory and persists to .env on the server.
+    Enables instant publication-grade translation and multimodal intelligence.
+    """
+    try:
+        body = await req.json()
+        key = (body.get("gemini_api_key") or body.get("api_key") or "").strip()
+        if not key:
+            raise HTTPException(status_code=400, detail="API key is required")
+
+        os.environ["GEMINI_API_KEY"] = key
+
+        # Persist to .env file if it exists or in project root
+        env_paths = [
+            Path("/home/ubuntu/oudio-books-AI/.env"),
+            Path.cwd() / ".env"
+        ]
+        persisted = False
+        for env_path in env_paths:
+            try:
+                content = ""
+                if env_path.exists():
+                    content = env_path.read_text(encoding="utf-8")
+                if "GEMINI_API_KEY=" in content:
+                    new_content = re.sub(r'GEMINI_API_KEY=.*', f'GEMINI_API_KEY={key}', content)
+                else:
+                    new_content = content.rstrip() + f"\nGEMINI_API_KEY={key}\n"
+                env_path.write_text(new_content, encoding="utf-8")
+                persisted = True
+                break
+            except Exception as write_err:
+                print(f"[api/settings/ai-key] Notice writing to {env_path}: {write_err}")
+
+        return JSONResponse({
+            "success": True,
+            "gemini_configured": True,
+            "persisted": persisted,
+            "message": "Gemini API key successfully saved and activated"
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.api_route("/api/v1/{path:path}", methods=["GET", "POST", "OPTIONS"])

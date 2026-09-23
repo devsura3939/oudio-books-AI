@@ -75,12 +75,16 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])გარეგნობის\s+ზღვაში(?![ა-ჰ])', 'გარეგანი სამყაროს ზღვაში'),
         (r'(?<![\u10A0-\u10FF])გიმ(?:რ|კრ)ეკის\s+რელიგიები(?![ა-ჰ])', 'იაფფასიანი რელიგიები'),
         (r'(?<![\u10A0-\u10FF])მან\s+ისინი\s+გაფრინდა(?![ა-ჰ])', 'კოსმოსში გატყორცნა ისინი'),
+        (r'(?<![\u10A0-\u10FF])მან\s+გაფრინდა(?![ა-ჰ])', 'ის გაფრინდა'),
         (r'(?<![\u10A0-\u10FF])ქვებივით\s+აფრინდა\s+მათ(?![ა-ჰ])', 'ქვებივით ისროდა მათ'),
         (r'(?<![\u10A0-\u10FF])ეს\s+უბედური\s+აგენტები\s+იპოვეს(?![ა-ჰ])', 'ამ უბედურმა აგენტებმა იპოვეს'),
         (r'(?<![\u10A0-\u10FF])კაცობრიობა,\s*რომელიც\s+არ\s+იცის(?![ა-ჰ])', 'კაცობრიობა, რომელმაც არ იცის'),
         (r'(?<![\u10A0-\u10FF])რომელიც\s+არ\s+იცის(?![ა-ჰ])', 'რომელმაც არ იცის'),
         (r'(?<![\u10A0-\u10FF])საკმარისად\s+იყო\s+ნაპოვნი(?![ა-ჰ])', 'უხვად იყო ნაპოვნი'),
         (r'(?<![\u10A0-\u10FF])უაზრობის\s+კოშმარი\s+უსასრულოდ(?![ა-ჰ])', 'უაზრობის უსასრულო კოშმარი'),
+        (r'(?<![\u10A0-\u10FF])თავსატეხების\s+ყუთებ(?:ი|ში|ს)(?![ა-ჰ])', 'შინაგან საიდუმლოებებში'),
+        (r'(?<![\u10A0-\u10FF])კაცობრიობის\s+გარეგნული\s+ბიძგი(?![ა-ჰ])', 'კაცობრიობის გარეგანი სწრაფვა'),
+        (r'(?<![\u10A0-\u10FF])იმ\s+ძველ\s+დღეებში(?![ა-ჰ])', 'იმ ძველ დროს'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -980,6 +984,9 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
                     data = resp.json()
                     if data and data[0] and isinstance(data[0], list):
                         candidate = "".join([item[0] for item in data[0] if item and item[0]])
+                        if candidate and tgt == "ka":
+                            candidate = synthesize_georgian_morphology(candidate)
+                            candidate = clean_georgian_morphology(candidate)
                         if candidate and translation_is_valid(p, candidate, tgt):
                             p_trans = candidate
                             engine = "server_neural_google"
@@ -1005,6 +1012,9 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
                     if cur:
                         sub_chunks.append(cur)
                     candidate = " ".join([tr.translate(sc) for sc in sub_chunks if sc])
+                if candidate and tgt == "ka":
+                    candidate = synthesize_georgian_morphology(candidate)
+                    candidate = clean_georgian_morphology(candidate)
                 if candidate and translation_is_valid(p, candidate, tgt):
                     p_trans = candidate
                     engine = "deep_translator_google"

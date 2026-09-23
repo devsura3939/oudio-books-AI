@@ -45,7 +45,7 @@
             signal?.throwIfAborted();
             if ((cooldown.get(provider) || 0) > Date.now()) {failure(provider,'temporarily paused after an earlier failure');return null;}
             try {
-                const timeout = provider === 'server' ? 12000 : 8000;
+                const timeout = provider === 'server' ? 45000 : 8000;
                 const response = await fetchImpl(url, { ...options, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout) });
                 if (!response.ok) {
                     failure(provider,response.status===429?'rate limited':`HTTP ${response.status}`);
@@ -65,7 +65,16 @@
             const key = JSON.stringify([sourceLang, targetLang, source]);
             const cached = cache.get(key);
             if (cached && Date.now() - cached.at < 600000) { onEngine('cache'); return cached.text; }
-            const accept = (text, engine) => {
+            const accept = (rawText, engine) => {
+                let text = rawText;
+                if (targetLang === 'ka' && typeof text === 'string' && text.trim()) {
+                    const synth = (typeof root !== 'undefined' && root.synthesizeGeorgianMorphology) ||
+                                  (typeof globalThis !== 'undefined' && globalThis.synthesizeGeorgianMorphology) ||
+                                  (typeof window !== 'undefined' && window.synthesizeGeorgianMorphology);
+                    if (typeof synth === 'function') {
+                        try { text = synth(text); } catch (_) {}
+                    }
+                }
                 if (!valid(source, text, targetLang)) {failure(engine,`quality check: ${assess(source,text,targetLang).reason || 'invalid output'}`);return null;}
                 signal?.throwIfAborted();
                 const previous = cache.get(key);

@@ -3920,6 +3920,13 @@ function saveGeminiSettings() {
         localStorage.setItem('geminiApiKey', key);
         localStorage.setItem('lumina_saved_gemini_key', key);
         geminiApiKey = key;
+        try {
+            fetch('/api/settings/ai-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gemini_api_key: key })
+            }).catch(() => {});
+        } catch (_) {}
     }
 
     localStorage.setItem('geminiModel', model);
@@ -8605,6 +8612,9 @@ function isEasyChunk(text) {
 function applyKaRuleEngine(text) {
     let out = text || '';
     if (!out) return out;
+    if (typeof synthesizeGeorgianMorphology === 'function') {
+        try { out = synthesizeGeorgianMorphology(out); } catch (e) { /* non-fatal */ }
+    }
     for (let round = 0; round < 3; round++) {
         const before = out;
         try {
@@ -8696,10 +8706,10 @@ function translationMachine() {
 }
 function finishMachineTranslation(source, output, targetLang) {
     if (!output) return null;
-    // Grammar substitutions cannot establish pronoun reference, negation or mood
-    // from the target alone. Keep them in the explicit repair/training workflow.
-    // Automatic MT cleanup changes layout only; source-aware editing is below.
-    const refined = EngbotCore.readingText(output);
+    let refined = EngbotCore.readingText(output);
+    if (targetLang === 'ka' && typeof synthesizeGeorgianMorphology === 'function') {
+        try { refined = synthesizeGeorgianMorphology(refined); } catch (_) {}
+    }
     return assessTranslation(source, refined, targetLang).ok ? refined : assessTranslation(source, output, targetLang).ok ? output : null;
 }
 async function translateChunkLocal(clean, targetLang, contextBefore = '', contextAfter = '') {
