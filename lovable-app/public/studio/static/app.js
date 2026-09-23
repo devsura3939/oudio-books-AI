@@ -6537,6 +6537,7 @@ function measurePages(sentences) {
             const targetMaxH = isFirstPage ? page1MaxH : pageOtherMaxH;
 
             // Ensure paragraph container exists
+            if (!curP) {
                 const isHeadingOrQuote = /^(?:თავი|chapter|part|კარი|წიგნი|ნაწილი)\b|^[„“"'\-—]|^\S{1,20}$/i.test(item.text.trim());
                 const isVeryFirstPara = isFirstPage && curPageSentences.length === 0 && !isHeadingOrQuote;
                 curP = document.createElement('p');
