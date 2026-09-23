@@ -67,6 +67,13 @@ def translation_is_valid(source, candidate, target):
         return False
     if len(source) >= 30 and not 0.35 <= len(candidate) / len(source) <= 2.8:
         return False
+    if target == "ka":
+        if re.search(r'(?<![\u10A0-\u10FF])მან\s+(?:[ა-ჰ]+\s+)?(?:გაფრინდა|წავიდა|მოვიდა|დაჯდა|დადგა|გაიქცა|ჩამოვიდა)(?![\u10A0-\u10FF])', candidate):
+            return False
+        if re.search(r'(?<![\u10A0-\u10FF])[ა-ჰ]+ები\s+(?:[ა-ჰ]+\s+)?(?:იპოვეს|თქვეს|გააკეთეს|დაწერეს|წაიკითხეს|ნახეს|გახსნეს|დახურეს)(?![\u10A0-\u10FF])', candidate):
+            return False
+        if re.search(r'(?<![\u10A0-\u10FF])(?:გამოიყურებოდა\s+გარეგნულად|თავის\s+გარეგნულ\s+ბიძგში|ქვებივით\s+აფრინდა\s+მათ)(?![\u10A0-\u10FF])', candidate):
+            return False
     return candidate != source or detect_language(source) == target
 
 

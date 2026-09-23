@@ -6526,9 +6526,9 @@ function measurePages(sentences) {
             const targetMaxH = isFirstPage ? page1MaxH : pageOtherMaxH;
 
             // Ensure paragraph container exists
-            if (!curP) {
+                const isHeadingOrQuote = /^(?:თავი|chapter|part|კარი|წიგნი|ნაწილი)\b|^[„“"'\-—]|^\S{1,20}$/i.test(item.text.trim());
+                const isVeryFirstPara = isFirstPage && curPageSentences.length === 0 && !isHeadingOrQuote;
                 curP = document.createElement('p');
-                const isVeryFirstPara = isFirstPage && curPageSentences.length === 0;
                 curP.className = `book-prose indent-6 ${isVeryFirstPara ? 'book-drop-cap' : ''}`;
                 probe.appendChild(curP);
             }
@@ -6867,10 +6867,12 @@ function renderCurrentPage() {
                 const pinHtml = bm ? `<span class="reader-bookmark-pin" title="Bookmark: ${escapeHtml(bm.label || 'Saved bookmark')}" onclick="event.stopPropagation(); showReaderBookmarkOptions('${escapeHtml(bm.slot)}', ${item.globalIndex})"><span class="material-symbols-outlined text-[13px] text-georgian-gold align-middle">bookmark</span></span>` : '';
                 pBuffer.push(`<span class="reader-sentence${bmClass}" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${pinHtml}${escapeHtml(item.text)}</span> `);
                 if (item.isParaBreak) {
-                    const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
+                    const firstText = (pBuffer[0] || '').replace(/<[^>]+>/g, '').trim();
+                    const isHeadingOrQuote = /^(?:თავი|chapter|part|კარი|წიგნი|ნაწილი)\b|^[„“"'\-—]|^\S{1,20}$/i.test(firstText);
+                    const dropCapClass = (isFirstParagraph && !isHeadingOrQuote) ? 'book-drop-cap' : '';
                     html += `<p class="book-prose indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
                     pBuffer = [];
-                    isFirstParagraph = false;
+                    if (!isHeadingOrQuote) isFirstParagraph = false;
                 }
             });
         });
@@ -6981,10 +6983,12 @@ function renderSinglePageCard(pageNumber, totalPages, sentences, chap, isFirstPa
         pBuffer.push(`<span class="reader-sentence${bmClass}" id="rsentence_${item.globalIndex}" onclick="onReaderSentenceClick(${item.globalIndex})">${pinHtml}${escapeHtml(item.text)}</span> `);
 
         if (item.isParaBreak || idx === sentences.length - 1) {
-            const dropCapClass = isFirstParagraph ? 'book-drop-cap' : '';
+            const firstText = (pBuffer[0] || '').replace(/<[^>]+>/g, '').trim();
+            const isHeadingOrQuote = /^(?:თავი|chapter|part|კარი|წიგნი|ნაწილი)\b|^[„“"'\-—]|^\S{1,20}$/i.test(firstText);
+            const dropCapClass = (isFirstParagraph && !isHeadingOrQuote) ? 'book-drop-cap' : '';
             cardHtml += `<p class="book-prose indent-6 ${dropCapClass}">${pBuffer.join('')}</p>`;
             pBuffer = [];
-            isFirstParagraph = false;
+            if (!isHeadingOrQuote) isFirstParagraph = false;
         }
     });
 

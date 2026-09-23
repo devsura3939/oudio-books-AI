@@ -69,6 +69,18 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])თვალის\s+დევნება(?![ა-ჰ])', 'ყურება'),
         (r'(?<![\u10A0-\u10FF])სარგებლობა\s+მოაქვს(?![ა-ჰ])', 'სარგებელი აქვს'),
         (r'(?<![\u10A0-\u10FF])საქმე\s+იმაშია(?![ა-ჰ])', 'საქმე ისაა'),
+        # Anti-calques for raw machine translation & Kurt Vonnegut / sci-fi prose
+        (r'(?<![\u10A0-\u10FF])გამოიყურებოდა\s+გარეგნულად(?![ა-ჰ])', 'მზერას გარეთ მიაპყრობდა'),
+        (r'(?<![\u10A0-\u10FF])თავის\s+გარეგნულ\s+ბიძგში(?![ა-ჰ])', 'თავის ამ გარეგან სწრაფვაში'),
+        (r'(?<![\u10A0-\u10FF])გარეგნობის\s+ზღვაში(?![ა-ჰ])', 'გარეგანი სამყაროს ზღვაში'),
+        (r'(?<![\u10A0-\u10FF])გიმ(?:რ|კრ)ეკის\s+რელიგიები(?![ა-ჰ])', 'იაფფასიანი რელიგიები'),
+        (r'(?<![\u10A0-\u10FF])მან\s+ისინი\s+გაფრინდა(?![ა-ჰ])', 'კოსმოსში გატყორცნა ისინი'),
+        (r'(?<![\u10A0-\u10FF])ქვებივით\s+აფრინდა\s+მათ(?![ა-ჰ])', 'ქვებივით ისროდა მათ'),
+        (r'(?<![\u10A0-\u10FF])ეს\s+უბედური\s+აგენტები\s+იპოვეს(?![ა-ჰ])', 'ამ უბედურმა აგენტებმა იპოვეს'),
+        (r'(?<![\u10A0-\u10FF])კაცობრიობა,\s*რომელიც\s+არ\s+იცის(?![ა-ჰ])', 'კაცობრიობა, რომელმაც არ იცის'),
+        (r'(?<![\u10A0-\u10FF])რომელიც\s+არ\s+იცის(?![ა-ჰ])', 'რომელმაც არ იცის'),
+        (r'(?<![\u10A0-\u10FF])საკმარისად\s+იყო\s+ნაპოვნი(?![ა-ჰ])', 'უხვად იყო ნაპოვნი'),
+        (r'(?<![\u10A0-\u10FF])უაზრობის\s+კოშმარი\s+უსასრულოდ(?![ა-ჰ])', 'უაზრობის უსასრულო კოშმარი'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -731,56 +743,13 @@ def translate_with_kona(
         if target_lang == "ka":
             sys_msg = (
                 "You are an expert bilingual literary translator specializing in English and Georgian. "
-                "Translate into natural, authentic, elegant literary Georgian (ქართული სამწერლო ენა).\n"
-                "Strict Syntactic & Stylistic Directives:\n"
-                "1. GEORGIAN SYNTAX & SENTENCE BUILDING: Do not translate mechanically word-for-word like Google Translate. "
-                "Use natural Georgian syntax (flexible SOV/OVS order, topic-comment focus before the finite verb) instead of rigid English SVO.\n"
-                "2. COMPLETE SENTENCES: Ensure every sentence is grammatically complete, natural, and fully resolved. "
-                "Never stop or leave a sentence unfinished in the middle.\n"
-                "3. CASE CONCORD & MORPHOLOGY:\n"
-                "   - Transitive and Medial verbs in the Aorist screeve require Ergative subject (-მა / -მ: 'ავტორმა თქვა', 'ქარმა დაუბერა', 'მზემ გაანათა', 'ბავშვმა იტირა', 'აზრმა გაუელვა').\n"
-                "   - Series III (Perfect / Pluperfect evidentials with თურმე) require Dative subject (-ს: 'ავტორს დაუწერია', 'მეფეს უბრძანებია', 'ოსტატს აუშენებია').\n"
-                "   - Experiencer verbs of perception, volition, and emotion take Dative subjects (მას უნდა, მას უყვარს, მას ახსოვს, მას აქვს, მას სურს, მას მოსწონს).\n"
-                "   - Use proper postposition syncopation (კუმშვა/კვეცა: ქალაქში, წყლიდან, მთაზე).\n"
-                "4. PARTICIPIAL CLAUSES: Use concise Georgian participles (დაწერილი წიგნი, აშენებული ტაძარი, მომავალი თაობა, სათქმელი სიტყვა) instead of clumsy 'რომელიც' subordinate clauses.\n"
-                "5. PROHIBITIVE NEGATION: For negative imperatives, ALWAYS use the prohibitive particle 'ნუ' (ნუ წახვალ, ნუ გეშინია, ნუ ტირი, ნუ დაივიწყებ), NEVER declarative '*არ წახვიდე'.\n"
-                "6. ANTI-CALQUES: Avoid literal English calques (use 'მოხდა' instead of 'ადგილი ჰქონდა', "
-                "'გადაწყვიტა' instead of 'მიიღო გადაწყვეტილება', 'როლი შეასრულა' instead of 'ითამაშა როლი').\n"
-                "7. PRESERVATION: Retain all names, numbers, dialogue marks, and meaning accurately.\n"
-                "8. PROPER NOUNS & CHARACTERS: Never translate proper nouns as common adjectives or nouns! 'Constant' is a character's name ('მალაქი კონსტანტი', 'კონსტანტმა', 'კონსტანტს'), NEVER translate it as 'მუდმივი' or 'მუდმივმა'. 'Rumfoord' -> 'რამფორდი', 'Kazak' -> 'კაზაკი'.\n"
-                "9. ADJECTIVE CONCORD: In oblique cases (-ში, -ზე, -თან, -დან, -სკენ, -თვის, -მდე), adjectives drop nominative -ი before nouns (e.g. 'უცნობ სივრცეში', 'დიდ სამყაროში', NOT 'უცნობი სივრცეში').\n"
-                "10. COMPOUND CONNECTORS: Use natural Georgian compound connectors: 'არა მხოლოდ... არამედ... კიდეც', 'თუმცა... მაინც', 'როგორც კი... მაშინვე'.\n"
-                "11. PREVERB DEIXIS & DIALOGUE QUOTATIVES: Respect speaker orientation in preverbs ('მოვიდა' vs 'წავიდა') and attach quotative enclitics ('-ო', '-მეთქი', '-თქო') in dialogue.\n"
-                "12. NUMERAL-NOUN AGREEMENT: Quantifiers and numerals (ორი, სამი, ათი, მრავალი, ბევრი, რამდენიმე) strictly require singular nouns ('სამი წიგნი', 'ათი დღე'), never plural '*სამი წიგნები'. Inanimate subjects take singular verbs ('სამი დღე გავიდა').\n"
-                "13. CARITIVE ADVERBS: Use synthetic 'უ-...-ოდ' adverbs ('უეჭველად', 'უშიშრად', 'უიმედოდ', 'უხმოდ', 'დაუღალავად') over '*გარეშე + Genitive'.\n"
-                "14. ACTION PREDICATES: Avoid 'გაკეთება' calques: use 'შეცდომის დაშვება', 'გავლენის მოხდენა', 'შთაბეჭდილების მოხდენა', 'ყურადღების მიქცევა', 'საჩივრის შეტანა'.\n"
-                "15. VERSION & PASSIVE: Use version markers (სათავისო 'ი-': 'დაიწერა წერილი'; სასხვისო 'უ-': 'შვილს აუშენა') and ablative '-გან' ('ღვთისგან ბოძებული') instead of '*მიერ'.\n"
-                "16. REFLEXIVE CO-REFERENCE: Strictly use 'თავისი' (oblique 'თავის') for co-referent 3rd-person subjects ('მან თავისი წიგნი აიღო'). Use reflexive head 'თავ-' for self ('საკუთარი თავი დაინახა', 'თავის თავს ჰკითხა').\n"
-                "17. POSTPOSITIONS & TEMPORAL CLITICS: Postpositions follow nouns ('ამის შესახებ'). Use instantaneous '-თანავე' ('დანახვისთანავე') and terminative '-მდე' ('დილამდე').\n"
-                "18. PROHIBITIVE & INABILITY CONCORD: Commands use prohibitive pronouns with 'ნუ' ('ნურაფერს ნუ გააკეთებ', 'ნურასოდეს ნუ დაივიწყებ'). Inability uses 'ვერ' ('ვერავინ შეძლო').\n"
-                "19. PURPOSIVE SUPINES & MIRATIVES: Use synthetic 'სა-...-ოდ' supines ('გასაგებად', 'სანახავად') and match 'თურმე' with Series III evidentials ('თურმე დავიწყებია').\n"
-                "20. DYNAMIC PASSIVE SYNTHESIS: Use synthetic dynamic passives ('დაიწერა', 'აშენდა', 'გადაწყდა', 'ითქვა', 'მიიღეს') instead of bureaucratic calques with '*იქნა'.\n"
-                "21. VERSION & CAUSATIVE SYNTHESIS: Use verbal version vowels (სათავისო 'ი-', სასხვისო 'უ-') and causative suffixes ('-ინებ', '-ევინებ') over analytical external phrases ('*მისთვის გააკეთა' -> 'გაუკეთა მას', '*აიძულა გაეკეთებინა' -> 'გააკეთებინა').\n"
-                "22. QUANTIFIER SINGULAR CONCORD: Quantifiers (ბევრი, ცოტა, რამდენიმე, უამრავი, ათასი) and numerals strictly require singular nouns ('სამი წიგნი', 'ბევრი ადამიანი', NOT '*სამი წიგნები').\n"
-                "23. FREQUENTATIVE HABITUAL ASPECT: Express habitual past with imperfect verb + '-ხოლმე' ('ამბობდა ხოლმე', 'აკეთებდა ხოლმე') instead of '*ადრე აკეთებდა ხოლმე' or '*ჩვევად ჰქონდა'.\n"
-                "24. CONDITIONAL & MODAL CLARITY: Use direct conditional and modal subordinators ('თუკი', 'თუ', 'როდესაც', 'შესაძლებელია, რომ', 'შეუძლებელია, რომ') instead of bulky '*იმ შემთხვევაში, თუკი'.\n"
-                "25. PARAGRAPH STRUCTURE: Maintain multi-sentence paragraph cohesion without adding line breaks between sentences in the same paragraph.\n"
-                "26. PUBLISHING IMPRINTS & METADATA: For publishing imprints, copyright notices, and publication metadata, translate descriptive English terms into natural Georgian while accurately preserving publisher names and addresses.\n"
-                "27. RECIPROCAL PRONOUNS: Reciprocal 'ერთმანეთი' can NEVER take Ergative case ('*ერთმანეთმა'). Use plural subjects and 'ერთმანეთი'/'ერთმანეთს' ('მათ ერთმანეთი დაინახეს', 'ერთმანეთს შეხედეს').\n"
-                "28. OPTATIVE & PERMISSIVE MOOD: Use 'დაე' + Optative ('დაე წავიდეს', 'დაე იყოს'), 'ნეტავ' + Subjunctive ('ნეტავ ვიცოდე') instead of clumsy '*ნება მიეცით წავიდეს'.\n"
-                "29. SYNTHETIC INCHOATIVES: Express inception of action with synthetic preverbs ('ამღერდა', 'ატირდა', 'ალაპარაკდა', 'აენთო', 'დაფიქრდა') instead of '*დაიწყო სიმღერა/ტირილი'.\n"
-                "30. DEICTIC COORDINATE ADVERBS: Use authentic binominal adverbs ('აქეთ-იქით', 'აქა-იქ', 'წინ და უკან', 'დღეიდან მოყოლებული') instead of '*აქ და იქ'.\n"
-                "31. CORRELATIVE DEGREE: Use correlative structures 'რაც უფრო... მით უფრო...' and 'სულ უფრო მეტი' instead of '*უფრო და უფრო მეტი'.\n"
-                "32. ITERATIVE REDUPLICATION: Use canonical hyphenated reduplication ('ნელ-ნელა', 'ცოტ-ცოტა', 'სწრაფ-სწრაფად', 'მრავალგზის') instead of analytical '*ნელა და ნელა'.\n"
-                "33. POSTPOSITION SYNCRETISM: Avoid stacked bureaucratic postpositions ('*ამ საკითხის შესახებ საუბრის დროს' -> 'ამ საკითხზე მსჯელობისას', '*იმასთან დაკავშირებით, რომ' -> 'იმის გამო, რომ').\n"
-                "34. SYNTHETIC TEMPORAL CONVERBS: Use synthetic converbs in '-ას' / '-ისას' ('კითხვისას', 'საუბრისას', 'წერისას', 'ფიქრისას', 'დანახვისთანავე') instead of clunky subordinate clauses with 'დროს' or 'მომენტში'.\n"
-                "35. APPOSITIVE CASE CONCORD: Postposed appositives and determinatives must agree in case with the head noun ('გიორგიმ, თავდადებულმა მეომარმა,', 'მეფემ, ბრძენმა მმართველმა,').\n"
-                "36. CONCESSIVE SYNTHESIS: Use authentic Kartvelian concessive markers ('თუმცა', 'მართალია... მაგრამ', 'თუნდაც') instead of heavy Russian calques like '*მიუხედავად იმისა, რომ'.\n"
-                "37. SPATIAL DEIXIS: Eliminate redundant spatial adverbs preceding directional preverbs ('*ზემოთ ავიდა' -> 'ავიდა', '*ქვემოთ ჩავიდა' -> 'ჩავიდა', '*შიგნით შევიდა' -> 'შევიდა', '*გარეთ გამოვიდა' -> 'გამოვიდა', '*უკან დაბრუნდა' -> 'დაბრუნდა').\n"
-                "38. SENSORY EXPERIENCER CONCORD: Verbs of perception and involuntary sensation require Dative logical subjects ('მას ესმის', 'მას ჩაესმა', 'მას მოეჩვენა', 'მას გაახსენდა', 'მას ეამა').\n"
-                "39. BOUND ENCLITICS: Use authentic bound restrictive, temporal, and contrastive clitics ('-ღა', '-ვე', '-კი': 'ისიღა დარჩა', 'ესღა ვიცი', 'იმ დღესვე', 'იმწამსვე', 'ის კი').\n"
-                "40. CIRCUMSTANTIAL COMPOUNDS: Prefer synthetic compound adverbs ('დაუხამხამებლად', 'გულფანცქალით', 'ხმაამოუღებლად', 'სუნთქვაშეკრული') over analytical prepositional phrases.\n"
-                "Output ONLY the Georgian translation."
+                "Translate the text into natural, authentic, grammatically correct literary Georgian (ქართული სამწერლო ენა).\n"
+                "Rules:\n"
+                "1. SYNTAX: Use natural Georgian sentence structure and word order; do NOT translate mechanically word-for-word.\n"
+                "2. CASE CONCORD: Transitive and medial verbs in the Series II Aorist (past) strictly require Ergative case (-მა / -მ: 'ავტორმა თქვა', 'აგენტებმა იპოვეს', 'მან გაისროლა'). Experiencer verbs take Dative (მას უნდა/უყვარს/ახსოვს).\n"
+                "3. PROPER NAMES: Transliterate proper names phonetically into Georgian (Constant -> კონსტანტი, Rumfoord -> რამფორდი, Kazak -> კაზაკი). Do NOT translate names as common words.\n"
+                "4. AVOID CALQUES: Do not translate idioms literally (e.g. 'looked outward' -> 'მზერას გარეთ მიაპყრობდა', 'outward push' -> 'გარეთ სწრაფვა').\n"
+                "Output ONLY the Georgian translation without any introductory or concluding remarks."
             )
             user_parts = []
             if context_before:
@@ -814,17 +783,22 @@ def translate_with_kona(
                 "model": "kona2-small-3.8B:latest",
                 "messages": messages,
                 "temperature": 0.1,
-                "frequency_penalty": 0.3,
-                "presence_penalty": 0.2,
-                "max_tokens": min(1536, max(128, int(len(text) * 2.5)))
+                "frequency_penalty": 0.2,
+                "presence_penalty": 0.1,
+                "max_tokens": min(1024, max(128, int(len(text) * 2.5))),
+                "options": {
+                    "num_predict": min(1024, max(128, int(len(text) * 2.5))),
+                    "temperature": 0.1,
+                },
+                "keep_alive": "60m"
             },
-            timeout=12.0
+            timeout=50.0
         )
         elapsed = time.time() - t0
         if resp.status_code == 200:
-            if elapsed > 4.5:
+            if elapsed > 45.0:
                 _kona_circuit["consecutive_slow"] += 1
-                if _kona_circuit["consecutive_slow"] >= 2:
+                if _kona_circuit["consecutive_slow"] >= 3:
                     _kona_circuit["degraded_until"] = time.time() + 60.0
                     _kona_circuit["consecutive_slow"] = 0
             else:
@@ -836,13 +810,13 @@ def translate_with_kona(
                 return cand
         else:
             _kona_circuit["consecutive_slow"] += 1
-            if _kona_circuit["consecutive_slow"] >= 2:
+            if _kona_circuit["consecutive_slow"] >= 3:
                 _kona_circuit["degraded_until"] = time.time() + 60.0
                 _kona_circuit["consecutive_slow"] = 0
     except Exception as e:
         print(f"[translation_engine] kona2 translation skipped: {e}")
         _kona_circuit["consecutive_slow"] += 1
-        if _kona_circuit["consecutive_slow"] >= 2:
+        if _kona_circuit["consecutive_slow"] >= 3:
             _kona_circuit["degraded_until"] = time.time() + 60.0
             _kona_circuit["consecutive_slow"] = 0
     return None

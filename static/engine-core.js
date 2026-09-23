@@ -85,6 +85,17 @@
         if (src.length >= 30 && (out.length / src.length < 0.35 || out.length / src.length > 2.8)) {
             return { ok: false, reason: 'extreme_length_ratio' };
         }
+        if (target === 'ka') {
+            if (/(?<![\u10A0-\u10FF])მან\s+(?:[ა-ჰ]+\s+)?(?:გაფრინდა|წავიდა|მოვიდა|დაჯდა|დადგა|გაიქცა|ჩამოვიდა)(?![\u10A0-\u10FF])/u.test(out)) {
+                return { ok: false, reason: 'ergative_intransitive_discord' };
+            }
+            if (/(?<![\u10A0-\u10FF])[ა-ჰ]+ები\s+(?:[ა-ჰ]+\s+)?(?:იპოვეს|თქვეს|გააკეთეს|დაწერეს|წაიკითხეს|ნახეს|გახსნეს|დახურეს)(?![\u10A0-\u10FF])/u.test(out)) {
+                return { ok: false, reason: 'nominative_aorist_transitive_discord' };
+            }
+            if (/(?<![\u10A0-\u10FF])(?:გამოიყურებოდა\s+გარეგნულად|თავის\s+გარეგნულ\s+ბიძგში|ქვებივით\s+აფრინდა\s+მათ)(?![\u10A0-\u10FF])/u.test(out)) {
+                return { ok: false, reason: 'raw_machine_calque' };
+            }
+        }
         if (src.toLowerCase() === out.toLowerCase() && scriptCounts(src).total >= 8 && detectLanguage(src) !== target) {
             return { ok: false, reason: 'identical_to_source' };
         }

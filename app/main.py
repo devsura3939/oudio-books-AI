@@ -186,7 +186,7 @@ async def server_translate(req: Request):
         text = body.get("text", "")
         source_lang = body.get("source_lang", "auto")
         target_lang = body.get("target_lang", "ka")
-        api_key = body.get("api_key") or req.headers.get("x-goog-api-key")
+        api_key = body.get("api_key") or req.headers.get("x-goog-api-key") or req.headers.get("x-gemini-key") or os.environ.get("GEMINI_API_KEY")
         checker_url = body.get("checker_url")
         checker_model = body.get("checker_model")
         context_before = body.get("context_before") or body.get("before") or ""
