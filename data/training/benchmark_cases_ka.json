@@ -7974,5 +7974,470 @@
       "kierkegaard",
       "knight_of_faith"
     ]
+  },
+  {
+    "id": "case-idiom-mind-01",
+    "kind": "translate",
+    "source": "მან დაკარგა თავისი გონება შიშის გამო.",
+    "expected": "მან ჭკუიდან შეიშალა შიშის გამო.",
+    "weight": 1.0,
+    "tags": [
+      "idiom",
+      "psychological",
+      "mind"
+    ]
+  },
+  {
+    "id": "case-idiom-mind-02",
+    "kind": "translate",
+    "source": "მან შეცვალა თავისი გონება და დარჩა.",
+    "expected": "მან გადაიფიქრა და დარჩა.",
+    "weight": 1.0,
+    "tags": [
+      "idiom",
+      "psychological",
+      "mind"
+    ]
+  },
+  {
+    "id": "case-idiom-mind-03",
+    "kind": "translate",
+    "source": "შეინახეთ გონებაში ეს გაკვეთილი.",
+    "expected": "გაითვალისწინეთ ეს გაკვეთილი.",
+    "weight": 1.0,
+    "tags": [
+      "idiom",
+      "psychological",
+      "mind"
+    ]
+  },
+  {
+    "id": "case-sensory-gaze-01",
+    "kind": "translate",
+    "source": "მან დაიჭირა მისი თვალი ბრბოში.",
+    "expected": "მან თვალი მოჰკრა ბრბოში.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "gaze",
+      "collocation"
+    ]
+  },
+  {
+    "id": "case-sensory-gaze-02",
+    "kind": "translate",
+    "source": "მან დაადო თვალი მას მაშინვე.",
+    "expected": "მან თვალი შეავლო მას მაშინვე.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "gaze",
+      "collocation"
+    ]
+  },
+  {
+    "id": "case-sensory-gaze-03",
+    "kind": "translate",
+    "source": "ერთი თვალის დახამხამებაში ყველაფერი გაქრა.",
+    "expected": "თვალის დახამხამებაში ყველაფერი გაქრა.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "gaze",
+      "collocation"
+    ]
+  },
+  {
+    "id": "case-organ-singular-01",
+    "kind": "translate",
+    "source": "მან საკუთარი თვალებით ნახა სასწაული.",
+    "expected": "მან საკუთარი თვალით ნახა სასწაული.",
+    "weight": 1.0,
+    "tags": [
+      "morphosyntax",
+      "organ",
+      "instrumental"
+    ]
+  },
+  {
+    "id": "case-organ-singular-02",
+    "kind": "translate",
+    "source": "მან საკუთარი ყურებით მოისმინა ხმა.",
+    "expected": "მან საკუთარი ყურით მოისმინა ხმა.",
+    "weight": 1.0,
+    "tags": [
+      "morphosyntax",
+      "organ",
+      "instrumental"
+    ]
+  },
+  {
+    "id": "case-organ-singular-03",
+    "kind": "translate",
+    "source": "მან შიშველი ხელებით ააშენა სახლი.",
+    "expected": "მან შიშველი ხელით ააშენა სახლი.",
+    "weight": 1.0,
+    "tags": [
+      "morphosyntax",
+      "organ",
+      "instrumental"
+    ]
+  },
+  {
+    "id": "case-spatial-binomial-01",
+    "kind": "translate",
+    "source": "ისინი იდგნენ გვერდი გვერდით ქარში.",
+    "expected": "ისინი იდგნენ მხარდამხარ ქარში.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "binomial",
+      "motion"
+    ]
+  },
+  {
+    "id": "case-spatial-binomial-02",
+    "kind": "translate",
+    "source": "მცველი უკან და წინ დადიოდა დილით.",
+    "expected": "მცველი წინ და უკან დადიოდა დილით.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "binomial",
+      "motion"
+    ]
+  },
+  {
+    "id": "case-spatial-binomial-03",
+    "kind": "translate",
+    "source": "გმირები სახე სახესთან შეხვდნენ.",
+    "expected": "გმირები პირისპირ შეხვდნენ.",
+    "weight": 1.0,
+    "tags": [
+      "spatial",
+      "binomial",
+      "motion"
+    ]
+  },
+  {
+    "id": "case-discourse-trans-01",
+    "kind": "translate",
+    "source": "პირველ შეხედვაზე საქმე მარტივი იყო.",
+    "expected": "ერთი შეხედვით საქმე მარტივი იყო.",
+    "weight": 1.0,
+    "tags": [
+      "discourse",
+      "transition"
+    ]
+  },
+  {
+    "id": "case-discourse-trans-02",
+    "kind": "translate",
+    "source": "როგორც ფაქტის საკითხი, ის მართალი იყო.",
+    "expected": "სინამდვილეში, ის მართალი იყო.",
+    "weight": 1.0,
+    "tags": [
+      "discourse",
+      "transition"
+    ]
+  },
+  {
+    "id": "case-discourse-trans-03",
+    "kind": "translate",
+    "source": "ყველა მოულოდნელად ქარიშხალი ამოვარდა.",
+    "expected": "უეცრად ქარიშხალი ამოვარდა.",
+    "weight": 1.0,
+    "tags": [
+      "discourse",
+      "transition"
+    ]
+  },
+  {
+    "id": "case-inquit-dicendi-01",
+    "kind": "translate",
+    "source": "მან ჩურჩულით თქვა პასუხი სიბნელეში.",
+    "expected": "მან ჩაიჩურჩულა პასუხი სიბნელეში.",
+    "weight": 1.0,
+    "tags": [
+      "verba_dicendi",
+      "inquit",
+      "dialogue"
+    ]
+  },
+  {
+    "id": "case-inquit-dicendi-02",
+    "kind": "translate",
+    "source": "მან ყვირილით თქვა გაფრთხილება ხალხს.",
+    "expected": "მან დაიყვირა გაფრთხილება ხალხს.",
+    "weight": 1.0,
+    "tags": [
+      "verba_dicendi",
+      "inquit",
+      "dialogue"
+    ]
+  },
+  {
+    "id": "case-inquit-dicendi-03",
+    "kind": "translate",
+    "source": "მეფემ მისცა პასუხი ელჩს.",
+    "expected": "მეფემ უპასუხა ელჩს.",
+    "weight": 1.0,
+    "tags": [
+      "verba_dicendi",
+      "inquit",
+      "dialogue"
+    ]
+  },
+  {
+    "id": "case-somatic-reflex-01",
+    "kind": "translate",
+    "source": "მოგზაურმა გამოუშვა ოხვრა დაღლილობისგან.",
+    "expected": "მოგზაურმა ამოიოხრა დაღლილობისგან.",
+    "weight": 1.0,
+    "tags": [
+      "somatic",
+      "reflex",
+      "physiological"
+    ]
+  },
+  {
+    "id": "case-somatic-reflex-02",
+    "kind": "translate",
+    "source": "მისი გული ჩაიძირა ცუდი ამბის გაგონებაზე.",
+    "expected": "გული გადაუქანდა ცუდი ამბის გაგონებაზე.",
+    "weight": 1.0,
+    "tags": [
+      "somatic",
+      "reflex",
+      "physiological"
+    ]
+  },
+  {
+    "id": "case-somatic-reflex-03",
+    "kind": "translate",
+    "source": "მან აიღო ღრმა სუნთქვა ბრძოლის წინ.",
+    "expected": "მან ღრმად ჩაისუნთქა ბრძოლის წინ.",
+    "weight": 1.0,
+    "tags": [
+      "somatic",
+      "reflex",
+      "physiological"
+    ]
+  },
+  {
+    "id": "case-epistemic-modal-01",
+    "kind": "translate",
+    "source": "მიდის უთქმელად, რომ ეს მნიშვნელოვანია.",
+    "expected": "თავისთავად ცხადია, რომ ეს მნიშვნელოვანია.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "modal",
+      "stance"
+    ]
+  },
+  {
+    "id": "case-epistemic-modal-02",
+    "kind": "translate",
+    "source": "ყველა ალბათობაში მატარებელი მოვა.",
+    "expected": "დიდი ალბათობით მატარებელი მოვა.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "modal",
+      "stance"
+    ]
+  },
+  {
+    "id": "case-epistemic-modal-03",
+    "kind": "translate",
+    "source": "რომ თქვა სიმართლე, მე დავიღალე.",
+    "expected": "სიმართლე რომ ითქვას, მე დავიღალე.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "modal",
+      "stance"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-01",
+    "kind": "translate",
+    "source": "ისინი მუშაობდნენ მთელი დღე გრძელი ველზე.",
+    "expected": "ისინი მუშაობდნენ მთელი დღის განმავლობაში ველზე.",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "durative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-02",
+    "kind": "translate",
+    "source": "დროის კურსში მეგობრობა განმტკიცდა.",
+    "expected": "დროთა განმავლობაში მეგობრობა განმტკიცდა.",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "durative",
+      "aspect"
+    ]
+  },
+  {
+    "id": "case-adversative-antithesis-01",
+    "kind": "translate",
+    "source": "საპირისპიროზე, მან მხარი დაუჭირა გეგმას.",
+    "expected": "პირიქით, მან მხარი დაუჭირა გეგმას.",
+    "weight": 1.0,
+    "tags": [
+      "adversative",
+      "antithesis",
+      "concessive"
+    ]
+  },
+  {
+    "id": "case-adversative-antithesis-02",
+    "kind": "translate",
+    "source": "ერთ ხელზე ეს კარგია, მეორე ხელზე კი ძვირია.",
+    "expected": "ერთი მხრივ ეს კარგია, მეორე მხრივ კი ძვირია.",
+    "weight": 1.0,
+    "tags": [
+      "adversative",
+      "antithesis",
+      "concessive"
+    ]
+  },
+  {
+    "id": "case-auditory-sound-01",
+    "kind": "translate",
+    "source": "კარი დაეჯახა დახურულად ქარის გამო.",
+    "expected": "კარი გაჯახუნდა ქარის გამო.",
+    "weight": 1.0,
+    "tags": [
+      "auditory",
+      "sound",
+      "acoustic"
+    ]
+  },
+  {
+    "id": "case-auditory-sound-02",
+    "kind": "translate",
+    "source": "ძველი იატაკი ყვიროდა ნაბიჯების ქვეშ.",
+    "expected": "ძველი იატაკი აჭრაჭუნდა ნაბიჯების ქვეშ.",
+    "weight": 1.0,
+    "tags": [
+      "auditory",
+      "sound",
+      "acoustic"
+    ]
+  },
+  {
+    "id": "case-auditory-sound-03",
+    "kind": "translate",
+    "source": "სიცივეში მისი კბილები ლაპარაკობდნენ.",
+    "expected": "სიცივეში კბილი კბილზე ადიოდა.",
+    "weight": 1.0,
+    "tags": [
+      "auditory",
+      "sound",
+      "acoustic"
+    ]
+  },
+  {
+    "id": "case-emotional-metaphor-01",
+    "kind": "translate",
+    "source": "მან დაკარგა ტემპერამენტი კამათის დროს.",
+    "expected": "მან მოთმინება დაკარგა კამათის დროს.",
+    "weight": 1.0,
+    "tags": [
+      "emotional",
+      "cognitive",
+      "metaphor"
+    ]
+  },
+  {
+    "id": "case-emotional-metaphor-02",
+    "kind": "translate",
+    "source": "მან შეინარჩუნა სიგრილე საფრთხის წინაშე.",
+    "expected": "მან სიმშვიდე შეინარჩუნა საფრთხის წინაშე.",
+    "weight": 1.0,
+    "tags": [
+      "emotional",
+      "cognitive",
+      "metaphor"
+    ]
+  },
+  {
+    "id": "case-physical-posture-01",
+    "kind": "translate",
+    "source": "ბერი იჯდა გადაჯვარედინებული ფეხებით ხალიჩაზე.",
+    "expected": "ბერი ფეხმორთხმით იჯდა ხალიჩაზე.",
+    "weight": 1.0,
+    "tags": [
+      "posture",
+      "stative",
+      "orientation"
+    ]
+  },
+  {
+    "id": "case-physical-posture-02",
+    "kind": "translate",
+    "source": "ბავშვი იდგა ფეხის თითებზე ფანჯარასთან.",
+    "expected": "ბავშვი ფეხის წვერებზე იდგა ფანჯარასთან.",
+    "weight": 1.0,
+    "tags": [
+      "posture",
+      "stative",
+      "orientation"
+    ]
+  },
+  {
+    "id": "case-quantifier-degree-01",
+    "kind": "translate",
+    "source": "დიდით და ვრცელით ეს წარმატება იყო.",
+    "expected": "მთლიანობაში ეს წარმატება იყო.",
+    "weight": 1.0,
+    "tags": [
+      "quantifier",
+      "degree",
+      "intensifier"
+    ]
+  },
+  {
+    "id": "case-quantifier-degree-02",
+    "kind": "translate",
+    "source": "ისინი ერთხელ ლურჯ მთვარეზე ნახულობდნენ ერთმანეთს.",
+    "expected": "ისინი ძალზე იშვიათად ნახულობდნენ ერთმანეთს.",
+    "weight": 1.0,
+    "tags": [
+      "quantifier",
+      "degree",
+      "intensifier"
+    ]
+  },
+  {
+    "id": "case-motion-directional-01",
+    "kind": "translate",
+    "source": "მგზავრი მობრუნდა უკან გზაჯვარედინზე.",
+    "expected": "მგზავრი გამობრუნდა გზაჯვარედინზე.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "directional",
+      "phrasal"
+    ]
+  },
+  {
+    "id": "case-motion-directional-02",
+    "kind": "translate",
+    "source": "მან მოშორებით შებრუნდა და წავიდა.",
+    "expected": "მან ზურგი შეაქცია და წავიდა.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "directional",
+      "phrasal"
+    ]
   }
 ]

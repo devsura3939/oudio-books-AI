@@ -238,6 +238,36 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])ყველა\s+უფრო(?![ა-ჰ])', 'მით უმეტეს'),
         (r'(?<![\u10A0-\u10FF])მეტი\s+თუ\s+ნაკლები(?![ა-ჰ])', 'მეტ-ნაკლებად'),
         (r'(?<![\u10A0-\u10FF])შორს\s+მისგან(?![ა-ჰ])', 'სრულებითაც არა'),
+        # Auditory Verbs & Sound Symbolism
+        (r'(?<![\u10A0-\u10FF])კარი\s+(?:დაეჯახა\s+დახურულად|დაეჯახა)(?![ა-ჰ])', 'კარი გაჯახუნდა'),
+        (r'(?<![\u10A0-\u10FF])იატაკი\s+(?:ყვიროდა|გამოსცემდა\s+ხმას)(?![ა-ჰ])', 'იატაკი აჭრაჭუნდა'),
+        (r'(?<![\u10A0-\u10FF])(?:მისი\s+)?კბილები\s+(?:ლაპარაკობდნენ|აკაკუნებდნენ)(?![ა-ჰ])', 'კბილი კბილზე ადიოდა'),
+        (r'(?<![\u10A0-\u10FF])ნაბიჯები\s+ექოდ\s+ისმოდა(?![ა-ჰ])', 'ნაბიჯების ხმა ექოდ გაისმა'),
+        (r'(?<![\u10A0-\u10FF])დააკაკუნა\s+კარებზე(?![ა-ჰ])', 'კარზე დააკაკუნა'),
+        # Emotional & Cognitive Metaphors
+        (r'(?<![\u10A0-\u10FF])(?:დაკარგა\s+ტემპერამენტი|ტემპერამენტი\s+დაკარგა)(?![ა-ჰ])', 'მოთმინება დაკარგა'),
+        (r'(?<![\u10A0-\u10FF])შეინარჩუნა\s+სიგრილე(?![ა-ჰ])', 'სიმშვიდე შეინარჩუნა'),
+        (r'(?<![\u10A0-\u10FF])დაჯდა\s+მის\s+ნერვებზე(?![ა-ჰ])', 'ნერვებს უშლიდა'),
+        (r'(?<![\u10A0-\u10FF])გული\s+დადო\s+ამაზე(?![ა-ჰ])', 'გულით მოინდომა'),
+        (r'(?<![\u10A0-\u10FF])გული\s+გატეხა(?![ა-ჰ])', 'გული მოუკლა'),
+        # Physical Posture & Stative Orientation
+        (r'(?<![\u10A0-\u10FF])იჯდა\s+გადაჯვარედინებული\s+ფეხებით(?![ა-ჰ])', 'ფეხმორთხმით იჯდა'),
+        (r'(?<![\u10A0-\u10FF])იდგა\s+ფეხის\s+თითებზე(?![ა-ჰ])', 'ფეხის წვერებზე იდგა'),
+        (r'(?<![\u10A0-\u10FF])დაეცა\s+(?:მის\s+)?მუხლებზე(?![ა-ჰ])', 'მუხლებზე დაემხო'),
+        (r'(?<![\u10A0-\u10FF])გადააჯვარედინა\s+(?:თავისი\s+)?ხელები(?![ა-ჰ])', 'გულზე ხელები დაიკრიფა'),
+        (r'(?<![\u10A0-\u10FF])დახარა\s+(?:თავისი\s+)?თავი(?![ა-ჰ])', 'თავი დახარა'),
+        # Quantificational Intensifiers & Degree Particles
+        (r'(?<![\u10A0-\u10FF])დიდით\s+და\s+ვრცელით(?![ა-ჰ])', 'მთლიანობაში'),
+        (r'(?<![\u10A0-\u10FF])ერთხელ\s+ლურჯ\s+მთვარეზე(?![ა-ჰ])', 'ძალზე იშვიათად'),
+        (r'(?<![\u10A0-\u10FF])გასწვრივ\s+და\s+გასწვრივ(?![ა-ჰ])', 'თავიდან ბოლომდე'),
+        (r'(?<![\u10A0-\u10FF])უსაფრთხოდ\s+და\s+ხმით(?![ა-ჰ])', 'ცოცხალ-ჯანსაღი'),
+        (r'(?<![\u10A0-\u10FF])ნელა,\s*მაგრამ\s+დარწმუნებით(?![ა-ჰ])', 'ნელა, მაგრამ შეუპოვრად'),
+        # Polysemous Motion Collocations & Phrasal Directionals
+        (r'(?<![\u10A0-\u10FF])მობრუნდა\s+უკან(?![ა-ჰ])', 'გამობრუნდა'),
+        (r'(?<![\u10A0-\u10FF])მოშორებით\s+შებრუნდა(?![ა-ჰ])', 'ზურგი შეაქცია'),
+        (r'(?<![\u10A0-\u10FF])მოშორებით\s+შეხედა(?![ა-ჰ])', 'მზერა აარიდა'),
+        (r'(?<![\u10A0-\u10FF])მზერა\s+ესროლა(?![ა-ჰ])', 'თვალი შეავლო'),
+        (r'(?<![\u10A0-\u10FF])მხედველობა\s+დაიჭირა(?![ა-ჰ])', 'თვალი მოჰკრა'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -861,6 +891,11 @@ def translate_with_gemini(
                 "51. EPISTEMIC MODALS: 'goes without saying' -> 'თავისთავად ცხადია' (NOT '*მიდის უთქმელად'), 'in all likelihood' -> 'დიდი ალბათობით', 'truth be told' -> 'სიმართლე რომ ითქვას', 'no doubt that' -> 'ეჭვგარეშეა, რომ'.\n"
                 "52. TEMPORAL DURATIVES: 'all day long' -> 'მთელი დღის განმავლობაში', 'in the course of time' -> 'დროთა განმავლობაში', 'from time to time' -> 'დროდადრო', 'for good' -> 'სამუდამოდ'.\n"
                 "53. ADVERSATIVE & CONCESSIVE: 'on the contrary' -> 'პირიქით' (NOT '*საპირისპიროზე'), 'on one hand ... other hand' -> 'ერთი მხრივ ... მეორე მხრივ' (NOT '*ერთ ხელზე'), 'all the more' -> 'მით უმეტეს'.\n"
+                "54. AUDITORY & SOUND VERBS: 'slammed shut' -> 'გაჯახუნდა' (NOT '*დაეჯახა დახურულად'), 'creaked' -> 'აჭრაჭუნდა', 'teeth chattered' -> 'კბილი კბილზე ადიოდა', 'footsteps echoed' -> 'ნაბიჯების ხმა ექოდ გაისმა', 'knocked on door' -> 'კარზე დააკაკუნა'.\n"
+                "55. EMOTIONAL METAPHORS: 'lost temper' -> 'მოთმინება დაკარგა' (NOT '*დაკარგა ტემპერამენტი'), 'kept cool' -> 'სიმშვიდე შეინარჩუნა', 'got on nerves' -> 'ნერვებს უშლიდა', 'set heart on' -> 'გულით მოინდომა', 'broke heart' -> 'გული მოუკლა'.\n"
+                "56. PHYSICAL POSTURE: 'sat cross-legged' -> 'ფეხმორთხმით იჯდა' (NOT '*გადაჯვარედინებული ფეხებით'), 'stood on tiptoe' -> 'ფეხის წვერებზე იდგა', 'fell on knees' -> 'მუხლებზე დაემხო', 'crossed arms' -> 'გულზე ხელები დაიკრიფა', 'bowed head' -> 'თავი დახარა'.\n"
+                "57. DEGREE & INTENSIFIERS: 'by and large' -> 'მთლიანობაში', 'once in a blue moon' -> 'ძალზე იშვიათად', 'through and through' -> 'თავიდან ბოლომდე', 'safe and sound' -> 'ცოცხალ-ჯანსაღი', 'slowly but surely' -> 'ნელა, მაგრამ შეუპოვრად'.\n"
+                "58. MOTION DIRECTIONALS: 'turned back' -> 'გამობრუნდა' (NOT '*მობრუნდა უკან'), 'turned away' -> 'ზურგი შეაქცია', 'looked away' -> 'მზერა აარიდა', 'cast a glance' -> 'თვალი შეავლო', 'caught sight of' -> 'თვალი მოჰკრა'.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -974,7 +1009,12 @@ def translate_with_local_llm(
             "18. Epistemic modals: 'goes without saying' -> 'თავისთავად ცხადია', 'in all likelihood' -> 'დიდი ალბათობით'.\n"
             "19. Temporal duratives: 'all day long' -> 'მთელი დღის განმავლობაში', 'over time' -> 'დროთა განმავლობაში'.\n"
             "20. Adversative antithesis: 'on the contrary' -> 'პირიქით', 'on one hand / other hand' -> 'ერთი მხრივ / მეორე მხრივ'.\n"
-            "21. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
+            "21. Auditory & sound verbs: 'slammed' -> 'გაჯახუნდა', 'creaked' -> 'აჭრაჭუნდა', 'knocked' -> 'კარზე დააკაკუნა'.\n"
+            "22. Emotional metaphors: 'lost temper' -> 'მოთმინება დაკარგა', 'kept cool' -> 'სიმშვიდე შეინარჩუნა'.\n"
+            "23. Posture verbs: 'sat cross-legged' -> 'ფეხმორთხმით იჯდა', 'stood on tiptoe' -> 'ფეხის წვერებზე იდგა'.\n"
+            "24. Degree particles: 'by and large' -> 'მთლიანობაში', 'once in a blue moon' -> 'ძალზე იშვიათად'.\n"
+            "25. Directionals: 'turned away' -> 'ზურგი შეაქცია', 'looked away' -> 'მზერა აარიდა'.\n"
+            "26. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
             if target_lang == "ka" else
             "You are an expert bilingual literary translator into English. Output ONLY the translation."
         )

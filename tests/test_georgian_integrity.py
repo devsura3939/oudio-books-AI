@@ -199,9 +199,9 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 740, "Expected at least 740 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 850, "Expected at least 850 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 40, "Active pack version must be at least 40")
+        self.assertGreaterEqual(len(cases), 770, "Expected at least 770 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 880, "Expected at least 880 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 41, "Active pack version must be at least 41")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
@@ -931,6 +931,71 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         for raw, expected in pairs:
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Adversative antithesis failed for '{raw}': got '{polished}'")
+
+    def test_60_auditory_verbs_sound_symbolism(self):
+        """Verify auditory verbs and sound-symbolic onomatopoeic collocations (Rule Group 61)."""
+        pairs = [
+            ("კარი დაეჯახა დახურულად წვიმაში.", "კარი გაჯახუნდა წვიმაში."),
+            ("ძველი იატაკი ყვიროდა ღამით.", "ძველი იატაკი აჭრაჭუნდა ღამით."),
+            ("სიცივისგან კბილები ლაპარაკობდნენ.", "სიცივისგან კბილი კბილზე ადიოდა."),
+            ("მისი ნაბიჯები ექოდ ისმოდა დარბაზში.", "მისი ნაბიჯების ხმა ექოდ გაისმა დარბაზში."),
+            ("მან დააკაკუნა კარებზე ხმამაღლა.", "მან კარზე დააკაკუნა ხმამაღლა."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Auditory verb failed for '{raw}': got '{polished}'")
+
+    def test_61_emotional_cognitive_metaphors(self):
+        """Verify emotional and cognitive idiomatic metaphors (Rule Group 62)."""
+        pairs = [
+            ("მან დაკარგა ტემპერამენტი კამათისას.", "მან მოთმინება დაკარგა კამათისას."),
+            ("მან შეინარჩუნა სიგრილე განსაცდელში.", "მან სიმშვიდე შეინარჩუნა განსაცდელში."),
+            ("ეს ხმაური დაჯდა მის ნერვებზე.", "ეს ხმაური ნერვებს უშლიდა."),
+            ("მან გული დადო ამაზე ბოლომდე.", "მან გულით მოინდომა ბოლომდე."),
+            ("ამ ამბავმა მას გული გატეხა.", "ამ ამბავმა მას გული მოუკლა."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Emotional metaphor failed for '{raw}': got '{polished}'")
+
+    def test_62_physical_posture_stative_orientation(self):
+        """Verify physical posture, body positioning, and stative orientation (Rule Group 63)."""
+        pairs = [
+            ("ის იჯდა გადაჯვარედინებული ფეხებით ხალიჩაზე.", "ის ფეხმორთხმით იჯდა ხალიჩაზე."),
+            ("ის იდგა ფეხის თითებზე ფანჯარასთან.", "ის ფეხის წვერებზე იდგა ფანჯარასთან."),
+            ("მხედარი დაეცა მის მუხლებზე მიწაზე.", "მხედარი მუხლებზე დაემხო მიწაზე."),
+            ("მან გადააჯვარედინა თავისი ხელები მკერდზე.", "მან გულზე ხელები დაიკრიფა მკერდზე."),
+            ("მან დახარა თავისი თავი მორჩილად.", "მან თავი დახარა მორჩილად."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Physical posture failed for '{raw}': got '{polished}'")
+
+    def test_63_quantificational_intensifiers_degree(self):
+        """Verify quantificational intensifiers, totality, and degree particles (Rule Group 64)."""
+        pairs = [
+            ("ეს წიგნი დიდით და ვრცელით საინტერესოა.", "ეს წიგნი მთლიანობაში საინტერესოა."),
+            ("ის ერთხელ ლურჯ მთვარეზე ჩნდება აქ.", "ის ძალზე იშვიათად ჩნდება აქ."),
+            ("მან იცოდა ქალაქი გასწვრივ და გასწვრივ.", "მან იცოდა ქალაქი თავიდან ბოლომდე."),
+            ("ისინი დაბრუნდნენ უსაფრთხოდ და ხმით შინ.", "ისინი დაბრუნდნენ ცოცხალ-ჯანსაღი შინ."),
+            ("ჩვენ მივიწევდით ნელა, მაგრამ დარწმუნებით წინ.", "ჩვენ მივიწევდით ნელა, მაგრამ შეუპოვრად წინ."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Degree intensifier failed for '{raw}': got '{polished}'")
+
+    def test_64_polysemous_motion_directionals(self):
+        """Verify polysemous motion collocations and phrasal directionals (Rule Group 65)."""
+        pairs = [
+            ("ის მობრუნდა უკან სახლისკენ.", "ის გამობრუნდა სახლისკენ."),
+            ("მან მოშორებით შებრუნდა მრისხანედ.", "მან ზურგი შეაქცია მრისხანედ."),
+            ("მან მოშორებით შეხედა სირცხვილით.", "მან მზერა აარიდა სირცხვილით."),
+            ("მან მზერა ესროლა უცნობს.", "მან თვალი შეავლო უცნობს."),
+            ("მან მხედველობა დაიჭირა წამით.", "მან თვალი მოჰკრა წამით."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Motion directional failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":

@@ -165,3 +165,18 @@ def test_epistemic_temporal_and_adversative_calques_rejected_and_cleaned():
     assert "მეორე მხრივ" in cleaned
     assert "სრულებითაც არა" in cleaned
 
+
+def test_auditory_posture_motion_and_idiom_calques_rejected_and_cleaned():
+    """Verify Rule Groups 61-65: auditory verbs, posture, motion directionals, degree, and idioms."""
+    source = "The door slammed shut, the floor groaned, he lost his temper, sat cross-legged, and turned away once in a blue moon."
+    bad_cand = "კარი დაეჯახა დახურულად, იატაკი ყვიროდა, მან დაკარგა ტემპერამენტი, იჯდა გადაჯვარედინებული ფეხებით, მოშორებით შებრუნდა ერთხელ ლურჯ მთვარეზე."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject auditory, posture, emotion, motion calques"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "კარი გაჯახუნდა" in cleaned
+    assert "იატაკი აჭრაჭუნდა" in cleaned
+    assert "მოთმინება დაკარგა" in cleaned
+    assert "ფეხმორთხმით იჯდა" in cleaned
+    assert "ზურგი შეაქცია" in cleaned
+    assert "ძალზე იშვიათად" in cleaned
+
