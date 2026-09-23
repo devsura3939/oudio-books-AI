@@ -207,6 +207,37 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])უფრო\s+ადრე\s+თუ\s+უფრო\s+გვიან(?![ა-ჰ])', 'ადრე თუ გვიან'),
         (r'(?<![\u10A0-\u10FF])თავიდან\s+ფეხის\s+თითამდე(?![ა-ჰ])', 'თავით ფეხამდე'),
         (r'(?<![\u10A0-\u10FF])დროის\s+დასაწყისიდან(?![ა-ჰ])', 'ოდითგანვე'),
+        # Verba Dicendi & Dialogue Inquit Synthesis
+        (r'(?<![\u10A0-\u10FF])ჩურჩულით\s+თქვა(?![ა-ჰ])', 'ჩაიჩურჩულა'),
+        (r'(?<![\u10A0-\u10FF])ყვირილით\s+თქვა(?![ა-ჰ])', 'დაიყვირა'),
+        (r'(?<![\u10A0-\u10FF])მისცა\s+პასუხი(?![ა-ჰ])', 'უპასუხა'),
+        (r'(?<![\u10A0-\u10FF])გააკეთა\s+კომენტარი(?![ა-ჰ])', 'აღნიშნა'),
+        (r'(?<![\u10A0-\u10FF])დასვა\s+(?:შე)?კითხვა(?![ა-ჰ])', 'ჰკითხა'),
+        (r'(?<![\u10A0-\u10FF])(?:იკითხა\s+უკან|უკან\s+იკითხა)(?![ა-ჰ])', 'შეუბრუნა კითხვა'),
+        # Involuntary Actions & Somatic Reflexes
+        (r'(?<![\u10A0-\u10FF])(?:გამოუშვა|ამოუშვა)\s+ოხვრა(?![ა-ჰ])', 'ამოიოხრა'),
+        (r'(?<![\u10A0-\u10FF])(?:მისი\s+)?გული\s+ჩაიძირა(?![ა-ჰ])', 'გული გადაუქანდა'),
+        (r'(?<![\u10A0-\u10FF])ჟრუანტელმა\s+გაიარა\s+მის\s+ხერხემალში(?![ა-ჰ])', 'ტანში ჟრუანტელმა დაუარა'),
+        (r'(?<![\u10A0-\u10FF])(?:აიღო\s+ღრმა\s+სუნთქვა|ღრმა\s+სუნთქვა\s+აიღო)(?![ა-ჰ])', 'ღრმად ჩაისუნთქა'),
+        (r'(?<![\u10A0-\u10FF])შეინახა\s+სუნთქვა(?![ა-ჰ])', 'სუნთქვა შეიკრა'),
+        # Epistemic Modals & Evidential Stance
+        (r'(?<![\u10A0-\u10FF])მიდის\s+უთქმელად(?![ა-ჰ])', 'თავისთავად ცხადია'),
+        (r'(?<![\u10A0-\u10FF])ყველა\s+ალბათობაში(?![ა-ჰ])', 'დიდი ალბათობით'),
+        (r'(?<![\u10A0-\u10FF])(?:რომ\s+თქვა\s+სიმართლე|სიმართლე\s+რომ\s+თქვა)(?![ა-ჰ])', 'სიმართლე რომ ითქვას'),
+        (r'(?<![\u10A0-\u10FF])ეჭვის\s+(?:ყოველგვარი\s+)?ჩრდილის\s+გარეშე(?![ა-ჰ])', 'ყოველგვარი ეჭვის გარეშე'),
+        (r'(?<![\u10A0-\u10FF])არ\s+არის\s+ეჭვი,\s*რომ(?![ა-ჰ])', 'ეჭვგარეშეა, რომ'),
+        # Temporal Duratives & Inceptives
+        (r'(?<![\u10A0-\u10FF])(?:მთელი\s+დღე\s+გრძელი|მთელი\s+დღის\s+გასწვრივ)(?![ა-ჰ])', 'მთელი დღის განმავლობაში'),
+        (r'(?<![\u10A0-\u10FF])დროის\s+კურსში(?![ა-ჰ])', 'დროთა განმავლობაში'),
+        (r'(?<![\u10A0-\u10FF])დროიდან\s+დროში(?![ა-ჰ])', 'დროდადრო'),
+        # Adversative & Concessive Antithesis
+        (r'(?<![\u10A0-\u10FF])საპირისპიროზე(?![ა-ჰ])', 'პირიქით'),
+        (r'(?<![\u10A0-\u10FF])ერთ\s+ხელზე(?![ა-ჰ])', 'ერთი მხრივ'),
+        (r'(?<![\u10A0-\u10FF])მეორე\s+ხელზე(?![ა-ჰ])', 'მეორე მხრივ'),
+        (r'(?<![\u10A0-\u10FF])თანაბრად\s+ასე(?![ა-ჰ])', 'მიუხედავად ამისა'),
+        (r'(?<![\u10A0-\u10FF])ყველა\s+უფრო(?![ა-ჰ])', 'მით უმეტეს'),
+        (r'(?<![\u10A0-\u10FF])მეტი\s+თუ\s+ნაკლები(?![ა-ჰ])', 'მეტ-ნაკლებად'),
+        (r'(?<![\u10A0-\u10FF])შორს\s+მისგან(?![ა-ჰ])', 'სრულებითაც არა'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -825,6 +856,11 @@ def translate_with_gemini(
                 "46. PAIRED ORGAN INSTRUMENTAL CONCORD: Paired organs as instruments take singular -ით ('საკუთარი თვალით დაინახა', NOT '*თავისი თვალებით'; 'საკუთარი ყურით მოისმინა', 'შიშველი ხელით', 'ფეხით იარა').\n"
                 "47. SPATIAL BINOMIALS & IDIOMS: 'side by side' -> 'მხარდამხარ / გვერდიგვერდ', 'back and forth' -> 'წინ და უკან', 'face to face' -> 'პირისპირ', 'in the middle of nowhere' -> 'უკაცრიელ ადგილას', 'step by step' -> 'ნაბიჯ-ნაბიჯ'.\n"
                 "48. NARRATIVE DISCOURSE TRANSITIONS: 'at first glance' -> 'ერთი შეხედვით', 'as a matter of fact' -> 'სინამდვილეში', 'all of a sudden' -> 'უეცრად / ანაზდად', 'sooner or later' -> 'ადრე თუ გვიან', 'from head to toe' -> 'თავით ფეხამდე'.\n"
+                "49. VERBA DICENDI & INQUIT: 'whispered' -> 'ჩაიჩურჩულა' (NOT '*ჩურჩულით თქვა'), 'shouted' -> 'დაიყვირა / შეჰყვირა', 'gave an answer' -> 'უპასუხა', 'asked back' -> 'შეუბრუნა კითხვა'.\n"
+                "50. INVOLUNTARY SOMATICS: 'heaved/let out a sigh' -> 'ამოიოხრა' (NOT '*გამოუშვა ოხვრა'), 'heart sank' -> 'გული გადაუქანდა', 'shiver down spine' -> 'ტანში ჟრუანტელმა დაუარა', 'deep breath' -> 'ღრმად ჩაისუნთქა'.\n"
+                "51. EPISTEMIC MODALS: 'goes without saying' -> 'თავისთავად ცხადია' (NOT '*მიდის უთქმელად'), 'in all likelihood' -> 'დიდი ალბათობით', 'truth be told' -> 'სიმართლე რომ ითქვას', 'no doubt that' -> 'ეჭვგარეშეა, რომ'.\n"
+                "52. TEMPORAL DURATIVES: 'all day long' -> 'მთელი დღის განმავლობაში', 'in the course of time' -> 'დროთა განმავლობაში', 'from time to time' -> 'დროდადრო', 'for good' -> 'სამუდამოდ'.\n"
+                "53. ADVERSATIVE & CONCESSIVE: 'on the contrary' -> 'პირიქით' (NOT '*საპირისპიროზე'), 'on one hand ... other hand' -> 'ერთი მხრივ ... მეორე მხრივ' (NOT '*ერთ ხელზე'), 'all the more' -> 'მით უმეტეს'.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -933,7 +969,12 @@ def translate_with_local_llm(
             "13. Paired organ concord: 'საკუთარი თვალით' (NOT *თვალებით), 'საკუთარი ყურით', 'შიშველი ხელით', 'ფეხით'.\n"
             "14. Spatial binomials: 'side by side' -> 'მხარდამხარ', 'back and forth' -> 'წინ და უკან', 'face to face' -> 'პირისპირ'.\n"
             "15. Discourse transitions: 'at first glance' -> 'ერთი შეხედვით', 'in fact' -> 'სინამდვილეში', 'all of a sudden' -> 'უეცრად'.\n"
-            "16. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
+            "16. Inquit & speech verbs: 'whispered' -> 'ჩაიჩურჩულა', 'shouted' -> 'დაიყვირა', 'gave answer' -> 'უპასუხა'.\n"
+            "17. Involuntary somatics: 'sigh' -> 'ამოიოხრა', 'heart sank' -> 'გული გადაუქანდა', 'deep breath' -> 'ღრმად ჩაისუნთქა'.\n"
+            "18. Epistemic modals: 'goes without saying' -> 'თავისთავად ცხადია', 'in all likelihood' -> 'დიდი ალბათობით'.\n"
+            "19. Temporal duratives: 'all day long' -> 'მთელი დღის განმავლობაში', 'over time' -> 'დროთა განმავლობაში'.\n"
+            "20. Adversative antithesis: 'on the contrary' -> 'პირიქით', 'on one hand / other hand' -> 'ერთი მხრივ / მეორე მხრივ'.\n"
+            "21. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
             if target_lang == "ka" else
             "You are an expert bilingual literary translator into English. Output ONLY the translation."
         )

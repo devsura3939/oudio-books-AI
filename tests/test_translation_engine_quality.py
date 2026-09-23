@@ -137,3 +137,31 @@ def test_spatial_and_discourse_calques_rejected_and_cleaned():
     assert "მხარდამხარ" in cleaned
     assert "უკაცრიელ ადგილას" in cleaned
     assert "საკუთარი თვალით" in cleaned
+
+
+def test_verba_dicendi_and_somatic_calques_rejected_and_cleaned():
+    """Verify inquit speech verbs and involuntary somatic calques are rejected and repaired."""
+    source = "He whispered the answer, shouted the command, and heaved a sigh as his heart sank."
+    bad_cand = "მან ჩურჩულით თქვა პასუხი, ყვირილით თქვა ბრძანება და გამოუშვა ოხვრა, როცა მისი გული ჩაიძირა."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject speech and somatic calques"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "ჩაიჩურჩულა" in cleaned
+    assert "დაიყვირა" in cleaned
+    assert "ამოიოხრა" in cleaned
+    assert "გული გადაუქანდა" in cleaned
+
+
+def test_epistemic_temporal_and_adversative_calques_rejected_and_cleaned():
+    """Verify epistemic, durative, and adversative calques are rejected and repaired."""
+    source = "It goes without saying that all day long, on the one hand he worked, but on the other hand, far from it."
+    bad_cand = "მიდის უთქმელად, რომ მთელი დღე გრძელი, ერთ ხელზე მუშაობდა, მაგრამ მეორე ხელზე, შორს მისგან."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject epistemic, temporal, and adversative calques"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "თავისთავად ცხადია" in cleaned
+    assert "მთელი დღის განმავლობაში" in cleaned
+    assert "ერთი მხრივ" in cleaned
+    assert "მეორე მხრივ" in cleaned
+    assert "სრულებითაც არა" in cleaned
+

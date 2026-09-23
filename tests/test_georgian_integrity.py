@@ -867,6 +867,71 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Discourse transition failed for '{raw}': got '{polished}'")
 
+    def test_55_verba_dicendi_and_inquit_synthesis(self):
+        """Verify verba dicendi and inquit formulas."""
+        pairs = [
+            ("მან ჩურჩულით თქვა საიდუმლო.", "მან ჩაიჩურჩულა საიდუმლო."),
+            ("მან ყვირილით თქვა ბრძანება.", "მან დაიყვირა ბრძანება."),
+            ("მან მისცა პასუხი მაშინვე.", "მან უპასუხა მაშინვე."),
+            ("ავტორმა გააკეთა კომენტარი ამაზე.", "ავტორმა აღნიშნა ამაზე."),
+            ("მან დასვა შეკითხვა ხმამაღლა.", "მან ჰკითხა ხმამაღლა."),
+            ("მან უკან იკითხა გაკვირვებით.", "მან შეუბრუნა კითხვა გაკვირვებით."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Inquit synthesis failed for '{raw}': got '{polished}'")
+
+    def test_56_involuntary_somatic_reflexes(self):
+        """Verify involuntary actions and physiological reflexes."""
+        pairs = [
+            ("მოხუცმა გამოუშვა ოხვრა მძიმედ.", "მოხუცმა ამოიოხრა მძიმედ."),
+            ("მისი გული ჩაიძირა შიშისგან.", "გული გადაუქანდა შიშისგან."),
+            ("ჟრუანტელმა გაიარა მის ხერხემალში ცივად.", "ტანში ჟრუანტელმა დაუარა ცივად."),
+            ("მან აიღო ღრმა სუნთქვა ოთახში.", "მან ღრმად ჩაისუნთქა ოთახში."),
+            ("მან შეინახა სუნთქვა წამით.", "მან სუნთქვა შეიკრა წამით."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Somatic reflex failed for '{raw}': got '{polished}'")
+
+    def test_57_epistemic_modals_and_stance(self):
+        """Verify epistemic modality and dubitative markers."""
+        pairs = [
+            ("ეს მიდის უთქმელად ყველასთვის.", "ეს თავისთავად ცხადია ყველასთვის."),
+            ("ყველა ალბათობაში ის მოვა.", "დიდი ალბათობით ის მოვა."),
+            ("რომ თქვა სიმართლე, არ ვიცოდი.", "სიმართლე რომ ითქვას, არ ვიცოდი."),
+            ("ეს მართალია ეჭვის ჩრდილის გარეშე.", "ეს მართალია ყოველგვარი ეჭვის გარეშე."),
+            ("არ არის ეჭვი, რომ ის მართალია.", "ეჭვგარეშეა, რომ ის მართალია."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Epistemic modal failed for '{raw}': got '{polished}'")
+
+    def test_58_temporal_duratives_and_inceptives(self):
+        """Verify temporal duratives and continuative time markers."""
+        pairs = [
+            ("მან იმუშავა მთელი დღე გრძელი.", "მან იმუშავა მთელი დღის განმავლობაში."),
+            ("დროის კურსში ქალაქი გაიზარდა.", "დროთა განმავლობაში ქალაქი გაიზარდა."),
+            ("ის დროიდან დროში მოდიოდა აქ.", "ის დროდადრო მოდიოდა აქ."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Temporal durative failed for '{raw}': got '{polished}'")
+
+    def test_59_adversative_concessive_antithesis(self):
+        """Verify adversative and concessive antithesis markers."""
+        pairs = [
+            ("საპირისპიროზე, მან გაიცინა.", "პირიქით, მან გაიცინა."),
+            ("ერთ ხელზე ეს კარგია, მეორე ხელზე კი რთული.", "ერთი მხრივ ეს კარგია, მეორე მხრივ კი რთული."),
+            ("თანაბრად ასე, ჩვენ გავიმარჯვეთ.", "მიუხედავად ამისა, ჩვენ გავიმარჯვეთ."),
+            ("ეს ყველა უფრო მნიშვნელოვანია ახლა.", "ეს მით უმეტეს მნიშვნელოვანია ახლა."),
+            ("ეს მეტი თუ ნაკლები სიმართლეა.", "ეს მეტ-ნაკლებად სიმართლეა."),
+            ("ეს შორს მისგან არის.", "ეს სრულებითაც არა არის."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Adversative antithesis failed for '{raw}': got '{polished}'")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
