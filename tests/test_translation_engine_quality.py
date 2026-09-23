@@ -79,4 +79,40 @@ def test_subordinate_clause_commas_and_chapter1_calques():
     assert "ისეთივე ხელშესახები" in cleaned
 
 
+def test_somatic_calques_rejected_and_cleaned():
+    """Verify somatic bodily idiom calques are rejected by validator and cleaned."""
+    source = "He caught his breath and shrugged his shoulders before bursting into laughter."
+    bad_cand = "მან მისი სუნთქვა დაიჭირა და მხრები შეანჯღრია, სანამ სიცილში აფეთქდა."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject somatic calques"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "სული მოითქვა" in cleaned
+    assert "მხრები აიჩეჩა" in cleaned
+    assert "სიცილი წასკდა" in cleaned
+
+
+def test_scifi_cosmic_lexicon_and_temporal():
+    """Verify sci-fi terminology and temporal compacting."""
+    source = "They traveled in outer space for hours through the empty void."
+    bad_cand = "ისინი მოგზაურობდნენ გარე სივრცეში საათების განმავლობაში ცარიელი სიცარიელეში."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject raw sci-fi calques"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "ღია კოსმოსში" in cleaned
+    assert "საათობით" in cleaned
+    assert "უკიდეგანო სიცარიელე" in cleaned
+
+
+def test_animacy_possession_concord():
+    """Verify animacy possession concord (ჰყავს vs აქვს)."""
+    source = "He has a loyal dog and three children, but he does not have a car."
+    bad_cand = "მას აქვს ძაღლი და სამი შვილი, მაგრამ მას ჰყავს მანქანა."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject 'მას აქვს ძაღლი'"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "მას ჰყავს ძაღლი" in cleaned
+    assert "მას აქვს მანქანა" in cleaned
+
+
+
 

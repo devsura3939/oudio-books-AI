@@ -733,6 +733,74 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Frequentative motion failed for '{raw}': got '{polished}'")
 
+    def test_45_somatic_bodily_idioms(self):
+        """Verify natural Georgian somatic and bodily reaction idioms."""
+        pairs = [
+            ("მან მისი სუნთქვა დაიჭირა წამით.", "მან სული მოითქვა წამით."),
+            ("მოულოდნელობისგან დაკარგა სუნთქვა.", "მოულოდნელობისგან სუნთქვა შეეკრა."),
+            ("მან მხრები შეანჯღრია უდარდელად.", "მან მხრები აიჩეჩა უდარდელად."),
+            ("მან თავი შეანჯღრია უარის ნიშნად.", "მან თავი გააქნია უარის ნიშნად."),
+            ("დარბაზი სიცილში აფეთქდა უცებ.", "დარბაზი სიცილი წასკდა უცებ."),
+            ("მგზავრი ცრემლებში აფეთქდა დარდით.", "მგზავრი ცრემლები წასკდა დარდით."),
+            ("მან ყელი გაიწმინდა და დაიწყო.", "მან ჩაახველა და დაიწყო."),
+            ("შიშისგან გული ჩაუვარდა მას.", "შიშისგან გული გადაუქანდა მას."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Somatic idiom failed for '{raw}': got '{polished}'")
+
+    def test_46_sci_fi_speculative_collocations(self):
+        """Verify literary sci-fi and speculative prose lexicon."""
+        pairs = [
+            ("ხომალდი გაფრინდა გარე სივრცეში შორს.", "ხომალდი გაფრინდა ღია კოსმოსში შორს."),
+            ("გარშემო იყო მხოლოდ ცარიელი სიცარიელე.", "გარშემო იყო მხოლოდ უკიდეგანო სიცარიელე."),
+            ("ისინი თხელი ჰაერიდან გამოჩნდნენ უცებ.", "ისინი პირდაპირ ჰაერში გაჩნდნენ უცებ."),
+            ("გზა გრძელდებოდა ათასი სინათლის წლები.", "გზა გრძელდებოდა ათასი სინათლის წელი."),
+            ("ორბიტაზე გამოჩნდა სამი კოსმოსური გემები.", "ორბიტაზე გამოჩნდა სამი კოსმოსური გემი."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Sci-fi collocation failed for '{raw}': got '{polished}'")
+
+    def test_47_polypersonal_possession_animacy(self):
+        """Verify animacy distinction in possession (ჰყავს animate vs აქვს inanimate)."""
+        pairs = [
+            ("მას აქვს ძაღლი ერთგული.", "მას ჰყავს ძაღლი ერთგული."),
+            ("მას აქვს შვილი საყვარელი.", "მას ჰყავს შვილი საყვარელი."),
+            ("მას არ აქვს მეგობარი ამ ქალაქში.", "მას არ ჰყავს მეგობარი ამ ქალაქში."),
+            ("მას ჰყავს მანქანა სწრაფი.", "მას აქვს მანქანა სწრაფი."),
+            ("მას ჰყავს სახლი მთაში.", "მას აქვს სახლი მთაში."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Animacy possession failed for '{raw}': got '{polished}'")
+
+    def test_48_temporal_adverbial_compacting(self):
+        """Verify compact synthetic temporal duration adverbs."""
+        pairs = [
+            ("ისინი საუბრობდნენ საათების განმავლობაში.", "ისინი საუბრობდნენ საათობით."),
+            ("ის ფიქრობდა დიდი დროის განმავლობაში.", "ის ფიქრობდა დიდხანს."),
+            ("წვიმდა დღეების განმავლობაში შეუსვენებლად.", "წვიმდა დღეობით შეუსვენებლად."),
+            ("ისინი შრომობდნენ წლების განმავლობაში ერთად.", "ისინი შრომობდნენ წლობით ერთად."),
+            ("ის გაჩერდა ერთი მომენტისთვის კარებთან.", "ის გაჩერდა წამით კარებთან."),
+            ("მისი ძალა დღიდან დღემდე იზრდებოდა.", "მისი ძალა დღითი დღე იზრდებოდა."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Temporal compacting failed for '{raw}': got '{polished}'")
+
+    def test_49_indirect_object_and_dialogue_framing(self):
+        """Verify indirect object markers and light-verb decalquing."""
+        pairs = [
+            ("ამ ნაბიჯმა გააკეთა აზრი ბოლოს.", "ამ ნაბიჯმა აზრი შეიძინა ბოლოს."),
+            ("მან ყურადღება გადაიხადა ამ დეტალზე.", "მან ყურადღება მიაქცია ამ დეტალზე."),
+            ("შეხვედრამ ადგილი აიღო ქალაქში.", "შეხვედრამ ჩატარდა ქალაქში."),
+            ("— სად მიდიხარ? — კითხა მან.", "— სად მიდიხარ? — ჰკითხა მან."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Indirect object / light-verb failed for '{raw}': got '{polished}'")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

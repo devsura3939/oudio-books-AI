@@ -112,6 +112,56 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])ისეთივე\s+არსებითი(?![ა-ჰ])', 'ისეთივე ხელშესახები'),
         (r'(?<![\u10A0-\u10FF])ყველამ\s+იცის\s+როგორ(?![ა-ჰ])', 'ყველამ იცის, როგორ'),
         (r'(?<![\u10A0-\u10FF])(იცის|იცოდა|იცოდნენ|ვიცი|ვიცით|გაიგო|გაიგეს|დაინახა|ნახა|მოუყვა|ჰკითხა|გაიგებს|გაახსენდა|მიხვდა|ახსოვს|ახსოვდა|გაარკვია)\s+(როგორ|რომ|რატომ|სად|როდის)(?![ა-ჰ])', r'\1, \2'),
+        # Somatic idioms
+        (r'(?<![\u10A0-\u10FF])(?:(?:მისი|თავისი)\s+)?სუნთქვა\s+დაიჭირა(?![ა-ჰ])', 'სული მოითქვა'),
+        (r'(?<![\u10A0-\u10FF])დაიჭირა\s+(?:(?:მისი|თავისი)\s+)?სუნთქვა(?![ა-ჰ])', 'სული მოითქვა'),
+        (r'(?<![\u10A0-\u10FF])(?:დაკარგა\s+სუნთქვა|სუნთქვა\s+დაკარგა)(?![ა-ჰ])', 'სუნთქვა შეეკრა'),
+        (r'(?<![\u10A0-\u10FF])მხრები\s+შეანჯღრია(?![ა-ჰ])', 'მხრები აიჩეჩა'),
+        (r'(?<![\u10A0-\u10FF])მხრების\s+შერყევა(?![ა-ჰ])', 'მხრების აჩეჩა'),
+        (r'(?<![\u10A0-\u10FF])თავი\s+შეანჯღრია(?![ა-ჰ])', 'თავი გააქნია'),
+        (r'(?<![\u10A0-\u10FF])სიცილში\s+აფეთქდა(?![ა-ჰ])', 'სიცილი წასკდა'),
+        (r'(?<![\u10A0-\u10FF])ცრემლებში\s+აფეთქდა(?![ა-ჰ])', 'ცრემლები წასკდა'),
+        (r'(?<![\u10A0-\u10FF])ყელი\s+გაიწმინდა(?![ა-ჰ])', 'ჩაახველა'),
+        (r'(?<![\u10A0-\u10FF])გული\s+ჩაუვარდა(?![ა-ჰ])', 'გული გადაუქანდა'),
+        (r'(?<![\u10A0-\u10FF])გულმა\s+დარტყმა\s+გამოტოვა(?![ა-ჰ])', 'გული შეუქანდა'),
+        # Sci-Fi lexicon
+        (r'(?<![\u10A0-\u10FF])გარე\s+სივრცეში(?![ა-ჰ])', 'ღია კოსმოსში'),
+        (r'(?<![\u10A0-\u10FF])გარე\s+სივრცე(?![ა-ჰ])', 'კოსმოსური სივრცე'),
+        (r'(?<![\u10A0-\u10FF])ცარიელ(?:ი)?\s+სიცარიელეში(?![ა-ჰ])', 'უკიდეგანო სიცარიელეში'),
+        (r'(?<![\u10A0-\u10FF])ცარიელ(?:ი)?\s+სიცარიელეს(?![ა-ჰ])', 'უკიდეგანო სიცარიელეს'),
+        (r'(?<![\u10A0-\u10FF])ცარიელ(?:ი)?\s+სიცარიელედ(?![ა-ჰ])', 'უკიდეგანო სიცარიელედ'),
+        (r'(?<![\u10A0-\u10FF])ცარიელ(?:ი)?\s+სიცარიელე(?![ა-ჰ])', 'უკიდეგანო სიცარიელე'),
+        (r'(?<![\u10A0-\u10FF])თხელ(?:ი)?\s+ჰაერიდან\s+(?:გამოჩნდნენ|გამოჩნდებოდნენ)(?![ა-ჰ])', 'პირდაპირ ჰაერში გაჩნდნენ'),
+        (r'(?<![\u10A0-\u10FF])თხელ(?:ი)?\s+ჰაერიდან\s+გამოჩნდა(?![ა-ჰ])', 'პირდაპირ ჰაერში გაჩნდა'),
+        (r'(?<![\u10A0-\u10FF])თხელ(?:ი)?\s+ჰაერიდან\s+გამოჩენა(?![ა-ჰ])', 'პირდაპირ ჰაერში გაჩენა'),
+        (r'(?<![\u10A0-\u10FF])თხელ(?:ი)?\s+ჰაერიდან(?![ა-ჰ])', 'არაფრისგან'),
+        (r'(?<![\u10A0-\u10FF])(\b\d+|ათასი|მილიონი|რამდენიმე|მრავალი)\s+სინათლის\s+წლები(?![ა-ჰ])', r'\1 სინათლის წელი'),
+        (r'(?<![\u10A0-\u10FF])(\b\d+|ორი|სამი|ათი|რამდენიმე)\s+კოსმოსური\s+გემები(?![ა-ჰ])', r'\1 კოსმოსური გემი'),
+        # Animacy possession concord
+        (r'(?<![\u10A0-\u10FF])(მას|ვის|ყველას)\s+ჰყავს\s+(მანქანა|სახლი|წიგნი|ტელეფონი|კალამი|ბინა|ქონება)(?![ა-ჰ])', r'\1 აქვს \2'),
+        (r'(?<![\u10A0-\u10FF])(მას|ვის|ყველას)\s+ჰყავდა\s+(მანქანა|სახლი|წიგნი|ტელეფონი|კალამი|ბინა|ქონება)(?![ა-ჰ])', r'\1 ჰქონდა \2'),
+        (r'(?<![\u10A0-\u10FF])(მას|ვის|ყველას)\s+აქვს\s+(ძაღლი|კატა|ცხენი|შვილი|მეგობარი|ძმა|და|ვაჟი|ქალიშვილი|მტერი|მრჩეველი|მოწაფე|მასწავლებელი)(?![ა-ჰ])', r'\1 ჰყავს \2'),
+        (r'(?<![\u10A0-\u10FF])(მას|ვის|ყველას)\s+ჰქონდა\s+(ძაღლი|კატა|ცხენი|შვილი|მეგობარი|ძმა|და|ვაჟი|ქალიშვილი|მტერი|მრჩეველი|მოწაფე|მასწავლებელი)(?![ა-ჰ])', r'\1 ჰყავდა \2'),
+        (r'(?<![\u10A0-\u10FF])არ\s+აქვს\s+(ძაღლი|კატა|ცხენი|შვილი|მეგობარი|ძმა|და|ვაჟი|ქალიშვილი|მტერი)(?![ა-ჰ])', r'არ ჰყავს \1'),
+        (r'(?<![\u10A0-\u10FF])არ\s+ჰქონდა\s+(ძაღლი|კატა|ცხენი|შვილი|მეგობარი|ძმა|და|ვაჟი|ქალიშვილი|მტერი)(?![ა-ჰ])', r'არ ჰყავდა \1'),
+        # Temporal compacting
+        (r'(?<![\u10A0-\u10FF])საათების\s+განმავლობაში(?![ა-ჰ])', 'საათობით'),
+        (r'(?<![\u10A0-\u10FF])დიდი\s+დროის\s+განმავლობაში(?![ა-ჰ])', 'დიდხანს'),
+        (r'(?<![\u10A0-\u10FF])დღეების\s+(?:განმავლობაში|მანძილზე)(?![ა-ჰ])', 'დღეობით'),
+        (r'(?<![\u10A0-\u10FF])წლების\s+(?:განმავლობაში|მანძილზე)(?![ა-ჰ])', 'წლობით'),
+        (r'(?<![\u10A0-\u10FF])ერთი\s+მომენტისთვის(?![ა-ჰ])', 'წამით'),
+        (r'(?<![\u10A0-\u10FF])ერთი\s+წამის\s+განმავლობაში(?![ა-ჰ])', 'ერთი წამით'),
+        (r'(?<![\u10A0-\u10FF])დღიდან\s+დღემდე(?![ა-ჰ])', 'დღითი დღე'),
+        (r'(?<![\u10A0-\u10FF])დროიდან\s+დრომდე(?![ა-ჰ])', 'დროდადრო'),
+        (r'(?<![\u10A0-\u10FF])ბოლო\s+დროის\s+განმავლობაში(?![ა-ჰ])', 'ბოლო დროს'),
+        (r'(?<![\u10A0-\u10FF])იმ\s+მომენტის\s+განმავლობაში(?![ა-ჰ])', 'იმ მომენტში'),
+        # Indirect object & light verbs
+        (r'(?<![\u10A0-\u10FF])გააკეთა\s+აზრი(?![ა-ჰ])', 'აზრი შეიძინა'),
+        (r'(?<![\u10A0-\u10FF])არ\s+აკეთებს\s+აზრს(?![ა-ჰ])', 'აზრს მოკლებულია'),
+        (r'(?<![\u10A0-\u10FF])ყურადღება\s+გადაიხადა(?![ა-ჰ])', 'ყურადღება მიაქცია'),
+        (r'(?<![\u10A0-\u10FF])ადგილი\s+აიღო(?![ა-ჰ])', 'ჩატარდა'),
+        (r'(?<![\u10A0-\u10FF])კითხა\s+მას(?![ა-ჰ])', 'ჰკითხა მას'),
+        (r'(?<![\u10A0-\u10FF])—\s*კითხა\s+მან(?![ა-ჰ])', '— ჰკითხა მან'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -721,6 +771,10 @@ def translate_with_gemini(
                 "37. SENSORY EXPERIENCER CONCORD: Verbs of perception and involuntary sensation require Dative logical subjects ('მას ესმის', 'მას ჩაესმა', 'მას მოეჩვენა', 'მას გაახსენდა', 'მას ეამა').\n"
                 "38. BOUND ENCLITICS: Use authentic bound restrictive, temporal, and contrastive clitics ('-ღა', '-ვე', '-კი': 'ისიღა დარჩა', 'ესღა ვიცი', 'იმ დღესვე', 'იმწამსვე', 'ის კი').\n"
                 "39. CIRCUMSTANTIAL COMPOUNDS: Prefer synthetic compound adverbs ('დაუხამხამებლად', 'გულფანცქალით', 'ხმაამოუღებლად', 'სუნთქვაშეკრული') over analytical prepositional phrases.\n"
+                "40. SOMATIC & BODILY IDIOMS: Translate bodily reactions idiomatically: 'catch breath' -> 'სული მოითქვა' (NOT '*მისი სუნთქვა დაიჭირა'), 'lose breath' -> 'სუნთქვა შეეკრა' (NOT '*დაკარგა სუნთქვა'), 'shrug shoulders' -> 'მხრები აიჩეჩა' (NOT '*მხრები შეანჯღრია'), 'shake head' -> 'თავი გააქნია', 'burst into laughter/tears' -> 'სიცილი/ცრემლები წასკდა', 'clear throat' -> 'ჩაახველა'.\n"
+                "41. SPECULATIVE & SCI-FI PROSE: Standardize cosmic lexicon: 'outer space' -> 'კოსმოსური სივრცე / ღია კოსმოსი' (NOT '*გარე სივრცე'), 'empty void' -> 'უკიდეგანო სიცარიელე' (NOT '*ცარიელი სიცარიელე'), 'out of thin air' -> 'პირდაპირ ჰაერში / არაფრისგან გაჩენა' (NOT '*თხელი ჰაერიდან გამოჩენა'), 'look outward' -> 'მზერა გარეთ მიაპყრო'.\n"
+                "42. ANIMACY CONCORD IN POSSESSION: Animate beings strictly require 'ჰყავს / ჰყავდა' ('მას ჰყავს ძაღლი/შვილი/მეგობარი', NEVER '*მას აქვს ძაღლი/შვილი'). Inanimate objects require 'აქვს / ჰქონდა' ('მას აქვს მანქანა/წიგნი').\n"
+                "43. TEMPORAL ADVERBIAL COMPACTING: Compact duration phrases into synthetic Georgian adverbs: 'საათების განმავლობაში' -> 'საათობით', 'დიდი დროის განმავლობაში' -> 'დიდხანს', 'წლების განმავლობაში' -> 'წლობით', 'ერთი მომენტისთვის' -> 'წამით', 'დღიდან დღემდე' -> 'დღითი დღე'.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -820,7 +874,11 @@ def translate_with_local_llm(
             "4. Negative imperatives require prohibitive ნუ (ნუ წახვალ, NOT არ წახვიდე).\n"
             "5. Consonant-stem adjectives drop -ი in oblique cases (უცნობ სივრცეში).\n"
             "6. Transliterate proper names phonetically (Constant -> კონსტანტი, Rumfoord -> რამფორდი, Kazak -> კაზაკი).\n"
-            "7. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
+            "7. Somatic idioms: 'catch breath' -> 'სული მოითქვა', 'lose breath' -> 'სუნთქვა შეეკრა', 'shrug shoulders' -> 'მხრები აიჩეჩა'.\n"
+            "8. Sci-Fi terms: 'outer space' -> 'კოსმოსური სივრცე', 'empty void' -> 'უკიდეგანო სიცარიელე'.\n"
+            "9. Animacy possession: 'მას ჰყავს ძაღლი/შვილი' (animate), 'მას აქვს მანქანა' (inanimate).\n"
+            "10. Temporal compacting: 'საათების განმავლობაში' -> 'საათობით', 'დიდი დროის განმავლობაში' -> 'დიდხანს'.\n"
+            "11. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
             if target_lang == "ka" else
             "You are an expert bilingual literary translator into English. Output ONLY the translation."
         )
@@ -886,6 +944,8 @@ def translate_with_kona(
                 "2. CASE CONCORD: Transitive and medial verbs in the Series II Aorist (past) strictly require Ergative case (-მა / -მ: 'ავტორმა თქვა', 'აგენტებმა იპოვეს', 'მან გაისროლა'). Experiencer verbs take Dative (მას უნდა/უყვარს/ახსოვს).\n"
                 "3. PROPER NAMES: Transliterate proper names phonetically into Georgian (Constant -> კონსტანტი, Rumfoord -> რამფორდი, Kazak -> კაზაკი). Do NOT translate names as common words.\n"
                 "4. AVOID CALQUES: Do not translate idioms literally (e.g. 'looked outward' -> 'მზერას გარეთ მიაპყრობდა', 'outward push' -> 'გარეთ სწრაფვა').\n"
+                "5. SOMATIC & SCI-FI: 'catch breath' -> 'სული მოითქვა', 'shrug shoulders' -> 'მხრები აიჩეჩა', 'outer space' -> 'კოსმოსური სივრცე', 'empty void' -> 'უკიდეგანო სიცარიელე'.\n"
+                "6. ANIMACY & TIME: 'მას ჰყავს ძაღლი/შვილი' (animate), 'მას აქვს მანქანა' (inanimate); 'საათების განმავლობაში' -> 'საათობით', 'დიდი დროის განმავლობაში' -> 'დიდხანს'.\n"
                 "Output ONLY the Georgian translation without any introductory or concluding remarks."
             )
             user_parts = []
