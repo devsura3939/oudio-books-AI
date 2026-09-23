@@ -1031,6 +1031,9 @@ def translate_with_gemini(
                 contents="\n\n".join(user_parts),
                 config=dict(system_instruction=sys_inst, temperature=0.1)
             )
+            cands = getattr(resp, "candidates", None)
+            if cands and str(getattr(cands[0], "finish_reason", "")).split(".")[-1] not in ("STOP", ""):
+                return None
             cand = resp.text.strip() if resp and getattr(resp, "text", None) else ""
             if cand and translation_is_valid(text, cand, target_lang):
                 return cand
@@ -1402,11 +1405,13 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
     # first so quota exhaustion cannot stop a valid translation.
     correction_key = api_key or os.environ.get("GEMINI_API_KEY")
 
-    # Reflow input text into cohesive narrative paragraphs
-    reflowed_text = reflow_narrative_paragraphs(text)
-
     # Split into paragraphs to maintain narrative structure
-    paragraphs = [p.strip() for p in reflowed_text.split("\n\n") if p.strip()]
+    raw_paras = [p.strip() for p in re.split(r'\n\s*\n', text) if p.strip()]
+    if len(raw_paras) > 1:
+        paragraphs = [reflow_narrative_paragraphs(p) or p for p in raw_paras]
+    else:
+        reflowed_text = reflow_narrative_paragraphs(text)
+        paragraphs = [p.strip() for p in reflowed_text.split("\n\n") if p.strip()]
     if not paragraphs:
         paragraphs = [text.strip()]
 

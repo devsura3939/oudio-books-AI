@@ -72,8 +72,7 @@ def translate_local(text, source_lang, target_lang):
             for part in token_parts(paragraph,lambda value:_tokenizer.encode(value)):
                 candidate=_generate(part.strip())
                 if target_lang == 'ka':
-                    from app.translation_engine import clean_georgian_morphology
-                    from app.text_integrity import synthesize_georgian_morphology
+                    from app.translation_engine import clean_georgian_morphology, synthesize_georgian_morphology
                     candidate = clean_georgian_morphology(candidate)
                     candidate = synthesize_georgian_morphology(candidate)
                 if not translation_is_valid(part,candidate,target_lang):
