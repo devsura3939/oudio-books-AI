@@ -858,17 +858,21 @@ const _isStaticHost = (() => {
 let luminaGatewayAvailable = !_isStaticHost;
 
 async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null, signal } = {}) {
-    const jobSignal = signal || translationRequestController?.signal;
+    const jobSignal = signal || (typeof translationRequestController !== 'undefined' ? translationRequestController?.signal : null);
     jobSignal?.throwIfAborted();
     if (!luminaGatewayAvailable) return null;
     try {
         const controller = new AbortController();
-        const tid = setTimeout(() => controller.abort(), 5000); // 5s max
+        const tid = setTimeout(() => controller.abort(), 30000); // 30s max for server AI models
         const payload = { prompt, temperature, maxTokens };
         if (systemPrompt) payload.systemPrompt = systemPrompt;
+        const headers = { 'Content-Type': 'application/json' };
+        if (typeof geminiApiKey !== 'undefined' && geminiApiKey) {
+            headers['x-gemini-key'] = geminiApiKey;
+        }
         const res = await window.EngbotProviders.request('/api/ai', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(payload),
             signal: jobSignal ? AbortSignal.any([controller.signal, jobSignal]) : controller.signal,
         });
@@ -891,9 +895,9 @@ async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 81
         return data && data.text ? parseModelJSON(data.text) : null;
     } catch (e) {
         jobSignal?.throwIfAborted();
-        luminaGatewayAvailable = false;
-        console.warn('[Lumina AI] gateway unreachable — falling back to key-based providers.', e && e.message);
-
+        if (e && e.name !== 'AbortError') {
+            console.warn('[Lumina AI] gateway call failed — falling back to next provider.', e && e.message);
+        }
         return null;
     }
 }
@@ -7525,7 +7529,7 @@ async function callCloudJSON(prompt, { temperature = 0.2, maxTokens = 8192, retr
     if (groqApiKey) providers.push({name:'Groq',run:attempt=>callGroqJSON(prompt,options(attempt))});
     if (openRouterApiKey) providers.push({name:'OpenRouter',run:attempt=>callOpenRouterJSON(prompt,options(attempt))});
     if (mistralApiKey) providers.push({name:'Mistral',run:attempt=>callMistralJSON(prompt,options(attempt))});
-    if (luminaGatewayAvailable) providers.push({name:'Server AI',run:attempt=>callLuminaGatewayJSON(prompt,options(attempt))});
+    if (luminaGatewayAvailable) providers.push({name:'Server AI',timeoutMs:30000,run:attempt=>callLuminaGatewayJSON(prompt,options(attempt))});
     return window.EngbotProviders.firstValid(providers,{signal:jobSignal,validate:validateResponse,timeoutMs:10000});
 }
 
@@ -8226,6 +8230,21 @@ async function fetchServerAiStatus() {
             serverAiStatus = await res.json();
             if (serverAiStatus?.gemini_configured) {
                 luminaGatewayAvailable = true;
+            } else if (typeof geminiApiKey !== 'undefined' && geminiApiKey) {
+                // Auto-sync client's saved key to server so server AI gateway is active
+                try {
+                    fetch('/api/settings/ai-key', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ gemini_api_key: geminiApiKey })
+                    }).then(r => r.ok && r.json()).then(d => {
+                        if (d?.gemini_configured) {
+                            if (serverAiStatus) serverAiStatus.gemini_configured = true;
+                            luminaGatewayAvailable = true;
+                            if (typeof renderAiKeyStatusPanel === 'function') renderAiKeyStatusPanel();
+                        }
+                    }).catch(() => {});
+                } catch (_) {}
             }
         }
     } catch (_) {}

@@ -69,3 +69,14 @@ def test_expanded_literary_anti_calques():
     assert "უგემურ ოკეანეში" in cleaned
 
 
+def test_subordinate_clause_commas_and_chapter1_calques():
+    """Verify that verbs of perception/cognition insert commas before subordinate markers and fix Chapter 1 calques."""
+    raw = "ყველამ უკვე იცის როგორ იპოვნოს ცხოვრების აზრი. კაცებსა და ქალებს არ ჰქონდათ მარტივი წვდომა მათში არსებულ საიდუმლოზე. მათ გარეთ გაიხედეს და ისეთივე არსებითი გახდნენ."
+    cleaned = clean_georgian_morphology(raw)
+    assert "ყველამ უკვე იცის, როგორ" in cleaned
+    assert "ადამიანებს ხელი არ მიუწვდებოდათ" in cleaned
+    assert "მზერა გარეთ მიაპყრეს" in cleaned
+    assert "ისეთივე ხელშესახები" in cleaned
+
+
+
