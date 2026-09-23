@@ -209,3 +209,15 @@ def test_sensory_transit_dialogue_temporal_calques_rejected_and_cleaned():
     assert "წამიერად გაქვავდა" in cleaned
 
 
+def test_light_inchoative_directional_intensifier_calques_rejected_and_cleaned():
+    """Verify Rule Groups 76-80: environmental light, inchoatives, directional preverbs, intensifiers, and narrative connectives."""
+    source = "The sun was setting on the horizon, the door opened of itself, he came inside the room, it was completely obvious, and then he said."
+    bad_cand = "მზე ჩადიოდა ჰორიზონტზე, კარი თავისით გაიღო, მოვიდა შიგნით ოთახში, იყო სრულიად აშკარად, და მერე მან თქვა."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject light, inchoative, directional, and connective calques"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "მზე ჰორიზონტს ეფარებოდა" in cleaned
+    assert "კარი გაიღო" in cleaned
+    assert "ოთახში შემოვიდა" in cleaned
+    assert "ცხადლივ" in cleaned
+    assert "შემდეგ კი თქვა" in cleaned

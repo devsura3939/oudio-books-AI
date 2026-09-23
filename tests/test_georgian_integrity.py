@@ -199,9 +199,9 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         from app.training_engine import load_active_pack, load_benchmark_cases, evaluate_pack
         pack = load_active_pack("ka")
         cases = load_benchmark_cases("ka")
-        self.assertGreaterEqual(len(cases), 800, "Expected at least 800 benchmark cases")
-        self.assertGreaterEqual(len(pack.get("items", [])), 920, "Expected at least 920 rule pack items")
-        self.assertGreaterEqual(int(pack.get("version", 0)), 42, "Active pack version must be at least 42")
+        self.assertGreaterEqual(len(cases), 900, "Expected at least 900 benchmark cases")
+        self.assertGreaterEqual(len(pack.get("items", [])), 1000, "Expected at least 1000 rule pack items")
+        self.assertGreaterEqual(int(pack.get("version", 0)), 44, "Active pack version must be at least 44")
         eval_res = evaluate_pack(pack.get("items", []), cases)
         self.assertEqual(eval_res["score"], 100.0, f"Expected 100.0 score, got {eval_res['score']}")
         self.assertEqual(eval_res["passed"], eval_res["total"], f"Failures: {eval_res['failures']}")
@@ -1131,6 +1131,77 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
         for raw, expected in pairs:
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Temporal durative failed for '{raw}': got '{polished}'")
+
+    def test_75_environmental_light_and_shadow(self):
+        """Verify environmental light, shadow, and atmospheric illumination (Rule Group 76)."""
+        pairs = [
+            ("საღამოს მზე ჩადიოდა ჰორიზონტზე მშვიდად.", "საღამოს მზე ჰორიზონტს ეფარებოდა მშვიდად."),
+            ("უცებ ჩრდილი დაეცა მიწაზე ციხესიმაგრის წინ.", "უცებ მიწას ჩრდილი დაადგა ციხესიმაგრის წინ."),
+            ("ღამით მთვარე ანათებდა კაშკაშად მდინარის თავზე.", "ღამით მთვარე მკვეთრად ანათებდა მდინარის თავზე."),
+            ("საღამოს ბინდი დაეცა ქალაქს და სიჩუმე ჩამოწვა.", "საღამოს ქალაქს ბინდი ჩამოაწვა და სიჩუმე ჩამოწვა."),
+            ("მზის სხივებმა გაჭრა ღრუბლები დილით ადრე.", "მზის სხივებმა ღრუბლებში გამოაღწია დილით ადრე."),
+            ("დილის სინათლე გატყდა ფანჯარაში მოულოდნელად.", "დილის სინათლემ ფანჯარაში შემოაღწია მოულოდნელად."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Environmental light/shadow failed for '{raw}': got '{polished}'")
+
+    def test_76_causative_inchoative_alternation(self):
+        """Verify causative-inchoative ergative alternations (Rule Group 77)."""
+        pairs = [
+            ("ქარისგან კარი თავისით გაიღო უეცრად.", "ქარისგან კარი გაიღო უეცრად."),
+            ("სიცხისგან ფანჯარა გატყდა თვითონ ოთახში.", "სიცხისგან ფანჯარა გატყდა ოთახში."),
+            ("მზეზე ყინული გადნა თავისით მდინარეზე.", "მზეზე ყინული გადნა მდინარეზე."),
+            ("ხანძრისას სახლი დაიწვა თვითონ სოფელში.", "ხანძრისას სახლი დაიწვა სოფელში."),
+            ("შტორმის დროს წყალმა დაიხრჩო იგი უმოწყალოდ.", "შტორმის დროს წყალში დაიხრჩო უმოწყალოდ."),
+            ("ქარში ტოტი გატყდა თავისით ბაღში.", "ქარში ტოტი გადატყდა ბაღში."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Inchoative ergative failed for '{raw}': got '{polished}'")
+
+    def test_77_intransitive_directional_preverbs(self):
+        """Verify intransitive directional particle preverbs (Rule Group 78)."""
+        pairs = [
+            ("სტუმარი მოვიდა შიგნით ოთახში საღამოს.", "სტუმარი ოთახში შემოვიდა საღამოს."),
+            ("მასპინძელი მოვიდა შიგნით და მიესალმა.", "მასპინძელი შემოვიდა და მიესალმა."),
+            ("ბავშვი წავიდა გარეთ ბაღში სათამაშოდ.", "ბავშვი ბაღში გავიდა სათამაშოდ."),
+            ("მოხუცი ჩამოვიდა დაბლა კიბეზე ფრთხილად.", "მოხუცი კიბეზე ჩამოვიდა ფრთხილად."),
+            ("მგზავრი ჩამოვიდა დაბლა და შეისვენა.", "მგზავრი დაეშვა და შეისვენა."),
+            ("რაინდი ავიდა ზემოთ კოშკში დასაზვერად.", "რაინდი კოშკში ავიდა დასაზვერად."),
+            ("მხედარი გადავიდა მეორე მხარეს მდინარისა.", "მხედარი გადავიდა მდინარისა."),
+            ("პატიმარი გამოვიდა გარეთ ეზოში მზის სანახავად.", "პატიმარი ეზოში გამოვიდა მზის სანახავად."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Directional preverb failed for '{raw}': got '{polished}'")
+
+    def test_78_phrasal_intensification_and_clitics(self):
+        """Verify phrasal intensification and evaluative adverbial clitics (Rule Group 79)."""
+        pairs = [
+            ("მისი განზრახვა იყო სრულიად აშკარად ყველასთვის.", "მისი განზრახვა იყო ცხადლივ ყველასთვის."),
+            ("საქმე გადაწყდა ძალიან მარტივად კრებაზე.", "საქმე გადაწყდა ძალზე იოლად კრებაზე."),
+            ("ეს იყო უკიდურესად რთული გამოცდა მეომრისთვის.", "ეს იყო უაღრესად რთული გამოცდა მეომრისთვის."),
+            ("მას საერთოდ არ ეშინოდა საფრთხის წინაშე.", "მას სულაც არ ეშინოდა საფრთხის წინაშე."),
+            ("ციხის აღება თითქმის შეუძლებელი იყო იმ დროს.", "ციხის აღება ფაქტობრივად შეუძლებელი იყო იმ დროს."),
+            ("სარდალი აბსოლუტურად დარწმუნებული იყო გამარჯვებაში.", "სარდალი სავსებით დარწმუნებული იყო გამარჯვებაში."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Phrasal intensifier failed for '{raw}': got '{polished}'")
+
+    def test_79_classical_literary_narrative_connectives(self):
+        """Verify classical literary narrative sentence starters and connectives (Rule Group 80)."""
+        pairs = [
+            ("და მერე მან თქვა თავისი საიდუმლო.", "შემდეგ კი თქვა თავისი საიდუმლო."),
+            ("როდესაც ყველაფერი დასრულდა, სახლში წავიდნენ.", "როცა ყველაფერი მიწყნარდა, სახლში წავიდნენ."),
+            ("მას არც კი შეუხედავს მისთვის წასვლისას.", "მას თვალიც არ შეუკრავს მისთვის წასვლისას."),
+            ("ამასობაში კი ჯარი ქალაქს მიუახლოვდა.", "ამასობაში ჯარი ქალაქს მიუახლოვდა."),
+            ("ერთი სიტყვით რომ ვთქვათ, ყველაფერი კარგად დასრულდა.", "მოკლედ რომ ვთქვათ, ყველაფერი კარგად დასრულდა."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Narrative connective failed for '{raw}': got '{polished}'")
 
 
 if __name__ == "__main__":

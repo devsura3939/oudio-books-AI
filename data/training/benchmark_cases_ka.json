@@ -9423,5 +9423,725 @@
       "somatic",
       "catch_breath"
     ]
+  },
+  {
+    "id": "case-light-shadow-01",
+    "kind": "translate",
+    "source": "საღამოს მზე ჩადიოდა ჰორიზონტზე მშვიდად.",
+    "expected": "საღამოს მზე ჰორიზონტს ეფარებოდა მშვიდად.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "shadow",
+      "sunset"
+    ]
+  },
+  {
+    "id": "case-light-shadow-02",
+    "kind": "translate",
+    "source": "მზე ჩადიოდა ჰორიზონტზე, როცა მოგზაური დაბრუნდა.",
+    "expected": "მზე ჰორიზონტს ეფარებოდა, როცა მოგზაური დაბრუნდა.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "shadow",
+      "sunset"
+    ]
+  },
+  {
+    "id": "case-light-shadow-03",
+    "kind": "translate",
+    "source": "უცებ ჩრდილი დაეცა მიწაზე ციხესიმაგრის წინ.",
+    "expected": "უცებ მიწას ჩრდილი დაადგა ციხესიმაგრის წინ.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "shadow",
+      "ground"
+    ]
+  },
+  {
+    "id": "case-light-shadow-04",
+    "kind": "translate",
+    "source": "ტყეში ჩრდილი დაეცა მიწას და აცივდა.",
+    "expected": "ტყეში მიწას ჩრდილი დაადგა და აცივდა.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "shadow",
+      "forest"
+    ]
+  },
+  {
+    "id": "case-light-shadow-05",
+    "kind": "translate",
+    "source": "ღამით მთვარე ანათებდა კაშკაშად მდინარის თავზე.",
+    "expected": "ღამით მთვარე მკვეთრად ანათებდა მდინარის თავზე.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "moon",
+      "bright"
+    ]
+  },
+  {
+    "id": "case-light-shadow-06",
+    "kind": "translate",
+    "source": "ცაზე მთვარე ანათებდა კაშკაშად და გზას ანათებდა.",
+    "expected": "ცაზე მთვარე მკვეთრად ანათებდა და გზას ანათებდა.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "moon",
+      "sky"
+    ]
+  },
+  {
+    "id": "case-light-shadow-07",
+    "kind": "translate",
+    "source": "საღამოს ბინდი დაეცა ქალაქს და სიჩუმე ჩამოწვა.",
+    "expected": "საღამოს ქალაქს ბინდი ჩამოაწვა და სიჩუმე ჩამოწვა.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "dusk",
+      "city"
+    ]
+  },
+  {
+    "id": "case-light-shadow-08",
+    "kind": "translate",
+    "source": "უეცრად ბინდი დააწვა ქალაქს და ქუჩები დაიცალა.",
+    "expected": "უეცრად ქალაქს ბინდი ჩამოაწვა და ქუჩები დაიცალა.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "dusk",
+      "city"
+    ]
+  },
+  {
+    "id": "case-light-shadow-09",
+    "kind": "translate",
+    "source": "მზის სხივებმა გაჭრა ღრუბლები დილით ადრე.",
+    "expected": "მზის სხივებმა ღრუბლებში გამოაღწია დილით ადრე.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "rays",
+      "clouds"
+    ]
+  },
+  {
+    "id": "case-light-shadow-10",
+    "kind": "translate",
+    "source": "სხივებმა გაარღვია ღრუბლები და ველი განათდა.",
+    "expected": "სხივებმა ღრუბლებში გამოაღწია და ველი განათდა.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "rays",
+      "clouds"
+    ]
+  },
+  {
+    "id": "case-light-shadow-11",
+    "kind": "translate",
+    "source": "დილის სინათლე გატყდა ფანჯარაში მოულოდნელად.",
+    "expected": "დილის სინათლემ ფანჯარაში შემოაღწია მოულოდნელად.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "morning",
+      "window"
+    ]
+  },
+  {
+    "id": "case-light-shadow-12",
+    "kind": "translate",
+    "source": "ოთახში დილის სინათლე გატყდა ფანჯარაში და გააღვიძა.",
+    "expected": "ოთახში დილის სინათლემ ფანჯარაში შემოაღწია და გააღვიძა.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "morning",
+      "window"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-01",
+    "kind": "translate",
+    "source": "ქარისგან კარი თავისით გაიღო უეცრად.",
+    "expected": "ქარისგან კარი გაიღო უეცრად.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "door"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-02",
+    "kind": "translate",
+    "source": "ღამით კარი თავისით გაიღო და შეეშინდა.",
+    "expected": "ღამით კარი გაიღო და შეეშინდა.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "door"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-03",
+    "kind": "translate",
+    "source": "სიცხისგან ფანჯარა გატყდა თვითონ ოთახში.",
+    "expected": "სიცხისგან ფანჯარა გატყდა ოთახში.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "window"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-04",
+    "kind": "translate",
+    "source": "ძველი ფანჯარა გატყდა თვითონ ქარიშხლისას.",
+    "expected": "ძველი ფანჯარა გატყდა ქარიშხლისას.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "window"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-05",
+    "kind": "translate",
+    "source": "მზეზე ყინული გადნა თავისით მდინარეზე.",
+    "expected": "მზეზე ყინული გადნა მდინარეზე.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "ice"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-06",
+    "kind": "translate",
+    "source": "გაზაფხულზე ყინული გადნა თავისით მთაში.",
+    "expected": "გაზაფხულზე ყინული გადნა მთაში.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "ice"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-07",
+    "kind": "translate",
+    "source": "ხანძრისას სახლი დაიწვა თვითონ სოფელში.",
+    "expected": "ხანძრისას სახლი დაიწვა სოფელში.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "house"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-08",
+    "kind": "translate",
+    "source": "ძველი სახლი დაიწვა თვითონ უდაბნოში.",
+    "expected": "ძველი სახლი დაიწვა უდაბნოში.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "house"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-09",
+    "kind": "translate",
+    "source": "შტორმის დროს წყალმა დაიხრჩო იგი უმოწყალოდ.",
+    "expected": "შტორმის დროს წყალში დაიხრჩო უმოწყალოდ.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "drown"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-10",
+    "kind": "translate",
+    "source": "ზღვაში წყალმა დაიხრჩო იგი და ვერ გადაარჩინეს.",
+    "expected": "ზღვაში წყალში დაიხრჩო და ვერ გადაარჩინეს.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "drown"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-11",
+    "kind": "translate",
+    "source": "ქარში ტოტი გატყდა თავისით ბაღში.",
+    "expected": "ქარში ტოტი გადატყდა ბაღში.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "branch"
+    ]
+  },
+  {
+    "id": "case-inchoative-erg-12",
+    "kind": "translate",
+    "source": "ხის ტოტი გატყდა თავისით და დაეცა.",
+    "expected": "ხის ტოტი გადატყდა და დაეცა.",
+    "weight": 1.0,
+    "tags": [
+      "ergative",
+      "inchoative",
+      "branch"
+    ]
+  },
+  {
+    "id": "case-directional-prev-01",
+    "kind": "translate",
+    "source": "სტუმარი მოვიდა შიგნით ოთახში საღამოს.",
+    "expected": "სტუმარი ოთახში შემოვიდა საღამოს.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "inside"
+    ]
+  },
+  {
+    "id": "case-directional-prev-02",
+    "kind": "translate",
+    "source": "მასპინძელი მოვიდა შიგნით და მიესალმა.",
+    "expected": "მასპინძელი შემოვიდა და მიესალმა.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "inside"
+    ]
+  },
+  {
+    "id": "case-directional-prev-03",
+    "kind": "translate",
+    "source": "ბავშვი წავიდა გარეთ ბაღში სათამაშოდ.",
+    "expected": "ბავშვი ბაღში გავიდა სათამაშოდ.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "outside"
+    ]
+  },
+  {
+    "id": "case-directional-prev-04",
+    "kind": "translate",
+    "source": "მან ქუდი დაიხურა და წავიდა გარეთ.",
+    "expected": "მან ქუდი დაიხურა და გავიდა.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "outside"
+    ]
+  },
+  {
+    "id": "case-directional-prev-05",
+    "kind": "translate",
+    "source": "მოხუცი ჩამოვიდა დაბლა კიბეზე ფრთხილად.",
+    "expected": "მოხუცი კიბეზე ჩამოვიდა ფრთხილად.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "stairs"
+    ]
+  },
+  {
+    "id": "case-directional-prev-06",
+    "kind": "translate",
+    "source": "მგზავრი ჩამოვიდა დაბლა და შეისვენა.",
+    "expected": "მგზავრი დაეშვა და შეისვენა.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "down"
+    ]
+  },
+  {
+    "id": "case-directional-prev-07",
+    "kind": "translate",
+    "source": "რაინდი ავიდა ზემოთ კოშკში დასაზვერად.",
+    "expected": "რაინდი კოშკში ავიდა დასაზვერად.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "tower"
+    ]
+  },
+  {
+    "id": "case-directional-prev-08",
+    "kind": "translate",
+    "source": "მზვერავი ავიდა ზემოთ და გადაიხედა.",
+    "expected": "მზვერავი ავიდა და გადაიხედა.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "up"
+    ]
+  },
+  {
+    "id": "case-directional-prev-09",
+    "kind": "translate",
+    "source": "მხედარი გადავიდა მეორე მხარეს მდინარისა.",
+    "expected": "მხედარი გადავიდა მდინარისა.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "across"
+    ]
+  },
+  {
+    "id": "case-directional-prev-10",
+    "kind": "translate",
+    "source": "ჯარი გადავიდა მეორე მხარეს დილით.",
+    "expected": "ჯარი გადავიდა დილით.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "across"
+    ]
+  },
+  {
+    "id": "case-directional-prev-11",
+    "kind": "translate",
+    "source": "პატიმარი გამოვიდა გარეთ ეზოში მზის სანახავად.",
+    "expected": "პატიმარი ეზოში გამოვიდა მზის სანახავად.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "yard"
+    ]
+  },
+  {
+    "id": "case-directional-prev-12",
+    "kind": "translate",
+    "source": "მეფე გამოვიდა გარეთ და ხალხს შეხედა.",
+    "expected": "მეფე გამოვიდა და ხალხს შეხედა.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "out"
+    ]
+  },
+  {
+    "id": "case-phrasal-intens-01",
+    "kind": "translate",
+    "source": "მისი განზრახვა იყო სრულიად აშკარად ყველასთვის.",
+    "expected": "მისი განზრახვა იყო ცხადლივ ყველასთვის.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "evident",
+      "clearly"
+    ]
+  },
+  {
+    "id": "case-phrasal-intens-02",
+    "kind": "translate",
+    "source": "საქმე გადაწყდა ძალიან მარტივად კრებაზე.",
+    "expected": "საქმე გადაწყდა ძალზე იოლად კრებაზე.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "degree",
+      "easily"
+    ]
+  },
+  {
+    "id": "case-phrasal-intens-03",
+    "kind": "translate",
+    "source": "ეს იყო უკიდურესად რთული გამოცდა მეომრისთვის.",
+    "expected": "ეს იყო უაღრესად რთული გამოცდა მეომრისთვის.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "degree",
+      "extremely"
+    ]
+  },
+  {
+    "id": "case-phrasal-intens-04",
+    "kind": "translate",
+    "source": "მას საერთოდ არ ეშინოდა საფრთხის წინაშე.",
+    "expected": "მას სულაც არ ეშინოდა საფრთხის წინაშე.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "negation",
+      "at_all"
+    ]
+  },
+  {
+    "id": "case-phrasal-intens-05",
+    "kind": "translate",
+    "source": "მტერს საერთოდ არ შეეძლო წინააღმდეგობა.",
+    "expected": "მტერს სულაც არ შეეძლო წინააღმდეგობა.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "negation",
+      "at_all"
+    ]
+  },
+  {
+    "id": "case-phrasal-intens-06",
+    "kind": "translate",
+    "source": "ციხის აღება თითქმის შეუძლებელი იყო იმ დროს.",
+    "expected": "ციხის აღება ფაქტობრივად შეუძლებელი იყო იმ დროს.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "modal",
+      "almost"
+    ]
+  },
+  {
+    "id": "case-phrasal-intens-07",
+    "kind": "translate",
+    "source": "გამარჯვება თითქმის შეუძლებელი ჩანდა.",
+    "expected": "გამარჯვება ფაქტობრივად შეუძლებელი ჩანდა.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "modal",
+      "almost"
+    ]
+  },
+  {
+    "id": "case-phrasal-intens-08",
+    "kind": "translate",
+    "source": "სარდალი აბსოლუტურად დარწმუნებული იყო გამარჯვებაში.",
+    "expected": "სარდალი სავსებით დარწმუნებული იყო გამარჯვებაში.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "epistemic",
+      "absolutely"
+    ]
+  },
+  {
+    "id": "case-phrasal-intens-09",
+    "kind": "translate",
+    "source": "მგზავრი აბსოლუტურად დარწმუნებული იყო თავის გზაში.",
+    "expected": "მგზავრი სავსებით დარწმუნებული იყო თავის გზაში.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "epistemic",
+      "absolutely"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-01",
+    "kind": "translate",
+    "source": "და მერე მან თქვა თავისი საიდუმლო.",
+    "expected": "შემდეგ კი თქვა თავისი საიდუმლო.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "narrative",
+      "and_then"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-02",
+    "kind": "translate",
+    "source": "და მერე თქვა ყველაფერი რაც იცოდა.",
+    "expected": "შემდეგ კი თქვა ყველაფერი რაც იცოდა.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "narrative",
+      "and_then"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-03",
+    "kind": "translate",
+    "source": "როდესაც ყველაფერი დასრულდა, სახლში წავიდნენ.",
+    "expected": "როცა ყველაფერი მიწყნარდა, სახლში წავიდნენ.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "narrative",
+      "when_over"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-04",
+    "kind": "translate",
+    "source": "როდესაც ყველაფერი დასრულდა, სოფელში სიჩუმე ჩამოვარდა.",
+    "expected": "როცა ყველაფერი მიწყნარდა, სოფელში სიჩუმე ჩამოვარდა.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "narrative",
+      "when_over"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-05",
+    "kind": "translate",
+    "source": "მას არც კი შეუხედავს მისთვის წასვლისას.",
+    "expected": "მას თვალიც არ შეუკრავს მისთვის წასვლისას.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "idiom",
+      "not_even_look"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-06",
+    "kind": "translate",
+    "source": "მტერს არც კი შეუხედავს უკან გაქცევისას.",
+    "expected": "მტერს თვალიც არ შეუკრავს უკან გაქცევისას.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "idiom",
+      "not_even_look"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-07",
+    "kind": "translate",
+    "source": "ამასობაში კი ჯარი ქალაქს მიუახლოვდა.",
+    "expected": "ამასობაში ჯარი ქალაქს მიუახლოვდა.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "narrative",
+      "meanwhile"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-08",
+    "kind": "translate",
+    "source": "ამასობაში კი ზამთარი დადგა მთაში.",
+    "expected": "ამასობაში ზამთარი დადგა მთაში.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "narrative",
+      "meanwhile"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-09",
+    "kind": "translate",
+    "source": "ერთი სიტყვით რომ ვთქვათ, ყველაფერი კარგად დასრულდა.",
+    "expected": "მოკლედ რომ ვთქვათ, ყველაფერი კარგად დასრულდა.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "narrative",
+      "in_short"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-10",
+    "kind": "translate",
+    "source": "ერთი სიტყვით რომ ვთქვათ, გეგმა შესრულდა.",
+    "expected": "მოკლედ რომ ვთქვათ, გეგმა შესრულდა.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "narrative",
+      "in_short"
+    ]
+  },
+  {
+    "id": "case-light-shadow-13",
+    "kind": "translate",
+    "source": "მზე ჩადიოდა ჰორიზონტზე და ცა გაწითლდა.",
+    "expected": "მზე ჰორიზონტს ეფარებოდა და ცა გაწითლდა.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "sunset",
+      "sky"
+    ]
+  },
+  {
+    "id": "case-light-shadow-14",
+    "kind": "translate",
+    "source": "ჩრდილი დაეცა მიწაზე და სიბნელემ მოიცვა ველი.",
+    "expected": "მიწას ჩრდილი დაადგა და სიბნელემ მოიცვა ველი.",
+    "weight": 1.0,
+    "tags": [
+      "light",
+      "shadow",
+      "darkness"
+    ]
+  },
+  {
+    "id": "case-directional-prev-13",
+    "kind": "translate",
+    "source": "მან კარი გააღო და მოვიდა შიგნით.",
+    "expected": "მან კარი გააღო და შემოვიდა.",
+    "weight": 1.0,
+    "tags": [
+      "preverb",
+      "direction",
+      "inside"
+    ]
+  },
+  {
+    "id": "case-phrasal-intens-10",
+    "kind": "translate",
+    "source": "სიმართლე იყო სრულიად აშკარად გაცხადებული.",
+    "expected": "სიმართლე იყო ცხადლივ გაცხადებული.",
+    "weight": 1.0,
+    "tags": [
+      "intensifier",
+      "evident",
+      "truth"
+    ]
+  },
+  {
+    "id": "case-narrative-conn-11",
+    "kind": "translate",
+    "source": "და მერე მან თქვა, რომ დრო იყო.",
+    "expected": "შემდეგ კი თქვა, რომ დრო იყო.",
+    "weight": 1.0,
+    "tags": [
+      "connective",
+      "narrative",
+      "and_then"
+    ]
   }
 ]

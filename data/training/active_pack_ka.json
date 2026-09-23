@@ -1,5 +1,5 @@
 {
-  "version": 43,
+  "version": 44,
   "language": "ka",
   "score": 100.0,
   "enabled": true,
@@ -9705,12 +9705,353 @@
       "note": "Iteration 6 rule",
       "created_at": "2026-09-23T20:02:29.193929+00:00",
       "severity": "error"
+    },
+    {
+      "id": "item-8f50e665d2c4",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:მზე\\s+ჩადიოდა\\s+ჰორიზონტზე|მზე\\s+ჰორიზონტზე\\s+ჩადიოდა)(?![ა-ჰ])",
+      "replacement": "მზე ჰორიზონტს ეფარებოდა",
+      "note": "Rule 76: Environmental light calque (sunset on horizon -> ჰორიზონტს ეფარებოდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-a54760cabd28",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:ჩრდილი\\s+დაეცა\\s+მიწაზე|ჩრდილი\\s+დაეცა\\s+მიწას)(?![ა-ჰ])",
+      "replacement": "მიწას ჩრდილი დაადგა",
+      "note": "Rule 76: Environmental shadow calque (shadow fell on ground -> მიწას ჩრდილი დაადგა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-b02071fe39f6",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მთვარე\\s+ანათებდა\\s+კაშკაშად(?![ა-ჰ])",
+      "replacement": "მთვარე მკვეთრად ანათებდა",
+      "note": "Rule 76: Atmospheric illumination (shone brightly -> მკვეთრად ანათებდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-af93f414b42a",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:ბინდი\\s+დაეცა\\s+ქალაქს|ბინდი\\s+დააწვა\\s+ქალაქს)(?![ა-ჰ])",
+      "replacement": "ქალაქს ბინდი ჩამოაწვა",
+      "note": "Rule 76: Atmospheric dusk calque (dusk fell on city -> ქალაქს ბინდი ჩამოაწვა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-f6d3e94c7e06",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:სხივებმა\\s+გაჭრა\\s+ღრუბლები|სხივებმა\\s+გაარღვია\\s+ღრუბლები)(?![ა-ჰ])",
+      "replacement": "სხივებმა ღრუბლებში გამოაღწია",
+      "note": "Rule 76: Atmospheric light breakthrough (rays cut clouds -> ღრუბლებში გამოაღწია)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-e26259411de5",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])დილის\\s+სინათლე\\s+გატყდა\\s+ფანჯარაში(?![ა-ჰ])",
+      "replacement": "დილის სინათლემ ფანჯარაში შემოაღწია",
+      "note": "Rule 76: Morning light breakthrough (light broke in window -> ფანჯარაში შემოაღწია)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-54504453adf8",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:მზე\\s+ჩადიოდა\\s+ჰორიზონტზე|ჩრდილი\\s+დაეცა\\s+მიწაზე|მთვარე\\s+ანათებდა\\s+კაშკაშად|ბინდი\\s+დაეცა\\s+ქალაქს)(?![ა-ჰ])",
+      "replacement": "Environmental illumination calque detected: use natural Georgian idioms (ეფარებოდა, ჩამოაწვა, დაადგა).",
+      "note": "Rule 76 QA: Environmental light/shadow literalism detector",
+      "created_at": "2026-09-23T20:37:55.361509+00:00",
+      "severity": "warn"
+    },
+    {
+      "id": "item-954076697874",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])კარი\\s+თავისით\\s+გაიღო(?![ა-ჰ])",
+      "replacement": "კარი გაიღო",
+      "note": "Rule 77: Inchoative state change (door opened of itself -> კარი გაიღო)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-86273d932fb2",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ფანჯარა\\s+გატყდა\\s+თვითონ(?![ა-ჰ])",
+      "replacement": "ფანჯარა გატყდა",
+      "note": "Rule 77: Inchoative state change (window broke itself -> ფანჯარა გატყდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-1a4d24cb2974",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ყინული\\s+გადნა\\s+თავისით(?![ა-ჰ])",
+      "replacement": "ყინული გადნა",
+      "note": "Rule 77: Inchoative state change (ice melted by itself -> ყინული გადნა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-8e2409f595f2",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])სახლი\\s+დაიწვა\\s+თვითონ(?![ა-ჰ])",
+      "replacement": "სახლი დაიწვა",
+      "note": "Rule 77: Inchoative state change (house burned down itself -> სახლი დაიწვა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-66a58fdaf03a",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])წყალმა\\s+დაიხრჩო\\s+იგი(?![ა-ჰ])",
+      "replacement": "წყალში დაიხრჩო",
+      "note": "Rule 77: Ergative causative calque (water drowned him -> წყალში დაიხრჩო)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-134129507e7e",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ტოტი\\s+გატყდა\\s+თავისით(?![ა-ჰ])",
+      "replacement": "ტოტი გადატყდა",
+      "note": "Rule 77: Inchoative state change (branch broke itself -> ტოტი გადატყდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-86dd663a6ec4",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:კარი\\s+თავისით\\s+გაიღო|ფანჯარა\\s+გატყდა\\s+თვითონ|ყინული\\s+გადნა\\s+თავისით|წყალმა\\s+დაიხრჩო\\s+იგი)(?![ა-ჰ])",
+      "replacement": "Inchoative ergative calque: ambitransitive state change verbs must not use reflexive pronouns.",
+      "note": "Rule 77 QA: Reflexive calque on inchoative verb detector",
+      "created_at": "2026-09-23T20:37:55.361509+00:00",
+      "severity": "warn"
+    },
+    {
+      "id": "item-53949a88030f",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:მოვიდა\\s+შიგნით\\s+ოთახში|მოვიდა\\s+ოთახში)(?![ა-ჰ])",
+      "replacement": "ოთახში შემოვიდა",
+      "note": "Rule 78: Intransitive directional preverb (came inside room -> ოთახში შემოვიდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-60428b38a47e",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])მოვიდა\\s+შიგნით(?![ა-ჰ])",
+      "replacement": "შემოვიდა",
+      "note": "Rule 78: Directional preverb redundancy (came inside -> შემოვიდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-28a5b9448b44",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])წავიდა\\s+გარეთ\\s+ბაღში(?![ა-ჰ])",
+      "replacement": "ბაღში გავიდა",
+      "note": "Rule 78: Directional preverb (went outside to garden -> ბაღში გავიდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-949fd27aacf5",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])წავიდა\\s+გარეთ(?![ა-ჰ])",
+      "replacement": "გავიდა",
+      "note": "Rule 78: Directional preverb redundancy (went outside -> გავიდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-c9606997a55b",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ჩამოვიდა\\s+დაბლა\\s+კიბეზე(?![ა-ჰ])",
+      "replacement": "კიბეზე ჩამოვიდა",
+      "note": "Rule 78: Directional preverb redundancy (came down stairs -> კიბეზე ჩამოვიდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-40ad5f01a90c",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ჩამოვიდა\\s+დაბლა(?![ა-ჰ])",
+      "replacement": "დაეშვა",
+      "note": "Rule 78: Directional preverb redundancy (came down -> დაეშვა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-c55d1238361e",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ავიდა\\s+ზემოთ\\s+კოშკში(?![ა-ჰ])",
+      "replacement": "კოშკში ავიდა",
+      "note": "Rule 78: Directional preverb redundancy (went up tower -> კოშკში ავიდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-7192df866973",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ავიდა\\s+ზემოთ(?![ა-ჰ])",
+      "replacement": "ავიდა",
+      "note": "Rule 78: Directional preverb redundancy (went up -> ავიდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-8f193288738f",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გადავიდა\\s+მეორე\\s+მხარეს(?![ა-ჰ])",
+      "replacement": "გადავიდა",
+      "note": "Rule 78: Directional preverb redundancy (crossed to other side -> გადავიდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-88a84a163446",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გამოვიდა\\s+გარეთ\\s+ეზოში(?![ა-ჰ])",
+      "replacement": "ეზოში გამოვიდა",
+      "note": "Rule 78: Directional preverb redundancy (came outside to yard -> ეზოში გამოვიდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-7142dd5f6052",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])გამოვიდა\\s+გარეთ(?![ა-ჰ])",
+      "replacement": "გამოვიდა",
+      "note": "Rule 78: Directional preverb redundancy (came out -> გამოვიდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-e17045af94e5",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:მოვიდა\\s+შიგნით|წავიდა\\s+გარეთ|ჩამოვიდა\\s+დაბლა|ავიდა\\s+ზემოთ|გამოვიდა\\s+გარეთ)(?![ა-ჰ])",
+      "replacement": "Directional preverb redundancy: avoid spatial adverbs preceding preverbs.",
+      "note": "Rule 78 QA: Redundant spatial adverbial particle detector",
+      "created_at": "2026-09-23T20:37:55.361509+00:00",
+      "severity": "warn"
+    },
+    {
+      "id": "item-0c53a18b7a53",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])სრულიად\\s+აშკარად(?![ა-ჰ])",
+      "replacement": "ცხადლივ",
+      "note": "Rule 79: Phrasal intensifier (completely obvious/clear -> ცხადლივ)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-19335579dfc8",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ძალიან\\s+მარტივად(?![ა-ჰ])",
+      "replacement": "ძალზე იოლად",
+      "note": "Rule 79: Evaluative adverbial degree (very simply/easily -> ძალზე იოლად)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-acb8f3362825",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])უკიდურესად\\s+რთული(?![ა-ჰ])",
+      "replacement": "უაღრესად რთული",
+      "note": "Rule 79: Evaluative adverbial degree (extremely difficult -> უაღრესად რთული)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-e3524b3a20ce",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])საერთოდ\\s+არ\\s+ეშინოდა(?![ა-ჰ])",
+      "replacement": "სულაც არ ეშინოდა",
+      "note": "Rule 79: Negative concord intensifier (was not afraid at all -> სულაც არ ეშინოდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-ce6b25691457",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])საერთოდ\\s+არ(?![ა-ჰ])",
+      "replacement": "სულაც არ",
+      "note": "Rule 79: Negative concord intensifier (not at all -> სულაც არ)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-44360d1243dd",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])თითქმის\\s+შეუძლებელი\\s+იყო(?![ა-ჰ])",
+      "replacement": "ფაქტობრივად შეუძლებელი იყო",
+      "note": "Rule 79: Evaluative modal adverbial (was almost impossible -> ფაქტობრივად შეუძლებელი იყო)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-cbef332187ca",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])თითქმის\\s+შეუძლებელი(?![ა-ჰ])",
+      "replacement": "ფაქტობრივად შეუძლებელი",
+      "note": "Rule 79: Evaluative modal adverbial (almost impossible -> ფაქტობრივად შეუძლებელი)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-785c7c57b286",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])აბსოლუტურად\\s+დარწმუნებული(?![ა-ჰ])",
+      "replacement": "სავსებით დარწმუნებული",
+      "note": "Rule 79: Epistemic certainty intensifier (absolutely sure -> სავსებით დარწმუნებული)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-d50d4fb61009",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:სრულიად\\s+აშკარად|ძალიან\\s+მარტივად|უკიდურესად\\s+რთული|საერთოდ\\s+არ\\s+ეშინოდა|აბსოლუტურად\\s+დარწმუნებული)(?![ა-ჰ])",
+      "replacement": "Phrasal intensifier calque: use literary clitics and adverbs (ცხადლივ, ძალზე იოლად, უაღრესად, სულაც არ).",
+      "note": "Rule 79 QA: Phrasal intensifier calque detector",
+      "created_at": "2026-09-23T20:37:55.361509+00:00",
+      "severity": "warn"
+    },
+    {
+      "id": "item-0708bf016682",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])და\\s+მერე\\s+მან\\s+თქვა(?![ა-ჰ])",
+      "replacement": "შემდეგ კი თქვა",
+      "note": "Rule 80: Narrative connective calque (and then he said -> შემდეგ კი თქვა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-380ac9345c8e",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])და\\s+მერე\\s+თქვა(?![ა-ჰ])",
+      "replacement": "შემდეგ კი თქვა",
+      "note": "Rule 80: Narrative connective calque (and then said -> შემდეგ კი თქვა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-4aaa7bc6b614",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])როდესაც\\s+ყველაფერი\\s+დასრულდა(?![ა-ჰ])",
+      "replacement": "როცა ყველაფერი მიწყნარდა",
+      "note": "Rule 80: Narrative temporal transition (when all was over -> როცა ყველაფერი მიწყნარდა)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-89c0c37a4406",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])არც\\s+კი\\s+შეუხედავს(?![ა-ჰ])",
+      "replacement": "თვალიც არ შეუკრავს",
+      "note": "Rule 80: Literary discourse idiom (did not even look -> თვალიც არ შეუკრავს)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-58c92be01416",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ამასობაში\\s+კი(?![ა-ჰ])",
+      "replacement": "ამასობაში",
+      "note": "Rule 80: Redundant narrative connective clitic (meanwhile -> ამასობაში)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-558c9a1c8673",
+      "type": "autofix",
+      "pattern": "(?<![\\u10A0-\\u10FF])ერთი\\s+სიტყვით\\s+რომ\\s+ვთქვათ(?![ა-ჰ])",
+      "replacement": "მოკლედ რომ ვთქვათ",
+      "note": "Rule 80: Epistemic summation connective (to say in one word -> მოკლედ რომ ვთქვათ)",
+      "created_at": "2026-09-23T20:37:55.361509+00:00"
+    },
+    {
+      "id": "item-3db5cc19c33a",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:და\\s+მერე\\s+მან\\s+თქვა|როდესაც\\s+ყველაფერი\\s+დასრულდა|არც\\s+კი\\s+შეუხედავს|ამასობაში\\s+კი|ერთი\\s+სიტყვით\\s+რომ\\s+ვთქვათ)(?![ა-ჰ])",
+      "replacement": "Narrative sentence starter calque: use idiomatic connectives (შემდეგ კი, როცა მიწყნარდა, თვალიც არ შეუკრავს).",
+      "note": "Rule 80 QA: Literal narrative sentence starter detector",
+      "created_at": "2026-09-23T20:37:55.361509+00:00",
+      "severity": "warn"
     }
   ],
-  "updated_at": "2026-09-23T20:03:41.743452+00:00",
+  "updated_at": "2026-09-23T20:39:43.358580+00:00",
   "last_score": 100.0,
   "last_evaluated_at": "2026-09-17T21:49:58.093333+00:00",
   "benchmark_cases_count": 740,
   "benchmark_score": 100.0,
-  "benchmark_cases": 861
+  "benchmark_cases": 921
 }

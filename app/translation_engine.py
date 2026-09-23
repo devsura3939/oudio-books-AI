@@ -329,6 +329,48 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])(?:გაიყინა\s+ადგილზე\s+ერთ\s+წამში|გაიყინა\s+ადგილზე)(?![ა-ჰ])', 'წამიერად გაქვავდა'),
         (r'(?<![\u10A0-\u10FF])დაიჭირა\s+მომენტი(?![ა-ჰ])', 'დრო იხელთა'),
         (r'(?<![\u10A0-\u10FF])(?:ძლივს\s+(?:დაიჭირა\s+(?:(?:მისი|თავისი)\s+)?სუნთქვა|სული\s+მოითქვა)|ძლივს\s+დაიჭირა\s+თავისი\s+სუნთქვა)(?![ა-ჰ])', 'სულს ძლივს ითქვამდა'),
+        # Environmental Light, Shadow & Atmospheric Illumination
+        (r'(?<![\u10A0-\u10FF])(?:მზე\s+ჩადიოდა\s+ჰორიზონტზე|მზე\s+ჰორიზონტზე\s+ჩადიოდა)(?![ა-ჰ])', 'მზე ჰორიზონტს ეფარებოდა'),
+        (r'(?<![\u10A0-\u10FF])(?:ჩრდილი\s+დაეცა\s+მიწაზე|ჩრდილი\s+დაეცა\s+მიწას)(?![ა-ჰ])', 'მიწას ჩრდილი დაადგა'),
+        (r'(?<![\u10A0-\u10FF])მთვარე\s+ანათებდა\s+კაშკაშად(?![ა-ჰ])', 'მთვარე მკვეთრად ანათებდა'),
+        (r'(?<![\u10A0-\u10FF])(?:ბინდი\s+დაეცა\s+ქალაქს|ბინდი\s+დააწვა\s+ქალაქს)(?![ა-ჰ])', 'ქალაქს ბინდი ჩამოაწვა'),
+        (r'(?<![\u10A0-\u10FF])(?:სხივებმა\s+გაჭრა\s+ღრუბლები|სხივებმა\s+გაარღვია\s+ღრუბლები)(?![ა-ჰ])', 'სხივებმა ღრუბლებში გამოაღწია'),
+        (r'(?<![\u10A0-\u10FF])დილის\s+სინათლე\s+გატყდა\s+ფანჯარაში(?![ა-ჰ])', 'დილის სინათლემ ფანჯარაში შემოაღწია'),
+        # Causative-Inchoative Ergative Alternations
+        (r'(?<![\u10A0-\u10FF])კარი\s+თავისით\s+გაიღო(?![ა-ჰ])', 'კარი გაიღო'),
+        (r'(?<![\u10A0-\u10FF])ფანჯარა\s+გატყდა\s+თვითონ(?![ა-ჰ])', 'ფანჯარა გატყდა'),
+        (r'(?<![\u10A0-\u10FF])ყინული\s+გადნა\s+თავისით(?![ა-ჰ])', 'ყინული გადნა'),
+        (r'(?<![\u10A0-\u10FF])სახლი\s+დაიწვა\s+თვითონ(?![ა-ჰ])', 'სახლი დაიწვა'),
+        (r'(?<![\u10A0-\u10FF])წყალმა\s+დაიხრჩო\s+იგი(?![ა-ჰ])', 'წყალში დაიხრჩო'),
+        (r'(?<![\u10A0-\u10FF])ტოტი\s+გატყდა\s+თავისით(?![ა-ჰ])', 'ტოტი გადატყდა'),
+        # Intransitive Directional Particle Preverbs
+        (r'(?<![\u10A0-\u10FF])მოვიდა\s+შიგნით\s+ოთახში(?![ა-ჰ])', 'ოთახში შემოვიდა'),
+        (r'(?<![\u10A0-\u10FF])მოვიდა\s+შიგნით(?![ა-ჰ])', 'შემოვიდა'),
+        (r'(?<![\u10A0-\u10FF])წავიდა\s+გარეთ\s+ბაღში(?![ა-ჰ])', 'ბაღში გავიდა'),
+        (r'(?<![\u10A0-\u10FF])წავიდა\s+გარეთ(?![ა-ჰ])', 'გავიდა'),
+        (r'(?<![\u10A0-\u10FF])ჩამოვიდა\s+დაბლა\s+კიბეზე(?![ა-ჰ])', 'კიბეზე ჩამოვიდა'),
+        (r'(?<![\u10A0-\u10FF])ჩამოვიდა\s+დაბლა(?![ა-ჰ])', 'დაეშვა'),
+        (r'(?<![\u10A0-\u10FF])ავიდა\s+ზემოთ\s+კოშკში(?![ა-ჰ])', 'კოშკში ავიდა'),
+        (r'(?<![\u10A0-\u10FF])ავიდა\s+ზემოთ(?![ა-ჰ])', 'ავიდა'),
+        (r'(?<![\u10A0-\u10FF])გადავიდა\s+მეორე\s+მხარეს(?![ა-ჰ])', 'გადავიდა'),
+        (r'(?<![\u10A0-\u10FF])გამოვიდა\s+გარეთ\s+ეზოში(?![ა-ჰ])', 'ეზოში გამოვიდა'),
+        (r'(?<![\u10A0-\u10FF])გამოვიდა\s+გარეთ(?![ა-ჰ])', 'გამოვიდა'),
+        # Phrasal Intensification & Evaluative Adverbials
+        (r'(?<![\u10A0-\u10FF])სრულიად\s+აშკარად(?![ა-ჰ])', 'ცხადლივ'),
+        (r'(?<![\u10A0-\u10FF])ძალიან\s+მარტივად(?![ა-ჰ])', 'ძალზე იოლად'),
+        (r'(?<![\u10A0-\u10FF])უკიდურესად\s+რთული(?![ა-ჰ])', 'უაღრესად რთული'),
+        (r'(?<![\u10A0-\u10FF])საერთოდ\s+არ\s+ეშინოდა(?![ა-ჰ])', 'სულაც არ ეშინოდა'),
+        (r'(?<![\u10A0-\u10FF])საერთოდ\s+არ(?![ა-ჰ])', 'სულაც არ'),
+        (r'(?<![\u10A0-\u10FF])თითქმის\s+შეუძლებელი\s+იყო(?![ა-ჰ])', 'ფაქტობრივად შეუძლებელი იყო'),
+        (r'(?<![\u10A0-\u10FF])თითქმის\s+შეუძლებელი(?![ა-ჰ])', 'ფაქტობრივად შეუძლებელი'),
+        (r'(?<![\u10A0-\u10FF])აბსოლუტურად\s+დარწმუნებული(?![ა-ჰ])', 'სავსებით დარწმუნებული'),
+        # Classical Literary Narrative Starters & Connectives
+        (r'(?<![\u10A0-\u10FF])და\s+მერე\s+მან\s+თქვა(?![ა-ჰ])', 'შემდეგ კი თქვა'),
+        (r'(?<![\u10A0-\u10FF])და\s+მერე\s+თქვა(?![ა-ჰ])', 'შემდეგ კი თქვა'),
+        (r'(?<![\u10A0-\u10FF])როდესაც\s+ყველაფერი\s+დასრულდა(?![ა-ჰ])', 'როცა ყველაფერი მიწყნარდა'),
+        (r'(?<![\u10A0-\u10FF])არც\s+კი\s+შეუხედავს(?![ა-ჰ])', 'თვალიც არ შეუკრავს'),
+        (r'(?<![\u10A0-\u10FF])ამასობაში\s+კი(?![ა-ჰ])', 'ამასობაში'),
+        (r'(?<![\u10A0-\u10FF])ერთი\s+სიტყვით\s+რომ\s+ვთქვათ(?![ა-ჰ])', 'მოკლედ რომ ვთქვათ'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -967,6 +1009,11 @@ def translate_with_gemini(
                 "66. DYNAMIC MOTION & TRANSIT: 'ran without looking back' -> 'უკანმოუხედავად გაიქცა' (NOT '*უკან ყურების გარეშე'), 'made one's way' -> 'გზა გაიკვლია', 'hot on heels' -> 'ფეხდაფეხ მიჰყვებოდა', 'bypassed / skirted' -> 'გვერდი აუარა', 'followed with eyes' -> 'თვალი გააყოლა'.\n"
                 "67. CONVERSATIONAL & LOCUTION: 'interrupted / cut him off' -> 'სიტყვა შეაწყვეტინა' (NOT '*გაჭრა მისი სიტყვა'), 'struck up a conversation' -> 'საუბარი გააბა', 'retorted / talked back' -> 'სიტყვა შეუბრუნა', 'expressed opinion' -> 'აზრი გამოთქვა', 'spoke mind' -> 'გულახდილად გამოთქვა აზრი'.\n"
                 "68. TEMPORAL DURATIVES & STATE: 'time ticked away / passed' -> 'დრო მიდიოდა', 'throughout the day' -> 'მთელი დღის განმავლობაში', 'froze in place' -> 'წამიერად გაქვავდა', 'seized the moment' -> 'დრო იხელთა', 'catch breath' -> 'სულს ძლივს ითქვამდა'.\n"
+                "69. LIGHT, SHADOW & ATMOSPHERE: 'sun was setting on horizon' -> 'მზე ჰორიზონტს ეფარებოდა' (NOT '*მზე ჩადიოდა ჰორიზონტზე'), 'shadow fell on ground' -> 'მიწას ჩრდილი დაადგა', 'twilight fell' -> 'ბინდი ჩამოაწვა', 'rays broke through' -> 'სხივებმა ღრუბლებში გამოაღწია'.\n"
+                "70. CAUSATIVE-INCHOATIVE ALTERNATIONS: Inchoative uncaused state-changes must NOT use clumsy agentive crutches: 'door opened' -> 'კარი გაიღო' (NOT '*კარი თავისით გაიღო'), 'window broke' -> 'ფანჯარა გატყდა', 'ice melted' -> 'ყინული გადნა', 'house burned down' -> 'სახლი დაიწვა', 'he drowned' -> 'წყალში დაიხრჩო'.\n"
+                "71. DIRECTIONAL PREVERB REDUNDANCY: Directional vectors are expressed strictly by Kartvelian preverbs (შე-, გა-, ჩამო-, ა-, გადა-, გამო-): avoid redundant spatial adverbs: 'came inside' -> 'შემოვიდა' (NOT '*მოვიდა შიგნით'), 'went outside' -> 'გავიდა' (NOT '*წავიდა გარეთ'), 'came down' -> 'ჩამოვიდა / დაეშვა', 'went up' -> 'ავიდა'.\n"
+                "72. EVALUATIVE INTENSIFIERS: 'completely obvious' -> 'ცხადლივ' (NOT '*სრულიად აშკარად'), 'very easily' -> 'ძალზე იოლად' (NOT '*ძალიან მარტივად'), 'extremely difficult' -> 'უაღრესად რთული', 'not at all' -> 'სულაც არ', 'virtually impossible' -> 'ფაქტობრივად შეუძლებელი', 'absolutely sure' -> 'სავსებით დარწმუნებული'.\n"
+                "73. NARRATIVE STARTERS & CONNECTIVES: 'and then he said' -> 'შემდეგ კი თქვა' (NOT '*და მერე მან თქვა'), 'when all was over' -> 'როცა ყველაფერი მიწყნარდა', 'in the meantime' -> 'ამასობაში', 'did not even look' -> 'თვალიც არ შეუკრავს', 'to put it briefly' -> 'მოკლედ რომ ვთქვათ'.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -1095,7 +1142,12 @@ def translate_with_local_llm(
             "33. Motion & transit: 'without looking back' -> 'უკანმოუხედავად გაიქცა', 'made way' -> 'გზა გაიკვლია', 'hot on heels' -> 'ფეხდაფეხ მიჰყვებოდა'.\n"
             "34. Dialogue: 'interrupted' -> 'სიტყვა შეაწყვეტინა', 'struck up conversation' -> 'საუბარი გააბა', 'talked back' -> 'სიტყვა შეუბრუნა'.\n"
             "35. Temporal & state: 'throughout the day' -> 'მთელი დღის განმავლობაში', 'froze in place' -> 'წამიერად გაქვავდა', 'seized moment' -> 'დრო იხელთა'.\n"
-            "36. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
+            "36. Light & shadow: 'sun set on horizon' -> 'მზე ჰორიზონტს ეფარებოდა', 'shadow fell' -> 'მიწას ჩრდილი დაადგა', 'twilight fell' -> 'ბინდი ჩამოაწვა'.\n"
+            "37. Inchoative voice: 'door opened' -> 'კარი გაიღო' (NOT '*თავისით გაიღო'), 'ice melted' -> 'ყინული გადნა', 'house burned' -> 'სახლი დაიწვა'.\n"
+            "38. Directional preverbs: 'came inside' -> 'შემოვიდა' (NOT '*მოვიდა შიგნით'), 'went outside' -> 'გავიდა' (NOT '*წავიდა გარეთ'), 'came down' -> 'ჩამოვიდა'.\n"
+            "39. Intensifiers: 'completely obvious' -> 'ცხადლივ', 'very easily' -> 'ძალზე იოლად', 'not at all' -> 'სულაც არ', 'virtually impossible' -> 'ფაქტობრივად შეუძლებელი'.\n"
+            "40. Narrative starters: 'and then he said' -> 'შემდეგ კი თქვა', 'when all was over' -> 'როცა ყველაფერი მიწყნარდა', 'in the meantime' -> 'ამასობაში'.\n"
+            "41. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
             if target_lang == "ka" else
             "You are an expert bilingual literary translator into English. Output ONLY the translation."
         )
