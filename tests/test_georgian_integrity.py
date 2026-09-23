@@ -801,6 +801,72 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Indirect object / light-verb failed for '{raw}': got '{polished}'")
 
+    def test_50_psychological_mind_idioms(self):
+        """Verify psychological and mental state collocations."""
+        pairs = [
+            ("მან დაკარგა თავისი გონება დარდისგან.", "მან ჭკუიდან შეიშალა დარდისგან."),
+            ("მოგზაურმა გააკეთა თავისი გონება საბოლოოდ.", "მოგზაურმა გადაწყვიტა საბოლოოდ."),
+            ("მან შეცვალა თავისი გონება და დარჩა.", "მან გადაიფიქრა და დარჩა."),
+            ("ეს რჩევა შეინახეთ გონებაში მუდამ.", "ეს რჩევა გაითვალისწინეთ მუდამ."),
+            ("უეცარმა აზრმა გადაკვეთა მისი გონება წამით.", "უეცარმა აზრმა აზრად მოუვიდა წამით."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Mental idiom failed for '{raw}': got '{polished}'")
+
+    def test_51_gaze_sensory_collocations(self):
+        """Verify sensory, visual, and gaze collocations."""
+        pairs = [
+            ("მან დაიჭირა მისი თვალი ბრბოში.", "მან თვალი მოჰკრა ბრბოში."),
+            ("მან დაადო თვალი მას მაშინვე.", "მან თვალი შეავლო მას მაშინვე."),
+            ("დარაჯმა შეინახა თვალი მასზე ფრთხილად.", "დარაჯმა თვალყური ადევნა მასზე ფრთხილად."),
+            ("ეს მოხდა ერთი თვალის დახამხამებაში.", "ეს მოხდა თვალის დახამხამებაში."),
+            ("მან თვალები დახუჭა ამაზე სრულიად.", "მან თვალი დახუჭა ამაზე სრულიად."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Gaze sensory collocation failed for '{raw}': got '{polished}'")
+
+    def test_52_paired_organ_instrumental_singular(self):
+        """Verify instrumental paired organ singular concord."""
+        pairs = [
+            ("მან საკუთარი თვალებით დაინახა სასწაული.", "მან საკუთარი თვალით დაინახა სასწაული."),
+            ("მან საკუთარი ყურებით მოისმინა სიმართლე.", "მან საკუთარი ყურით მოისმინა სიმართლე."),
+            ("მან შიშველი ხელებით დაიჭირა ჩიტი.", "მან შიშველი ხელით დაიჭირა ჩიტი."),
+            ("მან ფეხებზე იარა მთელი გზა.", "მან ფეხით იარა მთელი გზა."),
+            ("ოსტატმა თავისი ხელებით გააკეთა ეს.", "ოსტატმა საკუთარი ხელით გააკეთა ეს."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Organ instrumental concord failed for '{raw}': got '{polished}'")
+
+    def test_53_spatial_binomial_adverbials(self):
+        """Verify spatial dynamics and binomial motion synthesis."""
+        pairs = [
+            ("ისინი იდგნენ გვერდი გვერდით მთაზე.", "ისინი იდგნენ მხარდამხარ მთაზე."),
+            ("მცველი უკან და წინ დადიოდა ეზოში.", "მცველი წინ და უკან დადიოდა ეზოში."),
+            ("მოწინააღმდეგეები სახე სახესთან შეხვდნენ.", "მოწინააღმდეგეები პირისპირ შეხვდნენ."),
+            ("ისინი აღმოჩნდნენ არსად შუაში უეცრად.", "ისინი აღმოჩნდნენ უკაცრიელ ადგილას უეცრად."),
+            ("საქმე წინ მიდიოდა ნაბიჯი ნაბიჯით.", "საქმე წინ მიდიოდა ნაბიჯ-ნაბიჯ."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Spatial binomial failed for '{raw}': got '{polished}'")
+
+    def test_54_discourse_transitions_and_idioms(self):
+        """Verify narrative discourse connectors and transitional markers."""
+        pairs = [
+            ("პირველ შეხედვაზე ამოცანა მარტივი ჩანდა.", "ერთი შეხედვით ამოცანა მარტივი ჩანდა."),
+            ("როგორც ფაქტის საკითხი, ეს ასე იყო.", "სინამდვილეში, ეს ასე იყო."),
+            ("ყველა მოულოდნელად ცა დაბნელდა.", "უეცრად ცა დაბნელდა."),
+            ("უფრო ადრე თუ უფრო გვიან ყველაფერი გაირკვევა.", "ადრე თუ გვიან ყველაფერი გაირკვევა."),
+            ("მგზავრი თავიდან ფეხის თითამდე დასველდა.", "მგზავრი თავით ფეხამდე დასველდა."),
+            ("ეს წესი დროის დასაწყისიდან მოქმედებს.", "ეს წესი ოდითგანვე მოქმედებს."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Discourse transition failed for '{raw}': got '{polished}'")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

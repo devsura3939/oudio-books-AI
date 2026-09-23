@@ -114,5 +114,26 @@ def test_animacy_possession_concord():
     assert "მას აქვს მანქანა" in cleaned
 
 
+def test_mental_and_sensory_calques_rejected_and_cleaned():
+    """Verify psychological and sensory gaze calques are rejected and repaired."""
+    source = "He lost his mind when he caught her eye and laid eyes on the treasure."
+    bad_cand = "მან დაკარგა თავისი გონება, როდესაც დაიჭირა მისი თვალი და დაადო თვალი მას."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject mental and gaze calques"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "ჭკუიდან შეიშალა" in cleaned
+    assert "თვალი მოჰკრა" in cleaned
+    assert "თვალი შეავლო" in cleaned
 
 
+def test_spatial_and_discourse_calques_rejected_and_cleaned():
+    """Verify paired organ concord, spatial binomials, and discourse transitions."""
+    source = "At first glance, they stood side by side in the middle of nowhere and saw it with their own eyes."
+    bad_cand = "პირველ შეხედვაზე, ისინი იდგნენ გვერდი გვერდით არსად შუაში და საკუთარი თვალებით ნახეს."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject raw calques"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "ერთი შეხედვით" in cleaned
+    assert "მხარდამხარ" in cleaned
+    assert "უკაცრიელ ადგილას" in cleaned
+    assert "საკუთარი თვალით" in cleaned

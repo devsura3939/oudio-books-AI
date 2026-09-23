@@ -101,6 +101,9 @@
             if (/(?<![\u10A0-\u10FF])(?:მას\s+)?(?:აქვს|არ\s+აქვს)\s+(?:ძაღლი|კატა|ცხენი|შვილი|მეგობარი|ძმა|და|ვაჟი|ქალიშვილი)(?![\u10A0-\u10FF])/u.test(out)) {
                 return { ok: false, reason: 'animacy_possession_discord' };
             }
+            if (/(?<![\u10A0-\u10FF])(?:დაკარგა\s+თავისი\s+გონება|გააკეთა\s+თავისი\s+გონება|შეცვალა\s+თავისი\s+გონება|შეინახ(?:ა|ეთ|ე)\s+გონებაში|დაიჭირა\s+(?:მისი\s+)?თვალი|დაადო\s+თვალი\s+მას|საკუთარი\s+თვალებით|შიშველი\s+ხელებით|ფეხებზე\s+იარა|გვერდი\s+გვერდით|უკან\s+და\s+წინ|სახე\s+სახესთან|არსად\s+შუაში|როგორც\s+ფაქტის\s+საკითხი|პირველ\s+შეხედვაზე|ყველა\s+მოულოდნელად|თავიდან\s+ფეხის\s+თითამდე)(?![\u10A0-\u10FF])/u.test(out)) {
+                return { ok: false, reason: 'unnatural_idiom_calque' };
+            }
         }
         if (src.toLowerCase() === out.toLowerCase() && scriptCounts(src).total >= 8 && detectLanguage(src) !== target) {
             return { ok: false, reason: 'identical_to_source' };
