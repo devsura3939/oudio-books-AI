@@ -71,6 +71,11 @@ def translate_local(text, source_lang, target_lang):
             translated=[]
             for part in token_parts(paragraph,lambda value:_tokenizer.encode(value)):
                 candidate=_generate(part.strip())
+                if target_lang == 'ka':
+                    from app.translation_engine import clean_georgian_morphology
+                    from app.text_integrity import synthesize_georgian_morphology
+                    candidate = clean_georgian_morphology(candidate)
+                    candidate = synthesize_georgian_morphology(candidate)
                 if not translation_is_valid(part,candidate,target_lang):
                     raise ValueError('Local model output failed text integrity checks.')
                 translated.append(candidate)
