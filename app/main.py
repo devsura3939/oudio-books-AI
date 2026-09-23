@@ -918,18 +918,29 @@ async def training_health():
     """Health check for the autonomous Training API."""
     pack = load_active_pack("ka")
     cases = load_benchmark_cases("ka")
-    eval_res = evaluate_pack(pack.get("items", []), cases)
+    cached_score = pack.get("benchmark_score")
+    if cached_score is None:
+        cached_score = pack.get("score")
+
+    if cached_score is not None:
+        score_val = float(cached_score)
+        passed_val = pack.get("benchmark_cases_count") or len(cases)
+    else:
+        eval_res = await run_in_threadpool(evaluate_pack, pack.get("items", []), cases)
+        score_val = eval_res["score"]
+        passed_val = eval_res["passed"]
+
     return {
         "status": "healthy",
         "service": "EngBot Autonomous Training Engine",
         "active_pack": {
             "version": pack.get("version", 1),
             "items_count": len(pack.get("items", [])),
-            "score": eval_res["score"]
+            "score": score_val
         },
         "benchmark": {
             "total_cases": len(cases),
-            "exact_matches": eval_res["passed"]
+            "exact_matches": passed_val
         },
         "supported_item_types": ["glossary", "autofix", "qa_rule", "prompt_block", "ocr_fix"],
         "default_dev_key": DEFAULT_DEV_KEY,
