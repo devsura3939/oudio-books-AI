@@ -46,3 +46,26 @@ def test_ai_settings_endpoint():
     assert "gemini_configured" in data
     assert "gemini_model" in data
 
+
+def test_server_ai_gateway_endpoint():
+    """Verify that /api/ai gateway endpoint is registered and responds appropriately."""
+    from starlette.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    # Test without API key or server model should return 503 rather than 404
+    res = client.post("/api/ai", json={"prompt": "Hello", "temperature": 0.1})
+    assert res.status_code in (200, 503), f"Expected 200 or 503 from gateway, got {res.status_code}"
+
+
+def test_expanded_literary_anti_calques():
+    """Verify that newly identified Vonnegut/sci-fi calques are rejected and cleaned."""
+    source = "Mankind, ignorant of the truths that lie within every human being, looked outward—pushed ever outward."
+    calque_sample = "კაცობრიობა, უცოდინარი ჭეშმარიტებების, უბიძგებდა მუდამ გარეგნულად უგემოვნო ზღვაში."
+    assert not translation_is_valid(source, calque_sample, "ka")
+
+    cleaned = clean_georgian_morphology(calque_sample)
+    assert "ჭეშმარიტების უცოდინარი" in cleaned
+    assert "გამუდმებით გარეთ მიილტვოდა" in cleaned
+    assert "უგემურ ოკეანეში" in cleaned
+
+

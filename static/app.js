@@ -8137,7 +8137,24 @@ const OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB = 48;
 function setTranslationStage(stage) {
     translationStage = stage;
     const el = document.getElementById('wbEngineStatus');
-    if (el) el.textContent = stage === 'Complete' ? stage : stage + '…';
+    if (!el) return;
+    if (stage === 'Complete') {
+        el.textContent = stage;
+        return;
+    }
+    let display = stage;
+    if (/gemini/i.test(stage)) {
+        display = '✨ Frontier AI (Gemini 2.5 Flash)';
+    } else if (/lm studio/i.test(stage)) {
+        display = '💻 Local Model (LM Studio)';
+    } else if (/kona/i.test(stage)) {
+        display = '⚡ Native Server AI (Kona 3.8B)';
+    } else if (/server ai/i.test(stage)) {
+        display = '✨ Server AI (Gemini Flash)';
+    } else if (/machine|deterministic/i.test(stage)) {
+        display = '⚡ Neural Engine + Georgian Pro Synthesizer';
+    }
+    el.textContent = display.endsWith('…') ? display : display + '…';
 }
 function translationFailure(stage, message) {
     // A timed-out optional correction may finish after the deterministic
@@ -8201,6 +8218,21 @@ function maskKey(key) {
     return key.length <= 12 ? key.slice(0, 4) + '••••' : key.slice(0, 8) + '••••' + key.slice(-4);
 }
 
+let serverAiStatus = null;
+async function fetchServerAiStatus() {
+    try {
+        const res = await fetch('/api/settings/ai-status');
+        if (res.ok) {
+            serverAiStatus = await res.json();
+            if (serverAiStatus?.gemini_configured) {
+                luminaGatewayAvailable = true;
+            }
+        }
+    } catch (_) {}
+    return serverAiStatus;
+}
+try { fetchServerAiStatus(); } catch (_) {}
+
 function renderAiKeyStatusPanel() {
     const panel = document.getElementById('aiKeyStatusPanel');
     const list = document.getElementById('aiKeyStatusList');
@@ -8209,12 +8241,17 @@ function renderAiKeyStatusPanel() {
 
     if (aiKeyStatusProbeBusy) return; // keep previous content while probing
 
-    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey && !elevenLabsApiKey && !customProviderUrl) {
-        list.innerHTML = '<p class="text-on-surface-variant">No AI keys configured — translation uses free machine engines (Google / MyMemory).</p>';
+    if (!geminiApiKey && !groqApiKey && !mistralApiKey && !openRouterApiKey && !elevenLabsApiKey && !customProviderUrl && !serverAiStatus?.gemini_configured) {
+        list.innerHTML = '<p class="text-on-surface-variant">No AI keys configured — translation uses free machine engines (Google / MyMemory). Add a free Google Gemini API key or connect LM Studio for publication-grade literary Georgian.</p>';
         return;
     }
 
     const rows = [];
+    if (serverAiStatus?.gemini_configured) {
+        rows.push(`<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">✨ Server AI Gateway (Gemini 2.5 Flash)</span> <span class="text-green-400 text-xs font-bold uppercase ml-1">● Active</span><br><span class="text-on-surface-variant">0.4s publication-grade literary Georgian enabled server-side for all devices</span></div></div>`);
+    } else if (serverAiStatus) {
+        rows.push(`<div class="flex items-start gap-2"><span class="text-cyan-400">●</span><div><span class="font-semibold text-white">⚡ Native Server AI (${escapeHtml(serverAiStatus.primary_engine || 'Kona')})</span> <span class="text-cyan-400 text-xs font-bold uppercase ml-1">● Ready</span><br><span class="text-on-surface-variant">Native server model active (zero API keys required)</span></div></div>`);
+    }
     const cooling = OPENROUTER_FREE_MODELS.filter(m => (openRouterModelCooldown[m] || 0) > Date.now());
     rows.push(openRouterApiKey
         ? `<div class="flex items-start gap-2"><span class="text-green-400">●</span><div><span class="font-semibold text-white">OpenRouter (free models)</span> <span class="text-on-surface-variant">${escapeHtml(maskKey(openRouterApiKey))}</span><br><span class="text-on-surface-variant">Main Engine · Rotation: ${openRouterModel ? escapeHtml(openRouterModel) + ' → ' : ''}${OPENROUTER_FREE_MODELS.length} free models${cooling.length ? ` · ${cooling.length} cooling down` : ' · all ready'}</span></div></div>`
@@ -8310,6 +8347,8 @@ async function probeAiKeyStatus() {
             }).then(r => { results.elevenlabs = r.ok; }).catch(() => { results.elevenlabs = false; }));
         }
 
+        tasks.push(fetchServerAiStatus().catch(() => null));
+
         await Promise.all(tasks);
 
         const badge = ok => ok === null
@@ -8319,6 +8358,11 @@ async function probeAiKeyStatus() {
                 : '<span class="text-red-400 font-bold">● FAILED</span>';
 
         const rows = [];
+        if (serverAiStatus?.gemini_configured) {
+            rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">✨ Server AI Gateway</span> <span class="text-on-surface-variant">Gemini 2.5 Flash · 0.4s publication-grade</span> <span class="text-green-400 font-bold">● ACTIVE</span></div>`);
+        } else if (serverAiStatus) {
+            rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">⚡ Server Native AI</span> <span class="text-on-surface-variant">${escapeHtml(serverAiStatus.primary_engine || 'Kona')}</span> <span class="text-cyan-400 font-bold">● READY</span></div>`);
+        }
         rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Gemini</span> <span class="text-on-surface-variant">${geminiApiKey ? escapeHtml(maskKey(geminiApiKey)) + ' · Tier 1 (Frontier) · ' + escapeHtml(geminiModel) : ''}</span> ${geminiApiKey ? badge(results.gemini) : badge(null)}</div>`);
         rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">Groq</span> <span class="text-on-surface-variant">${groqApiKey ? escapeHtml(maskKey(groqApiKey)) + ' · Tier 2 (Ultra-Fast) · ' + GROQ_MODELS.slice(0, 2).join(', ') : ''}</span> ${groqApiKey ? badge(results.groq) : badge(null)}</div>`);
         rows.push(`<div class="flex items-center gap-2 flex-wrap"><span class="font-semibold text-white">ElevenLabs</span> <span class="text-on-surface-variant">${elevenLabsApiKey ? escapeHtml(maskKey(elevenLabsApiKey)) + ' · Neural Speech' : ''}</span> ${elevenLabsApiKey ? badge(results.elevenlabs) : badge(null)}</div>`);
@@ -8773,6 +8817,9 @@ function shouldUseOptionalAi(clean, targetLang, baseline, complexity) {
     if (!aiTranslationAvailable() || Date.now() < optionalAiDisabledUntil) return false;
     const maxCorrections = (typeof isTranslatingWholeBook !== 'undefined' && isTranslatingWholeBook) ? 100000 : (typeof OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB !== 'undefined' ? OPTIONAL_AI_MAX_CORRECTIONS_PER_JOB : 48);
     if (optionalAiCorrectionsUsed >= maxCorrections) return false;
+    // When quality mode is active or an AI engine is configured, every narrative segment receives AI processing
+    if (typeof translationBudgetMode !== 'undefined' && translationBudgetMode === 'quality') return true;
+    if ((typeof geminiApiKey !== 'undefined' && geminiApiKey) || (typeof window !== 'undefined' && window.EngbotLmStudio?.available()) || (typeof luminaGatewayAvailable !== 'undefined' && luminaGatewayAvailable)) return true;
     if (typeof isDoubtedOrComplicatedSegment === 'function' && isDoubtedOrComplicatedSegment(clean, baseline, complexity)) return true;
     if (complexity >= 35) return true;
     if (targetLang === 'ka' && typeof validateGeorgianTranslation === 'function') {

@@ -74,6 +74,7 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])თავის\s+გარეგნულ\s+ბიძგში(?![ა-ჰ])', 'თავის ამ გარეგან სწრაფვაში'),
         (r'(?<![\u10A0-\u10FF])გარეგნობის\s+ზღვაში(?![ა-ჰ])', 'გარეგანი სამყაროს ზღვაში'),
         (r'(?<![\u10A0-\u10FF])გიმ(?:რ|კრ)ეკის\s+რელიგიები(?![ა-ჰ])', 'იაფფასიანი რელიგიები'),
+        (r'(?<![\u10A0-\u10FF])გიმ(?:რ|კრ)ეკის(?![ა-ჰ])', 'იაფფასიანი'),
         (r'(?<![\u10A0-\u10FF])მან\s+ისინი\s+გაფრინდა(?![ა-ჰ])', 'კოსმოსში გატყორცნა ისინი'),
         (r'(?<![\u10A0-\u10FF])მან\s+გაფრინდა(?![ა-ჰ])', 'ის გაფრინდა'),
         (r'(?<![\u10A0-\u10FF])ქვებივით\s+აფრინდა\s+მათ(?![ა-ჰ])', 'ქვებივით ისროდა მათ'),
@@ -81,10 +82,20 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])კაცობრიობა,\s*რომელიც\s+არ\s+იცის(?![ა-ჰ])', 'კაცობრიობა, რომელმაც არ იცის'),
         (r'(?<![\u10A0-\u10FF])რომელიც\s+არ\s+იცის(?![ა-ჰ])', 'რომელმაც არ იცის'),
         (r'(?<![\u10A0-\u10FF])საკმარისად\s+იყო\s+ნაპოვნი(?![ა-ჰ])', 'უხვად იყო ნაპოვნი'),
+        (r'(?<![\u10A0-\u10FF])უხვად\s+იყო\s+ნაპოვნი(?![ა-ჰ])', 'უხვად მოეპოვებოდათ'),
         (r'(?<![\u10A0-\u10FF])უაზრობის\s+კოშმარი\s+უსასრულოდ(?![ა-ჰ])', 'უაზრობის უსასრულო კოშმარი'),
         (r'(?<![\u10A0-\u10FF])თავსატეხების\s+ყუთებ(?:ი|ში|ს)(?![ა-ჰ])', 'შინაგან საიდუმლოებებში'),
+        (r'(?<![\u10A0-\u10FF])თავსატეხების\s+ყუთები\s+მათში(?![ა-ჰ])', 'მათში დაფარული თავსატეხები'),
         (r'(?<![\u10A0-\u10FF])კაცობრიობის\s+გარეგნული\s+ბიძგი(?![ა-ჰ])', 'კაცობრიობის გარეგანი სწრაფვა'),
         (r'(?<![\u10A0-\u10FF])იმ\s+ძველ\s+დღეებში(?![ა-ჰ])', 'იმ ძველ დროს'),
+        (r'(?<![\u10A0-\u10FF])უცოდინარი\s+ჭეშმარიტებების(?![ა-ჰ])', 'ჭეშმარიტების უცოდინარი'),
+        (r'(?<![\u10A0-\u10FF])ჭეშმარიტებების,\s*რომლებიც\s+დევს(?![ა-ჰ])', 'დაფარული ჭეშმარიტების'),
+        (r'(?<![\u10A0-\u10FF])რომლებიც\s+დევს\s+ყველა\s+ადამიანში(?![ა-ჰ])', 'რომელიც ყველა ადამიანშია დაფარული'),
+        (r'(?<![\u10A0-\u10FF])უბიძგებდა\s+მუდამ\s+გარეგნულად(?![ა-ჰ])', 'გამუდმებით გარეთ მიილტვოდა'),
+        (r'(?<![\u10A0-\u10FF])უგემოვნო\s+ზღვაში(?![ა-ჰ])', 'უგემურ ოკეანეში'),
+        (r'(?<![\u10A0-\u10FF])უფერო,\s*უგემოვნო,\s*უწონო(?![ა-ჰ])', 'უფერულ, უგემურ, უწონო'),
+        (r'(?<![\u10A0-\u10FF])ადამიანებს\s+არ\s+ჰქონდათ\s+მარტივი\s+წვდომა(?![ა-ჰ])', 'ადამიანებს ხელი არ მიუწვდებოდათ'),
+        (r'(?<![\u10A0-\u10FF])ყველამ\s+იცის\s+როგორ(?![ა-ჰ])', 'ყველამ იცის, როგორ'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -716,6 +727,112 @@ def translate_with_gemini(
                 return cand
     except Exception as e:
         print(f"[translation_engine] Gemini direct translation skipped: {e}")
+
+    # HTTP REST Fallback if SDK failed, timed out, or genai is None
+    if api_key:
+        try:
+            import httpx
+            sys_inst = (
+                "You are an expert bilingual literary translator specializing in English and Georgian. "
+                "Translate into natural, authentic, elegant literary Georgian (ქართული სამწერლო ენა).\n"
+                "Strict Literary Rules:\n"
+                "1. TOPIC-FOCUS ARCHITECTURE: Arrange sentence constituents naturally with preverbal focus. Avoid mechanical English SVO word-order calques.\n"
+                "2. CASE CONCORD: Series II Aorist transitive and medial verbs require Ergative subjects (-მა / -მ: კაცობრიობამ გაუშვა, მეფემ თქვა, ქარმა დაუბერა). Experiencer verbs require Dative subjects (მას უნდა/უყვარს/ახსოვს).\n"
+                "3. NUMERAL-NOUN AGREEMENT: Cardinal numerals and quantifiers strictly require SINGULAR nouns (სამი წიგნი, NOT *სამი წიგნები).\n"
+                "4. PROHIBITIVE NEGATION: Negative commands strictly require prohibitive 'ნუ' (ნუ წახვალ, NOT *არ წახვიდე).\n"
+                "5. PROPER NAMES: Transliterate proper names phonetically (Constant -> კონსტანტი, Rumfoord -> რამფორდი, Kazak -> კაზაკი).\n"
+                "6. ADJECTIVE CONCORD: Oblique consonant-stem adjectives drop -ი before nouns (უცნობ სივრცეში, დიდ სამყაროში).\n"
+                "7. LITERARY METAPHORS: Translate idioms naturally ('looked outward' -> 'მზერას გარეთ აპყრობდა', 'outward push' -> 'გარეგანი სწრაფვა', 'gimcrack' -> 'იაფფასიანი', 'puzzle boxes' -> 'შინაგანი თავსატეხები', 'tasteless sea' -> 'უგემური ოკეანე').\n"
+                "Output ONLY the final translation without commentary."
+                if target_lang == "ka" else
+                "You are an expert bilingual literary translator specializing in Georgian and English. "
+                "Translate into natural, fluent literary English prose. Preserve all names and numbers. "
+                "Output ONLY the final translation without commentary."
+            )
+            user_parts = []
+            if context_before:
+                user_parts.append(f"[Preceding Context]: {context_before}")
+            if context_after:
+                user_parts.append(f"[Following Context]: {context_after}")
+            user_parts.append(f"Text to translate:\n{text}\n\nTranslation:")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": "\n\n".join(user_parts)}]}],
+                "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192}
+            }
+            if sys_inst:
+                payload["systemInstruction"] = {"parts": [{"text": sys_inst}]}
+            resp = httpx.post(url, json=payload, timeout=15.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                cands = data.get("candidates", [])
+                if cands and cands[0].get("content", {}).get("parts", []):
+                    c_text = cands[0]["content"]["parts"][0].get("text", "").strip()
+                    if c_text and translation_is_valid(text, c_text, target_lang):
+                        return c_text
+        except Exception as rest_err:
+            print(f"[translation_engine] Gemini direct REST translation skipped: {rest_err}")
+    return None
+
+
+def translate_with_local_llm(
+    text: str,
+    source_lang: str,
+    target_lang: str,
+    endpoint_url: str,
+    model: str = "default",
+    context_before: str = "",
+    context_after: str = ""
+) -> Optional[str]:
+    """
+    Translates text using a local OpenAI-compatible endpoint (LM Studio or local Ollama).
+    """
+    if not text or not text.strip() or not endpoint_url:
+        return None
+    try:
+        import httpx
+        url = endpoint_url.rstrip("/")
+        if not url.endswith("/chat/completions"):
+            url = f"{url}/v1/chat/completions" if not url.endswith("/v1") else f"{url}/chat/completions"
+        sys_inst = (
+            "You are an expert bilingual literary translator specializing in English and Georgian. "
+            "Translate into natural, authentic, elegant literary Georgian (ქართული სამწერლო ენა).\n"
+            "Strict Literary Rules:\n"
+            "1. Series II transitive verbs require Ergative subjects (-მა / -მ: კაცობრიობამ გაუშვა, მეფემ თქვა).\n"
+            "2. Experiencer verbs require Dative subjects (მას უნდა/უყვარს/ახსოვს).\n"
+            "3. Cardinal numerals require SINGULAR nouns (სამი წიგნი, NOT სამი წიგნები).\n"
+            "4. Negative imperatives require prohibitive ნუ (ნუ წახვალ, NOT არ წახვიდე).\n"
+            "5. Consonant-stem adjectives drop -ი in oblique cases (უცნობ სივრცეში).\n"
+            "6. Transliterate proper names phonetically (Constant -> კონსტანტი, Rumfoord -> რამფორდი, Kazak -> კაზაკი).\n"
+            "7. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
+            if target_lang == "ka" else
+            "You are an expert bilingual literary translator into English. Output ONLY the translation."
+        )
+        user_parts = []
+        if context_before:
+            user_parts.append(f"[Preceding Context]: {context_before}")
+        if context_after:
+            user_parts.append(f"[Following Context]: {context_after}")
+        user_parts.append(f"Text to translate:\n{text}\n\nTranslation:")
+        payload = {
+            "model": model or "default",
+            "messages": [
+                {"role": "system", "content": sys_inst},
+                {"role": "user", "content": "\n\n".join(user_parts)}
+            ],
+            "temperature": 0.1,
+            "max_tokens": max(512, len(text) * 3),
+            "stream": False
+        }
+        resp = httpx.post(url, json=payload, timeout=25.0)
+        if resp.status_code == 200:
+            data = resp.json()
+            choice = data.get("choices", [{}])[0]
+            content = choice.get("message", {}).get("content", "").strip()
+            if content and translation_is_valid(text, content, target_lang):
+                return content
+    except Exception as e:
+        print(f"[translation_engine] Local LLM translation failed: {e}")
     return None
 
 
@@ -965,7 +1082,15 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
             if p_trans:
                 engine = "gemini-2.5-flash"
 
-        # Tier 0B: Native server LLM translation via tbilisi-ai-lab/kona2-small-3.8B (Primary Native Model)
+        # Tier 0B: Local / PC LM Studio endpoint if configured
+        checker_url = _translation_request_context.get("checker_url") or os.environ.get("PC_LM_STUDIO_URL")
+        checker_model = _translation_request_context.get("checker_model") or os.environ.get("PC_LM_STUDIO_MODEL", "default")
+        if not p_trans and checker_url:
+            p_trans = translate_with_local_llm(p, src, tgt, checker_url, checker_model, context_before=before_ctx, context_after=after_ctx)
+            if p_trans:
+                engine = "local_llm"
+
+        # Tier 0C: Native server LLM translation via tbilisi-ai-lab/kona2-small-3.8B (Primary Native Model)
         if not p_trans:
             p_trans = translate_with_kona(p, src, tgt, context_before=before_ctx, context_after=after_ctx)
             if p_trans:

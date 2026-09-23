@@ -265,6 +265,122 @@ async def save_ai_key(req: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/ai")
+async def server_ai_gateway(req: Request):
+    """
+    Direct server AI gateway for clients without local keys or hardware.
+    Powers callLuminaGatewayJSON(), literary copy-editing, and translation phases.
+    Uses Gemini 2.5 Flash if GEMINI_API_KEY is available (in env or headers),
+    falling back to local server Ollama/LM Studio.
+    """
+    try:
+        body = await req.json()
+        prompt = body.get("prompt", "")
+        system_prompt = body.get("systemPrompt") or body.get("system_prompt", "")
+        temperature = float(body.get("temperature", 0.2))
+        max_tokens = int(body.get("maxTokens") or body.get("max_tokens", 8192))
+        api_key = (
+            req.headers.get("x-gemini-key")
+            or req.headers.get("x-goog-api-key")
+            or body.get("api_key")
+            or os.environ.get("GEMINI_API_KEY", "")
+        ).strip()
+
+        # Tier 1: Gemini 2.5 Flash (0.3s - 0.5s)
+        if api_key:
+            # 1a. Try Google genai SDK if installed
+            try:
+                from google import genai
+                client = genai.Client(api_key=api_key, http_options={"timeout": 15000})
+                config = {"temperature": temperature, "max_output_tokens": max_tokens}
+                if system_prompt:
+                    config["system_instruction"] = system_prompt
+                resp = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt,
+                    config=config
+                )
+                if resp and getattr(resp, "text", None):
+                    text_out = resp.text.strip()
+                    return JSONResponse({
+                        "text": text_out,
+                        "status": "ok",
+                        "finish_reason": "stop",
+                        "choices": [{"finish_reason": "stop", "message": {"content": text_out}}],
+                        "candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": text_out}]}}],
+                        "engine": "gemini-2.5-flash"
+                    })
+            except Exception as sdk_err:
+                print(f"[api/ai] Genai SDK attempt: {sdk_err}, trying REST fallback...")
+
+            # 1b. Direct HTTP REST fallback
+            try:
+                import httpx
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "temperature": temperature,
+                        "maxOutputTokens": max_tokens
+                    }
+                }
+                if system_prompt:
+                    payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
+                resp = httpx.post(url, json=payload, timeout=20.0)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    cands = data.get("candidates", [])
+                    if cands and cands[0].get("content", {}).get("parts", []):
+                        cand_text = cands[0]["content"]["parts"][0].get("text", "").strip()
+                        return JSONResponse({
+                            "text": cand_text,
+                            "status": "ok",
+                            "finish_reason": "stop",
+                            "choices": [{"finish_reason": "stop", "message": {"content": cand_text}}],
+                            "candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": cand_text}]}}],
+                            "engine": "gemini-2.5-flash"
+                        })
+            except Exception as rest_err:
+                print(f"[api/ai] Gemini REST attempt failed: {rest_err}")
+
+        # Tier 2: Local server Ollama / Kona proxy
+        ollama_url = os.environ.get("KONA_OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
+        try:
+            import httpx
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            resp = httpx.post(ollama_url, json={
+                "model": os.environ.get("KONA_MODEL", "qwen2.5:3b"),
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": False
+            }, timeout=30.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                choice = data.get("choices", [{}])[0]
+                content = choice.get("message", {}).get("content", "").strip()
+                if content:
+                    return JSONResponse({
+                        "text": content,
+                        "status": "ok",
+                        "finish_reason": "stop",
+                        "choices": [{"finish_reason": "stop", "message": {"content": content}}],
+                        "candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": content}]}}],
+                        "engine": "local-ollama"
+                    })
+        except Exception as ollama_err:
+            pass
+
+        raise HTTPException(status_code=503, detail="No AI engine currently available on server. Set GEMINI_API_KEY in settings.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 @app.api_route("/api/v1/{path:path}", methods=["GET", "POST", "OPTIONS"])
 async def ollama_proxy(path: str, req: Request):

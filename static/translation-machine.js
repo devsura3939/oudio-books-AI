@@ -111,6 +111,24 @@
                 const result = data?.success !== false && accept(data?.translated, engineName);
                 if (result) return result;
             }
+            // Local AI Priority: if server AI is unavailable, check if a connected local LM Studio model is ready to translate
+            const lmClient = (typeof globalThis !== 'undefined' && globalThis.EngbotLmStudio) || (typeof window !== 'undefined' && window.EngbotLmStudio) || (typeof root !== 'undefined' ? root.EngbotLmStudio : null);
+            if (lmClient?.available?.()) {
+                try {
+                    const lmDirect = await lmClient.translateDirect(source, targetLang, {
+                        signal,
+                        contextBefore: options?.context_before || '',
+                        contextAfter: options?.context_after || '',
+                        timeoutMs: 45000
+                    });
+                    if (valid(source, lmDirect, targetLang)) {
+                        const result = accept(lmDirect, 'lm_studio');
+                        if (result) return result;
+                    }
+                } catch (_) {
+                    signal?.throwIfAborted();
+                }
+            }
             // One Google request per complete source segment. MyMemory is a separate fallback.
             const params = new URLSearchParams({ client: 'gtx', sl: sourceLang, tl: targetLang, dt: 't', q: source });
             const google = await request('google', `https://translate.googleapis.com/translate_a/single?${params}`, {}, signal);
@@ -141,26 +159,6 @@
             signal?.throwIfAborted();
             // The connected model can be replaced independently of the app.
             if (valid(source, fallback, targetLang)) { onEngine('offline'); return fallback; }
-
-            // Emergency local AI fallback: if server, google, and mymemory failed or are paused,
-            // directly check if a connected local LM Studio model is ready to translate!
-            const lmClient = (typeof globalThis !== 'undefined' && globalThis.EngbotLmStudio) || (typeof window !== 'undefined' && window.EngbotLmStudio) || (typeof root !== 'undefined' ? root.EngbotLmStudio : null);
-            if (lmClient?.available?.()) {
-                try {
-                    const lmDirect = await lmClient.translateDirect(source, targetLang, {
-                        signal,
-                        contextBefore: options?.context_before || '',
-                        contextAfter: options?.context_after || '',
-                        timeoutMs: 45000
-                    });
-                    if (valid(source, lmDirect, targetLang)) {
-                        const result = accept(lmDirect, 'lm_studio');
-                        if (result) return result;
-                    }
-                } catch (_) {
-                    signal?.throwIfAborted();
-                }
-            }
 
             return null;
         }
