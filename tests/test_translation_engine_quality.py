@@ -194,3 +194,18 @@ def test_weather_resultative_and_cognitive_calques_rejected_and_cleaned():
     assert "უეცრად მიხვდა, რომ" in cleaned
     assert "ფიქრებში ჩაძირული" in cleaned
 
+
+def test_sensory_transit_dialogue_temporal_calques_rejected_and_cleaned():
+    """Verify Rule Groups 71-75: sensory, epistemic, motion, dialogue, and temporal calques."""
+    source = "A pungent smell hung in the air, he ran without looking back, interrupted his speech, and throughout the day froze in place."
+    bad_cand = "მძაფრი სუნი ეკიდა ჰაერში, გაიქცა უკან ყურების გარეშე, გაჭრა მისი სიტყვა, და დღის გავლით გაიყინა ადგილზე ერთ წამში."
+    assert not translation_is_valid(source, bad_cand, "ka"), "Should reject sensory, transit, dialogue, and temporal calques"
+
+    cleaned = clean_georgian_morphology(bad_cand)
+    assert "მძაფრი სუნი იდგა" in cleaned
+    assert "უკანმოუხედავად გაიქცა" in cleaned
+    assert "სიტყვა შეაწყვეტინა" in cleaned
+    assert "მთელი დღის განმავლობაში" in cleaned
+    assert "წამიერად გაქვავდა" in cleaned
+
+

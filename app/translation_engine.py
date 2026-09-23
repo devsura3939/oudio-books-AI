@@ -298,6 +298,37 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])ყველა\s+შანსების\s+წინააღმდეგ(?![ა-ჰ])', 'ყოველგვარი დაბრკოლების მიუხედავად'),
         (r'(?<![\u10A0-\u10FF])ეჭვის\s+ჩრდილის\s+მიღმა(?![ა-ჰ])', 'ეჭვგარეშეა'),
         (r'(?<![\u10A0-\u10FF])ზემოდან\s+ქვემომდე(?![ა-ჰ])', 'თავიდან ბოლომდე'),
+        # Sensory Perception & Somatic Collocations
+        (r'(?<![\u10A0-\u10FF])(?:მძაფრი\s+სუნი\s+ეკიდა|სუნი\s+ეკიდა\s+ჰაერში)(?![ა-ჰ])', 'მძაფრი სუნი იდგა'),
+        (r'(?<![\u10A0-\u10FF])სიცივემ\s+გაიარა\s+მის\s+ხერხემალში(?![ა-ჰ])', 'ტანში ცივმა ჟრუანტელმა დაუარა'),
+        (r'(?<![\u10A0-\u10FF])ზარი\s+მის\s+ყურებში(?![ა-ჰ])', 'ყურებში წუილი'),
+        (r'(?<![\u10A0-\u10FF])ყურებში\s+რეკვა\s+დაიწყო(?![ა-ჰ])', 'ყურები აუწუილდა'),
+        (r'(?<![\u10A0-\u10FF])(?:დატოვა\s+მწარე\s+გემო\s+პირში|დატოვა\s+მწარე\s+გემო\s+მის\s+პირში|დატოვა\s+მწარე\s+გემო)(?![ა-ჰ])', 'მწარე გემო დაუტოვა'),
+        (r'(?<![\u10A0-\u10FF])სიცივემ\s+გაჭრა\s+ძვალამდე(?![ა-ჰ])', 'სიცივემ ძვლებამდე გაატანა'),
+        # Epistemic Evidentiality & Discourse Pragmatics
+        (r'(?<![\u10A0-\u10FF])როგორც\s+ფაქტის\s+საკითხი(?![ა-ჰ])', 'სინამდვილეში'),
+        (r'(?<![\u10A0-\u10FF])ყველა\s+ანგარიშით(?![ა-ჰ])', 'როგორც ჩანს'),
+        (r'(?<![\u10A0-\u10FF])არ\s+აქვს\s+მნიშვნელობა\s+რა\s+მოხდება(?![ა-ჰ])', 'რაც არ უნდა მოხდეს'),
+        (r'(?<![\u10A0-\u10FF])სხვა\s+სიტყვებში(?![ა-ჰ])', 'სხვა სიტყვებით რომ ვთქვათ'),
+        (r'(?<![\u10A0-\u10FF])სიმართლე\s+სათქმელად(?![ა-ჰ])', 'სიმართლე რომ ითქვას'),
+        # Dynamic Motion & Spatial Transit Idioms
+        (r'(?<![\u10A0-\u10FF])(?:გაიქცა\s+უკან\s+ყურების\s+გარეშე|უკან\s+ყურების\s+გარეშე\s+გაიქცა)(?![ა-ჰ])', 'უკანმოუხედავად გაიქცა'),
+        (r'(?<![\u10A0-\u10FF])(?:გააკეთა\s+თავისი\s+გზა|თავისი\s+გზა\s+გააკეთა)(?![ა-ჰ])', 'გზა გაიკვლია'),
+        (r'(?<![\u10A0-\u10FF])მიჰყვა\s+ცხელ\s+ქუსლებზე(?![ა-ჰ])', 'ფეხდაფეხ მიჰყვებოდა'),
+        (r'(?<![\u10A0-\u10FF])გაიარა\s+გვერდით\s+გარშემო(?![ა-ჰ])', 'გვერდი აუარა'),
+        (r'(?<![\u10A0-\u10FF])მიჰყვა\s+თავისი\s+თვალებით(?![ა-ჰ])', 'თვალი გააყოლა'),
+        # Conversational Interlocution & Dialogue Discourse
+        (r'(?<![\u10A0-\u10FF])(?:გაჭრა\s+მისი\s+სიტყვა|შეაწყვეტინა\s+იგი)(?![ა-ჰ])', 'სიტყვა შეაწყვეტინა'),
+        (r'(?<![\u10A0-\u10FF])დაარტყა\s+საუბარი(?![ა-ჰ])', 'საუბარი გააბა'),
+        (r'(?<![\u10A0-\u10FF])ილაპარაკა\s+უკან(?![ა-ჰ])', 'სიტყვა შეუბრუნა'),
+        (r'(?<![\u10A0-\u10FF])გამოხატა\s+აზრი(?![ა-ჰ])', 'აზრი გამოთქვა'),
+        (r'(?<![\u10A0-\u10FF])ილაპარაკა\s+თავისი\s+გონება(?![ა-ჰ])', 'გულახდილად გამოთქვა აზრი'),
+        # Existential State Transitions & Temporal Duratives
+        (r'(?<![\u10A0-\u10FF])დრო\s+გადიოდა\s+გარეთ(?![ა-ჰ])', 'დრო მიდიოდა'),
+        (r'(?<![\u10A0-\u10FF])დღის\s+გავლით(?![ა-ჰ])', 'მთელი დღის განმავლობაში'),
+        (r'(?<![\u10A0-\u10FF])(?:გაიყინა\s+ადგილზე\s+ერთ\s+წამში|გაიყინა\s+ადგილზე)(?![ა-ჰ])', 'წამიერად გაქვავდა'),
+        (r'(?<![\u10A0-\u10FF])დაიჭირა\s+მომენტი(?![ა-ჰ])', 'დრო იხელთა'),
+        (r'(?<![\u10A0-\u10FF])(?:ძლივს\s+(?:დაიჭირა\s+(?:(?:მისი|თავისი)\s+)?სუნთქვა|სული\s+მოითქვა)|ძლივს\s+დაიჭირა\s+თავისი\s+სუნთქვა)(?![ა-ჰ])', 'სულს ძლივს ითქვამდა'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
@@ -931,6 +962,11 @@ def translate_with_gemini(
                 "61. PSYCHOLOGICAL VOLITION: 'at a loss for words' -> 'სიტყვა ვეღარ მოეძებნა' (NOT '*სიტყვების დანაკარგში იყო'), 'made up mind once and for all' -> 'საბოლოოდ გადაწყვიტა', 'bad feeling' -> 'ცუდი წინათგრძნობა', 'took to heart' -> 'გულთან ახლოს მიიტანა', 'beside himself with anger' -> 'განრისხებისგან ჭკუაზე აღარ იყო'.\n"
                 "62. COGNITIVE REALIZATION: 'dawned on him that' -> 'უეცრად მიხვდა, რომ' (NOT '*გათენდა მასზე'), 'came to senses' -> 'გონს მოეგო', 'saw through deception' -> 'სიცრუე მაშინვე ამოიცნო', 'took for granted' -> 'თავისთავად ცხადად მიიჩნია', 'lost track of time' -> 'დროის შეგრძნება დაკარგა'.\n"
                 "63. COLLOCATIONAL INTENSIFIERS: 'deep in thought' -> 'ფიქრებში ჩაძირული' (NOT '*ღრმად ფიქრში'), 'out of the blue' -> 'მოულოდნელად / მეხივით', 'against all odds' -> 'ყოველგვარი დაბრკოლების მიუხედავად', 'beyond shadow of doubt' -> 'ეჭვგარეშეა', 'from top to bottom' -> 'თავიდან ბოლომდე'.\n"
+                "64. SENSORY PERCEPTION & SOMATICS: 'pungent smell hung' -> 'მძაფრი სუნი იდგა' (NOT '*სუნი ეკიდა'), 'chill down spine' -> 'ტანში ცივმა ჟრუანტელმა დაუარა', 'ringing in ears' -> 'ყურებში წუილი / ყურები აუწუილდა', 'bitter taste' -> 'მწარე გემო დაუტოვა', 'cold cut to the bone' -> 'სიცივემ ძვლებამდე გაატანა'.\n"
+                "65. EPISTEMIC & DISCOURSE: 'as a matter of fact' -> 'სინამდვილეში', 'by all accounts' -> 'როგორც ჩანს', 'no matter what happens' -> 'რაც არ უნდა მოხდეს', 'in other words' -> 'სხვა სიტყვებით რომ ვთქვათ', 'truth be told' -> 'სიმართლე რომ ითქვას'.\n"
+                "66. DYNAMIC MOTION & TRANSIT: 'ran without looking back' -> 'უკანმოუხედავად გაიქცა' (NOT '*უკან ყურების გარეშე'), 'made one's way' -> 'გზა გაიკვლია', 'hot on heels' -> 'ფეხდაფეხ მიჰყვებოდა', 'bypassed / skirted' -> 'გვერდი აუარა', 'followed with eyes' -> 'თვალი გააყოლა'.\n"
+                "67. CONVERSATIONAL & LOCUTION: 'interrupted / cut him off' -> 'სიტყვა შეაწყვეტინა' (NOT '*გაჭრა მისი სიტყვა'), 'struck up a conversation' -> 'საუბარი გააბა', 'retorted / talked back' -> 'სიტყვა შეუბრუნა', 'expressed opinion' -> 'აზრი გამოთქვა', 'spoke mind' -> 'გულახდილად გამოთქვა აზრი'.\n"
+                "68. TEMPORAL DURATIVES & STATE: 'time ticked away / passed' -> 'დრო მიდიოდა', 'throughout the day' -> 'მთელი დღის განმავლობაში', 'froze in place' -> 'წამიერად გაქვავდა', 'seized the moment' -> 'დრო იხელთა', 'catch breath' -> 'სულს ძლივს ითქვამდა'.\n"
                 "Output ONLY the final translation without commentary."
                 if target_lang == "ka" else
                 "You are an expert bilingual literary translator specializing in Georgian and English. "
@@ -1054,7 +1090,12 @@ def translate_with_local_llm(
             "28. Psychological volition: 'at a loss for words' -> 'სიტყვა ვეღარ მოეძებნა', 'made up mind' -> 'საბოლოოდ გადაწყვიტა'.\n"
             "29. Cognitive realization: 'dawned on him that' -> 'უეცრად მიხვდა, რომ', 'came to senses' -> 'გონს მოეგო'.\n"
             "30. Intensifiers: 'deep in thought' -> 'ფიქრებში ჩაძირული', 'out of the blue' -> 'მოულოდნელად', 'beyond doubt' -> 'ეჭვგარეშეა'.\n"
-            "31. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
+            "31. Sensory: 'pungent smell' -> 'მძაფრი სუნი იდგა', 'chill down spine' -> 'ტანში ჟრუანტელმა დაუარა', 'cold cut to bone' -> 'სიცივემ ძვლებამდე გაატანა'.\n"
+            "32. Discourse: 'as a matter of fact' -> 'სინამდვილეში', 'no matter what' -> 'რაც არ უნდა მოხდეს', 'in other words' -> 'სხვა სიტყვებით რომ ვთქვათ'.\n"
+            "33. Motion & transit: 'without looking back' -> 'უკანმოუხედავად გაიქცა', 'made way' -> 'გზა გაიკვლია', 'hot on heels' -> 'ფეხდაფეხ მიჰყვებოდა'.\n"
+            "34. Dialogue: 'interrupted' -> 'სიტყვა შეაწყვეტინა', 'struck up conversation' -> 'საუბარი გააბა', 'talked back' -> 'სიტყვა შეუბრუნა'.\n"
+            "35. Temporal & state: 'throughout the day' -> 'მთელი დღის განმავლობაში', 'froze in place' -> 'წამიერად გაქვავდა', 'seized moment' -> 'დრო იხელთა'.\n"
+            "36. Output ONLY the direct literary translation without any commentary, preamble, or markdown formatting."
             if target_lang == "ka" else
             "You are an expert bilingual literary translator into English. Output ONLY the translation."
         )

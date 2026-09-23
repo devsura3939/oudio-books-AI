@@ -8787,5 +8787,641 @@
       "spatial",
       "top_to_bottom"
     ]
+  },
+  {
+    "id": "case-sensory-somatic-01",
+    "kind": "translate",
+    "source": "ჰაერში მძაფრი სუნი ეკიდა მთელი ღამე.",
+    "expected": "ჰაერში მძაფრი სუნი იდგა მთელი ღამე.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "smell",
+      "air"
+    ]
+  },
+  {
+    "id": "case-sensory-somatic-02",
+    "kind": "translate",
+    "source": "ოთახში სუნი ეკიდა ჰაერში უცნაურად.",
+    "expected": "ოთახში მძაფრი სუნი იდგა უცნაურად.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "smell",
+      "room"
+    ]
+  },
+  {
+    "id": "case-sensory-somatic-03",
+    "kind": "translate",
+    "source": "უცებ სიცივემ გაიარა მის ხერხემალში შიშისგან.",
+    "expected": "უცებ ტანში ცივმა ჟრუანტელმა დაუარა შიშისგან.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "spine",
+      "chill"
+    ]
+  },
+  {
+    "id": "case-sensory-somatic-04",
+    "kind": "translate",
+    "source": "ტყეში სიცივემ გაიარა მის ხერხემალში მოულოდნელად.",
+    "expected": "ტყეში ტანში ცივმა ჟრუანტელმა დაუარა მოულოდნელად.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "spine",
+      "forest"
+    ]
+  },
+  {
+    "id": "case-sensory-somatic-05",
+    "kind": "translate",
+    "source": "ყვირილის შემდეგ ზარი მის ყურებში გაისმა.",
+    "expected": "ყვირილის შემდეგ ყურებში წუილი გაისმა.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "ears",
+      "ringing"
+    ]
+  },
+  {
+    "id": "case-sensory-somatic-06",
+    "kind": "translate",
+    "source": "აფეთქებისგან ყურებში რეკვა დაიწყო მოულოდნელად.",
+    "expected": "აფეთქებისგან ყურები აუწუილდა მოულოდნელად.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "ears",
+      "explosion"
+    ]
+  },
+  {
+    "id": "case-sensory-somatic-07",
+    "kind": "translate",
+    "source": "მან დატოვა მწარე გემო პირში საუბრის შემდეგ.",
+    "expected": "მან მწარე გემო დაუტოვა საუბრის შემდეგ.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "taste",
+      "bitter"
+    ]
+  },
+  {
+    "id": "case-sensory-somatic-08",
+    "kind": "translate",
+    "source": "ამ ამბავმა დატოვა მწარე გემო მის პირში სამუდამოდ.",
+    "expected": "ამ ამბავმა მწარე გემო დაუტოვა სამუდამოდ.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "taste",
+      "mouth"
+    ]
+  },
+  {
+    "id": "case-sensory-somatic-09",
+    "kind": "translate",
+    "source": "ზამთრის სიცივემ გაჭრა ძვალამდე მგზავრს.",
+    "expected": "ზამთრის სიცივემ ძვლებამდე გაატანა მგზავრს.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "cold",
+      "bone"
+    ]
+  },
+  {
+    "id": "case-sensory-somatic-10",
+    "kind": "translate",
+    "source": "ღამის სიცივემ გაჭრა ძვალამდე მეომრებს.",
+    "expected": "ღამის სიცივემ ძვლებამდე გაატანა მეომრებს.",
+    "weight": 1.0,
+    "tags": [
+      "sensory",
+      "cold",
+      "bone"
+    ]
+  },
+  {
+    "id": "case-epistemic-disc-01",
+    "kind": "translate",
+    "source": "როგორც ფაქტის საკითხი, ის მართალი იყო.",
+    "expected": "სინამდვილეში, ის მართალი იყო.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "discourse",
+      "matter_of_fact"
+    ]
+  },
+  {
+    "id": "case-epistemic-disc-02",
+    "kind": "translate",
+    "source": "როგორც ფაქტის საკითხი, ჩვენ გავიმარჯვეთ.",
+    "expected": "სინამდვილეში, ჩვენ გავიმარჯვეთ.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "discourse",
+      "matter_of_fact"
+    ]
+  },
+  {
+    "id": "case-epistemic-disc-03",
+    "kind": "translate",
+    "source": "ყველა ანგარიშით, მტერი უკან იხევდა.",
+    "expected": "როგორც ჩანს, მტერი უკან იხევდა.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "evidential",
+      "all_accounts"
+    ]
+  },
+  {
+    "id": "case-epistemic-disc-04",
+    "kind": "translate",
+    "source": "ყველა ანგარიშით, გეგმა წარმატებული იყო.",
+    "expected": "როგორც ჩანს, გეგმა წარმატებული იყო.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "evidential",
+      "all_accounts"
+    ]
+  },
+  {
+    "id": "case-epistemic-disc-05",
+    "kind": "translate",
+    "source": "არ აქვს მნიშვნელობა რა მოხდება ხვალ, ჩვენ გავიმარჯვებთ.",
+    "expected": "რაც არ უნდა მოხდეს ხვალ, ჩვენ გავიმარჯვებთ.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "concessive",
+      "no_matter"
+    ]
+  },
+  {
+    "id": "case-epistemic-disc-06",
+    "kind": "translate",
+    "source": "არ აქვს მნიშვნელობა რა მოხდება ბრძოლაში, არ დაიხიო უკან.",
+    "expected": "რაც არ უნდა მოხდეს ბრძოლაში, არ დაიხიო უკან.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "concessive",
+      "no_matter"
+    ]
+  },
+  {
+    "id": "case-epistemic-disc-07",
+    "kind": "translate",
+    "source": "სხვა სიტყვებში, ეს შეუძლებელი ამოცანაა.",
+    "expected": "სხვა სიტყვებით რომ ვთქვათ, ეს შეუძლებელი ამოცანაა.",
+    "weight": 1.0,
+    "tags": [
+      "discourse",
+      "reformulation",
+      "in_other_words"
+    ]
+  },
+  {
+    "id": "case-epistemic-disc-08",
+    "kind": "translate",
+    "source": "სხვა სიტყვებში, სიმართლე გამჟღავნდა.",
+    "expected": "სხვა სიტყვებით რომ ვთქვათ, სიმართლე გამჟღავნდა.",
+    "weight": 1.0,
+    "tags": [
+      "discourse",
+      "reformulation",
+      "in_other_words"
+    ]
+  },
+  {
+    "id": "case-epistemic-disc-09",
+    "kind": "translate",
+    "source": "სიმართლე სათქმელად, მე ეს არ ვიცოდი.",
+    "expected": "სიმართლე რომ ითქვას, მე ეს არ ვიცოდი.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "veracity",
+      "truth_be_told"
+    ]
+  },
+  {
+    "id": "case-epistemic-disc-10",
+    "kind": "translate",
+    "source": "სიმართლე სათქმელად, საქმე რთულად იყო.",
+    "expected": "სიმართლე რომ ითქვას, საქმე რთულად იყო.",
+    "weight": 1.0,
+    "tags": [
+      "epistemic",
+      "veracity",
+      "truth_be_told"
+    ]
+  },
+  {
+    "id": "case-motion-transit-01",
+    "kind": "translate",
+    "source": "ბიჭი გაიქცა უკან ყურების გარეშე ტყეში.",
+    "expected": "ბიჭი უკანმოუხედავად გაიქცა ტყეში.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "transit",
+      "look_back"
+    ]
+  },
+  {
+    "id": "case-motion-transit-02",
+    "kind": "translate",
+    "source": "მან უკან ყურების გარეშე გაიქცა მდინარისკენ.",
+    "expected": "მან უკანმოუხედავად გაიქცა მდინარისკენ.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "transit",
+      "look_back"
+    ]
+  },
+  {
+    "id": "case-motion-transit-03",
+    "kind": "translate",
+    "source": "მხედარი გაიქცა უკან ყურების გარეშე ციხესიმაგრიდან.",
+    "expected": "მხედარი უკანმოუხედავად გაიქცა ციხესიმაგრიდან.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "transit",
+      "look_back"
+    ]
+  },
+  {
+    "id": "case-motion-transit-04",
+    "kind": "translate",
+    "source": "მოგზაურმა გააკეთა თავისი გზა უღრან ტყეში.",
+    "expected": "მოგზაურმა გზა გაიკვლია უღრან ტყეში.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "transit",
+      "make_way"
+    ]
+  },
+  {
+    "id": "case-motion-transit-05",
+    "kind": "translate",
+    "source": "მეომარმა თავისი გზა გააკეთა ციხესიმაგრისკენ.",
+    "expected": "მეომარმა გზა გაიკვლია ციხესიმაგრისკენ.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "transit",
+      "make_way"
+    ]
+  },
+  {
+    "id": "case-motion-transit-06",
+    "kind": "translate",
+    "source": "მზვერავი მიჰყვა ცხელ ქუსლებზე მტერს.",
+    "expected": "მზვერავი ფეხდაფეხ მიჰყვებოდა მტერს.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "pursuit",
+      "hot_on_heels"
+    ]
+  },
+  {
+    "id": "case-motion-transit-07",
+    "kind": "translate",
+    "source": "რაინდი მიჰყვა ცხელ ქუსლებზე გამტაცებელს.",
+    "expected": "რაინდი ფეხდაფეხ მიჰყვებოდა გამტაცებელს.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "pursuit",
+      "hot_on_heels"
+    ]
+  },
+  {
+    "id": "case-motion-transit-08",
+    "kind": "translate",
+    "source": "მან გაიარა გვერდით გარშემო დაბრკოლებას.",
+    "expected": "მან გვერდი აუარა დაბრკოლებას.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "transit",
+      "bypass"
+    ]
+  },
+  {
+    "id": "case-motion-transit-09",
+    "kind": "translate",
+    "source": "ეტლმა გაიარა გვერდით გარშემო ორმოს.",
+    "expected": "ეტლმა გვერდი აუარა ორმოს.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "transit",
+      "bypass"
+    ]
+  },
+  {
+    "id": "case-motion-transit-10",
+    "kind": "translate",
+    "source": "მოხუცმა მიჰყვა თავისი თვალებით მიმავალ ეტლს.",
+    "expected": "მოხუცმა თვალი გააყოლა მიმავალ ეტლს.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "visual",
+      "follow_with_eyes"
+    ]
+  },
+  {
+    "id": "case-motion-transit-11",
+    "kind": "translate",
+    "source": "გოგონამ მიჰყვა თავისი თვალებით მიმფრინავ ჩიტს.",
+    "expected": "გოგონამ თვალი გააყოლა მიმფრინავ ჩიტს.",
+    "weight": 1.0,
+    "tags": [
+      "motion",
+      "visual",
+      "follow_with_eyes"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-01",
+    "kind": "translate",
+    "source": "მან გაჭრა მისი სიტყვა მოულოდნელად კრებაზე.",
+    "expected": "მან სიტყვა შეაწყვეტინა მოულოდნელად კრებაზე.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "cut_off"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-02",
+    "kind": "translate",
+    "source": "მსაჯულმა გაჭრა მისი სიტყვა დარბაზში.",
+    "expected": "მსაჯულმა სიტყვა შეაწყვეტინა დარბაზში.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "cut_off"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-03",
+    "kind": "translate",
+    "source": "მასწავლებელმა შეაწყვეტინა იგი საუბრისას.",
+    "expected": "მასწავლებელმა სიტყვა შეაწყვეტინა საუბრისას.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "interrupt"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-04",
+    "kind": "translate",
+    "source": "მოხუცმა შეაწყვეტინა იგი მშვიდად.",
+    "expected": "მოხუცმა სიტყვა შეაწყვეტინა მშვიდად.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "interrupt"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-05",
+    "kind": "translate",
+    "source": "მგზავრმა დაარტყა საუბარი მეზობელთან ვაგონში.",
+    "expected": "მგზავრმა საუბარი გააბა მეზობელთან ვაგონში.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "strike_up"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-06",
+    "kind": "translate",
+    "source": "მეფემ დაარტყა საუბარი ელჩთან სასახლეში.",
+    "expected": "მეფემ საუბარი გააბა ელჩთან სასახლეში.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "strike_up"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-07",
+    "kind": "translate",
+    "source": "ყმაწვილმა ილაპარაკა უკან უხეშად მასპინძელს.",
+    "expected": "ყმაწვილმა სიტყვა შეუბრუნა უხეშად მასპინძელს.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "talk_back"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-08",
+    "kind": "translate",
+    "source": "ჯარისკაცმა ილაპარაკა უკან მეთაურს.",
+    "expected": "ჯარისკაცმა სიტყვა შეუბრუნა მეთაურს.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "talk_back"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-09",
+    "kind": "translate",
+    "source": "მოხუცმა გამოხატა აზრი ამ წინადადებაზე.",
+    "expected": "მოხუცმა აზრი გამოთქვა ამ წინადადებაზე.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "express_opinion"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-10",
+    "kind": "translate",
+    "source": "ბრძენმა გამოხატა აზრი შეკრებაზე.",
+    "expected": "ბრძენმა აზრი გამოთქვა შეკრებაზე.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "express_opinion"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-11",
+    "kind": "translate",
+    "source": "მან ილაპარაკა თავისი გონება ყველას წინაშე.",
+    "expected": "მან გულახდილად გამოთქვა აზრი ყველას წინაშე.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "speak_mind"
+    ]
+  },
+  {
+    "id": "case-dialogue-locution-12",
+    "kind": "translate",
+    "source": "ავტორმა ილაპარაკა თავისი გონება წიგნში.",
+    "expected": "ავტორმა გულახდილად გამოთქვა აზრი წიგნში.",
+    "weight": 1.0,
+    "tags": [
+      "dialogue",
+      "locution",
+      "speak_mind"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-03",
+    "kind": "translate",
+    "source": "ისინი მუშაობდნენ დღის გავლით მინდორში.",
+    "expected": "ისინი მუშაობდნენ მთელი დღის განმავლობაში მინდორში.",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "durative",
+      "throughout_day"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-04",
+    "kind": "translate",
+    "source": "მგზავრები მიდიოდნენ დღის გავლით გზაზე.",
+    "expected": "მგზავრები მიდიოდნენ მთელი დღის განმავლობაში გზაზე.",
+    "weight": 1.0,
+    "tags": [
+      "temporal",
+      "durative",
+      "throughout_day"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-05",
+    "kind": "translate",
+    "source": "საშინელების დანახვაზე ის გაიყინა ადგილზე ერთ წამში.",
+    "expected": "საშინელების დანახვაზე ის წამიერად გაქვავდა.",
+    "weight": 1.0,
+    "tags": [
+      "existential",
+      "state",
+      "froze_in_place"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-06",
+    "kind": "translate",
+    "source": "ხმის გაგონებაზე მცველი გაიყინა ადგილზე ერთ წამში.",
+    "expected": "ხმის გაგონებაზე მცველი წამიერად გაქვავდა.",
+    "weight": 1.0,
+    "tags": [
+      "existential",
+      "state",
+      "froze_in_place"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-07",
+    "kind": "translate",
+    "source": "უცნობი გაიყინა ადგილზე მოულოდნელად.",
+    "expected": "უცნობი წამიერად გაქვავდა მოულოდნელად.",
+    "weight": 1.0,
+    "tags": [
+      "existential",
+      "state",
+      "froze_in_place"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-08",
+    "kind": "translate",
+    "source": "მან დაიჭირა მომენტი და ოთახიდან გავიდა.",
+    "expected": "მან დრო იხელთა და ოთახიდან გავიდა.",
+    "weight": 1.0,
+    "tags": [
+      "existential",
+      "state",
+      "seized_moment"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-09",
+    "kind": "translate",
+    "source": "მეთაურმა დაიჭირა მომენტი და შეტევა დაიწყო.",
+    "expected": "მეთაურმა დრო იხელთა და შეტევა დაიწყო.",
+    "weight": 1.0,
+    "tags": [
+      "existential",
+      "state",
+      "seized_moment"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-10",
+    "kind": "translate",
+    "source": "სირბილის შემდეგ მგზავრმა ძლივს დაიჭირა თავისი სუნთქვა.",
+    "expected": "სირბილის შემდეგ მგზავრმა სულს ძლივს ითქვამდა.",
+    "weight": 1.0,
+    "tags": [
+      "existential",
+      "somatic",
+      "catch_breath"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-11",
+    "kind": "translate",
+    "source": "კიბეზე ასვლისას მოხუცმა ძლივს დაიჭირა თავისი სუნთქვა.",
+    "expected": "კიბეზე ასვლისას მოხუცმა სულს ძლივს ითქვამდა.",
+    "weight": 1.0,
+    "tags": [
+      "existential",
+      "somatic",
+      "catch_breath"
+    ]
+  },
+  {
+    "id": "case-temporal-durative-12",
+    "kind": "translate",
+    "source": "მძიმე შრომის შემდეგ ის ძლივს დაიჭირა თავისი სუნთქვა.",
+    "expected": "მძიმე შრომის შემდეგ ის სულს ძლივს ითქვამდა.",
+    "weight": 1.0,
+    "tags": [
+      "existential",
+      "somatic",
+      "catch_breath"
+    ]
   }
 ]

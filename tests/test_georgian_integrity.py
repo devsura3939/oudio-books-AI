@@ -1065,6 +1065,74 @@ class TestGeorgianLiteraryIntegrity(unittest.TestCase):
             polished = synthesize_georgian_morphology(raw)
             self.assertEqual(polished, expected, f"Intensifier collocation failed for '{raw}': got '{polished}'")
 
+    def test_70_sensory_perception_somatic(self):
+        """Verify sensory perception and somatic idioms (Rule Group 71)."""
+        pairs = [
+            ("ჰაერში მძაფრი სუნი ეკიდა მთელი ღამე.", "ჰაერში მძაფრი სუნი იდგა მთელი ღამე."),
+            ("უცებ სიცივემ გაიარა მის ხერხემალში შიშისგან.", "უცებ ტანში ცივმა ჟრუანტელმა დაუარა შიშისგან."),
+            ("ყვირილის შემდეგ ზარი მის ყურებში გაისმა.", "ყვირილის შემდეგ ყურებში წუილი გაისმა."),
+            ("აფეთქებისგან ყურებში რეკვა დაიწყო მოულოდნელად.", "აფეთქებისგან ყურები აუწუილდა მოულოდნელად."),
+            ("მან დატოვა მწარე გემო პირში საუბრის შემდეგ.", "მან მწარე გემო დაუტოვა საუბრის შემდეგ."),
+            ("ზამთრის სიცივემ გაჭრა ძვალამდე მგზავრს.", "ზამთრის სიცივემ ძვლებამდე გაატანა მგზავრს."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Sensory perception failed for '{raw}': got '{polished}'")
+
+    def test_71_epistemic_discourse_pragmatics(self):
+        """Verify epistemic evidentiality and discourse connectives (Rule Group 72)."""
+        pairs = [
+            ("როგორც ფაქტის საკითხი, ის მართალი იყო.", "სინამდვილეში, ის მართალი იყო."),
+            ("ყველა ანგარიშით, მტერი უკან იხევდა.", "როგორც ჩანს, მტერი უკან იხევდა."),
+            ("არ აქვს მნიშვნელობა რა მოხდება ხვალ, ჩვენ გავიმარჯვებთ.", "რაც არ უნდა მოხდეს ხვალ, ჩვენ გავიმარჯვებთ."),
+            ("სხვა სიტყვებში, ეს შეუძლებელი ამოცანაა.", "სხვა სიტყვებით რომ ვთქვათ, ეს შეუძლებელი ამოცანაა."),
+            ("სიმართლე სათქმელად, მე ეს არ ვიცოდი.", "სიმართლე რომ ითქვას, მე ეს არ ვიცოდი."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Epistemic discourse failed for '{raw}': got '{polished}'")
+
+    def test_72_dynamic_motion_spatial_transit(self):
+        """Verify dynamic motion and spatial transit idioms (Rule Group 73)."""
+        pairs = [
+            ("ბიჭი გაიქცა უკან ყურების გარეშე ტყეში.", "ბიჭი უკანმოუხედავად გაიქცა ტყეში."),
+            ("მოგზაურმა გააკეთა თავისი გზა უღრან ტყეში.", "მოგზაურმა გზა გაიკვლია უღრან ტყეში."),
+            ("მზვერავი მიჰყვა ცხელ ქუსლებზე მტერს.", "მზვერავი ფეხდაფეხ მიჰყვებოდა მტერს."),
+            ("მან გაიარა გვერდით გარშემო დაბრკოლებას.", "მან გვერდი აუარა დაბრკოლებას."),
+            ("მოხუცმა მიჰყვა თავისი თვალებით მიმავალ ეტლს.", "მოხუცმა თვალი გააყოლა მიმავალ ეტლს."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Motion transit failed for '{raw}': got '{polished}'")
+
+    def test_73_conversational_interlocution_dialogue(self):
+        """Verify conversational interlocution and dialogue discourse (Rule Group 74)."""
+        pairs = [
+            ("მან გაჭრა მისი სიტყვა მოულოდნელად კრებაზე.", "მან სიტყვა შეაწყვეტინა მოულოდნელად კრებაზე."),
+            ("მასწავლებელმა შეაწყვეტინა იგი საუბრისას.", "მასწავლებელმა სიტყვა შეაწყვეტინა საუბრისას."),
+            ("მგზავრმა დაარტყა საუბარი მეზობელთან ვაგონში.", "მგზავრმა საუბარი გააბა მეზობელთან ვაგონში."),
+            ("ყმაწვილმა ილაპარაკა უკან უხეშად მასპინძელს.", "ყმაწვილმა სიტყვა შეუბრუნა უხეშად მასპინძელს."),
+            ("მოხუცმა გამოხატა აზრი ამ წინადადებაზე.", "მოხუცმა აზრი გამოთქვა ამ წინადადებაზე."),
+            ("მან ილაპარაკა თავისი გონება ყველას წინაშე.", "მან გულახდილად გამოთქვა აზრი ყველას წინაშე."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Conversational locution failed for '{raw}': got '{polished}'")
+
+    def test_74_existential_state_temporal_duratives(self):
+        """Verify existential state transitions and temporal duratives (Rule Group 75)."""
+        pairs = [
+            ("სანამ ისინი ელოდნენ, დრო გადიოდა გარეთ ნელა.", "სანამ ისინი ელოდნენ, დრო მიდიოდა ნელა."),
+            ("ისინი მუშაობდნენ დღის გავლით მინდორში.", "ისინი მუშაობდნენ მთელი დღის განმავლობაში მინდორში."),
+            ("საშინელების დანახვაზე ის გაიყინა ადგილზე ერთ წამში.", "საშინელების დანახვაზე ის წამიერად გაქვავდა."),
+            ("მან დაიჭირა მომენტი და ოთახიდან გავიდა.", "მან დრო იხელთა და ოთახიდან გავიდა."),
+            ("სირბილის შემდეგ მგზავრმა ძლივს დაიჭირა თავისი სუნთქვა.", "სირბილის შემდეგ მგზავრმა სულს ძლივს ითქვამდა."),
+        ]
+        for raw, expected in pairs:
+            polished = synthesize_georgian_morphology(raw)
+            self.assertEqual(polished, expected, f"Temporal durative failed for '{raw}': got '{polished}'")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+

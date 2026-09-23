@@ -1,5 +1,5 @@
 {
-  "version": 42,
+  "version": 43,
   "language": "ka",
   "score": 100.0,
   "enabled": true,
@@ -9233,10 +9233,484 @@
       "session_id": "train-session-20260923192740-0fde80",
       "model": "autonomous-trainer-v42",
       "note": "Top to bottom"
+    },
+    {
+      "id": "item-b6e269d58895",
+      "type": "glossary",
+      "pattern": "მძაფრი სუნი ეკიდა",
+      "replacement": "მძაფრი სუნი იდგა",
+      "note": "Sensory smell collocation",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-f84b4713ff7d",
+      "type": "glossary",
+      "pattern": "სუნი ეკიდა ჰაერში",
+      "replacement": "მძაფრი სუნი იდგა",
+      "note": "Sensory smell collocation",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-dfc744abbcfe",
+      "type": "glossary",
+      "pattern": "სიცივემ გაიარა მის ხერხემალში",
+      "replacement": "ტანში ცივმა ჟრუანტელმა დაუარა",
+      "note": "Sensory chill down spine",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-97c779af2c4c",
+      "type": "glossary",
+      "pattern": "ზარი მის ყურებში",
+      "replacement": "ყურებში წუილი",
+      "note": "Sensory auditory ringing in ears",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-ddcb0578f581",
+      "type": "glossary",
+      "pattern": "ყურებში რეკვა დაიწყო",
+      "replacement": "ყურები აუწუილდა",
+      "note": "Sensory auditory ringing in ears",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-bd141b7b51bb",
+      "type": "glossary",
+      "pattern": "დატოვა მწარე გემო პირში",
+      "replacement": "მწარე გემო დაუტოვა",
+      "note": "Sensory taste bitter",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-43b35a291968",
+      "type": "glossary",
+      "pattern": "დატოვა მწარე გემო მის პირში",
+      "replacement": "მწარე გემო დაუტოვა",
+      "note": "Sensory taste bitter",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-7b036393f914",
+      "type": "glossary",
+      "pattern": "სიცივემ გაჭრა ძვალამდე",
+      "replacement": "სიცივემ ძვლებამდე გაატანა",
+      "note": "Sensory cold cut to bone",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-5c906be58000",
+      "type": "glossary",
+      "pattern": "როგორც ფაქტის საკითხი",
+      "replacement": "სინამდვილეში",
+      "note": "Epistemic as a matter of fact",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-ea8ee718f5b0",
+      "type": "glossary",
+      "pattern": "ყველა ანგარიშით",
+      "replacement": "როგორც ჩანს",
+      "note": "Evidential by all accounts",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-29fbf84af1e5",
+      "type": "glossary",
+      "pattern": "არ აქვს მნიშვნელობა რა მოხდება",
+      "replacement": "რაც არ უნდა მოხდეს",
+      "note": "Concessive no matter what happens",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-8a237eabfe25",
+      "type": "glossary",
+      "pattern": "სხვა სიტყვებში",
+      "replacement": "სხვა სიტყვებით რომ ვთქვათ",
+      "note": "Discourse in other words",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-af099e27e678",
+      "type": "glossary",
+      "pattern": "სიმართლე სათქმელად",
+      "replacement": "სიმართლე რომ ითქვას",
+      "note": "Epistemic truth be told",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-53ddeec4e746",
+      "type": "glossary",
+      "pattern": "გაიქცა უკან ყურების გარეშე",
+      "replacement": "უკანმოუხედავად გაიქცა",
+      "note": "Motion ran without looking back",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-a4ccd46b820e",
+      "type": "glossary",
+      "pattern": "უკან ყურების გარეშე გაიქცა",
+      "replacement": "უკანმოუხედავად გაიქცა",
+      "note": "Motion ran without looking back",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-ac41c69300d5",
+      "type": "glossary",
+      "pattern": "გააკეთა თავისი გზა",
+      "replacement": "გზა გაიკვლია",
+      "note": "Motion made one's way",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-60da821c7a9e",
+      "type": "glossary",
+      "pattern": "თავისი გზა გააკეთა",
+      "replacement": "გზა გაიკვლია",
+      "note": "Motion made one's way",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-b867ecaa2afa",
+      "type": "glossary",
+      "pattern": "მიჰყვა ცხელ ქუსლებზე",
+      "replacement": "ფეხდაფეხ მიჰყვებოდა",
+      "note": "Pursuit hot on heels",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-7f0fb583a961",
+      "type": "glossary",
+      "pattern": "გაიარა გვერდით გარშემო",
+      "replacement": "გვერდი აუარა",
+      "note": "Motion bypassed/skirted",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-31b4993e4761",
+      "type": "glossary",
+      "pattern": "მიჰყვა თავისი თვალებით",
+      "replacement": "თვალი გააყოლა",
+      "note": "Motion followed with eyes",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-551e349334a7",
+      "type": "glossary",
+      "pattern": "გაჭრა მისი სიტყვა",
+      "replacement": "სიტყვა შეაწყვეტინა",
+      "note": "Dialogue interrupted/cut off",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-967df8db70fc",
+      "type": "glossary",
+      "pattern": "შეაწყვეტინა იგი",
+      "replacement": "სიტყვა შეაწყვეტინა",
+      "note": "Dialogue interrupted him",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-9f3f997daea3",
+      "type": "glossary",
+      "pattern": "დაარტყა საუბარი",
+      "replacement": "საუბარი გააბა",
+      "note": "Dialogue struck up conversation",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-e22de2a1740e",
+      "type": "glossary",
+      "pattern": "ილაპარაკა უკან",
+      "replacement": "სიტყვა შეუბრუნა",
+      "note": "Dialogue retorted/talked back",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-8c4b0142dbf8",
+      "type": "glossary",
+      "pattern": "გამოხატა აზრი",
+      "replacement": "აზრი გამოთქვა",
+      "note": "Dialogue expressed opinion",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-16f17b7ba328",
+      "type": "glossary",
+      "pattern": "ილაპარაკა თავისი გონება",
+      "replacement": "გულახდილად გამოთქვა აზრი",
+      "note": "Dialogue spoke mind",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-501c3aab0af7",
+      "type": "glossary",
+      "pattern": "დრო გადიოდა გარეთ",
+      "replacement": "დრო მიდიოდა",
+      "note": "Temporal time passed by",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-8a19d21ccfc4",
+      "type": "glossary",
+      "pattern": "დღის გავლით",
+      "replacement": "მთელი დღის განმავლობაში",
+      "note": "Temporal throughout the day",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-fbeaa9ee84e6",
+      "type": "glossary",
+      "pattern": "გაიყინა ადგილზე ერთ წამში",
+      "replacement": "წამიერად გაქვავდა",
+      "note": "State froze in place",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-042394b20810",
+      "type": "glossary",
+      "pattern": "გაიყინა ადგილზე",
+      "replacement": "წამიერად გაქვავდა",
+      "note": "State froze in place",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-17084cbbd508",
+      "type": "glossary",
+      "pattern": "დაიჭირა მომენტი",
+      "replacement": "დრო იხელთა",
+      "note": "State seized moment",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-7bcf6b35cdd4",
+      "type": "glossary",
+      "pattern": "ძლივს დაიჭირა თავისი სუნთქვა",
+      "replacement": "სულს ძლივს ითქვამდა",
+      "note": "Somatic catch breath",
+      "created_at": "2026-09-23T20:02:29.193929+00:00"
+    },
+    {
+      "id": "item-9eb3651ebd73",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:მძაფრი\\s+სუნი\\s+ეკიდა|სუნი\\s+ეკიდა\\s+ჰაერში)(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural sensory calque: use 'მძაფრი სუნი იდგა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-dac26aa95cac",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])სიცივემ\\s+გაიარა\\s+მის\\s+ხერხემალში(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural chill calque: use 'ტანში ცივმა ჟრუანტელმა დაუარა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-5f59c6372b3d",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:ზარი\\s+მის\\s+ყურებში|ყურებში\\s+რეკვა\\s+დაიწყო)(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural auditory calque: use 'ყურებში წუილი / ყურები აუწუილდა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-afe4727ce0f6",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])დატოვა\\s+მწარე\\s+გემო\\s+(?:მის\\s+)?პირში(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural taste calque: use 'მწარე გემო დაუტოვა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-fd99aa215844",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])სიცივემ\\s+გაჭრა\\s+ძვალამდე(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural bone chill calque: use 'სიცივემ ძვლებამდე გაატანა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-2fee3bd2289b",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])ყველა\\s+ანგარიშით(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural evidential calque: use 'როგორც ჩანს'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-0551e9b261c7",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])არ\\s+აქვს\\s+მნიშვნელობა\\s+რა\\s+მოხდება(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural concessive calque: use 'რაც არ უნდა მოხდეს'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-5947d94c3428",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])სხვა\\s+სიტყვებში(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural discourse calque: use 'სხვა სიტყვებით რომ ვთქვათ'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-556bef8843ad",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])სიმართლე\\s+სათქმელად(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural veracity calque: use 'სიმართლე რომ ითქვას'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-66920b7c0cac",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:გაიქცა\\s+უკან\\s+ყურების\\s+გარეშე|უკან\\s+ყურების\\s+გარეშე\\s+გაიქცა)(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural motion calque: use 'უკანმოუხედავად გაიქცა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-77f1c4ef43b6",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:გააკეთა\\s+თავისი\\s+გზა|თავისი\\s+გზა\\s+გააკეთა)(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural transit calque: use 'გზა გაიკვლია'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-cbf7187b40b5",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])მიჰყვა\\s+ცხელ\\s+ქუსლებზე(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural pursuit calque: use 'ფეხდაფეხ მიჰყვებოდა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-b3c6ef3474ce",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])გაიარა\\s+გვერდით\\s+გარშემო(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural motion calque: use 'გვერდი აუარა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-e0c1f2e5f148",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])მიჰყვა\\s+თავისი\\s+თვალებით(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural visual calque: use 'თვალი გააყოლა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-907471c83e2b",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])(?:გაჭრა\\s+მისი\\s+სიტყვა|შეაწყვეტინა\\s+იგი)(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural interruption calque: use 'სიტყვა შეაწყვეტინა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-e1933dac3798",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაარტყა\\s+საუბარი(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural dialogue calque: use 'საუბარი გააბა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-139fe69fd3f5",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])ილაპარაკა\\s+უკან(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural dialogue calque: use 'სიტყვა შეუბრუნა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-194b5a1c4fb9",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])გამოხატა\\s+აზრი(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural dialogue calque: use 'აზრი გამოთქვა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-c8c95e5d4b75",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])ილაპარაკა\\s+თავისი\\s+გონება(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural dialogue calque: use 'გულახდილად გამოთქვა აზრი'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-20e24be1f839",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])დრო\\s+გადიოდა\\s+გარეთ(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural temporal calque: use 'დრო მიდიოდა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-a1bf0991f49b",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])დღის\\s+გავლით(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural temporal calque: use 'მთელი დღის განმავლობაში'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-b28d348d84b4",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])გაიყინა\\s+ადგილზე(?:\\s+ერთ\\s+წამში)?(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural state calque: use 'წამიერად გაქვავდა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-140bdc91b825",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])დაიჭირა\\s+მომენტი(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural state calque: use 'დრო იხელთა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
+    },
+    {
+      "id": "item-f353488247cc",
+      "type": "qa_rule",
+      "pattern": "(?<![\\u10A0-\\u10FF])ძლივს\\s+დაიჭირა\\s+თავისი\\s+სუნთქვა(?![\\u10A0-\\u10FF])",
+      "replacement": "Unnatural somatic calque: use 'სულს ძლივს ითქვამდა'",
+      "note": "Iteration 6 rule",
+      "created_at": "2026-09-23T20:02:29.193929+00:00",
+      "severity": "error"
     }
   ],
-  "updated_at": "2026-09-23T19:29:56.183843+00:00",
+  "updated_at": "2026-09-23T20:03:41.743452+00:00",
   "last_score": 100.0,
   "last_evaluated_at": "2026-09-17T21:49:58.093333+00:00",
-  "benchmark_cases_count": 740
+  "benchmark_cases_count": 740,
+  "benchmark_score": 100.0,
+  "benchmark_cases": 861
 }
