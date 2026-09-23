@@ -796,14 +796,14 @@ def translate_with_kona(
                 },
                 "keep_alive": "60m"
             },
-            timeout=50.0
+            timeout=float(os.environ.get("KONA_TIMEOUT", "12.0"))
         )
         elapsed = time.time() - t0
         if resp.status_code == 200:
-            if elapsed > 45.0:
+            if elapsed > 10.0:
                 _kona_circuit["consecutive_slow"] += 1
-                if _kona_circuit["consecutive_slow"] >= 3:
-                    _kona_circuit["degraded_until"] = time.time() + 60.0
+                if _kona_circuit["consecutive_slow"] >= 1:
+                    _kona_circuit["degraded_until"] = time.time() + 300.0
                     _kona_circuit["consecutive_slow"] = 0
             else:
                 _kona_circuit["consecutive_slow"] = 0
@@ -814,15 +814,13 @@ def translate_with_kona(
                 return cand
         else:
             _kona_circuit["consecutive_slow"] += 1
-            if _kona_circuit["consecutive_slow"] >= 3:
-                _kona_circuit["degraded_until"] = time.time() + 60.0
-                _kona_circuit["consecutive_slow"] = 0
+            _kona_circuit["degraded_until"] = time.time() + 300.0
+            _kona_circuit["consecutive_slow"] = 0
     except Exception as e:
         print(f"[translation_engine] kona2 translation skipped: {e}")
         _kona_circuit["consecutive_slow"] += 1
-        if _kona_circuit["consecutive_slow"] >= 3:
-            _kona_circuit["degraded_until"] = time.time() + 60.0
-            _kona_circuit["consecutive_slow"] = 0
+        _kona_circuit["degraded_until"] = time.time() + 300.0
+        _kona_circuit["consecutive_slow"] = 0
     return None
 
 
