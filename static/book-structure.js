@@ -109,6 +109,16 @@
         }
         return { chapters, pageCount: list.length, method: hasOutline ? 'pdf-outline' : headingCount ? 'heading' : 'page', emptyPages: list.filter(p => !p.text.trim()).map(p => p.index) };
     }
-    const needsOcr = text => (String(text).match(/\p{L}/gu) || []).length < 20 || /\uFFFD/.test(String(text));
+    function needsOcr(text) {
+        const raw = String(text || '');
+        if (/\uFFFD/.test(raw)) return true;
+        const trimmed = raw.trim();
+        if (!trimmed) return true;
+        const letters = (trimmed.match(/\p{L}/gu) || []).length;
+        if (letters >= 20) return false;
+        if (heading(trimmed)) return false;
+        if (/^(?:the\s+end|finis|fin|end|contents|dedication)\b/i.test(trimmed)) return false;
+        return true;
+    }
     return { heading, pageLines, outline, structure, needsOcr };
 });

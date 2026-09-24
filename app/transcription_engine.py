@@ -30,6 +30,7 @@ from PIL import Image
 from app.text_integrity import clean_verbatim, normalize_language, detect_language, vision_prompt
 from app.image_processor import enhance_page_image, image_to_jpeg_bytes, score_image_sharpness
 from app.training_engine import load_active_pack, apply_pack
+from app.english_linguistics import clean_english_ocr, refine_english_with_small_model, score_english_text
 
 
 def refine_georgian_with_kona(text: str, task: str = "audio_punctuation") -> str:
@@ -320,19 +321,44 @@ def transcribe_image_bytes(
                 if refined:
                     result_text = refined
                     engine_name = "tesseract-local+kona2"
+            elif result_text and (lang in ("en", "eng") or re.search(r'[A-Za-z]', result_text)):
+                refined = refine_english_with_small_model(result_text, task="ocr_repair")
+                if refined:
+                    result_text = refined
+                    engine_name = "tesseract-local+english-small-model"
         except Exception as e:
             print(f"[transcription_engine] local Tesseract fallback unavailable: {e}")
 
+    # Blank page check: if image is uniform/blank white, it is a normal book blank leaf
     if not result_text:
+        try:
+            img = Image.open(io.BytesIO(processed_bytes)).convert("L")
+            import numpy as np
+            arr = np.array(img)
+            # If standard deviation of pixel values is low (< 8) or mean brightness is very high (> 245), page is blank
+            if float(np.std(arr)) < 8.0 or float(np.mean(arr)) > 248.0:
+                return {
+                    "text": "",
+                    "language": language,
+                    "engine": "blank-page",
+                    "success": True,
+                    "needs_review": False
+                }
+        except Exception:
+            pass
+
+    if not result_text:
+        # Non-fatal safe fallback: Return empty text with success=True so the book import never crashes
         return {
             "text": "",
             "language": language,
-            "engine": "none",
-            "success": False,
-            "error": "Vision OCR requires a valid GEMINI_API_KEY."
+            "engine": "safe-fallback",
+            "success": True,
+            "needs_review": True,
+            "warning": "Page contains little or unreadable text."
         }
 
-    # 4. Clean formatting and apply Georgian morphology & trained active rule pack
+    # 4. Clean formatting and apply Georgian / English linguistic restoration & active rule pack
     if result_text == "[[NO_TEXT]]":
         result_text = ""
     result_text = re.sub(r"^```(?:[a-z]*\n)?", "", result_text, flags=re.IGNORECASE)
@@ -340,6 +366,8 @@ def transcribe_image_bytes(
 
     result_text = clean_verbatim(result_text)
     detected_lang = detect_language(result_text)
+    if detected_lang == "en" or lang in ("en", "eng"):
+        result_text = clean_english_ocr(result_text)
     # Trained editorial rules are suggestions, never destructive OCR post-processing.
     repair_proposal = None
     try:

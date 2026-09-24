@@ -8,13 +8,15 @@ from app.models import Chapter, BookData
 from app.text_integrity import reflow_narrative_paragraphs
 
 CHAPTER_PATTERNS = [
-    re.compile(r'^\s*(chapter\s+(?:[0-9]+|[ivxlcdm]+))\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
-    re.compile(r'^\s*(part\s+(?:[0-9]+|[ivxlcdm]+))\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
-    re.compile(r'^\s*(book\s+(?:[0-9]+|[ivxlcdm]+))\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
+    re.compile(r'^\s*(chapter\s+(?:[0-9]+|[ivxlcdm]+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty(?:-[a-z]+)?))\b\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
+    re.compile(r'^\s*(c\s+h\s+a\s+p\s+t\s+e\s+r\s+(?:[0-9]+|[ivxlcdm]+))\b\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
+    re.compile(r'^\s*(part\s+(?:[0-9]+|[ivxlcdm]+|one|two|three|four|five|six|seven|eight|nine|ten))\b\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
+    re.compile(r'^\s*(p\s+a\s+r\s+t\s+(?:[0-9]+|[ivxlcdm]+))\b\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
+    re.compile(r'^\s*(book\s+(?:[0-9]+|[ivxlcdm]+|one|two|three|four|five))\b\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
     re.compile(r'^\s*(act\s+(?:[0-9]+|[ivxlcdm]+))\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
     re.compile(r'^\s*(prologue|epilogue|introduction|preface|foreword|conclusion|afterword)\b\s*[:.\-–—]?\s*(.*)$', re.IGNORECASE),
-    re.compile(r'^\s*(თავი\s+(?:[0-9]+|[ა-ჰ]+))\s*[:.\-–—]?\s*(.*)$'),
-    re.compile(r'^\s*(ნაწილი\s+(?:[0-9]+|[ა-ჰ]+))\s*[:.\-–—]?\s*(.*)$'),
+    re.compile(r'^\s*(თავი\s+(?:[0-9]+|[ა-ჰ]+|პირველი|მეორე|მესამე|მეოთხე|მეხუთე|მეექვსე|მეშვიდე|მერვე|მეცხრე|მეათე))\s*[:.\-–—]?\s*(.*)$'),
+    re.compile(r'^\s*(ნაწილი\s+(?:[0-9]+|[ა-ჰ]+|პირველი|მეორე|მესამე|მეოთხე|მეხუთე))\s*[:.\-–—]?\s*(.*)$'),
     re.compile(r'^\s*(წიგნი\s+(?:[0-9]+|[ა-ჰ]+))\s*[:.\-–—]?\s*(.*)$'),
     re.compile(r'^\s*(შესავალი|წინასიტყვაობა|ბოლოსიტყვაობა|დასკვნა|დანართი|პროლოგი|ეპილოგი)\b\s*[:.\-–—]?\s*(.*)$'),
 ]
@@ -23,10 +25,12 @@ PAGE_NUMBER_PATTERN = re.compile(r'^\s*(?:page\s+)?(?:\d+|[ivxlcdm]+)(?:\s+of\s+
 HYPHENATED_LINE_BREAK = re.compile(r'(\b\w+)-\n(\w+\b)')
 
 def clean_page_text(text: str) -> str:
-    """Clean common PDF extraction artifacts from a single page's text."""
+    """Clean common PDF extraction artifacts from a single page's text using English linguistics."""
     if not text:
         return ""
     
+    from app.english_linguistics import clean_english_ocr, reconstruct_spaced_headings
+    text = reconstruct_spaced_headings(text)
     text = HYPHENATED_LINE_BREAK.sub(r'\1\2', text)
     lines = text.splitlines()
     cleaned_lines = []
@@ -45,6 +49,7 @@ def clean_page_text(text: str) -> str:
     
     result = "\n".join(cleaned_lines)
     result = re.sub(r'\n{3,}', '\n\n', result)
+    result = clean_english_ocr(result)
     return result.strip()
 
 def _extract_outline_items(reader: PdfReader, outline: Any) -> List[Tuple[str, int]]:

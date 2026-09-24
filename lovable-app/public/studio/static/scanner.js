@@ -1565,7 +1565,15 @@ ${text.slice(0, 10000)}`;
   function offlineLinguisticPass(text, lang) {
     if (!text || typeof text !== "string") return text || "";
     const isKa = lang === "kat" || lang === "ka" || (text.match(/[\u10A0-\u10FF]/g) || []).length > 8;
-    if (!isKa) return window.EngbotPack ? window.EngbotPack.apply(text, 'en', 'transcribe') : text;
+    if (!isKa) {
+      let cleaned = text;
+      const engModule = (typeof window !== 'undefined' && window.EngbotEnglishLinguistics) ||
+                        (typeof globalThis !== 'undefined' && globalThis.EngbotEnglishLinguistics);
+      if (engModule && typeof engModule.cleanEnglishOcr === 'function') {
+        cleaned = engModule.cleanEnglishOcr(cleaned);
+      }
+      return (typeof window !== 'undefined' && window.EngbotPack) ? window.EngbotPack.apply(cleaned, 'en', 'transcribe') : cleaned;
+    }
 
     let t = offlineSpellCheckKa(text);
 
@@ -1755,8 +1763,18 @@ ${text.slice(0, 10000)}`;
   function scoreText(text, lang) {
     const t = (text || "").trim();
     if (!t) return 0;
+    const engModule = (typeof window !== 'undefined' && window.EngbotEnglishLinguistics) ||
+                      (typeof globalThis !== 'undefined' && globalThis.EngbotEnglishLinguistics);
+    if (engModule && typeof engModule.isCleanEnglishHeading === 'function' && engModule.isCleanEnglishHeading(t)) {
+      return 0.95;
+    }
     const letters = (t.match(/\p{L}/gu) || []).length;
-    if (letters < 8) return 0.05;
+    if (letters < 8) {
+      if (/^(?:chapter|part|book|the\s+end|finis|fin|end|volume|section)\b/i.test(t) || /^[ivxlcdm\d\s:—–.-]+$/i.test(t)) {
+        return 0.95;
+      }
+      return 0.05;
+    }
     const ka = (t.match(/\p{Script=Georgian}/gu) || []).length;
     const latin = (t.match(/[A-Za-z]/g) || []).length;
     const expected = lang === "kat" ? ka : lang === "eng" ? latin : Math.max(ka, latin);
@@ -1784,6 +1802,11 @@ ${text.slice(0, 10000)}`;
       if (kaValidityRatio < 0.55) {
         score *= Math.max(0.05, kaValidityRatio);
       }
+    }
+
+    if (latin > ka && engModule && typeof engModule.scoreEnglishText === 'function') {
+      const engScore = engModule.scoreEnglishText(t);
+      if (engScore > 0.8) score = Math.max(score, engScore);
     }
 
     score += Math.min(0.1, words.length / 3000); // reward fuller pages
@@ -2181,8 +2204,15 @@ ${text.slice(0, 10000)}`;
     try {
       await scanOnePage(page, lang);
       if (state.cancel || page.status === 'pending') throw new Error('Page recognition was cancelled. No partial book was saved.');
-      if (page.status === 'error' || (page.status === 'unreadable' && /\p{L}/u.test(page.text || ''))) throw new Error(page.error || 'Page needs a clearer scan or manual review.');
-      return { text: page.text || '', quality: page.quality, engine: page.engine };
+      const isUnreadable = page.status === 'unreadable' || page.status === 'error';
+      return {
+        text: page.text || '',
+        quality: page.quality || 0,
+        engine: page.engine || 'none',
+        status: page.status,
+        warning: page.warning || page.error,
+        unreadable: isUnreadable
+      };
     } finally { URL.revokeObjectURL(page.url); state.running = false; }
   }
 

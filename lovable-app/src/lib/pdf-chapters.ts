@@ -35,13 +35,51 @@ function coverMetadata(pages: { index: number; text: string }[]) {
   if (!author && next && next.length <= 40 && /^[A-Zა-ჰ]/.test(next) && next.split(" ").length <= 5) author = next;
   return { title, author, page: page?.index || null };
 }
-async function recognize(blob: Blob): Promise<string> {
-  // StudioHost keeps the same OCR engine alive across native routes.
+async function recognize(blob: Blob, rawText: string = "", pageNumber: number = 1): Promise<string> {
+  // Tier 1: Try server-side AI parsing first (/api/parse-page)
+  try {
+    const reader = new FileReader();
+    const b64Promise = new Promise<string | null>((resolve) => {
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+    const b64 = await b64Promise;
+    if (b64) {
+      const resp = await fetch("/api/parse-page", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          raw_text: rawText,
+          image_base64: b64,
+          lang: "auto",
+          page_number: pageNumber
+        }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data?.text?.trim()) return data.text.trim();
+      }
+    }
+  } catch (_) {
+    // Server offline or timed out; continue to Studio OCR
+  }
+
+  // Tier 2: StudioHost keeps the same OCR engine alive across native routes.
   const frame = document.querySelector<HTMLIFrameElement>('iframe[title="EngBot Studio"]');
-  const studio = frame?.contentWindow as (Window & { LuminaScanner?: { transcribeBlob(blob: Blob, lang: string): Promise<{ text: string }> } }) | null;
+  const studio = frame?.contentWindow as (Window & {
+    LuminaScanner?: { transcribeBlob(blob: Blob, lang: string): Promise<{ text: string }> };
+    EngbotEnglishLinguistics?: { cleanEnglishOcr(t: string): string };
+  }) | null;
   for (let attempt = 0; attempt < 40 && !studio?.LuminaScanner; attempt++) await new Promise(resolve => setTimeout(resolve, 250));
-  if (!studio?.LuminaScanner) throw new Error("The scanner is still loading. Open Scanner once, then retry this PDF.");
-  return (await studio.LuminaScanner.transcribeBlob(blob, "auto")).text;
+  if (!studio?.LuminaScanner) return rawText;
+  const result = await studio.LuminaScanner.transcribeBlob(blob, "auto");
+  let recognized = result?.text || "";
+  if (studio?.EngbotEnglishLinguistics && recognized && !/[\u10A0-\u10FF]/.test(recognized)) {
+    recognized = studio.EngbotEnglishLinguistics.cleanEnglishOcr(recognized);
+  }
+  return recognized;
 }
 async function image(doc: PDFDocumentProxy, pageNumber: number, edge: number): Promise<HTMLCanvasElement> {
   const page = await doc.getPage(pageNumber), base = page.getViewport({ scale: 1 });
@@ -63,10 +101,18 @@ export async function parsePdf(file: File): Promise<ParsedBook> {
       if (engine.needsOcr(text)) {
         const canvas = await image(doc, i, 2400);
         const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
-        if (!blob) throw new Error("Could not render page " + i);
-        try { const recognized = await recognize(blob); if (recognized.trim()) text = recognized; }
-        catch (error) { throw new Error("Page " + i + " needs review: " + (error instanceof Error ? error.message : "OCR unavailable")); }
-        finally { canvas.width = canvas.height = 0; }
+        if (!blob) {
+          console.warn("Could not render page " + i);
+        } else {
+          try {
+            const recognized = await recognize(blob, text, i);
+            if (recognized && recognized.trim()) text = recognized;
+          } catch (error) {
+            console.warn("Page " + i + " OCR warning:", error);
+          } finally {
+            canvas.width = canvas.height = 0;
+          }
+        }
       }
       pages.push({ index: i, text });
     }

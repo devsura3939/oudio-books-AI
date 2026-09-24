@@ -12200,11 +12200,68 @@ async function handleFileUpload(file) {
                     const canvas = document.createElement('canvas'); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
                     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
                     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                    try { ocr = await window.LuminaScanner.transcribeBlob(blob, 'auto'); }
-                    catch (error) { throw new Error(`Page ${i} needs review: ${error.message}`); }
-                    if (ocr.text.trim()) pageText = ocr.text;
+                    
+                    let parsedText = '';
+                    let engineUsed = null;
+
+                    // Tier 1: Try server-side AI model first (Ollama/LM Studio small models, or server vision OCR)
+                    try {
+                        const reader = new FileReader();
+                        const b64Promise = new Promise(resolve => {
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.onerror = () => resolve(null);
+                            reader.readAsDataURL(blob);
+                        });
+                        const b64 = await b64Promise;
+                        if (b64) {
+                            const resp = await fetch('/api/parse-page', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    raw_text: pageText,
+                                    image_base64: b64,
+                                    lang: 'auto',
+                                    page_number: i
+                                }),
+                                signal: AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined
+                            });
+                            if (resp.ok) {
+                                const data = await resp.json();
+                                if (data && data.success && data.text && data.text.trim()) {
+                                    parsedText = data.text.trim();
+                                    engineUsed = data.engine || 'server-ai';
+                                }
+                            }
+                        }
+                    } catch (serverErr) {
+                        // Server offline/timeout; fallback to local
+                    }
+
+                    // Tier 2: In-browser local OCR (LuminaScanner)
+                    if (!parsedText && window.LuminaScanner) {
+                        try {
+                            ocr = await window.LuminaScanner.transcribeBlob(blob, 'auto');
+                            if (ocr && ocr.text && ocr.text.trim()) {
+                                parsedText = ocr.text.trim();
+                                engineUsed = ocr.engine || 'local-ocr';
+                            }
+                        } catch (scannerErr) {
+                            console.warn(`[upload] Page ${i} local OCR notice:`, scannerErr.message);
+                        }
+                    }
+
+                    if (parsedText) {
+                        pageText = parsedText;
+                        ocr = { engine: engineUsed };
+                    }
                     canvas.width = canvas.height = 0;
                 }
+
+                // Tier 3: English linguistic cleanup pass
+                if (window.EngbotEnglishLinguistics && pageText && !/[\u10A0-\u10FF]/.test(pageText)) {
+                    pageText = window.EngbotEnglishLinguistics.cleanEnglishOcr(pageText);
+                }
+
                 pageTexts.push({ index: i, text: pageText, ocr: ocr?.engine || null });
                 page.cleanup();
 
@@ -12230,6 +12287,14 @@ async function handleFileUpload(file) {
             const enCount = (sampleText.match(/[A-Za-z]/g) || []).length;
             isGeorgianBook = kaCount > 25 && (kaCount >= enCount * 0.25 || kaCount > 100);
             detectedLang = isGeorgianBook ? 'ka' : 'en';
+
+            if (!isGeorgianBook && window.EngbotEnglishLinguistics) {
+                for (const p of pageTexts) {
+                    if (p.text) {
+                        p.text = window.EngbotEnglishLinguistics.cleanEnglishOcr(p.text);
+                    }
+                }
+            }
 
             const outline = await window.EngbotBookStructure.outline(pdf);
             const structure = detectBookStructure(pageTexts, { isKa: isGeorgianBook, outline });

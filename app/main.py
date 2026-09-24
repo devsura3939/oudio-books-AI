@@ -513,6 +513,98 @@ async def ocr_endpoint(req: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/parse-page")
+async def parse_page_endpoint(req: Request):
+    """
+    Intelligent server-side book page parsing & reconstruction endpoint.
+    Called during PDF upload when client parsing gets stuck, has low confidence,
+    or requires neural vision/OCR and small model textual repair.
+    Tiers:
+    1. Fast linguistic & small model repair if raw_text is supplied.
+    2. Vision OCR (Gemini / local neural vision) if image is supplied.
+    3. Tesseract OCR with English/Georgian small model restoration.
+    4. Safe fallback preserving existing text — NEVER aborts the book upload!
+    """
+    raw_text = ""
+    try:
+        body = await req.json()
+        raw_text = (body.get("raw_text") or body.get("text") or "").strip()
+        image_str = body.get("image") or body.get("image_base64")
+        lang = body.get("lang") or body.get("language") or "auto"
+        page_num = body.get("page_number") or body.get("page") or 1
+        hint = body.get("hint")
+        api_key = (
+            req.headers.get("x-gemini-key")
+            or req.headers.get("x-goog-api-key")
+            or body.get("api_key")
+        )
+
+        from app.english_linguistics import clean_english_ocr, refine_english_with_small_model, score_english_text
+
+        # 1. If we already have decent raw text from the PDF stream, repair and enhance it
+        if raw_text and len(raw_text.split()) >= 4:
+            if lang in ("en", "eng") or (lang == "auto" and not re.search(r'[\u10A0-\u10FF]', raw_text)):
+                repaired = clean_english_ocr(raw_text)
+                refined = refine_english_with_small_model(repaired, task="page_parse")
+                return JSONResponse({
+                    "success": True,
+                    "text": refined or repaired,
+                    "engine": "server-english-small-model",
+                    "status": "repaired",
+                    "page_number": page_num
+                })
+
+        # 2. If image is supplied, run vision OCR and small model restoration
+        if image_str:
+            mime_type = "image/jpeg"
+            if image_str.startswith("data:"):
+                header, b64_data = image_str.split(",", 1)
+                if ";" in header and ":" in header:
+                    mime_type = header.split(";")[0].split(":")[1]
+                image_bytes = base64.b64decode(b64_data)
+            else:
+                image_bytes = base64.b64decode(image_str)
+
+            result = await run_in_threadpool(transcribe_image_bytes,
+                image_bytes=image_bytes,
+                mime_type=mime_type,
+                language=lang,
+                hint=hint,
+                api_key=api_key
+            )
+            parsed_text = (result.get("text") or "").strip()
+            # If vision returned text, use it; otherwise fall back to raw_text
+            final_text = parsed_text if parsed_text else raw_text
+            return JSONResponse({
+                "success": True,
+                "text": final_text,
+                "engine": result.get("engine", "server-vision"),
+                "status": "ok" if final_text else "empty",
+                "page_number": page_num,
+                "needs_review": result.get("needs_review", False),
+                "warning": result.get("warning")
+            })
+
+        # 3. Fallback: clean whatever raw text is available
+        cleaned_text = clean_english_ocr(raw_text) if raw_text else ""
+        return JSONResponse({
+            "success": True,
+            "text": cleaned_text,
+            "engine": "server-linguistic-fallback",
+            "status": "ok" if cleaned_text else "empty",
+            "page_number": page_num
+        })
+    except Exception as e:
+        print(f"[api/parse-page] Error parsing page: {e}")
+        return JSONResponse({
+            "success": True,
+            "text": raw_text,
+            "engine": "resilient-fallback",
+            "status": "fallback",
+            "warning": str(e)
+        })
+
+
 @app.post("/api/server-burst-fuse")
 async def server_burst_fuse(req: Request):
     """
