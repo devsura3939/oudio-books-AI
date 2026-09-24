@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>EngBot - AI Audiobook & Moon+ Reader</title>
 
     <!-- PDF.js -->
@@ -145,7 +148,7 @@
         /* Modals & Drawers */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(4, 6, 10, 0.85); backdrop-filter: blur(16px);
-            display: flex; justify-content: center; align-items: center; z-index: 150;
+            display: flex; justify-content: center; align-items: center; z-index: 200;
             opacity: 0; pointer-events: none; transition: all 0.3s ease;
         }
         .modal-overlay.active {
@@ -153,7 +156,7 @@
             display: flex !important;
             opacity: 1 !important;
             pointer-events: auto !important;
-            z-index: 150 !important;
+            z-index: 200 !important;
         }
         .modal-content {
             transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -162,6 +165,7 @@
             transform: scale(1) !important;
             opacity: 1 !important;
             pointer-events: auto !important;
+            z-index: 201 !important;
         }
 
         /* Slide-out Drawer */
@@ -665,8 +669,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="static/styles.css?v=1.53.4&settings=2">
-    <link rel="stylesheet" href="static/studio-ui.css?v=1.54.0&release=10">
+    <link rel="stylesheet" href="static/styles.css?v=1.56.5&release=16">
+    <link rel="stylesheet" href="static/studio-ui.css?v=1.56.5&release=16">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
@@ -3191,13 +3195,13 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                 </button>
             </div>
             
-            <div id="dropZone" class="border-2 border-dashed border-white/20 hover:border-primary-container/60 rounded-2xl p-8 text-center transition-all cursor-pointer bg-surface/40 group" onclick="triggerFileInputClick(event)">
+            <div id="dropZone" class="relative overflow-hidden border-2 border-dashed border-white/20 hover:border-primary-container/60 rounded-2xl p-8 text-center transition-all cursor-pointer bg-surface/40 group">
                 <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary-container/20 to-secondary/20 border border-white/10 flex items-center justify-center text-primary-fixed mx-auto mb-4 group-hover:scale-110 transition-transform pointer-events-none">
                     <span class="material-symbols-outlined text-3xl">cloud_upload</span>
                 </div>
                 <p class="text-white font-semibold text-base pointer-events-none">Click to browse or drop PDF here</p>
                 <p class="text-on-surface-variant text-xs mt-1 pointer-events-none">Supports books, documents, novels up to 100MB</p>
-                <input type="file" id="fileInput" accept=".pdf,application/pdf" class="hidden" onclick="event.stopPropagation()">
+                <input type="file" id="fileInput" accept=".pdf,application/pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" aria-label="Upload PDF book file" onclick="event.stopPropagation()">
             </div>
 
             <div id="uploadProgressContainer" class="hidden mt-6 space-y-2">
@@ -3379,31 +3383,31 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
       });
     </script>
 
-    <script src="static/library-sync.js?v=1.56.0&release=13"></script>
-    <script src="static/supabase-store.js?v=1.56.0&release=13"></script>
-    <script src="static/engine-core.js?v=1.56.0&release=13"></script>
-    <script src="static/provider-runtime.js?v=1.56.0&release=13"></script>
-    <script src="static/studio-ui.js?v=1.56.0&release=13"></script>
-    <script src="static/training-client.js?v=1.56.0&release=13"></script>
-    <script src="static/job-store.js?v=1.56.0&release=13"></script>
-            <script src="static/training-runner.js?v=1.56.0&release=13"></script>
-    <script src="static/training-studio.js?v=1.56.0&release=13"></script>
-    <script src="static/narration.js?v=1.56.0&release=13"></script>
-    <script src="static/model-discovery.js?v=1.56.0&release=13"></script>
-    <script src="static/ai-settings.js?v=1.56.0&release=13"></script>
-    <script src="static/lm-studio.js?v=1.56.0&release=13"></script>
-    <script src="static/translation-phases.js?v=1.56.0&release=13"></script>
-    <script src="static/local-translation.js?v=1.56.0&release=13"></script>
-    <script src="static/translation-machine.js?v=1.56.0&release=13"></script>
-    <script src="static/book-structure.js?v=1.56.0&release=13"></script>
-    <script src="static/app.js?v=1.56.0&release=13"></script>
-    <script src="static/reading-state.js?v=1.56.0&release=13"></script>
-    <script src="static/reading-ui.js?v=1.56.0&release=13"></script>
-    <script src="static/repair-review.js?v=1.56.0&release=13"></script>
-    <script src="static/georgian-linguistics.js?v=1.56.0&release=13"></script>
-    <script src="static/english-linguistics.js?v=1.56.0&release=13"></script>
-    <script src="static/engine-pack.js?v=1.56.0&release=13"></script>
-    <script src="static/scanner.js?v=1.56.0&release=13"></script>
+    <script src="static/library-sync.js?v=1.56.5&release=16"></script>
+    <script src="static/supabase-store.js?v=1.56.5&release=16"></script>
+    <script src="static/engine-core.js?v=1.56.5&release=16"></script>
+    <script src="static/provider-runtime.js?v=1.56.5&release=16"></script>
+    <script src="static/studio-ui.js?v=1.56.5&release=16"></script>
+    <script src="static/training-client.js?v=1.56.5&release=16"></script>
+    <script src="static/job-store.js?v=1.56.5&release=16"></script>
+    <script src="static/training-runner.js?v=1.56.5&release=16"></script>
+    <script src="static/training-studio.js?v=1.56.5&release=16"></script>
+    <script src="static/narration.js?v=1.56.5&release=16"></script>
+    <script src="static/model-discovery.js?v=1.56.5&release=16"></script>
+    <script src="static/ai-settings.js?v=1.56.5&release=16"></script>
+    <script src="static/lm-studio.js?v=1.56.5&release=16"></script>
+    <script src="static/translation-phases.js?v=1.56.5&release=16"></script>
+    <script src="static/local-translation.js?v=1.56.5&release=16"></script>
+    <script src="static/translation-machine.js?v=1.56.5&release=16"></script>
+    <script src="static/book-structure.js?v=1.56.5&release=16"></script>
+    <script src="static/app.js?v=1.56.5&release=16"></script>
+    <script src="static/reading-state.js?v=1.56.5&release=16"></script>
+    <script src="static/reading-ui.js?v=1.56.5&release=16"></script>
+    <script src="static/repair-review.js?v=1.56.5&release=16"></script>
+    <script src="static/georgian-linguistics.js?v=1.56.5&release=16"></script>
+    <script src="static/english-linguistics.js?v=1.56.5&release=16"></script>
+    <script src="static/engine-pack.js?v=1.56.5&release=16"></script>
+    <script src="static/scanner.js?v=1.56.5&release=16"></script>
 
 
 <div id="studioActionStatus" role="status" aria-live="polite" hidden></div>

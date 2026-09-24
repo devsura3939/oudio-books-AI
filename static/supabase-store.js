@@ -673,7 +673,8 @@
       } else {
         s = s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
       }
-      s = s.replace(/\u0000/g, "").replace(/\\u0000/gi, "").replace(/\\x00/gi, "");
+      s = s.replace(/\u0000/g, "").replace(/\\+u0000/gi, "").replace(/\\+x00/gi, "");
+      s = s.replace(/\\+u[dD][89a-fA-F][0-9a-fA-F]{2}/gi, "");
       s = s.replace(/\x0C/g, "\n").replace(/[\x00-\x08\x0B\x0E-\x1F\x7F]/g, "");
       return s;
     }
