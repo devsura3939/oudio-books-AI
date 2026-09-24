@@ -473,8 +473,10 @@ select:focus-visible,
     font-weight: 700;
 }
 
+#wbChunkLog .chunk-engine.kona { color: #10b981; font-weight: 800; text-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
 #wbChunkLog .chunk-engine.local { color: #34d399; }
 #wbChunkLog .chunk-engine.ai { color: #818cf8; }
+#wbChunkLog .chunk-engine.rules { color: #fbbf24; }
 #wbChunkLog .chunk-engine.fail { color: #f87171; }
 
 #wbChunkLog .chunk-text {

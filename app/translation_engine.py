@@ -904,13 +904,20 @@ def translate_offline_en_to_ka(text: str) -> str:
 _translation_request_context = {}
 
 
-def set_translation_request_context(before: str = "", after: str = "", checker_url: Optional[str] = None, checker_model: Optional[str] = None):
+def set_translation_request_context(
+    before: str = "",
+    after: str = "",
+    checker_url: Optional[str] = None,
+    checker_model: Optional[str] = None,
+    prefer_engine: Optional[str] = None
+):
     global _translation_request_context
     _translation_request_context = {
         "before": before or "",
         "after": after or "",
         "checker_url": checker_url,
         "checker_model": checker_model,
+        "prefer_engine": prefer_engine,
     }
 
 
@@ -918,6 +925,24 @@ _kona_circuit = {
     "consecutive_slow": 0,
     "degraded_until": 0.0,
 }
+
+
+def reset_kona_circuit():
+    """Resets the circuit breaker state for Kona2 native translation."""
+    _kona_circuit["consecutive_slow"] = 0
+    _kona_circuit["degraded_until"] = 0.0
+    return {"status": "ok", "circuit": _kona_circuit}
+
+
+def get_kona_circuit_status():
+    """Returns the live status of the Kona2 circuit breaker."""
+    now = time.time()
+    return {
+        "active": _kona_circuit["degraded_until"] <= now,
+        "degraded_until": _kona_circuit["degraded_until"],
+        "remaining_seconds": max(0.0, _kona_circuit["degraded_until"] - now),
+        "consecutive_slow": _kona_circuit["consecutive_slow"]
+    }
 
 
 def translate_with_gemini(
@@ -1187,7 +1212,8 @@ def translate_with_kona(
     source_lang: str,
     target_lang: str,
     context_before: str = "",
-    context_after: str = ""
+    context_after: str = "",
+    force: bool = False
 ) -> Optional[str]:
     """
     Translates text between English and Georgian using native server-side tbilisi-ai-lab/kona2-small-3.8B.
@@ -1196,12 +1222,12 @@ def translate_with_kona(
     transitive aorist ergative concord (-მა), experiencer dative inversion (მას უნდა/უყვარს/ახსოვს/აქვს),
     Series III evidential inversion (ავტორს დაუწერია), participial clauses,
     anti-calques, and complete clause closures without truncation.
-    Equipped with an adaptive circuit breaker to avoid serial stalling when under heavy CPU load.
+    Equipped with an adaptive circuit breaker to avoid serial stalling under extreme conditions.
     """
     if not text or not text.strip():
         return None
     now = time.time()
-    if _kona_circuit["degraded_until"] > now:
+    if not force and _kona_circuit["degraded_until"] > now:
         return None
     try:
         import httpx
@@ -1246,6 +1272,7 @@ def translate_with_kona(
                 {"role": "system", "content": sys_msg},
                 {"role": "user", "content": "\n\n".join(user_parts)}
             ]
+        timeout_val = float(os.environ.get("KONA_TIMEOUT", "45.0"))
         resp = httpx.post(
             url,
             json={
@@ -1259,19 +1286,13 @@ def translate_with_kona(
                     "num_predict": min(1024, max(128, int(len(text) * 2.5))),
                     "temperature": 0.1,
                 },
-                "keep_alive": "60m"
+                "keep_alive": "24h"
             },
-            timeout=float(os.environ.get("KONA_TIMEOUT", "12.0"))
+            timeout=timeout_val
         )
-        elapsed = time.time() - t0
         if resp.status_code == 200:
-            if elapsed > 10.0:
-                _kona_circuit["consecutive_slow"] += 1
-                if _kona_circuit["consecutive_slow"] >= 1:
-                    _kona_circuit["degraded_until"] = time.time() + 300.0
-                    _kona_circuit["consecutive_slow"] = 0
-            else:
-                _kona_circuit["consecutive_slow"] = 0
+            _kona_circuit["consecutive_slow"] = 0
+            _kona_circuit["degraded_until"] = 0.0
             cand = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
             cand = re.sub(r'^```[a-z]*\s*', '', cand, flags=re.IGNORECASE)
             cand = re.sub(r'\s*```$', '', cand).strip()
@@ -1279,13 +1300,15 @@ def translate_with_kona(
                 return cand
         else:
             _kona_circuit["consecutive_slow"] += 1
-            _kona_circuit["degraded_until"] = time.time() + 300.0
-            _kona_circuit["consecutive_slow"] = 0
+            if _kona_circuit["consecutive_slow"] >= 3:
+                _kona_circuit["degraded_until"] = time.time() + 30.0
+                _kona_circuit["consecutive_slow"] = 0
     except Exception as e:
         print(f"[translation_engine] kona2 translation skipped: {e}")
         _kona_circuit["consecutive_slow"] += 1
-        _kona_circuit["degraded_until"] = time.time() + 300.0
-        _kona_circuit["consecutive_slow"] = 0
+        if _kona_circuit["consecutive_slow"] >= 3:
+            _kona_circuit["degraded_until"] = time.time() + 30.0
+            _kona_circuit["consecutive_slow"] = 0
     return None
 
 
@@ -1426,8 +1449,17 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
         p_trans = None
         engine = "server_neural_translate"
 
+        prefer_engine = str(_translation_request_context.get("prefer_engine") or os.environ.get("PREFER_TRANSLATION_ENGINE", "")).lower()
+        force_kona = prefer_engine in ("kona", "kona2", "server_kona")
+
+        # Explicit Kona Priority: If client preferred Kona or translating to Georgian by default
+        if force_kona:
+            p_trans = translate_with_kona(p, src, tgt, context_before=before_ctx, context_after=after_ctx, force=True)
+            if p_trans:
+                engine = "kona2-small-3.8B"
+
         # Tier 0A: Frontier Gemini API if key is present (0.3s-0.6s instant execution)
-        if correction_key:
+        if not p_trans and correction_key and not force_kona:
             p_trans = translate_with_gemini(p, src, tgt, correction_key, context_before=before_ctx, context_after=after_ctx)
             if p_trans:
                 engine = "gemini-2.5-flash"
@@ -1435,14 +1467,14 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
         # Tier 0B: Local / PC LM Studio endpoint if configured
         checker_url = _translation_request_context.get("checker_url") or os.environ.get("PC_LM_STUDIO_URL")
         checker_model = _translation_request_context.get("checker_model") or os.environ.get("PC_LM_STUDIO_MODEL", "default")
-        if not p_trans and checker_url:
+        if not p_trans and checker_url and not force_kona:
             p_trans = translate_with_local_llm(p, src, tgt, checker_url, checker_model, context_before=before_ctx, context_after=after_ctx)
             if p_trans:
                 engine = "local_llm"
 
         # Tier 0C: Native server LLM translation via tbilisi-ai-lab/kona2-small-3.8B (Primary Native Model)
         if not p_trans:
-            p_trans = translate_with_kona(p, src, tgt, context_before=before_ctx, context_after=after_ctx)
+            p_trans = translate_with_kona(p, src, tgt, context_before=before_ctx, context_after=after_ctx, force=force_kona)
             if p_trans:
                 engine = "kona2-small-3.8B"
 

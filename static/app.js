@@ -8186,22 +8186,25 @@ function setTranslationEngineStatusEl(el) {
 function renderTranslationEngineStatus() {
     if (!translationEngineStatusEl) return;
     const s = translationEngineStats;
-    const ai = (s.ai || 0) + (s.gemini || 0) + (s.lm_studio || 0) + (s.cloud_ai || 0) + (s.server || 0);
+    const kona = (s.kona2 || 0) + (s.kona || 0) + (s.server || 0);
+    const ai = (s.ai || 0) + (s.gemini || 0) + (s.lm_studio || 0) + (s.cloud_ai || 0);
     const rules = (s.rules || 0) + (s.google || 0);
     const raw = (s.raw || 0) + (s.mymemory || 0) + (s.offline || 0);
-    const total = ai + rules + raw + (s.failed || 0);
+    const total = kona + ai + rules + raw + (s.failed || 0);
     if (total === 0) {
         translationEngineStatusEl.innerHTML = '<span class="text-on-surface-variant">Engine: waiting…</span>';
         return;
     }
     const pct = n => total ? Math.round((n / total) * 100) : 0;
-    // Provider usage is not a measured translation-quality score.
+    const parts = [];
+    if (kona > 0) parts.push(`Kona Native AI ${pct(kona)}%`);
+    if (ai > 0) parts.push(`AI ${pct(ai)}%`);
+    if (rules > 0 || raw > 0) parts.push(`Neural MT ${pct(rules + raw)}%`);
     translationEngineStatusEl.innerHTML =
         `<span class="text-primary-fixed font-semibold">Translation engine</span>` +
         `<span class="text-on-surface-variant text-[11px] ml-2">` +
-        `Neural MT ${pct(rules + raw)}% · AI edited ${pct(ai)}%` +
+        `${parts.join(' · ') || `Neural MT 100%`}` +
         `${s.failed ? ` · unavailable ${s.failed}` : ''}</span>`;
-
 }
 
 function recordEngineUse(engine) {
@@ -8504,8 +8507,24 @@ function updateMiniDock() {
 function appendChunkLog(idx, engine, preview) {
     if (!DOM.wbChunkLog) return;
     const row = document.createElement('div');
-    const engineClass = engine === 'local' ? 'local' : (engine === 'fail' ? 'fail' : 'ai');
-    const engineLabel = engine === 'local' ? 'LOC' : (engine === 'fail' ? 'ERR' : 'AI');
+    let engineClass = 'ai';
+    let engineLabel = 'AI';
+    if (engine === 'kona') {
+        engineClass = 'kona';
+        engineLabel = 'KONA';
+    } else if (engine === 'local') {
+        engineClass = 'local';
+        engineLabel = 'LOC';
+    } else if (engine === 'rules') {
+        engineClass = 'rules';
+        engineLabel = 'NMT';
+    } else if (engine === 'raw') {
+        engineClass = 'rules';
+        engineLabel = 'TM';
+    } else if (engine === 'fail') {
+        engineClass = 'fail';
+        engineLabel = 'ERR';
+    }
     row.innerHTML = `<span class="chunk-idx">#${idx}</span><span class="chunk-engine ${engineClass}">${engineLabel}</span><span class="chunk-text">${escapeHtml(preview)}</span>`;
     DOM.wbChunkLog.appendChild(row);
     // Keep only the last 50 rows
@@ -8710,6 +8729,90 @@ function assessTranslation(src, out, targetLang = 'ka') {
 
 window.assessTranslation = assessTranslation;
 
+function isServerKonaPreferred() {
+    const pref = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || '';
+    if (pref === 'server_kona') return true;
+    if (pref === 'lm_studio') return false;
+    // Default: for Georgian books, prefer Server Native Kona AI
+    return true;
+}
+
+function setPrimaryTranslationEngine(engine) {
+    if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
+        localStorage.setItem('luminaPreferredTranslationEngine', engine);
+    }
+    phaseTranslator = null; // force reload with new preference
+    machineTranslator = null;
+    const msg = engine === 'server_kona' ? 'Server Native AI (Kona 3.8B Georgian LLM)' : (engine === 'lm_studio' ? 'Local Model (LM Studio)' : 'Frontier AI (Gemini)');
+    if (typeof showToast === 'function') showToast(`Primary translation engine: ${msg}`, 'info');
+    if (typeof renderAdminTranslationTelemetry === 'function' && typeof activeTranslationJob !== 'undefined' && activeTranslationJob) {
+        renderAdminTranslationTelemetry(activeTranslationJob, activeTranslationBook || currentBook);
+    }
+}
+async function testServerKonaLive() {
+    const el = document.getElementById('konaTestStatus');
+    if (el) { el.classList.remove('hidden'); el.textContent = 'Testing Kona 3.8B on server…'; el.className = 'text-xs text-amber-300'; }
+    try {
+        const apiBase = window.LUMINA_RUNTIME_CONFIG?.API_URL || '';
+        const endpoint = apiBase ? `${apiBase}/api/server-translate` : '/api/server-translate';
+        const t0 = Date.now();
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: 'Hello, world!', source_lang: 'en', target_lang: 'ka', prefer_engine: 'kona' })
+        });
+        const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+        if (res.ok) {
+            const data = await res.json();
+            if (el) {
+                el.textContent = `✓ Kona 3.8B responded in ${elapsed}s: "${data.translated}" (Engine: ${data.engine})`;
+                el.className = 'text-xs text-emerald-400 font-medium';
+            }
+            if (typeof showToast === 'function') showToast(`Kona test passed (${elapsed}s)! Engine: ${data.engine}`, 'success');
+        } else {
+            if (el) { el.textContent = `Server error ${res.status}`; el.className = 'text-xs text-error font-medium'; }
+        }
+    } catch (e) {
+        if (el) { el.textContent = `Connection error: ${e.message}`; el.className = 'text-xs text-error font-medium'; }
+    }
+}
+
+async function resetKonaCircuitBreaker() {
+    try {
+        const apiBase = window.LUMINA_RUNTIME_CONFIG?.API_URL || '';
+        const endpoint = apiBase ? `${apiBase}/api/admin/kona-reset` : '/api/admin/kona-reset';
+        const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        if (res.ok) {
+            if (typeof showToast === 'function') showToast('Kona circuit breaker reset successfully!', 'success');
+        } else {
+            if (typeof showToast === 'function') showToast('Reset endpoint returned ' + res.status, 'info');
+        }
+    } catch (_) {}
+}
+
+function updateEngineSelectorUI() {
+    const pref = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || 'server_kona';
+    const btnKona = document.getElementById('btnEngineKona');
+    const btnLm = document.getElementById('btnEngineLmStudio');
+    if (btnKona && btnLm) {
+        if (pref === 'lm_studio') {
+            btnKona.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-white/5 text-on-surface-variant border-white/10 hover:text-white cursor-pointer';
+            btnLm.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm cursor-pointer';
+        } else {
+            btnKona.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm cursor-pointer';
+            btnLm.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-white/5 text-on-surface-variant border-white/10 hover:text-white cursor-pointer';
+        }
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.setPrimaryTranslationEngine = setPrimaryTranslationEngine;
+    window.isServerKonaPreferred = isServerKonaPreferred;
+    window.testServerKonaLive = testServerKonaLive;
+    window.resetKonaCircuitBreaker = resetKonaCircuitBreaker;
+    window.updateEngineSelectorUI = updateEngineSelectorUI;
+}
+
 // Machine-translation draft + the full rule engine. `translateChunkLocal` keeps
 // its name (many call sites) but it is now Tier B, not a raw MT passthrough.
 let machineTranslator = null;
@@ -8718,6 +8821,7 @@ let phaseTranslator = null, phaseTranslatorOwner = null;
 function getPhaseTranslator() {
     if (!window.EngbotTranslationPhases) return null;
     const owner = getCurrentUserId();
+    const serverKonaActive = isServerKonaPreferred();
     if (!phaseTranslator || owner !== phaseTranslatorOwner) {
         phaseTranslatorOwner = owner;
         phaseTranslator = window.EngbotTranslationPhases.create({
@@ -8734,18 +8838,19 @@ function getPhaseTranslator() {
                 }
             },
             cloud: (prompt, options) => callCloudJSON(prompt, options),
-            localAvailable: () => !!(window.EngbotLmStudio?.available() && !isLocalSlow()),
+            localAvailable: () => !serverKonaActive && !!(window.EngbotLmStudio?.available() && !isLocalSlow()),
             cloudAvailable: () => !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl),
             assess: assessTranslation,
             onStage: stage => {
                 setTranslationStage(stage);
-                if (/LM Studio/.test(stage)) recordEngineUse('lm_studio');
+                if (/kona/i.test(stage)) recordEngineUse('kona2');
+                else if (/LM Studio/.test(stage)) recordEngineUse('lm_studio');
                 else if (/Cloud AI/.test(stage)) recordEngineUse('cloud_ai');
                 else if (/Machine|Deterministic/.test(stage)) recordEngineUse('rules');
                 else if (/Local neural/.test(stage)) recordEngineUse('offline');
                 else recordEngineUse('ai');
             },
-            localPrimary: true,
+            localPrimary: !serverKonaActive && !!window.EngbotLmStudio?.enabled(),
             maxCloudCalls: 100000,
             maxCloudTokens: 1000000000,
         });
@@ -8760,7 +8865,24 @@ function translationMachine() {
         const serverTarget = apiBase ? `${apiBase}/api/server-translate` : (!_isStaticHost ? '/api/server-translate' : false);
         machineTranslator = window.EngbotTranslationMachine.create({
             assess: assessTranslation, server: serverTarget,
-            onEngine: engine => { setTranslationStage(engine === 'offline' ? 'Local neural translation' : 'Machine translation'); recordEngineUse(engine === 'mymemory' ? 'raw' : 'rules'); },
+            onEngine: engine => {
+                if (engine && (engine.includes('kona') || engine === 'server' || engine.includes('3.8B'))) {
+                    setTranslationStage('Native Server AI (Kona 3.8B)');
+                    recordEngineUse('kona2');
+                } else if (engine && (engine.includes('gemini') || engine.includes('cloud'))) {
+                    setTranslationStage('Frontier AI (Gemini 2.5 Flash)');
+                    recordEngineUse('cloud_ai');
+                } else if (engine === 'offline' || engine === 'local_llm' || engine === 'lm_studio') {
+                    setTranslationStage('Local neural translation');
+                    recordEngineUse('lm_studio');
+                } else if (engine === 'mymemory') {
+                    setTranslationStage('Machine translation');
+                    recordEngineUse('raw');
+                } else {
+                    setTranslationStage('Machine translation');
+                    recordEngineUse('rules');
+                }
+            },
             offline: async (source, sourceLang, targetLang, signal) => {
                 return window.EngbotLocalTranslation?.translate(source, sourceLang, targetLang, signal) || null;
             },
@@ -9344,17 +9466,22 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
         job.status = 'running';
         job.totalChapters = targetBook.chapters.length;
         if (typeof activeTranslationJob !== 'undefined') activeTranslationJob = job;
+        const preferredEngine = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || (targetLang === 'ka' ? 'server_kona' : (window.EngbotLmStudio?.enabled() ? 'lm_studio' : 'auto'));
         job.telemetry ||= saved?.telemetry || {
             startedAt: Date.now(),
             host: 'Oracle Cloud Ampere A1 (4 OCPU ARM64, 24 GB RAM)',
-            primaryModel: 'tbilisi-ai-lab/kona2-small-3.8B (Q4_K_M)',
+            primaryModel: 'tbilisi-ai-lab/kona2-small-3.8B (Georgian Native AI · OCI)',
             cost: '$0.00 / month (OCI Free Tier Always-Free)',
             engines: {},
             totalChunks: 0,
             totalChars: 0,
             totalWords: 0
         };
-        if (window.EngbotLmStudio?.enabled()) {
+        if (preferredEngine === 'server_kona' || (targetLang === 'ka' && preferredEngine !== 'lm_studio' && !customProviderModel)) {
+            job.telemetry.primaryModel = 'tbilisi-ai-lab/kona2-small-3.8B (Georgian Native AI · OCI)';
+            job.telemetry.host = 'Oracle Cloud Ampere A1 (4 OCPU ARM64, 24 GB RAM)';
+            job.telemetry.cost = '$0.00 / month (OCI Free Tier Always-Free)';
+        } else if (preferredEngine === 'lm_studio' || window.EngbotLmStudio?.enabled()) {
             const localMod = window.EngbotLmStudio.settings()?.model || 'Local Model';
             job.telemetry.primaryModel = `LM Studio · ${localMod}`;
             job.telemetry.host = 'Local Machine (LM Studio · GPU/CPU)';
@@ -9373,6 +9500,7 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
             minimizeTranslationPanel();
         } else {
             openModal('wholeBookTranslateModal');
+            if (typeof updateEngineSelectorUI === 'function') updateEngineSelectorUI();
         }
         if (typeof updateWbStartReadingButton === 'function') updateWbStartReadingButton(job, targetBook);
         if (typeof renderAdminTranslationTelemetry === 'function') renderAdminTranslationTelemetry(job, targetBook);
@@ -9606,9 +9734,10 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                     let segTimer;
                     const isDoubted = isDoubtedOrComplicatedSegment(chunks[i], '', scoreChunkComplexity(chunks[i]));
                     const hasCloud = !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl);
-                    // Give local AI adequate time (40s-60s), but if no local model is connected or if cloud is sole provider, use snappy timeout
-                    const stallLimit = window.EngbotLmStudio?.enabled()
-                        ? (isDoubted ? 60000 : 40000)
+                    // Give local AI and server Kona adequate time (45s-65s), but if cloud is sole provider, use snappy timeout
+                    const isKonaPref = (typeof isServerKonaPreferred === 'function' ? isServerKonaPreferred() : ((typeof window !== 'undefined' && typeof window.isServerKonaPreferred === 'function') ? window.isServerKonaPreferred() : true));
+                    const stallLimit = (window.EngbotLmStudio?.enabled() || isKonaPref)
+                        ? (isDoubted ? 65000 : 45000)
                         : (hasCloud ? 25000 : 15000);
                     const segTimeout = new Promise(resolve => {
                         segTimer = setTimeout(() => resolve('__STALL__'), stallLimit);
@@ -9769,7 +9898,12 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                 job.telemetry.totalChars = (job.telemetry.totalChars || 0) + output.length;
                 job.telemetry.totalWords = (job.telemetry.totalWords || 0) + (output.trim().split(/\s+/).filter(Boolean).length || 0);
 
-                appendChunkLog(i + 1, lastTranslationEngine === 'ai' ? 'ai' : 'local', output.slice(0, 100));
+                let logEng = 'ai';
+                if (engKey.includes('kona') || engKey === 'server') logEng = 'kona';
+                else if (engKey === 'lm_studio' || engKey === 'local_ai') logEng = 'local';
+                else if (engKey === 'rules' || engKey.includes('google')) logEng = 'rules';
+                else if (engKey === 'raw' || engKey.includes('mymemory')) logEng = 'raw';
+                appendChunkLog(i + 1, logEng, output.slice(0, 100));
                 updateChunkRate();
                 if (DOM.wbCharCounter) DOM.wbCharCounter.textContent = `${Object.values(job.chapters).reduce((n, c) => n + c.outputs.reduce((sum, t) => sum + (t?.length || 0), 0), 0).toLocaleString()} characters accepted`;
                 if (DOM.wbLiveGeorgian) DOM.wbLiveGeorgian.textContent = output;
@@ -10090,7 +10224,7 @@ function renderAdminTranslationTelemetry(job = null, book = null) {
             displayName = 'Server / Cloud AI Pass';
             badgeColor = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40';
         } else if (eng.includes('kona') || eng === 'server') {
-            displayName = 'Tbilisi AI Lab Kona-2 (Q4_K_M · OCI)';
+            displayName = 'Tbilisi AI Lab Kona-2 (Georgian Native AI · OCI)';
             badgeColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
         } else if (eng.includes('gemini')) {
             displayName = 'Google Gemini 2.5 Pro/Flash';
@@ -10124,6 +10258,15 @@ function renderAdminTranslationTelemetry(job = null, book = null) {
         ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">Complete</span>'
         : '<span class="px-2 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/40 text-[10px] font-bold animate-pulse">Translating Live</span>';
 
+    const preferredEngine = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || 'server_kona';
+    const isLmStudioActive = preferredEngine === 'lm_studio' && window.EngbotLmStudio?.enabled();
+    const hostEnv = isLmStudioActive ? 'Local Machine' : (tel.host?.split('(')[0]?.trim() || 'Oracle Cloud A1');
+    const hostSub = isLmStudioActive ? 'LM Studio · GPU/CPU Acceleration' : '4 OCPU · 24GB RAM (Free Tier)';
+    const costSub = isLmStudioActive ? 'Local Private Inference' : 'OCI Free Tier Always-Free';
+    const primaryAiName = isLmStudioActive
+        ? ('LM Studio · ' + (window.EngbotLmStudio.settings()?.model || 'Local Model'))
+        : (tel.primaryModel || 'Kona-2 Small 3.8B (Georgian Native AI · OCI)');
+
     el.innerHTML = `
         <div class="flex items-center justify-between border-b border-indigo-500/20 pb-2">
             <div class="flex items-center gap-1.5 text-indigo-300 font-bold">
@@ -10145,13 +10288,13 @@ function renderAdminTranslationTelemetry(job = null, book = null) {
             </div>
             <div class="p-2 rounded-xl bg-white/5 border border-white/10">
                 <div class="text-on-surface-variant text-[10px]">Host Environment</div>
-                <div class="text-white font-bold truncate text-[11px]">${window.EngbotLmStudio?.enabled() ? 'Local Machine' : (tel.host?.split('(')[0]?.trim() || 'Oracle Cloud A1')}</div>
-                <div class="text-[10px] ${window.EngbotLmStudio?.enabled() ? 'text-cyan-400' : 'text-emerald-400'}">${window.EngbotLmStudio?.enabled() ? 'LM Studio · GPU/CPU Acceleration' : '4 OCPU · 24GB RAM'}</div>
+                <div class="text-white font-bold truncate text-[11px]">${hostEnv}</div>
+                <div class="text-[10px] ${isLmStudioActive ? 'text-cyan-400' : 'text-emerald-400'}">${hostSub}</div>
             </div>
             <div class="p-2 rounded-xl bg-white/5 border border-white/10">
                 <div class="text-on-surface-variant text-[10px]">Infrastructure Cost</div>
                 <div class="text-emerald-300 font-bold font-mono text-xs">$0.00 / month</div>
-                <div class="text-[10px] text-on-surface-variant">${window.EngbotLmStudio?.enabled() ? 'Local Private Inference' : 'OCI Free Tier Always-Free'}</div>
+                <div class="text-[10px] text-on-surface-variant">${costSub}</div>
             </div>
         </div>
         <div class="pt-2 border-t border-white/5 space-y-2">
@@ -10159,7 +10302,7 @@ function renderAdminTranslationTelemetry(job = null, book = null) {
             ${engineRows}
         </div>
         <div class="pt-1 flex items-center justify-between text-[10px] text-on-surface-variant border-t border-white/5">
-            <span>Primary AI: <strong class="text-white">${window.EngbotLmStudio?.enabled() ? ('LM Studio · ' + (window.EngbotLmStudio.settings()?.model || 'Local Model')) : (tel.primaryModel || 'Kona-2 Small 3.8B Q4_K_M')}</strong></span>
+            <span>Primary AI: <strong class="text-white">${primaryAiName}</strong></span>
             <span class="text-indigo-300">Admin: ananiadevsurashvili@gmail.com</span>
         </div>
     `;

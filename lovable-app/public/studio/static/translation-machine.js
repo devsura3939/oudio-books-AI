@@ -89,12 +89,14 @@
             };
             const serverEndpoint = typeof server === 'string' && server ? server : (server ? '/api/server-translate' : null);
             if (serverEndpoint) {
-                const payload = { text: source, source_lang: sourceLang, target_lang: targetLang };
+                const preferredEngine = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || (targetLang === 'ka' ? 'kona' : 'auto');
+                const payload = { text: source, source_lang: sourceLang, target_lang: targetLang, prefer_engine: options?.prefer_engine || preferredEngine };
                 if (options?.context_before) payload.context_before = options.context_before;
                 if (options?.context_after) payload.context_after = options.context_after;
                 const headers = { 'Content-Type': 'application/json' };
+                if (payload.prefer_engine) headers['X-Prefer-Engine'] = String(payload.prefer_engine);
                 try {
-                    const sessionApiKey = options?.api_key || (typeof localStorage !== 'undefined' ? (localStorage.getItem('geminiApiKey') || localStorage.getItem('openRouterApiKey') || '') : '');
+                    const sessionApiKey = options?.api_key || (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? (localStorage.getItem('geminiApiKey') || localStorage.getItem('openRouterApiKey') || '') : '');
                     if (sessionApiKey) {
                         const cleanKey = sessionApiKey.trim();
                         payload.api_key = cleanKey;
