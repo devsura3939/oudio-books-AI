@@ -196,3 +196,82 @@ test('Hybrid load balancer routes to server/cloud AI when local AI is slow or bu
     assert.equal(cloudCalls, 51); // Ran past 48 calls without cutting off!
 });
 
+test('Ensemble mode drafts directly with local AI and refines with cloud AI across all segments', async () => {
+    let localCalls = 0;
+    let cloudCalls = 0;
+    let machineCalls = 0;
+    const stages = [];
+    const localDraft = 'ლოკალური მოდელის მონახაზი.';
+    const cloudRefinement = 'სერვერული AI-ს მიერ დახვეწილი თარგმანი.';
+
+    const engine = phases.create({
+        machine: async () => { machineCalls++; return 'მანქანური თარგმანი'; },
+        localAvailable: () => true,
+        cloudAvailable: () => true,
+        assess: () => ({ ok: true }),
+        onStage: s => stages.push(s),
+        local: async () => {
+            localCalls++;
+            return { translation: localDraft };
+        },
+        cloud: async () => {
+            cloudCalls++;
+            return { translation: cloudRefinement };
+        },
+        ensembleMode: true,
+        aiFirst: true,
+        localPrimary: true,
+        maxCloudCalls: 100000,
+        maxCloudTokens: 1000000000,
+    });
+
+    const source = 'The old grandfather clock ticked steadily in the silent hall.';
+
+    // Run 5 consecutive segments
+    for (let i = 0; i < 5; i++) {
+        const result = await engine.translate(source, 'ka');
+        assert.equal(result, cloudRefinement);
+    }
+
+    // Both local AI (draft + review) and cloud AI refinement MUST be called on every segment
+    assert.equal(localCalls, 10);
+    assert.equal(cloudCalls, 5);
+    // Machine translation MUST NOT be called when AI engines are healthy
+    assert.equal(machineCalls, 0);
+    // onStage must record the Dual-AI Ensemble refinement
+    assert.ok(stages.some(s => s.includes('Dual-AI Ensemble · Refined')));
+});
+
+test('AI-first cloud drafting engages directly when local AI is disconnected', async () => {
+    let localCalls = 0;
+    let cloudCalls = 0;
+    let machineCalls = 0;
+    const cloudDraft = 'პირდაპირი ღრუბლოვანი AI თარგმანი.';
+
+    const engine = phases.create({
+        machine: async () => { machineCalls++; return 'სარეზერვო მანქანური თარგმანი'; },
+        localAvailable: () => false,
+        cloudAvailable: () => true,
+        assess: () => ({ ok: true }),
+        local: async () => { localCalls++; return null; },
+        cloud: async () => {
+            cloudCalls++;
+            return { translation: cloudDraft };
+        },
+        ensembleMode: true,
+        aiFirst: true,
+        localPrimary: false,
+        maxCloudCalls: 100000,
+        maxCloudTokens: 1000000000,
+    });
+
+    const source = 'A swift brown fox jumped over the lazy sleeping hound.';
+    const result = await engine.translate(source, 'ka');
+
+    assert.equal(result, cloudDraft);
+    assert.equal(localCalls, 0);
+    assert.equal(cloudCalls, 1);
+    assert.equal(machineCalls, 0);
+});
+
+

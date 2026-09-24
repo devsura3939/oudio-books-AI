@@ -96,7 +96,7 @@
                 const headers = { 'Content-Type': 'application/json' };
                 if (payload.prefer_engine) headers['X-Prefer-Engine'] = String(payload.prefer_engine);
                 try {
-                    const sessionApiKey = options?.api_key || (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? (localStorage.getItem('geminiApiKey') || localStorage.getItem('openRouterApiKey') || '') : '');
+                    const sessionApiKey = options?.api_key || (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? (localStorage.getItem('geminiApiKey') || localStorage.getItem('lumina_saved_gemini_key') || localStorage.getItem('openRouterApiKey') || localStorage.getItem('lumina_saved_openrouter_key') || '') : '') || (typeof globalThis !== 'undefined' && globalThis.geminiApiKey) || (typeof window !== 'undefined' && window.geminiApiKey) || '';
                     if (sessionApiKey) {
                         const cleanKey = sessionApiKey.trim();
                         payload.api_key = cleanKey;

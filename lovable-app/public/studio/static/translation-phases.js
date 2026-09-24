@@ -67,7 +67,7 @@
             parent?.throwIfAborted(); return result;
         } finally { clearTimeout(timer); signal.removeEventListener('abort',abort); own.abort(); }
     }
-    function create({machine, local, cloud, localAvailable = () => false, cloudAvailable = () => false, assess, onStage = () => {}, now = Date.now, maxCloudCalls = 48, maxCloudTokens = 180000, localTimeoutMs = 90000, cloudTimeoutMs = 20000, recoveryTimeoutMs = 75000, phaseTimeoutMs = 150000, localPrimary = false}) {
+    function create({machine, local, cloud, localAvailable = () => false, cloudAvailable = () => false, assess, onStage = () => {}, now = Date.now, maxCloudCalls = 48, maxCloudTokens = 180000, localTimeoutMs = 90000, cloudTimeoutMs = 20000, recoveryTimeoutMs = 75000, phaseTimeoutMs = 150000, localPrimary = false, ensembleMode = false, aiFirst = false}) {
         let state, cloudUntil = 0;
         function reset(previous = {}) {
             state = {segments:Math.max(0,Number(previous.segments)||0),difficultSegments:Math.max(0,Number(previous.difficultSegments)||0),localCalls:Math.max(0,Number(previous.localCalls)||0),cloudCalls:Math.max(0,Number(previous.cloudCalls)||0),reservedCloudTokens:Math.max(0,Number(previous.reservedCloudTokens)||0)};
@@ -102,15 +102,15 @@
                 const reserved = (estimate(prompt) + outputBudget) * 3;
                 // The optional editing allowance must not disable the only working
                 // translator halfway through a user-requested book translation.
-                const optionalBudgetSpent = baseline && (state.cloudCalls >= maxCloudCalls || state.reservedCloudTokens + reserved > maxCloudTokens);
+                const optionalBudgetSpent = baseline && (maxCloudCalls <= 100) && (state.cloudCalls >= maxCloudCalls || state.reservedCloudTokens + reserved > maxCloudTokens);
                 if (cloudUsed || !cloudAvailable() || now() < cloudUntil || optionalBudgetSpent || remaining() < 1000) return null;
                 cloudUsed = true; state.cloudCalls++; state.reservedCloudTokens += reserved;
                 onStage('Cloud AI · ' + stage);
                 const result = normalizeOutput(source,await bounded(s => cloud(prompt,{signal:s,temperature:0.1,maxTokens:outputBudget,retries:0,validateResponse:valid,systemPrompt:'You are a source-faithful bilingual literary editor. Return only the requested JSON.'}),signal,Math.min(baseline ? cloudTimeoutMs : recoveryTimeoutMs,remaining())));
-                if (!valid(result)) {cloudUntil = now() + 60000; return null;} return result;
+                if (!valid(result)) {cloudUntil = now() + (ensembleMode || aiFirst || maxCloudCalls > 100 ? 2000 : 60000); return null;} return result;
             }
-            // When local model is primary, draft directly from source across all segments
-            if (localPrimary && localAvailable()) {
+            // When local model is primary or ensemble is active, draft directly from source across all segments
+            if ((localPrimary || ensembleMode || aiFirst) && localAvailable()) {
                 const drafted = await runLocal('draft');
                 if (valid(drafted)) {
                     candidate = drafted.translation;
@@ -118,7 +118,15 @@
                     uncertainty = drafted.uncertain === true;
                 }
             }
-            // If local primary did not yield candidate or is disabled, run machine baseline
+            // If local did not draft or is unavailable, and ensemble/aiFirst with cloud is active, draft directly with cloud/API AI
+            if (!candidate && (ensembleMode || aiFirst) && cloudAvailable()) {
+                const cloudDraft = await runCloud('draft');
+                if (valid(cloudDraft)) {
+                    candidate = cloudDraft.translation;
+                    uncertainty = cloudDraft.uncertain === true;
+                }
+            }
+            // If AI did not yield candidate or is disabled, run machine baseline
             if (!candidate) {
                 onStage('Machine translation');
                 baseline = await machine(source, target, signal); signal?.throwIfAborted();
@@ -142,11 +150,16 @@
                 else if (review.preferred === 'baseline' && baseline) {candidate = baseline;localCandidate = false;issues = [];uncertainty = false;}
                 else {issues = findings;uncertainty = uncertainty || issues.length > 0;}
             }
-            // Cloud is reserved for failed local work, evidenced problems and periodic difficult-passage audits.
-            const sample = mode === 'quality' && difficult && state.difficultSegments % 12 === 0;
-            if (!candidate || (!localCandidate && (mode === 'quality' || difficult)) || uncertainty || sample) {
+            // Cloud is reserved for failed local work, evidenced problems and periodic difficult-passage audits (or all segments in ensemble/aiFirst mode).
+            const sample = (ensembleMode || aiFirst) ? true : (mode === 'quality' && difficult && state.difficultSegments % 12 === 0);
+            if (ensembleMode || aiFirst || !candidate || (!localCandidate && (mode === 'quality' || difficult)) || uncertainty || sample) {
                 const refined = await runCloud(candidate ? 'edit' : 'draft');
-                if (valid(refined)) {candidate = refined.translation;issues = [];uncertainty = false;}
+                if (valid(refined)) {
+                    candidate = refined.translation;
+                    issues = [];
+                    uncertainty = false;
+                    if (ensembleMode && localCandidate) onStage('Dual-AI Ensemble · Refined');
+                }
                 else if (issues.length && localAvailable()) {
                     const repair = await runLocal('repair');
                     if (valid(repair)) {

@@ -888,7 +888,7 @@ const _isStaticHost = (() => {
         return h.endsWith('.github.io') || h.endsWith('.pages.dev') || h.endsWith('.netlify.app') || h.endsWith('.chatgpt.site');
     } catch (e) { return false; }
 })();
-let luminaGatewayAvailable = Boolean(typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL) || !_isStaticHost;
+let luminaGatewayAvailable = true;
 
 async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null, signal } = {}) {
     const jobSignal = signal || (typeof translationRequestController !== 'undefined' ? translationRequestController?.signal : null);
@@ -7624,12 +7624,12 @@ async function callCloudJSON(prompt, { temperature = 0.2, maxTokens = 8192, retr
         const text=await callCustomProviderText(prompt,options(attempt));
         return text ? parseModelJSON(text) : null;
     }});
-    if (geminiApiKey) providers.push({name:'Gemini',run:attempt=>callGeminiJSONDirect(prompt,options(attempt))});
-    if (groqApiKey) providers.push({name:'Groq',run:attempt=>callGroqJSON(prompt,options(attempt))});
-    if (openRouterApiKey) providers.push({name:'OpenRouter',run:attempt=>callOpenRouterJSON(prompt,options(attempt))});
-    if (mistralApiKey) providers.push({name:'Mistral',run:attempt=>callMistralJSON(prompt,options(attempt))});
+    if (geminiApiKey) providers.push({name:'Gemini',timeoutMs:30000,run:attempt=>callGeminiJSONDirect(prompt,options(attempt))});
+    if (groqApiKey) providers.push({name:'Groq',timeoutMs:30000,run:attempt=>callGroqJSON(prompt,options(attempt))});
+    if (openRouterApiKey) providers.push({name:'OpenRouter',timeoutMs:30000,run:attempt=>callOpenRouterJSON(prompt,options(attempt))});
+    if (mistralApiKey) providers.push({name:'Mistral',timeoutMs:30000,run:attempt=>callMistralJSON(prompt,options(attempt))});
     if (luminaGatewayAvailable) providers.push({name:'Server AI',timeoutMs:30000,run:attempt=>callLuminaGatewayJSON(prompt,options(attempt))});
-    return window.EngbotProviders.firstValid(providers,{signal:jobSignal,validate:validateResponse,timeoutMs:10000});
+    return window.EngbotProviders.firstValid(providers,{signal:jobSignal,validate:validateResponse,timeoutMs:30000});
 }
 
 async function callGeminiJSONDirect(prompt, { temperature = 0.2, maxTokens = 8192, retries = 2, systemPrompt = null, signal } = {}) {
@@ -8930,15 +8930,20 @@ if (typeof window !== 'undefined') {
 // its name (many call sites) but it is now Tier B, not a raw MT passthrough.
 let machineTranslator = null;
 let machineTranslatorOwner = null;
-let phaseTranslator = null, phaseTranslatorOwner = null;
+let phaseTranslator = null, phaseTranslatorOwner = null, phaseTranslatorPref = null;
 function getPhaseTranslator() {
     if (!window.EngbotTranslationPhases) return null;
     const owner = getCurrentUserId();
     const serverKonaActive = isServerKonaPreferred();
     const pref = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || 'ensemble';
     const isLmPrimary = pref === 'lm_studio';
-    if (!phaseTranslator || owner !== phaseTranslatorOwner) {
+    const isEnsemble = pref === 'ensemble';
+    const hasLocal = !!(window.EngbotLmStudio?.available() && !isLocalSlow());
+    const hasCloud = !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl || serverKonaActive);
+    const aiFirst = isEnsemble || pref === 'gemini' || pref === 'server_kona' || hasCloud;
+    if (!phaseTranslator || owner !== phaseTranslatorOwner || pref !== phaseTranslatorPref) {
         phaseTranslatorOwner = owner;
+        phaseTranslatorPref = pref;
         phaseTranslator = window.EngbotTranslationPhases.create({
             machine: (source, target) => deterministicTranslateChunk(source, target),
             local: async (prompt, options) => {
@@ -8954,20 +8959,24 @@ function getPhaseTranslator() {
             },
             cloud: (prompt, options) => callCloudJSON(prompt, options),
             localAvailable: () => !!(window.EngbotLmStudio?.available() && !isLocalSlow()),
-            cloudAvailable: () => !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl),
+            cloudAvailable: () => !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl || serverKonaActive),
             assess: assessTranslation,
             onStage: stage => {
                 setTranslationStage(stage);
-                if (/kona/i.test(stage)) recordEngineUse('kona2');
+                if (/ensemble/i.test(stage)) recordEngineUse('ensemble');
+                else if (/kona/i.test(stage)) recordEngineUse('kona2');
                 else if (/LM Studio/.test(stage)) recordEngineUse('lm_studio');
                 else if (/Cloud AI/.test(stage)) recordEngineUse('cloud_ai');
                 else if (/Machine|Deterministic/.test(stage)) recordEngineUse('rules');
                 else if (/Local neural/.test(stage)) recordEngineUse('offline');
                 else recordEngineUse('ai');
             },
-            localPrimary: isLmPrimary && !!window.EngbotLmStudio?.enabled(),
+            ensembleMode: isEnsemble,
+            aiFirst: aiFirst,
+            localPrimary: (isLmPrimary || isEnsemble) && hasLocal,
             maxCloudCalls: 100000,
             maxCloudTokens: 1000000000,
+            cloudTimeoutMs: 35000,
         });
     }
     return phaseTranslator;
@@ -10009,9 +10018,13 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                 if (!cancelTranslationFlag && i + 1 < chunks.length) {
                     startLookahead(i + 1);
                 }
+                const prefEngine = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || 'ensemble';
                 let engKey = lastTranslationEngine || 'kona2';
                 if (typeof currentChunkEngines !== 'undefined' && currentChunkEngines) {
-                    if ((currentChunkEngines.has('kona2') || currentChunkEngines.has('server')) && currentChunkEngines.has('lm_studio')) {
+                    if (currentChunkEngines.has('ensemble') ||
+                        ((currentChunkEngines.has('kona2') || currentChunkEngines.has('server') || currentChunkEngines.has('cloud_ai') || currentChunkEngines.has('ai')) && currentChunkEngines.has('lm_studio'))) {
+                        engKey = 'ensemble';
+                    } else if (prefEngine === 'ensemble' && (currentChunkEngines.has('lm_studio') || currentChunkEngines.has('kona2') || currentChunkEngines.has('server') || currentChunkEngines.has('cloud_ai') || currentChunkEngines.has('ai'))) {
                         engKey = 'ensemble';
                     }
                 }
