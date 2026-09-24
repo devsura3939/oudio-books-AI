@@ -669,8 +669,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="static/styles.css?v=1.56.5&release=16">
-    <link rel="stylesheet" href="static/studio-ui.css?v=1.56.5&release=16">
+    <link rel="stylesheet" href="static/styles.css?v=1.56.6&release=17">
+    <link rel="stylesheet" href="static/studio-ui.css?v=1.56.6&release=17">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
     <div class="bg-mesh"></div>
@@ -921,6 +921,17 @@
                     if (dropZone) dropZone.classList.remove('border-primary-container');
                 }
                 modal.classList.add('active');
+                modal.style.display = 'flex';
+                modal.style.visibility = 'visible';
+                modal.style.opacity = '1';
+                modal.style.pointerEvents = 'auto';
+                modal.style.zIndex = '200';
+                var content = modal.querySelector('.modal-content');
+                if (content) {
+                    content.style.opacity = '1';
+                    content.style.pointerEvents = 'auto';
+                    content.style.zIndex = '201';
+                }
                 document.body.classList.add('modal-open');
                 try { modal.querySelector('button, input, select')?.focus(); } catch (e) {}
             }
@@ -929,7 +940,18 @@
         window.closeModal = function(modalId) {
             if (typeof window._fullCloseModal === 'function') return window._fullCloseModal(modalId);
             var modal = document.getElementById(modalId);
-            if (modal) modal.classList.remove('active');
+            if (modal) {
+                modal.classList.remove('active');
+                modal.style.display = '';
+                modal.style.visibility = '';
+                modal.style.opacity = '';
+                modal.style.pointerEvents = '';
+                var content = modal.querySelector('.modal-content');
+                if (content) {
+                    content.style.opacity = '';
+                    content.style.pointerEvents = '';
+                }
+            }
             if (!document.querySelector('.modal-overlay.active')) {
                 document.body.classList.remove('modal-open');
             }
@@ -1191,7 +1213,7 @@
             <button onclick="LuminaScanner.open()" class="p-2 rounded-xl text-georgian-gold hover:bg-white/10 transition" aria-label="Scan book pages" title="Scan book pages">
                 <span class="material-symbols-outlined text-2xl">document_scanner</span>
             </button>
-            <button onclick="openModal('uploadModal')" class="p-2 rounded-xl text-primary-fixed hover:bg-white/10 transition" aria-label="Upload PDF" title="Upload PDF">
+            <button onclick="event.stopPropagation(); openModal('uploadModal')" class="p-2 rounded-xl text-primary-fixed hover:bg-white/10 transition" aria-label="Upload PDF" title="Upload PDF">
                 <span class="material-symbols-outlined text-2xl">upload_file</span>
             </button>
             <button id="mobileTopServerStatsBtn" onclick="navigate('server-stats')" data-admin-build class="hidden p-2 rounded-xl text-emerald-400 hover:bg-white/10 transition" aria-label="Server Stats" title="Server Stats">
@@ -1269,7 +1291,7 @@
                 <button onclick="LuminaScanner.open();closeMobileNav()" class="w-full py-3 rounded-xl bg-georgian-gold/15 text-georgian-gold font-semibold border border-georgian-gold/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
                     <span class="material-symbols-outlined">document_scanner</span> Scan Book Pages
                 </button>
-                <button onclick="openModal('uploadModal');closeMobileNav()" class="w-full py-3 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-semibold shadow-[0_0_25px_rgba(0,240,255,0.35)] flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_35px_rgba(0,240,255,0.6)] active:scale-[0.98]">
+                <button onclick="event.stopPropagation(); openModal('uploadModal'); closeMobileNav()" class="w-full py-3 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-semibold shadow-[0_0_25px_rgba(0,240,255,0.35)] flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_35px_rgba(0,240,255,0.6)] active:scale-[0.98]">
                     <span class="material-symbols-outlined">upload_file</span> Upload PDF Book
                 </button>
             </div>
@@ -1293,7 +1315,7 @@
             </div>
         </div>
 
-        <button id="btnNavUpload" onclick="openModal('uploadModal')" class="mb-2 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-semibold shadow-[0_0_25px_rgba(0,240,255,0.35)] hover:shadow-[0_0_35px_rgba(0,240,255,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 group cursor-pointer" aria-label="Upload PDF Book" title="Upload PDF Book">
+        <button id="btnNavUpload" onclick="event.stopPropagation(); openModal('uploadModal')" class="mb-2 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-semibold shadow-[0_0_25px_rgba(0,240,255,0.35)] hover:shadow-[0_0_35px_rgba(0,240,255,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 group cursor-pointer" aria-label="Upload PDF Book" title="Upload PDF Book">
             <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">upload_file</span>
             <span>Upload Book</span>
         </button>
@@ -1382,7 +1404,7 @@
                 <span>Engine v1.53.1</span>
             </div>
 
-            <button onclick="openModal('uploadModal')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-container/20 hover:bg-primary-container/30 border border-primary-container/40 text-xs font-bold text-primary-fixed transition shadow-sm cursor-pointer" title="Upload PDF Book" aria-label="Upload PDF Book">
+            <button onclick="event.stopPropagation(); openModal('uploadModal')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-container/20 hover:bg-primary-container/30 border border-primary-container/40 text-xs font-bold text-primary-fixed transition shadow-sm cursor-pointer" title="Upload PDF Book" aria-label="Upload PDF Book">
                 <span class="material-symbols-outlined text-base">upload_file</span>
                 <span>Upload Book</span>
             </button>
@@ -2946,6 +2968,8 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                         Multi-stage literary pipeline: expert draft → strict copy-editor audit → surgical refinement, with a final QA pass keeping the better version. Neighbouring sentences are passed as context so pronouns and terminology stay coherent.
                     </p>
                 </div>
+            </div>
+
             <div class="glass-panel rounded-2xl p-4 mt-4 space-y-3 border border-emerald-500/30 bg-emerald-950/20">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -3383,31 +3407,31 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
       });
     </script>
 
-    <script src="static/library-sync.js?v=1.56.5&release=16"></script>
-    <script src="static/supabase-store.js?v=1.56.5&release=16"></script>
-    <script src="static/engine-core.js?v=1.56.5&release=16"></script>
-    <script src="static/provider-runtime.js?v=1.56.5&release=16"></script>
-    <script src="static/studio-ui.js?v=1.56.5&release=16"></script>
-    <script src="static/training-client.js?v=1.56.5&release=16"></script>
-    <script src="static/job-store.js?v=1.56.5&release=16"></script>
-    <script src="static/training-runner.js?v=1.56.5&release=16"></script>
-    <script src="static/training-studio.js?v=1.56.5&release=16"></script>
-    <script src="static/narration.js?v=1.56.5&release=16"></script>
-    <script src="static/model-discovery.js?v=1.56.5&release=16"></script>
-    <script src="static/ai-settings.js?v=1.56.5&release=16"></script>
-    <script src="static/lm-studio.js?v=1.56.5&release=16"></script>
-    <script src="static/translation-phases.js?v=1.56.5&release=16"></script>
-    <script src="static/local-translation.js?v=1.56.5&release=16"></script>
-    <script src="static/translation-machine.js?v=1.56.5&release=16"></script>
-    <script src="static/book-structure.js?v=1.56.5&release=16"></script>
-    <script src="static/app.js?v=1.56.5&release=16"></script>
-    <script src="static/reading-state.js?v=1.56.5&release=16"></script>
-    <script src="static/reading-ui.js?v=1.56.5&release=16"></script>
-    <script src="static/repair-review.js?v=1.56.5&release=16"></script>
-    <script src="static/georgian-linguistics.js?v=1.56.5&release=16"></script>
-    <script src="static/english-linguistics.js?v=1.56.5&release=16"></script>
-    <script src="static/engine-pack.js?v=1.56.5&release=16"></script>
-    <script src="static/scanner.js?v=1.56.5&release=16"></script>
+    <script src="static/library-sync.js?v=1.56.6&release=17"></script>
+    <script src="static/supabase-store.js?v=1.56.6&release=17"></script>
+    <script src="static/engine-core.js?v=1.56.6&release=17"></script>
+    <script src="static/provider-runtime.js?v=1.56.6&release=17"></script>
+    <script src="static/studio-ui.js?v=1.56.6&release=17"></script>
+    <script src="static/training-client.js?v=1.56.6&release=17"></script>
+    <script src="static/job-store.js?v=1.56.6&release=17"></script>
+    <script src="static/training-runner.js?v=1.56.6&release=17"></script>
+    <script src="static/training-studio.js?v=1.56.6&release=17"></script>
+    <script src="static/narration.js?v=1.56.6&release=17"></script>
+    <script src="static/model-discovery.js?v=1.56.6&release=17"></script>
+    <script src="static/ai-settings.js?v=1.56.6&release=17"></script>
+    <script src="static/lm-studio.js?v=1.56.6&release=17"></script>
+    <script src="static/translation-phases.js?v=1.56.6&release=17"></script>
+    <script src="static/local-translation.js?v=1.56.6&release=17"></script>
+    <script src="static/translation-machine.js?v=1.56.6&release=17"></script>
+    <script src="static/book-structure.js?v=1.56.6&release=17"></script>
+    <script src="static/app.js?v=1.56.6&release=17"></script>
+    <script src="static/reading-state.js?v=1.56.6&release=17"></script>
+    <script src="static/reading-ui.js?v=1.56.6&release=17"></script>
+    <script src="static/repair-review.js?v=1.56.6&release=17"></script>
+    <script src="static/georgian-linguistics.js?v=1.56.6&release=17"></script>
+    <script src="static/english-linguistics.js?v=1.56.6&release=17"></script>
+    <script src="static/engine-pack.js?v=1.56.6&release=17"></script>
+    <script src="static/scanner.js?v=1.56.6&release=17"></script>
 
 
 <div id="studioActionStatus" role="status" aria-live="polite" hidden></div>

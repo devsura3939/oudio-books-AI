@@ -3844,9 +3844,6 @@ function openModal(modalId) {
     }
     const modal = document.getElementById(modalId);
     if (modal) {
-        if (modalId === 'uploadModal' && modal.classList.contains('active')) {
-            return;
-        }
         if (modalId === 'authModal') {
             if (typeof toggleAuthForgot === 'function') toggleAuthForgot(false);
             if (typeof setAuthError === 'function') setAuthError('');
@@ -3888,6 +3885,17 @@ function openModal(modalId) {
             if (domObj?.readerModalFontSizeText) domObj.readerModalFontSizeText.textContent = `${readerFontSize}px`;
         }
         modal.classList.add('active');
+        modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+        modal.style.pointerEvents = 'auto';
+        modal.style.zIndex = '200';
+        const content = modal.querySelector('.modal-content');
+        if (content) {
+            content.style.opacity = '1';
+            content.style.pointerEvents = 'auto';
+            content.style.zIndex = '201';
+        }
         document.body.classList.add('modal-open');
         try { modal.querySelector('button, input, select')?.focus(); } catch (_) {}
     }
@@ -3905,6 +3913,15 @@ function closeModal(modalId) {
             if (typeof setAuthSuccess === 'function') setAuthSuccess('');
         }
         modal.classList.remove('active');
+        modal.style.display = '';
+        modal.style.visibility = '';
+        modal.style.opacity = '';
+        modal.style.pointerEvents = '';
+        const content = modal.querySelector('.modal-content');
+        if (content) {
+            content.style.opacity = '';
+            content.style.pointerEvents = '';
+        }
         modal._returnFocus?.focus?.();
     }
     if (!document.querySelector('.modal-overlay.active')) {
