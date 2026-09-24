@@ -2571,11 +2571,14 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                     <span>Primary Engine:</span>
                 </div>
                 <div class="flex items-center gap-1">
-                    <button type="button" id="btnEngineKona" onclick="setPrimaryTranslationEngine('server_kona'); updateEngineSelectorUI();" class="px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm cursor-pointer" title="Server-side Tbilisi AI Lab Kona 3.8B Georgian Model">
-                        <span>⚡ Kona 3.8B (OCI Server)</span>
+                    <button type="button" id="btnEngineEnsemble" onclick="setPrimaryTranslationEngine('ensemble'); updateEngineSelectorUI();" class="px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-sky-500/20 text-sky-300 border-sky-500/40 shadow-sm cursor-pointer" title="Dual-AI Ensemble: OCI Server Kona 3.8B + Local LM Studio">
+                        <span>✨ Ensemble</span>
+                    </button>
+                    <button type="button" id="btnEngineKona" onclick="setPrimaryTranslationEngine('server_kona'); updateEngineSelectorUI();" class="px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-white/5 text-on-surface-variant border-white/10 hover:text-white cursor-pointer" title="Server-side Tbilisi AI Lab Kona 3.8B Georgian Model">
+                        <span>⚡ Kona 3.8B</span>
                     </button>
                     <button type="button" id="btnEngineLmStudio" onclick="setPrimaryTranslationEngine('lm_studio'); updateEngineSelectorUI();" class="px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-white/5 text-on-surface-variant border-white/10 hover:text-white cursor-pointer" title="Local LM Studio Model">
-                        <span>💻 LM Studio (Local)</span>
+                        <span>💻 LM Studio</span>
                     </button>
                 </div>
             </div>
@@ -3300,6 +3303,8 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
 
     <!-- Continuous Silent Audio Loop: keeps OS audio hardware pipeline awake for lock-screen & background narration -->
     <audio id="backgroundKeepAliveAudio" preload="auto" loop playsinline webkit-playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA" style="display:none;"></audio>
+    <!-- Master DOM-attached playback element: keeps background and lock-screen audio privilege active across sentences -->
+    <audio id="primaryPlaybackAudio" preload="auto" playsinline webkit-playsinline style="display:none;"></audio>
 
     <script>
       window.LUMINA_RUNTIME_CONFIG = Object.assign({}, window.LUMINA_RUNTIME_CONFIG, {

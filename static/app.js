@@ -140,9 +140,29 @@ let touchEndY = 0;
 let elevenLabsEnabled = false;
 let elevenLabsApiKey = '';
 let elevenLabsVoiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam (English default)
-let elevenLabsVoiceIdKa = localStorage.getItem('lumina_el_voice_ka') || 'nPczCjzI2devNBz1zQrb'; // Brian (Georgian recommended)
-let elevenLabsModelId = localStorage.getItem('lumina_el_model') || 'eleven_multilingual_v2';
+let elevenLabsVoiceIdKa = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('lumina_el_voice_ka')) || 'nPczCjzI2devNBz1zQrb'; // Brian (Georgian recommended)
+let elevenLabsModelId = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('lumina_el_model')) || 'eleven_multilingual_v2';
 let currentElevenAudio = null;
+let masterPlaybackAudio = null;
+
+function getMasterPlaybackAudio() {
+    if (!masterPlaybackAudio && typeof document !== 'undefined') {
+        masterPlaybackAudio = document.getElementById('primaryPlaybackAudio');
+        if (!masterPlaybackAudio && document.createElement) {
+            try {
+                masterPlaybackAudio = document.createElement('audio');
+                masterPlaybackAudio.id = 'primaryPlaybackAudio';
+                masterPlaybackAudio.preload = 'auto';
+                masterPlaybackAudio.playsInline = true;
+                masterPlaybackAudio.setAttribute('playsinline', '');
+                masterPlaybackAudio.setAttribute('webkit-playsinline', '');
+                masterPlaybackAudio.style.display = 'none';
+                if (document.body) document.body.appendChild(masterPlaybackAudio);
+            } catch (_) {}
+        }
+    }
+    return masterPlaybackAudio;
+}
 
 // Lock-Screen Background Audio Keep-Alive & Wake Lock State
 let backgroundKeepAliveAudio = null;
@@ -176,6 +196,12 @@ function generateSilentWavBlobUrl(durationSec = 5, sampleRate = 8000) {
         // data chunk
         view.setUint8(36, 0x64); view.setUint8(37, 0x61); view.setUint8(38, 0x74); view.setUint8(39, 0x61); // 'data'
         view.setUint32(40, dataSize, true);
+        
+        // Write inaudible sub-bass dither (20Hz at -72dB) so mobile audio hardware registers active stream
+        for (let i = 0; i < numSamples; i++) {
+            const sample = Math.round(Math.sin((2 * Math.PI * 20 * i) / sampleRate) * 8); // +/- 8 out of 32767
+            view.setInt16(44 + i * 2, sample, true);
+        }
         
         const blob = new Blob([view], { type: 'audio/wav' });
         return URL.createObjectURL(blob);
@@ -2624,8 +2650,18 @@ function stopLibraryRealtime() {
 }
 
 // ════════════════ Low-End Device & Concurrency Optimization Engine ════════════════
+function isMobileDevice() {
+    if (typeof window === 'undefined') return false;
+    const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+    const isMobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    const isTouch = typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 1 || 'ontouchstart' in window);
+    const isSmallScreen = window.innerWidth <= 768;
+    return isMobileUa || (isTouch && isSmallScreen);
+}
+
 function isLowTierHardware() {
     if (typeof navigator === 'undefined') return false;
+    if (typeof isMobileDevice === 'function' && isMobileDevice()) return true;
     const cores = navigator.hardwareConcurrency || 4;
     const mem = navigator.deviceMemory || 4;
     return cores <= 4 || mem <= 2;
@@ -8112,16 +8148,16 @@ function recordLocalLatency(durationMs, success = true) {
         localConsecutiveSlowCount++;
     } else {
         localLatencyHistory.push(durationMs);
-        if (durationMs > 22000) localConsecutiveSlowCount++;
+        if (durationMs > 55000) localConsecutiveSlowCount++;
         else localConsecutiveSlowCount = Math.max(0, localConsecutiveSlowCount - 1);
     }
     if (localLatencyHistory.length > 5) localLatencyHistory.shift();
 }
 function isLocalSlow() {
-    if (localConsecutiveSlowCount >= 2) return true;
+    if (localConsecutiveSlowCount >= 3) return true;
     if (localLatencyHistory.length < 2) return false;
     const avg = localLatencyHistory.reduce((a, b) => a + b, 0) / localLatencyHistory.length;
-    return avg > 22000;
+    return avg > 55000;
 }
 function resetLocalLatency() {
     localLatencyHistory.length = 0;
@@ -8132,6 +8168,7 @@ let translationEngineStatusEl = null;
 let translationStage = '';
 let lastTranslationFailure = '';
 let lastTranslationEngine = 'rules';
+let currentChunkEngines = new Set();
 let optionalAiRequestActive = false;
 let optionalAiDisabledUntil = 0;
 let optionalAiCorrectionsUsed = 0;
@@ -8148,7 +8185,9 @@ function setTranslationStage(stage) {
         return;
     }
     let display = stage;
-    if (/gemini/i.test(stage)) {
+    if (/ensemble/i.test(stage)) {
+        display = '✨ Dual-AI Ensemble (Kona 3.8B + LM Studio)';
+    } else if (/gemini/i.test(stage)) {
         display = '✨ Frontier AI (Gemini 2.5 Flash)';
     } else if (/lm studio/i.test(stage)) {
         display = '💻 Local Model (LM Studio)';
@@ -8209,6 +8248,9 @@ function renderTranslationEngineStatus() {
 
 function recordEngineUse(engine) {
     lastTranslationEngine = engine;
+    if (typeof currentChunkEngines !== 'undefined' && currentChunkEngines) {
+        currentChunkEngines.add(engine);
+    }
     if (engine in translationEngineStats) translationEngineStats[engine]++;
     else translationEngineStats[engine] = 1;
     renderTranslationEngineStatus();
@@ -8509,7 +8551,10 @@ function appendChunkLog(idx, engine, preview) {
     const row = document.createElement('div');
     let engineClass = 'ai';
     let engineLabel = 'AI';
-    if (engine === 'kona') {
+    if (engine === 'ensemble' || engine === 'kona+loc') {
+        engineClass = 'ensemble';
+        engineLabel = 'KONA+LOC';
+    } else if (engine === 'kona') {
         engineClass = 'kona';
         engineLabel = 'KONA';
     } else if (engine === 'local') {
@@ -8730,10 +8775,9 @@ function assessTranslation(src, out, targetLang = 'ka') {
 window.assessTranslation = assessTranslation;
 
 function isServerKonaPreferred() {
-    const pref = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || '';
-    if (pref === 'server_kona') return true;
+    const pref = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || 'ensemble';
     if (pref === 'lm_studio') return false;
-    // Default: for Georgian books, prefer Server Native Kona AI
+    // Default ('ensemble') and 'server_kona': Server Native Kona AI is active
     return true;
 }
 
@@ -8743,8 +8787,13 @@ function setPrimaryTranslationEngine(engine) {
     }
     phaseTranslator = null; // force reload with new preference
     machineTranslator = null;
-    const msg = engine === 'server_kona' ? 'Server Native AI (Kona 3.8B Georgian LLM)' : (engine === 'lm_studio' ? 'Local Model (LM Studio)' : 'Frontier AI (Gemini)');
+    let msg = 'Dual-AI Ensemble (Server Kona + LM Studio)';
+    if (engine === 'server_kona') msg = 'Server Native AI (Kona 3.8B Georgian LLM)';
+    else if (engine === 'lm_studio') msg = 'Local Model (LM Studio)';
+    else if (engine === 'ensemble') msg = 'Dual-AI Ensemble (Server Kona + LM Studio)';
+    else msg = 'Frontier AI (Gemini)';
     if (typeof showToast === 'function') showToast(`Primary translation engine: ${msg}`, 'info');
+    if (typeof updateEngineSelectorUI === 'function') updateEngineSelectorUI();
     if (typeof renderAdminTranslationTelemetry === 'function' && typeof activeTranslationJob !== 'undefined' && activeTranslationJob) {
         renderAdminTranslationTelemetry(activeTranslationJob, activeTranslationBook || currentBook);
     }
@@ -8791,18 +8840,20 @@ async function resetKonaCircuitBreaker() {
 }
 
 function updateEngineSelectorUI() {
-    const pref = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || 'server_kona';
+    const pref = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || 'ensemble';
+    const btnEnsemble = document.getElementById('btnEngineEnsemble');
     const btnKona = document.getElementById('btnEngineKona');
     const btnLm = document.getElementById('btnEngineLmStudio');
-    if (btnKona && btnLm) {
-        if (pref === 'lm_studio') {
-            btnKona.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-white/5 text-on-surface-variant border-white/10 hover:text-white cursor-pointer';
-            btnLm.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm cursor-pointer';
-        } else {
-            btnKona.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm cursor-pointer';
-            btnLm.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-white/5 text-on-surface-variant border-white/10 hover:text-white cursor-pointer';
-        }
-    }
+    const activeClass = {
+        ensemble: 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-sky-500/20 text-sky-300 border-sky-500/40 shadow-sm cursor-pointer',
+        server_kona: 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm cursor-pointer',
+        lm_studio: 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm cursor-pointer',
+    };
+    const inactiveClass = 'px-2.5 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 bg-white/5 text-on-surface-variant border-white/10 hover:text-white cursor-pointer';
+
+    if (btnEnsemble) btnEnsemble.className = pref === 'ensemble' ? activeClass.ensemble : inactiveClass;
+    if (btnKona) btnKona.className = pref === 'server_kona' ? activeClass.server_kona : inactiveClass;
+    if (btnLm) btnLm.className = pref === 'lm_studio' ? activeClass.lm_studio : inactiveClass;
 }
 
 if (typeof window !== 'undefined') {
@@ -8822,6 +8873,8 @@ function getPhaseTranslator() {
     if (!window.EngbotTranslationPhases) return null;
     const owner = getCurrentUserId();
     const serverKonaActive = isServerKonaPreferred();
+    const pref = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || 'ensemble';
+    const isLmPrimary = pref === 'lm_studio';
     if (!phaseTranslator || owner !== phaseTranslatorOwner) {
         phaseTranslatorOwner = owner;
         phaseTranslator = window.EngbotTranslationPhases.create({
@@ -8838,7 +8891,7 @@ function getPhaseTranslator() {
                 }
             },
             cloud: (prompt, options) => callCloudJSON(prompt, options),
-            localAvailable: () => !serverKonaActive && !!(window.EngbotLmStudio?.available() && !isLocalSlow()),
+            localAvailable: () => !!(window.EngbotLmStudio?.available() && !isLocalSlow()),
             cloudAvailable: () => !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl),
             assess: assessTranslation,
             onStage: stage => {
@@ -8850,7 +8903,7 @@ function getPhaseTranslator() {
                 else if (/Local neural/.test(stage)) recordEngineUse('offline');
                 else recordEngineUse('ai');
             },
-            localPrimary: !serverKonaActive && !!window.EngbotLmStudio?.enabled(),
+            localPrimary: isLmPrimary && !!window.EngbotLmStudio?.enabled(),
             maxCloudCalls: 100000,
             maxCloudTokens: 1000000000,
         });
@@ -9708,6 +9761,7 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                 if (typeof yieldMainThread === 'function') await yieldMainThread();
                 if (DOM.wbSentenceCounter) DOM.wbSentenceCounter.textContent = `Accepted segments: ${checkpoint.outputs.filter(Boolean).length} / ${chunks.length}`;
                 if (checkpoint.outputs[i] && assessTranslation(chunks[i], checkpoint.outputs[i], targetLang).ok) continue;
+                if (typeof currentChunkEngines !== 'undefined' && currentChunkEngines) currentChunkEngines.clear();
                 lastTranslationFailure = '';
                 window.EngbotProviders?.reset();
                 if (DOM.wbLiveOriginal) DOM.wbLiveOriginal.textContent = chunks[i];
@@ -9734,10 +9788,11 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                     let segTimer;
                     const isDoubted = isDoubtedOrComplicatedSegment(chunks[i], '', scoreChunkComplexity(chunks[i]));
                     const hasCloud = !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl);
-                    // Give local AI and server Kona adequate time (45s-65s), but if cloud is sole provider, use snappy timeout
+                    // Give local AI and server Kona adequate time (55s-85s), but if cloud is sole provider, use snappy timeout
                     const isKonaPref = (typeof isServerKonaPreferred === 'function' ? isServerKonaPreferred() : ((typeof window !== 'undefined' && typeof window.isServerKonaPreferred === 'function') ? window.isServerKonaPreferred() : true));
-                    const stallLimit = (window.EngbotLmStudio?.enabled() || isKonaPref)
-                        ? (isDoubted ? 65000 : 45000)
+                    const hasLocal = !!(window.EngbotLmStudio?.available());
+                    const stallLimit = (hasLocal || isKonaPref)
+                        ? (isDoubted ? 85000 : 55000)
                         : (hasCloud ? 25000 : 15000);
                     const segTimeout = new Promise(resolve => {
                         segTimer = setTimeout(() => resolve('__STALL__'), stallLimit);
@@ -9892,14 +9947,20 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                 if (!cancelTranslationFlag && i + 1 < chunks.length) {
                     startLookahead(i + 1);
                 }
-                const engKey = lastTranslationEngine || 'kona2';
+                let engKey = lastTranslationEngine || 'kona2';
+                if (typeof currentChunkEngines !== 'undefined' && currentChunkEngines) {
+                    if ((currentChunkEngines.has('kona2') || currentChunkEngines.has('server')) && currentChunkEngines.has('lm_studio')) {
+                        engKey = 'ensemble';
+                    }
+                }
                 job.telemetry.engines[engKey] = (job.telemetry.engines[engKey] || 0) + 1;
                 job.telemetry.totalChunks = (job.telemetry.totalChunks || 0) + 1;
                 job.telemetry.totalChars = (job.telemetry.totalChars || 0) + output.length;
                 job.telemetry.totalWords = (job.telemetry.totalWords || 0) + (output.trim().split(/\s+/).filter(Boolean).length || 0);
 
                 let logEng = 'ai';
-                if (engKey.includes('kona') || engKey === 'server') logEng = 'kona';
+                if (engKey === 'ensemble') logEng = 'ensemble';
+                else if (engKey.includes('kona') || engKey === 'server') logEng = 'kona';
                 else if (engKey === 'lm_studio' || engKey === 'local_ai') logEng = 'local';
                 else if (engKey === 'rules' || engKey.includes('google')) logEng = 'rules';
                 else if (engKey === 'raw' || engKey.includes('mymemory')) logEng = 'raw';
@@ -10217,7 +10278,10 @@ function renderAdminTranslationTelemetry(job = null, book = null) {
         const pct = Math.round((count / sumEngineChunks) * 100);
         let displayName = eng.toUpperCase();
         let badgeColor = 'bg-georgian-gold/20 text-georgian-gold border-georgian-gold/40';
-        if (eng.includes('lm_studio') || eng === 'local_ai') {
+        if (eng === 'ensemble') {
+            displayName = '✨ Dual-AI Ensemble (Kona 3.8B + LM Studio)';
+            badgeColor = 'bg-sky-500/20 text-sky-300 border-sky-500/40 shadow-sm';
+        } else if (eng.includes('lm_studio') || eng === 'local_ai') {
             displayName = 'LM Studio · ' + (window.EngbotLmStudio?.settings()?.model || 'Local Model');
             badgeColor = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
         } else if (eng.includes('cloud_ai') || eng === 'ai') {
@@ -10258,14 +10322,21 @@ function renderAdminTranslationTelemetry(job = null, book = null) {
         ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">Complete</span>'
         : '<span class="px-2 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/40 text-[10px] font-bold animate-pulse">Translating Live</span>';
 
-    const preferredEngine = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || 'server_kona';
+    const preferredEngine = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' && localStorage.getItem('luminaPreferredTranslationEngine')) || 'ensemble';
+    const isEnsemble = preferredEngine === 'ensemble';
     const isLmStudioActive = preferredEngine === 'lm_studio' && window.EngbotLmStudio?.enabled();
-    const hostEnv = isLmStudioActive ? 'Local Machine' : (tel.host?.split('(')[0]?.trim() || 'Oracle Cloud A1');
-    const hostSub = isLmStudioActive ? 'LM Studio · GPU/CPU Acceleration' : '4 OCPU · 24GB RAM (Free Tier)';
-    const costSub = isLmStudioActive ? 'Local Private Inference' : 'OCI Free Tier Always-Free';
-    const primaryAiName = isLmStudioActive
-        ? ('LM Studio · ' + (window.EngbotLmStudio.settings()?.model || 'Local Model'))
-        : (tel.primaryModel || 'Kona-2 Small 3.8B (Georgian Native AI · OCI)');
+    const hostEnv = isEnsemble
+        ? 'OCI Cloud + Local Machine'
+        : (isLmStudioActive ? 'Local Machine' : (tel.host?.split('(')[0]?.trim() || 'Oracle Cloud A1'));
+    const hostSub = isEnsemble
+        ? 'Dual-AI Pipeline (Kona 3.8B + LM Studio)'
+        : (isLmStudioActive ? 'LM Studio · GPU/CPU Acceleration' : '4 OCPU · 24GB RAM (Free Tier)');
+    const costSub = isEnsemble ? 'Zero-Cost Hybrid Pipeline' : (isLmStudioActive ? 'Local Private Inference' : 'OCI Free Tier Always-Free');
+    const primaryAiName = isEnsemble
+        ? 'Dual-AI Ensemble (Kona 3.8B Georgian LLM + LM Studio)'
+        : (isLmStudioActive
+            ? ('LM Studio · ' + (window.EngbotLmStudio.settings()?.model || 'Local Model'))
+            : (tel.primaryModel || 'Kona-2 Small 3.8B (Georgian Native AI · OCI)'));
 
     el.innerHTML = `
         <div class="flex items-center justify-between border-b border-indigo-500/20 pb-2">
@@ -10339,7 +10410,7 @@ function initBackgroundAudioKeepAlive() {
             backgroundKeepAliveAudio = new Audio(_silentBlobUrl || SILENT_AUDIO_URI);
             backgroundKeepAliveAudio.id = 'backgroundKeepAliveAudio';
             backgroundKeepAliveAudio.loop = true;
-            backgroundKeepAliveAudio.volume = 0.001;
+            backgroundKeepAliveAudio.volume = 0.015;
             backgroundKeepAliveAudio.playsInline = true;
             backgroundKeepAliveAudio.setAttribute('playsinline', '');
             backgroundKeepAliveAudio.setAttribute('webkit-playsinline', '');
@@ -10349,11 +10420,26 @@ function initBackgroundAudioKeepAlive() {
         }
     }
     if (backgroundKeepAliveAudio) {
-        backgroundKeepAliveAudio.volume = 0.001;
+        backgroundKeepAliveAudio.volume = 0.015;
         backgroundKeepAliveAudio.loop = true;
     }
 }
 window.initBackgroundAudioKeepAlive = initBackgroundAudioKeepAlive;
+
+function ensureAudioUnlocked() {
+    try {
+        const master = getMasterPlaybackAudio();
+        if (master && !master.src) {
+            master.src = _silentBlobUrl || generateSilentWavBlobUrl(1);
+            const p = master.play();
+            if (p && typeof p.then === 'function') {
+                p.then(() => { master.pause(); }).catch(() => {});
+            }
+        }
+    } catch (_) {}
+    startBackgroundKeepAlive();
+}
+window.ensureAudioUnlocked = ensureAudioUnlocked;
 
 function startBackgroundKeepAlive() {
     try {
@@ -10740,8 +10826,11 @@ function playUltimateFallbackTTS(text, lang, token) {
             ? selectedEngbotPreset(lang)
             : (lang === 'ka' ? 'ka-male' : 'en-gb-male');
         const url = `${serverEndpoint}?ie=UTF-8&tl=${encodeURIComponent(lang)}&client=tw-ob&q=${encodeURIComponent(chunkText)}&text=${encodeURIComponent(chunkText)}&preset=${encodeURIComponent(preset)}`;
-        const audio = new Audio(url);
+        const audio = (typeof getMasterPlaybackAudio === 'function' ? getMasterPlaybackAudio() : null) || new Audio(url);
+        audio.url = url;
+        audio.src = url;
         currentElevenAudio = audio;
+        try { audio.currentTime = 0; } catch (_) {}
         if (typeof applyAudioPlaybackRate === 'function') {
             applyAudioPlaybackRate(audio, currentGlobalSpeed);
         } else {
@@ -11121,23 +11210,31 @@ async function speakGatewayNeural(text, lang) {
 
     try {
         let audioToPlay = prefetchCacheTake(currentSentenceIndex);
-        if (!audioToPlay) {
+        let audioUrl = null;
+        if (audioToPlay && audioToPlay.src) {
+            audioUrl = audioToPlay.src;
+        } else {
             // Nothing buffered: start the window immediately so the *following*
             // sentences are fetched in parallel with this one.
             primeGatewayPrefetchWindow(currentSentenceIndex, lang);
-            const url = await fetchGatewaySpeechUrl(text, lang);
-            if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-            if (url) audioToPlay = new Audio(url);
+            audioUrl = await fetchGatewaySpeechUrl(text, lang);
         }
         if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
-        if (!audioToPlay) throw new Error('gateway audio unavailable');
+        if (!audioUrl && !audioToPlay) throw new Error('gateway audio unavailable');
 
-        currentElevenAudio = audioToPlay;
+        const master = getMasterPlaybackAudio() || (audioToPlay instanceof Audio ? audioToPlay : new Audio());
+        currentElevenAudio = master;
         currentElevenAudio.volume = isAudioMuted ? 0 : currentAudioVolume;
         currentElevenAudio.playsInline = true;
         currentElevenAudio.setAttribute('playsinline', '');
         currentElevenAudio.setAttribute('webkit-playsinline', '');
         applyAudioPlaybackRate(currentElevenAudio, currentGlobalSpeed);
+
+        const targetSrc = audioUrl || (audioToPlay && audioToPlay.src) || '';
+        if (targetSrc && currentElevenAudio.src !== targetSrc) {
+            currentElevenAudio.src = targetSrc;
+        }
+        try { currentElevenAudio.currentTime = 0; } catch (_) {}
 
         startBackgroundKeepAlive();
         requestScreenWakeLock();
@@ -11320,12 +11417,19 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
             throw new Error(`Could not obtain Neural audio stream for ${voiceId}`);
         }
 
-        currentElevenAudio = audioToPlay;
+        const master = getMasterPlaybackAudio() || (audioToPlay instanceof Audio ? audioToPlay : new Audio());
+        currentElevenAudio = master;
         currentElevenAudio.volume = isAudioMuted ? 0 : currentAudioVolume;
         currentElevenAudio.playsInline = true;
         currentElevenAudio.setAttribute('playsinline', '');
         currentElevenAudio.setAttribute('webkit-playsinline', '');
         applyAudioPlaybackRate(currentElevenAudio, currentGlobalSpeed);
+
+        const playUrl = (audioToPlay && audioToPlay.src) ? audioToPlay.src : '';
+        if (playUrl && currentElevenAudio.src !== playUrl) {
+            currentElevenAudio.src = playUrl;
+        }
+        try { currentElevenAudio.currentTime = 0; } catch (_) {}
 
         startBackgroundKeepAlive();
         requestScreenWakeLock();
@@ -11445,13 +11549,15 @@ async function speakElevenLabsSentence(text, lang = null) {
         if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
 
         const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
-        audio.volume = isAudioMuted ? 0 : currentAudioVolume;
-        audio.playsInline = true;
-        audio.setAttribute('playsinline', '');
-        audio.setAttribute('webkit-playsinline', '');
-        audio._engbotObjectUrl = audioUrl;
-        currentElevenAudio = audio;
+        const master = getMasterPlaybackAudio() || new Audio();
+        currentElevenAudio = master;
+        currentElevenAudio.volume = isAudioMuted ? 0 : currentAudioVolume;
+        currentElevenAudio.playsInline = true;
+        currentElevenAudio.setAttribute('playsinline', '');
+        currentElevenAudio.setAttribute('webkit-playsinline', '');
+        currentElevenAudio._engbotObjectUrl = audioUrl;
+        currentElevenAudio.src = audioUrl;
+        try { currentElevenAudio.currentTime = 0; } catch (_) {}
         applyAudioPlaybackRate(currentElevenAudio, currentGlobalSpeed);
 
         startBackgroundKeepAlive();
@@ -11514,14 +11620,23 @@ function stopCurrentSpeechAudio(keepBuffers = false) {
     }
     if (currentElevenAudio) {
         try {
-            if (currentElevenAudio._engbotObjectUrl) URL.revokeObjectURL(currentElevenAudio._engbotObjectUrl);
+            if (currentElevenAudio._engbotObjectUrl) {
+                URL.revokeObjectURL(currentElevenAudio._engbotObjectUrl);
+                currentElevenAudio._engbotObjectUrl = null;
+            }
             currentElevenAudio.pause();
             currentElevenAudio.onended = null;
             currentElevenAudio.onerror = null;
-            currentElevenAudio.src = '';
-            currentElevenAudio.load();
+            if (typeof masterPlaybackAudio !== 'undefined' && currentElevenAudio === masterPlaybackAudio) {
+                if (!keepBuffers) {
+                    try { currentElevenAudio.removeAttribute('src'); } catch(e) {}
+                }
+            } else {
+                currentElevenAudio.src = '';
+                currentElevenAudio.load();
+                currentElevenAudio = null;
+            }
         } catch(e) {}
-        currentElevenAudio = null;
     }
     if (window.speechSynthesis) {
         try {
@@ -11542,6 +11657,7 @@ function stopCurrentSpeechAudio(keepBuffers = false) {
 
 // ── Playback Controls ───────────────────────────────────────────────────────
 async function playChapterAudio(chapId, startSentenceIdx, forceReload = false) {
+    if (typeof ensureAudioUnlocked === 'function') ensureAudioUnlocked();
     if (!currentBook) return;
     if (startSentenceIdx === undefined && !forceReload && !isPlaying && window.EngbotReadingUI) {
         const book = currentBook;
@@ -11634,6 +11750,7 @@ async function playChapterAudio(chapId, startSentenceIdx, forceReload = false) {
 let _lastPlayPauseToggle = 0;
 
 function togglePlayPause() {
+    if (typeof ensureAudioUnlocked === 'function') ensureAudioUnlocked();
     const now = Date.now();
     if (now - _lastPlayPauseToggle < 250) {
         console.debug('[Player] Debouncing play/pause toggle');
@@ -11691,6 +11808,7 @@ function togglePlayPause() {
         startBackgroundKeepAlive();
         requestScreenWakeLock();
         updateMediaSession();
+        if (typeof ensureAudioUnlocked === 'function') ensureAudioUnlocked();
         if (currentElevenAudio) {
             currentElevenAudio.play().catch(() => speakCurrentSentence());
         } else if (window.speechSynthesis && window.speechSynthesis.paused) {
