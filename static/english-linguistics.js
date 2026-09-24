@@ -126,7 +126,9 @@
 
     function cleanEnglishOcr(text) {
         if (!text || typeof text !== 'string') return text || "";
-        let t = fixEnglishLigatures(text);
+        let t = typeof text.toWellFormed === 'function' ? text.toWellFormed() : text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
+        t = t.replace(/\u0000/g, '').replace(/\\u0000/gi, '').replace(/\x0C/g, '\n').replace(/[\x00-\x08\x0B\x0E-\x1F\x7F]/g, '');
+        t = fixEnglishLigatures(t);
         t = reconstructSpacedHeadings(t);
 
         // Strip repeated scanner loops (IIII, =====, -----, _____)

@@ -12170,6 +12170,7 @@ async function handleFileUpload(file) {
     DOM.uploadProgressPct.textContent = '15%';
     await window.EngbotUI.nextPaint();
 
+    let newBook = null;
     try {
         let totalPages = 1;
         let fileTitle = cleanBookTitle(file.name);
@@ -12345,7 +12346,7 @@ async function handleFileUpload(file) {
         // Clear any deletion tombstone so user can re-upload or add this book fresh
         clearBookTombstone(newBookId, title);
 
-        const newBook = {
+        newBook = {
             id: newBookId,
             title,
             author,
@@ -12371,7 +12372,19 @@ async function handleFileUpload(file) {
             }
         };
 
-        await saveBookToDB(newBook);
+        try {
+            await saveBookToDB(newBook);
+        } catch (saveErr) {
+            console.warn('[upload] saveBookToDB notice:', saveErr);
+            if (saveErr.message && saveErr.message.includes('Cloud sync failed; local copy retained')) {
+                if (typeof showToast === 'function') {
+                    showToast('Book saved to your device library! Cloud sync will retry in background.', 'info');
+                }
+            } else {
+                throw saveErr;
+            }
+        }
+
         // Keep the parsed text available immediately, but also retain the
         // original PDF in the user's private Supabase folder for every device.
         if (isPdf && usingCloud && window.LuminaStore && typeof window.LuminaStore.uploadSourceFile === 'function') {
@@ -12407,6 +12420,28 @@ async function handleFileUpload(file) {
 
     } catch (err) {
         console.error('File Upload Error:', err);
+        // If the book was parsed and local copy was retained, complete the upload cleanly
+        if (newBook && (err.message || '').includes('Cloud sync failed; local copy retained')) {
+            console.warn('[upload] Non-fatal cloud sync warning during upload; local copy is intact.');
+            DOM.uploadProgressBar.style.width = '100%';
+            DOM.uploadProgressPct.textContent = '100%';
+            DOM.uploadStatusText.textContent = isGeorgianBook ? "ქართული წიგნი წარმატებით ჩაიტვირთა!" : "Import complete!";
+            const fileInputEl = document.getElementById('fileInput');
+            if (fileInputEl) fileInputEl.value = '';
+            setTimeout(async () => {
+                closeModal('uploadModal');
+                DOM.uploadProgressContainer.classList.add('hidden');
+                if (typeof navigate === 'function') navigate('library');
+                await renderDigitalShelf();
+                selectBook(newBook.id, true);
+                if (typeof showToast === 'function') {
+                    showToast(isGeorgianBook
+                        ? `🇬🇪 „${newBook.title}“ — წარმატებით დაემატა ბიბლიოთეკას!`
+                        : `📖 "${newBook.title}" added to your library!`, 'success');
+                }
+            }, 600);
+            return;
+        }
         DOM.uploadStatusText.textContent = "Error parsing document: " + (err.message || 'Unknown error');
         DOM.uploadStatusText.classList.add('text-error');
         const fileInputEl = document.getElementById('fileInput');
@@ -12503,7 +12538,14 @@ async function createBookFromScannedPages(pages, meta) {
         }
     };
 
-    await saveBookToDB(newBook);
+    try {
+        await saveBookToDB(newBook);
+    } catch (saveErr) {
+        console.warn('[createBookFromScannedPages] save notice:', saveErr);
+        if (!saveErr.message || !saveErr.message.includes('Cloud sync failed; local copy retained')) {
+            throw saveErr;
+        }
+    }
     await renderDigitalShelf();
     if (typeof renderScanShelf === 'function') await renderScanShelf();
     selectBook(newBook.id, false);
@@ -12553,7 +12595,14 @@ async function appendScannedPagesToBook(bookId, pages, meta) {
         book.translatedLangs = (book.translatedLangs || []).concat('ka');
     }
 
-    await saveBookToDB(book);
+    try {
+        await saveBookToDB(book);
+    } catch (saveErr) {
+        console.warn('[appendScannedPagesToBook] save notice:', saveErr);
+        if (!saveErr.message || !saveErr.message.includes('Cloud sync failed; local copy retained')) {
+            throw saveErr;
+        }
+    }
     await renderDigitalShelf();
     if (typeof renderScanShelf === 'function') await renderScanShelf();
     if (currentBook && String(currentBook.id) === String(book.id)) await selectBook(book.id, false);

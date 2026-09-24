@@ -62,3 +62,31 @@ test('Cloud failure in getAllBooks falls back to persistent cache snapshot',asyn
   assert.equal(books[1].title,'Book 2');
 });
 
+test('saveBook strips null bytes, lone surrogates, and control characters for postgres compatibility', async () => {
+  const h = setup(); await h.store.signIn('reader@example.test', 'password');
+  const book = (await h.store.getAllBooks())[0];
+  book.title = 'Kurt Vonnegut\u0000 - Sirens of Titan\\u0000';
+  book.chapters[0].title = 'Chapter 1\uD800 Lone Surrogate';
+  book.chapters[0].text = 'Extracted text\u0000with null byte and\x0cpagebreak\x07bell';
+  book.extra = { dirty_meta: 'raw\u0000data\\u0000' };
+
+  await h.store.saveBook(book);
+
+  const bookWrite = h.writes.find(w => w.table === 'books');
+  assert.ok(bookWrite, 'book write must exist');
+  assert.equal(bookWrite.value.title, 'Kurt Vonnegut - Sirens of Titan');
+  assert.ok(!bookWrite.value.title.includes('\u0000'));
+  assert.ok(!bookWrite.value.title.includes('\\u0000'));
+  assert.equal(bookWrite.value.metadata.extra.dirty_meta, 'rawdata');
+
+  const chapterWrite = h.writes.find(w => w.table === 'chapters');
+  assert.ok(chapterWrite, 'chapter write must exist');
+  const chapterRow = chapterWrite.value[0];
+  assert.ok(chapterRow);
+  assert.ok(!chapterRow.title.includes('\uD800'));
+  assert.ok(!chapterRow.text_content.includes('\u0000'));
+  assert.ok(!chapterRow.text_content.includes('\x07'));
+  assert.ok(!chapterRow.text_content.includes('\x0c'));
+  assert.ok(chapterRow.text_content.includes('\n'));
+});
+

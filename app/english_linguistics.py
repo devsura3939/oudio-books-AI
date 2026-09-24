@@ -135,10 +135,13 @@ def clean_english_ocr(text: str) -> str:
     - Normalizes punctuation, quotes, and em dashes
     - Reconnects hyphenated word wraps
     """
-    if not text or not text.strip():
+    if not text or not str(text).strip():
         return ""
 
-    t = fix_english_ligatures(text)
+    t = text.replace('\x00', '').replace('\\u0000', '').replace('\\x00', '')
+    t = t.replace('\x0c', '\n')
+    t = re.sub(r'[\x01-\x08\x0b\x0e-\x1f\x7f]', '', t)
+    t = fix_english_ligatures(t)
     t = reconstruct_spaced_headings(t)
 
     # Strip repeated scanner loops (IIII, =====, -----, _____)

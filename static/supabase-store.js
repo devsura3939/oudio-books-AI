@@ -659,6 +659,40 @@
     });
   }
 
+  /**
+   * Deeply sanitizes strings, arrays, and plain objects for PostgreSQL/Supabase.
+   * PostgreSQL explicitly rejects code point 0 (\u0000, \x00, and literal \\u0000)
+   * as well as lone UTF-16 surrogates (\uD800-\uDFFF) in text and json/jsonb columns
+   * with SQLSTATE 22P05: "unsupported Unicode escape sequence".
+   */
+  function sanitizeForPostgres(val) {
+    if (typeof val === "string") {
+      var s = val;
+      if (typeof s.toWellFormed === "function") {
+        s = s.toWellFormed();
+      } else {
+        s = s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
+      }
+      s = s.replace(/\u0000/g, "").replace(/\\u0000/gi, "").replace(/\\x00/gi, "");
+      s = s.replace(/\x0C/g, "\n").replace(/[\x00-\x08\x0B\x0E-\x1F\x7F]/g, "");
+      return s;
+    }
+    if (Array.isArray(val)) {
+      return val.map(sanitizeForPostgres);
+    }
+    if (val !== null && typeof val === "object") {
+      if (val instanceof Date) return val.toISOString();
+      var res = {};
+      var keys = Object.keys(val);
+      for (var i = 0; i < keys.length; i++) {
+        var k = keys[i];
+        res[sanitizeForPostgres(k)] = sanitizeForPostgres(val[k]);
+      }
+      return res;
+    }
+    return val;
+  }
+
   // ── studio object → rows ─────────────────────────────────────────────────
   function bookRowFrom(book) {
     var extra = Object.assign({}, book.extra || {});
@@ -686,7 +720,7 @@
         extra[k] = book[k];
       }
     });
-    return {
+    return sanitizeForPostgres({
       user_id: userId,
       slug: String(book.id),
       title: book.title || "Untitled",
@@ -706,7 +740,7 @@
         progressPct: book.progressPct || 0,
         extra: extra,
       },
-    };
+    });
   }
 
   function chapterRowsFrom(book, bookRowId) {
@@ -721,21 +755,24 @@
           extra[k] = chapter[k];
         }
       });
-      return {
+      var rawTitle = chapter.title || "Chapter " + (index + 1);
+      var rawText = chapter.text || "";
+      var rawTextKa = chapter.text_ka || null;
+      return sanitizeForPostgres({
         book_id: bookRowId,
         user_id: userId,
         chapter_index: index,
-        title: chapter.title || "Chapter " + (index + 1),
-        text_content: chapter.text || "",
-        word_count: chapter.word_count || wordCount(chapter.text),
-        status: chapter.status || (chapter.text_ka ? 'done' : 'pending') || 'pending',
+        title: rawTitle,
+        text_content: rawText,
+        word_count: chapter.word_count || wordCount(rawText),
+        status: chapter.status || (rawTextKa ? 'done' : 'pending') || 'pending',
         metadata: {
           studio_id: chapter.id ?? index + 1,
-          text_ka: chapter.text_ka || null,
+          text_ka: rawTextKa,
           estimated_duration_sec: chapter.estimated_duration_sec || null,
           extra: extra,
         },
-      };
+      });
     });
   }
 
@@ -847,8 +884,8 @@
   async function saveBook(book) {
     if (!isReady()) return false;
     var ownerId = userId;
-    var frozenBook = structuredClone(book);
-    var row = bookRowFrom(frozenBook);
+    var frozenBook = sanitizeForPostgres(structuredClone(book));
+    var row = sanitizeForPostgres(bookRowFrom(frozenBook));
     var run = saveQueue.catch(function () {}).then(async function () {
       function checkOwner() {if (ownerId !== userId || !isReady()) throw new Error('Account changed during save');}
       checkOwner();
@@ -878,7 +915,7 @@
           bookRowId = ins.data.id;
         }
         checkOwner();
-        var chapters = chapterRowsFrom(frozenBook,bookRowId);
+        var chapters = sanitizeForPostgres(chapterRowsFrom(frozenBook,bookRowId));
         var previous = snapshot ? snapshot.chapters.filter(function(c){return c.book_id===bookRowId;}) : [];
         var changed = window.EngbotLibrarySync ? window.EngbotLibrarySync.changedRows(chapters,previous,'chapter_index') : chapters;
         changed = changed.map(function(chapter) {
@@ -891,7 +928,8 @@
         });
         for (var start=0;start<changed.length;start+=50) {
           checkOwner();
-          var saved = await client.from('chapters').upsert(changed.slice(start,start+50),{onConflict:'book_id,chapter_index'});
+          var batch = sanitizeForPostgres(changed.slice(start,start+50));
+          var saved = await client.from('chapters').upsert(batch,{onConflict:'book_id,chapter_index'});
           if (saved.error) throw saved.error;
         }
         checkOwner();
@@ -996,7 +1034,7 @@
       });
       if (upload.error) throw upload.error;
       var update = await client.from("books")
-        .update({ pdf_path: path, source_filename: file.name || null, status: "ready" })
+        .update({ pdf_path: path, source_filename: sanitizeForPostgres(file.name || null), status: "ready" })
         .eq("user_id", userId)
         .eq("slug", sid);
       if (update.error) throw update.error;
@@ -1047,12 +1085,12 @@
         .or("slug.eq." + sid + ",id.eq." + sid)
         .maybeSingle();
       if (!bookRes.error && bookRes.data) {
-        var meta = Object.assign({}, bookRes.data.metadata || {});
+        var meta = sanitizeForPostgres(Object.assign({}, bookRes.data.metadata || {}));
         if (progressPct !== undefined && progressPct !== null) meta.progressPct = Number(progressPct);
         if (lastPlayedChapterId !== undefined && lastPlayedChapterId !== null) meta.lastPlayedChapterId = lastPlayedChapterId;
         await client
           .from("books")
-          .update({ metadata: meta })
+          .update({ metadata: sanitizeForPostgres(meta) })
           .eq("id", bookRes.data.id)
           .eq("user_id", userId);
         return true;
@@ -1203,6 +1241,7 @@
     unsubscribeLibraryChanges: unsubscribeLibraryChanges,
     createJob: createJob,
     fetchActiveEnginePack: fetchActiveEnginePack,
+    sanitizeForPostgres: sanitizeForPostgres,
     invalidate: function () { if (incrementalLibrary) incrementalLibrary.invalidate(); },
   };
 })();

@@ -88,3 +88,42 @@ test('Scanner transcribeBlob never throws fatal errors for unreadable single pag
     assert.equal(result.unreadable, true);
     assert.ok(result.text.length > 0);
 });
+
+test('English OCR and book structure sanitize null bytes, lone surrogates, and control chars', () => {
+    // 1. cleanEnglishOcr sanitization
+    const dirty = 'Kurt Vonnegut\u0000 - The Sirens of Titan\\u0000\x0cwith page break\x00and\x07bell\uD800';
+    const cleaned = eng.cleanEnglishOcr(dirty);
+    assert.ok(!cleaned.includes('\u0000'));
+    assert.ok(!cleaned.includes('\\u0000'));
+    assert.ok(!cleaned.includes('\x00'));
+    assert.ok(!cleaned.includes('\x07'));
+    assert.ok(!cleaned.includes('\uD800'));
+    assert.ok(cleaned.includes('Kurt Vonnegut - The Sirens of Titan'));
+
+    // 2. pageLines sanitization
+    const content = {
+        items: [
+            { str: 'Chapter 1\u0000: The Sirens\\u0000', transform: [1, 0, 0, 12, 50, 700], width: 100, height: 12 },
+            { str: 'It was a cold\x00day\x0cwith\uD800surrogate.', transform: [1, 0, 0, 10, 50, 680], width: 150, height: 10 }
+        ]
+    };
+    const lines = structure.pageLines(content);
+    assert.ok(!lines.includes('\u0000'));
+    assert.ok(!lines.includes('\\u0000'));
+    assert.ok(!lines.includes('\uD800'));
+    assert.ok(lines.includes('Chapter 1: The Sirens'));
+
+    // 3. structure sanitization
+    const pages = [
+        { index: 1, text: 'Chapter 1\u0000\nKurt Vonnegut wrote this\u0000 book\x0cfor readers.' },
+        { index: 2, text: 'Chapter 2\uD800\nSecond chapter text\u0000 with more words to meet chapter minimums.' }
+    ];
+    const res = structure.structure(pages);
+    assert.ok(res.chapters.length >= 2);
+    for (const ch of res.chapters) {
+        assert.ok(!ch.title.includes('\u0000'));
+        assert.ok(!ch.title.includes('\uD800'));
+        assert.ok(!ch.text.includes('\u0000'));
+        assert.ok(!ch.text.includes('\uD800'));
+    }
+});

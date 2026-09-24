@@ -15,15 +15,22 @@
             || /^(პირველი|მეორე|მესამე|მეოთხე|მეხუთე|მეექვსე|მეშვიდე|მერვე|მეცხრე|მეათე)\s+თავი/u.test(lower)
             || /^(შესავალი|წინასიტყვაობა|ბოლოსიტყვაობა|დასკვნა|დანართი|პროლოგი|ეპილოგი|სარჩევი|მიძღვნა)\s*[:—–-]?\s*$/u.test(lower);
     }
+    function sanitizeText(str) {
+        if (!str || typeof str !== 'string') return '';
+        var s = typeof str.toWellFormed === 'function' ? str.toWellFormed() : str.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
+        return s.replace(/\u0000/g, '').replace(/\\u0000/gi, '').replace(/\x0C/g, '\n').replace(/[\x00-\x08\x0B\x0E-\x1F\x7F]/g, '');
+    }
     function pageLines(content) {
         const rows = [];
         for (const item of content.items || []) {
             if (typeof item.str !== 'string' || !item.str) continue;
+            const text = sanitizeText(item.str);
+            if (!text) continue;
             const x = item.transform?.[4] || 0, y = item.transform?.[5] || 0;
             const size = Math.abs(item.transform?.[3] || item.height || 10);
             let row = rows.find(r => Math.abs(r.y - y) < Math.max(2, size * 0.25));
             if (!row) { row = { y, size, parts: [] }; rows.push(row); }
-            row.parts.push({ text: item.str, x, end: x + (item.width || item.str.length * size * 0.5), size });
+            row.parts.push({ text, x, end: x + (item.width || text.length * size * 0.5), size });
         }
         rows.sort((a, b) => b.y - a.y);
         const gaps = [];
@@ -55,7 +62,7 @@
                     const dest = typeof item.dest === 'string' ? await doc.getDestination(item.dest) : item.dest;
                     if (Array.isArray(dest) && dest[0] != null) {
                         const index = typeof dest[0] === 'number' ? dest[0] : await doc.getPageIndex(dest[0]);
-                        if (index >= 0 && index < doc.numPages) out.push({ page: index + 1, title: String(item.title || '').trim(), depth });
+                        if (index >= 0 && index < doc.numPages) out.push({ page: index + 1, title: sanitizeText(String(item.title || '')).trim(), depth });
                     }
                 } catch (_) { /* Malformed outline entries do not discard page text. */ }
                 await visit(item.items, depth + 1);
@@ -75,7 +82,16 @@
             for (const line of new Set([...lines.slice(0, 2), ...lines.slice(-2)])) edgeCounts.set(line, (edgeCounts.get(line) || 0) + 1);
         }
         const chapters = []; let current;
-        const push = () => { if (current?.text.trim()) { current.text = current.text.trim(); current.word_count = wordCount(current.text); current.estimated_duration_sec = Math.round(current.word_count / 140 * 60); if (isKa) current.text_ka = current.text; chapters.push({ ...current, id: chapters.length + 1 }); } };
+        const push = () => {
+            if (current?.text.trim()) {
+                current.text = sanitizeText(current.text).trim();
+                current.title = sanitizeText(current.title || '').trim();
+                current.word_count = wordCount(current.text);
+                current.estimated_duration_sec = Math.round(current.word_count / 140 * 60);
+                if (isKa) current.text_ka = current.text;
+                chapters.push({ ...current, id: chapters.length + 1 });
+            }
+        };
         const begin = (title, page, method) => { push(); current = { title, text: '', firstPage: page, lastPage: page, structure_method: method }; };
         const hasOutline = outline.length > 0;
         let headingCount = 0;
@@ -120,5 +136,5 @@
         if (/^(?:the\s+end|finis|fin|end|contents|dedication)\b/i.test(trimmed)) return false;
         return true;
     }
-    return { heading, pageLines, outline, structure, needsOcr };
+    return { heading, pageLines, outline, structure, needsOcr, sanitizeText };
 });
