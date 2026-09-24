@@ -231,7 +231,7 @@ input[type="range"]::-moz-range-thumb {
     visibility: hidden;
     position: fixed;
     inset: 0;
-    z-index: 130;
+    z-index: 150;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -266,11 +266,12 @@ input[type="range"]::-moz-range-thumb {
     display: flex !important;
     opacity: 1 !important;
     pointer-events: auto !important;
+    z-index: 150 !important;
 }
 
 .modal-overlay.active .modal-content {
-    transform: scale(1) translateZ(0);
-    opacity: 1;
+    transform: scale(1) translateZ(0) !important;
+    opacity: 1 !important;
     pointer-events: auto !important;
 }
 /* Settings always sit above the reader, including its fixed toolbar. */

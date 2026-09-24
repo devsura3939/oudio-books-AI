@@ -145,14 +145,24 @@
         /* Modals & Drawers */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(4, 6, 10, 0.85); backdrop-filter: blur(16px);
-            display: flex; justify-content: center; align-items: center; z-index: 100;
+            display: flex; justify-content: center; align-items: center; z-index: 150;
             opacity: 0; pointer-events: none; transition: all 0.3s ease;
         }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-overlay.active {
+            visibility: visible !important;
+            display: flex !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            z-index: 150 !important;
+        }
         .modal-content {
             transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-overlay.active .modal-content {
+            transform: scale(1) !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
 
         /* Slide-out Drawer */
         .drawer-overlay {
@@ -887,6 +897,56 @@
                     else window.setGateError('The sign-in service could not load. Reload this page to retry.');
                 }
             }, 80);
+        };
+
+        // Early Modal & File Chooser Controls (Available from millisecond 0 on desktop and mobile)
+        window.openModal = function(modalId) {
+            if (typeof window._fullOpenModal === 'function') return window._fullOpenModal(modalId);
+            if (modalId === 'authModal') {
+                if (typeof window.openAuthGate === 'function') window.openAuthGate('signin');
+                return;
+            }
+            var modal = document.getElementById(modalId);
+            if (modal) {
+                if (modalId === 'uploadModal') {
+                    var progress = document.getElementById('uploadProgressContainer');
+                    if (progress) progress.classList.add('hidden');
+                    var fileInput = document.getElementById('fileInput');
+                    if (fileInput) fileInput.value = '';
+                    var dropZone = document.getElementById('dropZone');
+                    if (dropZone) dropZone.classList.remove('border-primary-container');
+                }
+                modal.classList.add('active');
+                document.body.classList.add('modal-open');
+                try { modal.querySelector('button, input, select')?.focus(); } catch (e) {}
+            }
+        };
+
+        window.closeModal = function(modalId) {
+            if (typeof window._fullCloseModal === 'function') return window._fullCloseModal(modalId);
+            var modal = document.getElementById(modalId);
+            if (modal) modal.classList.remove('active');
+            if (!document.querySelector('.modal-overlay.active')) {
+                document.body.classList.remove('modal-open');
+            }
+        };
+
+        window.triggerFileInputClick = function(e) {
+            if (e && e.target && e.target.id === 'fileInput') return;
+            var fileInput = document.getElementById('fileInput');
+            if (fileInput) {
+                fileInput.value = '';
+                fileInput.click();
+            }
+        };
+
+        window.closeMobileNav = function() {
+            if (typeof window._fullCloseMobileNav === 'function') return window._fullCloseMobileNav();
+            var drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) { drawer.classList.remove('active'); drawer.inert = true; }
+            if (!document.querySelector('.modal-overlay.active')) {
+                document.body.classList.remove('modal-open');
+            }
         };
     })();
     </script>

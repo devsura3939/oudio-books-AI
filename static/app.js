@@ -11,6 +11,9 @@
 const APP_VERSION = 'v1.53.4';
 const ENGINE_VERSION = 'v1.53.4 (Reliable translation recovery)';
 
+var DOM = (typeof window !== 'undefined' && window.DOM) ? window.DOM : {};
+if (typeof window !== 'undefined') window.DOM = DOM;
+
 let db = null;
 let currentBook = null;
 let currentPlayingChapterId = null;
@@ -805,7 +808,11 @@ let geminiPasses = (_initialAcc && _initialAcc.geminiPasses !== undefined)
 if (![1, 2, 3].includes(geminiPasses)) geminiPasses = 3;
 
 // Gemini fallback chain: real production Google AI Studio models
-const GEMINI_FALLBACK_MODELS = EngbotCore.geminiModels(geminiModel);
+const GEMINI_FALLBACK_MODELS = (typeof EngbotCore !== 'undefined' && EngbotCore.geminiModels)
+    ? EngbotCore.geminiModels(geminiModel)
+    : (typeof window !== 'undefined' && window.EngbotCore?.geminiModels)
+        ? window.EngbotCore.geminiModels(geminiModel)
+        : ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash'];
 const geminiModelCooldown = {}; // model -> earliest ms it may be retried
 const GEMINI_MODEL_COOLDOWN_MS = 60_000;
 
@@ -2102,7 +2109,7 @@ const LEGACY_DEMO_BOOKS = Object.freeze([
 ]);
 
 // ── DOM Cache ──────────────────────────────────────────────────────────────
-let DOM = {};
+var DOM = (typeof window !== 'undefined' && window.DOM) ? window.DOM : (typeof DOM !== 'undefined' ? DOM : {});
 
 function cacheDOM() {
     DOM = {
@@ -3821,7 +3828,8 @@ function clearActiveAiSettings() {
 
 function triggerFileInputClick(e) {
     if (e && e.target && e.target.id === 'fileInput') return;
-    const fileInput = document.getElementById('fileInput') || DOM?.fileInput;
+    const domObj = typeof DOM !== 'undefined' ? DOM : (typeof window !== 'undefined' ? window.DOM : null);
+    const fileInput = document.getElementById('fileInput') || domObj?.fileInput;
     if (fileInput) {
         fileInput.value = '';
         fileInput.click();
@@ -3836,17 +3844,21 @@ function openModal(modalId) {
     }
     const modal = document.getElementById(modalId);
     if (modal) {
+        if (modalId === 'uploadModal' && modal.classList.contains('active')) {
+            return;
+        }
         if (modalId === 'authModal') {
             if (typeof toggleAuthForgot === 'function') toggleAuthForgot(false);
             if (typeof setAuthError === 'function') setAuthError('');
             if (typeof setAuthSuccess === 'function') setAuthSuccess('');
         }
         if (modalId === 'uploadModal') {
-            const progress = document.getElementById('uploadProgressContainer') || DOM?.uploadProgressContainer;
+            const domObj = typeof DOM !== 'undefined' ? DOM : (typeof window !== 'undefined' ? window.DOM : null);
+            const progress = document.getElementById('uploadProgressContainer') || domObj?.uploadProgressContainer;
             if (progress) progress.classList.add('hidden');
-            const fileInput = document.getElementById('fileInput') || DOM?.fileInput;
+            const fileInput = document.getElementById('fileInput') || domObj?.fileInput;
             if (fileInput) fileInput.value = '';
-            const dropZone = document.getElementById('dropZone') || DOM?.dropZone;
+            const dropZone = document.getElementById('dropZone') || domObj?.dropZone;
             if (dropZone) dropZone.classList.remove('border-primary-container');
         }
         if (modalId === 'wholeBookTranslateModal') {
@@ -3872,14 +3884,16 @@ function openModal(modalId) {
         if (modalId === 'readerThemeModal') {
             document.getElementById('readerFontFamilySelect').value = readerFontFamily;
             document.getElementById('readerComfortToggle').checked = localStorage.getItem('lumina_reader_comfort') === 'true';
-            if (DOM.readerModalFontSizeText) DOM.readerModalFontSizeText.textContent = `${readerFontSize}px`;
+            const domObj = typeof DOM !== 'undefined' ? DOM : (typeof window !== 'undefined' ? window.DOM : null);
+            if (domObj?.readerModalFontSizeText) domObj.readerModalFontSizeText.textContent = `${readerFontSize}px`;
         }
         modal.classList.add('active');
         document.body.classList.add('modal-open');
-        modal.querySelector('button, input, select')?.focus();
+        try { modal.querySelector('button, input, select')?.focus(); } catch (_) {}
     }
 }
 window.openModal = openModal;
+window._fullOpenModal = openModal;
 
 function closeModal(modalId) {
     if (modalId === 'aiSettingsModal') window.EngbotAiSettings?.hideSecrets();
@@ -3898,6 +3912,7 @@ function closeModal(modalId) {
     }
 }
 window.closeModal = closeModal;
+window._fullCloseModal = closeModal;
 
 function saveGeminiSettings() {
     if (window.EngbotLmStudio?.saveFromUI() === false) return;
@@ -4085,6 +4100,8 @@ function closeMobileNav() {
         document.body.classList.remove('modal-open');
     }
 }
+window.closeMobileNav = closeMobileNav;
+window._fullCloseMobileNav = closeMobileNav;
 
 function jumpToBookmark(chapterId, sentenceIndex) {
     closeToCDrawer();
@@ -11532,17 +11549,19 @@ function elevenLabsVoiceSettings(modelId, sentenceType) {
     return { stability: 0.35, similarity_boost: 0.85, style: sentenceType === 'exclamation' ? 0.45 : 0.25, use_speaker_boost: true };
 }
 
-const elevenSpeechBuffer = window.EngbotProviders.createSpeechBuffer(async (payload, signal) => {
-    const res = await window.EngbotProviders.request(`https://api.elevenlabs.io/v1/text-to-speech/${payload.voiceId}`, {
-        method:'POST', signal,
-        headers:{'xi-api-key':sanitizeApiKey(elevenLabsApiKey),'Content-Type':'application/json','Accept':'audio/mpeg'},
-        body:JSON.stringify(payload.body)
-    }, {timeoutMs:18000, provider:'ElevenLabs'});
-    if (!res.ok) throw new Error(window.EngbotProviders.getFailure()?.message || `ElevenLabs HTTP ${res.status}`);
-    const blob = await res.blob();
-    if (!blob.type.startsWith('audio/') || blob.size < 64) throw new Error('ElevenLabs returned no playable audio.');
-    return blob;
-});
+const elevenSpeechBuffer = (typeof window !== 'undefined' && window.EngbotProviders?.createSpeechBuffer)
+    ? window.EngbotProviders.createSpeechBuffer(async (payload, signal) => {
+        const res = await window.EngbotProviders.request(`https://api.elevenlabs.io/v1/text-to-speech/${payload.voiceId}`, {
+            method:'POST', signal,
+            headers:{'xi-api-key':sanitizeApiKey(elevenLabsApiKey),'Content-Type':'application/json','Accept':'audio/mpeg'},
+            body:JSON.stringify(payload.body)
+        }, {timeoutMs:18000, provider:'ElevenLabs'});
+        if (!res.ok) throw new Error(window.EngbotProviders.getFailure()?.message || `ElevenLabs HTTP ${res.status}`);
+        const blob = await res.blob();
+        if (!blob.type.startsWith('audio/') || blob.size < 64) throw new Error('ElevenLabs returned no playable audio.');
+        return blob;
+    })
+    : { get: () => Promise.resolve(null), clear: () => {}, size: 0 };
 
 function elevenSpeechPayload(text, lang, index) {
     const isKa = lang === 'ka';
@@ -12452,10 +12471,21 @@ async function handleFileUpload(file) {
         return;
     }
 
-    const progressContainer = DOM.uploadProgressContainer || document.getElementById('uploadProgressContainer');
-    const statusText = DOM.uploadStatusText || document.getElementById('uploadStatusText');
-    const progressBar = DOM.uploadProgressBar || document.getElementById('uploadProgressBar');
-    const progressPct = DOM.uploadProgressPct || document.getElementById('uploadProgressPct');
+    const domObj = typeof DOM !== 'undefined' ? DOM : (typeof window !== 'undefined' ? window.DOM : null);
+    const progressContainer = domObj?.uploadProgressContainer || document.getElementById('uploadProgressContainer');
+    const statusText = domObj?.uploadStatusText || document.getElementById('uploadStatusText');
+    const progressBar = domObj?.uploadProgressBar || document.getElementById('uploadProgressBar');
+    const progressPct = domObj?.uploadProgressPct || document.getElementById('uploadProgressPct');
+
+    const updateUploadProgress = (pctVal, textVal) => {
+        const curDom = typeof DOM !== 'undefined' ? DOM : (typeof window !== 'undefined' ? window.DOM : null);
+        const bar = curDom?.uploadProgressBar || document.getElementById('uploadProgressBar');
+        const pct = curDom?.uploadProgressPct || document.getElementById('uploadProgressPct');
+        const status = curDom?.uploadStatusText || document.getElementById('uploadStatusText');
+        if (bar && pctVal != null) bar.style.width = `${pctVal}%`;
+        if (pct && pctVal != null) pct.textContent = `${pctVal}%`;
+        if (status && textVal != null) status.textContent = textVal;
+    };
 
     if (progressContainer) progressContainer.classList.remove('hidden');
     if (statusText) {
@@ -12491,7 +12521,7 @@ async function handleFileUpload(file) {
                 let pageText = pdfPageLines(content);
                 let ocr = null;
                 if (window.EngbotBookStructure.needsOcr(pageText)) {
-                    DOM.uploadStatusText.textContent = `Recognizing printed text · page ${i} of ${totalPages}…`;
+                    updateUploadProgress(null, `Recognizing printed text · page ${i} of ${totalPages}…`);
                     const base = page.getViewport({ scale: 1 });
                     const viewport = page.getViewport({ scale: Math.min(3, 2400 / Math.max(base.width, base.height)) });
                     const canvas = document.createElement('canvas'); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
@@ -12563,13 +12593,10 @@ async function handleFileUpload(file) {
                 page.cleanup();
 
                 const pct = 15 + Math.round((i / totalPages) * 45);
-                DOM.uploadProgressBar.style.width = `${pct}%`;
-                DOM.uploadProgressPct.textContent = `${pct}%`;
+                updateUploadProgress(pct, null);
             }
 
-            DOM.uploadStatusText.textContent = "Detecting cover, title and chapters...";
-            DOM.uploadProgressBar.style.width = '70%';
-            DOM.uploadProgressPct.textContent = '70%';
+            updateUploadProgress(70, "Detecting cover, title and chapters...");
 
             let info = {};
             try { info = (await pdf.getMetadata()).info || {}; } catch (e) {}
@@ -12612,9 +12639,7 @@ async function handleFileUpload(file) {
         } else {
             // Text or Markdown document
             const fullText = await file.text();
-            DOM.uploadProgressBar.style.width = '50%';
-            DOM.uploadProgressPct.textContent = '50%';
-            DOM.uploadStatusText.textContent = "Formatting document chapters...";
+            updateUploadProgress(50, "Formatting document chapters...");
 
             const kaCount = (fullText.match(/[\u10A0-\u10FF\u1C90-\u1CBF]/g) || []).length;
             const enCount = (fullText.match(/[A-Za-z]/g) || []).length;
@@ -12626,9 +12651,7 @@ async function handleFileUpload(file) {
             coverUrl = generateDynamicStudioCover(cleanBookTitle(title));
         }
 
-        DOM.uploadStatusText.textContent = isGeorgianBook ? "თავების სტრუქტურირება..." : "Structuring chapters...";
-        DOM.uploadProgressBar.style.width = '90%';
-        DOM.uploadProgressPct.textContent = '90%';
+        updateUploadProgress(90, isGeorgianBook ? "თავების სტრუქტურირება..." : "Structuring chapters...");
 
         if (isGeorgianBook) {
             chapters.forEach(ch => {
@@ -13553,10 +13576,14 @@ function setupEventListeners() {
 
     // Window drag protection: dragging a file across the page never accidentally navigates away
     window.addEventListener('dragover', (e) => {
-        if (!e.target.closest('#dropZone')) e.preventDefault();
+        if (!e.target || typeof e.target.closest !== 'function' || !e.target.closest('#dropZone')) {
+            e.preventDefault();
+        }
     });
     window.addEventListener('drop', (e) => {
-        if (!e.target.closest('#dropZone')) e.preventDefault();
+        if (!e.target || typeof e.target.closest !== 'function' || !e.target.closest('#dropZone')) {
+            e.preventDefault();
+        }
     });
 
 
