@@ -881,7 +881,7 @@ const _isStaticHost = (() => {
         return h.endsWith('.github.io') || h.endsWith('.pages.dev') || h.endsWith('.netlify.app') || h.endsWith('.chatgpt.site');
     } catch (e) { return false; }
 })();
-let luminaGatewayAvailable = !_isStaticHost;
+let luminaGatewayAvailable = Boolean(typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL) || !_isStaticHost;
 
 async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 8192, systemPrompt = null, signal } = {}) {
     const jobSignal = signal || (typeof translationRequestController !== 'undefined' ? translationRequestController?.signal : null);
@@ -896,7 +896,11 @@ async function callLuminaGatewayJSON(prompt, { temperature = 0.2, maxTokens = 81
         if (typeof geminiApiKey !== 'undefined' && geminiApiKey) {
             headers['x-gemini-key'] = geminiApiKey;
         }
-        const res = await window.EngbotProviders.request('/api/ai', {
+        const apiBase = (typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL)
+            ? window.LUMINA_RUNTIME_CONFIG.API_URL.replace(/\/+$/, '')
+            : (_isStaticHost ? 'https://92.5.71.162.sslip.io' : '');
+        const targetUrl = apiBase ? `${apiBase}/api/ai` : '/api/ai';
+        const res = await window.EngbotProviders.request(targetUrl, {
             method: 'POST',
             headers,
             body: JSON.stringify(payload),
@@ -3815,6 +3819,16 @@ function clearActiveAiSettings() {
     syncSettingsToDOMInputs();
 }
 
+function triggerFileInputClick(e) {
+    if (e && e.target && e.target.id === 'fileInput') return;
+    const fileInput = document.getElementById('fileInput') || DOM?.fileInput;
+    if (fileInput) {
+        fileInput.value = '';
+        fileInput.click();
+    }
+}
+window.triggerFileInputClick = triggerFileInputClick;
+
 function openModal(modalId) {
     if (modalId === 'authModal') {
         openAuthGate('signin');
@@ -3826,6 +3840,18 @@ function openModal(modalId) {
             if (typeof toggleAuthForgot === 'function') toggleAuthForgot(false);
             if (typeof setAuthError === 'function') setAuthError('');
             if (typeof setAuthSuccess === 'function') setAuthSuccess('');
+        }
+        if (modalId === 'uploadModal') {
+            const progress = document.getElementById('uploadProgressContainer') || DOM?.uploadProgressContainer;
+            if (progress) progress.classList.add('hidden');
+            const fileInput = document.getElementById('fileInput') || DOM?.fileInput;
+            if (fileInput) fileInput.value = '';
+            const dropZone = document.getElementById('dropZone') || DOM?.dropZone;
+            if (dropZone) dropZone.classList.remove('border-primary-container');
+        }
+        if (modalId === 'wholeBookTranslateModal') {
+            if (typeof renderTranslationBudgetModeUI === 'function') renderTranslationBudgetModeUI();
+            if (typeof updateEngineSelectorUI === 'function') updateEngineSelectorUI();
         }
         if (modalId === 'voiceModal') {
             populateVoiceList();
@@ -3853,6 +3879,7 @@ function openModal(modalId) {
         modal.querySelector('button, input, select')?.focus();
     }
 }
+window.openModal = openModal;
 
 function closeModal(modalId) {
     if (modalId === 'aiSettingsModal') window.EngbotAiSettings?.hideSecrets();
@@ -3870,6 +3897,7 @@ function closeModal(modalId) {
         document.body.classList.remove('modal-open');
     }
 }
+window.closeModal = closeModal;
 
 function saveGeminiSettings() {
     if (window.EngbotLmStudio?.saveFromUI() === false) return;
@@ -8914,8 +8942,8 @@ function translationMachine() {
     const owner = typeof getCurrentUserId === 'function' ? getCurrentUserId() : '';
     if (!machineTranslator || machineTranslatorOwner !== owner) {
         machineTranslatorOwner = owner;
-        const apiBase = window.LUMINA_RUNTIME_CONFIG?.API_URL || '';
-        const serverTarget = apiBase ? `${apiBase}/api/server-translate` : (!_isStaticHost ? '/api/server-translate' : false);
+        const apiBase = (typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL) ? window.LUMINA_RUNTIME_CONFIG.API_URL.replace(/\/+$/, '') : (_isStaticHost ? 'https://92.5.71.162.sslip.io' : '');
+        const serverTarget = apiBase ? `${apiBase}/api/server-translate` : (!_isStaticHost ? '/api/server-translate' : 'https://92.5.71.162.sslip.io/api/server-translate');
         machineTranslator = window.EngbotTranslationMachine.create({
             assess: assessTranslation, server: serverTarget,
             onEngine: engine => {
@@ -12424,11 +12452,18 @@ async function handleFileUpload(file) {
         return;
     }
 
-    DOM.uploadProgressContainer.classList.remove('hidden');
-    DOM.uploadStatusText.classList.remove('text-error');
-    DOM.uploadStatusText.textContent = isPdf ? "Extracting text from PDF..." : "Reading document text...";
-    DOM.uploadProgressBar.style.width = '15%';
-    DOM.uploadProgressPct.textContent = '15%';
+    const progressContainer = DOM.uploadProgressContainer || document.getElementById('uploadProgressContainer');
+    const statusText = DOM.uploadStatusText || document.getElementById('uploadStatusText');
+    const progressBar = DOM.uploadProgressBar || document.getElementById('uploadProgressBar');
+    const progressPct = DOM.uploadProgressPct || document.getElementById('uploadProgressPct');
+
+    if (progressContainer) progressContainer.classList.remove('hidden');
+    if (statusText) {
+        statusText.classList.remove('text-error');
+        statusText.textContent = isPdf ? "Extracting text from PDF..." : "Reading document text...";
+    }
+    if (progressBar) progressBar.style.width = '15%';
+    if (progressPct) progressPct.textContent = '15%';
     await window.EngbotUI.nextPaint();
 
     let newBook = null;
@@ -12658,17 +12693,21 @@ async function handleFileUpload(file) {
                 showToast('Book text was saved, but the original PDF could not be synced yet.', 'error');
             }
         }
-        DOM.uploadProgressBar.style.width = '100%';
-        DOM.uploadProgressPct.textContent = '100%';
-        DOM.uploadStatusText.textContent = isGeorgianBook ? "ქართული წიგნი წარმატებით ჩაიტვირთა!" : "Import complete!";
+        const bar = DOM.uploadProgressBar || document.getElementById('uploadProgressBar');
+        const pct = DOM.uploadProgressPct || document.getElementById('uploadProgressPct');
+        const status = DOM.uploadStatusText || document.getElementById('uploadStatusText');
+        const cont = DOM.uploadProgressContainer || document.getElementById('uploadProgressContainer');
+        if (bar) bar.style.width = '100%';
+        if (pct) pct.textContent = '100%';
+        if (status) status.textContent = isGeorgianBook ? "ქართული წიგნი წარმატებით ჩაიტვირთა!" : "Import complete!";
 
         // Reset file input value so uploading the same file again triggers change event
-        const fileInputEl = document.getElementById('fileInput');
+        const fileInputEl = document.getElementById('fileInput') || DOM?.fileInput;
         if (fileInputEl) fileInputEl.value = '';
 
         setTimeout(async () => {
             closeModal('uploadModal');
-            DOM.uploadProgressContainer.classList.add('hidden');
+            if (cont) cont.classList.add('hidden');
             if (typeof navigate === 'function') navigate('library');
             await renderDigitalShelf();
             selectBook(newBook.id, true);
@@ -12681,17 +12720,21 @@ async function handleFileUpload(file) {
 
     } catch (err) {
         console.error('File Upload Error:', err);
+        const bar = DOM.uploadProgressBar || document.getElementById('uploadProgressBar');
+        const pct = DOM.uploadProgressPct || document.getElementById('uploadProgressPct');
+        const status = DOM.uploadStatusText || document.getElementById('uploadStatusText');
+        const cont = DOM.uploadProgressContainer || document.getElementById('uploadProgressContainer');
         // If the book was parsed and local copy was retained, complete the upload cleanly
         if (newBook && (err.message || '').includes('Cloud sync failed; local copy retained')) {
             console.warn('[upload] Non-fatal cloud sync warning during upload; local copy is intact.');
-            DOM.uploadProgressBar.style.width = '100%';
-            DOM.uploadProgressPct.textContent = '100%';
-            DOM.uploadStatusText.textContent = isGeorgianBook ? "ქართული წიგნი წარმატებით ჩაიტვირთა!" : "Import complete!";
-            const fileInputEl = document.getElementById('fileInput');
+            if (bar) bar.style.width = '100%';
+            if (pct) pct.textContent = '100%';
+            if (status) status.textContent = isGeorgianBook ? "ქართული წიგნი წარმატებით ჩაიტვირთა!" : "Import complete!";
+            const fileInputEl = document.getElementById('fileInput') || DOM?.fileInput;
             if (fileInputEl) fileInputEl.value = '';
             setTimeout(async () => {
                 closeModal('uploadModal');
-                DOM.uploadProgressContainer.classList.add('hidden');
+                if (cont) cont.classList.add('hidden');
                 if (typeof navigate === 'function') navigate('library');
                 await renderDigitalShelf();
                 selectBook(newBook.id, true);
@@ -12703,9 +12746,11 @@ async function handleFileUpload(file) {
             }, 600);
             return;
         }
-        DOM.uploadStatusText.textContent = "Error parsing document: " + (err.message || 'Unknown error');
-        DOM.uploadStatusText.classList.add('text-error');
-        const fileInputEl = document.getElementById('fileInput');
+        if (status) {
+            status.textContent = "Error parsing document: " + (err.message || 'Unknown error');
+            status.classList.add('text-error');
+        }
+        const fileInputEl = document.getElementById('fileInput') || DOM?.fileInput;
         if (fileInputEl) fileInputEl.value = '';
     }
 }
@@ -13472,28 +13517,47 @@ function setupEventListeners() {
         btnNavUpload.addEventListener('click', () => openModal('uploadModal'));
     }
 
-    if (DOM.dropZone) {
-        DOM.dropZone.addEventListener('dragover', (e) => {
+    const dropZoneEl = DOM.dropZone || document.getElementById('dropZone');
+    if (dropZoneEl) {
+        dropZoneEl.addEventListener('dragover', (e) => {
             e.preventDefault();
-            DOM.dropZone.classList.add('border-primary-container');
+            dropZoneEl.classList.add('border-primary-container');
         });
-        DOM.dropZone.addEventListener('dragleave', () => {
-            DOM.dropZone.classList.remove('border-primary-container');
+        dropZoneEl.addEventListener('dragleave', () => {
+            dropZoneEl.classList.remove('border-primary-container');
         });
-        DOM.dropZone.addEventListener('drop', (e) => {
+        dropZoneEl.addEventListener('drop', (e) => {
             e.preventDefault();
-            DOM.dropZone.classList.remove('border-primary-container');
-            if (e.dataTransfer.files.length > 0) {
+            dropZoneEl.classList.remove('border-primary-container');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                 handleFileUpload(e.dataTransfer.files[0]);
             }
         });
     }
 
-    if (DOM.fileInput) {
-        DOM.fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handleFileUpload(e.target.files[0]);
+    const fileInputEl = DOM.fileInput || document.getElementById('fileInput');
+    if (fileInputEl) {
+        fileInputEl.addEventListener('change', (e) => {
+            if (e.target && e.target.files && e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
         });
     }
+
+    // Modal background dismissal: clicking outside modal-content closes active modal
+    window.addEventListener('click', (e) => {
+        if (e.target && e.target.classList && e.target.classList.contains('modal-overlay') && e.target.classList.contains('active')) {
+            closeModal(e.target.id);
+        }
+    });
+
+    // Window drag protection: dragging a file across the page never accidentally navigates away
+    window.addEventListener('dragover', (e) => {
+        if (!e.target.closest('#dropZone')) e.preventDefault();
+    });
+    window.addEventListener('drop', (e) => {
+        if (!e.target.closest('#dropZone')) e.preventDefault();
+    });
 
 
 

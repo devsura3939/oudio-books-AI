@@ -261,12 +261,18 @@ input[type="range"]::-moz-range-thumb {
     will-change: transform, opacity;
 }
 
+.modal-overlay.active {
+    visibility: visible !important;
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
 .modal-overlay.active .modal-content {
     transform: scale(1) translateZ(0);
     opacity: 1;
+    pointer-events: auto !important;
 }
-
-.modal-overlay.active { visibility: visible; }
 /* Settings always sit above the reader, including its fixed toolbar. */
 #readerThemeModal button, #readerThemeModal select { min-height: 44px; }
 #readerThemeModal .modal-content { max-height: calc(100dvh - 24px); }

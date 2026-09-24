@@ -1033,12 +1033,14 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
     const openRouterKey = (typeof window.sanitizeApiKey === 'function' ? window.sanitizeApiKey(localStorage.getItem("openRouterApiKey") || "") : (localStorage.getItem("openRouterApiKey") || "").trim());
 
     // 1. Try server-side endpoint first (/api/ocr)
-    if (!location.hostname.endsWith('.github.io')) try {
+    const apiBase = (typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL) ? window.LUMINA_RUNTIME_CONFIG.API_URL.replace(/\/+$/, '') : '';
+    if (!location.hostname.endsWith('.github.io') || apiBase) try {
+      const ocrUrl = apiBase ? `${apiBase}/api/ocr` : '/api/ocr';
       const headers = { "Content-Type": "application/json" };
       if (geminiKey) headers["X-Gemini-Key"] = geminiKey;
       if (openRouterKey) headers["X-OpenRouter-Key"] = openRouterKey;
 
-      const res = await window.EngbotProviders.request("/api/ocr", {
+      const res = await window.EngbotProviders.request(ocrUrl, {
         method: "POST",
               // Vision is an enhancement. Keep its deadline short so an
               // expired gateway key immediately falls through to local OCR.
@@ -1056,9 +1058,9 @@ ${hint ? 'Context hints (not evidence for missing words): ' + hint : ''}`;
         state.tier0 = false;
         state.neuralRetryAt = Date.now() + (res.status === 429 ? 60_000 : 5 * 60_000);
       }
-      console.warn(`[scanner] /api/ocr responded with status ${res.status}`);
+      console.warn(`[scanner] ${ocrUrl} responded with status ${res.status}`);
     } catch (err) {
-      console.warn("[scanner] /api/ocr request failed, trying client-side vision", err);
+      console.warn("[scanner] OCR request failed, trying client-side vision", err);
     }
 
     // 2. Direct Client-Side Gemini Vision (Frontier Models: Gemini 2.5 Pro / Flash)
