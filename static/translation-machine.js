@@ -68,11 +68,18 @@
             const accept = (rawText, engine) => {
                 let text = rawText;
                 if (targetLang === 'ka' && typeof text === 'string' && text.trim()) {
-                    const synth = (typeof root !== 'undefined' && root.synthesizeGeorgianMorphology) ||
-                                  (typeof globalThis !== 'undefined' && globalThis.synthesizeGeorgianMorphology) ||
-                                  (typeof window !== 'undefined' && window.synthesizeGeorgianMorphology);
-                    if (typeof synth === 'function') {
-                        try { text = synth(text); } catch (_) {}
+                    const polisher = (typeof root !== 'undefined' && root.applyKaRuleEngine) ||
+                                     (typeof globalThis !== 'undefined' && globalThis.applyKaRuleEngine) ||
+                                     (typeof window !== 'undefined' && window.applyKaRuleEngine);
+                    if (typeof polisher === 'function') {
+                        try { text = polisher(text); } catch (_) {}
+                    } else {
+                        const synth = (typeof root !== 'undefined' && root.synthesizeGeorgianMorphology) ||
+                                      (typeof globalThis !== 'undefined' && globalThis.synthesizeGeorgianMorphology) ||
+                                      (typeof window !== 'undefined' && window.synthesizeGeorgianMorphology);
+                        if (typeof synth === 'function') {
+                            try { text = synth(text); } catch (_) {}
+                        }
                     }
                 }
                 if (!valid(source, text, targetLang)) {failure(engine,`quality check: ${assess(source,text,targetLang).reason || 'invalid output'}`);return null;}

@@ -7766,9 +7766,13 @@ function parseModelJSON(raw) {
 function extractTranslation(raw) {
     if (!raw) return '';
     let out = String(raw).trim();
+    out = out.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    out = out.replace(/<\/?think>/gi, '').trim();
+    out = out.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '').trim();
+    out = out.replace(/<\/?(?:tool_call|output|translation)>/gi, '').trim();
     out = out.replace(/^```(?:[a-zA-Z]*)\s*\n?/, '').replace(/\n?```\s*$/, '');
     const lower = out.toLowerCase();
-    for (const prefix of ['translation:', 'übersetzung:', 'თარგმანი:']) {
+    for (const prefix of ['translation:', 'übersetzung:', 'თარგმანი:', 'ქართული თარგმანი:']) {
         if (lower.startsWith(prefix)) {
             out = out.slice(prefix.length).trim();
             break;
@@ -8961,6 +8965,7 @@ function getPhaseTranslator() {
             localAvailable: () => !!(window.EngbotLmStudio?.available() && !isLocalSlow()),
             cloudAvailable: () => !!(luminaGatewayAvailable || geminiApiKey || groqApiKey || mistralApiKey || openRouterApiKey || customProviderUrl || serverKonaActive),
             assess: assessTranslation,
+            ruleEngine: applyKaRuleEngine,
             onStage: stage => {
                 setTranslationStage(stage);
                 if (/ensemble/i.test(stage)) recordEngineUse('ensemble');
@@ -9017,8 +9022,16 @@ function translationMachine() {
 function finishMachineTranslation(source, output, targetLang) {
     if (!output) return null;
     let refined = EngbotCore.readingText(output);
-    if (targetLang === 'ka' && typeof synthesizeGeorgianMorphology === 'function') {
-        try { refined = synthesizeGeorgianMorphology(refined); } catch (_) {}
+    if (targetLang === 'ka') {
+        if (typeof synthesizeGeorgianMorphology === 'function') {
+            try { refined = synthesizeGeorgianMorphology(refined); } catch (_) {}
+        }
+        if (typeof applyKaRuleEngine === 'function') {
+            try {
+                const ruled = applyKaRuleEngine(refined);
+                if (ruled && assessTranslation(source, ruled, targetLang).ok) return ruled;
+            } catch (_) {}
+        }
     }
     return assessTranslation(source, refined, targetLang).ok ? refined : assessTranslation(source, output, targetLang).ok ? output : null;
 }
@@ -9864,7 +9877,7 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                     const hasLocal = !!(window.EngbotLmStudio?.available());
                     const stallLimit = (hasLocal || isKonaPref)
                         ? (isDoubted ? 85000 : 55000)
-                        : (hasCloud ? 25000 : 15000);
+                        : (hasCloud ? 60000 : 35000);
                     const segTimeout = new Promise(resolve => {
                         segTimer = setTimeout(() => resolve('__STALL__'), stallLimit);
                     });
@@ -9909,6 +9922,39 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                     output = await chunkPromise;
                 }
 
+                const sanitizeModelOutput = text => {
+                    if (!text || typeof text !== 'string') return '';
+                    let out = text;
+                    out = out.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+                    out = out.replace(/<\/?think>/gi, '').trim();
+                    out = out.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '').trim();
+                    out = out.replace(/<\/?(?:tool_call|output|translation)>/gi, '').trim();
+                    if (/^\s*\{[\s\S]*\}\s*$/.test(out)) {
+                        try {
+                            const parsed = JSON.parse(out);
+                            const val = parsed.translation || parsed.translated || parsed.text || parsed.output || parsed.chunk || parsed.georgian || parsed.ka || parsed.result;
+                            if (val && typeof val === 'string') out = val;
+                        } catch (_) {}
+                    }
+                    out = out.replace(/^```[a-zA-Z0-9_-]*\s*([\s\S]*?)\s*```$/m, '$1');
+                    out = out.replace(/```[a-zA-Z0-9_-]*\s*/g, '').replace(/```/g, '').trim();
+                    out = out.replace(/^(?:Here is the translation:?|Translation:?|Georgian translation:?|ქართული თარგმანი:?)\s*/i, '');
+                    return out.trim();
+                };
+                const polishSegmentOutput = (text, lang = targetLang || 'ka') => {
+                    if (!text || typeof text !== 'string') return '';
+                    let cleaned = sanitizeModelOutput(text);
+                    if (!lang || lang === 'ka' || lang.startsWith('ka-')) {
+                        const engine = (typeof applyKaRuleEngine === 'function' ? applyKaRuleEngine : (typeof window !== 'undefined' && typeof window.applyKaRuleEngine === 'function' ? window.applyKaRuleEngine : null));
+                        if (engine) {
+                            try { cleaned = engine(cleaned); } catch (_) {}
+                        }
+                    }
+                    return cleaned;
+                };
+
+                output = polishSegmentOutput(output, targetLang);
+
                 if (skipCurrentTranslationSegmentRequested) {
                     skipCurrentTranslationSegmentRequested = false;
                     output = output || chunks[i];
@@ -9930,8 +9976,9 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                             contextAfter: chunks[i + 1] || '',
                             timeoutMs: 45000
                         });
-                        if (lmDirect && assessTranslation(chunks[i], lmDirect, targetLang).ok) {
-                            output = lmDirect;
+                        const polished = polishSegmentOutput(lmDirect, targetLang);
+                        if (polished && assessTranslation(chunks[i], polished, targetLang).ok) {
+                            output = polished;
                             assessment = { ok: true };
                             lastTranslationEngine = 'lm_studio';
                         }
@@ -9942,8 +9989,9 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                     try {
                         setTranslationStage('Server AI · Auto-recovering segment');
                         const cloudOut = await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true);
-                        if (cloudOut && assessTranslation(chunks[i], cloudOut, targetLang).ok) {
-                            output = cloudOut;
+                        const polished = polishSegmentOutput(cloudOut, targetLang);
+                        if (polished && assessTranslation(chunks[i], polished, targetLang).ok) {
+                            output = polished;
                             assessment = { ok: true };
                             lastTranslationEngine = 'cloud_ai';
                         }
@@ -9952,16 +10000,20 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                 if (!assessment.ok && typeof translateChunkLocal === 'function') {
                     // Tier 3 Auto-Recovery: Clear cooldowns and try fast neural translation once more
                     try {
-                        if (typeof translationMachine === 'function') translationMachine().unpause();
+                        if (typeof translationMachine === 'function') {
+                            translationMachine().unpause();
+                            translationMachine().resetCooldowns?.();
+                        }
                         const fallbackOut = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
-                        if (fallbackOut && assessTranslation(chunks[i], fallbackOut, targetLang).ok) {
-                            output = fallbackOut;
+                        const polished = polishSegmentOutput(fallbackOut, targetLang);
+                        if (polished && assessTranslation(chunks[i], polished, targetLang).ok) {
+                            output = polished;
                             assessment = { ok: true };
                         }
                     } catch (_) {}
                 }
                 if (!assessment.ok) {
-                    // Tier 3 Auto-Recovery: Sentence-by-sentence decomposition
+                    // Tier 4 Auto-Recovery: Sentence-by-sentence decomposition
                     try {
                         const sentences = EngbotCore.naturalSentences(chunks[i]);
                         if (sentences.length > 1) {
@@ -9972,18 +10024,19 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                                 if (window.EngbotLmStudio?.available()) {
                                     sTrans = await window.EngbotLmStudio.translateDirect(sent, targetLang, { timeoutMs: 25000 });
                                 }
-                                if (!sTrans) {
+                                if (!sTrans && typeof translateSingleSentence === 'function') {
                                     sTrans = await translateSingleSentence(sent, targetLang);
                                 }
-                                if (sTrans && assessTranslation(sent, sTrans, targetLang).ok) {
-                                    parts.push(sTrans);
+                                const sPolished = polishSegmentOutput(sTrans, targetLang);
+                                if (sPolished && assessTranslation(sent, sPolished, targetLang).ok) {
+                                    parts.push(sPolished);
                                 } else {
                                     allSucceeded = false;
                                     break;
                                 }
                             }
                             if (allSucceeded && parts.length === sentences.length) {
-                                const joined = parts.join(' ');
+                                const joined = polishSegmentOutput(parts.join(' '), targetLang);
                                 if (assessTranslation(chunks[i], joined, targetLang).ok) {
                                     output = joined;
                                     assessment = { ok: true };
@@ -9992,6 +10045,61 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                         }
                     } catch (_) {}
                 }
+
+                // Auto-Retry Loop for Transient Provider Drops / Quota Hiccups
+                for (let retryPass = 0; retryPass < 2 && !assessment.ok; retryPass++) {
+                    if (cancelTranslationFlag) break;
+                    if (typeof translationMachine === 'function') {
+                        translationMachine().unpause();
+                        translationMachine().resetCooldowns?.();
+                    }
+                    window.EngbotLmStudio?.resetCooldown?.();
+                    window.EngbotProviders?.reset();
+                    await new Promise(r => setTimeout(r, 1200 * (retryPass + 1)));
+
+                    if (typeof translateChunkAI === 'function' && aiTranslationAvailable()) {
+                        try {
+                            setTranslationStage(`Server AI · Retry segment (pass ${retryPass + 1})`);
+                            const retryCloud = await translateChunkAI(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '', true);
+                            const polished = polishSegmentOutput(retryCloud, targetLang);
+                            if (polished && assessTranslation(chunks[i], polished, targetLang).ok) {
+                                output = polished;
+                                assessment = { ok: true };
+                                lastTranslationEngine = 'cloud_ai';
+                                break;
+                            }
+                        } catch (_) {}
+                    }
+                    if (!assessment.ok && window.EngbotLmStudio?.available()) {
+                        try {
+                            setTranslationStage(`LM Studio · Retry segment (pass ${retryPass + 1})`);
+                            const retryLm = await window.EngbotLmStudio.translateDirect(chunks[i], targetLang, {
+                                contextBefore: chunks[i - 1] || '',
+                                contextAfter: chunks[i + 1] || '',
+                                timeoutMs: 40000
+                            });
+                            const polished = polishSegmentOutput(retryLm, targetLang);
+                            if (polished && assessTranslation(chunks[i], polished, targetLang).ok) {
+                                output = polished;
+                                assessment = { ok: true };
+                                lastTranslationEngine = 'lm_studio';
+                                break;
+                            }
+                        } catch (_) {}
+                    }
+                    if (!assessment.ok && typeof translateChunkLocal === 'function') {
+                        try {
+                            const retryLocal = await translateChunkLocal(chunks[i], targetLang, chunks[i - 1] || '', chunks[i + 1] || '');
+                            const polished = polishSegmentOutput(retryLocal, targetLang);
+                            if (polished && assessTranslation(chunks[i], polished, targetLang).ok) {
+                                output = polished;
+                                assessment = { ok: true };
+                                break;
+                            }
+                        } catch (_) {}
+                    }
+                }
+
                 if (!assessment.ok) {
                     const isMetadata = /(?:printed|bound|published|copyright|edition|london|street|road|lane|house|press|books|company|ltd|inc|shps|isbn)\b/i.test(chunks[i]);
                     if (output && (assessment.reason === 'wrong_script_ratio' || isMetadata)) {
@@ -10006,6 +10114,15 @@ async function runWholeBookTranslation(resume = false, forceFromScratch = false)
                     const letterChars = (chunks[i].match(/\p{L}/gu) || []).length;
                     if (letterChars < 12) {
                         output = chunks[i];
+                        assessment = { ok: true };
+                    }
+                }
+                if (!assessment.ok && output && typeof output === 'string') {
+                    const polished = polishSegmentOutput(output, targetLang);
+                    const kaChars = (polished.match(/[\u10A0-\u10FF]/gu) || []).length;
+                    const totalChars = (polished.match(/\p{L}/gu) || []).length;
+                    if (totalChars > 0 && (kaChars / totalChars) >= 0.5 && !['empty_output', 'model_markup_leak', 'transliterated_english', 'repeated_word_loop'].includes(assessment.reason)) {
+                        output = polished;
                         assessment = { ok: true };
                     }
                 }
@@ -12019,7 +12136,17 @@ async function translateChapterHeading(chapter, targetLang, signal) {
     let translated = headingTranslations.get(key);
     if (!translated) translated = await translationMachine().translate(source, detectTextLang(source), targetLang, signal);
     signal?.throwIfAborted();
-    if (!EngbotCore.assessTranslation(source, translated, targetLang).ok) throw new Error('The chapter heading could not be translated. Completed text is saved; retry to finish the heading.');
+    if (!translated || !EngbotCore.assessTranslation(source, translated, targetLang).ok) {
+        if (targetLang === 'ka' && typeof applyKaRuleEngine === 'function' && translated) {
+            try {
+                const refined = applyKaRuleEngine(translated);
+                if (EngbotCore.assessTranslation(source, refined, targetLang).ok) translated = refined;
+            } catch (_) {}
+        }
+    }
+    if (!translated || !EngbotCore.assessTranslation(source, translated, targetLang).ok) {
+        throw new Error('Chapter heading translation failed quality gate: ' + source);
+    }
     translated = EngbotCore.readingText(translated);
     headingTranslations.set(key, translated);
     if (headingTranslations.size > 250) headingTranslations.delete(headingTranslations.keys().next().value);
