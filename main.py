@@ -1,5 +1,17 @@
-﻿import sys
+import sys
 import os
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 import uvicorn
 import webbrowser
 import threading
@@ -12,9 +24,9 @@ def open_browser():
 
 if __name__ == "__main__":
     print("=" * 65)
-    print("  🎧 AudioRead Studio - High-Definition AI Audiobook Creator")
-    print("  🌐 Server running at: http://127.0.0.1:8000")
-    print("  ✨ 100% Free • Unlimited Neural Voices • Zero API Keys Required")
+    print("  [AudioRead Studio] - High-Definition AI Audiobook Creator")
+    print("  Server running at: http://127.0.0.1:8000")
+    print("  100% Free - Unlimited Neural Voices - Zero API Keys Required")
     print("=" * 65)
     
     # Launch browser automatically

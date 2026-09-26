@@ -965,14 +965,6 @@ async def progress_stream(book_id: str, request: Request):
                     
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.get("/api/audio/{book_id}/{filename}")
-async def stream_audio(book_id: str, filename: str):
-    """Stream generated MP3 audio file with range headers."""
-    audio_path = AUDIO_DIR / book_id / filename
-    if not audio_path.exists():
-        raise HTTPException(status_code=404, detail="Audio file not found")
-    return FileResponse(path=audio_path, media_type="audio/mpeg", filename=filename)
-
 @app.get("/api/audio/preview/{filename}")
 async def stream_preview_audio(filename: str):
     """Stream voice sample preview MP3."""
@@ -980,6 +972,14 @@ async def stream_preview_audio(filename: str):
     if not preview_path.exists():
         raise HTTPException(status_code=404, detail="Preview file not found")
     return FileResponse(path=preview_path, media_type="audio/mpeg")
+
+@app.get("/api/audio/{book_id}/{filename}")
+async def stream_audio(book_id: str, filename: str):
+    """Stream generated MP3 audio file with range headers."""
+    audio_path = AUDIO_DIR / book_id / filename
+    if not audio_path.exists():
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    return FileResponse(path=audio_path, media_type="audio/mpeg", filename=filename)
 
 @app.get("/api/download/zip/{book_id}")
 async def download_zip(book_id: str):
