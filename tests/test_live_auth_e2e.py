@@ -9,6 +9,18 @@ email = f"test_user_{int(time.time())}@example.com"
 password = "TestPassword123!"
 username = "test_user_hero"
 
+import os
+try:
+    import pytest
+except ImportError:
+    pytest = None
+
+if not os.path.exists("/home/ubuntu/supabase-project/.env"):
+    if pytest:
+        pytest.skip("Skipping live auth E2E test: /home/ubuntu/supabase-project/.env not present", allow_module_level=True)
+    else:
+        sys.exit(0)
+
 # Load anon key
 anon_key = ""
 with open("/home/ubuntu/supabase-project/.env") as f:

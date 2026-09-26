@@ -18,7 +18,7 @@ assert any("lighthouse" in c.text.lower() for c in book_data.chapters), \
     "chapter text should be extracted from the PDF"
 
 # 3. Test TTS Synthesis
-async def test_tts():
+async def run_tts():
     out_mp3 = TEST_DIR / 'test_chapter_1.mp3'
     print(' [3/4] Synthesizing Chapter 1 with edge-tts...')
 
@@ -41,7 +41,8 @@ async def test_tts():
     preview_url = await generate_voice_preview('en-US-AriaNeural', 'Welcome to AudioRead Studio. Converting your books to studio voice.')
     print(f'   -> Voice preview URL generated: {preview_url}')
 
-asyncio.run(test_tts())
+def test_pipeline_execution():
+    asyncio.run(run_tts())
 
 # 4. Save session
 save_book_session(book_data)
