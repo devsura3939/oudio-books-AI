@@ -92,13 +92,14 @@ let recoveryReady = false;
         var explicitlyLoggedOut = localStorage.getItem('lumina_explicitly_logged_out') === 'true';
         var isAuthed = false;
         if (!explicitlyLoggedOut) {
-            // 1. Prioritize sessionStorage (strictly isolated per window/tab, empty in new Incognito windows)
+            // 1. Check current tab/window session first
             var sessionUser = sessionStorage.getItem('lumina_auth_user');
             if (sessionUser) {
                 var u = JSON.parse(sessionUser);
                 if (u && u.email) isAuthed = true;
-            } else if (localStorage.getItem('lumina_remember_me') === 'true') {
-                // 2. Only allow persistent localStorage if user explicitly opted in with "Remember me"
+            }
+            // 2. Check persistent localStorage if not found in tab session
+            if (!isAuthed) {
                 var saved = localStorage.getItem('lumina_auth_user');
                 if (saved) {
                     var u2 = JSON.parse(saved);
@@ -1709,12 +1710,30 @@ function verbalizeGeorgianTextForTTS(text) {
         [kaWord('ქ-ნი', 'g'), 'ქალბატონი'],
         [kaWord('დოქტ\\.', 'g'), 'დოქტორი'],
         [kaWord('პროფ\\.', 'g'), 'პროფესორი'],
+        [kaWord('აკად\\.', 'g'), 'აკადემიკოსი'],
         [kaWord('წ\\.', 'g'), 'წელი'],
-        [kaWord('სს\\.', 'g'), 'საუკუნე']
+        [kaWord('წწ\\.', 'g'), 'წლები'],
+        [kaWord('სს\\.', 'g'), 'საუკუნე'],
+        [kaWord('გვ\\.', 'g'), 'გვერდი'],
+        [kaWord('ტ\\.', 'g'), 'ტომი'],
+        [kaWord('ნაწ\\.', 'g'), 'ნაწილი'],
+        [kaWord('იხ\\.', 'g'), 'იხილეთ'],
+        [kaWord('შდრ\\.', 'g'), 'შეადარეთ'],
+        [kaWord('სხვ\\.', 'g'), 'სხვა'],
+        [kaWord('რ-ნი', 'g'), 'რაიონი'],
+        [kaWord('რ-ნ\\.', 'g'), 'რაიონი'],
+        [kaWord('თვ\\.', 'g'), 'თვე']
     ];
     abbrevMap.forEach(([regex, repl]) => {
         out = out.replace(regex, repl);
     });
+
+    // 5.1 City & Village prefixes
+    out = out.replace(/(?<![\u10A0-\u10FF])ქ\.\s*(?=[\u10A0-\u10FF])/g, 'ქალაქ ');
+    out = out.replace(/(?<![\u10A0-\u10FF])სოფ\.\s*(?=[\u10A0-\u10FF])/g, 'სოფელი ');
+
+    // 5.2 Georgian initials before surname: remove dot so TTS does not pause mid-name
+    out = out.replace(/(?<=(?:^|\s)[\u10D0-\u10FA])\.\s*(?=[\u10D0-\u10FA])/g, ' ');
 
     // 5.4 Roman Numerals in Chapter/Book Headings, Centuries & Monarchs
     const romanToOrdinalKa = {
@@ -1848,6 +1867,14 @@ function verbalizeEnglishTextForTTS(text) {
         [/\bGen\.(?=\s+[A-Z])/g, 'General'],
         [/\bLt\.(?=\s+[A-Z])/g, 'Lieutenant'],
         [/\bSgt\.(?=\s+[A-Z])/g, 'Sergeant'],
+        [/\bGov\.(?=\s+[A-Z])/g, 'Governor'],
+        [/\bSen\.(?=\s+[A-Z])/g, 'Senator'],
+        [/\bRep\.(?=\s+[A-Z])/g, 'Representative'],
+        [/\bMaj\.(?=\s+[A-Z])/g, 'Major'],
+        [/\bRev\.(?=\s+[A-Z])/g, 'Reverend'],
+        [/\bHon\.(?=\s+[A-Z])/g, 'Honorable'],
+        [/\bJr\.(?!\w)/g, 'Junior'],
+        [/\bSr\.(?!\w)/g, 'Senior'],
     ];
     titles.forEach(([re, repl]) => { out = out.replace(re, repl); });
 
@@ -1862,8 +1889,44 @@ function verbalizeEnglishTextForTTS(text) {
         [/\bno\.\s*(?=\d+)/gi, 'number '],
         [/\bvol\.\s*(?=\d+)/gi, 'volume '],
         [/\bch\.\s*(?=\d+)/gi, 'chapter '],
+        [/\bpp?\.\s*(?=\d+)/gi, 'page '],
+        [/\bdept\.(?!\w)/gi, 'department'],
+        [/\buniv\.(?!\w)/gi, 'university'],
+        [/\bco\.(?!\w)/gi, 'company'],
+        [/\bcorp\.(?!\w)/gi, 'corporation'],
+        [/\binc\.(?!\w)/gi, 'incorporated'],
+        [/\bltd\.(?!\w)/gi, 'limited'],
     ];
     abbrevs.forEach(([re, repl]) => { out = out.replace(re, repl); });
+
+    // 3.1 Common English Acronyms with periods -> smooth pronunciation without pauses
+    out = out
+        .replace(/\bU\.S\.A\.\b/g, 'USA')
+        .replace(/\bU\.S\.\b/g, 'US')
+        .replace(/\bU\.K\.\b/g, 'UK')
+        .replace(/\bN\.Y\.C\.\b/g, 'NYC')
+        .replace(/\bD\.C\.\b/g, 'DC')
+        .replace(/\bPh\.D\.\b/g, 'PhD')
+        .replace(/\bB\.A\.\b/g, 'BA')
+        .replace(/\bM\.A\.\b/g, 'MA')
+        .replace(/\ba\.m\.\b/gi, 'am')
+        .replace(/\bp\.m\.\b/gi, 'pm')
+        .replace(/\bB\.C\.\b/g, 'BC')
+        .replace(/\bA\.D\.\b/g, 'AD');
+
+    // 3.2 Single uppercase initials before next initial or capitalized name (e.g. J. K. Rowling -> J K Rowling)
+    out = out.replace(/\b([A-Z])\.\s*(?=[A-Z]\b)/g, '$1 ');
+    out = out.replace(/\b([A-Z])\.\s+(?=[A-Z][a-z])/g, '$1 ');
+
+    // 3.3 Normalize ALL-CAPS words in text to Title/lowercase so TTS doesn't spell them letter-by-letter
+    const ACRONYMS_ALLOWLIST = new Set(['AI', 'USA', 'UK', 'UN', 'EU', 'NATO', 'FBI', 'CIA', 'NASA', 'BBC', 'CNN', 'DNA', 'RNA', 'HIV', 'CEO', 'CTO', 'CFO', 'COO', 'VIP', 'TV', 'ID', 'OK', 'AM', 'PM', 'BC', 'AD', 'PHD', 'BA', 'MA', 'BSC', 'MSC', 'COVID', 'GPS', 'PDF', 'URL', 'HTTP', 'API', 'UI', 'UX']);
+    out = out.replace(/\b[A-Z]{2,}\b/g, (match) => {
+        if (ACRONYMS_ALLOWLIST.has(match)) return match;
+        if (match.length <= 3 && /^(IN|ON|HE|IT|IS|AT|TO|AS|SO|WE|ME|MY|NO|DO|GO|UP|BY|OR|IF|THE|AND|BUT|FOR|NOT|ALL|CAN|HAD|HAS|HER|HIM|HIS|HOW|MAN|NEW|NOW|OLD|ONE|OUR|OUT|SEE|TWO|WAY|WHO|BOY|DID|ITS|LET|PUT|SAY|SHE|TOO|USE)$/i.test(match)) {
+            return match.toLowerCase();
+        }
+        return match.charAt(0) + match.slice(1).toLowerCase();
+    });
 
     // 4. Roman Numerals in Chapter / Part / Book Headings & Monarchs
     const romanMap = {
@@ -2242,8 +2305,7 @@ const LUMINA_LAST_BOOK_KEY = 'lumina_last_active_book_id';
 
 function saveActiveSession(trigger = '') {
     try {
-        const owner = typeof getCurrentUserId === 'function' ? getCurrentUserId() : null;
-        if (!owner) return;
+        const owner = (typeof getCurrentUserId === 'function' && getCurrentUserId()) ? getCurrentUserId() : 'local_user';
 
         const activeBook = (typeof readerActive !== 'undefined' && readerActive) ? readerBook : currentBook;
         if (!activeBook || !activeBook.id) return;
@@ -2984,12 +3046,30 @@ let _lastSavedChapterId = null;
 let _localProgressDebounceTimer = null;
 let _lastLocalSavedProgressTime = 0;
 
-function saveBookProgress(book, progressPct, lastPlayedChapterId) {
+function saveBookProgress(book, progressPct, lastPlayedChapterId, sentenceIndex) {
     if (!book) return;
     book.progressPct = progressPct;
     if (lastPlayedChapterId !== undefined && lastPlayedChapterId !== null) {
         book.lastPlayedChapterId = lastPlayedChapterId;
     }
+    if (sentenceIndex !== undefined && sentenceIndex !== null) {
+        book.lastPlayedSentenceIndex = sentenceIndex;
+    } else if (book.lastPlayedSentenceIndex === undefined && typeof currentSentenceIndex === 'number') {
+        book.lastPlayedSentenceIndex = currentSentenceIndex;
+    }
+
+    // Always update durable per-book progress slot immediately in localStorage
+    try {
+        const bookKey = 'lumina_book_progress_' + (book.id || book.slug);
+        const data = {
+            chapterId: book.lastPlayedChapterId,
+            sentenceIndex: book.lastPlayedSentenceIndex || 0,
+            progressPct: progressPct,
+            updatedAt: Date.now()
+        };
+        localStorage.setItem(bookKey, JSON.stringify(data));
+    } catch (_) {}
+
     // 1. Debounce local IndexedDB writes to save flash I/O on low-end devices
     const now = Date.now();
     const chapterChanged = lastPlayedChapterId !== _lastSavedChapterId;
@@ -3021,7 +3101,7 @@ function saveBookProgress(book, progressPct, lastPlayedChapterId) {
             _progressDebounceTimer = setTimeout(() => {
                 _lastSavedProgressPct = progressPct;
                 _lastSavedChapterId = lastPlayedChapterId;
-                window.LuminaStore.updateProgress(sid, progressPct, lastPlayedChapterId).catch(() => {});
+                window.LuminaStore.updateProgress(sid, progressPct, lastPlayedChapterId, book.lastPlayedSentenceIndex).catch(() => {});
             }, 6000);
         }
     }
@@ -3032,6 +3112,18 @@ function flushBookProgressImmediate(book) {
     clearTimeout(_localProgressDebounceTimer);
     clearTimeout(_progressDebounceTimer);
     _lastLocalSavedProgressTime = Date.now();
+    if (typeof currentSentenceIndex === 'number' && book.lastPlayedSentenceIndex === undefined) {
+        book.lastPlayedSentenceIndex = currentSentenceIndex;
+    }
+    try {
+        const bookKey = 'lumina_book_progress_' + (book.id || book.slug);
+        localStorage.setItem(bookKey, JSON.stringify({
+            chapterId: book.lastPlayedChapterId,
+            sentenceIndex: book.lastPlayedSentenceIndex || 0,
+            progressPct: book.progressPct || 0,
+            updatedAt: Date.now()
+        }));
+    } catch (_) {}
     try {
         saveBookToLocalDB(book).catch(() => {});
     } catch (e) {}
@@ -3040,7 +3132,7 @@ function flushBookProgressImmediate(book) {
         if (sid) {
             _lastSavedProgressPct = book.progressPct || 0;
             _lastSavedChapterId = book.lastPlayedChapterId || null;
-            window.LuminaStore.updateProgress(sid, book.progressPct, book.lastPlayedChapterId).catch(() => {});
+            window.LuminaStore.updateProgress(sid, book.progressPct, book.lastPlayedChapterId, book.lastPlayedSentenceIndex).catch(() => {});
         }
     }
 }
@@ -5449,19 +5541,16 @@ async function login(email, password, rememberParam) {
             supabaseAuth: cloudConnected
         };
 
-        // Always store in sessionStorage for current tab/window session
+        // Persist session to both sessionStorage and localStorage so users are not unexpectedly logged out
         try {
             sessionStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
         } catch (e) {}
-
-        // Only persist across device restarts if user explicitly checked "Remember me"
-        if (rememberMe) {
+        try {
             localStorage.setItem('lumina_auth_user', JSON.stringify(currentUser));
-            localStorage.setItem('lumina_remember_me', 'true');
-        } else {
-            localStorage.removeItem('lumina_auth_user');
-            localStorage.removeItem('lumina_remember_me');
-        }
+            if (rememberMe) {
+                localStorage.setItem('lumina_remember_me', 'true');
+            }
+        } catch (e) {}
         localStorage.removeItem('lumina_explicitly_logged_out');
 
         if (window.parent && window.parent !== window) {
@@ -6345,6 +6434,20 @@ async function openReader(bookId, chapterId, lang = 'en', savedPosition = null) 
         if (isPlaying && String(currentPlayingChapterId) === String(readerChapterId)) {
             if (readerSentenceToPageMap[currentSentenceIndex] !== undefined) {
                 readerCurrentPage = readerSentenceToPageMap[currentSentenceIndex] + 1;
+            }
+        } else if (!savedPosition) {
+            let savedProg = null;
+            try {
+                const rawProg = localStorage.getItem('lumina_book_progress_' + (readerBook.id || readerBook.slug));
+                if (rawProg) savedProg = JSON.parse(rawProg);
+            } catch (_) {}
+            const restoredSentenceIdx = (savedProg && String(savedProg.chapterId) === String(readerChapterId) && typeof savedProg.sentenceIndex === 'number')
+                ? savedProg.sentenceIndex
+                : ((String(readerBook.lastPlayedChapterId) === String(readerChapterId) && typeof readerBook.lastPlayedSentenceIndex === 'number')
+                    ? readerBook.lastPlayedSentenceIndex
+                    : 0);
+            if (restoredSentenceIdx > 0 && readerSentenceToPageMap[restoredSentenceIdx] !== undefined) {
+                readerCurrentPage = readerSentenceToPageMap[restoredSentenceIdx] + 1;
             }
         }
         renderCurrentPage();
@@ -10924,7 +11027,8 @@ async function speakCurrentSentence() {
     if (currentBook) {
         currentBook.progressPct = pct;
         currentBook.lastPlayedChapterId = currentPlayingChapterId;
-        saveBookProgress(currentBook, pct, currentPlayingChapterId);
+        currentBook.lastPlayedSentenceIndex = currentSentenceIndex;
+        saveBookProgress(currentBook, pct, currentPlayingChapterId, currentSentenceIndex);
         if (DOM.heroProgressText) DOM.heroProgressText.textContent = `${pct}% Completed`;
         if (DOM.heroProgressBarInner) DOM.heroProgressBarInner.style.width = `${pct}%`;
         if (DOM.heroProgressCircle) {
@@ -11863,7 +11967,28 @@ async function playChapterAudio(chapId, startSentenceIdx, forceReload = false) {
         if (!chapter) return;
         startSentenceIdx = window.EngbotReading.resolve(saved, chapter, currentLang, prepareChapterSentences(chapter['text_' + currentLang] || chapter.text || ''));
     }
-    if (startSentenceIdx === undefined) startSentenceIdx = isPlaying && String(chapId) === String(currentPlayingChapterId) ? currentSentenceIndex : 0;
+    if (startSentenceIdx === undefined) {
+        let savedSentence = null;
+        try {
+            const rawProg = localStorage.getItem('lumina_book_progress_' + (currentBook.id || currentBook.slug));
+            if (rawProg) {
+                const prog = JSON.parse(rawProg);
+                if (prog && String(prog.chapterId) === String(chapId) && typeof prog.sentenceIndex === 'number') {
+                    savedSentence = prog.sentenceIndex;
+                }
+            }
+        } catch (_) {}
+        if (savedSentence === null && String(currentBook.lastPlayedChapterId) === String(chapId) && typeof currentBook.lastPlayedSentenceIndex === 'number') {
+            savedSentence = currentBook.lastPlayedSentenceIndex;
+        }
+        if (savedSentence !== null) {
+            startSentenceIdx = savedSentence;
+        } else if (isPlaying && String(chapId) === String(currentPlayingChapterId)) {
+            startSentenceIdx = currentSentenceIndex;
+        } else {
+            startSentenceIdx = 0;
+        }
+    }
     const chap = currentBook.chapters.find(c => String(c.id) === String(chapId));
     if (!chap) return;
 
@@ -13275,7 +13400,18 @@ function splitIntoChapters(text, isKa = false) {
 function splitIntoNaturalSentences(text) {
     return EngbotCore.naturalSentences(text).flatMap(part => {
         const sentence = part.trim();
-        return sentence.split(/\s+/).length > 16 ? splitLongIntoClauses(sentence, 16) : [sentence];
+        if (!sentence) return [];
+        const words = sentence.split(/\s+/);
+        // Only unpunctuated text or runaway run-on walls (> 60 words) are split into clauses.
+        // Complete punctuated sentences flow naturally without stopping or pausing at commas.
+        const isPunctuated = /[.!?…჻]["'”’»“\])}]*\s*$/u.test(sentence);
+        if (!isPunctuated && words.length > 16) {
+            return splitLongIntoClauses(sentence, 16);
+        }
+        if (words.length > 60) {
+            return splitLongIntoClauses(sentence, 35);
+        }
+        return [sentence];
     }).filter(Boolean);
 }
 

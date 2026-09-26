@@ -147,7 +147,7 @@
         if (!input.trim()) return [];
         const protectedDots = new Set();
         // Mark original offsets instead of replacing punctuation with sentinel text.
-        const abbreviations = /\b(?:Mr|Mrs|Ms|Dr|Prof|Gen|Col|Capt|Lt|Sr|Jr|St|Rev|Hon|No|Vol|Ch|pp?)\.|\b(?:e\.g\.|i\.e\.|vs\.)|(?<!\p{L})(?:ე\.ი\.|ე\.წ\.|ა\.შ\.|სხვ\.)/giu;
+        const abbreviations = /\b(?:Mr|Mrs|Ms|Mme|Mlle|Dr|Prof|Gen|Col|Capt|Lt|Sgt|Maj|Gov|Sen|Rep|Sr|Jr|St|Rev|Hon|No|Vol|Ch|Sec|pp?|ed|approx|est|dept|univ|co|corp|inc|ltd|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec|mon|tue|wed|thu|fri|sat|sun|vs|etc|fig|eq|al)\.|\b[a-z]\.(?=[a-z]\.)|\b(?:[a-z]\.){2,}(?=\s+[a-z])|(?<=(?:^|\s)[A-Z])\.(?=\s+[A-Za-z])|(?<=(?:^|\s)[\u10D0-\u10FA])\.(?=\s+[\u10D0-\u10FA])|(?<!\p{L})(?:ე\.ი\.|ე\.წ\.|ა\.შ\.|სხვ\.|მაგ\.|ქ\.|სოფ\.|დოქტ\.|პროფ\.|აკად\.|წ\.|წწ\.|სს\.|გვ\.|ტ\.|ნაწ\.|იხ\.|შდრ\.)/giu;
         for (const match of input.matchAll(abbreviations)) {
             for (let i = 0; i < match[0].length; i++) if (match[0][i] === '.') protectedDots.add(match.index + i);
         }

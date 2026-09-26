@@ -248,17 +248,14 @@
       return false;
     }
 
-    // Require an active authenticated session in the current tab/window or explicit "Remember me"
+    // Require an active authenticated session in the current tab/window or local user state
     var hasActiveSession = false;
     try {
       var explicitlyLoggedOut = localStorage.getItem("lumina_explicitly_logged_out") === "true";
       var sessionUser = sessionStorage.getItem("lumina_auth_user");
-      var rememberMe = localStorage.getItem("lumina_remember_me") === "true";
       var localUser = localStorage.getItem("lumina_auth_user");
       if (!explicitlyLoggedOut) {
-        if (sessionUser) {
-          hasActiveSession = true;
-        } else if (rememberMe && localUser) {
+        if (sessionUser || localUser) {
           hasActiveSession = true;
         }
       }
@@ -282,7 +279,7 @@
 
     // Check if cached session exists in sessionStorage or remembered localStorage
     try {
-      var saved = sessionStorage.getItem("lumina_auth_user") || (localStorage.getItem("lumina_remember_me") === "true" ? localStorage.getItem("lumina_auth_user") : null);
+      var saved = sessionStorage.getItem("lumina_auth_user") || localStorage.getItem("lumina_auth_user");
       if (saved) {
         var parsed = JSON.parse(saved);
         if (parsed && parsed.id && (parsed.id.length >= 32 || !parsed.id.startsWith("usr_"))) {
@@ -654,6 +651,7 @@
       translatedLangs: meta.translatedLangs || [],
       dateAdded: meta.dateAdded || bookRow.created_at,
       lastPlayedChapterId: meta.lastPlayedChapterId ?? (chapters[0] ? chapters[0].id : null),
+      lastPlayedSentenceIndex: meta.lastPlayedSentenceIndex ?? 0,
       progressPct: meta.progressPct || 0,
       extra: flattenedExtra,
     });
@@ -712,6 +710,7 @@
           "translatedLangs",
           "dateAdded",
           "lastPlayedChapterId",
+          "lastPlayedSentenceIndex",
           "progressPct",
           "updated_at",
           "user_id",
@@ -738,6 +737,7 @@
         translatedLangs: book.translatedLangs || [],
         dateAdded: book.dateAdded || new Date().toISOString(),
         lastPlayedChapterId: book.lastPlayedChapterId ?? null,
+        lastPlayedSentenceIndex: book.lastPlayedSentenceIndex ?? 0,
         progressPct: book.progressPct || 0,
         extra: extra,
       },
@@ -1075,7 +1075,7 @@
    * Lightweight progress updater: updates only book metadata without touching chapters.
    * Prevents database lockups, high latency, and chapter thrashing during playback.
    */
-  async function updateProgress(studioId, progressPct, lastPlayedChapterId) {
+  async function updateProgress(studioId, progressPct, lastPlayedChapterId, lastPlayedSentenceIndex) {
     if (!isReady()) return false;
     var sid = String(studioId);
     try {
@@ -1089,6 +1089,7 @@
         var meta = sanitizeForPostgres(Object.assign({}, bookRes.data.metadata || {}));
         if (progressPct !== undefined && progressPct !== null) meta.progressPct = Number(progressPct);
         if (lastPlayedChapterId !== undefined && lastPlayedChapterId !== null) meta.lastPlayedChapterId = lastPlayedChapterId;
+        if (lastPlayedSentenceIndex !== undefined && lastPlayedSentenceIndex !== null) meta.lastPlayedSentenceIndex = Number(lastPlayedSentenceIndex);
         await client
           .from("books")
           .update({ metadata: sanitizeForPostgres(meta) })
