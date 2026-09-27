@@ -11,17 +11,18 @@
             fingerprint: hash(chapter['text_' + language] || chapter.text || ''), mode, savedAt: new Date().toISOString() };
     }
     function resolve(saved, chapter, language, sentences) {
-        if (!saved || String(saved.chapterId) !== String(chapter.id) || saved.language !== language) return 0;
+        if (!saved || String(saved.chapterId) !== String(chapter.id) || (saved.language && saved.language !== language)) return 0;
+        const index = Math.max(0, Math.min(saved.sentence || 0, sentences.length - 1));
+        if (!saved.anchor) return index;
         const normalize = text => String(text || '').replace(/(?<!\S)_{12,}(?!\S)/gu, ' ').replace(/\s+/gu, ' ').trim();
         const anchor = normalize(saved.anchor);
-        const index = Math.max(0, Math.min(saved.sentence || 0, sentences.length - 1));
         // A layout-engine update can change sentence boundaries without changing raw book text.
         if (saved.fingerprint === hash(chapter['text_' + language] || chapter.text || '') && (!anchor || normalize(sentences[index]?.text || sentences[index]).startsWith(anchor))) return index;
         const matches = sentences.map((s, i) => {
             const text = normalize(s.text || s);
             return anchor && text && (text.startsWith(anchor) || anchor.startsWith(text)) ? i : -1;
         }).filter(i => i >= 0);
-        return matches.sort((a, b) => Math.abs(a - saved.sentence) - Math.abs(b - saved.sentence))[0] ?? 0;
+        return matches.sort((a, b) => Math.abs(a - saved.sentence) - Math.abs(b - saved.sentence))[0] ?? index;
     }
     function merge(local, remote) {
         const next = { ...local };

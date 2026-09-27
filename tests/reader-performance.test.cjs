@@ -168,4 +168,90 @@ test('Reader Responsiveness & Audio Resiliency Suite', async (t) => {
         assert.ok(appSource.includes("fetchGatewaySpeechUrl"), 'fetchGatewaySpeechUrl must exist');
         assert.ok(appSource.includes("getAdaptivePrefetchCount"), 'getAdaptivePrefetchCount must exist');
     });
+
+    // 7. Verify getRealBookPageInfo maps pages accurately across chapters and PDF metadata
+    await t.test('getRealBookPageInfo accurately computes continuous book pages and progress', () => {
+        const startIdx = appSource.indexOf('function getRealBookPageInfo(');
+        const endIdx = appSource.indexOf('window.getRealBookPageInfo = getRealBookPageInfo;', startIdx);
+        assert.ok(startIdx > 0 && endIdx > startIdx, 'getRealBookPageInfo function must be present in app.js');
+        const fnCode = appSource.substring(startIdx, endIdx);
+
+        const sandbox = {
+            window: {},
+            readerBook: null,
+            readerChapterId: null,
+            readerPages: []
+        };
+        vm.createContext(sandbox);
+        vm.runInContext(fnCode + '\nthis.getRealBookPageInfo = getRealBookPageInfo;', sandbox);
+
+        // Case A: No readerBook loaded -> safe fallback
+        const fallback = sandbox.getRealBookPageInfo(null, 1);
+        assert.equal(fallback.chapterPage, 1);
+        assert.equal(fallback.bookPage, 1);
+        assert.equal(fallback.totalBookPages, 1);
+
+        // Case B: Explicit PDF metadata (as seen in user scenario: Chapter with firstPage=235, lastPage=320, book page_count=500)
+        sandbox.readerBook = {
+            id: 'book-harari',
+            page_count: 500,
+            chapters: [
+                { id: 'c1', title: 'Cover', firstPage: 1, lastPage: 2 },
+                { id: 'c2', title: 'Intro', firstPage: 3, lastPage: 234 },
+                { id: 'c3', title: 'Part I: Human Networks', firstPage: 235, lastPage: 320 }
+            ]
+        };
+        sandbox.readerChapterId = 'c3';
+        // Simulate 851 screen pages for chapter c3
+        sandbox.readerPages = new Array(851).fill([{ text: 'Sentence' }]);
+
+        const chap3 = sandbox.readerBook.chapters[2];
+        const page1Info = sandbox.getRealBookPageInfo(chap3, 1);
+        assert.equal(page1Info.chapterPage, 1);
+        assert.equal(page1Info.bookPage, 235, 'First page of chapter must show real PDF page 235, not 1');
+        assert.equal(page1Info.totalBookPages, 500, 'Total book pages must match book page_count 500, not 851');
+        assert.equal(page1Info.hasPdfMeta, true);
+
+        // Turn to page 2 (in dual spread: page 2 is right side)
+        const page2Info = sandbox.getRealBookPageInfo(chap3, 2);
+        assert.equal(page2Info.bookPage, 235); // 2 of 851 maps to page 235
+
+        // Turn to page 426 (halfway through chapter)
+        const pageMidInfo = sandbox.getRealBookPageInfo(chap3, 426);
+        assert.equal(pageMidInfo.bookPage, 278, 'Midpoint of chapter must map to midpoint between 235 and 320');
+
+        // Turn to page 851 (end of chapter)
+        const pageEndInfo = sandbox.getRealBookPageInfo(chap3, 851);
+        assert.equal(pageEndInfo.bookPage, 320, 'Last page of chapter must map to lastPage 320');
+
+        // Progress percentage check: Page 235 of 500 = 47%
+        const pct1 = Math.round((page1Info.bookPage / page1Info.totalBookPages) * 100);
+        assert.equal(pct1, 47, 'Progress for page 235 of 500 must mathematically equal 47%');
+
+        // Case C: Proportional cumulative estimation when no explicit firstPage/lastPage
+        sandbox.readerBook = {
+            id: 'book-novel',
+            chapters: [
+                { id: 'chap-1', word_count: 500 },
+                { id: 'chap-2', word_count: 1000 },
+                { id: 'chap-3', word_count: 500 }
+            ]
+        };
+        sandbox.readerChapterId = 'chap-2';
+        // chap-2 has 4 screen pages (250 words/page)
+        sandbox.readerPages = new Array(4).fill([{ text: 'Sentence' }]);
+        const chap2 = sandbox.readerBook.chapters[1];
+
+        // Page 1 in Chap 2 (after chap-1 which is 500 words = 2 pages)
+        const chap2P1 = sandbox.getRealBookPageInfo(chap2, 1);
+        assert.equal(chap2P1.chapterPage, 1);
+        assert.equal(chap2P1.bookPage, 3, 'Chapter 2 page 1 must be book page 3 (2 prior pages + 1)');
+        assert.equal(chap2P1.totalBookPages, 8, 'Total book pages should estimate to 8 (2 + 4 + 2)');
+
+        // Page 4 in Chap 2 (end of chapter 2)
+        const chap2P4 = sandbox.getRealBookPageInfo(chap2, 4);
+        assert.equal(chap2P4.chapterPage, 4);
+        assert.equal(chap2P4.bookPage, 6, 'Chapter 2 page 4 must be book page 6');
+    });
 });
+

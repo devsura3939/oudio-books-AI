@@ -57,12 +57,27 @@
                 const cached = JSON.parse(localStorage.getItem(key) || '{}');
                 saved = cached['position:' + language]?.value;
             } catch (_) {}
+            if (!saved) {
+                try {
+                    const rawProg = localStorage.getItem('lumina_book_progress_' + (book.id || book.slug));
+                    if (rawProg) {
+                        const parsed = JSON.parse(rawProg);
+                        if (parsed && parsed.chapterId && book.chapters?.some(c => String(c.id) === String(parsed.chapterId))) {
+                            saved = { chapterId: parsed.chapterId, sentence: parsed.sentenceIndex || 0, language };
+                        }
+                    }
+                } catch (_) {}
+                if (!saved && book.lastPlayedChapterId && book.chapters?.some(c => String(c.id) === String(book.lastPlayedChapterId))) {
+                    saved = { chapterId: book.lastPlayedChapterId, sentence: book.lastPlayedSentenceIndex || 0, language };
+                }
+            }
             void store.load(book).catch(() => {});
             if (preferredChapter != null) {
                 if (saved && String(saved.chapterId) === String(preferredChapter)) {
                     return saved;
                 }
-                return { chapterId: preferredChapter, language, sentence: 0 };
+                const defaultSentence = (saved && String(saved.chapterId) === String(preferredChapter)) ? (saved.sentence || 0) : 0;
+                return { chapterId: preferredChapter, language, sentence: defaultSentence };
             }
             if (saved && book.chapters?.some(c => String(c.id) === String(saved.chapterId))) {
                 return saved;
@@ -85,7 +100,21 @@
                 if (finished || getCurrentUserId() !== owner) { finish(null); return; }
                 status.remove();
                 const controls = document.createElement('div'); el.insertBefore(controls, el.lastChild);
-                const saved = entries['position:' + language]?.value;
+                let saved = entries['position:' + language]?.value;
+                if (!saved) {
+                    try {
+                        const rawProg = localStorage.getItem('lumina_book_progress_' + (book.id || book.slug));
+                        if (rawProg) {
+                            const parsed = JSON.parse(rawProg);
+                            if (parsed && parsed.chapterId && book.chapters.some(c => String(c.id) === String(parsed.chapterId))) {
+                                saved = { chapterId: parsed.chapterId, sentence: parsed.sentenceIndex || 0, language };
+                            }
+                        }
+                    } catch (_) {}
+                    if (!saved && book.lastPlayedChapterId && book.chapters.some(c => String(c.id) === String(book.lastPlayedChapterId))) {
+                        saved = { chapterId: book.lastPlayedChapterId, sentence: book.lastPlayedSentenceIndex || 0, language };
+                    }
+                }
                 if (saved && book.chapters.some(c => String(c.id) === String(saved.chapterId))) {
                     const chapter = book.chapters.find(c => String(c.id) === String(saved.chapterId));
                     button(controls, `Continue · ${chapter.title} · sentence ${saved.sentence + 1}`, () => finish(saved), true);
