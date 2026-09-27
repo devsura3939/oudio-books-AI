@@ -23,10 +23,10 @@
     }
     function pauseMs(text, speed = 1) {
         const t = terminal(text);
-        // Additional inter-sentence gap, beyond the voice's own punctuation pause.
-        const gap = /\n\s*\n\s*$/.test(String(text)) ? 340
-            : /(?:\.{3}|…)$/.test(t) ? 280 : /[?!]$/.test(t) ? 180 : /[.჻]$/.test(t) ? 130
-                : /[;:]$/.test(t) ? 90 : /[,—–]$/.test(t) ? 55 : 25;
+        // Additional inter-sentence gap, calibrated for seamless human audiobook flow.
+        const gap = /\n\s*\n\s*$/.test(String(text)) ? 60
+            : /(?:\.{3}|…)$/.test(t) ? 50 : /[?!]$/.test(t) ? 35 : /[.჻]$/.test(t) ? 20
+                : /[;:]$/.test(t) ? 10 : /[,—–]$/.test(t) ? 6 : 2;
         return Math.round(gap / Math.max(0.5, Math.min(2, Number(speed) || 1)));
     }
     function chunks(text, limit = 200) {

@@ -4320,10 +4320,18 @@ function renderToCDrawerList() {
             ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold font-bold border border-georgian-gold/30 flex items-center gap-0.5 flex-shrink-0"><span class="material-symbols-outlined text-xs">bookmark</span>${chapBms.length}</span>`
             : '';
 
+        const stats = EngbotCore.chapterStats(chap);
+        const pageBadge = (typeof getChapterPageBadge === 'function') ? getChapterPageBadge(chap) : '';
+        const pagePrefix = pageBadge ? `${escapeHtml(pageBadge)} • ` : '';
+        const wordsFormatted = (stats.words || chap.word_count || 0).toLocaleString();
+        const durationFormatted = (typeof formatChapterDuration === 'function')
+            ? formatChapterDuration(stats.seconds)
+            : formatTime(stats.seconds);
+
         btn.innerHTML = `
             <div class="overflow-hidden min-w-0 flex-1">
                 <p class="text-xs truncate">${idx + 1}. ${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</p>
-                <p class="text-[10px] text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(EngbotCore.chapterStats(chap).seconds)}</p>
+                <p class="text-[10px] text-on-surface-variant mt-0.5">${pagePrefix}${wordsFormatted} words • ~${durationFormatted}</p>
             </div>
             <div class="flex items-center gap-1.5 flex-shrink-0">
                 ${bmBadge}
@@ -7121,6 +7129,36 @@ function getRealBookPageInfo(chap, pageInChapter) {
 }
 window.getRealBookPageInfo = getRealBookPageInfo;
 
+function formatChapterDuration(sec) {
+    sec = Number(sec);
+    if (!Number.isFinite(sec) || sec <= 0) return '< 1m';
+    if (sec < 60) return `${Math.round(sec)}s`;
+    const m = Math.round(sec / 60);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    const remM = m % 60;
+    return remM > 0 ? `${h}h ${remM}m` : `${h}h`;
+}
+window.formatChapterDuration = formatChapterDuration;
+
+function getChapterPageBadge(chap) {
+    if (!chap) return '';
+    let start = (typeof chap.firstPage === 'number') ? chap.firstPage : (typeof chap.start_page === 'number' ? chap.start_page : null);
+    let end = (typeof chap.lastPage === 'number') ? chap.lastPage : (typeof chap.end_page === 'number' ? chap.end_page : null);
+    if (start === null && typeof getRealBookPageInfo === 'function') {
+        const info = getRealBookPageInfo(chap, 1);
+        if (info && info.bookPage) start = info.bookPage;
+    }
+    if (start !== null) {
+        if (end !== null && end > start) {
+            return `Pages ${start}–${end}`;
+        }
+        return `Page ${start}`;
+    }
+    return '';
+}
+window.getChapterPageBadge = getChapterPageBadge;
+
 function renderCurrentPage() {
     window.EngbotReadingUI?.followAudio();
     if (readerActive) {
@@ -7162,9 +7200,10 @@ function renderCurrentPage() {
                     <span class="text-xs font-label-caps font-bold tracking-widest uppercase opacity-75">✦ ${escapeHtml(window.EngbotUI.displayTitle(readerBook.title))} ✦</span>
                     <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold mt-1 mb-2 tracking-tight ${readerLang === 'ka' ? 'font-georgian-sans' : 'font-cinzel'}">${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}</h1>
                     <div class="flex items-center justify-center gap-3 text-xs opacity-75">
-                        <span>${chap.word_count} words</span>
+                        ${getChapterPageBadge(chap) ? `<span>${escapeHtml(getChapterPageBadge(chap))}</span><span>•</span>` : ''}
+                        <span>${(chap.word_count || 0).toLocaleString()} words</span>
                         <span>•</span>
-                        <span>~${formatTime(EngbotCore.chapterStats(chap).seconds)}</span>
+                        <span>~${formatChapterDuration(EngbotCore.chapterStats(chap).seconds)}</span>
                     </div>
                     <div class="mt-3 text-xs opacity-60">── ❖ ──</div>
                 </header>
@@ -11377,7 +11416,8 @@ function speakStandardSentence(text, lang) {
         currentSentenceIndex++;
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
         const pauseTime = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
-        const delay = document.hidden ? Math.min(50, pauseTime) : pauseTime;
+        const isParagraphEnd = /\n\s*\n\s*$/.test(String(text));
+        const delay = document.hidden ? 0 : (isParagraphEnd ? Math.min(50, pauseTime) : Math.min(20, pauseTime));
         utteranceTimeout = setTimeout(() => {
             if (myToken === currentSpeechToken && isPlaying && !isPaused) {
                 speakCurrentSentence();
@@ -11659,7 +11699,8 @@ async function speakGatewayNeural(text, lang) {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             sentenceRetryCount = 0;
             const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
-            const delay = document.hidden ? 0 : breathDelay;
+            const isParagraphEnd = /\n\s*\n\s*$/.test(String(text));
+            const delay = document.hidden ? 0 : (isParagraphEnd ? Math.min(50, breathDelay) : Math.min(15, breathDelay));
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
@@ -11856,7 +11897,8 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
         currentElevenAudio.onended = () => {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
-            const delay = document.hidden ? Math.min(50, breathDelay) : breathDelay;
+            const isParagraphEnd = /\n\s*\n\s*$/.test(String(text));
+            const delay = document.hidden ? 0 : (isParagraphEnd ? Math.min(50, breathDelay) : Math.min(15, breathDelay));
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
@@ -11983,7 +12025,8 @@ async function speakElevenLabsSentence(text, lang = null) {
             URL.revokeObjectURL(audioUrl);
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             const breathDelay = window.EngbotNarration.pauseMs(textToRead, currentGlobalSpeed);
-            const delay = document.hidden ? Math.min(50, breathDelay) : breathDelay;
+            const isParagraphEnd = /\n\s*\n\s*$/.test(String(textToRead));
+            const delay = document.hidden ? 0 : (isParagraphEnd ? Math.min(50, breathDelay) : Math.min(15, breathDelay));
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
                 if (myToken === currentSpeechToken && isPlaying && !isPaused) {
@@ -13892,7 +13935,7 @@ function renderChaptersList() {
                         ${chapHasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 font-bold">🇬🇪</span>' : ''}
                         ${isCurrentlyTranslating ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold animate-pulse">⏳ Translating</span>' : ''}
                     </h4>
-                    <p class="text-[10px] sm:text-xs text-on-surface-variant mt-0.5">${chap.word_count} words • ~${formatTime(EngbotCore.chapterStats(chap).seconds)}</p>
+                    <p class="text-[10px] sm:text-xs text-on-surface-variant mt-0.5">${(typeof getChapterPageBadge === 'function' && getChapterPageBadge(chap)) ? `${escapeHtml(getChapterPageBadge(chap))} • ` : ''}${(EngbotCore.chapterStats(chap).words || chap.word_count || 0).toLocaleString()} words • ~${(typeof formatChapterDuration === 'function') ? formatChapterDuration(EngbotCore.chapterStats(chap).seconds) : formatTime(EngbotCore.chapterStats(chap).seconds)}</p>
                 </div>
             </div>
 
@@ -13921,8 +13964,12 @@ function renderChaptersList() {
 function formatTime(sec) {
     sec = Number(sec);
     if (!Number.isFinite(sec) || sec < 0) sec = 0;
-    const m = Math.floor(sec / 60);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
     const s = Math.floor(sec % 60);
+    if (h > 0) {
+        return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    }
     return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 

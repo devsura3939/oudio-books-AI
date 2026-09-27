@@ -56,6 +56,21 @@ test('PDF outline resolves named destinations and keeps original page ranges', a
   const outline=await structure.outline(doc);assert.deepEqual(outline.map(x=>x.page),[1,4]);
   const result=structure.structure([1,2,3,4,5].map(index=>({index,text:`Page ${index} body.`})),{outline});
   assert.deepEqual(result.chapters.map(c=>[c.firstPage,c.lastPage]),[[1,3],[4,5]]);
+
+  const nestedDoc = {
+    numPages: 10,
+    getOutline: async () => [
+      { title: 'Part I', dest: [0], items: [
+        { title: 'Chapter 1', dest: [1] },
+        { title: 'Chapter 2', dest: [4] }
+      ]},
+      { title: 'Part II', dest: [7], items: [
+        { title: 'Chapter 3', dest: [8] }
+      ]}
+    ]
+  };
+  const nestedOutline = await structure.outline(nestedDoc);
+  assert.deepEqual(nestedOutline.map(x => x.page), [1, 2, 5, 8, 9]);
 });
 test('PDF items are ordered by visual position, including two-column pages', () => {
   const item=(str,x,y,width=55)=>({str,width,transform:[10,0,0,10,x,y]});

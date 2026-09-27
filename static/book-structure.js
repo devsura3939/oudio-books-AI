@@ -69,10 +69,22 @@
             }
         }
         try { await visit(await doc.getOutline()); } catch (_) {}
-        // Use the shallowest outline level with multiple actual chapter destinations.
-        const levels = [...new Set(out.map(x => x.depth))].sort();
-        const chosen = levels.find(level => out.filter(x => x.depth === level).length > 1) ?? levels[0];
-        return out.filter(x => x.depth === chosen && x.title).sort((a, b) => a.page - b.page).filter((x, i, all) => !i || x.page !== all[i - 1].page);
+        // Include outline destinations across hierarchy levels (e.g. Parts and their Chapters).
+        // For entries sharing the same page, prefer the deeper/more specific chapter entry or combine them.
+        const byPage = new Map();
+        const sorted = [...out].filter(x => x && x.title && x.page > 0).sort((a, b) => a.depth - b.depth || a.page - b.page);
+        for (const item of sorted) {
+            const existing = byPage.get(item.page);
+            if (!existing) {
+                byPage.set(item.page, item);
+            } else if (item.depth > existing.depth) {
+                const combinedTitle = /^(?:part|book|volume|ნაწილი|ტომი)\b/i.test(existing.title)
+                    ? `${existing.title} — ${item.title}`
+                    : item.title;
+                byPage.set(item.page, { ...item, title: combinedTitle });
+            }
+        }
+        return [...byPage.values()].sort((a, b) => a.page - b.page);
     }
     function structure(pages, { isKa = false, outline = [] } = {}) {
         const list = pages.map((p, i) => ({ ...p, index: p.index ?? i + 1 })).filter(p => typeof p.text === 'string');

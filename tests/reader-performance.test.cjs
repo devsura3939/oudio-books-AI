@@ -253,5 +253,62 @@ test('Reader Responsiveness & Audio Resiliency Suite', async (t) => {
         assert.equal(chap2P4.chapterPage, 4);
         assert.equal(chap2P4.bookPage, 6, 'Chapter 2 page 4 must be book page 6');
     });
+
+    // 8. Verify chapter data formatting, page badges, duration hours, and seamless TTS inter-sentence pauses
+    await t.test('Chapter data formatting and seamless TTS pauses', () => {
+        // A. Duration formatting
+        const narration = require('../static/narration.js');
+
+        // formatTime with hours and zero-padded minutes/seconds
+        const startFormatTime = appSource.indexOf('function formatTime(');
+        const endFormatTime = appSource.indexOf('// ── Event Listeners Binding', startFormatTime);
+        assert.ok(startFormatTime > 0 && endFormatTime > startFormatTime);
+        const formatTimeCode = appSource.substring(startFormatTime, endFormatTime);
+
+        const formatSandbox = {};
+        vm.createContext(formatSandbox);
+        vm.runInContext(formatTimeCode + '\nthis.formatTime = formatTime;', formatSandbox);
+
+        assert.equal(formatSandbox.formatTime(26363), '7:19:23', '26,363 seconds must format as 7:19:23, not 439:23');
+        assert.equal(formatSandbox.formatTime(2968), '49:28');
+        assert.equal(formatSandbox.formatTime(50), '0:50');
+        assert.equal(formatSandbox.formatTime(undefined), '0:00');
+
+        // formatChapterDuration
+        const startChapterDur = appSource.indexOf('function formatChapterDuration(');
+        const endChapterDur = appSource.indexOf('window.formatChapterDuration = formatChapterDuration;', startChapterDur);
+        assert.ok(startChapterDur > 0 && endChapterDur > startChapterDur);
+        const durCode = appSource.substring(startChapterDur, endChapterDur);
+        vm.runInContext(durCode + '\nthis.formatChapterDuration = formatChapterDuration;', formatSandbox);
+
+        assert.equal(formatSandbox.formatChapterDuration(26363), '7h 19m', '61,514-word chapter (~26,363 sec) must format as 7h 19m, not 439:23');
+        assert.equal(formatSandbox.formatChapterDuration(2968), '49m');
+        assert.equal(formatSandbox.formatChapterDuration(24), '24s');
+        assert.equal(formatSandbox.formatChapterDuration(0), '< 1m');
+
+        // getChapterPageBadge
+        const startPageBadge = appSource.indexOf('function getChapterPageBadge(');
+        const endPageBadge = appSource.indexOf('window.getChapterPageBadge = getChapterPageBadge;', startPageBadge);
+        assert.ok(startPageBadge > 0 && endPageBadge > startPageBadge);
+        const badgeCode = appSource.substring(startPageBadge, endPageBadge);
+        vm.runInContext(badgeCode + '\nthis.getChapterPageBadge = getChapterPageBadge;', formatSandbox);
+
+        assert.equal(formatSandbox.getChapterPageBadge({ firstPage: 235, lastPage: 320 }), 'Pages 235–320');
+        assert.equal(formatSandbox.getChapterPageBadge({ firstPage: 209, lastPage: 209 }), 'Page 209');
+        assert.equal(formatSandbox.getChapterPageBadge({ start_page: 5 }), 'Page 5');
+
+        // B. Seamless TTS inter-sentence delays (no awkward long stops)
+        const regularSentencePause = narration.pauseMs('This is sentence one.');
+        const questionPause = narration.pauseMs('Is this working properly?');
+        const continuationPause = narration.pauseMs('in the middle of a sentence');
+        const commaPause = narration.pauseMs('as you can see,');
+
+        assert.ok(regularSentencePause <= 25, `Regular sentence pause must be <= 25ms, got ${regularSentencePause}ms`);
+        assert.ok(questionPause <= 40, `Question pause must be <= 40ms, got ${questionPause}ms`);
+        assert.ok(continuationPause <= 5, `Continuation pause must be <= 5ms, got ${continuationPause}ms`);
+        assert.ok(commaPause <= 10, `Comma pause must be <= 10ms, got ${commaPause}ms`);
+        assert.ok(regularSentencePause > continuationPause, 'Sentence terminal pause must exceed mid-clause pause');
+    });
 });
+
 
