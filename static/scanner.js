@@ -2218,7 +2218,25 @@ ${text.slice(0, 10000)}`;
     } finally { URL.revokeObjectURL(page.url); state.running = false; }
   }
 
+  async function searchVisualPages(query, topK = 5) {
+    if (!query) return [];
+    try {
+      const res = await fetch('/api/embeddinggemma/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query, top_k: topK, dim: 256 })
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.matches || [];
+    } catch (e) {
+      console.warn('[EmbeddingGemma] Visual search error:', e);
+      return [];
+    }
+  }
+
   const scannerApi = {
+    searchVisualPages,
     transcribeBlob,
     reorderByPageNumbers,
     _autoOrder: autoOrderPages,

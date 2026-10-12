@@ -524,6 +524,20 @@ async def ocr_endpoint(req: Request):
         )
         if not result.get("success", False) and not result.get("text"):
             return JSONResponse(result, status_code=400)
+
+        # Auto-index into EmbeddingGemma 2 multimodal space
+        if result.get("text") and get_embeddinggemma_engine:
+            try:
+                eg = get_embeddinggemma_engine()
+                eg.index_page(
+                    doc_id=body.get("book_id", "scanned_photo"),
+                    page_number=int(body.get("page_number", 1)),
+                    title=body.get("title", f"Scanned Page {body.get('page_number', 1)}"),
+                    text_content=result["text"]
+                )
+            except Exception as eg_e:
+                print(f"[EmbeddingGemma auto-index] {eg_e}")
+
         return JSONResponse(result)
     except HTTPException:
         raise
@@ -593,6 +607,19 @@ async def parse_page_endpoint(req: Request):
             parsed_text = (result.get("text") or "").strip()
             # If vision returned text, use it; otherwise fall back to raw_text
             final_text = parsed_text if parsed_text else raw_text
+
+            if final_text and get_embeddinggemma_engine:
+                try:
+                    eg = get_embeddinggemma_engine()
+                    eg.index_page(
+                        doc_id=body.get("book_id", "pdf_document"),
+                        page_number=int(page_num or 1),
+                        title=body.get("title", f"Page {page_num}"),
+                        text_content=final_text
+                    )
+                except Exception as eg_e:
+                    print(f"[EmbeddingGemma auto-index] {eg_e}")
+
             return JSONResponse({
                 "success": True,
                 "text": final_text,
@@ -1162,4 +1189,69 @@ async def training_key_generate(req: Request):
         "created_at": key_data["created_at"],
         "instructions_url": "/api/public/train/guide"
     }
+
+
+# ==============================================================================
+# EmbeddingGemma 2 Multimodal Endpoints (Scanned Docs, Books, and Cross-Modal Search)
+# ==============================================================================
+
+try:
+    from app.embeddinggemma_engine import get_embeddinggemma_engine
+except ImportError:
+    get_embeddinggemma_engine = None
+
+@app.get("/api/embeddinggemma/health")
+async def embeddinggemma_health():
+    """Health check for EmbeddingGemma 2 multimodal sub-engine."""
+    if not get_embeddinggemma_engine:
+        return {"status": "unavailable", "detail": "Module not loaded"}
+    engine = get_embeddinggemma_engine()
+    return {
+        "status": "online",
+        "model": "google/embeddinggemma-2",
+        "is_production_model": engine.is_production_model,
+        "target_mrl_dim": engine.target_dim,
+        "indexed_records_count": len(engine.index_records)
+    }
+
+@app.post("/api/embeddinggemma/search")
+async def embeddinggemma_search(req: Request):
+    """Cross-modal semantic search across scanned book pages and audio chunks."""
+    try:
+        body = await req.json()
+    except Exception:
+        body = {}
+    query = body.get("query", "")
+    top_k = int(body.get("top_k", 5))
+    dim = int(body.get("dim", 256))
+    if not query:
+        raise HTTPException(status_code=400, detail="Query parameter is required")
+    
+    engine = get_embeddinggemma_engine()
+    matches = engine.search(query=query, top_k=top_k, dim=dim)
+    return {
+        "query": query,
+        "dimension": dim,
+        "matches": matches
+    }
+
+@app.post("/api/embeddinggemma/index-page")
+async def embeddinggemma_index_page(req: Request):
+    """Indexes a scanned book page or text chunk in the EmbeddingGemma 2 vector space."""
+    try:
+        body = await req.json()
+    except Exception:
+        body = {}
+    doc_id = body.get("doc_id", "doc_default")
+    page_number = int(body.get("page_number", 1))
+    title = body.get("title", f"Page {page_number}")
+    text_content = body.get("text_content")
+
+    engine = get_embeddinggemma_engine()
+    record = engine.index_page(doc_id=doc_id, page_number=page_number, title=title, text_content=text_content)
+    return {
+        "status": "indexed",
+        "record": record
+    }
+
 
