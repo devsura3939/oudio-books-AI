@@ -1446,6 +1446,17 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
     def _translate_single_chunk(chunk_index: int, p: str):
         before_ctx = chunks[chunk_index - 1] if chunk_index > 0 else _translation_request_context.get("before", "")
         after_ctx = chunks[chunk_index + 1] if chunk_index + 1 < len(chunks) else _translation_request_context.get("after", "")
+        
+        # EmbeddingGemma 2 RAG Context Retrieval: Maintain character & terminology consistency
+        try:
+            from app.embeddinggemma_engine import get_embeddinggemma_engine
+            eg = get_embeddinggemma_engine()
+            sem_ctx = eg.get_semantic_context_for_translation(p)
+            if sem_ctx and sem_ctx.get("prompt_hint"):
+                before_ctx = (sem_ctx["prompt_hint"] + "\n" + before_ctx).strip()
+        except Exception:
+            pass
+
         p_trans = None
         engine = "server_neural_translate"
 

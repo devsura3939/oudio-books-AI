@@ -176,6 +176,7 @@ async def tts_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/server-translate")
+@app.post("/api/translate")
 async def server_translate(req: Request):
     """
     Lightweight, high-speed server-side translation.
@@ -1265,10 +1266,16 @@ async def embeddinggemma_transcribe_and_translate(req: Request):
         body = {}
     query_or_doc_id = body.get("query_or_doc_id") or body.get("doc_id", "")
     target_language = body.get("target_language", "ka")
+    text_content = body.get("text_content") or body.get("text")
 
     engine = get_embeddinggemma_engine()
-    result = engine.transcribe_and_translate(query_or_doc_id=query_or_doc_id, target_language=target_language)
-    return result
+    result = await run_in_threadpool(
+        engine.transcribe_and_translate,
+        query_or_doc_id=query_or_doc_id,
+        target_language=target_language,
+        text_content=text_content
+    )
+    return JSONResponse(result)
 
 
 

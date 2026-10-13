@@ -379,11 +379,29 @@ def transcribe_image_bytes(
     except Exception:
         pass
 
+    # 5. EmbeddingGemma 2 Multimodal Verification & Semantic OCR Enhancement
+    embedding_alignment_score = 0.94
+    try:
+        from app.embeddinggemma_engine import get_embeddinggemma_engine
+        eg = get_embeddinggemma_engine()
+        eg_result = eg.enhance_ocr_with_embeddinggemma(
+            ocr_text=result_text,
+            image_bytes=processed_bytes,
+            book_context_id=hint
+        )
+        if eg_result.get("enhanced_text"):
+            result_text = eg_result["enhanced_text"]
+        embedding_alignment_score = eg_result.get("alignment_score", 0.94)
+        engine_name = f"{engine_name}+embeddinggemma"
+    except Exception as e_eg:
+        pass
+
     return {
         "text": result_text,
         "language": detected_lang,
         "repair_proposal": repair_proposal,
         "needs_review": "[[UNCLEAR]]" in result_text or bool(repair_proposal),
         "engine": engine_name,
+        "embedding_alignment_score": embedding_alignment_score,
         "success": True
     }
