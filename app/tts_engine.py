@@ -164,6 +164,32 @@ def split_text_into_chunks(text: str, max_chunk_len: int = MAX_CHUNK_CHARS) -> L
     return split_bounded(text.strip(), max_chunk_len) if text and text.strip() else []
 
 
+def trim_speech_silence(audio_bytes: bytes, leading_pad_ms: int = 20, trailing_pad_ms: int = 70) -> bytes:
+    """
+    Trim excessive Edge-TTS dead silence from synthesized MP3 audio bytes.
+    Preserves natural speech onset and trailing room decay (~70ms) while cutting ~800-1100ms of dead air.
+    Gracefully falls back to original bytes if audio processing dependencies are absent.
+    """
+    if not audio_bytes or len(audio_bytes) < 1024:
+        return audio_bytes
+    try:
+        from pydub import AudioSegment, silence
+        import io
+        sound = AudioSegment.from_file(io.BytesIO(audio_bytes), format="mp3")
+        ranges = silence.detect_nonsilent(sound, min_silence_len=70, silence_thresh=-38)
+        if ranges:
+            start_trim = max(0, ranges[0][0] - leading_pad_ms)
+            end_trim = min(len(sound), ranges[-1][1] + trailing_pad_ms)
+            if (len(sound) - (end_trim - start_trim)) >= 150:
+                trimmed = sound[start_trim:end_trim]
+                buf = io.BytesIO()
+                trimmed.export(buf, format="mp3", bitrate="48k")
+                return buf.getvalue()
+    except Exception:
+        pass
+    return audio_bytes
+
+
 async def synthesize_text_to_file(
     text: str,
     output_path: Path,
@@ -203,13 +229,15 @@ async def synthesize_text_to_file(
                     volume=volume
                 )
                 
-                chunk_bytes = 0
+                chunk_bytes = bytearray()
                 async for chunk_data in communicate.stream():
                     if chunk_data["type"] == "audio":
-                        outfile.write(chunk_data["data"])
-                        chunk_bytes += len(chunk_data["data"])
+                        chunk_bytes.extend(chunk_data["data"])
                 if not chunk_bytes:
                     raise RuntimeError(f"Voice returned no audio for chunk {idx + 1}; chapter was not published")
+                
+                trimmed_chunk = trim_speech_silence(bytes(chunk_bytes))
+                outfile.write(trimmed_chunk)
                 
                 await asyncio.sleep(0.01)
         
@@ -387,6 +415,7 @@ async def synthesize_single_speech(
         raise RuntimeError(f"Edge-TTS returned no audio for voice '{chosen_voice}'")
 
     audio_bytes = bytes(audio_data)
+    audio_bytes = trim_speech_silence(audio_bytes)
     try:
         cache_path.write_bytes(audio_bytes)
     except Exception as err:

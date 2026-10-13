@@ -23,11 +23,14 @@
     }
     function pauseMs(text, speed = 1) {
         const t = terminal(text);
-        // Additional inter-sentence gap, calibrated for seamless human audiobook flow.
-        const gap = /\n\s*\n\s*$/.test(String(text)) ? 60
-            : /(?:\.{3}|…)$/.test(t) ? 50 : /[?!]$/.test(t) ? 35 : /[.჻]$/.test(t) ? 20
-                : /[;:]$/.test(t) ? 10 : /[,—–]$/.test(t) ? 6 : 2;
-        return Math.round(gap / Math.max(0.5, Math.min(2, Number(speed) || 1)));
+        // Calibrated for seamless human audiobook flow (50% tighter pauses).
+        // Strongly scales down with playback speeds (1.25x, 1.5x) so accelerated listening has zero sluggish stops.
+        const gap = /\n\s*\n\s*$/.test(String(text)) ? 30
+            : /(?:\.{3}|…)$/.test(t) ? 25 : /[?!]$/.test(t) ? 18 : /[.჻]$/.test(t) ? 10
+                : /[;:]$/.test(t) ? 5 : /[,—–]$/.test(t) ? 3 : 1;
+        const spd = Math.max(0.5, Math.min(3, Number(speed) || 1));
+        const speedScale = spd > 1.0 ? Math.pow(spd, 1.7) : spd;
+        return Math.max(1, Math.round(gap / speedScale));
     }
     function chunks(text, limit = 200) {
         if (!Number.isInteger(limit) || limit < 2) throw new Error('Invalid speech chunk limit');

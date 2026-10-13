@@ -11427,7 +11427,7 @@ function speakStandardSentence(text, lang) {
         if (utteranceTimeout) clearTimeout(utteranceTimeout);
         const pauseTime = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
         const isParagraphEnd = /\n\s*\n\s*$/.test(String(text));
-        const delay = document.hidden ? 0 : (isParagraphEnd ? Math.min(50, pauseTime) : Math.min(20, pauseTime));
+        const delay = document.hidden ? 0 : (isParagraphEnd ? Math.min(25, pauseTime) : Math.min(8, pauseTime));
         utteranceTimeout = setTimeout(() => {
             if (myToken === currentSpeechToken && isPlaying && !isPaused) {
                 speakCurrentSentence();
@@ -11449,6 +11449,64 @@ function speakStandardSentence(text, lang) {
     window._activeUtterance = utter;
     window.speechSynthesis.speak(utter);
     updatePlayerUIState(true);
+}
+
+// ── Audio Speech Boundary & Dead Silence Trimming ─────────────────────────
+// Cuts ~800-1100ms of leading/trailing dead silence in neural TTS clips,
+// enabling tight, seamless audiobook listening and fast 1.25x / 1.5x playback.
+const speechBoundsCache = new Map();
+
+function inspectAudioSpeechBounds(blob, cacheKey) {
+    if (!blob || !(blob instanceof Blob)) return Promise.resolve(null);
+    const key = cacheKey || `${blob.size}|${blob.type}`;
+    if (speechBoundsCache.has(key)) return Promise.resolve(speechBoundsCache.get(key));
+
+    return new Promise(resolve => {
+        try {
+            const AudioCtx = (typeof window !== 'undefined') && (window.AudioContext || window.webkitAudioContext);
+            if (!AudioCtx) return resolve(null);
+
+            blob.arrayBuffer().then(buf => {
+                const offlineCtx = new (window.OfflineAudioContext || AudioCtx)(1, 8000, 8000);
+                return offlineCtx.decodeAudioData(buf);
+            }).then(decoded => {
+                const channel = decoded.getChannelData(0);
+                const len = channel.length;
+                const sr = decoded.sampleRate;
+                if (!len || !sr) return resolve(null);
+
+                let startSample = 0;
+                const threshold = 0.01;
+                for (let i = 0; i < len; i += 16) {
+                    if (Math.abs(channel[i]) > threshold) {
+                        startSample = Math.max(0, i - Math.round(sr * 0.02));
+                        break;
+                    }
+                }
+
+                let endSample = len - 1;
+                for (let i = len - 1; i >= 0; i -= 16) {
+                    if (Math.abs(channel[i]) > threshold) {
+                        endSample = Math.min(len - 1, i + Math.round(sr * 0.06));
+                        break;
+                    }
+                }
+
+                const startSec = startSample / sr;
+                const endSec = endSample / sr;
+                const bounds = {
+                    start: startSec,
+                    end: endSec,
+                    duration: decoded.duration,
+                    hasDeadSilence: (decoded.duration - endSec) > 0.15
+                };
+                speechBoundsCache.set(key, bounds);
+                resolve(bounds);
+            }).catch(() => resolve(null));
+        } catch (_) {
+            resolve(null);
+        }
+    });
 }
 
 // ── Lookahead Georgian Audio Prefetch Buffer ───────────────────────────────
@@ -11540,6 +11598,8 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority
         const cachedBlob = await getAudioFromPersistentCache(key);
         if (cachedBlob) {
             const url = URL.createObjectURL(cachedBlob);
+            void inspectAudioSpeechBounds(cachedBlob, key);
+            void inspectAudioSpeechBounds(cachedBlob, url);
             if (gatewayTTSCache.size > 80) {
                 const oldest = gatewayTTSCache.keys().next().value;
                 try { URL.revokeObjectURL(gatewayTTSCache.get(oldest)); } catch (e) {}
@@ -11585,6 +11645,8 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority
         saveAudioToPersistentCache(key, blob);
 
         const url = URL.createObjectURL(blob);
+        void inspectAudioSpeechBounds(blob, key);
+        void inspectAudioSpeechBounds(blob, url);
         if (gatewayTTSCache.size > 80) {
             const oldest = gatewayTTSCache.keys().next().value;
             try { URL.revokeObjectURL(gatewayTTSCache.get(oldest)); } catch (e) {}
@@ -11697,7 +11759,12 @@ async function speakGatewayNeural(text, lang) {
         if (targetSrc && currentElevenAudio.src !== targetSrc) {
             currentElevenAudio.src = targetSrc;
         }
-        try { currentElevenAudio.currentTime = 0; } catch (_) {}
+        const bounds = speechBoundsCache.get(targetSrc);
+        if (bounds && bounds.start > 0.03) {
+            try { currentElevenAudio.currentTime = bounds.start; } catch (_) {}
+        } else {
+            try { currentElevenAudio.currentTime = 0; } catch (_) {}
+        }
 
         startBackgroundKeepAlive();
         requestScreenWakeLock();
@@ -11705,12 +11772,16 @@ async function speakGatewayNeural(text, lang) {
 
         primeGatewayPrefetchWindow(currentSentenceIndex, lang);
 
-        currentElevenAudio.onended = () => {
+        let hasAdvanced = false;
+        const advanceToNextSentence = () => {
+            if (hasAdvanced) return;
+            hasAdvanced = true;
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             sentenceRetryCount = 0;
             const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
             const isParagraphEnd = /\n\s*\n\s*$/.test(String(text));
-            const delay = document.hidden ? 0 : (isParagraphEnd ? Math.min(50, breathDelay) : Math.min(15, breathDelay));
+            const maxDelay = isParagraphEnd ? 25 : 8;
+            const delay = document.hidden ? 0 : Math.min(maxDelay, breathDelay);
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
@@ -11718,6 +11789,22 @@ async function speakGatewayNeural(text, lang) {
                 speakCurrentSentence();
             }, delay);
         };
+
+        currentElevenAudio.onended = advanceToNextSentence;
+
+        if (bounds && bounds.hasDeadSilence && bounds.end > 0.15) {
+            const checkSpeechEnd = () => {
+                if (hasAdvanced || myToken !== currentSpeechToken || !isPlaying || isPaused) {
+                    currentElevenAudio.removeEventListener('timeupdate', checkSpeechEnd);
+                    return;
+                }
+                if (currentElevenAudio.currentTime >= bounds.end) {
+                    currentElevenAudio.removeEventListener('timeupdate', checkSpeechEnd);
+                    advanceToNextSentence();
+                }
+            };
+            currentElevenAudio.addEventListener('timeupdate', checkSpeechEnd);
+        }
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
             console.warn('[speakGatewayNeural] Audio playback error — falling back to free neural/standard');
@@ -11893,7 +11980,12 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
         if (playUrl && currentElevenAudio.src !== playUrl) {
             currentElevenAudio.src = playUrl;
         }
-        try { currentElevenAudio.currentTime = 0; } catch (_) {}
+        const bounds = speechBoundsCache.get(playUrl);
+        if (bounds && bounds.start > 0.03) {
+            try { currentElevenAudio.currentTime = bounds.start; } catch (_) {}
+        } else {
+            try { currentElevenAudio.currentTime = 0; } catch (_) {}
+        }
 
         startBackgroundKeepAlive();
         requestScreenWakeLock();
@@ -11904,11 +11996,15 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
             prefetchNextNeuralSentence(currentSentenceIndex + i, voiceId, ratePct, pitchHz, lang);
         }
 
-        currentElevenAudio.onended = () => {
+        let hasAdvanced = false;
+        const advanceToNextSentence = () => {
+            if (hasAdvanced) return;
+            hasAdvanced = true;
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             const breathDelay = window.EngbotNarration.pauseMs(text, currentGlobalSpeed);
             const isParagraphEnd = /\n\s*\n\s*$/.test(String(text));
-            const delay = document.hidden ? 0 : (isParagraphEnd ? Math.min(50, breathDelay) : Math.min(15, breathDelay));
+            const maxDelay = isParagraphEnd ? 25 : 8;
+            const delay = document.hidden ? 0 : Math.min(maxDelay, breathDelay);
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
                 if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
@@ -11916,6 +12012,22 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
                 speakCurrentSentence();
             }, delay);
         };
+
+        currentElevenAudio.onended = advanceToNextSentence;
+
+        if (bounds && bounds.hasDeadSilence && bounds.end > 0.15) {
+            const checkSpeechEnd = () => {
+                if (hasAdvanced || myToken !== currentSpeechToken || !isPlaying || isPaused) {
+                    currentElevenAudio.removeEventListener('timeupdate', checkSpeechEnd);
+                    return;
+                }
+                if (currentElevenAudio.currentTime >= bounds.end) {
+                    currentElevenAudio.removeEventListener('timeupdate', checkSpeechEnd);
+                    advanceToNextSentence();
+                }
+            };
+            currentElevenAudio.addEventListener('timeupdate', checkSpeechEnd);
+        }
 
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
@@ -12036,7 +12148,7 @@ async function speakElevenLabsSentence(text, lang = null) {
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             const breathDelay = window.EngbotNarration.pauseMs(textToRead, currentGlobalSpeed);
             const isParagraphEnd = /\n\s*\n\s*$/.test(String(textToRead));
-            const delay = document.hidden ? 0 : (isParagraphEnd ? Math.min(50, breathDelay) : Math.min(15, breathDelay));
+            const delay = document.hidden ? 0 : (isParagraphEnd ? Math.min(25, breathDelay) : Math.min(8, breathDelay));
             if (utteranceTimeout) clearTimeout(utteranceTimeout);
             utteranceTimeout = setTimeout(() => {
                 if (myToken === currentSpeechToken && isPlaying && !isPaused) {
