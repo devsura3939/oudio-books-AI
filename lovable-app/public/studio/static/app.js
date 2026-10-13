@@ -7733,7 +7733,7 @@ function setupKeyboardAndTouchControls() {
             else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
             return;
         }
-        // ESC closes the topmost open modal or mobile nav drawer
+        // ESC closes the topmost open modal, mobile nav drawer, or reader
         if (e.key === 'Escape') {
             const openDrawer = document.getElementById('mobileNavDrawer');
             if (openDrawer && openDrawer.classList.contains('active')) {
@@ -7741,80 +7741,212 @@ function setupKeyboardAndTouchControls() {
                 e.preventDefault();
                 return;
             }
-            const openModalEl = topModal;
-            if (openModalEl) {
-                if (openModalEl.id === 'wholeBookTranslateModal') {
+            if (topModal) {
+                if (topModal.id === 'wholeBookTranslateModal') {
                     minimizeTranslationPanel();
                 } else {
-                    closeModal(openModalEl.id);
+                    closeModal(topModal.id);
                 }
                 e.preventDefault();
                 return;
             }
+            if (readerActive) {
+                e.preventDefault();
+                closeReader();
+                return;
+            }
         }
-        if (!readerActive || document.querySelector('.modal-overlay.active, dialog[open]')) return;
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+        // If an overlay modal or native dialog is currently active, prevent player key intercepts
+        if (document.querySelector('.modal-overlay.active, dialog[open]')) return;
+
+        // Skip shortcuts when typing inside form inputs, textareas, selects, or contenteditable
+        const target = e.target;
+        const isEditing = target && (
+            target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.isContentEditable ||
+            (typeof target.closest === 'function' && target.closest('[contenteditable="true"]'))
+        );
+        if (isEditing) return;
+
+        // Blur button if focused so Space doesn't trigger duplicate synthetic click
+        if (target && target.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Spacebar')) {
+            target.blur();
+        }
+
+        const hasAudioActive = isPlaying || isPaused || (sentenceQueue && sentenceQueue.length > 0);
 
         switch (e.key) {
-            case 'ArrowRight':
-            case 'PageDown':
-                e.preventDefault();
-                readerNextPage();
-                break;
-            case 'ArrowLeft':
-            case 'PageUp':
-                e.preventDefault();
-                readerPrevPage();
-                break;
-            case 'Home':
-                e.preventDefault();
-                currentTurnDir = 'prev';
-                readerCurrentPage = 1;
-                renderCurrentPage();
-                break;
-            case 'End':
-                e.preventDefault();
-                currentTurnDir = 'next';
-                readerCurrentPage = readerPages.length;
-                renderCurrentPage();
-                break;
-            case 'ArrowDown':
-                e.preventDefault();
-                readerForwardSentence();
-                break;
-            case 'ArrowUp':
-                e.preventDefault();
-                readerRewindSentence();
-                break;
+            // Space: Toggle play/pause for book reading or listening
             case ' ':
+            case 'Spacebar':
                 e.preventDefault();
                 togglePlayPause();
                 break;
-            case 't':
-            case 'T':
+
+            // ArrowLeft: Rewind backward (or prev page in reader when audio idle)
+            case 'ArrowLeft':
                 e.preventDefault();
-                toggleReaderLanguage();
+                if (e.shiftKey || e.altKey) {
+                    if (readerActive) readerPrevPage();
+                    else playPrevChapter();
+                } else {
+                    if (hasAudioActive) {
+                        playerRewind(10);
+                    } else if (readerActive) {
+                        readerPrevPage();
+                    } else {
+                        playPrevChapter();
+                    }
+                }
                 break;
-            case 'f':
-            case 'F':
+
+            // ArrowRight: Fast-forward (or next page in reader when audio idle)
+            case 'ArrowRight':
                 e.preventDefault();
-                toggleReaderFullscreen();
+                if (e.shiftKey || e.altKey) {
+                    if (readerActive) readerNextPage();
+                    else playNextChapter();
+                } else {
+                    if (hasAudioActive) {
+                        playerForward(10);
+                    } else if (readerActive) {
+                        readerNextPage();
+                    } else {
+                        playNextChapter();
+                    }
+                }
                 break;
-            case 'c':
-            case 'C':
+
+            // ArrowUp: Volume up (or speed up with Shift, or rewind sentence in reader)
+            case 'ArrowUp':
                 e.preventDefault();
-                openToCDrawer();
+                if (e.shiftKey) {
+                    if (typeof nudgeSpeed === 'function') nudgeSpeed(0.05);
+                } else if (hasAudioActive) {
+                    setAudioVolume(Math.min(1, currentAudioVolume + 0.1));
+                } else if (readerActive) {
+                    readerRewindSentence();
+                }
                 break;
-            case 'h':
-            case 'H':
+
+            // ArrowDown: Volume down (or speed down with Shift, or advance sentence in reader)
+            case 'ArrowDown':
+                e.preventDefault();
+                if (e.shiftKey) {
+                    if (typeof nudgeSpeed === 'function') nudgeSpeed(-0.05);
+                } else if (hasAudioActive) {
+                    setAudioVolume(Math.max(0, currentAudioVolume - 0.1));
+                } else if (readerActive) {
+                    readerForwardSentence();
+                }
+                break;
+
+            // Page navigation
+            case 'PageUp':
+                e.preventDefault();
+                if (readerActive) readerPrevPage();
+                else playPrevChapter();
+                break;
+
+            case 'PageDown':
+                e.preventDefault();
+                if (readerActive) readerNextPage();
+                else playNextChapter();
+                break;
+
+            case '[':
+                e.preventDefault();
+                if (readerActive && !hasAudioActive) readerPrevPage();
+                else playPrevChapter();
+                break;
+
+            case ']':
+                e.preventDefault();
+                if (readerActive && !hasAudioActive) readerNextPage();
+                else playNextChapter();
+                break;
+
+            // Media keys: j (rewind 10s), k (play/pause), l (forward 10s), m (mute)
+            case 'j':
+            case 'J':
+                e.preventDefault();
+                playerRewind(10);
+                break;
+
+            case 'k':
+            case 'K':
+                e.preventDefault();
+                togglePlayPause();
+                break;
+
+            case 'l':
+            case 'L':
+                e.preventDefault();
+                playerForward(10);
+                break;
+
             case 'm':
             case 'M':
                 e.preventDefault();
-                toggleReaderToolbars();
+                if (readerActive && !hasAudioActive) {
+                    toggleReaderToolbars();
+                } else {
+                    toggleMuteAudio();
+                }
                 break;
-            case 'Escape':
-                e.preventDefault();
-                closeReader();
+
+            // Reader-specific shortcuts (active when Reader is open)
+            case 'Home':
+                if (readerActive) {
+                    e.preventDefault();
+                    currentTurnDir = 'prev';
+                    readerCurrentPage = 1;
+                    renderCurrentPage();
+                }
+                break;
+
+            case 'End':
+                if (readerActive) {
+                    e.preventDefault();
+                    currentTurnDir = 'next';
+                    readerCurrentPage = readerPages.length;
+                    renderCurrentPage();
+                }
+                break;
+
+            case 't':
+            case 'T':
+                if (readerActive) {
+                    e.preventDefault();
+                    toggleReaderLanguage();
+                }
+                break;
+
+            case 'f':
+            case 'F':
+                if (readerActive) {
+                    e.preventDefault();
+                    toggleReaderFullscreen();
+                }
+                break;
+
+            case 'c':
+            case 'C':
+                if (readerActive) {
+                    e.preventDefault();
+                    openToCDrawer();
+                }
+                break;
+
+            case 'h':
+            case 'H':
+                if (readerActive) {
+                    e.preventDefault();
+                    toggleReaderToolbars();
+                }
                 break;
         }
     });
@@ -7843,17 +7975,85 @@ function playNextChapter() {
     }
 }
 
+// ── Player Rewind & Forward Helpers (Smooth on All Devices) ────────────────
+function playerRewind(seconds = 10) {
+    if (!sentenceQueue || sentenceQueue.length === 0) {
+        if (readerActive) readerPrevPage();
+        return;
+    }
+    const sentencesToJump = Math.max(1, Math.round(seconds / 5));
+    secondsElapsed = Math.max(0, secondsElapsed - seconds);
+    currentSentenceIndex = Math.max(0, currentSentenceIndex - sentencesToJump);
+    if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+    const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
+    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
+    if (readerActive) {
+        highlightReaderSentence(currentSentenceIndex, true);
+    }
+    if (isPlaying && !isPaused) {
+        speakCurrentSentence();
+    }
+    updateMediaSession();
+    const btn = DOM.btnPlayerRewind;
+    if (btn) {
+        btn.classList.add('scale-90', 'text-cyan-400');
+        setTimeout(() => btn.classList.remove('scale-90', 'text-cyan-400'), 150);
+    }
+    if (typeof showToast === 'function') {
+        showToast(`Rewind -${seconds}s`, 'info');
+    }
+}
+
+function playerForward(seconds = 10) {
+    if (!sentenceQueue || sentenceQueue.length === 0) {
+        if (readerActive) readerNextPage();
+        return;
+    }
+    const sentencesToJump = Math.max(1, Math.round(seconds / 5));
+    secondsElapsed += seconds;
+    currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + sentencesToJump);
+    if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+    const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
+    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
+    if (readerActive) {
+        highlightReaderSentence(currentSentenceIndex, true);
+    }
+    if (isPlaying && !isPaused) {
+        speakCurrentSentence();
+    }
+    updateMediaSession();
+    const btn = DOM.btnPlayerForward;
+    if (btn) {
+        btn.classList.add('scale-90', 'text-cyan-400');
+        setTimeout(() => btn.classList.remove('scale-90', 'text-cyan-400'), 150);
+    }
+    if (typeof showToast === 'function') {
+        showToast(`Forward +${seconds}s`, 'info');
+    }
+}
+
+window.playerRewind = playerRewind;
+window.playerForward = playerForward;
+
 function readerRewindSentence() {
     if (sentenceQueue.length > 0) {
         currentSentenceIndex = Math.max(0, currentSentenceIndex - 1);
-        speakCurrentSentence();
+        highlightReaderSentence(currentSentenceIndex, true);
+        if (isPlaying && !isPaused) {
+            speakCurrentSentence();
+        }
+        updateMediaSession();
     }
 }
 
 function readerForwardSentence() {
     if (sentenceQueue.length > 0) {
         currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 1);
-        speakCurrentSentence();
+        highlightReaderSentence(currentSentenceIndex, true);
+        if (isPlaying && !isPaused) {
+            speakCurrentSentence();
+        }
+        updateMediaSession();
     }
 }
 
@@ -11115,17 +11315,11 @@ function initMediaSessionHandlers() {
         }],
         ['seekbackward', (details) => {
             const seekSec = (details && details.seekOffset) ? details.seekOffset : 10;
-            secondsElapsed = Math.max(0, secondsElapsed - seekSec);
-            currentSentenceIndex = Math.max(0, currentSentenceIndex - 2);
-            speakCurrentSentence();
-            updateMediaSession();
+            playerRewind(seekSec);
         }],
         ['seekforward', (details) => {
             const seekSec = (details && details.seekOffset) ? details.seekOffset : 10;
-            secondsElapsed += seekSec;
-            currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 2);
-            speakCurrentSentence();
-            updateMediaSession();
+            playerForward(seekSec);
         }],
         ['seekto', (details) => {
             if (details && typeof details.seekTime === 'number' && sentenceQueue && sentenceQueue.length > 0) {
@@ -14170,50 +14364,66 @@ function setupEventListeners() {
     if (DOM.btnPlayerPlayPause) DOM.btnPlayerPlayPause.addEventListener('click', togglePlayPause);
     
     if (DOM.btnPlayerRewind) {
-        DOM.btnPlayerRewind.addEventListener('click', () => {
-            if (sentenceQueue.length > 0) {
-                secondsElapsed = Math.max(0, secondsElapsed - 10);
-                currentSentenceIndex = Math.max(0, currentSentenceIndex - 2);
-                if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
-                const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
-                if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
-                if (isPlaying && !isPaused) speakCurrentSentence();
-                updateMediaSession();
-            }
-        });
+        DOM.btnPlayerRewind.addEventListener('click', () => playerRewind(10));
     }
 
     if (DOM.btnPlayerForward) {
-        DOM.btnPlayerForward.addEventListener('click', () => {
-            if (sentenceQueue.length > 0) {
-                secondsElapsed += 10;
-                currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + 2);
-                if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
-                const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
-                if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
-                if (isPlaying && !isPaused) speakCurrentSentence();
-                updateMediaSession();
-            }
-        });
+        DOM.btnPlayerForward.addEventListener('click', () => playerForward(10));
     }
 
     if (DOM.playerProgressContainer) {
         const progressContainer = DOM.playerProgressContainer;
         const seekTooltip = document.getElementById('playerSeekTooltip');
         let isScrubbing = false;
+        let lastScrubClientX = 0;
 
-        const handleSeek = (clientX) => {
-            if (!sentenceQueue || sentenceQueue.length === 0) return;
+        const getProgressRatio = (clientX) => {
             const rect = progressContainer.getBoundingClientRect();
             const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
-            const pct = Math.max(0, Math.min(1, clickX / rect.width));
-            
+            return rect.width > 0 ? clickX / rect.width : 0;
+        };
+
+        const updateScrubPreview = (clientX) => {
+            if (!sentenceQueue || sentenceQueue.length === 0) return;
+            lastScrubClientX = clientX;
+            const pct = Math.max(0, Math.min(1, getProgressRatio(clientX)));
+
             const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
             const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
             const totalDuration = (chapStats && chapStats.seconds) 
                 ? chapStats.seconds 
                 : ((currentChap && currentChap.estimated_duration_sec) ? currentChap.estimated_duration_sec : (sentenceQueue.length * 4));
-            
+
+            const previewSeconds = Math.round(pct * totalDuration);
+            const previewIdx = Math.min(sentenceQueue.length - 1, Math.floor(pct * sentenceQueue.length));
+
+            if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${Math.round(pct * 100)}%`;
+            if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(previewSeconds);
+
+            if (seekTooltip) {
+                const rect = progressContainer.getBoundingClientRect();
+                const hoverX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+                seekTooltip.textContent = formatTime(previewSeconds);
+                seekTooltip.style.left = `${hoverX}px`;
+                seekTooltip.classList.remove('hidden', 'opacity-0');
+                seekTooltip.classList.add('opacity-100');
+            }
+
+            if (readerActive) {
+                highlightReaderSentence(previewIdx);
+            }
+        };
+
+        const commitSeek = (clientX) => {
+            if (!sentenceQueue || sentenceQueue.length === 0) return;
+            const pct = Math.max(0, Math.min(1, getProgressRatio(clientX)));
+
+            const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
+            const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
+            const totalDuration = (chapStats && chapStats.seconds) 
+                ? chapStats.seconds 
+                : ((currentChap && currentChap.estimated_duration_sec) ? currentChap.estimated_duration_sec : (sentenceQueue.length * 4));
+
             secondsElapsed = Math.round(pct * totalDuration);
             currentSentenceIndex = Math.min(sentenceQueue.length - 1, Math.floor(pct * sentenceQueue.length));
 
@@ -14223,57 +14433,66 @@ function setupEventListeners() {
             if (isPlaying && !isPaused) {
                 speakCurrentSentence();
             } else if (readerActive) {
-                highlightReaderSentence(currentSentenceIndex);
+                highlightReaderSentence(currentSentenceIndex, true);
             }
             updateMediaSession();
         };
 
         progressContainer.addEventListener('click', (e) => {
-            handleSeek(e.clientX);
+            commitSeek(e.clientX);
         });
 
-        progressContainer.addEventListener('mousemove', (e) => {
-            if (!seekTooltip || !sentenceQueue || sentenceQueue.length === 0) return;
-            const rect = progressContainer.getBoundingClientRect();
-            const hoverX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-            const pct = hoverX / rect.width;
-            
-            const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
-            const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
-            const totalDuration = (chapStats && chapStats.seconds) 
-                ? chapStats.seconds 
-                : ((currentChap && currentChap.estimated_duration_sec) ? currentChap.estimated_duration_sec : (sentenceQueue.length * 4));
-            
-            const hoverSec = Math.round(pct * totalDuration);
-            seekTooltip.textContent = formatTime(hoverSec);
-            seekTooltip.style.left = `${hoverX}px`;
-            seekTooltip.classList.remove('hidden', 'opacity-0');
-            seekTooltip.classList.add('opacity-100');
+        progressContainer.addEventListener('mousedown', (e) => {
+            isScrubbing = true;
+            updateScrubPreview(e.clientX);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isScrubbing) {
+                updateScrubPreview(e.clientX);
+            } else if (progressContainer.matches && progressContainer.matches(':hover')) {
+                updateScrubPreview(e.clientX);
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (isScrubbing) {
+                isScrubbing = false;
+                commitSeek(e.clientX);
+            }
         });
 
         progressContainer.addEventListener('mouseleave', () => {
-            if (seekTooltip) {
+            if (!isScrubbing && seekTooltip) {
                 seekTooltip.classList.add('opacity-0');
                 setTimeout(() => { if (seekTooltip && seekTooltip.classList.contains('opacity-0')) seekTooltip.classList.add('hidden'); }, 150);
             }
         });
 
-        // Touch scrubbing support on mobile
+        // Touch scrubbing support on mobile / tablet
         progressContainer.addEventListener('touchstart', (e) => {
             if (e.touches && e.touches.length > 0) {
                 isScrubbing = true;
-                handleSeek(e.touches[0].clientX);
+                updateScrubPreview(e.touches[0].clientX);
             }
         }, { passive: true });
 
         window.addEventListener('touchmove', (e) => {
             if (isScrubbing && e.touches && e.touches.length > 0) {
-                handleSeek(e.touches[0].clientX);
+                updateScrubPreview(e.touches[0].clientX);
             }
         }, { passive: true });
 
-        window.addEventListener('touchend', () => {
-            if (isScrubbing) isScrubbing = false;
+        window.addEventListener('touchend', (e) => {
+            if (isScrubbing) {
+                isScrubbing = false;
+                const clientX = (e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0].clientX : lastScrubClientX;
+                commitSeek(clientX);
+                if (seekTooltip) {
+                    seekTooltip.classList.add('opacity-0');
+                    setTimeout(() => { if (seekTooltip && seekTooltip.classList.contains('opacity-0')) seekTooltip.classList.add('hidden'); }, 150);
+                }
+            }
         }, { passive: true });
     }
 
