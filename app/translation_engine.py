@@ -1654,12 +1654,7 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
 
         return chunk_index, p_trans, engine
 
-    if len(chunks) > 1:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(chunks))) as executor:
-            chunk_results = list(executor.map(lambda item: _translate_single_chunk(item[0], item[1]), enumerate(chunks)))
-            chunk_results.sort(key=lambda x: x[0])
-    else:
-        chunk_results = [_translate_single_chunk(0, chunks[0])]
+    chunk_results = [_translate_single_chunk(idx, chunk) for idx, chunk in enumerate(chunks)]
 
     for chunk_index, p_trans, eng in chunk_results:
         p = chunks[chunk_index]
