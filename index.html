@@ -1266,6 +1266,9 @@
                 <button onclick="navigate('discover');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
                     <span class="material-symbols-outlined text-[20px]">explore</span><span>Discover</span>
                 </button>
+                <button onclick="navigate('embeddinggemma');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-primary-fixed hover:bg-white/5 hover:text-white transition">
+                    <span class="material-symbols-outlined text-[20px] text-primary-container">psychology</span><span>EmbeddingGemma 2</span>
+                </button>
                 <button onclick="openCurrentBookInReader();closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-georgian-gold hover:bg-georgian-gold/10 transition">
                     <span class="material-symbols-outlined text-[20px]">menu_book</span><span>Reader</span>
                 </button>
@@ -1338,6 +1341,15 @@
                 <button onclick="navigate('scanner');renderScanShelf()" id="nav-scanner" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all font-medium text-sm">
                     <span class="material-symbols-outlined text-[20px]">document_scanner</span>
                     <span>Scanner</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="navigate('embeddinggemma')" id="nav-embeddinggemma" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all font-medium text-sm">
+                    <span class="material-symbols-outlined text-[20px] text-primary-container">psychology</span>
+                    <span class="flex items-center gap-1.5">
+                        <span>EmbeddingGemma</span>
+                        <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-primary-container/10 text-primary-fixed border border-primary-container/30">2</span>
+                    </span>
                 </button>
             </li>
             <li>
@@ -1543,13 +1555,234 @@
                     <p class="text-xs md:text-sm text-on-surface-variant mt-0.5">Photograph book pages, recognise them in English or Georgian, then read, listen, translate or export.</p>
                     <p id="scanShelfMeta" class="text-[11px] text-primary-fixed-dim mt-1"></p>
                 </div>
-                <button onclick="LuminaScanner.open()" class="py-3 px-5 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-bold text-sm shadow-[0_0_25px_rgba(0,240,255,0.35)] flex items-center gap-2 active:scale-[0.98] transition">
-                    <span class="material-symbols-outlined text-xl">document_scanner</span>
-                    Scan pages
-                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="navigate('embeddinggemma')" class="py-3 px-4 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold text-xs flex items-center gap-2 transition active:scale-[0.98] cursor-pointer">
+                        <span class="material-symbols-outlined text-lg">psychology</span>
+                        Visual Search (EmbeddingGemma)
+                    </button>
+                    <button onclick="LuminaScanner.open()" class="py-3 px-5 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container font-bold text-sm shadow-[0_0_25px_rgba(0,240,255,0.35)] flex items-center gap-2 active:scale-[0.98] transition cursor-pointer">
+                        <span class="material-symbols-outlined text-xl">document_scanner</span>
+                        Scan pages
+                    </button>
+                </div>
             </div>
             <p id="scanExportStatus" class="hidden glass-panel rounded-xl px-4 py-3 text-xs text-primary-fixed-dim"></p>
             <div id="scanShelfGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- View: EmbeddingGemma 2 Multimodal Search & Studio -->
+        <div id="view-embeddinggemma" class="hidden space-y-6">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold font-mono">
+                            <span class="material-symbols-outlined text-lg">psychology</span>
+                        </span>
+                        <h2 class="text-xl md:text-2xl font-extrabold text-white flex items-center gap-2">
+                            <span>EmbeddingGemma</span>
+                            <span class="text-cyan-400 font-black">2</span>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">Multimodal Studio</span>
+                        </h2>
+                    </div>
+                    <p class="text-xs md:text-sm text-on-surface-variant mt-1">
+                        Zero-OCR cross-modal search across scanned book pages, photos, and chapters using Google's unified 768d/256d vector space.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <div id="eg2StatusBadge" class="flex items-center space-x-1.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-3 py-1.5 rounded-full text-xs font-semibold">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                        <span id="eg2StatusText">Edge Client Active</span>
+                    </div>
+                    <button onclick="window.EmbeddingGemmaStudio.indexFromLibrary()" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                        <span class="material-symbols-outlined text-sm text-cyan-400">library_add</span>
+                        <span>Index Bookshelf</span>
+                    </button>
+                    <button onclick="LuminaScanner.open()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container text-xs font-bold flex items-center gap-1.5 transition shadow-md shadow-cyan-500/25 active:scale-95 cursor-pointer">
+                        <span class="material-symbols-outlined text-sm">photo_camera</span>
+                        <span>Scan New Page</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Architecture & MRL Metrics Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div class="glass-card rounded-2xl p-4 flex flex-col justify-between">
+                    <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Encoder Engine</div>
+                    <div class="text-sm sm:text-base font-bold text-white mt-1">Gemma 4 Multimodal</div>
+                    <div class="text-[11px] text-cyan-400 font-mono mt-1">Vision 170M + Text 270M</div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 flex flex-col justify-between">
+                    <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Edge Footprint</div>
+                    <div class="text-sm sm:text-base font-bold text-emerald-400 mt-1">440M Active</div>
+                    <div class="text-[11px] text-slate-400 font-mono mt-1">~310 MB RAM (Quantized)</div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 flex flex-col justify-between border-cyan-500/30">
+                    <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider flex items-center justify-between">
+                        <span>Active MRL Dim</span>
+                        <span class="text-[10px] text-cyan-400 font-mono">Dynamic</span>
+                    </div>
+                    <div class="mt-1">
+                        <select id="eg2MrlSelect" onchange="window.EmbeddingGemmaStudio.onMrlChanged()"
+                            class="w-full bg-surface border border-cyan-500/30 text-white rounded-xl px-2.5 py-1 text-xs font-semibold focus:outline-none cursor-pointer">
+                            <option value="768">768d (Default Fidelity)</option>
+                            <option value="512">512d (1.5x save)</option>
+                            <option value="256" selected>256d (Edge Mobile - 3.0x save)</option>
+                            <option value="128">128d (Micro Edge - 6.0x save)</option>
+                        </select>
+                    </div>
+                    <div id="eg2MrlLabel" class="text-[10px] text-cyan-300 font-mono mt-1">1,024 bytes/doc &bull; 3.0x RAM saving</div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 flex flex-col justify-between">
+                    <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider flex items-center justify-between">
+                        <span>Visual Index</span>
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    </div>
+                    <div id="eg2IndexedCount" class="text-sm sm:text-base font-bold text-white mt-1">3 Documents</div>
+                    <div class="text-[11px] text-slate-400 font-mono mt-1">Scanned Invoices, Rx & Classics</div>
+                </div>
+            </div>
+
+            <!-- Search Section -->
+            <div class="glass-card rounded-3xl p-5 sm:p-7 space-y-5">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <span class="material-symbols-outlined text-cyan-400 text-xl">search</span>
+                        <span>Cross-Modal Multilingual Book Search</span>
+                    </h3>
+                    <p class="text-xs text-on-surface-variant mt-1">
+                        Type queries in Georgian, English, Spanish or any language. EmbeddingGemma 2 matches your words directly with visual scanned page features.
+                    </p>
+                </div>
+
+                <div class="relative">
+                    <input type="text" id="eg2SearchQuery"
+                        placeholder="Search passages (e.g. 'რომელმან შექმნა სამყარო', 'Commercial tax invoice', 'prescription amoxicillin')..."
+                        onkeydown="if(event.key === 'Enter') window.EmbeddingGemmaStudio.search(this.value.trim())"
+                        class="w-full bg-surface/90 border border-white/10 focus:border-cyan-400 rounded-2xl pl-11 pr-28 py-3.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none transition">
+                    <div class="absolute left-3.5 top-3.5 text-slate-400">
+                        <span class="material-symbols-outlined text-lg">search</span>
+                    </div>
+                    <button onclick="window.EmbeddingGemmaStudio.search(document.getElementById('eg2SearchQuery').value.trim())"
+                        class="absolute right-2 top-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container text-xs font-bold shadow-md shadow-cyan-500/20 active:scale-95 transition cursor-pointer">
+                        Search
+                    </button>
+                </div>
+
+                <!-- Query Chips -->
+                <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                    <span class="text-slate-400 font-medium">Try queries:</span>
+                    <button onclick="document.getElementById('eg2SearchQuery').value='ვეფხისტყაოსანი პროლოგი შოთა რუსთაველი';window.EmbeddingGemmaStudio.search('ვეფხისტყაოსანი პროლოგი შოთა რუსთაველი')"
+                        class="px-2.5 py-1 rounded-lg bg-surface hover:bg-white/10 text-slate-300 border border-white/10 transition active:scale-95 cursor-pointer">
+                        🇬🇪 ვეფხისტყაოსანი
+                    </button>
+                    <button onclick="document.getElementById('eg2SearchQuery').value='Commercial tax invoice payment total due';window.EmbeddingGemmaStudio.search('Commercial tax invoice payment total due')"
+                        class="px-2.5 py-1 rounded-lg bg-surface hover:bg-white/10 text-slate-300 border border-white/10 transition active:scale-95 cursor-pointer">
+                        🧾 Tax invoice total
+                    </button>
+                    <button onclick="document.getElementById('eg2SearchQuery').value='receta medica para paciente con amoxicilina';window.EmbeddingGemmaStudio.search('receta medica para paciente con amoxicilina')"
+                        class="px-2.5 py-1 rounded-lg bg-surface hover:bg-white/10 text-slate-300 border border-white/10 transition active:scale-95 cursor-pointer">
+                        💊 Prescription amoxicillin
+                    </button>
+                </div>
+
+                <!-- Results Grid -->
+                <div id="eg2SearchResults" class="space-y-4 hidden pt-3 border-t border-white/10">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <span>Visual Match Results</span>
+                            <span id="eg2ResultsLatency" class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-mono">0.4 ms</span>
+                        </h4>
+                    </div>
+                    <div id="eg2ResultsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+
+            <!-- Decoding & Translation Section -->
+            <div id="eg2DecodeSection" class="glass-card rounded-3xl p-5 sm:p-7 space-y-5 hidden border-cyan-500/30">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                            <span class="material-symbols-outlined text-cyan-400 text-xl">translate</span>
+                            <span>Verbatim Transcription & Neural Translation</span>
+                            <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">Decoded</span>
+                        </h3>
+                        <p class="text-xs text-on-surface-variant mt-0.5" id="eg2DecodeDocLabel"></p>
+                    </div>
+
+                    <div class="flex items-center gap-2 bg-surface/90 border border-white/10 rounded-xl p-1.5">
+                        <span class="text-xs text-slate-400 px-1 font-medium">Target Language:</span>
+                        <select id="eg2TargetLangSelect" onchange="window.EmbeddingGemmaStudio.decode(window.EmbeddingGemmaStudio.currentDocId)"
+                            class="bg-surface border border-white/10 text-white rounded-lg px-2.5 py-1 text-xs font-semibold focus:outline-none cursor-pointer">
+                            <option value="ka" selected>Georgian (ქართული)</option>
+                            <option value="en">English</option>
+                            <option value="es">Spanish (Español)</option>
+                            <option value="fr">French (Français)</option>
+                            <option value="de">German (Deutsch)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Verbatim OCR Card -->
+                    <div class="bg-surface/80 border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-3">
+                        <div>
+                            <div class="text-xs font-bold text-slate-400 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-cyan-400 text-sm">description</span>
+                                <span>VERBATIM OCR TRANSCRIPTION</span>
+                            </div>
+                            <div id="eg2TranscribeText" class="mt-2.5 text-xs text-slate-200 font-mono bg-surface p-3.5 rounded-xl border border-white/5 min-h-[140px] whitespace-pre-wrap select-all leading-relaxed">
+                                Transcription will appear here...
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
+                            <button onclick="navigator.clipboard.writeText(document.getElementById('eg2TranscribeText').innerText)" class="text-slate-400 hover:text-white transition font-medium flex items-center gap-1 cursor-pointer">
+                                <span class="material-symbols-outlined text-sm">content_copy</span> Copy
+                            </button>
+                            <button onclick="window.EmbeddingGemmaStudio.toggleSpeak('eg2TranscribeText', 'en')" class="text-cyan-400 hover:text-cyan-300 font-semibold px-3 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 transition cursor-pointer">
+                                🔊 Listen
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Neural Translation Card -->
+                    <div class="bg-surface/80 border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-3">
+                        <div>
+                            <div class="text-xs font-bold text-slate-400 flex items-center justify-between">
+                                <span class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-emerald-400 text-sm">g_translate</span>
+                                    <span>NEURAL TRANSLATION RESULT</span>
+                                </span>
+                                <span id="eg2DecodeLangBadge" class="text-emerald-400 uppercase font-mono text-[10px] font-bold">KA</span>
+                            </div>
+                            <div id="eg2TranslateText" class="mt-2.5 text-xs text-emerald-200/90 bg-surface p-3.5 rounded-xl border border-white/5 min-h-[140px] whitespace-pre-wrap select-all leading-relaxed">
+                                Translation will appear here...
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
+                            <button onclick="navigator.clipboard.writeText(document.getElementById('eg2TranslateText').innerText)" class="text-slate-400 hover:text-white transition font-medium flex items-center gap-1 cursor-pointer">
+                                <span class="material-symbols-outlined text-sm">content_copy</span> Copy
+                            </button>
+                            <button onclick="window.EmbeddingGemmaStudio.toggleSpeak('eg2TranslateText', document.getElementById('eg2TargetLangSelect').value)" class="text-emerald-400 hover:text-emerald-300 font-semibold px-3 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 transition cursor-pointer">
+                                🔊 Listen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Library Collection Grid -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-400">
+                    <span class="uppercase tracking-wider">Indexed Documents & Book Passages</span>
+                    <button onclick="window.EmbeddingGemmaStudio.init()" class="text-cyan-400 hover:underline cursor-pointer">Refresh</button>
+                </div>
+                <div id="eg2DocGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
         </div>
 
         <!-- View: Server Stats (Strict Admin Only: ananiadevsurashvili@gmail.com) -->
@@ -2185,6 +2418,10 @@
         <button type="button" onclick="navToSection('scanner')" id="bottomNavScanner" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
             <span class="material-symbols-outlined text-2xl">document_scanner</span>
             <span>Scanner</span>
+        </button>
+        <button type="button" onclick="navigate('embeddinggemma')" id="bottomNavGemma" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
+            <span class="material-symbols-outlined text-2xl text-cyan-400">psychology</span>
+            <span>Gemma 2</span>
         </button>
         <button type="button" onclick="navToSection('engbot')" id="bottomNavEngbot" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
             <span class="material-symbols-outlined text-2xl">graphic_eq</span>
@@ -3432,7 +3669,35 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
     <script src="static/english-linguistics.js?v=1.56.6&release=17"></script>
     <script src="static/engine-pack.js?v=1.56.6&release=17"></script>
     <script src="static/scanner.js?v=1.56.6&release=17"></script>
+    <script src="static/embeddinggemma-studio.js?v=2.0.0"></script>
 
+    <!-- ════════════════ EmbeddingGemma Document Inspect Modal ════════════════ -->
+    <div id="eg2DocModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="bg-surface-container border border-white/15 rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+            <div class="p-5 border-b border-white/10 flex items-center justify-between">
+                <div>
+                    <span id="eg2ModalDocId" class="text-[11px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded"></span>
+                    <h3 id="eg2ModalDocTitle" class="text-base sm:text-lg font-bold text-white mt-1"></h3>
+                </div>
+                <button onclick="window.EmbeddingGemmaStudio.closeInspect()" class="w-8 h-8 rounded-full bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+            </div>
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-4">
+                <div class="bg-surface border border-white/10 rounded-2xl p-5 font-mono text-xs text-slate-300 leading-relaxed shadow-inner">
+                    <div id="eg2ModalBody" class="whitespace-pre-wrap"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-white/10 bg-surface/50 flex items-center justify-between">
+                <button onclick="window.EmbeddingGemmaStudio.closeInspect()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer">
+                    Close
+                </button>
+                <button id="eg2ModalActionBtn" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-container to-primary-fixed-dim text-on-primary-container text-xs font-bold shadow-md shadow-cyan-500/20 active:scale-95 transition cursor-pointer">
+                    Decode & Translate &rarr;
+                </button>
+            </div>
+        </div>
+    </div>
 
 <div id="studioActionStatus" role="status" aria-live="polite" hidden></div>
 </body>

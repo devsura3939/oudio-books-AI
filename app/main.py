@@ -1254,4 +1254,21 @@ async def embeddinggemma_index_page(req: Request):
         "record": record
     }
 
+@app.post("/api/embeddinggemma/transcribe-and-translate")
+async def embeddinggemma_transcribe_and_translate(req: Request):
+    """
+    Decodes a visual document crop or book page into verbatim transcription and neural translation.
+    """
+    try:
+        body = await req.json()
+    except Exception:
+        body = {}
+    query_or_doc_id = body.get("query_or_doc_id") or body.get("doc_id", "")
+    target_language = body.get("target_language", "ka")
+
+    engine = get_embeddinggemma_engine()
+    result = engine.transcribe_and_translate(query_or_doc_id=query_or_doc_id, target_language=target_language)
+    return result
+
+
 
