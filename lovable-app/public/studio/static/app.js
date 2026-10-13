@@ -3493,7 +3493,7 @@ function getBookStats(book) {
 
 // ── Navigation & Modals ─────────────────────────────────────────────────────
 function updateBottomNavActive(tab) {
-    ['home', 'scanner', 'engbot', 'profile'].forEach(t => {
+    ['home', 'scanner', 'gemma', 'engbot', 'profile'].forEach(t => {
         const btn = document.getElementById('bottomNav' + t.charAt(0).toUpperCase() + t.slice(1));
         if (btn) {
             if (t === tab) {
@@ -3515,6 +3515,9 @@ function navToSection(tab) {
         navigate('scanner');
         if (typeof renderScanShelf === 'function') renderScanShelf();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (tab === 'gemma') {
+        navigate('embeddinggemma');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (tab === 'engbot') {
         navigate('library');
         const hero = document.getElementById('heroSection');
@@ -3525,7 +3528,7 @@ function navToSection(tab) {
 }
 
 function navigate(viewId) {
-    const views = ['library', 'discover', 'scanner', 'server-stats'];
+    const views = ['library', 'discover', 'scanner', 'embeddinggemma', 'server-stats'];
     const emailClean = (currentUser?.email || '').trim().toLowerCase();
     const isAdmin = (emailClean === 'ananiadevsurashvili@gmail.com');
 
@@ -3568,9 +3571,16 @@ function navigate(viewId) {
         activeNav.classList.remove('text-on-surface-variant');
     }
 
+    if (viewId === 'embeddinggemma') {
+        if (window.EmbeddingGemmaStudio && typeof window.EmbeddingGemmaStudio.init === 'function') {
+            window.EmbeddingGemmaStudio.init();
+        }
+    }
+
     // Keep bottom nav tabs synchronized
     if (viewId === 'library') updateBottomNavActive('home');
     else if (viewId === 'scanner') updateBottomNavActive('scanner');
+    else if (viewId === 'embeddinggemma') updateBottomNavActive('gemma');
 
     if (viewId === 'server-stats' && isAdmin) {
         if (typeof ensureServerStatsViewRendered === 'function') ensureServerStatsViewRendered();
