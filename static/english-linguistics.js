@@ -257,7 +257,8 @@
                 });
             }
 
-            const response = await fetch('/api/parse-page', {
+            const apiBase = (typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL) ? window.LUMINA_RUNTIME_CONFIG.API_URL.replace(/\/+$/, '') : (typeof location !== 'undefined' && (location.hostname.endsWith('github.io') || location.protocol === 'file:') ? 'https://92.5.71.162.sslip.io' : '');
+            const response = await fetch((apiBase || '') + '/api/parse-page', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

@@ -17,7 +17,7 @@ import uuid
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, Union
 
 from app.config import BASE_DIR
 
@@ -379,7 +379,7 @@ def apply_pack(text: str, items: List[Dict[str, Any]], kind: str = "translate") 
         if item.get("type") == target_type:
             pat = item.get("pattern", "")
             rep = item.get("replacement", "")
-            if not pat:
+            if not pat or pat not in out:
                 continue
             # Unicode-aware word boundaries
             esc = re.escape(pat)
@@ -446,8 +446,10 @@ def character_similarity(a: str, b: str) -> float:
     return 1 - row[-1] / max(len(left), len(right), 1)
 
 
-def evaluate_pack(items: List[Dict[str, Any]], cases: List[Dict[str, Any]]) -> Dict[str, Any]:
+def evaluate_pack(items: Union[List[Dict[str, Any]], Dict[str, Any]], cases: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Replay all benchmark test cases with candidate pack and compute score."""
+    if isinstance(items, dict):
+        items = items.get("items", [])
     if not cases:
         return {
             "score": 0.0,

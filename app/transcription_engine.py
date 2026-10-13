@@ -132,9 +132,22 @@ def transcribe_audio_bytes(
             if response and response.text and str(getattr(response.candidates[0], "finish_reason", "")).split(".")[-1] == "STOP":
                 result_text = response.text.strip()
                 result_text = clean_verbatim(result_text)
+                detected = detect_language(result_text)
+                if detected == "en" or lang in ("en", "eng"):
+                    result_text = clean_english_ocr(result_text)
+                elif detected == "ka" or lang in ("ka", "kat"):
+                    result_text = refine_georgian_with_kona(result_text, task="audio_punctuation")
+                try:
+                    active_pack = load_active_pack(detected if detected != "auto" else lang)
+                    if active_pack and active_pack.get("enabled", True):
+                        candidate = apply_pack(result_text, active_pack.get("items", []), kind="transcribe")
+                        if candidate:
+                            result_text = candidate
+                except Exception:
+                    pass
                 return {
                     "text": result_text,
-                    "language": detect_language(result_text),
+                    "language": detected,
                     "engine": "gemini-2.5-flash",
                     "success": True
                 }
@@ -171,12 +184,23 @@ def transcribe_audio_bytes(
                 target_speech_lang = "ka-GE" if lang == "ka" else "en-US"
                 text = r.recognize_google(audio_data, language=target_speech_lang)
                 if text:
+                    detected_speech_lang = lang if lang != "auto" else ("ka" if re.search(r'[\u10A0-\u10FF]', text) else "en")
                     if target_speech_lang == "ka-GE" or re.search(r'[\u10A0-\u10FF]', text):
                         text = refine_georgian_with_kona(text, task="audio_punctuation")
+                    elif detected_speech_lang == "en":
+                        text = clean_english_ocr(text)
+                    try:
+                        active_pack = load_active_pack(detected_speech_lang)
+                        if active_pack and active_pack.get("enabled", True):
+                            cand = apply_pack(text, active_pack.get("items", []), kind="transcribe")
+                            if cand:
+                                text = cand
+                    except Exception:
+                        pass
                     text = clean_verbatim(text)
                     return {
                         "text": text,
-                        "language": lang if lang != "auto" else ("ka" if re.search(r'[\u10A0-\u10FF]', text) else "en"),
+                        "language": detected_speech_lang,
                         "engine": "google-web-speech+kona2" if (target_speech_lang == "ka-GE" or re.search(r'[\u10A0-\u10FF]', text)) else "google-web-speech",
                         "success": True
                     }

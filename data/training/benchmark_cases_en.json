@@ -1,0 +1,162 @@
+[
+  {
+    "id": "case-en-ocr-ligature-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "The scientiﬁc classiﬁcation of ﬂowers was difﬁcult.",
+    "expected": "The scientific classification of flowers was difficult.",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Print typography ligatures fi, fl, ffi expansion"
+  },
+  {
+    "id": "case-en-ocr-hyphen-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "Modern society relies on an inter-\nconnected network of global systems.",
+    "expected": "Modern society relies on an interconnected network of global systems.",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Hyphenated line break rejoining for standard word"
+  },
+  {
+    "id": "case-en-ocr-compound-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "He was a self-\nconscious young man with a well-\nknown reputation.",
+    "expected": "He was a self-conscious young man with a well-known reputation.",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Hyphenated compound prefixes preservation"
+  },
+  {
+    "id": "case-en-ocr-digits-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "Th1s b00k offers a c1ear view of Eng1ish history.",
+    "expected": "This book offers a clear view of English history.",
+    "weight": 2.5,
+    "origin": "seed",
+    "note": "Digit inside word confusion repair (1->i/l, 0->o)"
+  },
+  {
+    "id": "case-en-ocr-rn-m-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "The bum was buming in the early moming across modem cities.",
+    "expected": "The burn was burning in the early morning across modern cities.",
+    "weight": 2.5,
+    "origin": "seed",
+    "note": "rn vs m letter confusion repair"
+  },
+  {
+    "id": "case-en-ocr-cl-d-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "Look dosely under the dear sky.",
+    "expected": "Look closely under the clear sky.",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "cl vs d letter confusion repair"
+  },
+  {
+    "id": "case-en-ocr-vv-w-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "vvith all their might, they vvorked vvell together.",
+    "expected": "with all their might, they worked well together.",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "vv to w letter repair"
+  },
+  {
+    "id": "case-en-contraction-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "dont worry if it s raining we ve got umbrellas and they ll arrive soon",
+    "expected": "don't worry if it's raining we've got umbrellas and they'll arrive soon",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Spaced or dropped apostrophe contraction restoration"
+  },
+  {
+    "id": "case-en-heading-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "C H A P T E R   O N E\nP R O L O G U E",
+    "expected": "CHAPTER ONE\nPROLOGUE",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Spaced-out heading uppercase letter reconstruction"
+  },
+  {
+    "id": "case-en-speech-punct-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "in the beginning was the word and the word was with god",
+    "expected": "In the beginning was the word, and the word was with God.",
+    "weight": 2.5,
+    "origin": "seed",
+    "note": "Speech transcription capitalization, commas and period restoration"
+  },
+  {
+    "id": "case-en-speech-pronoun-01",
+    "language": "en",
+    "kind": "transcribe",
+    "source": "yesterday l was walking down the street when l saw him",
+    "expected": "yesterday I was walking down the street when I saw him",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Isolated lowercase l pronoun repair to capital I"
+  },
+  {
+    "id": "case-en-trans-sun-tzu-01",
+    "language": "en",
+    "kind": "translate",
+    "source": "ომის ხელოვნება სასიცოცხლო მნიშვნელობისაა სახელმწიფოსთვის.",
+    "expected": "The art of war is of vital importance to the State.",
+    "weight": 2.5,
+    "origin": "seed",
+    "note": "Classical Sun Tzu translation calibration into literary English"
+  },
+  {
+    "id": "case-en-trans-rustaveli-01",
+    "language": "en",
+    "kind": "translate",
+    "source": "რომელმან შექმნა სამყარო ძალითა მით ძლიერითა.",
+    "expected": "He who created the universe by that mighty power.",
+    "weight": 2.5,
+    "origin": "seed",
+    "note": "Rustaveli prologue opening calibration into poetic English"
+  },
+  {
+    "id": "case-en-trans-nexus-01",
+    "language": "en",
+    "kind": "translate",
+    "source": "საინფორმაციო ქსელებმა შექმნეს და გააუქმეს ჩვენი სამყარო.",
+    "expected": "Information networks have made and unmade our world.",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Modern non-fiction Nexus chapter translation"
+  },
+  {
+    "id": "case-en-trans-marcus-01",
+    "language": "en",
+    "kind": "translate",
+    "source": "მარკუს ავრელიუსმა თავისი ფიქრები სიჩუმეში დაწერა.",
+    "expected": "Marcus Aurelius wrote his Meditations in silence.",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Classical proper name and book title translation"
+  },
+  {
+    "id": "case-en-trans-quote-01",
+    "language": "en",
+    "kind": "translate",
+    "source": "„ცოდნა ძალაა“, — განაცხადა ფილოსოფოსმა.",
+    "expected": "\"Knowledge is power,\" the philosopher stated.",
+    "weight": 2.0,
+    "origin": "seed",
+    "note": "Georgian quotes and dashes to English standard typographical quotation"
+  }
+]

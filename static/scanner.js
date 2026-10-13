@@ -1335,7 +1335,8 @@ ${text.slice(0, 10000)}`;
     }
 
     try {
-      const res = await fetch("/api/ai", {
+      const apiBase = (typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL) ? window.LUMINA_RUNTIME_CONFIG.API_URL.replace(/\/+$/, '') : (typeof location !== 'undefined' && (location.hostname.endsWith('github.io') || location.protocol === 'file:') ? 'https://92.5.71.162.sslip.io' : '');
+      const res = await fetch((apiBase || "") + "/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, temperature: 0, maxTokens: 8192 })
@@ -2221,7 +2222,8 @@ ${text.slice(0, 10000)}`;
   async function searchVisualPages(query, topK = 5) {
     if (!query) return [];
     try {
-      const res = await fetch('/api/embeddinggemma/search', {
+      const apiBase = (typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL) ? window.LUMINA_RUNTIME_CONFIG.API_URL.replace(/\/+$/, '') : (typeof location !== 'undefined' && (location.hostname.endsWith('github.io') || location.protocol === 'file:') ? 'https://92.5.71.162.sslip.io' : '');
+      const res = await fetch((apiBase || "") + '/api/embeddinggemma/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: query, top_k: topK, dim: 256 })

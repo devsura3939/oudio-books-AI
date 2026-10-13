@@ -48,6 +48,37 @@ def clean_georgian_morphology(text: str) -> str:
 
     # Anti-calque & synthetic verb reinforcement (Georgian Pro standards)
     calques = [
+        # Modern synthetic verbs & anti-calques (Georgian Pro standards)
+        (r'(?<![\u10A0-\u10FF])გააკეთა\s+ანალიზი(?![ა-ჰ])', 'გააანალიზა'),
+        (r'(?<![\u10A0-\u10FF])განახორციელა\s+ინვესტიცია(?![ა-ჰ])', 'დააბანდა'),
+        (r'(?<![\u10A0-\u10FF])ჩაატარა\s+გამოკვლევა(?![ა-ჰ])', 'გამოიკვლია'),
+        (r'(?<![\u10A0-\u10FF])გააკეთა\s+შეფასება(?![ა-ჰ])', 'შეაფასა'),
+        (r'(?<![\u10A0-\u10FF])მიიყვანა\s+დასკვნამდე(?![ა-ჰ])', 'დაასკვნა'),
+        (r'(?<![\u10A0-\u10FF])გამოთქვა\s+ვარაუდი(?![ა-ჰ])', 'ივარაუდა'),
+        (r'(?<![\u10A0-\u10FF])ჰქონდა\s+ეჭვი(?![ა-ჰ])', 'ეჭვობდა'),
+        (r'(?<![\u10A0-\u10FF])მიიღო\s+მონაწილეობა(?![ა-ჰ])', 'მონაწილეობდა'),
+        (r'(?<![\u10A0-\u10FF])გაუწია\s+დახმარება(?![ა-ჰ])', 'დაეხმარა'),
+        (r'(?<![\u10A0-\u10FF])გაუწია\s+წინააღმდეგობა(?![ა-ჰ])', 'შეეწინააღმდეგა'),
+        (r'(?<![\u10A0-\u10FF])მიიტანა\s+იერიში(?![ა-ჰ])', 'შეუტია'),
+        (r'(?<![\u10A0-\u10FF])გამოთქვა\s+თანხმობა(?![ა-ჰ])', 'დათანხმდა'),
+        (r'(?<![\u10A0-\u10FF])გამოთქვა\s+პროტესტი(?![ა-ჰ])', 'გააპროტესტა'),
+        (r'(?<![\u10A0-\u10FF])შეიყვანა\s+შეცდომაში(?![ა-ჰ])', 'შეაცდინა'),
+        (r'(?<![\u10A0-\u10FF])მიაყენა\s+ზიანი(?![ა-ჰ])', 'დააზიანა'),
+        (r'(?<![\u10A0-\u10FF])მოახდინა\s+ზეგავლენა(?![ა-ჰ])', 'იმოქმედა'),
+        (r'(?<![\u10A0-\u10FF])გასცა\s+პასუხი(?![ა-ჰ])', 'უპასუხა'),
+        (r'(?<![\u10A0-\u10FF])გამოთქვა\s+მადლიერება(?![ა-ჰ])', 'მადლობა გადაუხადა'),
+        (r'(?<![\u10A0-\u10FF])გამოთქვა\s+მწუხარება(?![ა-ჰ])', 'დამწუხრდა'),
+        (r'(?<![\u10A0-\u10FF])მიაღწია\s+შეთანხმებას(?![ა-ჰ])', 'შეთანხმდა'),
+        (r'(?<![\u10A0-\u10FF])გააკეთა\s+აქცენტი(?![ა-ჰ])', 'ხაზი გაუსვა'),
+        (r'(?<![\u10A0-\u10FF])მოახდინა\s+დემონსტრირება(?![ა-ჰ])', 'აჩვენა'),
+        (r'(?<![\u10A0-\u10FF])მოახდინა\s+იდენტიფიცირება(?![ა-ჰ])', 'ამოიცნო'),
+        (r'(?<![\u10A0-\u10FF])მოახდინა\s+ოპტიმიზაცია(?![ა-ჰ])', 'გააუმჯობესა'),
+        (r'(?<![\u10A0-\u10FF])გამოთქვა\s+სინანული(?![ა-ჰ])', 'ინანა'),
+        (r'(?<![\u10A0-\u10FF])მიიღო\s+მხედველობაში(?![ა-ჰ])', 'გაითვალისწინა'),
+        (r'(?<![\u10A0-\u10FF])სისრულეში\s+მოიყვანა(?![ა-ჰ])', 'შეასრულა'),
+        (r'(?<![\u10A0-\u10FF])საფრთხე\s+შეუქმნა(?![ა-ჰ])', 'დაემუქრა'),
+        (r'(?<![\u10A0-\u10FF])დაბრკოლება\s+შეუქმნა(?![ა-ჰ])', 'დააბრკოლა'),
+        (r'(?<![\u10A0-\u10FF])უარი\s+განაცხადა(?![ა-ჰ])', 'უარი თქვა'),
         (r'(?<![\u10A0-\u10FF])მიიღო\s+გადაწყვეტილება(?![ა-ჰ])', 'გადაწყვიტა'),
         (r'(?<![\u10A0-\u10FF])მიიღეს\s+გადაწყვეტილება(?![ა-ჰ])', 'გადაწყვიტეს'),
         (r'(?<![\u10A0-\u10FF])განახორციელა(?![ა-ჰ])', 'გააკეთა'),
@@ -1460,6 +1491,19 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
         p_trans = None
         engine = "server_neural_translate"
 
+        # Tier -1: Learned Active Pack Glossary exact / calibrated matches
+        active_pack = None
+        if load_active_pack and apply_pack:
+            try:
+                active_pack = load_active_pack(tgt)
+                if active_pack and active_pack.get("enabled", True):
+                    glossary_hit = apply_pack(p, active_pack.get("items", []), kind="translate")
+                    if glossary_hit != p and translation_is_valid(p, glossary_hit, tgt):
+                        p_trans = glossary_hit
+                        engine = "active_pack_glossary"
+            except Exception as e_pack:
+                print(f"[translation_engine] active_pack pre-check error: {e_pack}")
+
         prefer_engine = str(_translation_request_context.get("prefer_engine") or os.environ.get("PREFER_TRANSLATION_ENGINE", "")).lower()
         force_kona = prefer_engine in ("kona", "kona2", "server_kona")
 
@@ -1553,6 +1597,29 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
             p_trans = synthesize_georgian_morphology(p_trans)
             p_trans = clean_georgian_morphology(p_trans)
 
+        # English post-processing and contraction normalization
+        if p_trans and tgt == "en":
+            try:
+                from app.english_linguistics import clean_english_ocr
+                p_trans = clean_english_ocr(p_trans)
+            except Exception:
+                pass
+
+        # Apply active learned training pack post-editing (autofixes & grammar repairs)
+        if p_trans and load_active_pack and apply_pack:
+            try:
+                if not active_pack:
+                    active_pack = load_active_pack(tgt)
+                if active_pack and active_pack.get("enabled", True):
+                    p_trans = apply_pack(p_trans, active_pack.get("items", []), kind="translate")
+                    if tgt == "ka":
+                        p_trans = clean_georgian_morphology(p_trans)
+                    elif tgt == "en":
+                        from app.english_linguistics import clean_english_ocr
+                        p_trans = clean_english_ocr(p_trans)
+            except Exception as e_pack:
+                print(f"[translation_engine] active_pack post-editing error: {e_pack}")
+
         # 2. Final Quality Checker Tier
         # If local PC LM Studio or custom external endpoint is connected
         active_checker_url = _translation_request_context.get("checker_url") or os.environ.get("PC_LM_STUDIO_URL")
@@ -1572,6 +1639,17 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
                 if tgt == "ka":
                     p_trans = synthesize_georgian_morphology(p_trans)
                     p_trans = clean_georgian_morphology(p_trans)
+                elif tgt == "en":
+                    try:
+                        from app.english_linguistics import clean_english_ocr
+                        p_trans = clean_english_ocr(p_trans)
+                    except Exception:
+                        pass
+                if active_pack and apply_pack and active_pack.get("enabled", True):
+                    try:
+                        p_trans = apply_pack(p_trans, active_pack.get("items", []), kind="translate")
+                    except Exception:
+                        pass
                 engine = f"{engine}+final_checker"
 
         return chunk_index, p_trans, engine

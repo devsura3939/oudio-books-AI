@@ -120,7 +120,8 @@
 
     // 2. Fall back to local server /api/engine-pack if running locally
     try {
-      const res = await fetch("/api/engine-pack?language=" + encodeURIComponent(language), {
+      const apiBase = (typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL) ? window.LUMINA_RUNTIME_CONFIG.API_URL.replace(/\/+$/, '') : (typeof location !== 'undefined' && (location.hostname.endsWith('github.io') || location.protocol === 'file:') ? 'https://92.5.71.162.sslip.io' : '');
+      const res = await fetch((apiBase || "") + "/api/engine-pack?language=" + encodeURIComponent(language), {
         headers: { Accept: "application/json" },
         signal: AbortSignal.timeout(8000),
       });

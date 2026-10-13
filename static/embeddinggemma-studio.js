@@ -103,6 +103,14 @@
     } catch (e) {}
   }
 
+  function getApiBase() {
+    if (typeof window !== 'undefined' && window.LUMINA_RUNTIME_CONFIG?.API_URL) {
+      return window.LUMINA_RUNTIME_CONFIG.API_URL.replace(/\/+$/, '');
+    }
+    const isStaticHost = typeof location !== 'undefined' && (location.hostname.endsWith('github.io') || location.protocol === 'file:');
+    return isStaticHost ? 'https://92.5.71.162.sslip.io' : '';
+  }
+
   // Initialize or update the EmbeddingGemma view
   async function initEmbeddingGemmaView() {
     loadPersistedDocs();
@@ -118,7 +126,7 @@
     if (!badge || !text) return;
 
     try {
-      const res = await fetch("/api/embeddinggemma/health", { signal: AbortSignal.timeout(2000) });
+      const res = await fetch(getApiBase() + "/api/embeddinggemma/health", { signal: AbortSignal.timeout(6000) });
       if (res.ok) {
         const data = await res.json();
         badge.className = "flex items-center space-x-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-full text-xs font-semibold";
@@ -227,11 +235,11 @@
     // Try server API first
     if (state.backendStatus !== "edge") {
       try {
-        const res = await fetch("/api/embeddinggemma/search", {
+        const res = await fetch(getApiBase() + "/api/embeddinggemma/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: query, top_k: 4, dim: state.activeDim }),
-          signal: AbortSignal.timeout(2500)
+          signal: AbortSignal.timeout(6000)
         });
         if (res.ok) {
           const data = await res.json();
@@ -331,7 +339,7 @@
     // 1. Try server EmbeddingGemma transcribe-and-translate API
     if (state.backendStatus !== "edge") {
       try {
-        const res = await fetch("/api/embeddinggemma/transcribe-and-translate", {
+        const res = await fetch(getApiBase() + "/api/embeddinggemma/transcribe-and-translate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -345,7 +353,9 @@
         if (res.ok) {
           const data = await res.json();
           const candidateTrans = data.translation || "";
-          const isValidTarget = targetLang !== "ka" || /[\u10A0-\u10FF]/.test(candidateTrans);
+          const isValidTarget = targetLang === "ka"
+            ? /[\u10A0-\u10FF]/.test(candidateTrans)
+            : (targetLang === "en" ? /[A-Za-z]/.test(candidateTrans) : Boolean(candidateTrans.trim()));
           if (isValidTarget && candidateTrans.trim()) {
             if (transText) transText.innerText = data.transcription || sourceText;
             if (translText) translText.innerText = candidateTrans;
@@ -361,65 +371,88 @@
       }
     }
 
-    // 2. Fallback: If target is Georgian ('ka'), ensure REAL Georgian translation
+    // 2. Fallback: Ensure REAL translation according to selected target language
     if (transText) transText.innerText = sourceText || "Extracted visual OCR content.";
 
-    if (targetLang === "ka") {
-      // Check if already translated
-      if (doc.translations && doc.translations.ka && /[\u10A0-\u10FF]/.test(doc.translations.ka)) {
-        if (translText) translText.innerText = doc.translations.ka;
-        toast("Loaded cached Georgian translation!", "info");
-        return;
-      }
+    // Check if valid translation is already cached
+    const cachedCandidate = doc.translations && doc.translations[targetLang];
+    const isCachedValid = cachedCandidate && (
+      targetLang === "ka" ? /[\u10A0-\u10FF]/.test(cachedCandidate) :
+      (targetLang === "en" ? /[A-Za-z]/.test(cachedCandidate) : Boolean(cachedCandidate.trim()))
+    );
+    if (isCachedValid) {
+      if (translText) translText.innerText = cachedCandidate;
+      toast(`Loaded cached ${targetLang === "ka" ? "Georgian" : "English"} translation!`, "info");
+      return;
+    }
 
-      // Actively translate via server translation API
-      if (translText) translText.innerText = "Generating neural Georgian translation via Kona/Gemini...";
-      try {
-        const transRes = await fetch("/api/server-translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: sourceText,
-            source_lang: "auto",
-            target_lang: "ka"
-          }),
-          signal: AbortSignal.timeout(25000)
-        });
-        if (transRes.ok) {
-          const transData = await transRes.json();
-          if (transData.translated && /[\u10A0-\u10FF]/.test(transData.translated)) {
-            if (translText) translText.innerText = transData.translated;
-            if (!doc.translations) doc.translations = {};
-            doc.translations["ka"] = transData.translated;
-            savePersistedDocs();
-            toast("Georgian neural translation completed!", "success");
-            return;
-          }
+    // Actively translate via server translation API
+    if (translText) translText.innerText = `Generating neural ${targetLang === "ka" ? "Georgian" : "English"} translation...`;
+    try {
+      const transRes = await fetch(getApiBase() + "/api/server-translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: sourceText,
+          source_lang: "auto",
+          target_lang: targetLang
+        }),
+        signal: AbortSignal.timeout(25000)
+      });
+      if (transRes.ok) {
+        const transData = await transRes.json();
+        const tText = transData.translated || "";
+        const isValid = targetLang === "ka" ? /[\u10A0-\u10FF]/.test(tText) : (targetLang === "en" ? /[A-Za-z]/.test(tText) : Boolean(tText.trim()));
+        if (isValid && tText.trim()) {
+          if (translText) translText.innerText = tText;
+          if (!doc.translations) doc.translations = {};
+          doc.translations[targetLang] = tText;
+          savePersistedDocs();
+          toast(`${targetLang === "ka" ? "Georgian" : "English"} neural translation completed!`, "success");
+          return;
         }
-      } catch (tErr) {
-        console.warn("[EmbeddingGemma] direct translate fallback error:", tErr);
       }
+    } catch (tErr) {
+      console.warn("[EmbeddingGemma] direct translate fallback error:", tErr);
+    }
 
-      // Client Edge translation fallback
-      if (window.translateChunkAI && typeof window.translateChunkAI === "function") {
-        try {
-          const edgeRes = await window.translateChunkAI(sourceText, "en", "ka");
-          if (edgeRes && /[\u10A0-\u10FF]/.test(edgeRes)) {
-            if (translText) translText.innerText = edgeRes;
-            if (!doc.translations) doc.translations = {};
-            doc.translations["ka"] = edgeRes;
-            savePersistedDocs();
-            toast("Georgian translation generated via on-device engine!", "success");
-            return;
-          }
-        } catch (edgeErr) {}
+    // Client Translation Machine fallback
+    if (typeof translationMachine === "function") {
+      try {
+        const machRes = await translationMachine().translate(sourceText, "auto", targetLang);
+        const isValid = targetLang === "ka" ? /[\u10A0-\u10FF]/.test(machRes) : (targetLang === "en" ? /[A-Za-z]/.test(machRes) : Boolean(machRes.trim()));
+        if (isValid && machRes.trim()) {
+          if (translText) translText.innerText = machRes;
+          if (!doc.translations) doc.translations = {};
+          doc.translations[targetLang] = machRes;
+          savePersistedDocs();
+          toast("Translation generated via client engine!", "success");
+          return;
+        }
+      } catch (machErr) {
+        console.warn("[EmbeddingGemma] translationMachine fallback error:", machErr);
       }
+    }
 
-      if (translText) {
+    // Client Edge translation fallback
+    if (window.translateChunkAI && typeof window.translateChunkAI === "function") {
+      try {
+        const edgeRes = await window.translateChunkAI(sourceText, "auto", targetLang);
+        if (edgeRes && edgeRes.trim()) {
+          if (translText) translText.innerText = edgeRes;
+          if (!doc.translations) doc.translations = {};
+          doc.translations[targetLang] = edgeRes;
+          savePersistedDocs();
+          toast("Translation generated via on-device engine!", "success");
+          return;
+        }
+      } catch (edgeErr) {}
+    }
+
+    if (translText) {
+      if (targetLang === "ka") {
         translText.innerText = `[ქართული თარგმანი დამუშავების პროცესშია...]: ${sourceText}`;
-      }
-    } else {
-      if (translText) {
+      } else {
         translText.innerText = (doc.translations && doc.translations[targetLang])
           ? doc.translations[targetLang]
           : sourceText;
@@ -491,7 +524,7 @@
 
         // Auto-index to server-side EmbeddingGemma vector store
         try {
-          fetch("/api/embeddinggemma/index-page", {
+          fetch(getApiBase() + "/api/embeddinggemma/index-page", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

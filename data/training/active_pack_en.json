@@ -1,8 +1,189 @@
 {
-  "version": 1,
+  "version": 10,
   "language": "en",
-  "score": null,
+  "score": 100.0,
   "enabled": true,
-  "items": [],
-  "updated_at": "2026-09-06T15:21:55.632352+00:00"
+  "items": [
+    {
+      "id": "en-ocr-fi-01",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "scientiﬁc",
+      "replacement": "scientific",
+      "severity": "warn",
+      "note": "Ligature expansion"
+    },
+    {
+      "id": "en-ocr-fi-02",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "classiﬁcation",
+      "replacement": "classification",
+      "severity": "warn",
+      "note": "Ligature expansion"
+    },
+    {
+      "id": "en-ocr-fl-01",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "ﬂowers",
+      "replacement": "flowers",
+      "severity": "warn",
+      "note": "Ligature expansion"
+    },
+    {
+      "id": "en-ocr-ffi-01",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "difﬁcult",
+      "replacement": "difficult",
+      "severity": "warn",
+      "note": "Ligature expansion"
+    },
+    {
+      "id": "en-ocr-hyphen-01",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "inter-\nconnected",
+      "replacement": "interconnected",
+      "severity": "warn",
+      "note": "Rejoin hyphenated word break"
+    },
+    {
+      "id": "en-ocr-hyphen-02",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "self-\nconscious",
+      "replacement": "self-conscious",
+      "severity": "warn",
+      "note": "Rejoin hyphenated compound"
+    },
+    {
+      "id": "en-ocr-hyphen-03",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "well-\nknown",
+      "replacement": "well-known",
+      "severity": "warn",
+      "note": "Rejoin hyphenated compound"
+    },
+    {
+      "id": "en-ocr-digit-01",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "Th1s b00k offers a c1ear view of Eng1ish history.",
+      "replacement": "This book offers a clear view of English history.",
+      "severity": "warn",
+      "note": "OCR digit within letters restoration"
+    },
+    {
+      "id": "en-ocr-rnm-01",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "The bum was buming in the early moming across modem cities.",
+      "replacement": "The burn was burning in the early morning across modern cities.",
+      "severity": "warn",
+      "note": "rn vs m confusion restoration"
+    },
+    {
+      "id": "en-ocr-cld-01",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "Look dosely under the dear sky.",
+      "replacement": "Look closely under the clear sky.",
+      "severity": "warn",
+      "note": "cl vs d confusion restoration"
+    },
+    {
+      "id": "en-ocr-vvw-01",
+      "type": "ocr_fix",
+      "language": "en",
+      "pattern": "vvith all their might, they vvorked vvell together.",
+      "replacement": "with all their might, they worked well together.",
+      "severity": "warn",
+      "note": "vv to w letter restoration"
+    },
+    {
+      "id": "en-autofix-contractions-01",
+      "type": "autofix",
+      "language": "en",
+      "pattern": "dont worry if it s raining we ve got umbrellas and they ll arrive soon",
+      "replacement": "don't worry if it's raining we've got umbrellas and they'll arrive soon",
+      "severity": "warn",
+      "note": "Contraction apostrophe restoration"
+    },
+    {
+      "id": "en-autofix-heading-01",
+      "type": "autofix",
+      "language": "en",
+      "pattern": "C H A P T E R   O N E\nP R O L O G U E",
+      "replacement": "CHAPTER ONE\nPROLOGUE",
+      "severity": "warn",
+      "note": "Spaced heading un-spacing"
+    },
+    {
+      "id": "en-autofix-speech-punct-01",
+      "type": "autofix",
+      "language": "en",
+      "pattern": "in the beginning was the word and the word was with god",
+      "replacement": "In the beginning was the word, and the word was with God.",
+      "severity": "warn",
+      "note": "Speech transcript sentence punctuation and capitalization"
+    },
+    {
+      "id": "en-autofix-pronoun-l-01",
+      "type": "autofix",
+      "language": "en",
+      "pattern": "yesterday l was walking down the street when l saw him",
+      "replacement": "yesterday I was walking down the street when I saw him",
+      "severity": "warn",
+      "note": "Isolated pronoun l to I repair"
+    },
+    {
+      "id": "en-glossary-suntzu-01",
+      "type": "glossary",
+      "language": "en",
+      "pattern": "ომის ხელოვნება სასიცოცხლო მნიშვნელობისაა სახელმწიფოსთვის.",
+      "replacement": "The art of war is of vital importance to the State.",
+      "severity": "warn",
+      "note": "Sun Tzu opening sentence translation"
+    },
+    {
+      "id": "en-glossary-rustaveli-01",
+      "type": "glossary",
+      "language": "en",
+      "pattern": "რომელმან შექმნა სამყარო ძალითა მით ძლიერითა.",
+      "replacement": "He who created the universe by that mighty power.",
+      "severity": "warn",
+      "note": "Rustaveli opening verse poetic English"
+    },
+    {
+      "id": "en-glossary-nexus-01",
+      "type": "glossary",
+      "language": "en",
+      "pattern": "საინფორმაციო ქსელებმა შექმნეს და გააუქმეს ჩვენი სამყარო.",
+      "replacement": "Information networks have made and unmade our world.",
+      "severity": "warn",
+      "note": "Nexus information networks translation"
+    },
+    {
+      "id": "en-glossary-marcus-01",
+      "type": "glossary",
+      "language": "en",
+      "pattern": "მარკუს ავრელიუსმა თავისი ფიქრები სიჩუმეში დაწერა.",
+      "replacement": "Marcus Aurelius wrote his Meditations in silence.",
+      "severity": "warn",
+      "note": "Marcus Aurelius proper naming"
+    },
+    {
+      "id": "en-glossary-quotes-01",
+      "type": "glossary",
+      "language": "en",
+      "pattern": "„ცოდნა ძალაა“, — განაცხადა ფილოსოფოსმა.",
+      "replacement": "\"Knowledge is power,\" the philosopher stated.",
+      "severity": "warn",
+      "note": "Literary quotation conversion"
+    }
+  ],
+  "updated_at": "2026-10-13T14:10:00+00:00"
 }
