@@ -2400,7 +2400,13 @@ function setupPlayerDockForResume(book, chapterId, sentenceIndex = 0, lang = 'en
     }
 
     currentSentenceIndex = Math.min(sentenceIndex, Math.max(0, sentenceQueue.length - 1));
-    secondsElapsed = 0;
+    const totalDuration = (typeof getChapterTotalSeconds === 'function') 
+        ? getChapterTotalSeconds(chap, sentenceQueue)
+        : ((typeof EngbotCore !== 'undefined' && EngbotCore.chapterStats) ? EngbotCore.chapterStats(chap).seconds : 60);
+    const resumeRatio = (typeof getChapterWordRatio === 'function')
+        ? getChapterWordRatio(chap, currentSentenceIndex, sentenceQueue)
+        : (sentenceQueue.length > 0 ? (currentSentenceIndex / sentenceQueue.length) : 0);
+    secondsElapsed = Math.round(resumeRatio * totalDuration);
     isPlaying = true;
     isPaused = true;
     isUserManuallyNavigating = false;
@@ -2431,13 +2437,15 @@ function setupPlayerDockForResume(book, chapterId, sentenceIndex = 0, lang = 'en
     if (DOM.dockSubtitle) {
         DOM.dockSubtitle.textContent = currentBook.title;
     }
-    if (DOM.playerTotalTime && typeof EngbotCore !== 'undefined' && EngbotCore.chapterStats) {
-        DOM.playerTotalTime.textContent = formatTime(EngbotCore.chapterStats(chap).seconds);
+    if (DOM.playerTotalTime) {
+        DOM.playerTotalTime.textContent = formatTime(totalDuration);
+    }
+    if (DOM.playerCurrentTime) {
+        DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
     }
 
-    if (DOM.playerProgressBar && sentenceQueue.length > 0) {
-        const pct = Math.min(100, Math.max(0, (currentSentenceIndex / sentenceQueue.length) * 100));
-        DOM.playerProgressBar.style.width = `${pct.toFixed(1)}%`;
+    if (DOM.playerProgressBar) {
+        DOM.playerProgressBar.style.width = `${(resumeRatio * 100).toFixed(1)}%`;
     }
 
     if (typeof updatePlayerUIState === 'function') updatePlayerUIState(false);
@@ -7146,7 +7154,7 @@ function refreshBookmarksUI(targetBook) {
 window.refreshBookmarksUI = refreshBookmarksUI;
 
 function getRealBookPageInfo(chap, pageInChapter, targetBook = null) {
-    const book = targetBook || (readerActive ? readerBook : null) || readerBook || currentBook;
+    const book = targetBook || ((typeof readerActive !== 'undefined' && readerActive) ? readerBook : null) || (typeof readerBook !== 'undefined' ? readerBook : null) || (typeof currentBook !== 'undefined' ? currentBook : null);
     if (!book || !book.chapters || book.chapters.length === 0) {
         const p = Math.max(1, pageInChapter || 1);
         const tot = (typeof readerPages !== 'undefined' && readerPages.length) ? readerPages.length : 1;
@@ -7161,7 +7169,7 @@ function getRealBookPageInfo(chap, pageInChapter, targetBook = null) {
         };
     }
 
-    const curChap = chap || (readerBook ? readerBook.chapters.find(c => String(c.id) === String(readerChapterId)) : null) || book.chapters[0];
+    const curChap = chap || (typeof readerBook !== 'undefined' && readerBook ? readerBook.chapters.find(c => String(c.id) === String(typeof readerChapterId !== 'undefined' ? readerChapterId : '')) : null) || book.chapters[0];
     const totalChapterPages = (typeof readerPages !== 'undefined' && readerPages.length) ? readerPages.length : 1;
     const curChapIdx = book.chapters.findIndex(c => String(c.id) === String(curChap?.id));
     const safeChapIdx = curChapIdx >= 0 ? curChapIdx : 0;
@@ -7184,8 +7192,13 @@ function getRealBookPageInfo(chap, pageInChapter, targetBook = null) {
                 if (idx < safeChapIdx) priorWords += w;
                 totalWords += w;
             });
-            const baseTotalPages = bookPdfPages > 0 ? bookPdfPages : Math.max(book.chapters.length * 10, Math.round(totalWords / 280));
-            startPage = Math.max(1, Math.round((priorWords / Math.max(1, totalWords)) * baseTotalPages) + 1);
+            const curWords = Math.max(1, curChap.word_count || (curChap.text ? curChap.text.split(/\s+/).length : 500));
+            if (bookPdfPages > 0) {
+                startPage = Math.max(1, Math.round((priorWords / Math.max(1, totalWords)) * bookPdfPages) + 1);
+            } else {
+                const wordsPerPage = totalChapterPages > 1 ? Math.max(50, curWords / totalChapterPages) : 250;
+                startPage = Math.max(1, Math.round(priorWords / wordsPerPage) + 1);
+            }
         }
     }
 
@@ -7226,10 +7239,13 @@ function getRealBookPageInfo(chap, pageInChapter, targetBook = null) {
                 endPage = Math.min(bookPdfPages, startPage + chapSpan - 1);
             }
         } else {
-            // Estimate span from word count (~280 words per book page)
-            const curWords = Math.max(1, curChap.word_count || (curChap.text ? curChap.text.split(/\s+/).length : 500));
-            const estSpan = Math.max(1, Math.round(curWords / 280));
-            endPage = startPage + estSpan - 1;
+            if (totalChapterPages > 1) {
+                endPage = startPage + totalChapterPages - 1;
+            } else {
+                const curWords = Math.max(1, curChap.word_count || (curChap.text ? curChap.text.split(/\s+/).length : 500));
+                const estSpan = Math.max(1, Math.round(curWords / 250));
+                endPage = startPage + estSpan - 1;
+            }
         }
     }
 
@@ -7241,7 +7257,17 @@ function getRealBookPageInfo(chap, pageInChapter, targetBook = null) {
     const effectiveEnd = Math.max(startPage, endPage);
 
     // 3. Calculate interpolated book page for the requested chapter page
-    const totalRealPages = bookPdfPages > 0 ? Math.max(bookPdfPages, effectiveEnd) : effectiveEnd;
+    let totalRealPages = bookPdfPages > 0 ? Math.max(bookPdfPages, effectiveEnd) : effectiveEnd;
+    if (bookPdfPages <= 0) {
+        let totalWords = 0;
+        book.chapters.forEach(c => {
+            totalWords += Math.max(1, c.word_count || (c.text ? c.text.split(/\s+/).length : 500));
+        });
+        const curWords = Math.max(1, curChap.word_count || (curChap.text ? curChap.text.split(/\s+/).length : 500));
+        const wordsPerPage = totalChapterPages > 1 ? Math.max(50, curWords / totalChapterPages) : 250;
+        const estTotalPages = Math.max(effectiveEnd, Math.round(totalWords / wordsPerPage));
+        totalRealPages = estTotalPages;
+    }
     const span = Math.max(1, effectiveEnd - startPage);
     const p = Math.max(1, pageInChapter || 1);
     const pageRatio = totalChapterPages > 1 ? (p - 1) / (totalChapterPages - 1) : 0;
@@ -7259,48 +7285,146 @@ function getRealBookPageInfo(chap, pageInChapter, targetBook = null) {
 }
 window.getRealBookPageInfo = getRealBookPageInfo;
 
+// ── Word-Weighted Reading & Listening Progress Engine ────────────────────────
+function countWordsInText(text) {
+    if (!text || typeof text !== 'string') return 0;
+    const m = text.match(/\S+/gu);
+    return m ? m.length : 0;
+}
+window.countWordsInText = countWordsInText;
+
+function getChapterTotalSeconds(chap, queue = null) {
+    if (chap) {
+        if (typeof EngbotCore !== 'undefined' && EngbotCore.chapterStats) {
+            const stats = EngbotCore.chapterStats(chap);
+            if (stats && stats.seconds > 0) return stats.seconds;
+        }
+        if (Number.isFinite(chap.estimated_duration_sec) && chap.estimated_duration_sec > 0) {
+            return Math.round(chap.estimated_duration_sec);
+        }
+    }
+    const q = queue || (typeof sentenceQueue !== 'undefined' ? sentenceQueue : null);
+    if (q && q.length > 0) {
+        let words = 0;
+        for (let i = 0; i < q.length; i++) {
+            words += countWordsInText(q[i]) || 1;
+        }
+        return Math.max(1, Math.round(words / 140 * 60));
+    }
+    return 60;
+}
+window.getChapterTotalSeconds = getChapterTotalSeconds;
+
+function getChapterWordRatio(chap, sentenceIdx, queue = null) {
+    const q = queue || (typeof sentenceQueue !== 'undefined' ? sentenceQueue : null);
+    if (!q || q.length === 0) return 0;
+    const safeIdx = Math.max(0, Math.min(q.length, sentenceIdx !== undefined && sentenceIdx !== null ? sentenceIdx : 0));
+    if (safeIdx === 0) return 0;
+    if (safeIdx >= q.length) return 1;
+
+    let wordsBefore = 0;
+    let totalQueueWords = 0;
+    for (let i = 0; i < q.length; i++) {
+        const w = countWordsInText(q[i]) || 1;
+        if (i < safeIdx) {
+            wordsBefore += w;
+        }
+        totalQueueWords += w;
+    }
+
+    if (totalQueueWords > 0) {
+        return Math.max(0, Math.min(1, wordsBefore / totalQueueWords));
+    }
+    return Math.max(0, Math.min(1, safeIdx / q.length));
+}
+window.getChapterWordRatio = getChapterWordRatio;
+
+function findSentenceIndexByRatio(queue, targetRatio) {
+    if (!queue || queue.length === 0) return 0;
+    const ratio = Math.max(0, Math.min(1, targetRatio));
+    if (ratio <= 0) return 0;
+    if (ratio >= 1) return queue.length - 1;
+
+    let totalQueueWords = 0;
+    const wordCounts = new Array(queue.length);
+    for (let i = 0; i < queue.length; i++) {
+        const w = countWordsInText(queue[i]) || 1;
+        wordCounts[i] = w;
+        totalQueueWords += w;
+    }
+
+    if (totalQueueWords === 0) {
+        return Math.min(queue.length - 1, Math.floor(ratio * queue.length));
+    }
+
+    const targetWords = ratio * totalQueueWords;
+    let accumulated = 0;
+    for (let i = 0; i < queue.length; i++) {
+        accumulated += wordCounts[i];
+        if (accumulated >= targetWords) {
+            return i;
+        }
+    }
+    return queue.length - 1;
+}
+window.findSentenceIndexByRatio = findSentenceIndexByRatio;
+
 function getDetailedBookProgress(chap, pageInChapter, sentenceIdx, targetBook = null) {
-    const book = targetBook || (readerActive ? readerBook : null) || readerBook || currentBook;
+    const book = targetBook || ((typeof readerActive !== 'undefined' && readerActive) ? readerBook : null) || (typeof readerBook !== 'undefined' ? readerBook : null) || (typeof currentBook !== 'undefined' ? currentBook : null);
     if (!book || !book.chapters || book.chapters.length === 0) {
         return { bookPct: 0, chapterPct: 0, currentBookPage: 1, totalBookPages: 1, chapterPage: 1, totalChapterPages: 1 };
     }
-    const curChap = chap || (readerBook ? readerBook.chapters.find(c => String(c.id) === String(readerChapterId)) : null) || book.chapters[0];
+    const curChap = chap || (typeof readerBook !== 'undefined' && readerBook ? readerBook.chapters.find(c => String(c.id) === String(typeof readerChapterId !== 'undefined' ? readerChapterId : '')) : null) || book.chapters[0];
     const curChapIdx = book.chapters.findIndex(c => String(c.id) === String(curChap?.id));
     const safeChapIdx = curChapIdx >= 0 ? curChapIdx : 0;
     const totalChapterPages = (typeof readerPages !== 'undefined' && readerPages.length) ? readerPages.length : 1;
-    const p = Math.max(1, pageInChapter || readerCurrentPage || 1);
+    const p = Math.max(1, pageInChapter || (typeof readerCurrentPage !== 'undefined' ? readerCurrentPage : 1));
 
     const bounds = getRealBookPageInfo(curChap, p, book);
 
     // Chapter progress fraction: prioritize sentence index if audio is active on this chapter, else use reader page
     let chapterFraction = 0;
-    if (typeof sentenceIdx === 'number' && sentenceQueue && sentenceQueue.length > 0 && (!currentPlayingChapterId || String(currentPlayingChapterId) === String(curChap?.id))) {
-        chapterFraction = Math.max(0, Math.min(1, (sentenceIdx + 1) / sentenceQueue.length));
+    const activeSentenceQueue = (typeof sentenceQueue !== 'undefined' && sentenceQueue && sentenceQueue.length > 0) ? sentenceQueue : null;
+    const isPlayingThisChap = (typeof currentPlayingChapterId === 'undefined') || !currentPlayingChapterId || String(currentPlayingChapterId) === String(curChap?.id);
+
+    if (typeof sentenceIdx === 'number' && sentenceIdx >= 0 && activeSentenceQueue && isPlayingThisChap) {
+        chapterFraction = getChapterWordRatio(curChap, sentenceIdx, activeSentenceQueue);
+    } else if (typeof readerPages !== 'undefined' && readerPages.length > 0) {
+        let wordsRead = 0;
+        let totalWordsInPages = 0;
+        const pageLimit = Math.min(readerPages.length, p);
+        for (let i = 0; i < readerPages.length; i++) {
+            const pageSentences = readerPages[i] || [];
+            let pageWords = 0;
+            for (let j = 0; j < pageSentences.length; j++) {
+                pageWords += countWordsInText(pageSentences[j].text) || 1;
+            }
+            if (i < pageLimit) {
+                wordsRead += pageWords;
+            }
+            totalWordsInPages += pageWords;
+        }
+        chapterFraction = totalWordsInPages > 0 ? (wordsRead / totalWordsInPages) : Math.max(0, Math.min(1, p / Math.max(1, totalChapterPages)));
     } else if (totalChapterPages > 1) {
-        chapterFraction = Math.max(0, Math.min(1, (p - 1) / (totalChapterPages - 1)));
+        chapterFraction = Math.max(0, Math.min(1, p / totalChapterPages));
     }
-    const chapterPct = Math.round(chapterFraction * 100);
+    const chapterPct = Math.min(100, Math.max(0, Math.round(chapterFraction * 100)));
 
     // Exact interpolated book page:
     const span = Math.max(0, bounds.effectiveEnd - bounds.startPage);
     const activeBookPage = Math.min(bounds.totalBookPages, Math.max(1, bounds.startPage + Math.round(chapterFraction * span)));
 
-    // Overall book percentage:
-    let bookPct = 0;
-    if (bounds.totalBookPages > 0) {
-        bookPct = Math.min(100, Math.max(0, Math.round((activeBookPage / bounds.totalBookPages) * 100)));
-    } else {
-        let priorWords = 0;
-        let totalWords = 0;
-        book.chapters.forEach((c, idx) => {
-            const w = Math.max(1, c.word_count || (c.text ? c.text.split(/\s+/).length : 500));
-            if (idx < safeChapIdx) priorWords += w;
-            totalWords += w;
-        });
-        const curWords = Math.max(1, curChap?.word_count || (curChap?.text ? curChap.text.split(/\s+/).length : 500));
-        const completedWords = priorWords + (curWords * chapterFraction);
-        bookPct = Math.min(100, Math.max(0, Math.round((completedWords / Math.max(1, totalWords)) * 100)));
-    }
+    // Overall book percentage: unified word-weighted metric across all chapters
+    let priorWords = 0;
+    let totalWords = 0;
+    book.chapters.forEach((c, idx) => {
+        const w = Math.max(1, (typeof EngbotCore !== 'undefined' && EngbotCore.chapterStats ? EngbotCore.chapterStats(c).words : (c.word_count || countWordsInText(c.text) || 500)));
+        if (idx < safeChapIdx) priorWords += w;
+        totalWords += w;
+    });
+    const curWords = Math.max(1, (typeof EngbotCore !== 'undefined' && EngbotCore.chapterStats ? EngbotCore.chapterStats(curChap).words : (curChap?.word_count || countWordsInText(curChap?.text) || 500)));
+    const completedWords = priorWords + (curWords * chapterFraction);
+    const bookPct = Math.min(100, Math.max(0, Math.round((completedWords / Math.max(1, totalWords)) * 100)));
 
     return {
         bookPct,
@@ -8214,12 +8338,18 @@ function playerRewind(seconds = 10) {
         if (readerActive) readerPrevPage();
         return;
     }
-    const sentencesToJump = Math.max(1, Math.round(seconds / 5));
+    const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
+    const totalDuration = (typeof getChapterTotalSeconds === 'function')
+        ? getChapterTotalSeconds(currentChap, sentenceQueue)
+        : (sentenceQueue.length * 4);
     secondsElapsed = Math.max(0, secondsElapsed - seconds);
-    currentSentenceIndex = Math.max(0, currentSentenceIndex - sentencesToJump);
+    const ratio = totalDuration > 0 ? Math.max(0, Math.min(1, secondsElapsed / totalDuration)) : 0;
+    currentSentenceIndex = (typeof findSentenceIndexByRatio === 'function')
+        ? findSentenceIndexByRatio(sentenceQueue, ratio)
+        : Math.max(0, Math.min(sentenceQueue.length - 1, Math.floor(ratio * sentenceQueue.length)));
+
     if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
-    const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
-    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
+    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${(ratio * 100).toFixed(1)}%`;
     if (readerActive) {
         highlightReaderSentence(currentSentenceIndex, true);
     }
@@ -8242,12 +8372,18 @@ function playerForward(seconds = 10) {
         if (readerActive) readerNextPage();
         return;
     }
-    const sentencesToJump = Math.max(1, Math.round(seconds / 5));
-    secondsElapsed += seconds;
-    currentSentenceIndex = Math.min(sentenceQueue.length - 1, currentSentenceIndex + sentencesToJump);
+    const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
+    const totalDuration = (typeof getChapterTotalSeconds === 'function')
+        ? getChapterTotalSeconds(currentChap, sentenceQueue)
+        : (sentenceQueue.length * 4);
+    secondsElapsed = Math.min(totalDuration, secondsElapsed + seconds);
+    const ratio = totalDuration > 0 ? Math.max(0, Math.min(1, secondsElapsed / totalDuration)) : 0;
+    currentSentenceIndex = (typeof findSentenceIndexByRatio === 'function')
+        ? findSentenceIndexByRatio(sentenceQueue, ratio)
+        : Math.max(0, Math.min(sentenceQueue.length - 1, Math.floor(ratio * sentenceQueue.length)));
+
     if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
-    const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
-    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
+    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${(ratio * 100).toFixed(1)}%`;
     if (readerActive) {
         highlightReaderSentence(currentSentenceIndex, true);
     }
@@ -11557,13 +11693,16 @@ function initMediaSessionHandlers() {
         ['seekto', (details) => {
             if (details && typeof details.seekTime === 'number' && sentenceQueue && sentenceQueue.length > 0) {
                 const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
-                const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
-                const totalDuration = (chapStats && chapStats.seconds) 
-                    ? chapStats.seconds 
-                    : ((currentChap && currentChap.estimated_duration_sec) ? currentChap.estimated_duration_sec : (sentenceQueue.length * 4));
+                const totalDuration = (typeof getChapterTotalSeconds === 'function')
+                    ? getChapterTotalSeconds(currentChap, sentenceQueue)
+                    : (sentenceQueue.length * 4);
                 const seekRatio = Math.max(0, Math.min(1, details.seekTime / totalDuration));
                 secondsElapsed = Math.round(details.seekTime);
-                currentSentenceIndex = Math.min(sentenceQueue.length - 1, Math.floor(seekRatio * sentenceQueue.length));
+                currentSentenceIndex = (typeof findSentenceIndexByRatio === 'function')
+                    ? findSentenceIndexByRatio(sentenceQueue, seekRatio)
+                    : Math.min(sentenceQueue.length - 1, Math.floor(seekRatio * sentenceQueue.length));
+                if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+                if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${(seekRatio * 100).toFixed(1)}%`;
                 if (isPlaying && !isPaused) {
                     speakCurrentSentence();
                 } else if (readerActive) {
@@ -11613,12 +11752,21 @@ async function speakCurrentSentence() {
 
     const cleanSentence = rawSentence.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-    const pct = Math.round((currentSentenceIndex / sentenceQueue.length) * 100);
-    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${pct}%`;
+    const curChap = currentBook?.chapters?.find(c => String(c.id) === String(currentPlayingChapterId)) || null;
+    const totalDuration = (typeof getChapterTotalSeconds === 'function')
+        ? getChapterTotalSeconds(curChap, sentenceQueue)
+        : (sentenceQueue.length * 4);
+    const wordRatio = (typeof getChapterWordRatio === 'function')
+        ? getChapterWordRatio(curChap, currentSentenceIndex, sentenceQueue)
+        : (sentenceQueue.length > 0 ? (currentSentenceIndex / sentenceQueue.length) : 0);
+    secondsElapsed = Math.round(wordRatio * totalDuration);
+
+    const pct = Math.max(0, Math.min(100, Math.round(wordRatio * 100)));
+    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${(wordRatio * 100).toFixed(1)}%`;
     if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+    if (DOM.playerTotalTime) DOM.playerTotalTime.textContent = formatTime(totalDuration);
 
     if (currentBook) {
-        const curChap = currentBook.chapters?.find(c => String(c.id) === String(currentPlayingChapterId)) || null;
         const bookProg = typeof getDetailedBookProgress === 'function'
             ? getDetailedBookProgress(curChap, null, currentSentenceIndex, currentBook)
             : null;
@@ -12731,7 +12879,13 @@ async function playChapterAudio(chapId, startSentenceIdx, forceReload = false) {
     const preparedAudioSentences = prepareChapterSentences(textToRead);
     sentenceQueue = preparedAudioSentences.map(x => x.text);
     currentSentenceIndex = Math.min(startSentenceIdx, Math.max(0, sentenceQueue.length - 1));
-    secondsElapsed = 0;
+    const chapTotalSeconds = (typeof getChapterTotalSeconds === 'function')
+        ? getChapterTotalSeconds(chap, sentenceQueue)
+        : ((typeof EngbotCore !== 'undefined' && EngbotCore.chapterStats) ? EngbotCore.chapterStats(chap).seconds : 60);
+    const initialRatio = (currentSentenceIndex > 0 && typeof getChapterWordRatio === 'function')
+        ? getChapterWordRatio(chap, currentSentenceIndex, sentenceQueue)
+        : (sentenceQueue.length > 0 ? (currentSentenceIndex / sentenceQueue.length) : 0);
+    secondsElapsed = Math.round(initialRatio * chapTotalSeconds);
     isPlaying = true;
     isPaused = false;
     isUserManuallyNavigating = false;
@@ -12758,7 +12912,9 @@ async function playChapterAudio(chapId, startSentenceIdx, forceReload = false) {
 
     DOM.dockTitle.textContent = EngbotCore.chapterTitle(chap, currentLang);
     DOM.dockSubtitle.textContent = currentBook.title;
-    if (DOM.playerTotalTime) DOM.playerTotalTime.textContent = formatTime(EngbotCore.chapterStats(chap).seconds);
+    if (DOM.playerTotalTime) DOM.playerTotalTime.textContent = formatTime(chapTotalSeconds);
+    if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
+    if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${(initialRatio * 100).toFixed(1)}%`;
 
     updateLangToggleUI();
     startTimer();
@@ -12907,14 +13063,18 @@ function startTimer() {
     stopTimer();
     timerInterval = setInterval(() => {
         secondsElapsed++;
+        const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
+        const chapDuration = (typeof getChapterTotalSeconds === 'function')
+            ? getChapterTotalSeconds(currentChap, sentenceQueue)
+            : ((currentChap && currentChap.estimated_duration_sec) || (sentenceQueue && sentenceQueue.length > 0 ? sentenceQueue.length * 4 : 60));
+        if (chapDuration > 0) {
+            if (secondsElapsed > chapDuration) secondsElapsed = chapDuration;
+            const progressRatio = Math.max(0, Math.min(1, secondsElapsed / chapDuration));
+            if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${(progressRatio * 100).toFixed(1)}%`;
+        }
         if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
         if (secondsElapsed % 2 === 0 && 'mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
-            const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
             if (currentChap) {
-                const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
-                const chapDuration = (chapStats && chapStats.seconds) 
-                    ? chapStats.seconds 
-                    : (currentChap.estimated_duration_sec || (sentenceQueue && sentenceQueue.length > 0 ? sentenceQueue.length * 4 : 60));
                 try {
                     navigator.mediaSession.setPositionState({
                         duration: Math.max(1, chapDuration),
@@ -14628,15 +14788,16 @@ function setupEventListeners() {
             const pct = Math.max(0, Math.min(1, getProgressRatio(clientX)));
 
             const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
-            const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
-            const totalDuration = (chapStats && chapStats.seconds) 
-                ? chapStats.seconds 
-                : ((currentChap && currentChap.estimated_duration_sec) ? currentChap.estimated_duration_sec : (sentenceQueue.length * 4));
+            const totalDuration = (typeof getChapterTotalSeconds === 'function')
+                ? getChapterTotalSeconds(currentChap, sentenceQueue)
+                : (sentenceQueue.length * 4);
 
             const previewSeconds = Math.round(pct * totalDuration);
-            const previewIdx = Math.min(sentenceQueue.length - 1, Math.floor(pct * sentenceQueue.length));
+            const previewIdx = (typeof findSentenceIndexByRatio === 'function')
+                ? findSentenceIndexByRatio(sentenceQueue, pct)
+                : Math.min(sentenceQueue.length - 1, Math.floor(pct * sentenceQueue.length));
 
-            if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${Math.round(pct * 100)}%`;
+            if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${(pct * 100).toFixed(1)}%`;
             if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(previewSeconds);
 
             if (seekTooltip) {
@@ -14658,15 +14819,16 @@ function setupEventListeners() {
             const pct = Math.max(0, Math.min(1, getProgressRatio(clientX)));
 
             const currentChap = currentBook && currentBook.chapters ? currentBook.chapters.find(c => String(c.id) === String(currentPlayingChapterId)) : null;
-            const chapStats = window.EngbotCore ? window.EngbotCore.chapterStats(currentChap) : null;
-            const totalDuration = (chapStats && chapStats.seconds) 
-                ? chapStats.seconds 
-                : ((currentChap && currentChap.estimated_duration_sec) ? currentChap.estimated_duration_sec : (sentenceQueue.length * 4));
+            const totalDuration = (typeof getChapterTotalSeconds === 'function')
+                ? getChapterTotalSeconds(currentChap, sentenceQueue)
+                : (sentenceQueue.length * 4);
 
             secondsElapsed = Math.round(pct * totalDuration);
-            currentSentenceIndex = Math.min(sentenceQueue.length - 1, Math.floor(pct * sentenceQueue.length));
+            currentSentenceIndex = (typeof findSentenceIndexByRatio === 'function')
+                ? findSentenceIndexByRatio(sentenceQueue, pct)
+                : Math.min(sentenceQueue.length - 1, Math.floor(pct * sentenceQueue.length));
 
-            if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${Math.round(pct * 100)}%`;
+            if (DOM.playerProgressBar) DOM.playerProgressBar.style.width = `${(pct * 100).toFixed(1)}%`;
             if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
 
             if (isPlaying && !isPaused) {

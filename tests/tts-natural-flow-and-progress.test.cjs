@@ -227,3 +227,99 @@ test('Auth persistence: User session in localStorage is restored on tab resume w
     assert.equal(store.isReady(), true);
     assert.equal(store.getUserId(), 'user-xyz-123456789012345678901234567890');
 });
+
+test('Audio Player progress bar, elapsed time, and word-weighted reading/listening progress', () => {
+    const appSource = fs.readFileSync(require.resolve('../static/app.js'), 'utf8');
+    const ctx = {
+        EngbotCore: core,
+        document: { addEventListener: () => {}, getElementById: () => null },
+        window: {},
+        DOM: {
+            playerProgressBar: { style: { width: '' } },
+            playerCurrentTime: { textContent: '' },
+            playerTotalTime: { textContent: '' },
+            readerReadingProgressText: { textContent: '', title: '' },
+            readerBookProgressText: { textContent: '', title: '' },
+            readerPageStatusBottom: { textContent: '' }
+        },
+        currentPlayingChapterId: null,
+        sentenceQueue: [],
+        currentSentenceIndex: 0,
+        secondsElapsed: 0,
+        readerActive: false,
+        readerBook: null,
+        currentBook: null,
+        formatTime: (s) => {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const sec = s % 60;
+            return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
+        }
+    };
+    vm.createContext(ctx);
+
+    const extractFn = (name) => {
+        const start = appSource.indexOf(`function ${name}(`);
+        assert.ok(start > 0, `function ${name} must exist`);
+        const exp = `window.${name} = ${name};`;
+        const end = appSource.indexOf(exp, start) + exp.length;
+        vm.runInContext(appSource.slice(start, end), ctx);
+    };
+
+    extractFn('countWordsInText');
+    extractFn('getChapterTotalSeconds');
+    extractFn('getChapterWordRatio');
+    extractFn('findSentenceIndexByRatio');
+    extractFn('getRealBookPageInfo');
+    extractFn('getDetailedBookProgress');
+
+    // 1. Verify user scenario: Chapter with 35,976 words, ~15,418s (4h 16m 58s)
+    const chap9 = {
+        id: 'c9',
+        title: 'Chapter 9 - The Battle for the Mind',
+        word_count: 35976,
+        estimated_duration_sec: 15418
+    };
+
+    // Queue of 100 sentences with unequal word distributions
+    const queue = [];
+    for (let i = 0; i < 100; i++) {
+        const wordCount = i < 50 ? 10 : 710;
+        queue.push(Array(wordCount).fill('word').join(' '));
+    }
+    assert.equal(queue.length, 100);
+
+    // At sentence 50:
+    // Only 500 words out of ~36,000 words have been read (~1.4%)
+    const ratioAt50 = ctx.getChapterWordRatio(chap9, 50, queue);
+    assert.ok(ratioAt50 < 0.05, 'Sentence 50 must accurately reflect true word ratio, not naive sentence count');
+
+    // Test Scrubber Lockstep: Elapsed 2:13:37 (8017s) out of 4:16:58 (15418s)
+    // 8017 / 15418 = 0.51997... (~52.0%)
+    const elapsedSeconds = 8017;
+    const totalSeconds = 15418;
+    const progressRatio = elapsedSeconds / totalSeconds;
+    const barWidthPct = (progressRatio * 100).toFixed(1);
+    assert.equal(barWidthPct, '52.0', 'Progress bar at 2:13:37 of 4:16:58 MUST be 52.0%, never 90%');
+
+    // findSentenceIndexByRatio maps 52.0% words to the corresponding sentence
+    const sentIdxAt52 = ctx.findSentenceIndexByRatio(queue, progressRatio);
+    assert.ok(sentIdxAt52 >= 50, 'Sentence at 52% words must be past sentence 50');
+
+    // 2. Test getDetailedBookProgress with multi-chapter book
+    const book = {
+        id: 'book-master-key',
+        title: 'The Master Key System',
+        chapters: [
+            { id: 'c1', word_count: 2000 },
+            { id: 'c2', word_count: 3000 },
+            { id: 'c3', word_count: 35000 }
+        ]
+    };
+    ctx.currentPlayingChapterId = 'c3';
+    const queueC3 = [Array(17500).fill('word').join(' '), Array(17500).fill('word').join(' ')];
+    ctx.sentenceQueue = queueC3;
+    const prog1 = ctx.getDetailedBookProgress(book.chapters[2], 1, 1, book);
+    assert.equal(prog1.chapterPct, 50, 'Chapter progress must be 50%');
+    assert.equal(prog1.bookPct, 56, 'Book progress must be 56% (22,500 / 40,000 words)');
+});
