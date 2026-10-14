@@ -7055,89 +7055,242 @@ function refreshBookmarksUI(targetBook) {
 }
 window.refreshBookmarksUI = refreshBookmarksUI;
 
-function getRealBookPageInfo(chap, pageInChapter) {
-    if (!readerBook || !readerBook.chapters || readerBook.chapters.length === 0) {
+function getRealBookPageInfo(chap, pageInChapter, targetBook = null) {
+    const book = targetBook || (readerActive ? readerBook : null) || readerBook || currentBook;
+    if (!book || !book.chapters || book.chapters.length === 0) {
         const p = Math.max(1, pageInChapter || 1);
         const tot = (typeof readerPages !== 'undefined' && readerPages.length) ? readerPages.length : 1;
         return {
             chapterPage: p,
             totalChapterPages: tot,
             bookPage: p,
-            totalBookPages: tot
+            totalBookPages: tot,
+            startPage: 1,
+            effectiveEnd: tot,
+            hasPdfMeta: false
         };
     }
 
-    const curChap = chap || readerBook.chapters.find(c => String(c.id) === String(readerChapterId)) || readerBook.chapters[0];
+    const curChap = chap || (readerBook ? readerBook.chapters.find(c => String(c.id) === String(readerChapterId)) : null) || book.chapters[0];
     const totalChapterPages = (typeof readerPages !== 'undefined' && readerPages.length) ? readerPages.length : 1;
-    const curChapIdx = readerBook.chapters.findIndex(c => String(c.id) === String(curChap?.id));
+    const curChapIdx = book.chapters.findIndex(c => String(c.id) === String(curChap?.id));
     const safeChapIdx = curChapIdx >= 0 ? curChapIdx : 0;
-    const bookPdfPages = Number(readerBook.page_count || readerBook.total_pages || (readerBook.extra && readerBook.extra.page_count)) || 0;
+    const bookPdfPages = Number(book.page_count || book.total_pages || (book.extra && book.extra.page_count)) || 0;
 
-    // Check if chapters have explicit printed/PDF page numbers (e.g. firstPage, start_page)
+    // 1. Resolve starting page of current chapter
     const hasExplicitPage = curChap && (typeof curChap.firstPage === 'number' || typeof curChap.start_page === 'number');
-    const startPage = hasExplicitPage ? (curChap.firstPage ?? curChap.start_page) : null;
-    const nextChap = readerBook.chapters[safeChapIdx + 1];
-    const nextStartPage = nextChap ? (nextChap.firstPage ?? nextChap.start_page) : null;
-    const endPage = hasExplicitPage ? (curChap.lastPage ?? curChap.end_page ?? (nextStartPage ? nextStartPage - 1 : startPage)) : null;
+    let startPage = (typeof curChap.firstPage === 'number' && curChap.firstPage > 0)
+        ? curChap.firstPage
+        : ((typeof curChap.start_page === 'number' && curChap.start_page > 0) ? curChap.start_page : null);
 
-    if (startPage !== null && startPage > 0) {
-        const effectiveEnd = Math.max(startPage, endPage !== null ? endPage : startPage);
-        const span = Math.max(1, effectiveEnd - startPage + 1);
-        const ratio = totalChapterPages > 1 ? (Math.max(1, pageInChapter) - 1) / (totalChapterPages - 1) : 0;
-        const realBookPage = startPage + Math.round(ratio * (span - 1));
-        const totalRealPages = bookPdfPages > 0 ? Math.max(bookPdfPages, effectiveEnd) : Math.max(effectiveEnd, (readerBook.chapters[readerBook.chapters.length - 1]?.lastPage || effectiveEnd));
-
-        return {
-            chapterPage: Math.max(1, pageInChapter),
-            totalChapterPages,
-            bookPage: Math.max(1, realBookPage),
-            totalBookPages: Math.max(Math.max(1, realBookPage), totalRealPages),
-            hasPdfMeta: true
-        };
-    }
-
-    // Proportional / cumulative estimation across all chapters
-    const curWords = Math.max(1, curChap?.word_count || (curChap?.text ? curChap.text.split(/\s+/).length : 500));
-    const wordsPerPage = curWords / Math.max(1, totalChapterPages);
-
-    let priorPages = 0;
-    let totalBookPages = 0;
-
-    readerBook.chapters.forEach((c, idx) => {
-        let cPages;
-        if (idx === safeChapIdx) {
-            cPages = totalChapterPages;
+    if (startPage === null) {
+        if (safeChapIdx === 0) {
+            startPage = 1;
         } else {
-            const w = Math.max(1, c.word_count || (c.text ? c.text.split(/\s+/).length : 500));
-            cPages = Math.max(1, Math.round(w / wordsPerPage));
+            let priorWords = 0;
+            let totalWords = 0;
+            book.chapters.forEach((c, idx) => {
+                const w = Math.max(1, c.word_count || (c.text ? c.text.split(/\s+/).length : 500));
+                if (idx < safeChapIdx) priorWords += w;
+                totalWords += w;
+            });
+            const baseTotalPages = bookPdfPages > 0 ? bookPdfPages : Math.max(book.chapters.length * 10, Math.round(totalWords / 280));
+            startPage = Math.max(1, Math.round((priorWords / Math.max(1, totalWords)) * baseTotalPages) + 1);
         }
-        if (idx < safeChapIdx) {
-            priorPages += cPages;
-        }
-        totalBookPages += cPages;
-    });
-
-    const calculatedBookPage = priorPages + Math.max(1, pageInChapter);
-    if (bookPdfPages > 0) {
-        const scaledRealPage = Math.max(1, Math.min(bookPdfPages, Math.round((calculatedBookPage / Math.max(1, totalBookPages)) * bookPdfPages)));
-        return {
-            chapterPage: Math.max(1, pageInChapter),
-            totalChapterPages,
-            bookPage: scaledRealPage,
-            totalBookPages: bookPdfPages,
-            hasPdfMeta: true
-        };
     }
+
+    // 2. Resolve true ending page of current chapter (never collapse multi-page chapter to startPage)
+    let endPage = (typeof curChap.lastPage === 'number' && curChap.lastPage > startPage)
+        ? curChap.lastPage
+        : ((typeof curChap.end_page === 'number' && curChap.end_page > startPage) ? curChap.end_page : null);
+
+    if (endPage === null) {
+        // Look ahead for the next chapter that has a starting page > startPage
+        let nextStartPage = null;
+        for (let j = safeChapIdx + 1; j < book.chapters.length; j++) {
+            const nc = book.chapters[j];
+            const ns = (typeof nc.firstPage === 'number' && nc.firstPage > startPage)
+                ? nc.firstPage
+                : ((typeof nc.start_page === 'number' && nc.start_page > startPage) ? nc.start_page : null);
+            if (ns !== null) {
+                nextStartPage = ns;
+                break;
+            }
+        }
+
+        if (nextStartPage !== null && nextStartPage > startPage) {
+            endPage = nextStartPage - 1;
+        } else if (bookPdfPages > startPage) {
+            if (safeChapIdx === book.chapters.length - 1) {
+                endPage = bookPdfPages;
+            } else {
+                // Distribute remaining pages among remaining chapters by word count
+                const curWords = Math.max(1, curChap.word_count || (curChap.text ? curChap.text.split(/\s+/).length : 500));
+                let remTotalWords = 0;
+                for (let k = safeChapIdx; k < book.chapters.length; k++) {
+                    const c = book.chapters[k];
+                    remTotalWords += Math.max(1, c.word_count || (c.text ? c.text.split(/\s+/).length : 500));
+                }
+                const remPages = bookPdfPages - startPage + 1;
+                const chapSpan = Math.max(1, Math.round((curWords / Math.max(1, remTotalWords)) * remPages));
+                endPage = Math.min(bookPdfPages, startPage + chapSpan - 1);
+            }
+        } else {
+            // Estimate span from word count (~280 words per book page)
+            const curWords = Math.max(1, curChap.word_count || (curChap.text ? curChap.text.split(/\s+/).length : 500));
+            const estSpan = Math.max(1, Math.round(curWords / 280));
+            endPage = startPage + estSpan - 1;
+        }
+    }
+
+    // Safety fallback: if endPage <= startPage but chapter has multiple reader pages,
+    // span must at least reflect the reader pages!
+    if (endPage <= startPage && totalChapterPages > 1) {
+        endPage = startPage + Math.max(1, totalChapterPages - 1);
+    }
+    const effectiveEnd = Math.max(startPage, endPage);
+
+    // 3. Calculate interpolated book page for the requested chapter page
+    const totalRealPages = bookPdfPages > 0 ? Math.max(bookPdfPages, effectiveEnd) : effectiveEnd;
+    const span = Math.max(1, effectiveEnd - startPage);
+    const p = Math.max(1, pageInChapter || 1);
+    const pageRatio = totalChapterPages > 1 ? (p - 1) / (totalChapterPages - 1) : 0;
+    const realBookPage = Math.min(totalRealPages, startPage + Math.round(pageRatio * span));
 
     return {
-        chapterPage: Math.max(1, pageInChapter),
+        chapterPage: p,
         totalChapterPages,
-        bookPage: calculatedBookPage,
-        totalBookPages: Math.max(calculatedBookPage, totalBookPages),
-        hasPdfMeta: false
+        bookPage: realBookPage,
+        totalBookPages: totalRealPages,
+        startPage,
+        effectiveEnd,
+        hasPdfMeta: bookPdfPages > 0 || hasExplicitPage
     };
 }
 window.getRealBookPageInfo = getRealBookPageInfo;
+
+function getDetailedBookProgress(chap, pageInChapter, sentenceIdx, targetBook = null) {
+    const book = targetBook || (readerActive ? readerBook : null) || readerBook || currentBook;
+    if (!book || !book.chapters || book.chapters.length === 0) {
+        return { bookPct: 0, chapterPct: 0, currentBookPage: 1, totalBookPages: 1, chapterPage: 1, totalChapterPages: 1 };
+    }
+    const curChap = chap || (readerBook ? readerBook.chapters.find(c => String(c.id) === String(readerChapterId)) : null) || book.chapters[0];
+    const curChapIdx = book.chapters.findIndex(c => String(c.id) === String(curChap?.id));
+    const safeChapIdx = curChapIdx >= 0 ? curChapIdx : 0;
+    const totalChapterPages = (typeof readerPages !== 'undefined' && readerPages.length) ? readerPages.length : 1;
+    const p = Math.max(1, pageInChapter || readerCurrentPage || 1);
+
+    const bounds = getRealBookPageInfo(curChap, p, book);
+
+    // Chapter progress fraction: prioritize sentence index if audio is active on this chapter, else use reader page
+    let chapterFraction = 0;
+    if (typeof sentenceIdx === 'number' && sentenceQueue && sentenceQueue.length > 0 && (!currentPlayingChapterId || String(currentPlayingChapterId) === String(curChap?.id))) {
+        chapterFraction = Math.max(0, Math.min(1, (sentenceIdx + 1) / sentenceQueue.length));
+    } else if (totalChapterPages > 1) {
+        chapterFraction = Math.max(0, Math.min(1, (p - 1) / (totalChapterPages - 1)));
+    }
+    const chapterPct = Math.round(chapterFraction * 100);
+
+    // Exact interpolated book page:
+    const span = Math.max(0, bounds.effectiveEnd - bounds.startPage);
+    const activeBookPage = Math.min(bounds.totalBookPages, Math.max(1, bounds.startPage + Math.round(chapterFraction * span)));
+
+    // Overall book percentage:
+    let bookPct = 0;
+    if (bounds.totalBookPages > 0) {
+        bookPct = Math.min(100, Math.max(0, Math.round((activeBookPage / bounds.totalBookPages) * 100)));
+    } else {
+        let priorWords = 0;
+        let totalWords = 0;
+        book.chapters.forEach((c, idx) => {
+            const w = Math.max(1, c.word_count || (c.text ? c.text.split(/\s+/).length : 500));
+            if (idx < safeChapIdx) priorWords += w;
+            totalWords += w;
+        });
+        const curWords = Math.max(1, curChap?.word_count || (curChap?.text ? curChap.text.split(/\s+/).length : 500));
+        const completedWords = priorWords + (curWords * chapterFraction);
+        bookPct = Math.min(100, Math.max(0, Math.round((completedWords / Math.max(1, totalWords)) * 100)));
+    }
+
+    return {
+        bookPct,
+        chapterPct,
+        currentBookPage: activeBookPage,
+        totalBookPages: bounds.totalBookPages,
+        chapterPage: p,
+        totalChapterPages,
+        startPage: bounds.startPage,
+        effectiveEnd: bounds.effectiveEnd
+    };
+}
+window.getDetailedBookProgress = getDetailedBookProgress;
+
+function updateReaderStatusBar(chap, pageInChapter, sentenceIdx) {
+    if (!readerActive || !readerBook) return;
+    const curChap = chap || readerBook.chapters.find(c => String(c.id) === String(readerChapterId)) || readerBook.chapters[0];
+    const totalPages = (typeof readerPages !== 'undefined' && readerPages.length) ? readerPages.length : 1;
+    const isWidescreen = window.innerWidth >= 900;
+    const isDual = readerMode === 'dual' && isWidescreen;
+
+    let pageStatusString = '';
+    let leftInfo = null, rightInfo = null;
+
+    if (isDual) {
+        const leftPageNum = readerCurrentPage % 2 === 0 ? readerCurrentPage - 1 : readerCurrentPage;
+        const rightPageNum = leftPageNum + 1;
+        leftInfo = getRealBookPageInfo(curChap, leftPageNum);
+        rightInfo = rightPageNum <= totalPages ? getRealBookPageInfo(curChap, rightPageNum) : null;
+        if (rightInfo && rightInfo.bookPage !== leftInfo.bookPage) {
+            pageStatusString = `Pages ${leftInfo.bookPage}–${rightInfo.bookPage} of ${leftInfo.totalBookPages}`;
+        } else {
+            pageStatusString = `Page ${leftInfo.bookPage} of ${leftInfo.totalBookPages}`;
+        }
+    } else {
+        const curPageInfo = getRealBookPageInfo(curChap, pageInChapter || readerCurrentPage);
+        pageStatusString = `Page ${curPageInfo.bookPage} of ${curPageInfo.totalBookPages}`;
+    }
+
+    if (DOM.readerPageStatusBottom) {
+        DOM.readerPageStatusBottom.textContent = pageStatusString;
+    }
+    const floatingText = document.getElementById('floatingPageText');
+    if (floatingText) {
+        floatingText.textContent = pageStatusString;
+    }
+
+    const prog = getDetailedBookProgress(curChap, pageInChapter || readerCurrentPage, sentenceIdx);
+
+    if (DOM.readerReadingProgressText) {
+        if (sentenceQueue && sentenceQueue.length > 0) {
+            const activeIdx = (typeof sentenceIdx === 'number' && sentenceIdx >= 0)
+                ? Math.min(sentenceQueue.length - 1, sentenceIdx)
+                : currentSentenceIndex;
+            DOM.readerReadingProgressText.textContent = `Sentence ${activeIdx + 1} / ${sentenceQueue.length}`;
+            DOM.readerReadingProgressText.title = `${prog.chapterPct}% Chapter • Sentence ${activeIdx + 1} of ${sentenceQueue.length}`;
+        } else if (readerPages && readerPages.length > 0) {
+            const pIdx = Math.max(0, Math.min(readerPages.length - 1, (pageInChapter || readerCurrentPage) - 1));
+            const curP = readerPages[pIdx];
+            if (curP && curP.length > 0) {
+                const first = curP[0].globalIndex + 1;
+                const last = curP[curP.length - 1].globalIndex + 1;
+                DOM.readerReadingProgressText.textContent = first === last ? `Sentence ${first}` : `Sentences ${first}–${last}`;
+                DOM.readerReadingProgressText.title = `Sentences ${first} to ${last} on this page`;
+            }
+        }
+    }
+
+    if (DOM.readerBookProgressText) {
+        DOM.readerBookProgressText.textContent = `${prog.bookPct}% Book Progress`;
+        DOM.readerBookProgressText.title = `${prog.chapterPct}% Chapter Progress • ${prog.bookPct}% Overall Book Progress`;
+    }
+
+    if (readerBook) {
+        readerBook.progressPct = prog.bookPct;
+    }
+
+    return { pageStatusString, prog, leftInfo, rightInfo };
+}
+window.updateReaderStatusBar = updateReaderStatusBar;
 
 function formatChapterDuration(sec) {
     sec = Number(sec);
@@ -7157,7 +7310,10 @@ function getChapterPageBadge(chap) {
     let end = (typeof chap.lastPage === 'number') ? chap.lastPage : (typeof chap.end_page === 'number' ? chap.end_page : null);
     if (start === null && typeof getRealBookPageInfo === 'function') {
         const info = getRealBookPageInfo(chap, 1);
-        if (info && info.bookPage) start = info.bookPage;
+        if (info && info.bookPage) {
+            start = info.startPage || info.bookPage;
+            end = info.effectiveEnd || end;
+        }
     }
     if (start !== null) {
         if (end !== null && end > start) {
@@ -7244,7 +7400,6 @@ function renderCurrentPage() {
             html += `<p class="book-prose indent-6">${pBuffer.join('')}</p>`;
         }
 
-
         html += `
                 </div>
                 <footer class="mt-10 pt-6 border-t border-black/10 dark:border-white/10 text-center opacity-60 text-xs select-none">
@@ -7289,37 +7444,8 @@ function renderCurrentPage() {
 
     DOM.readerPageSpread.innerHTML = html;
 
-    // Update Status Bars with REAL book page numbers
-    const curPageInfo = getRealBookPageInfo(chap, readerCurrentPage);
-    let pageStatusString = '';
-    if (isDual) {
-        const leftPageNum = readerCurrentPage % 2 === 0 ? readerCurrentPage - 1 : readerCurrentPage;
-        const rightPageNum = leftPageNum + 1;
-        const leftInfo = getRealBookPageInfo(chap, leftPageNum);
-        const rightInfo = rightPageNum <= totalPages ? getRealBookPageInfo(chap, rightPageNum) : null;
-        pageStatusString = rightInfo
-            ? `Pages ${leftInfo.bookPage}–${rightInfo.bookPage} of ${leftInfo.totalBookPages}`
-            : `Page ${leftInfo.bookPage} of ${leftInfo.totalBookPages}`;
-    } else {
-        pageStatusString = `Page ${curPageInfo.bookPage} of ${curPageInfo.totalBookPages}`;
-    }
-
-    if (DOM.readerPageStatusBottom) {
-        DOM.readerPageStatusBottom.textContent = pageStatusString;
-    }
-    const floatingText = document.getElementById('floatingPageText');
-    if (floatingText) {
-        floatingText.textContent = pageStatusString;
-    }
-
-    if (DOM.readerReadingProgressText && sentenceQueue.length > 0) {
-        DOM.readerReadingProgressText.textContent = `Sentence ${currentSentenceIndex + 1} / ${sentenceQueue.length}`;
-    }
-
-    if (DOM.readerBookProgressText && readerBook) {
-        const totalPct = Math.min(100, Math.max(0, Math.round((curPageInfo.bookPage / curPageInfo.totalBookPages) * 100)));
-        DOM.readerBookProgressText.textContent = `${totalPct}% Book Progress`;
-    }
+    // Update Status Bars with REAL book page numbers and progress
+    updateReaderStatusBar(chap, readerCurrentPage, isPlaying ? currentSentenceIndex : null);
 
     // Highlight current sentence if playing this chapter
     if (isPlaying && String(currentPlayingChapterId) === String(readerChapterId)) {
@@ -7644,7 +7770,14 @@ function highlightReaderSentence(sentenceIdx, forceSync = false) {
         }
     }
 
-    if (DOM.readerReadingProgressText && sentenceQueue.length > 0) {
+    if (readerBook) {
+        const chap = readerBook.chapters.find(c => String(c.id) === String(readerChapterId));
+        if (chap && typeof updateReaderStatusBar === 'function') {
+            updateReaderStatusBar(chap, readerCurrentPage, sentenceIdx);
+        } else if (DOM.readerReadingProgressText && sentenceQueue.length > 0) {
+            DOM.readerReadingProgressText.textContent = `Sentence ${sentenceIdx + 1} / ${sentenceQueue.length}`;
+        }
+    } else if (DOM.readerReadingProgressText && sentenceQueue.length > 0) {
         DOM.readerReadingProgressText.textContent = `Sentence ${sentenceIdx + 1} / ${sentenceQueue.length}`;
     }
 }
@@ -11385,14 +11518,20 @@ async function speakCurrentSentence() {
     if (DOM.playerCurrentTime) DOM.playerCurrentTime.textContent = formatTime(secondsElapsed);
 
     if (currentBook) {
-        currentBook.progressPct = pct;
+        const curChap = currentBook.chapters?.find(c => String(c.id) === String(currentPlayingChapterId)) || null;
+        const bookProg = typeof getDetailedBookProgress === 'function'
+            ? getDetailedBookProgress(curChap, null, currentSentenceIndex, currentBook)
+            : null;
+        const overallBookPct = (bookProg && typeof bookProg.bookPct === 'number') ? bookProg.bookPct : pct;
+
+        currentBook.progressPct = overallBookPct;
         currentBook.lastPlayedChapterId = currentPlayingChapterId;
         currentBook.lastPlayedSentenceIndex = currentSentenceIndex;
-        saveBookProgress(currentBook, pct, currentPlayingChapterId, currentSentenceIndex);
-        if (DOM.heroProgressText) DOM.heroProgressText.textContent = `${pct}% Completed`;
-        if (DOM.heroProgressBarInner) DOM.heroProgressBarInner.style.width = `${pct}%`;
+        saveBookProgress(currentBook, overallBookPct, currentPlayingChapterId, currentSentenceIndex);
+        if (DOM.heroProgressText) DOM.heroProgressText.textContent = `${overallBookPct}% Completed`;
+        if (DOM.heroProgressBarInner) DOM.heroProgressBarInner.style.width = `${overallBookPct}%`;
         if (DOM.heroProgressCircle) {
-            DOM.heroProgressCircle.style.strokeDashoffset = 289 - (289 * pct / 100);
+            DOM.heroProgressCircle.style.strokeDashoffset = 289 - (289 * overallBookPct / 100);
         }
     }
 
