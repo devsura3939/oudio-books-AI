@@ -105,13 +105,18 @@ test('Playback speed controls: persistence, clamping, DOM sync, and audio rate p
 
     assert.equal(mockAudio.defaultPlaybackRate, 1.25, 'defaultPlaybackRate must be 1.25');
     assert.equal(mockAudio.playbackRate, 1.25, 'playbackRate must be 1.25');
+    assert.equal(mockAudio.preservesPitch, true, 'preservesPitch must be true');
+    assert.equal(mockAudio.mozPreservesPitch, true, 'mozPreservesPitch must be true');
+    assert.equal(mockAudio.webkitPreservesPitch, true, 'webkitPreservesPitch must be true');
     assert.ok(listeners.play, 'Must attach play listener for mobile Safari/Chrome persistence');
     assert.ok(listeners.loadedmetadata, 'Must attach loadedmetadata listener');
 
     // Simulate mobile browser resetting playbackRate to 1.0 upon play
     mockAudio.playbackRate = 1.0;
+    mockAudio.preservesPitch = false;
     listeners.play(); // trigger play event listener
     assert.equal(mockAudio.playbackRate, 1.25, 'Event listener must re-apply currentGlobalSpeed on play');
+    assert.equal(mockAudio.preservesPitch, true, 'Event listener must re-apply preservesPitch on play');
 });
 
 test('EngbotReadingUI bookmark management: getBookmarks and removeBookmark', () => {
@@ -219,4 +224,30 @@ test('Table of Contents and Reader sentence bookmark integration', () => {
     assert.ok(source.includes('class="reader-bookmark-pin"'), 'reader-bookmark-pin must be rendered in app.js');
     assert.ok(source.includes('bookmarked-sentence has-bookmark'), 'bookmarked-sentence class must be applied in app.js');
     assert.ok(source.includes('Bookmarks (${allBookmarks.length})'), 'TOC must display Bookmarks section header');
+});
+
+test('Speech synthesis rate scaling: avoids double-speedup and preserves pitch', () => {
+    const source = fs.readFileSync(require.resolve('../static/app.js'), 'utf8');
+
+    // 1. speakFreeNeural must not compound currentGlobalSpeed into ratePct
+    assert.ok(
+        !source.includes('const ratePct = Math.max(-50, Math.min(50, Math.round((currentGlobalSpeed - 1.0) * 100) + finalRateDelta));'),
+        'speakFreeNeural must not double-scale ratePct with currentGlobalSpeed'
+    );
+    assert.ok(
+        source.includes('const ratePct = finalRateDelta;'),
+        'speakFreeNeural must synthesize at natural baseline rate'
+    );
+
+    // 2. inspectAudioSpeechBounds must not aggressively cut sentence ends
+    assert.ok(
+        !source.includes('if (bounds && bounds.hasDeadSilence && bounds.end > 0.15)'),
+        'Audio player must not prematurely truncate sentences via checkSpeechEnd'
+    );
+
+    // 3. applyAudioPlaybackRate sets preservesPitch
+    assert.ok(
+        source.includes('audio.preservesPitch = true;') && source.includes('audio.mozPreservesPitch = true;'),
+        'applyAudioPlaybackRate must preserve natural pitch'
+    );
 });

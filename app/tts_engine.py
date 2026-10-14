@@ -166,27 +166,10 @@ def split_text_into_chunks(text: str, max_chunk_len: int = MAX_CHUNK_CHARS) -> L
 
 def trim_speech_silence(audio_bytes: bytes, leading_pad_ms: int = 20, trailing_pad_ms: int = 70) -> bytes:
     """
-    Trim excessive Edge-TTS dead silence from synthesized MP3 audio bytes.
-    Preserves natural speech onset and trailing room decay (~70ms) while cutting ~800-1100ms of dead air.
-    Gracefully falls back to original bytes if audio processing dependencies are absent.
+    Preserves pristine, full-bitrate Edge-TTS neural audio bytes.
+    Avoids lossy re-encoding (e.g. 48k compression) and phoneme clipping to ensure
+    crystal-clear speech intelligibility at all playback speeds (1.0x - 2.0x).
     """
-    if not audio_bytes or len(audio_bytes) < 1024:
-        return audio_bytes
-    try:
-        from pydub import AudioSegment, silence
-        import io
-        sound = AudioSegment.from_file(io.BytesIO(audio_bytes), format="mp3")
-        ranges = silence.detect_nonsilent(sound, min_silence_len=70, silence_thresh=-38)
-        if ranges:
-            start_trim = max(0, ranges[0][0] - leading_pad_ms)
-            end_trim = min(len(sound), ranges[-1][1] + trailing_pad_ms)
-            if (len(sound) - (end_trim - start_trim)) >= 150:
-                trimmed = sound[start_trim:end_trim]
-                buf = io.BytesIO()
-                trimmed.export(buf, format="mp3", bitrate="48k")
-                return buf.getvalue()
-    except Exception:
-        pass
     return audio_bytes
 
 
@@ -236,8 +219,7 @@ async def synthesize_text_to_file(
                 if not chunk_bytes:
                     raise RuntimeError(f"Voice returned no audio for chunk {idx + 1}; chapter was not published")
                 
-                trimmed_chunk = trim_speech_silence(bytes(chunk_bytes))
-                outfile.write(trimmed_chunk)
+                outfile.write(bytes(chunk_bytes))
                 
                 await asyncio.sleep(0.01)
         
@@ -391,8 +373,8 @@ async def synthesize_single_speech(
     is_ka = chosen_voice.startswith("ka-") or (lang and str(lang).lower().startswith("ka")) or bool(re.search(r"[\u10A0-\u10FF]", text))
     spoken_text = verbalize_georgian_for_tts(text) if is_ka else text
 
-    # Compute cache key
-    key = f"{chosen_voice}_{rate_str}_{pitch_str}_{spoken_text.strip()}"
+    # Compute cache key (v2 ensures clean non-re-encoded neural audio)
+    key = f"v2_{chosen_voice}_{rate_str}_{pitch_str}_{spoken_text.strip()}"
     hash_key = hashlib.sha256(key.encode("utf-8")).hexdigest()[:24]
     cache_path = TTS_CACHE_DIR / f"{hash_key}.mp3"
 
@@ -415,7 +397,6 @@ async def synthesize_single_speech(
         raise RuntimeError(f"Edge-TTS returned no audio for voice '{chosen_voice}'")
 
     audio_bytes = bytes(audio_data)
-    audio_bytes = trim_speech_silence(audio_bytes)
     try:
         cache_path.write_bytes(audio_bytes)
     except Exception as err:

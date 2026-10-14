@@ -35,6 +35,9 @@ function applyAudioPlaybackRate(audio, speed = currentGlobalSpeed) {
     const rate = Math.min(2, Math.max(0.5, Math.round((speed || 1.0) * 20) / 20));
     try { audio.defaultPlaybackRate = rate; } catch (e) {}
     try { audio.playbackRate = rate; } catch (e) {}
+    try { audio.preservesPitch = true; } catch (e) {}
+    try { audio.mozPreservesPitch = true; } catch (e) {}
+    try { audio.webkitPreservesPitch = true; } catch (e) {}
     try {
         if (!audio._rateListenersBound && typeof audio.addEventListener === 'function') {
             audio._rateListenersBound = true;
@@ -43,6 +46,9 @@ function applyAudioPlaybackRate(audio, speed = currentGlobalSpeed) {
                     const r = Math.min(2, Math.max(0.5, currentGlobalSpeed || 1.0));
                     audio.defaultPlaybackRate = r;
                     audio.playbackRate = r;
+                    audio.preservesPitch = true;
+                    audio.mozPreservesPitch = true;
+                    audio.webkitPreservesPitch = true;
                 } catch (_) {}
             };
             audio.addEventListener('play', reapply);
@@ -12032,62 +12038,11 @@ function speakStandardSentence(text, lang) {
     updatePlayerUIState(true);
 }
 
-// ── Audio Speech Boundary & Dead Silence Trimming ─────────────────────────
-// Cuts ~800-1100ms of leading/trailing dead silence in neural TTS clips,
-// enabling tight, seamless audiobook listening and fast 1.25x / 1.5x playback.
+// ── Audio Speech Boundary ─────────────────────────────────────────────────
 const speechBoundsCache = new Map();
 
 function inspectAudioSpeechBounds(blob, cacheKey) {
-    if (!blob || !(blob instanceof Blob)) return Promise.resolve(null);
-    const key = cacheKey || `${blob.size}|${blob.type}`;
-    if (speechBoundsCache.has(key)) return Promise.resolve(speechBoundsCache.get(key));
-
-    return new Promise(resolve => {
-        try {
-            const AudioCtx = (typeof window !== 'undefined') && (window.AudioContext || window.webkitAudioContext);
-            if (!AudioCtx) return resolve(null);
-
-            blob.arrayBuffer().then(buf => {
-                const offlineCtx = new (window.OfflineAudioContext || AudioCtx)(1, 8000, 8000);
-                return offlineCtx.decodeAudioData(buf);
-            }).then(decoded => {
-                const channel = decoded.getChannelData(0);
-                const len = channel.length;
-                const sr = decoded.sampleRate;
-                if (!len || !sr) return resolve(null);
-
-                let startSample = 0;
-                const threshold = 0.01;
-                for (let i = 0; i < len; i += 16) {
-                    if (Math.abs(channel[i]) > threshold) {
-                        startSample = Math.max(0, i - Math.round(sr * 0.02));
-                        break;
-                    }
-                }
-
-                let endSample = len - 1;
-                for (let i = len - 1; i >= 0; i -= 16) {
-                    if (Math.abs(channel[i]) > threshold) {
-                        endSample = Math.min(len - 1, i + Math.round(sr * 0.06));
-                        break;
-                    }
-                }
-
-                const startSec = startSample / sr;
-                const endSec = endSample / sr;
-                const bounds = {
-                    start: startSec,
-                    end: endSec,
-                    duration: decoded.duration,
-                    hasDeadSilence: (decoded.duration - endSec) > 0.15
-                };
-                speechBoundsCache.set(key, bounds);
-                resolve(bounds);
-            }).catch(() => resolve(null));
-        } catch (_) {
-            resolve(null);
-        }
-    });
+    return Promise.resolve(null);
 }
 
 // ── Lookahead Georgian Audio Prefetch Buffer ───────────────────────────────
@@ -12340,12 +12295,7 @@ async function speakGatewayNeural(text, lang) {
         if (targetSrc && currentElevenAudio.src !== targetSrc) {
             currentElevenAudio.src = targetSrc;
         }
-        const bounds = speechBoundsCache.get(targetSrc);
-        if (bounds && bounds.start > 0.03) {
-            try { currentElevenAudio.currentTime = bounds.start; } catch (_) {}
-        } else {
-            try { currentElevenAudio.currentTime = 0; } catch (_) {}
-        }
+        try { currentElevenAudio.currentTime = 0; } catch (_) {}
 
         startBackgroundKeepAlive();
         requestScreenWakeLock();
@@ -12372,20 +12322,6 @@ async function speakGatewayNeural(text, lang) {
         };
 
         currentElevenAudio.onended = advanceToNextSentence;
-
-        if (bounds && bounds.hasDeadSilence && bounds.end > 0.15) {
-            const checkSpeechEnd = () => {
-                if (hasAdvanced || myToken !== currentSpeechToken || !isPlaying || isPaused) {
-                    currentElevenAudio.removeEventListener('timeupdate', checkSpeechEnd);
-                    return;
-                }
-                if (currentElevenAudio.currentTime >= bounds.end) {
-                    currentElevenAudio.removeEventListener('timeupdate', checkSpeechEnd);
-                    advanceToNextSentence();
-                }
-            };
-            currentElevenAudio.addEventListener('timeupdate', checkSpeechEnd);
-        }
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
             console.warn('[speakGatewayNeural] Audio playback error — falling back to free neural/standard');
@@ -12525,7 +12461,7 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
     const finalRateDelta = rateDelta || (v ? (v.rate || 0) : 0);
     const finalPitchDelta = pitchDelta || (v ? (v.pitch || 0) : 0);
 
-    const ratePct = Math.max(-50, Math.min(50, Math.round((currentGlobalSpeed - 1.0) * 100) + finalRateDelta));
+    const ratePct = finalRateDelta;
     const pitchHz = Math.max(-20, Math.min(20, Math.round((currentPitch - 1.0) * 40) + finalPitchDelta));
 
     try {
@@ -12561,12 +12497,7 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
         if (playUrl && currentElevenAudio.src !== playUrl) {
             currentElevenAudio.src = playUrl;
         }
-        const bounds = speechBoundsCache.get(playUrl);
-        if (bounds && bounds.start > 0.03) {
-            try { currentElevenAudio.currentTime = bounds.start; } catch (_) {}
-        } else {
-            try { currentElevenAudio.currentTime = 0; } catch (_) {}
-        }
+        try { currentElevenAudio.currentTime = 0; } catch (_) {}
 
         startBackgroundKeepAlive();
         requestScreenWakeLock();
@@ -12595,20 +12526,6 @@ async function speakFreeNeural(text, lang, targetVoiceId = null, rateDelta = 0, 
         };
 
         currentElevenAudio.onended = advanceToNextSentence;
-
-        if (bounds && bounds.hasDeadSilence && bounds.end > 0.15) {
-            const checkSpeechEnd = () => {
-                if (hasAdvanced || myToken !== currentSpeechToken || !isPlaying || isPaused) {
-                    currentElevenAudio.removeEventListener('timeupdate', checkSpeechEnd);
-                    return;
-                }
-                if (currentElevenAudio.currentTime >= bounds.end) {
-                    currentElevenAudio.removeEventListener('timeupdate', checkSpeechEnd);
-                    advanceToNextSentence();
-                }
-            };
-            currentElevenAudio.addEventListener('timeupdate', checkSpeechEnd);
-        }
 
         currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
@@ -12724,7 +12641,7 @@ async function speakElevenLabsSentence(text, lang = null) {
         requestScreenWakeLock();
         updateMediaSession();
 
-        audio.onended = () => {
+        currentElevenAudio.onended = () => {
             URL.revokeObjectURL(audioUrl);
             if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
             const breathDelay = window.EngbotNarration.pauseMs(textToRead, currentGlobalSpeed);
@@ -12739,7 +12656,7 @@ async function speakElevenLabsSentence(text, lang = null) {
             }, delay);
         };
 
-        audio.onerror = () => {
+        currentElevenAudio.onerror = () => {
             if (myToken !== currentSpeechToken) return;
             console.warn('[ElevenLabs] Audio playback error — falling back to neural TTS');
             if (gatewayTTSAvailable) {
@@ -12749,7 +12666,7 @@ async function speakElevenLabsSentence(text, lang = null) {
             }
         };
 
-        await audio.play();
+        await currentElevenAudio.play();
         if (myToken !== currentSpeechToken || !isPlaying || isPaused) return;
         // Bounded lookahead hides synthesis latency while the current sentence plays.
         for (let ahead=1; ahead<=2; ahead++) {
@@ -13250,6 +13167,11 @@ function setGlobalSpeed(value) {
     }
     if (window._voicePreviewAudio) {
         applyAudioPlaybackRate(window._voicePreviewAudio, clamped);
+    }
+    if (typeof georgianAudioPrefetchCache !== 'undefined' && georgianAudioPrefetchCache && georgianAudioPrefetchCache.forEach) {
+        georgianAudioPrefetchCache.forEach(cachedAudio => {
+            try { applyAudioPlaybackRate(cachedAudio, clamped); } catch (_) {}
+        });
     }
 
     // Browser speechSynthesis cannot change rate mid-utterance: re-speak the

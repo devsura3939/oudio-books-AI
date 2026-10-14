@@ -49,3 +49,9 @@ def test_offline_voice_list_identifies_georgian_voices():
     georgian = [v for v in voices if v.short_name.startswith('ka-')]
     assert georgian
     assert all(v.language == 'ka' for v in georgian)
+
+
+def test_trim_speech_silence_preserves_audio_quality():
+    from app.tts_engine import trim_speech_silence
+    sample = b"ID3\x04\x00\x00\x00\x00\x00\x00test_audio_frame_data_pristine_quality" * 50
+    assert trim_speech_silence(sample) == sample
