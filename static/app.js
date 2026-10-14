@@ -4222,32 +4222,89 @@ function closeMobileNav() {
 window.closeMobileNav = closeMobileNav;
 window._fullCloseMobileNav = closeMobileNav;
 
-function jumpToBookmark(chapterId, sentenceIndex) {
+async function jumpToBookmark(chapterId, sentenceIndex) {
     closeToCDrawer();
+    const book = readerBook || currentBook;
+    if (!book) return;
     const chapNum = Number(chapterId);
     const targetChapId = isNaN(chapNum) ? chapterId : chapNum;
-    if (String(readerChapterId) !== String(targetChapId)) {
-        onReaderChapterChange(targetChapId);
+    sentenceIndex = Number(sentenceIndex) || 0;
+
+    if (!readerActive) {
+        await openReader(book.id, targetChapId, (typeof currentLang !== 'undefined' ? currentLang : 'en'));
     }
-    setTimeout(() => {
-        if (readerSentenceToPageMap && typeof readerSentenceToPageMap[sentenceIndex] === 'number') {
-            readerCurrentPage = readerSentenceToPageMap[sentenceIndex] + 1;
-            renderCurrentPage();
+
+    if (String(readerChapterId) !== String(targetChapId)) {
+        readerChapterId = targetChapId;
+        readerCurrentPage = 1;
+        paginateChapter();
+    }
+
+    if (readerSentenceToPageMap && typeof readerSentenceToPageMap[sentenceIndex] === 'number') {
+        const targetPage = readerSentenceToPageMap[sentenceIndex] + 1;
+        currentTurnDir = targetPage >= readerCurrentPage ? 'next' : 'prev';
+        readerCurrentPage = targetPage;
+    }
+    renderCurrentPage();
+
+    if (isPlaying) {
+        if (String(currentPlayingChapterId) !== String(targetChapId)) {
+            playChapterAudio(targetChapId, sentenceIndex, true);
+        } else {
+            currentSentenceIndex = sentenceIndex;
+            speakCurrentSentence();
         }
-        highlightReaderSentence(sentenceIndex);
+    } else {
+        currentSentenceIndex = sentenceIndex;
+    }
+
+    requestAnimationFrame(() => {
+        highlightReaderSentence(sentenceIndex, true);
         const targetEl = document.getElementById(`rsentence_${sentenceIndex}`);
         if (targetEl) {
             targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
             targetEl.classList.add('reading-resume-anchor');
-            setTimeout(() => targetEl.classList.remove('reading-resume-anchor'), 2500);
+            setTimeout(() => targetEl.classList.remove('reading-resume-anchor'), 3000);
         }
-        if (isPlaying && String(currentPlayingChapterId) === String(targetChapId)) {
-            currentSentenceIndex = sentenceIndex;
-            speakCurrentSentence();
+        if (readerMode === 'scroll' && DOM.readerScrollContainer && targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-    }, 160);
+    });
+
+    if (typeof showReaderToast === 'function') {
+        const chap = book.chapters?.find(c => String(c.id) === String(targetChapId));
+        const chapTitle = chap ? EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang) : '';
+        showReaderToast(`🔖 ${chapTitle || 'Bookmark'}`);
+    }
 }
 window.jumpToBookmark = jumpToBookmark;
+
+function playBookmarkAudio(chapterId, sentenceIndex) {
+    closeToCDrawer();
+    const book = readerBook || currentBook;
+    if (!book) return;
+    const chapNum = Number(chapterId);
+    const targetChapId = isNaN(chapNum) ? chapterId : chapNum;
+    sentenceIndex = Number(sentenceIndex) || 0;
+
+    if (String(currentBook?.id) !== String(book.id)) {
+        selectBook(book.id, false);
+    }
+    playChapterAudio(targetChapId, sentenceIndex, true);
+    if (readerActive) {
+        if (String(readerChapterId) !== String(targetChapId)) {
+            readerChapterId = targetChapId;
+            paginateChapter();
+        }
+        if (readerSentenceToPageMap && typeof readerSentenceToPageMap[sentenceIndex] === 'number') {
+            readerCurrentPage = readerSentenceToPageMap[sentenceIndex] + 1;
+            renderCurrentPage();
+        }
+        highlightReaderSentence(sentenceIndex, true);
+    }
+    if (typeof showToast === 'function') showToast('Playing from bookmark', 'info');
+}
+window.playBookmarkAudio = playBookmarkAudio;
 
 function removeBookmarkFromTOC(slot) {
     const book = readerBook || currentBook;
@@ -4262,11 +4319,13 @@ function removeBookmarkFromTOC(slot) {
 window.removeBookmarkFromTOC = removeBookmarkFromTOC;
 
 function renderToCDrawerList() {
-    if (!DOM.tocDrawerList || !readerBook) return;
+    const book = readerBook || currentBook;
+    if (!DOM.tocDrawerList || !book) return;
+    if (!readerBook) readerBook = book;
     DOM.tocDrawerList.innerHTML = '';
 
     const allBookmarks = (typeof window.EngbotReadingUI?.getBookmarks === 'function')
-        ? window.EngbotReadingUI.getBookmarks(readerBook, readerActive ? readerLang : null)
+        ? window.EngbotReadingUI.getBookmarks(book)
         : [];
 
     // 1. Dedicated Bookmarks Section at Top if any exist
@@ -4284,22 +4343,53 @@ function renderToCDrawerList() {
         `;
         const bmContainer = bmSection.querySelector('#tocBookmarksContainer');
         allBookmarks.forEach(bm => {
-            const chap = readerBook.chapters.find(c => String(c.id) === String(bm.chapterId));
+            const chap = book.chapters.find(c => String(c.id) === String(bm.chapterId));
             const chapTitle = chap ? EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang) : `Chapter ${bm.chapterId}`;
+
+            let pageBadgeStr = '';
+            if (bm.bookPage) {
+                pageBadgeStr = `Page ${bm.bookPage}`;
+            } else if (chap && typeof getRealBookPageInfo === 'function') {
+                let pInChap = 1;
+                if (String(readerChapterId) === String(bm.chapterId) && readerSentenceToPageMap && typeof readerSentenceToPageMap[bm.sentence] === 'number') {
+                    pInChap = readerSentenceToPageMap[bm.sentence] + 1;
+                } else {
+                    const words = chap.word_count || (chap.text ? chap.text.split(/\s+/).length : 500);
+                    const estPages = Math.max(1, Math.round(words / 280));
+                    const estSentences = Math.max(1, Math.round(words / 15));
+                    pInChap = Math.max(1, Math.min(estPages, Math.round(((bm.sentence + 1) / estSentences) * estPages)));
+                }
+                const pInfo = getRealBookPageInfo(chap, pInChap, book);
+                if (pInfo && pInfo.bookPage) {
+                    pageBadgeStr = `Page ${pInfo.bookPage}`;
+                }
+            }
+
+            let displayLabel = bm.label || 'Bookmark';
+            if (/^Part|Chapter|თავი/i.test(displayLabel) && displayLabel.includes('sentence')) {
+                displayLabel = pageBadgeStr ? `${chapTitle} • ${pageBadgeStr}` : `${chapTitle} • Sentence ${bm.sentence + 1}`;
+            }
+
             const item = document.createElement('div');
             item.className = 'toc-bookmark-item flex items-center justify-between gap-2.5';
             item.onclick = () => jumpToBookmark(bm.chapterId, bm.sentence);
             item.innerHTML = `
                 <div class="overflow-hidden min-w-0 flex-1">
-                    <p class="text-xs font-semibold text-white truncate flex items-center gap-1">
+                    <div class="flex items-center gap-1.5 truncate">
                         <span class="material-symbols-outlined text-xs text-georgian-gold flex-shrink-0">bookmark</span>
-                        <span>${escapeHtml(bm.label || 'Bookmark')}</span>
-                    </p>
-                    <p class="text-[10px] text-on-surface-variant truncate mt-0.5">${escapeHtml(chapTitle)} • "${escapeHtml((bm.anchor || '').slice(0, 70))}"</p>
+                        <span class="text-xs font-semibold text-white truncate">${escapeHtml(displayLabel)}</span>
+                        ${pageBadgeStr ? `<span class="text-[9px] px-1 py-0.2 rounded bg-georgian-gold/20 text-georgian-gold font-bold border border-georgian-gold/30 flex-shrink-0">${escapeHtml(pageBadgeStr)}</span>` : ''}
+                    </div>
+                    <p class="text-[10px] text-on-surface-variant truncate mt-0.5">${escapeHtml(chapTitle)} • Sentence ${bm.sentence + 1} • "${escapeHtml((bm.anchor || '').slice(0, 65))}"</p>
                 </div>
-                <button type="button" onclick="event.stopPropagation(); removeBookmarkFromTOC('${escapeHtml(bm.slot)}')" class="p-1 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-red-400 transition" title="Delete bookmark">
-                    <span class="material-symbols-outlined text-sm">delete</span>
-                </button>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <button type="button" onclick="event.stopPropagation(); playBookmarkAudio('${escapeHtml(bm.chapterId)}', ${bm.sentence})" class="p-1 rounded-lg hover:bg-primary-container/20 text-primary-fixed hover:text-white transition" title="Listen from this bookmark">
+                        <span class="material-symbols-outlined text-base">play_circle</span>
+                    </button>
+                    <button type="button" onclick="event.stopPropagation(); removeBookmarkFromTOC('${escapeHtml(bm.slot)}')" class="p-1 rounded-lg hover:bg-red-500/20 text-on-surface-variant hover:text-red-400 transition" title="Delete bookmark">
+                        <span class="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                </div>
             `;
             bmContainer.appendChild(item);
         });
@@ -4310,12 +4400,12 @@ function renderToCDrawerList() {
     const chHeader = document.createElement('div');
     chHeader.className = 'px-1 mb-1.5 flex items-center justify-between';
     chHeader.innerHTML = `
-        <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Chapters (${readerBook.chapters.length})</span>
+        <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Chapters (${book.chapters.length})</span>
     `;
     DOM.tocDrawerList.appendChild(chHeader);
 
     // 3. Chapters List with Bookmark Badges
-    readerBook.chapters.forEach((chap, idx) => {
+    book.chapters.forEach((chap, idx) => {
         const isCurrent = String(chap.id) === String(readerChapterId);
         const hasKa = !!(chap.text_ka && chap.text_ka.trim().length > 0) || chap.translation_state?.ka?.status === 'complete';
         const chapBms = allBookmarks.filter(b => String(b.chapterId) === String(chap.id));
@@ -4327,7 +4417,7 @@ function renderToCDrawerList() {
         };
 
         const bmBadge = chapBms.length > 0
-            ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold font-bold border border-georgian-gold/30 flex items-center gap-0.5 flex-shrink-0"><span class="material-symbols-outlined text-xs">bookmark</span>${chapBms.length}</span>`
+            ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold font-bold border border-georgian-gold/30 flex items-center gap-0.5 flex-shrink-0" title="${chapBms.length} bookmark(s) in this chapter"><span class="material-symbols-outlined text-xs">bookmark</span>${chapBms.length}</span>`
             : '';
 
         const stats = EngbotCore.chapterStats(chap);
@@ -8079,6 +8169,16 @@ function setupKeyboardAndTouchControls() {
                 if (readerActive) {
                     e.preventDefault();
                     toggleReaderToolbars();
+                }
+                break;
+
+            case 'b':
+            case 'B':
+                if (readerActive || isPlaying || isPaused) {
+                    e.preventDefault();
+                    if (window.EngbotReadingUI && typeof window.EngbotReadingUI.bookmark === 'function') {
+                        window.EngbotReadingUI.bookmark();
+                    }
                 }
                 break;
         }

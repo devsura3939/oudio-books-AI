@@ -35,18 +35,50 @@
     }
     function create({ storage, user, client, onStatus = () => {} }) {
         const contexts = new Map(); let channel, subscribedOwner;
-        function write(ctx) { if (!ctx.deleted) storage.setItem(ctx.key, JSON.stringify(ctx.entries)); }
+        function write(ctx) {
+            if (!ctx.deleted) {
+                storage.setItem(ctx.key, JSON.stringify(ctx.entries));
+                try {
+                    const backupKey = 'lumina_bookmarks_' + (ctx.book.id || ctx.book.slug);
+                    const bms = {};
+                    for (const [s, e] of Object.entries(ctx.entries)) {
+                        if (s.startsWith('bookmark:')) bms[s] = e;
+                    }
+                    if (Object.keys(bms).length > 0) {
+                        storage.setItem(backupKey, JSON.stringify(bms));
+                    }
+                } catch (_) {}
+            }
+        }
         function context(book) {
-            const owner = user(); if (!owner) throw new Error('Sign in to save your place.');
-            if (book.user_id && book.user_id !== owner) throw new Error('This book belongs to another account.');
+            const owner = user() || 'guest';
+            if (book.user_id && book.user_id !== owner && owner !== 'guest') throw new Error('This book belongs to another account.');
             const key = 'engbot_reading_v1:' + owner + ':' + book.id;
             if (!contexts.has(key)) {
                 let entries = {}; try { entries = JSON.parse(storage.getItem(key) || '{}'); } catch (_) {}
+                if (owner !== 'guest' && Object.keys(entries).length === 0) {
+                    try {
+                        const guestKey = 'engbot_reading_v1:guest:' + book.id;
+                        const guestEntries = JSON.parse(storage.getItem(guestKey) || '{}');
+                        if (guestEntries && Object.keys(guestEntries).length > 0) {
+                            entries = { ...guestEntries };
+                            storage.setItem(key, JSON.stringify(entries));
+                        }
+                    } catch (_) {}
+                }
+                try {
+                    const backupKey = 'lumina_bookmarks_' + (book.id || book.slug);
+                    const backup = JSON.parse(storage.getItem(backupKey) || '{}');
+                    if (backup && Object.keys(backup).length > 0) {
+                        entries = merge(entries, Object.values(backup));
+                        storage.setItem(key, JSON.stringify(entries));
+                    }
+                } catch (_) {}
                 contexts.set(key, { key, owner, book, entries, timer: null, flushing: false });
             }
             const ctx = contexts.get(key); ctx.book = book;
             const sb = client();
-            if (sb && subscribedOwner !== owner) {
+            if (sb && subscribedOwner !== owner && owner !== 'guest') {
                 if (channel) sb.removeChannel(channel);
                 subscribedOwner = owner;
                 channel = sb.channel('reader-entries-' + owner).on('postgres_changes', { event: '*', schema: 'public', table: 'reader_entries', filter: 'user_id=eq.' + owner }, event => {

@@ -11,6 +11,14 @@
     }
     function readIndex() {
         if (isPlaying && !isUserManuallyNavigating && String(currentPlayingChapterId) === String(readerChapterId)) return currentSentenceIndex;
+        if (typeof currentSentenceIndex === 'number' && typeof readerSentenceToPageMap !== 'undefined' && readerSentenceToPageMap[currentSentenceIndex] !== undefined) {
+            const sentencePage = readerSentenceToPageMap[currentSentenceIndex] + 1;
+            const isDual = typeof readerMode !== 'undefined' && readerMode === 'dual' && window.innerWidth >= 900;
+            const leftPage = readerCurrentPage % 2 === 0 ? readerCurrentPage - 1 : readerCurrentPage;
+            if (isDual ? (sentencePage === leftPage || sentencePage === leftPage + 1) : (sentencePage === readerCurrentPage)) {
+                return currentSentenceIndex;
+            }
+        }
         if (readerMode === 'scroll') {
             if (readerAnchor?.book === readerBook?.id && String(readerAnchor.chapter) === String(readerChapterId)
                 && (readerAnchor.scrollLocked || Math.abs(DOM.readerScrollContainer.scrollTop - readerAnchor.scrollTop) < 2)) return readerAnchor.index;
@@ -126,13 +134,21 @@
                 controls.append(select);
                 button(controls, 'Start selected chapter', () => finish({ chapterId: select.value, language, sentence: 0 }));
                 button(controls, 'Start from the beginning', () => finish({ chapterId: book.chapters[0]?.id, language, sentence: 0 }));
-                const marks = Object.entries(entries).filter(([slot, entry]) => slot.startsWith('bookmark:') && !entry.value.deleted && entry.value.language === language);
+                const marks = Object.entries(entries).filter(([slot, entry]) => slot.startsWith('bookmark:') && !entry.value.deleted && (!language || entry.value.language === language || !entry.value.language));
                 if (marks.length) { const h = document.createElement('h3'); h.textContent = 'Bookmarks'; controls.append(h); }
                 for (const [slot, entry] of marks) {
                     const row = document.createElement('div'); row.className = 'reading-bookmark'; controls.append(row);
                     button(row, entry.value.label || entry.value.anchor || 'Saved bookmark', () => finish(entry.value));
                     const remove = button(row, 'Remove', () => {
                         store.save(book, slot, { deleted: true }, true);
+                        try {
+                            const backupKey = 'lumina_bookmarks_' + (book.id || book.slug);
+                            const curBackup = JSON.parse(localStorage.getItem(backupKey) || '{}');
+                            if (curBackup[slot]) {
+                                curBackup[slot].value = { ...(curBackup[slot].value || {}), deleted: true };
+                                localStorage.setItem(backupKey, JSON.stringify(curBackup));
+                            }
+                        } catch (_) {}
                         row.remove();
                         notifyBookmarksChanged(book);
                     });
@@ -152,7 +168,12 @@
         if (!book) return [];
         try {
             const entries = store.entries(book);
-            return Object.entries(entries || {})
+            const backupKey = 'lumina_bookmarks_' + (book.id || book.slug);
+            let backupEntries = {};
+            try { backupEntries = JSON.parse(localStorage.getItem(backupKey) || '{}'); } catch (_) {}
+            const merged = { ...backupEntries, ...(entries || {}) };
+
+            return Object.entries(merged)
                 .filter(([slot, entry]) => slot.startsWith('bookmark:') && entry?.value && !entry.value.deleted && (!language || entry.value.language === language))
                 .map(([slot, entry]) => ({
                     slot,
@@ -173,28 +194,94 @@
         if (!book || !slot) return false;
         try {
             store.save(book, slot, { deleted: true }, true);
+            const backupKey = 'lumina_bookmarks_' + (book.id || book.slug);
+            try {
+                const curBackup = JSON.parse(localStorage.getItem(backupKey) || '{}');
+                if (curBackup[slot]) {
+                    curBackup[slot].value = { ...(curBackup[slot].value || {}), deleted: true };
+                    localStorage.setItem(backupKey, JSON.stringify(curBackup));
+                }
+            } catch (_) {}
             notifyBookmarksChanged(book);
             return true;
         } catch (_) {
             return false;
         }
     }
-    function bookmark() {
-        const saved = current(); if (!saved) { showToast('Open a book or start listening first.', 'info'); return; }
-        const el = dialog('Bookmark this place'); const label = document.createElement('label'); label.textContent = 'Bookmark name'; el.append(label);
-        const input = document.createElement('input'); input.maxLength = 120; input.setAttribute('aria-label', 'Bookmark name');
-        input.value = `${saved.book.chapters.find(c => String(c.id) === String(saved.value.chapterId)).title} · sentence ${saved.value.sentence + 1}`; el.append(input);
+    function bookmark(customSentenceIdx = null) {
+        const saved = current();
+        if (!saved) {
+            if (typeof showToast === 'function') showToast('Open a book or start listening first.', 'info');
+            return;
+        }
+        const theBook = saved.book;
+        const targetSentence = (typeof customSentenceIdx === 'number') ? customSentenceIdx : saved.value.sentence;
+        const chap = theBook.chapters.find(c => String(c.id) === String(saved.value.chapterId));
+        const chapTitle = chap ? (window.EngbotCore ? window.EngbotCore.chapterTitle(chap, (typeof readerActive !== 'undefined' && readerActive) ? readerLang : currentLang) : chap.title) : ('Chapter ' + saved.value.chapterId);
+
+        let realBookPage = null;
+        let totalBookPages = null;
+        let pageStr = '';
+        if (chap && typeof getRealBookPageInfo === 'function') {
+            let pInChap = 1;
+            if (typeof readerCurrentPage !== 'undefined' && readerCurrentPage > 0) {
+                pInChap = readerCurrentPage;
+            } else if (typeof readerSentenceToPageMap !== 'undefined' && readerSentenceToPageMap && typeof readerSentenceToPageMap[targetSentence] === 'number') {
+                pInChap = readerSentenceToPageMap[targetSentence] + 1;
+            }
+            const pInfo = getRealBookPageInfo(chap, pInChap, theBook);
+            if (pInfo && pInfo.bookPage) {
+                realBookPage = pInfo.bookPage;
+                totalBookPages = pInfo.totalBookPages;
+                pageStr = `Page ${realBookPage}`;
+            }
+        }
+
+        const defaultLabel = pageStr
+            ? `${chapTitle} · ${pageStr} (Sentence ${targetSentence + 1})`
+            : `${chapTitle} · Sentence ${targetSentence + 1}`;
+
+        const el = dialog('Bookmark this place');
+        const label = document.createElement('label');
+        label.textContent = 'Bookmark name';
+        el.append(label);
+
+        const input = document.createElement('input');
+        input.maxLength = 120;
+        input.setAttribute('aria-label', 'Bookmark name');
+        input.value = defaultLabel;
+        el.append(input);
+
         closeDialog = () => { el.close(); el.remove(); activeDialog = null; closeDialog = null; };
+
         button(el, 'Save bookmark', () => {
             try {
-                store.save(saved.book, 'bookmark:' + crypto.randomUUID(), { ...saved.value, label: input.value.trim() || saved.value.anchor }, true);
+                const bmSlot = 'bookmark:' + crypto.randomUUID();
+                const bmValue = {
+                    ...saved.value,
+                    sentence: targetSentence,
+                    label: input.value.trim() || defaultLabel,
+                    bookPage: realBookPage,
+                    totalBookPages: totalBookPages
+                };
+                store.save(theBook, bmSlot, bmValue, true);
+                try {
+                    const backupKey = 'lumina_bookmarks_' + (theBook.id || theBook.slug);
+                    const curBackup = JSON.parse(localStorage.getItem(backupKey) || '{}');
+                    curBackup[bmSlot] = { slot: bmSlot, value: bmValue, observed_at: new Date().toISOString() };
+                    localStorage.setItem(backupKey, JSON.stringify(curBackup));
+                } catch (_) {}
                 closeDialog();
-                showToast('Bookmark saved.', 'success');
-                notifyBookmarksChanged(saved.book);
+                if (typeof showToast === 'function') showToast('Bookmark saved.', 'success');
+                notifyBookmarksChanged(theBook);
+            } catch (_) {
+                if (typeof showToast === 'function') showToast('Bookmark could not be saved.', 'error');
             }
-            catch (_) { showToast('Bookmark could not be saved.', 'error'); }
         }, true);
-        button(el, 'Cancel', () => closeDialog()); el.addEventListener('cancel', () => closeDialog()); el.showModal(); input.select();
+        button(el, 'Cancel', () => closeDialog());
+        el.addEventListener('cancel', () => closeDialog());
+        el.showModal();
+        input.select();
     }
     function restore(saved) {
         const chap = readerBook?.chapters.find(c => String(c.id) === String(readerChapterId)); if (!chap) return;
