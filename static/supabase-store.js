@@ -653,6 +653,7 @@
       lastPlayedChapterId: meta.lastPlayedChapterId ?? (chapters[0] ? chapters[0].id : null),
       lastPlayedSentenceIndex: meta.lastPlayedSentenceIndex ?? 0,
       progressPct: meta.progressPct || 0,
+      lastPlayedAt: meta.lastPlayedAt || bookRow.updated_at || null,
       extra: flattenedExtra,
     });
   }
@@ -739,6 +740,7 @@
         lastPlayedChapterId: book.lastPlayedChapterId ?? null,
         lastPlayedSentenceIndex: book.lastPlayedSentenceIndex ?? 0,
         progressPct: book.progressPct || 0,
+        lastPlayedAt: book.lastPlayedAt || null,
         extra: extra,
       },
     });
@@ -1090,9 +1092,11 @@
         if (progressPct !== undefined && progressPct !== null) meta.progressPct = Number(progressPct);
         if (lastPlayedChapterId !== undefined && lastPlayedChapterId !== null) meta.lastPlayedChapterId = lastPlayedChapterId;
         if (lastPlayedSentenceIndex !== undefined && lastPlayedSentenceIndex !== null) meta.lastPlayedSentenceIndex = Number(lastPlayedSentenceIndex);
+        var nowIso = new Date().toISOString();
+        meta.lastPlayedAt = nowIso;
         await client
           .from("books")
-          .update({ metadata: sanitizeForPostgres(meta) })
+          .update({ metadata: sanitizeForPostgres(meta), updated_at: nowIso })
           .eq("id", bookRes.data.id)
           .eq("user_id", userId);
         return true;

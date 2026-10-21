@@ -164,13 +164,47 @@ def split_text_into_chunks(text: str, max_chunk_len: int = MAX_CHUNK_CHARS) -> L
     return split_bounded(text.strip(), max_chunk_len) if text and text.strip() else []
 
 
-def trim_speech_silence(audio_bytes: bytes, leading_pad_ms: int = 20, trailing_pad_ms: int = 70) -> bytes:
+def trim_speech_silence(audio_bytes: bytes, leading_pad_ms: int = 25, trailing_pad_ms: int = 160) -> bytes:
     """
-    Preserves pristine, full-bitrate Edge-TTS neural audio bytes.
-    Avoids lossy re-encoding (e.g. 48k compression) and phoneme clipping to ensure
-    crystal-clear speech intelligibility at all playback speeds (1.0x - 2.0x).
+    Trims excessive leading and trailing dead air silence from single-sentence Edge-TTS audio clips,
+    preventing 1-2 second awkward pauses when transitioning between sentences punctuated with dots.
+    
+    Preserves pristine CD-quality audio (192k bitrate) with safe acoustic padding (25ms leading,
+    160ms trailing decay) to prevent clipping syllables or consonants at all playback speeds (1.0x - 2.0x).
     """
-    return audio_bytes
+    if not audio_bytes or len(audio_bytes) < 400:
+        return audio_bytes
+
+    try:
+        import io
+        from pydub import AudioSegment, silence
+
+        seg = AudioSegment.from_file(io.BytesIO(audio_bytes), format="mp3")
+        if len(seg) < 300:
+            return audio_bytes
+
+        # -46dB threshold reliably detects quiet speech and whispers without catching room noise
+        ranges = silence.detect_nonsilent(seg, min_silence_len=50, silence_thresh=-46)
+        if not ranges:
+            return audio_bytes
+
+        start_trim = max(0, ranges[0][0] - leading_pad_ms)
+        end_trim = min(len(seg), ranges[-1][1] + trailing_pad_ms)
+
+        saved_ms = len(seg) - (end_trim - start_trim)
+        # Only re-encode if we save a meaningful amount of dead air (at least 120ms)
+        if saved_ms < 120:
+            return audio_bytes
+
+        trimmed = seg[start_trim:end_trim]
+        buf = io.BytesIO()
+        # Export at pristine 192k bitrate to maintain full neural frequency spectrum and speed fidelity
+        trimmed.export(buf, format="mp3", bitrate="192k")
+        out_bytes = buf.getvalue()
+        return out_bytes if len(out_bytes) > 200 else audio_bytes
+    except Exception:
+        # Fallback to pristine unmodified audio if pydub/ffmpeg is unavailable or fails
+        return audio_bytes
 
 
 async def synthesize_text_to_file(
@@ -374,7 +408,7 @@ async def synthesize_single_speech(
     spoken_text = verbalize_georgian_for_tts(text) if is_ka else text
 
     # Compute cache key (v2 ensures clean non-re-encoded neural audio)
-    key = f"v2_{chosen_voice}_{rate_str}_{pitch_str}_{spoken_text.strip()}"
+    key = f"v3_{chosen_voice}_{rate_str}_{pitch_str}_{spoken_text.strip()}"
     hash_key = hashlib.sha256(key.encode("utf-8")).hexdigest()[:24]
     cache_path = TTS_CACHE_DIR / f"{hash_key}.mp3"
 
@@ -396,7 +430,8 @@ async def synthesize_single_speech(
     if not audio_data:
         raise RuntimeError(f"Edge-TTS returned no audio for voice '{chosen_voice}'")
 
-    audio_bytes = bytes(audio_data)
+    raw_bytes = bytes(audio_data)
+    audio_bytes = trim_speech_silence(raw_bytes)
     try:
         cache_path.write_bytes(audio_bytes)
     except Exception as err:

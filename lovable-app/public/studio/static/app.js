@@ -2556,9 +2556,64 @@ async function restoreLastActiveSessionOrFirstBook(books) {
         } catch (_) {}
     }
 
+    // Cross-Device Continuity Fallback:
+    // If no local session exists (new device, incognito, or cleared browser storage),
+    // pick the book that has the most recent activity across all user books in the cloud.
+    if (!targetBook) {
+        const booksWithActivity = books.slice().filter(b => (
+            (b.progressPct && b.progressPct > 0) ||
+            (b.lastPlayedSentenceIndex && b.lastPlayedSentenceIndex > 0) ||
+            (b.lastPlayedChapterId && b.chapters && String(b.lastPlayedChapterId) !== String(b.chapters[0]?.id)) ||
+            b.lastPlayedAt
+        ));
+
+        if (booksWithActivity.length > 0) {
+            booksWithActivity.sort((a, b) => {
+                const timeA = Math.max(Date.parse(a.lastPlayedAt || 0) || 0, Date.parse(a.updated_at || 0) || 0, Date.parse(a.updatedAt || 0) || 0);
+                const timeB = Math.max(Date.parse(b.lastPlayedAt || 0) || 0, Date.parse(b.updated_at || 0) || 0, Date.parse(b.updatedAt || 0) || 0);
+                return timeB - timeA;
+            });
+            targetBook = booksWithActivity[0];
+        }
+    }
+
     if (!targetBook) {
         targetBook = books[0];
         savedSession = null;
+    }
+
+    // If local savedSession is missing on this device, reconstruct it from cloud book progress and reader entries
+    if (!savedSession && targetBook) {
+        let cloudPos = null;
+        if (window.EngbotReadingUI?.store) {
+            try {
+                const entries = await window.EngbotReadingUI.store.load(targetBook);
+                const prefLang = targetBook.lang || 'en';
+                cloudPos = entries?.['position:' + prefLang]?.value || entries?.['position:en']?.value || entries?.['position:ka']?.value;
+            } catch (_) {}
+        }
+        const resolvedChapterId = cloudPos?.chapterId ?? targetBook.lastPlayedChapterId;
+        const resolvedSentence = cloudPos?.sentence ?? targetBook.lastPlayedSentenceIndex ?? 0;
+        const resolvedLang = cloudPos?.language ?? targetBook.lang ?? 'en';
+        const hasProgress = (targetBook.progressPct && targetBook.progressPct > 0) ||
+                            (resolvedSentence > 0) ||
+                            (resolvedChapterId && targetBook.chapters && String(resolvedChapterId) !== String(targetBook.chapters[0]?.id)) ||
+                            Boolean(cloudPos);
+
+        if (hasProgress && resolvedChapterId) {
+            savedSession = {
+                userId: typeof getCurrentUserId === 'function' ? getCurrentUserId() : null,
+                bookId: String(targetBook.id),
+                chapterId: resolvedChapterId,
+                sentenceIndex: resolvedSentence,
+                anchor: cloudPos?.anchor || '',
+                lang: resolvedLang,
+                mode: cloudPos?.mode || 'listen',
+                readerActive: cloudPos?.mode === 'read',
+                wasPlaying: false,
+                updatedAt: Date.now()
+            };
+        }
     }
 
     await selectBook(targetBook.id, false);
@@ -3106,17 +3161,13 @@ function saveBookProgress(book, progressPct, lastPlayedChapterId, sentenceIndex)
     // 2. Debounce cloud update to Supabase metadata without touching chapters
     if (usingCloud && window.LuminaStore && typeof window.LuminaStore.updateProgress === 'function') {
         const sid = book.id || book.slug;
-        if (!sid) return;
-
-        const pctDiff = Math.abs(progressPct - _lastSavedProgressPct);
-
-        if (chapterChanged || pctDiff >= 5) {
+        if (sid) {
             clearTimeout(_progressDebounceTimer);
             _progressDebounceTimer = setTimeout(() => {
                 _lastSavedProgressPct = progressPct;
                 _lastSavedChapterId = lastPlayedChapterId;
                 window.LuminaStore.updateProgress(sid, progressPct, lastPlayedChapterId, book.lastPlayedSentenceIndex).catch(() => {});
-            }, 6000);
+            }, 1500);
         }
     }
 }
@@ -5712,6 +5763,10 @@ async function login(email, password, rememberParam) {
         // Fast local-first library load
         try {
             await loadBooks();
+            const books = await getAllBooks();
+            if (books && books.length > 0) {
+                await restoreLastActiveSessionOrFirstBook(books);
+            }
         } catch (e) {
             console.warn('loadBooks error after login:', e);
         }

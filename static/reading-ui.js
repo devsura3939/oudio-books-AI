@@ -79,12 +79,23 @@
                     saved = { chapterId: book.lastPlayedChapterId, sentence: book.lastPlayedSentenceIndex || 0, language };
                 }
             }
-            void store.load(book).catch(() => {});
+            if (!saved) {
+                try {
+                    const entries = await store.load(book);
+                    if (entries && entries['position:' + language]?.value) {
+                        saved = entries['position:' + language].value;
+                    }
+                } catch (_) {}
+            } else {
+                void store.load(book).catch(() => {});
+            }
             if (preferredChapter != null) {
                 if (saved && String(saved.chapterId) === String(preferredChapter)) {
                     return saved;
                 }
-                const defaultSentence = (saved && String(saved.chapterId) === String(preferredChapter)) ? (saved.sentence || 0) : 0;
+                const defaultSentence = (saved && String(saved.chapterId) === String(preferredChapter))
+                    ? (saved.sentence || 0)
+                    : ((book.lastPlayedChapterId && String(book.lastPlayedChapterId) === String(preferredChapter)) ? (book.lastPlayedSentenceIndex || 0) : 0);
                 return { chapterId: preferredChapter, language, sentence: defaultSentence };
             }
             if (saved && book.chapters?.some(c => String(c.id) === String(saved.chapterId))) {
