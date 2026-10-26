@@ -1,4 +1,4 @@
-﻿__pycache__/
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -27,3 +27,4 @@ local-engine/model-cache/
 
 local-engine/tools/
 local-engine/ui-check.png
+ORACLE_CREDENTIALS.md
