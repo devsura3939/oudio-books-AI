@@ -1,13 +1,23 @@
-/* AudioRead Studio - Nocturne Spatial Design System */
+/* AudioRead Studio - Chromatic Spatial Design System */
 
 :root {
-    --bg-cosmic: #05070b;
-    --card-bg: rgba(13, 18, 28, 0.78);
-    --card-border: rgba(255, 255, 255, 0.085);
-    --card-hover-border: rgba(62, 244, 200, 0.42);
-    --accent-indigo: #3ef4c8;
-    --accent-purple: #f3c969;
-    --accent-cyan: #60a5fa;
+    --bg-cosmic: #070911;
+    --card-bg: rgba(14, 19, 32, 0.82);
+    --card-border: rgba(148, 163, 184, 0.14);
+    --card-hover-border: rgba(46, 230, 197, 0.48);
+    --accent-indigo: #818cf8;
+    --accent-purple: #f5c451;
+    --accent-cyan: #2ee6c5;
+}
+
+html.theme-light {
+    --bg-cosmic: #f4f6fb;
+    --card-bg: rgba(255, 255, 255, 0.90);
+    --card-border: rgba(15, 23, 42, 0.10);
+    --card-hover-border: rgba(79, 70, 229, 0.36);
+    --accent-indigo: #4f46e5;
+    --accent-purple: #d97706;
+    --accent-cyan: #0d9488;
 }
 
 /* Spatial Obsidian & Coordinate Lattice Canvas */
@@ -86,20 +96,20 @@ button:disabled,
 
 /* Hardware Spatial Audio Dock */
 .player-dock {
-    background: rgba(11, 15, 24, 0.9);
+    background: rgba(11, 15, 28, 0.92);
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.11);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    box-shadow: 0 24px 64px rgba(2, 6, 23, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.12);
     transform: translateZ(0);
     will-change: transform, opacity;
 }
 
 /* Prismatic Primary Action */
 .btn-stitch-primary {
-    background: linear-gradient(135deg, #3ef4c8 0%, #56ccf2 100%);
-    color: #031c1a;
-    box-shadow: 0 6px 22px -6px rgba(62, 244, 200, 0.45);
+    background: linear-gradient(135deg, #2ee6c5 0%, #38bdf8 52%, #818cf8 100%);
+    color: #031a21;
+    box-shadow: 0 8px 24px -6px rgba(56, 189, 248, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.45);
     transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, filter 0.16s ease;
     will-change: transform, box-shadow;
 }
@@ -195,8 +205,48 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .track-row.active-playing {
-    border-color: rgba(62, 244, 200, 0.45) !important;
-    background: linear-gradient(135deg, rgba(94, 234, 212, 0.08) 0%, rgba(18, 23, 30, 0.95) 100%) !important;
+    border-color: rgba(46, 230, 197, 0.5) !important;
+    background: linear-gradient(135deg, rgba(46, 230, 197, 0.10) 0%, rgba(129, 140, 248, 0.08) 55%, rgba(14, 19, 32, 0.95) 100%) !important;
+}
+
+/* Sculpted Iridescent Capsule CTA & Brand Trigger */
+.studio-cta-primary {
+    background: linear-gradient(135deg, #2ee6c5 0%, #38bdf8 50%, #818cf8 100%) !important;
+    color: #031a21 !important;
+    border: none !important;
+    box-shadow: 0 10px 26px -8px rgba(56, 189, 248, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.48) !important;
+    transition: transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.18s ease, filter 0.18s ease;
+}
+.studio-cta-primary:hover {
+    transform: translateY(-1.5px);
+    filter: brightness(1.06);
+    box-shadow: 0 14px 30px -8px rgba(46, 230, 197, 0.56), inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
+}
+.studio-cta-primary:active {
+    transform: translateY(0) scale(0.985);
+}
+html.theme-light .studio-cta-primary {
+    background: linear-gradient(135deg, #0d9488 0%, #0284c7 52%, #4f46e5 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 24px -8px rgba(79, 70, 229, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.32) !important;
+}
+html.theme-light .btn-stitch-primary {
+    background: linear-gradient(135deg, #0d9488 0%, #0284c7 52%, #4f46e5 100%);
+    color: #ffffff;
+    box-shadow: 0 8px 22px -6px rgba(79, 70, 229, 0.40);
+}
+html.theme-light .track-row.active-playing {
+    border-color: rgba(79, 70, 229, 0.42) !important;
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(79, 70, 229, 0.08) 100%) !important;
+}
+html.theme-light ::-webkit-scrollbar-track {
+    background: #e9eef6;
+}
+html.theme-light ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+}
+html.theme-light ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 /* 3D Book Jacket */

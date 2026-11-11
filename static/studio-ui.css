@@ -932,11 +932,461 @@ button[aria-busy="true"] { cursor: progress; opacity: 0.7; }
     #appMainContainer > header a[aria-label="GitHub Repository"] { display: none !important; }
     #appMainContainer > header button { min-width: 40px; min-height: 40px; }
     #mobileNavDrawer .drawer-content > div:last-child button:last-child {
-        background: linear-gradient(135deg, #3ef4c8 0%, #56ccf2 100%) !important;
-        color: var(--studio-accent-ink) !important;
-        box-shadow: none !important;
+        background: linear-gradient(135deg, #2ee6c5 0%, #38bdf8 52%, #818cf8 100%) !important;
+        color: #031a21 !important;
+        box-shadow: 0 10px 26px -8px rgba(56, 189, 248, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
     }
 }
+
+/* ════════════════ CHROMATIC SPATIAL POLISH & ALABASTER LIGHT THEME ════════════════ */
+:root {
+    --studio-bg: #070911;
+    --studio-surface: rgba(14, 19, 32, 0.84);
+    --studio-surface-solid: #0c101d;
+    --studio-line: rgba(148, 163, 184, 0.15);
+    --studio-line-strong: rgba(148, 163, 184, 0.26);
+    --studio-accent: #2ee6c5;
+    --studio-iris: #818cf8;
+    --studio-sky: #38bdf8;
+    --studio-gold: #f5c451;
+    --studio-accent-ink: #031a21;
+}
+
+body {
+    background-color: var(--studio-bg);
+}
+
+/* Clickable Brand Logo Trigger -> Home */
+.engbot-brand-trigger {
+    cursor: pointer;
+    border-radius: 14px;
+    transition: transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.16s ease;
+    text-align: left;
+}
+.engbot-brand-trigger:hover .engbot-logo-badge {
+    transform: translateY(-1px) scale(1.04);
+    box-shadow: 0 10px 24px -6px rgba(46, 230, 197, 0.42), 0 0 0 1px rgba(129, 140, 248, 0.38);
+}
+.engbot-brand-trigger:active {
+    transform: scale(0.975);
+}
+.engbot-brand-trigger:focus-visible {
+    outline: 2px solid var(--studio-accent);
+    outline-offset: 4px;
+}
+.engbot-logo-badge {
+    background: linear-gradient(145deg, rgba(18, 25, 44, 0.95) 0%, rgba(11, 15, 28, 0.98) 100%);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 8px 20px -8px rgba(0, 0, 0, 0.72);
+    transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Sculpted Dark Surfaces, Iridescent Gradients & Shapes */
+#studioSidebar,
+#studioTopbar {
+    background: rgba(11, 15, 28, 0.84) !important;
+    border-color: rgba(148, 163, 184, 0.14) !important;
+    box-shadow: 0 22px 54px -18px rgba(2, 6, 23, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+#studioSidebar {
+    border-radius: 26px !important;
+}
+#studioTopbar {
+    border-radius: 9999px !important;
+}
+#btnNavUpload,
+.hero-btn-listen,
+#btnPlayerPlayPause {
+    background: linear-gradient(135deg, #2ee6c5 0%, #38bdf8 50%, #818cf8 100%) !important;
+    color: #031a21 !important;
+    box-shadow: 0 10px 28px -8px rgba(56, 189, 248, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+    border-radius: 9999px !important;
+}
+.hero-btn-read {
+    border-radius: 9999px !important;
+    border: 1px solid rgba(148, 163, 184, 0.22) !important;
+    background: rgba(255, 255, 255, 0.055) !important;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.hero-btn-read:hover {
+    background: rgba(129, 140, 248, 0.14) !important;
+    border-color: rgba(129, 140, 248, 0.42) !important;
+    transform: translateY(-1px);
+}
+#heroSection {
+    border-radius: 28px !important;
+    background: linear-gradient(142deg, rgba(18, 24, 42, 0.90) 0%, rgba(11, 15, 28, 0.94) 55%, rgba(16, 20, 38, 0.92) 100%) !important;
+    border: 1px solid rgba(148, 163, 184, 0.16) !important;
+    box-shadow: 0 26px 64px -24px rgba(2, 6, 23, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+}
+.hero-play {
+    bottom: 12px !important;
+    right: 15px !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 9999px !important;
+    background: linear-gradient(135deg, #2ee6c5 0%, #38bdf8 55%, #818cf8 100%) !important;
+    color: #031a21 !important;
+    border: 1px solid rgba(255, 255, 255, 0.42) !important;
+    box-shadow: 0 8px 22px -4px rgba(2, 6, 23, 0.65), 0 0 18px rgba(56, 189, 248, 0.35) !important;
+    backdrop-filter: blur(12px);
+}
+#gateTabs button.text-slate-950,
+#gateTabs button.bg-primary-container {
+    background: linear-gradient(135deg, #2ee6c5 0%, #38bdf8 52%, #818cf8 100%) !important;
+    color: #031a21 !important;
+    box-shadow: 0 6px 18px -6px rgba(56, 189, 248, 0.45) !important;
+}
+.shelf-filters {
+    border-radius: 9999px !important;
+    padding: 4px !important;
+    background: rgba(14, 19, 32, 0.88) !important;
+    border: 1px solid rgba(148, 163, 184, 0.16) !important;
+}
+.shelf-filters button {
+    border-radius: 9999px !important;
+}
+.shelf-filters button.active,
+.shelf-filters button[aria-pressed="true"] {
+    background: linear-gradient(135deg, rgba(46, 230, 197, 0.22) 0%, rgba(129, 140, 248, 0.24) 100%) !important;
+    color: #f8fafc !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 12px -4px rgba(46, 230, 197, 0.28);
+}
+.studio-book-cover {
+    border-radius: 7px 18px 18px 7px !important;
+    box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.20), 0 20px 38px -16px rgba(2, 6, 23, 0.82) !important;
+}
+.studio-book-actions {
+    border-radius: 9999px !important;
+    padding: 4px !important;
+    gap: 5px !important;
+}
+.studio-book-actions button {
+    border-radius: 9999px !important;
+}
+#chaptersContainer {
+    border-radius: 26px !important;
+    background: linear-gradient(160deg, rgba(15, 20, 35, 0.86) 0%, rgba(10, 14, 24, 0.94) 100%) !important;
+    border: 1px solid rgba(148, 163, 184, 0.15) !important;
+}
+#chaptersList > div {
+    border-radius: 16px !important;
+}
+#playerDock {
+    border-radius: 24px !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+}
+@media (max-width: 767px) {
+    #studioTopbar { border-radius: 20px !important; }
+    #heroSection { border-radius: 22px !important; }
+    .hero-play { width: 34px !important; height: 34px !important; bottom: 8px !important; right: 10px !important; }
+    .studio-book-actions { border-radius: 14px !important; }
+    .studio-book-actions button { border-radius: 10px !important; }
+    #playerDock { border-radius: 22px !important; }
+}
+
+/* ── Alabaster Spatial Light Theme (html.theme-light) ── */
+html.theme-light {
+    --studio-bg: #f4f6fb;
+    --studio-surface: rgba(255, 255, 255, 0.90);
+    --studio-surface-solid: #ffffff;
+    --studio-line: rgba(15, 23, 42, 0.09);
+    --studio-line-strong: rgba(15, 23, 42, 0.16);
+    --studio-text: #0f172a;
+    --studio-text-muted: #475569;
+    --studio-text-soft: #64748b;
+    --studio-accent: #0d9488;
+    --studio-iris: #4f46e5;
+    --studio-sky: #0284c7;
+    --studio-gold: #b45309;
+    --studio-accent-ink: #ffffff;
+    color-scheme: light;
+}
+html.theme-light body {
+    background-color: #f4f6fb !important;
+    color: #0f172a !important;
+}
+html.theme-light :is(#pageTitle, .workspace-heading h2) {
+    background: linear-gradient(120deg, #0f172a 25%, #3730a3 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: #0f172a !important;
+}
+html.theme-light :is(.library-tools h3, #studioMain > section h2, #studioMain > section h3) {
+    color: #0f172a !important;
+}
+html.theme-light .workspace-heading p,
+html.theme-light .library-tools p {
+    color: #475569 !important;
+}
+html.theme-light .bg-mesh {
+    background-color: #f4f6fb !important;
+    background-image:
+        radial-gradient(ellipse 75% 44% at 50% -8%, rgba(13, 148, 136, 0.09) 0%, transparent 65%),
+        radial-gradient(ellipse 52% 40% at 92% 10%, rgba(79, 70, 229, 0.08) 0%, transparent 62%),
+        radial-gradient(ellipse 42% 34% at 8% 88%, rgba(245, 158, 11, 0.07) 0%, transparent 65%),
+        radial-gradient(rgba(15, 23, 42, 0.055) 1px, transparent 1px) !important;
+}
+html.theme-light .engbot-logo-badge {
+    background: linear-gradient(145deg, #ffffff 0%, #eef2ff 100%) !important;
+    border-color: rgba(79, 70, 229, 0.22) !important;
+    box-shadow: inset 0 1px 0 #ffffff, 0 8px 18px -8px rgba(15, 23, 42, 0.18) !important;
+}
+html.theme-light #studioSidebar,
+html.theme-light #studioTopbar,
+html.theme-light #appMainContainer > header.md\:hidden,
+html.theme-light #appMainContainer > nav.md\:hidden,
+html.theme-light #mobileNavDrawer .drawer-content {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border-color: rgba(15, 23, 42, 0.09) !important;
+    box-shadow: 0 20px 46px -18px rgba(15, 23, 42, 0.14), inset 0 1px 0 #ffffff !important;
+}
+html.theme-light #studioSidebar nav button,
+html.theme-light #studioSidebar nav a,
+html.theme-light #mobileNavDrawer nav button,
+html.theme-light #mobileNavDrawer nav a {
+    color: #334155 !important;
+}
+html.theme-light #studioSidebar nav button:not(.bg-white\/10) > span:not(.material-symbols-outlined),
+html.theme-light #studioSidebar nav button:not(.bg-white\/10),
+html.theme-light #mobileNavDrawer nav button:not(.bg-white\/10) {
+    color: #334155 !important;
+}
+html.theme-light #studioSidebar nav button:hover,
+html.theme-light #studioSidebar nav a:hover,
+html.theme-light #mobileNavDrawer nav button:hover,
+html.theme-light #mobileNavDrawer nav a:hover {
+    background: rgba(15, 23, 42, 0.045) !important;
+    color: #0f172a !important;
+}
+html.theme-light #studioSidebar nav button.bg-white\/10 {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.11) 0%, rgba(79, 70, 229, 0.11) 100%) !important;
+    color: #0f172a !important;
+    border-color: rgba(79, 70, 229, 0.24) !important;
+}
+html.theme-light #heroSection {
+    background: linear-gradient(142deg, rgba(255, 255, 255, 0.97) 0%, rgba(244, 247, 254, 0.95) 60%, rgba(238, 242, 255, 0.94) 100%) !important;
+    border: 1px solid rgba(15, 23, 42, 0.09) !important;
+    box-shadow: 0 24px 52px -22px rgba(15, 23, 42, 0.15), inset 0 1px 0 #ffffff !important;
+}
+html.theme-light #heroSection::after {
+    opacity: 0.42 !important;
+    color: rgba(79, 70, 229, 0.48) !important;
+}
+html.theme-light #heroTitle {
+    color: #0f172a !important;
+}
+html.theme-light #heroMetaStats {
+    background: rgba(15, 23, 42, 0.05) !important;
+    color: #334155 !important;
+    border-color: rgba(15, 23, 42, 0.08) !important;
+}
+html.theme-light .hero-btn-read {
+    background: rgba(15, 23, 42, 0.05) !important;
+    color: #0f172a !important;
+    border-color: rgba(15, 23, 42, 0.13) !important;
+}
+html.theme-light .hero-btn-read:hover {
+    background: rgba(79, 70, 229, 0.10) !important;
+    border-color: rgba(79, 70, 229, 0.28) !important;
+}
+html.theme-light .shelf-filters {
+    background: rgba(15, 23, 42, 0.05) !important;
+    border-color: rgba(15, 23, 42, 0.08) !important;
+}
+html.theme-light .shelf-filters button {
+    color: #475569 !important;
+}
+html.theme-light .shelf-filters button.active,
+html.theme-light .shelf-filters button[aria-pressed="true"] {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(15, 23, 42, 0.06) !important;
+}
+html.theme-light .studio-book h4 {
+    color: #0f172a !important;
+}
+html.theme-light .studio-book-meta {
+    color: #475569 !important;
+}
+html.theme-light .studio-book-cover {
+    box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.25), 0 20px 36px -16px rgba(15, 23, 42, 0.28) !important;
+}
+html.theme-light #chaptersContainer {
+    background: rgba(255, 255, 255, 0.90) !important;
+    border-color: rgba(15, 23, 42, 0.09) !important;
+    box-shadow: 0 18px 42px -18px rgba(15, 23, 42, 0.12) !important;
+}
+html.theme-light #chaptersList > div {
+    background: rgba(248, 250, 252, 0.92) !important;
+    border-color: rgba(15, 23, 42, 0.08) !important;
+    color: #0f172a !important;
+}
+html.theme-light #chaptersList > div:hover {
+    background: #ffffff !important;
+    border-color: rgba(79, 70, 229, 0.30) !important;
+    box-shadow: 0 8px 20px -10px rgba(15, 23, 42, 0.12) !important;
+}
+html.theme-light #playerDock {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: rgba(15, 23, 42, 0.11) !important;
+    box-shadow: 0 24px 54px -16px rgba(15, 23, 42, 0.22), inset 0 1px 0 #ffffff !important;
+}
+html.theme-light #playerDock button:not(#btnPlayerPlayPause) {
+    border-color: rgba(15, 23, 42, 0.11) !important;
+}
+html.theme-light #playerDock button.p-1:not(#btnPlayerPlayPause),
+html.theme-light #playerDock #btnPlayerRewind,
+html.theme-light #playerDock #btnPlayerForward {
+    border-color: transparent !important;
+    background-color: transparent !important;
+}
+html.theme-light #topProfileBtn {
+    background: rgba(15, 23, 42, 0.045) !important;
+    border-color: rgba(15, 23, 42, 0.12) !important;
+}
+html.theme-light #studioTopbar button:last-child,
+html.theme-light #btnGateQuickTop {
+    background: rgba(245, 158, 11, 0.12) !important;
+    border-color: rgba(217, 119, 6, 0.26) !important;
+    color: #b45309 !important;
+}
+html.theme-light #btnThemeToggleDesktop,
+html.theme-light #btnThemeToggleMobile,
+html.theme-light #btnThemeToggleGate,
+html.theme-light #btnThemeToggleDrawer {
+    background: rgba(79, 70, 229, 0.09) !important;
+    border-color: rgba(79, 70, 229, 0.22) !important;
+    color: #312e81 !important;
+}
+html.theme-light #studioTopbar > div > button:first-of-type,
+html.theme-light .workspace-action-btn,
+html.theme-light #studioMain > section:first-child button {
+    border-color: rgba(15, 23, 42, 0.12) !important;
+}
+@media (max-width: 767px) {
+    #studioActionStatus,
+    #globalToastContainer {
+        top: calc(74px + env(safe-area-inset-top)) !important;
+        bottom: auto !important;
+    }
+}
+html.theme-light .hero-play {
+    background: linear-gradient(135deg, #0d9488 0%, #0284c7 52%, #4f46e5 100%) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.55) !important;
+    box-shadow: 0 10px 24px -6px rgba(15, 23, 42, 0.45) !important;
+}
+html.theme-light #playerProgressContainer,
+html.theme-light .hero-track {
+    background: rgba(15, 23, 42, 0.11) !important;
+}
+html.theme-light #playerProgressBar,
+html.theme-light .hero-fill {
+    background: linear-gradient(90deg, #0d9488 0%, #0284c7 52%, #4f46e5 100%) !important;
+}
+html.theme-light .glass-card,
+html.theme-light .glass-panel,
+html.theme-light .modal-content,
+html.theme-light .training-workbench {
+    background: rgba(255, 255, 255, 0.94) !important;
+    border-color: rgba(15, 23, 42, 0.10) !important;
+    box-shadow: 0 22px 48px -18px rgba(15, 23, 42, 0.16), inset 0 1px 0 #ffffff !important;
+}
+html.theme-light .modal-overlay {
+    background: rgba(15, 23, 42, 0.38) !important;
+}
+html.theme-light .training-workbench h4,
+html.theme-light .training-workbench label {
+    color: #0f172a !important;
+}
+html.theme-light .training-workbench p {
+    color: #475569 !important;
+}
+html.theme-light .training-workbench button:not(#trainerRun) {
+    background: #eef2ff !important;
+    color: #1e293b !important;
+    border: 1px solid rgba(79, 70, 229, 0.18) !important;
+}
+html.theme-light .training-workbench #trainerRun {
+    background: linear-gradient(135deg, #0d9488 0%, #4f46e5 100%) !important;
+    color: #ffffff !important;
+}
+html.theme-light .glass-input,
+html.theme-light #shelfSearch,
+html.theme-light #mobileShelfSearch,
+html.theme-light .modal-content :is(input:not([type="checkbox"]), select, textarea),
+html.theme-light #authGateScreen input:not([type="checkbox"]),
+html.theme-light .training-workbench :is(input:not([type="checkbox"]), select, textarea) {
+    background: rgba(241, 245, 249, 0.92) !important;
+    border-color: rgba(15, 23, 42, 0.14) !important;
+    color: #0f172a !important;
+}
+html.theme-light input::placeholder,
+html.theme-light textarea::placeholder {
+    color: #64748b !important;
+}
+html.theme-light #authGateScreen {
+    background: rgba(244, 246, 251, 0.92) !important;
+}
+html.theme-light #authGateScreen #gateTabs {
+    background: rgba(15, 23, 42, 0.06) !important;
+    border-color: rgba(15, 23, 42, 0.09) !important;
+}
+html.theme-light #authGateScreen #gateTabs button.text-slate-950,
+html.theme-light #authGateScreen #gateTabs button.bg-gradient-to-r,
+html.theme-light #authGateScreen #gateTabs button.bg-primary-container {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #0d9488 0%, #0284c7 52%, #4f46e5 100%) !important;
+    box-shadow: 0 8px 18px -6px rgba(79, 70, 229, 0.42) !important;
+}
+html.theme-light #authGateScreen button[type="button"]:not(#gateTabSignIn):not(#gateTabRegister):not(#btnThemeToggleGate),
+html.theme-light #authGateScreen :is(a, span):is([class*="text-teal-"], [class*="text-cyan-"], [class*="text-emerald-"]) {
+    color: #0f766e !important;
+}
+
+/* Light theme safe ink contrast across workspace containers */
+html.theme-light :is(#studioSidebar, #studioTopbar, #studioMain, #playerDock, #mobileNavDrawer, #appMainContainer > header, #appMainContainer > nav, .modal-content, #authGateScreen) :is(.text-white, .text-on-surface, .text-slate-100, .text-slate-200, .text-primary) {
+    color: #0f172a !important;
+}
+html.theme-light :is(#studioSidebar, #studioTopbar, #studioMain, #playerDock, #mobileNavDrawer, #appMainContainer > header, #appMainContainer > nav, .modal-content, #authGateScreen) :is(.text-on-surface-variant, .text-slate-300, .text-slate-400, .text-slate-500) {
+    color: #475569 !important;
+}
+html.theme-light :is(#studioSidebar, #studioTopbar, #studioMain, #playerDock, #mobileNavDrawer, #appMainContainer > header, #appMainContainer > nav, .modal-content, #authGateScreen) :is(.text-primary-container, .text-primary-fixed, .text-primary-fixed-dim) {
+    color: #0f766e !important;
+}
+html.theme-light :is(#studioSidebar, #studioTopbar, #studioMain, #playerDock, #mobileNavDrawer, #appMainContainer > header, #appMainContainer > nav, .modal-content, #authGateScreen) .text-georgian-gold {
+    color: #b45309 !important;
+}
+html.theme-light :is(#btnNavUpload, .hero-btn-listen, #btnPlayerPlayPause, .studio-cta-primary, #authGateScreen button[type="submit"], #mobileNavDrawer .drawer-content > div:last-child button:last-child),
+html.theme-light :is(#btnNavUpload, .hero-btn-listen, #btnPlayerPlayPause, .studio-cta-primary, #authGateScreen button[type="submit"], #mobileNavDrawer .drawer-content > div:last-child button:last-child) * {
+    background: linear-gradient(135deg, #0d9488 0%, #0284c7 52%, #4f46e5 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 24px -8px rgba(79, 70, 229, 0.45) !important;
+}
+html.theme-light #btnPlayerPlayPause,
+html.theme-light #btnPlayerPlayPause * {
+    box-shadow: 0 8px 20px -4px rgba(79, 70, 229, 0.48) !important;
+}
+html.theme-light #btnNavUpload *,
+html.theme-light .hero-btn-listen *,
+html.theme-light .studio-cta-primary *,
+html.theme-light #btnPlayerPlayPause *,
+html.theme-light #authGateScreen button[type="submit"] *,
+html.theme-light #mobileNavDrawer .drawer-content > div:last-child button:last-child * {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+html.theme-light .studio-book-cover,
+html.theme-light .studio-book-cover :is(.text-white, .text-on-surface, .text-slate-100, .text-slate-200) {
+    color: #ffffff !important;
+}
+html.theme-light .studio-book-actions button:first-child {
+    background: linear-gradient(135deg, #0d9488 0%, #0284c7 55%, #4f46e5 100%) !important;
+    color: #ffffff !important;
+}
+
 
 /* Reader Polish: editorial measure, reachable controls, low compositing cost */
 #readerView { height: 100dvh !important; min-height: 100svh; contain: layout paint; }

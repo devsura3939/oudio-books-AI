@@ -27,27 +27,39 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- Early Theme Controller (Dark Default, zero FOUC) -->
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('engbot_ui_theme') === 'light' ? 'light' : 'dark';
+          var r = document.documentElement;
+          r.classList.toggle('theme-light', t === 'light');
+          r.classList.toggle('dark', t !== 'light');
+          r.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
     <script id="tailwind-config">
       tailwind.config = {
         darkMode: "class",
         theme: {
           extend: {
             colors: {
-                "surface": "#05070b",
-                "surface-container": "#0d121c",
-                "surface-container-high": "#151d2d",
-                "primary-container": "#3ef4c8",
-                "primary-fixed": "#a7f3d0",
+                "surface": "#070911",
+                "surface-container": "#0e1320",
+                "surface-container-high": "#161d2f",
+                "primary-container": "#2ee6c5",
+                "primary-fixed": "#a5f3fc",
                 "primary": "#ecfeff",
-                "secondary-container": "#1d283a",
-                "secondary": "#60a5fa",
-                "background": "#05070b",
-                "on-surface": "#f3f2ee",
-                "on-surface-variant": "#92a0b3",
-                "on-primary-container": "#031c1a",
+                "secondary-container": "#23254a",
+                "secondary": "#818cf8",
+                "background": "#070911",
+                "on-surface": "#f4f3ef",
+                "on-surface-variant": "#94a3b8",
+                "on-primary-container": "#031a21",
                 "error": "#f87171",
-                "georgian-gold": "#f3c969",
-                "georgian-gold-dark": "#d4a237"
+                "georgian-gold": "#f5c451",
+                "georgian-gold-dark": "#d49b27"
             },
             fontFamily: {
                 "label-caps": ["Plus Jakarta Sans", "Inter", "sans-serif"],
@@ -66,16 +78,16 @@
     </script>
     <style>
         :root {
-            --surface-obsidian: #05070b;
-            --surface-panel: #0c1019;
-            --accent-celadon: rgba(62, 244, 200, 0.09);
-            --accent-sky: rgba(96, 165, 250, 0.075);
-            --accent-amber: rgba(243, 201, 105, 0.045);
+            --surface-obsidian: #070911;
+            --surface-panel: #0e1320;
+            --accent-celadon: rgba(46, 230, 197, 0.10);
+            --accent-sky: rgba(129, 140, 248, 0.09);
+            --accent-amber: rgba(245, 196, 81, 0.055);
         }
 
         body {
-            background-color: #05070b;
-            color: #f3f2ee;
+            background-color: #070911;
+            color: #f4f3ef;
             font-family: 'Plus Jakarta Sans', 'Inter', 'Noto Sans Georgian', sans-serif;
             overflow-x: hidden;
             min-height: 100vh;
@@ -89,7 +101,7 @@
             width: 100vw; height: 100vh;
             z-index: -1;
             pointer-events: none;
-            background-color: #05070b;
+            background-color: #070911;
             background-image:
                 radial-gradient(ellipse 75% 42% at 50% -10%, var(--accent-celadon) 0%, transparent 65%),
                 radial-gradient(ellipse 50% 38% at 92% 12%, var(--accent-sky) 0%, transparent 62%),
@@ -100,49 +112,49 @@
 
         /* Spatial Frosted Obsidian Surfaces */
         .glass-nav {
-            background: rgba(10, 14, 22, 0.80);
+            background: rgba(11, 15, 28, 0.84);
             backdrop-filter: blur(28px);
             -webkit-backdrop-filter: blur(28px);
-            border: 1px solid rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(148, 163, 184, 0.14);
         }
         .glass-header {
-            background: rgba(10, 14, 22, 0.78);
+            background: rgba(11, 15, 28, 0.82);
             backdrop-filter: blur(26px);
             -webkit-backdrop-filter: blur(26px);
-            border: 1px solid rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(148, 163, 184, 0.14);
         }
         .glass-panel {
-            background: rgba(12, 16, 25, 0.88);
+            background: rgba(13, 18, 32, 0.90);
             backdrop-filter: blur(22px);
             -webkit-backdrop-filter: blur(22px);
-            border: 1px solid rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(148, 163, 184, 0.15);
         }
         .glass-card {
-            background: linear-gradient(160deg, rgba(20, 27, 40, 0.90) 0%, rgba(11, 15, 23, 0.96) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.09);
+            background: linear-gradient(160deg, rgba(20, 26, 46, 0.90) 0%, rgba(11, 15, 28, 0.96) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.14);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
             transition: border-color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
         }
         .glass-card:hover {
-            border-color: rgba(62, 244, 200, 0.42);
-            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), 0 0 24px -10px rgba(62, 244, 200, 0.25);
+            border-color: rgba(46, 230, 197, 0.44);
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.58), 0 0 26px -10px rgba(129, 140, 248, 0.28);
             transform: translateY(-2px);
         }
         .glass-dock {
-            background: rgba(10, 14, 23, 0.90);
+            background: rgba(11, 15, 28, 0.92);
             backdrop-filter: blur(28px);
             -webkit-backdrop-filter: blur(28px);
-            border: 1px solid rgba(255, 255, 255, 0.13);
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.11);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            box-shadow: 0 24px 60px rgba(2, 6, 23, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.11);
         }
         .glass-input {
-            background: rgba(255, 255, 255, 0.04) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: #edf1f5 !important;
+            background: rgba(255, 255, 255, 0.045) !important;
+            border: 1px solid rgba(148, 163, 184, 0.16) !important;
+            color: #f4f3ef !important;
         }
         .glass-input:focus {
-            border-color: rgba(94, 234, 212, 0.65) !important;
-            box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.14) !important;
+            border-color: rgba(46, 230, 197, 0.65) !important;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16) !important;
         }
 
         /* Modals & Drawers */
@@ -664,10 +676,24 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="static/styles.css?v=1.58.0&release=19">
-    <link rel="stylesheet" href="static/studio-ui.css?v=1.58.0&release=19">
+    <link rel="stylesheet" href="static/styles.css?v=1.59.0&release=20">
+    <link rel="stylesheet" href="static/studio-ui.css?v=1.59.0&release=20">
 </head>
 <body class="min-h-screen flex flex-col md:flex-row antialiased">
+    <!-- Shared Vector Gradients for Acoustic Prism Codex Emblem -->
+    <svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+      <defs>
+        <linearGradient id="engbotPrismGrad" x1="2" y1="3" x2="30" y2="29" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#2ee6c5"/>
+          <stop offset="52%" stop-color="#38bdf8"/>
+          <stop offset="100%" stop-color="#818cf8"/>
+        </linearGradient>
+        <linearGradient id="engbotGoldGrad" x1="16" y1="5" x2="29" y2="27" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#f5c451"/>
+          <stop offset="100%" stop-color="#fb923c"/>
+        </linearGradient>
+      </defs>
+    </svg>
     <div class="bg-mesh"></div>
 
     <!-- ════════════════ Early Auth Gate Controller (v1.53.1) ════════════════ -->
@@ -779,10 +805,10 @@
                 if (registerForm) registerForm.classList.remove('hidden');
                 if (tabs) tabs.classList.remove('hidden');
                 if (tabSignIn) {
-                    tabSignIn.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95';
+                    tabSignIn.className = 'flex-1 py-2.5 rounded-full text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95';
                 }
                 if (tabRegister) {
-                    tabRegister.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
+                    tabRegister.className = 'flex-1 py-2.5 rounded-full bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
                 }
                 if (subtitle) subtitle.textContent = 'Create your free Studio account to sync books across devices';
                 var regInput = document.getElementById('gateRegUsername') || document.getElementById('gateRegEmail');
@@ -810,10 +836,10 @@
                 if (signInForm) signInForm.classList.remove('hidden');
                 if (tabs) tabs.classList.remove('hidden');
                 if (tabSignIn) {
-                    tabSignIn.className = 'flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
+                    tabSignIn.className = 'flex-1 py-2.5 rounded-full bg-primary-container text-on-primary-container shadow-md transition-all font-bold cursor-pointer active:scale-95';
                 }
                 if (tabRegister) {
-                    tabRegister.className = 'flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95';
+                    tabRegister.className = 'flex-1 py-2.5 rounded-full text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-95';
                 }
                 if (subtitle) subtitle.textContent = 'Your books, ready to read and listen.';
             }
@@ -979,19 +1005,25 @@
             <div class="absolute inset-0 bg-[radial-gradient(ellipse_75%_45%_at_50%_0%,rgba(62,244,200,0.11),transparent_70%),radial-gradient(ellipse_55%_40%_at_90%_95%,rgba(96,165,250,0.09),transparent_65%),radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1px)] [background-size:auto,auto,28px_28px]"></div>
         </div>
 
-        <div class="relative w-full max-w-[428px] bg-[#0b0f18]/92 backdrop-blur-2xl p-6 sm:p-8 rounded-[28px] border border-white/[0.11] shadow-[0_32px_90px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.12)] space-y-6 my-auto">
-            <div class="pointer-events-none absolute top-0 left-10 right-10 h-px bg-gradient-to-r from-transparent via-primary-container/60 to-transparent"></div>
+        <div class="relative w-full max-w-[432px] bg-[#0b0f18]/92 backdrop-blur-2xl p-6 sm:p-8 rounded-[30px] border border-white/[0.11] shadow-[0_32px_90px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.12)] space-y-6 my-auto">
+            <div class="pointer-events-none absolute top-0 left-10 right-10 h-px bg-gradient-to-r from-transparent via-primary-container/70 to-transparent"></div>
+            <button type="button" id="btnThemeToggleGate" onclick="toggleStudioTheme()" class="studio-theme-pill absolute top-5 right-5 w-9 h-9 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.09] text-on-surface-variant hover:text-white flex items-center justify-center transition" aria-label="Switch to light theme" aria-pressed="false" title="Toggle dark / light theme">
+                <span class="material-symbols-outlined text-[18px]">light_mode</span>
+            </button>
             <!-- Branding Header -->
             <div class="text-center space-y-3">
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#161e2e] to-[#0a0e16] border border-white/15 mx-auto flex items-center justify-center shadow-[0_12px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15)]">
-                    <svg class="w-7 h-7 text-primary-container" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/>
-                        <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5a2.5 2.5 0 0 1 2.5 2V5.5Z" stroke="#f3c969"/>
+                <div class="w-16 h-16 rounded-[22px] bg-gradient-to-br from-[#161e31] to-[#0a0e18] border border-white/15 mx-auto flex items-center justify-center shadow-[0_14px_34px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.18)]">
+                    <svg class="w-9 h-9" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                        <path d="M4.5 9.5C4.5 7.2 6.4 5.3 8.7 5.3H14.5C15.3 5.3 16 6 16 6.8V25.6C16 25.6 12.6 23.4 8.8 23.4H6.3C5.3 23.4 4.5 22.6 4.5 21.6V9.5Z" fill="url(#engbotPrismGrad)" fill-opacity="0.22" stroke="url(#engbotPrismGrad)" stroke-width="1.8" stroke-linejoin="round"/>
+                        <path d="M27.5 9.5C27.5 7.2 25.6 5.3 23.3 5.3H17.5C16.7 5.3 16 6 16 6.8V25.6C16 25.6 19.4 23.4 23.2 23.4H25.7C26.7 23.4 27.5 22.6 27.5 21.6V9.5Z" fill="url(#engbotGoldGrad)" fill-opacity="0.16" stroke="url(#engbotGoldGrad)" stroke-width="1.8" stroke-linejoin="round"/>
+                        <path d="M16 3.5V27.5" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.4" stroke-linecap="round"/>
+                        <path d="M10.2 12.4V17M21.8 11.4V18" stroke="url(#engbotPrismGrad)" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="16" cy="5" r="1.7" fill="#2ee6c5"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="font-mono text-[10px] tracking-[0.22em] uppercase text-primary-container/85 mb-1">Spatial Reading Atelier</p>
-                    <h1 class="font-serif-display text-3xl sm:text-[36px] leading-tight font-normal tracking-tight text-white flex items-center justify-center gap-2">
+                    <p class="font-mono text-[10px] tracking-[0.22em] uppercase text-primary-container/90 mb-1">Spatial Reading Atelier</p>
+                    <h1 class="font-serif-display text-3xl sm:text-[38px] leading-tight font-normal tracking-tight text-white flex items-center justify-center gap-2">
                         <span>EngBot Studio</span>
                     </h1>
                     <p class="text-xs sm:text-[13px] text-on-surface-variant mt-1" id="gateSubtitle">
@@ -1001,9 +1033,9 @@
             </div>
 
             <!-- Mode Selector Tabs (Sign In / Register) -->
-            <div class="flex p-1 rounded-2xl bg-[#05070b]/85 border border-white/[0.08] text-xs font-semibold" id="gateTabs">
-                <button type="button" onclick="switchGateMode('signin')" id="gateTabSignIn" class="flex-1 py-2.5 rounded-xl bg-primary-container text-on-primary-container transition-all font-bold cursor-pointer active:scale-[0.98]">Sign In</button>
-                <button type="button" onclick="switchGateMode('register')" id="gateTabRegister" class="flex-1 py-2.5 rounded-xl text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-[0.98]">Create Account</button>
+            <div class="flex p-1 rounded-full bg-[#05070b]/85 border border-white/[0.08] text-xs font-semibold" id="gateTabs">
+                <button type="button" onclick="switchGateMode('signin')" id="gateTabSignIn" class="flex-1 py-2.5 rounded-full bg-primary-container text-on-primary-container transition-all font-bold cursor-pointer active:scale-[0.98]">Sign In</button>
+                <button type="button" onclick="switchGateMode('register')" id="gateTabRegister" class="flex-1 py-2.5 rounded-full text-on-surface-variant hover:text-white transition-all cursor-pointer active:scale-[0.98]">Create Account</button>
             </div>
 
             <!-- Error and Success Banners -->
@@ -1035,7 +1067,7 @@
                     </label>
                 </div>
 
-                <button type="submit" id="btnGateSignIn" class="w-full py-3 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:bg-primary-fixed active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <button type="submit" id="btnGateSignIn" class="studio-cta-primary w-full py-3.5 bg-primary-container text-on-primary-container font-bold text-sm rounded-full hover:bg-primary-fixed active:scale-[0.98] transition flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-lg">login</span>
                     <span>Sign In</span>
                 </button>
@@ -1078,7 +1110,7 @@
                     </label>
                 </div>
 
-                <button type="submit" id="btnGateRegister" class="w-full py-3 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:bg-primary-fixed active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <button type="submit" id="btnGateRegister" class="studio-cta-primary w-full py-3.5 bg-primary-container text-on-primary-container font-bold text-sm rounded-full hover:bg-primary-fixed active:scale-[0.98] transition flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-lg">person_add</span>
                     <span>Create Free Account</span>
                 </button>
@@ -1132,12 +1164,12 @@
                     <input type="email" id="gateForgotEmail" placeholder="name@example.com" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required autocomplete="email">
                 </div>
 
-                <button type="submit" id="btnGateForgot" class="w-full py-3 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:bg-primary-fixed active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <button type="submit" id="btnGateForgot" class="studio-cta-primary w-full py-3.5 bg-primary-container text-on-primary-container font-bold text-sm rounded-full hover:bg-primary-fixed active:scale-[0.98] transition flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-lg">mail</span>
                     <span>Send Recovery Link</span>
                 </button>
 
-                <button type="button" id="gateBtnToSignInFromForgot" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition border border-white/10 text-center cursor-pointer active:scale-95">
+                <button type="button" id="gateBtnToSignInFromForgot" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-full transition border border-white/10 text-center cursor-pointer active:scale-95">
                     ← Back to Sign In
                 </button>
             </form>
@@ -1162,12 +1194,12 @@
                     <div class="auth-password-field"><input type="password" id="gateConfirmNewPassword" placeholder="••••••••" class="w-full glass-input rounded-xl p-3 text-sm text-white outline-none placeholder:text-on-surface-variant/50" required minlength="6" autocomplete="new-password"><button type="button" onclick="toggleGatePassword('gateConfirmNewPassword', this)" aria-label="Show password" aria-controls="gateConfirmNewPassword" aria-pressed="false">Show</button></div>
                 </div>
 
-                <button type="submit" id="btnGateSetNewPassword" class="w-full py-3 bg-primary-container text-on-primary-container font-bold text-sm rounded-xl hover:bg-primary-fixed active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <button type="submit" id="btnGateSetNewPassword" class="studio-cta-primary w-full py-3.5 bg-primary-container text-on-primary-container font-bold text-sm rounded-full hover:bg-primary-fixed active:scale-[0.98] transition flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-lg">check_circle</span>
                     <span>Update Password & Enter Studio</span>
                 </button>
 
-                <button type="button" id="gateBtnToSignInFromReset" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-xl transition border border-white/10 text-center cursor-pointer active:scale-95">
+                <button type="button" id="gateBtnToSignInFromReset" onclick="switchGateMode('signin')" class="w-full py-2.5 bg-white/5 hover:bg-white/10 text-on-surface-variant hover:text-white font-medium text-xs rounded-full transition border border-white/10 text-center cursor-pointer active:scale-95">
                     ← Back to Sign In
                 </button>
             </form>
@@ -1192,35 +1224,42 @@
     <!-- ════════════════ App Main Container (hidden when not logged in) ════════════════ -->
     <div id="appMainContainer" class="hidden flex-1 flex flex-col md:flex-row w-full min-h-screen">
     <!-- ════════════════ Mobile Top Bar (visible < md) ════════════════ -->
-    <header class="md:hidden glass-header fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-3.5">
-        <button onclick="openMobileNav()" class="w-10 h-10 -ml-1 rounded-xl text-on-surface hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Open menu" title="Menu">
+    <header class="md:hidden glass-header fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-3">
+        <button onclick="openMobileNav()" class="w-10 h-10 -ml-1 rounded-full text-on-surface hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Open menu" title="Menu">
             <span class="material-symbols-outlined text-[22px]">menu</span>
         </button>
-        <div class="flex items-center gap-2 min-w-0">
-            <svg class="w-5 h-5 shrink-0 text-primary-container" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/>
-                <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5a2.5 2.5 0 0 1 2.5 2V5.5Z" stroke="#e6b968"/>
-            </svg>
-            <span class="font-label-caps font-semibold tracking-tight text-white text-[15px]">EngBot</span>
+        <div class="flex items-center gap-1.5 min-w-0">
+            <button type="button" onclick="goToStudioHome()" class="engbot-brand-trigger flex items-center gap-2 min-w-0 px-2 py-1 rounded-full hover:bg-white/[0.06] active:scale-[0.97] transition" aria-label="Go to Library Home" title="Go to Home">
+                <svg class="w-6 h-6 shrink-0" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                    <path d="M4.5 9.5C4.5 7.2 6.4 5.3 8.7 5.3H14.5C15.3 5.3 16 6 16 6.8V25.6C16 25.6 12.6 23.4 8.8 23.4H6.3C5.3 23.4 4.5 22.6 4.5 21.6V9.5Z" fill="url(#engbotPrismGrad)" fill-opacity="0.22" stroke="url(#engbotPrismGrad)" stroke-width="1.9" stroke-linejoin="round"/>
+                    <path d="M27.5 9.5C27.5 7.2 25.6 5.3 23.3 5.3H17.5C16.7 5.3 16 6 16 6.8V25.6C16 25.6 19.4 23.4 23.2 23.4H25.7C26.7 23.4 27.5 22.6 27.5 21.6V9.5Z" fill="url(#engbotGoldGrad)" fill-opacity="0.16" stroke="url(#engbotGoldGrad)" stroke-width="1.9" stroke-linejoin="round"/>
+                    <path d="M10.2 12.4V17M21.8 11.4V18" stroke="url(#engbotPrismGrad)" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="16" cy="5" r="1.7" fill="#2ee6c5"/>
+                </svg>
+                <span class="font-label-caps font-bold tracking-tight text-white text-[15px]">EngBot</span>
+            </button>
             <div id="adminVersionPillMobile" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/15 border border-primary-container/30 text-[10px] font-mono text-primary-fixed font-semibold">
-                <span>👑</span><span>v1.57.0</span>
+                <span>👑</span><span>v1.59.0</span>
             </div>
         </div>
         <div class="flex items-center gap-0.5 -mr-1">
-            <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" data-admin-only hidden class="hidden w-9 h-9 rounded-xl text-white/80 hover:text-white hover:bg-white/[0.06] transition flex items-center justify-center" aria-label="GitHub Repository" title="GitHub Repository">
+            <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" data-admin-only hidden class="hidden w-9 h-9 rounded-full text-white/80 hover:text-white hover:bg-white/[0.06] transition flex items-center justify-center" aria-label="GitHub Repository" title="GitHub Repository">
                 <svg class="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
             </a>
-            <button onclick="LuminaScanner.open()" class="w-9 h-9 rounded-xl text-georgian-gold hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Scan book pages" title="Scan book pages">
-                <span class="material-symbols-outlined text-[21px]">document_scanner</span>
+            <button id="btnThemeToggleMobile" onclick="toggleStudioTheme()" class="studio-theme-pill w-9 h-9 rounded-full text-on-surface-variant hover:text-white hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Switch to light theme" aria-pressed="false" title="Switch theme">
+                <span class="material-symbols-outlined text-[20px]">light_mode</span>
             </button>
-            <button onclick="event.stopPropagation(); openModal('uploadModal')" class="w-9 h-9 rounded-xl text-primary-container hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Upload PDF" title="Upload PDF">
-                <span class="material-symbols-outlined text-[21px]">upload_file</span>
+            <button onclick="LuminaScanner.open()" class="w-9 h-9 rounded-full text-georgian-gold hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Scan book pages" title="Scan book pages">
+                <span class="material-symbols-outlined text-[20px]">document_scanner</span>
             </button>
-            <button id="mobileTopServerStatsBtn" onclick="navigate('server-stats')" data-admin-build class="hidden w-9 h-9 rounded-xl text-emerald-400 hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Server Stats" title="Server Stats">
-                <span class="material-symbols-outlined text-[21px]">dns</span>
+            <button onclick="event.stopPropagation(); openModal('uploadModal')" class="w-9 h-9 rounded-full text-primary-container hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Upload PDF" title="Upload PDF">
+                <span class="material-symbols-outlined text-[20px]">upload_file</span>
             </button>
-            <button id="mobileTopProfileBtn" onclick="openAccountCabinet()" class="w-9 h-9 rounded-xl text-on-surface hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Account & Cabinet" title="Account & Cabinet">
-                <span class="material-symbols-outlined text-[21px]">account_circle</span>
+            <button id="mobileTopServerStatsBtn" onclick="navigate('server-stats')" data-admin-build class="hidden w-9 h-9 rounded-full text-emerald-400 hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Server Stats" title="Server Stats">
+                <span class="material-symbols-outlined text-[20px]">dns</span>
+            </button>
+            <button id="mobileTopProfileBtn" onclick="openAccountCabinet()" class="w-9 h-9 rounded-full text-on-surface hover:bg-white/[0.06] flex items-center justify-center transition" aria-label="Account & Cabinet" title="Account & Cabinet">
+                <span class="material-symbols-outlined text-[20px]">account_circle</span>
             </button>
         </div>
 
@@ -1230,19 +1269,20 @@
     <div id="mobileNavDrawer" inert class="drawer-overlay" onclick="closeMobileNav()">
         <div class="drawer-content glass-panel flex flex-col bg-[#0f141b] text-white border-l border-white/[0.08]" onclick="event.stopPropagation()" role="dialog" aria-label="Navigation menu">
             <div class="flex items-center justify-between p-4 border-b border-white/[0.07]">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-lg bg-[#181f28] border border-white/10 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-primary-container" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/>
-                            <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5a2.5 2.5 0 0 1 2.5 2V5.5Z" stroke="#e6b968"/>
+                <button type="button" onclick="goToStudioHome()" class="engbot-brand-trigger flex items-center gap-2.5 text-left px-1.5 py-1 rounded-2xl hover:bg-white/[0.05] transition" aria-label="Go to Library Home" title="Go to Home">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#161e31] to-[#0a0e18] border border-white/15 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                            <path d="M4.5 9.5C4.5 7.2 6.4 5.3 8.7 5.3H14.5C15.3 5.3 16 6 16 6.8V25.6C16 25.6 12.6 23.4 8.8 23.4H6.3C5.3 23.4 4.5 22.6 4.5 21.6V9.5Z" fill="url(#engbotPrismGrad)" fill-opacity="0.22" stroke="url(#engbotPrismGrad)" stroke-width="1.9" stroke-linejoin="round"/>
+                            <path d="M27.5 9.5C27.5 7.2 25.6 5.3 23.3 5.3H17.5C16.7 5.3 16 6 16 6.8V25.6C16 25.6 19.4 23.4 23.2 23.4H25.7C26.7 23.4 27.5 22.6 27.5 21.6V9.5Z" fill="url(#engbotGoldGrad)" fill-opacity="0.16" stroke="url(#engbotGoldGrad)" stroke-width="1.9" stroke-linejoin="round"/>
+                            <path d="M10.2 12.4V17M21.8 11.4V18" stroke="url(#engbotPrismGrad)" stroke-width="2" stroke-linecap="round"/>
                         </svg>
                     </div>
                     <div>
-                        <span class="font-label-caps font-semibold text-white block leading-tight text-sm">EngBot Studio</span>
-                        <span class="text-[11px] text-on-surface-variant">Your reading workspace</span>
+                        <span class="font-label-caps font-bold text-white block leading-tight text-sm">EngBot Studio</span>
+                        <span class="text-[11px] text-on-surface-variant">Reading Atelier</span>
                     </div>
-                </div>
-                <button onclick="closeMobileNav()" class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition" aria-label="Close menu">
+                </button>
+                <button onclick="closeMobileNav()" class="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center transition" aria-label="Close menu">
                     <span class="material-symbols-outlined text-lg">close</span>
                 </button>
             </div>
@@ -1290,12 +1330,15 @@
                 <button onclick="openAccountCabinet();closeMobileNav()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/[0.06] hover:text-white transition">
                     <span class="material-symbols-outlined text-[20px]">person</span><span id="mobileNavUserName">Sign In</span>
                 </button>
+                <button type="button" id="btnThemeToggleDrawer" onclick="toggleStudioTheme()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/[0.06] hover:text-white transition">
+                    <span id="drawerThemeIcon" class="material-symbols-outlined text-[20px]">light_mode</span><span id="drawerThemeLabel">Theme: Dark</span>
+                </button>
             </nav>
             <div class="p-4 border-t border-white/[0.07] space-y-2">
-                <button onclick="LuminaScanner.open();closeMobileNav()" class="w-full py-2.5 rounded-xl bg-georgian-gold/12 text-georgian-gold font-semibold border border-georgian-gold/25 flex items-center justify-center gap-2 text-sm transition-all active:scale-[0.98]">
+                <button onclick="LuminaScanner.open();closeMobileNav()" class="w-full py-2.5 rounded-full bg-georgian-gold/12 text-georgian-gold font-semibold border border-georgian-gold/25 flex items-center justify-center gap-2 text-sm transition-all active:scale-[0.98]">
                     <span class="material-symbols-outlined text-lg">document_scanner</span> Scan Book Pages
                 </button>
-                <button onclick="event.stopPropagation(); openModal('uploadModal'); closeMobileNav()" class="w-full py-2.5 rounded-xl bg-primary-container text-on-primary-container font-bold text-sm flex items-center justify-center gap-2 transition-all hover:bg-primary-fixed active:scale-[0.98]">
+                <button onclick="event.stopPropagation(); openModal('uploadModal'); closeMobileNav()" class="studio-cta-primary w-full py-2.5 rounded-full bg-primary-container text-on-primary-container font-bold text-sm flex items-center justify-center gap-2 transition-all hover:bg-primary-fixed active:scale-[0.98]">
                     <span class="material-symbols-outlined text-lg">upload_file</span> Upload PDF Book
                 </button>
             </div>
@@ -1305,22 +1348,24 @@
 
     <!-- ════════════════ SideNavBar (Desktop) ════════════════ -->
     <nav id="studioSidebar" aria-label="Main navigation" class="hidden md:flex flex-col h-full py-7 px-4 glass-nav w-64 fixed left-0 top-0 z-40">
-        <div class="mb-7 px-2.5 flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-[#161c24] border border-white/10 flex items-center justify-center shrink-0">
-                <svg class="w-5 h-5 text-primary-container" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/>
-                    <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5a2.5 2.5 0 0 1 2.5 2V5.5Z" stroke="#e6b968"/>
+        <button type="button" onclick="goToStudioHome()" class="engbot-brand-trigger mb-5 w-full px-2.5 py-2 rounded-2xl flex items-center gap-3 text-left hover:bg-white/[0.06] active:scale-[0.98] transition cursor-pointer group" aria-label="Go to Library Home" title="Go to Home">
+            <div class="w-10 h-10 rounded-[14px] bg-gradient-to-br from-[#161e31] to-[#0a0e18] border border-white/15 flex items-center justify-center shrink-0 shadow-[0_8px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.16)] group-hover:scale-105 transition-transform">
+                <svg class="w-6 h-6" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                    <path d="M4.5 9.5C4.5 7.2 6.4 5.3 8.7 5.3H14.5C15.3 5.3 16 6 16 6.8V25.6C16 25.6 12.6 23.4 8.8 23.4H6.3C5.3 23.4 4.5 22.6 4.5 21.6V9.5Z" fill="url(#engbotPrismGrad)" fill-opacity="0.22" stroke="url(#engbotPrismGrad)" stroke-width="1.9" stroke-linejoin="round"/>
+                    <path d="M27.5 9.5C27.5 7.2 25.6 5.3 23.3 5.3H17.5C16.7 5.3 16 6 16 6.8V25.6C16 25.6 19.4 23.4 23.2 23.4H25.7C26.7 23.4 27.5 22.6 27.5 21.6V9.5Z" fill="url(#engbotGoldGrad)" fill-opacity="0.16" stroke="url(#engbotGoldGrad)" stroke-width="1.9" stroke-linejoin="round"/>
+                    <path d="M10.2 12.4V17M21.8 11.4V18" stroke="url(#engbotPrismGrad)" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="16" cy="5" r="1.7" fill="#2ee6c5"/>
                 </svg>
             </div>
             <div>
-                <h1 class="font-label-caps text-[17px] font-bold tracking-tight text-white flex items-center gap-1.5">
+                <h1 class="font-label-caps text-[17px] font-bold tracking-tight text-white flex items-center gap-1.5 group-hover:text-primary-container transition-colors">
                     EngBot
                 </h1>
-                <p class="text-on-surface-variant text-[11px] font-medium">Reading Studio</p>
+                <p class="text-on-surface-variant text-[10.5px] font-medium tracking-wider uppercase">Reading Atelier</p>
             </div>
-        </div>
+        </button>
 
-        <button id="btnNavUpload" onclick="event.stopPropagation(); openModal('uploadModal')" class="mb-4 w-full py-3 px-4 rounded-xl bg-primary-container text-on-primary-container font-bold text-sm hover:bg-primary-fixed active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer" aria-label="Upload PDF Book" title="Upload PDF Book">
+        <button id="btnNavUpload" onclick="event.stopPropagation(); openModal('uploadModal')" class="studio-cta-primary mb-4 w-full py-3 px-4 rounded-full bg-primary-container text-on-primary-container font-bold text-sm hover:bg-primary-fixed active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer" aria-label="Upload PDF Book" title="Upload PDF Book">
             <span class="material-symbols-outlined text-[19px]">upload_file</span>
             <span>Upload Book</span>
         </button>
@@ -1404,49 +1449,53 @@
     <header id="studioTopbar" class="hidden md:flex justify-between items-center px-8 py-3 glass-header fixed top-0 right-0 w-[calc(100%-16rem)] z-30">
         <div class="flex-grow max-w-sm">
             <div class="relative">
-                <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
-                <input id="searchInput" aria-label="Search your library" class="w-full glass-input rounded-xl py-2 pl-10 pr-4 text-[13px] placeholder:text-on-surface-variant/70 focus:outline-none" placeholder="Search your library…" type="text">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+                <input id="searchInput" aria-label="Search your library" class="w-full glass-input rounded-full py-2 pl-10 pr-4 text-[13px] placeholder:text-on-surface-variant/70 focus:outline-none" placeholder="Search your library…" type="text">
             </div>
         </div>
 
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2">
             <div id="adminVersionPill" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-primary-container/12 border border-primary-container/25 text-[11px] font-mono text-primary-fixed font-semibold">
                 <span>👑 Admin</span>
                 <span class="opacity-40">•</span>
-                <span>App v1.57.0</span>
+                <span>App v1.59.0</span>
                 <span class="opacity-40">•</span>
-                <span>Ka-v5</span>
+                <span>Ka-v6</span>
             </div>
 
-            <button onclick="event.stopPropagation(); openModal('uploadModal')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary-container/15 hover:bg-primary-container/25 border border-primary-container/30 text-xs font-semibold text-primary-container transition cursor-pointer" title="Upload PDF Book" aria-label="Upload PDF Book">
+            <button onclick="event.stopPropagation(); openModal('uploadModal')" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary-container/15 hover:bg-primary-container/25 border border-primary-container/30 text-xs font-semibold text-primary-container transition cursor-pointer" title="Upload PDF Book" aria-label="Upload PDF Book">
                 <span class="material-symbols-outlined text-[17px]">upload_file</span>
                 <span>Upload Book</span>
             </button>
 
-            <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" data-admin-only hidden class="hidden flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white transition" title="View Project on GitHub">
+            <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" data-admin-only hidden class="hidden flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white transition" title="View Project on GitHub">
                 <svg class="w-4 h-4 fill-current text-white/90" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                 <span>GitHub</span>
             </a>
 
-            <button onclick="openCurrentBookInReader()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-georgian-gold/12 hover:bg-georgian-gold/20 border border-georgian-gold/25 text-xs font-semibold text-georgian-gold transition" title="Open Moon+ Reader view">
+            <button onclick="openCurrentBookInReader()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-georgian-gold/12 hover:bg-georgian-gold/20 border border-georgian-gold/25 text-xs font-semibold text-georgian-gold transition" title="Open Moon+ Reader view">
                 <span class="material-symbols-outlined text-[17px]">menu_book</span>
                 <span>Reader</span>
             </button>
 
-            <button onclick="openModal('voiceModal')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white transition">
+            <button onclick="openModal('voiceModal')" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white transition">
                 <span class="material-symbols-outlined text-primary-container text-[17px]">record_voice_over</span>
                 <span id="topVoiceBadge">Narrator: EngBot</span>
                 <span class="material-symbols-outlined text-sm text-on-surface-variant">expand_more</span>
             </button>
 
-            <button id="topServerStatsBtn" onclick="navigate('server-stats')" data-admin-build class="hidden items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/12 hover:bg-emerald-500/20 border border-emerald-500/25 text-xs font-semibold text-emerald-400 transition" title="Server State & Live Usage Telemetry">
+            <button id="btnThemeToggleDesktop" onclick="toggleStudioTheme()" class="studio-theme-pill w-9 h-9 rounded-full bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-on-surface-variant hover:text-white flex items-center justify-center transition" aria-label="Switch to light theme" aria-pressed="false" title="Switch dark / light theme">
+                <span class="material-symbols-outlined text-[18px]">light_mode</span>
+            </button>
+
+            <button id="topServerStatsBtn" onclick="navigate('server-stats')" data-admin-build class="hidden items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/12 hover:bg-emerald-500/20 border border-emerald-500/25 text-xs font-semibold text-emerald-400 transition" title="Server State & Live Usage Telemetry">
                 <span class="material-symbols-outlined text-[17px] text-emerald-400">dns</span>
                 <span>Server Stats</span>
                 <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Live</span>
             </button>
 
-            <button id="topProfileBtn" onclick="openAccountCabinet()" class="p-1 rounded-full text-on-surface-variant hover:text-white transition flex items-center gap-2" title="Your Account & Cabinet">
-                <div class="w-8 h-8 rounded-full bg-[#181f28] border border-white/12 flex items-center justify-center text-primary-container font-bold text-xs" id="topAvatarBadge">
+            <button id="topProfileBtn" onclick="openAccountCabinet()" class="p-0.5 rounded-full text-on-surface-variant hover:text-white transition flex items-center gap-2" title="Your Account & Cabinet">
+                <div class="w-8 h-8 rounded-full bg-[#181f28] border border-white/14 flex items-center justify-center text-primary-container font-bold text-xs" id="topAvatarBadge">
                     G
                 </div>
             </button>
@@ -2236,22 +2285,22 @@
 
         <!-- Mobile Quick Utility Bar (Clean Bottom Strip so Title stays full width) -->
         <div class="flex md:hidden items-center justify-between gap-1.5 pt-1.5 border-t border-white/[0.06] w-full">
-            <div class="flex items-center gap-0.5 rounded-lg border border-white/10 bg-white/[0.04]">
-                <button onclick="nudgeSpeed(-0.05)" title="Slower (-0.05x)" class="px-2 py-1 text-primary-container text-xs font-bold rounded-l-lg active:scale-90 transition">−</button>
+            <div class="flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04]">
+                <button onclick="nudgeSpeed(-0.05)" title="Slower (-0.05x)" class="px-2.5 py-1 text-primary-container text-xs font-bold rounded-l-full active:scale-90 transition">−</button>
                 <button onclick="cycleSpeed()" id="btnDockSpeedMobile" class="px-1.5 py-1 text-white text-[11px] font-semibold font-mono" title="Playback speed">1.00x</button>
-                <button onclick="nudgeSpeed(0.05)" title="Faster (+0.05x)" class="px-2 py-1 text-primary-container text-xs font-bold rounded-r-lg active:scale-90 transition">+</button>
+                <button onclick="nudgeSpeed(0.05)" title="Faster (+0.05x)" class="px-2.5 py-1 text-primary-container text-xs font-bold rounded-r-full active:scale-90 transition">+</button>
             </div>
             <div class="flex items-center gap-1.5">
-                <button onclick="togglePlaybackLanguage()" id="btnDockLangToggleMobile" class="px-2.5 py-1 rounded-lg bg-white/[0.05] text-[11px] font-semibold text-georgian-gold border border-georgian-gold/25 active:scale-90 transition">
+                <button onclick="togglePlaybackLanguage()" id="btnDockLangToggleMobile" class="px-2.5 py-1 rounded-full bg-white/[0.05] text-[11px] font-semibold text-georgian-gold border border-georgian-gold/25 active:scale-90 transition">
                     <span id="dockLangBadgeMobile">🇬🇪 KA</span>
                 </button>
-                <button onclick="openModal('voiceModal')" class="p-1.5 rounded-lg bg-white/[0.05] text-primary-container border border-white/10 active:scale-90 transition" title="Voice & EngBot TTS" aria-label="Voice settings">
+                <button onclick="openModal('voiceModal')" class="p-1.5 rounded-full bg-white/[0.05] text-primary-container border border-white/10 active:scale-90 transition" title="Voice & EngBot TTS" aria-label="Voice settings">
                     <span class="material-symbols-outlined text-[18px]">record_voice_over</span>
                 </button>
-                <button onclick="EngbotReadingUI.bookmark()" class="p-1.5 rounded-lg bg-georgian-gold/10 text-georgian-gold border border-georgian-gold/25 active:scale-90 transition" title="Bookmark position" aria-label="Bookmark position">
+                <button onclick="EngbotReadingUI.bookmark()" class="p-1.5 rounded-full bg-georgian-gold/10 text-georgian-gold border border-georgian-gold/25 active:scale-90 transition" title="Bookmark position" aria-label="Bookmark position">
                     <span class="material-symbols-outlined text-[18px]">bookmark_add</span>
                 </button>
-                <button onclick="openCurrentBookInReader()" class="p-1.5 rounded-lg bg-georgian-gold/15 text-georgian-gold border border-georgian-gold/30 active:scale-90 transition" title="Open Reader" aria-label="Open Reader">
+                <button onclick="openCurrentBookInReader()" class="p-1.5 rounded-full bg-georgian-gold/15 text-georgian-gold border border-georgian-gold/30 active:scale-90 transition" title="Open Reader" aria-label="Open Reader">
                     <span class="material-symbols-outlined text-[18px]">menu_book</span>
                 </button>
             </div>
@@ -2259,21 +2308,21 @@
 
         <!-- Desktop Right Actions -->
         <div class="hidden md:flex items-center justify-end gap-2 w-[27%]">
-            <button onclick="toggleMuteAudio()" id="btnDockVolumeToggle" class="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-on-surface-variant hover:text-white border border-white/10 transition flex items-center justify-center active:scale-90" title="Mute / Unmute audio">
+            <button onclick="toggleMuteAudio()" id="btnDockVolumeToggle" class="p-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-on-surface-variant hover:text-white border border-white/10 transition flex items-center justify-center active:scale-90" title="Mute / Unmute audio">
                 <span class="material-symbols-outlined text-base" id="dockVolumeIcon">volume_up</span>
             </button>
-            <button onclick="togglePlaybackLanguage()" id="btnDockLangToggle" class="px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold border border-white/10 transition flex items-center gap-1 active:scale-90" title="Toggle English / Georgian audio">
+            <button onclick="togglePlaybackLanguage()" id="btnDockLangToggle" class="px-3 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold border border-white/10 transition flex items-center gap-1 active:scale-90" title="Toggle English / Georgian audio">
                 <span id="dockLangBadge">🇺🇸 EN</span>
             </button>
-            <button onclick="openCurrentBookInReader()" class="p-2 rounded-xl bg-georgian-gold/12 hover:bg-georgian-gold/20 text-georgian-gold text-xs font-semibold flex items-center gap-1 border border-georgian-gold/25 transition active:scale-90" title="Open Moon Reader">
+            <button onclick="openCurrentBookInReader()" class="p-2 rounded-full bg-georgian-gold/12 hover:bg-georgian-gold/20 text-georgian-gold text-xs font-semibold flex items-center gap-1 border border-georgian-gold/25 transition active:scale-90" title="Open Moon Reader">
                 <span class="material-symbols-outlined text-base">menu_book</span>
             </button>
-            <div class="flex items-center gap-0.5 rounded-xl border border-white/10 bg-white/[0.04]">
-                <button onclick="nudgeSpeed(-0.05)" title="Slower (-0.05x)" class="px-2 py-1 text-primary-container text-xs font-bold hover:bg-white/10 rounded-l-xl transition active:scale-90">−</button>
+            <div class="flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04]">
+                <button onclick="nudgeSpeed(-0.05)" title="Slower (-0.05x)" class="px-2.5 py-1 text-primary-container text-xs font-bold hover:bg-white/10 rounded-l-full transition active:scale-90">−</button>
                 <button onclick="cycleSpeed()" id="btnDockSpeed" class="px-1.5 py-1 text-white text-xs font-semibold font-mono transition active:scale-90" title="Playback speed (tap to step +0.05x)">
                     1.00x
                 </button>
-                <button onclick="nudgeSpeed(0.05)" title="Faster (+0.05x)" class="px-2 py-1 text-primary-container text-xs font-bold hover:bg-white/10 rounded-r-xl transition active:scale-90">+</button>
+                <button onclick="nudgeSpeed(0.05)" title="Faster (+0.05x)" class="px-2.5 py-1 text-primary-container text-xs font-bold hover:bg-white/10 rounded-r-full transition active:scale-90">+</button>
             </div>
         </div>
     </div>
@@ -2521,6 +2570,15 @@
                         <span>Reset / Recover Password</span>
                     </span>
                     <span class="material-symbols-outlined text-sm text-on-surface-variant">chevron_right</span>
+                </button>
+
+                <!-- Theme Switcher (Dark Default / Light Mode) -->
+                <button type="button" id="cabinetBtnTheme" onclick="toggleStudioTheme()" class="w-full py-2.5 px-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white border border-white/[0.08] text-xs font-medium transition flex items-center justify-between">
+                    <span class="flex items-center gap-2.5">
+                        <span id="cabinetThemeIcon" class="material-symbols-outlined text-base text-primary-container">light_mode</span>
+                        <span id="cabinetThemeLabel">Appearance Theme</span>
+                    </span>
+                    <span id="cabinetThemeBadge" class="px-2.5 py-0.5 rounded-full bg-white/[0.08] text-[10px] font-mono text-primary-container">Dark</span>
                 </button>
 
                 <!-- Sign Out -->
@@ -3650,31 +3708,31 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
       });
     </script>
 
-    <script src="static/library-sync.js?v=1.58.0&release=19"></script>
-    <script src="static/supabase-store.js?v=1.58.0&release=19"></script>
-    <script src="static/engine-core.js?v=1.58.0&release=19"></script>
-    <script src="static/provider-runtime.js?v=1.58.0&release=19"></script>
-    <script src="static/studio-ui.js?v=1.58.0&release=19"></script>
-    <script src="static/training-client.js?v=1.58.0&release=19"></script>
-    <script src="static/job-store.js?v=1.58.0&release=19"></script>
-    <script src="static/training-runner.js?v=1.58.0&release=19"></script>
-    <script src="static/training-studio.js?v=1.58.0&release=19"></script>
-    <script src="static/narration.js?v=1.58.0&release=19"></script>
-    <script src="static/model-discovery.js?v=1.58.0&release=19"></script>
-    <script src="static/ai-settings.js?v=1.58.0&release=19"></script>
-    <script src="static/lm-studio.js?v=1.58.0&release=19"></script>
-    <script src="static/translation-phases.js?v=1.58.0&release=19"></script>
-    <script src="static/local-translation.js?v=1.58.0&release=19"></script>
-    <script src="static/translation-machine.js?v=1.58.0&release=19"></script>
-    <script src="static/book-structure.js?v=1.58.0&release=19"></script>
-    <script src="static/app.js?v=1.58.0&release=19"></script>
-    <script src="static/reading-state.js?v=1.58.0&release=19"></script>
-    <script src="static/reading-ui.js?v=1.58.0&release=19"></script>
-    <script src="static/repair-review.js?v=1.58.0&release=19"></script>
-    <script src="static/georgian-linguistics.js?v=1.58.0&release=19"></script>
-    <script src="static/english-linguistics.js?v=1.58.0&release=19"></script>
-    <script src="static/engine-pack.js?v=1.58.0&release=19"></script>
-    <script src="static/scanner.js?v=1.58.0&release=19"></script>
+    <script src="static/library-sync.js?v=1.59.0&release=20"></script>
+    <script src="static/supabase-store.js?v=1.59.0&release=20"></script>
+    <script src="static/engine-core.js?v=1.59.0&release=20"></script>
+    <script src="static/provider-runtime.js?v=1.59.0&release=20"></script>
+    <script src="static/studio-ui.js?v=1.59.0&release=20"></script>
+    <script src="static/training-client.js?v=1.59.0&release=20"></script>
+    <script src="static/job-store.js?v=1.59.0&release=20"></script>
+    <script src="static/training-runner.js?v=1.59.0&release=20"></script>
+    <script src="static/training-studio.js?v=1.59.0&release=20"></script>
+    <script src="static/narration.js?v=1.59.0&release=20"></script>
+    <script src="static/model-discovery.js?v=1.59.0&release=20"></script>
+    <script src="static/ai-settings.js?v=1.59.0&release=20"></script>
+    <script src="static/lm-studio.js?v=1.59.0&release=20"></script>
+    <script src="static/translation-phases.js?v=1.59.0&release=20"></script>
+    <script src="static/local-translation.js?v=1.59.0&release=20"></script>
+    <script src="static/translation-machine.js?v=1.59.0&release=20"></script>
+    <script src="static/book-structure.js?v=1.59.0&release=20"></script>
+    <script src="static/app.js?v=1.59.0&release=20"></script>
+    <script src="static/reading-state.js?v=1.59.0&release=20"></script>
+    <script src="static/reading-ui.js?v=1.59.0&release=20"></script>
+    <script src="static/repair-review.js?v=1.59.0&release=20"></script>
+    <script src="static/georgian-linguistics.js?v=1.59.0&release=20"></script>
+    <script src="static/english-linguistics.js?v=1.59.0&release=20"></script>
+    <script src="static/engine-pack.js?v=1.59.0&release=20"></script>
+    <script src="static/scanner.js?v=1.59.0&release=20"></script>
     <script src="static/embeddinggemma-studio.js?v=2.0.0"></script>
 
     <!-- ════════════════ EmbeddingGemma Document Inspect Modal ════════════════ -->

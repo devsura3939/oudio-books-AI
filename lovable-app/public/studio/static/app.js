@@ -3812,6 +3812,75 @@ function navToSection(tab) {
     }
 }
 
+function goToStudioHome() {
+    try {
+        if (typeof readerActive !== 'undefined' && readerActive && typeof closeReader === 'function') {
+            closeReader();
+        }
+    } catch (_) {}
+    try { if (typeof closeMobileNav === 'function') closeMobileNav(); } catch (_) {}
+    if (typeof updateBottomNavActive === 'function') updateBottomNavActive('home');
+    if (typeof navigate === 'function') navigate('library');
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) {}
+}
+if (typeof window !== 'undefined') window.goToStudioHome = goToStudioHome;
+
+function getStudioTheme() {
+    try {
+        return localStorage.getItem('engbot_ui_theme') === 'light' ? 'light' : 'dark';
+    } catch (_) {
+        return 'dark';
+    }
+}
+
+function applyStudioTheme(theme) {
+    const mode = theme === 'light' ? 'light' : 'dark';
+    const root = typeof document !== 'undefined' ? document.documentElement : null;
+    if (root) {
+        root.classList.toggle('theme-light', mode === 'light');
+        root.classList.toggle('dark', mode !== 'light');
+        root.dataset.theme = mode;
+    }
+    try { localStorage.setItem('engbot_ui_theme', mode); } catch (_) {}
+    if (typeof document === 'undefined') return;
+    const isLight = mode === 'light';
+    const nextLabel = isLight ? 'Switch to dark theme' : 'Switch to light theme';
+    const iconName = isLight ? 'dark_mode' : 'light_mode';
+    ['btnThemeToggleDesktop', 'btnThemeToggleMobile', 'btnThemeToggleGate'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.setAttribute('aria-label', nextLabel);
+        btn.setAttribute('aria-pressed', String(isLight));
+        btn.title = nextLabel;
+        const glyph = btn.querySelector('.material-symbols-outlined');
+        if (glyph) glyph.textContent = iconName;
+    });
+    const drawerLabel = document.getElementById('drawerThemeLabel');
+    const drawerGlyph = document.getElementById('drawerThemeIcon');
+    if (drawerLabel) drawerLabel.textContent = isLight ? 'Theme: Light' : 'Theme: Dark';
+    if (drawerGlyph) drawerGlyph.textContent = iconName;
+    const cabinetBadge = document.getElementById('cabinetThemeBadge');
+    const cabinetGlyph = document.getElementById('cabinetThemeIcon');
+    if (cabinetBadge) cabinetBadge.textContent = isLight ? 'Light' : 'Dark';
+    if (cabinetGlyph) cabinetGlyph.textContent = iconName;
+}
+
+function toggleStudioTheme() {
+    const next = getStudioTheme() === 'light' ? 'dark' : 'light';
+    applyStudioTheme(next);
+    if (typeof showToast === 'function') {
+        showToast(next === 'light' ? 'Alabaster Light theme activated' : 'Nocturne Dark theme activated', 'info');
+    }
+}
+if (typeof window !== 'undefined') {
+    window.getStudioTheme = getStudioTheme;
+    window.applyStudioTheme = applyStudioTheme;
+    window.toggleStudioTheme = toggleStudioTheme;
+}
+if (typeof document !== 'undefined') {
+    try { applyStudioTheme(getStudioTheme()); } catch (_) {}
+}
+
 function navigate(viewId) {
     const views = ['library', 'discover', 'scanner', 'embeddinggemma', 'server-stats'];
     const emailClean = (currentUser?.email || '').trim().toLowerCase();
