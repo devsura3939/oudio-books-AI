@@ -1495,12 +1495,16 @@ def _translate_text_impl(text: str, source_lang: str = "auto", target_lang: str 
         after_ctx = chunks[chunk_index + 1] if chunk_index + 1 < len(chunks) else _translation_request_context.get("after", "")
         
         # EmbeddingGemma 2 RAG Context Retrieval: Maintain character & terminology consistency
+        # when custom user documents/books have been indexed beyond the static demo stubs.
         try:
-            from app.embeddinggemma_engine import get_embeddinggemma_engine
+            from app.embeddinggemma_engine import get_embeddinggemma_engine, DEFAULT_CORPUS
             eg = get_embeddinggemma_engine()
-            sem_ctx = eg.get_semantic_context_for_translation(p)
-            if sem_ctx and sem_ctx.get("prompt_hint"):
-                before_ctx = (sem_ctx["prompt_hint"] + "\n" + before_ctx).strip()
+            default_ids = {item.get("doc_id") for item in DEFAULT_CORPUS}
+            has_user_docs = any(r.get("doc_id") not in default_ids for r in (eg.index_records or []))
+            if has_user_docs:
+                sem_ctx = eg.get_semantic_context_for_translation(p)
+                if sem_ctx and sem_ctx.get("prompt_hint"):
+                    before_ctx = (sem_ctx["prompt_hint"] + "\n" + before_ctx).strip()
         except Exception:
             pass
 

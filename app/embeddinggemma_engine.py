@@ -82,6 +82,13 @@ class EmbeddingGemmaEngine:
         self._load_index()
 
     def _init_model(self):
+        # Never block worker threads importing Torch or hitting HuggingFace Hub unless explicitly enabled
+        # or a local cached snapshot already exists.
+        hf_cache_dir = os.path.expanduser("~/.cache/huggingface/hub/models--google--embeddinggemma-2")
+        allow_download = os.environ.get("EMBEDDINGGEMMA_ALLOW_DOWNLOAD", "").strip().lower() in ("1", "true", "yes")
+        if not allow_download and not os.path.isdir(hf_cache_dir):
+            self.is_production_model = False
+            return
         try:
             import torch
             from sentence_transformers import SentenceTransformer
@@ -93,6 +100,7 @@ class EmbeddingGemmaEngine:
 
             self.model = SentenceTransformer(
                 "google/embeddinggemma-2",
+                local_files_only=not allow_download,
                 model_kwargs={"torch_dtype": dtype},
                 config_kwargs=config_kwargs if config_kwargs else None
             )
