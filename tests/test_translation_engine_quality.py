@@ -221,3 +221,12 @@ def test_light_inchoative_directional_intensifier_calques_rejected_and_cleaned()
     assert "ოთახში შემოვიდა" in cleaned
     assert "ცხადლივ" in cleaned
     assert "შემდეგ კი თქვა" in cleaned
+
+
+def test_oblique_adjective_genitive_and_calque_repairs():
+    """Verify consonant-stem modifier agreement before genitive/directional nouns and calque fixes."""
+    raw = "ძველ სადგურისკენ მიდიოდა, სანამ გააკეთა გადაწყვეტილება და ძველ სადგურში შევიდა."
+    cleaned = clean_georgian_morphology(raw)
+    assert "ძველი სადგურისკენ" in cleaned
+    assert "გადაწყვეტილება მიიღო" in cleaned
+    assert "ძველ სადგურში" in cleaned

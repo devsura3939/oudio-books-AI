@@ -1601,7 +1601,24 @@ function transliterateLatinWordToGeorgian(word) {
         'tv': 'თი-ვი', 'ok': 'ოქეი', 'okay': 'ოქეი', 'vip': 'ვი-აი-პი',
         'gps': 'ჯი-პი-ეს', 'wifi': 'ვაი-ფაი', 'un': 'გაერო', 'uk': 'დიდი ბრიტანეთი',
         'linux': 'ლინუქსი', 'windows': 'უინდოუზი', 'python': 'პითონი',
-        'vonnegut': 'ვონეგუტი', 'aurelia': 'ავრელია', 'rumfoord': 'რამფორდი', 'constant': 'კონსტანტი'
+        'vonnegut': 'ვონეგუტი', 'aurelia': 'ავრელია', 'rumfoord': 'რამფორდი', 'constant': 'კონსტანტი',
+        'europe': 'ევროპა', 'asia': 'აზია', 'africa': 'აფრიკა',
+        'germany': 'გერმანია', 'italy': 'იტალია', 'spain': 'ესპანეთი', 'greece': 'საბერძნეთი',
+        'turkey': 'თურქეთი', 'china': 'ჩინეთი', 'japan': 'იაპონია', 'india': 'ინდოეთი',
+        'ukraine': 'უკრაინა', 'russia': 'რუსეთი', 'poland': 'პოლონეთი', 'sweden': 'შვედეთი',
+        'norway': 'ნორვეგია', 'canada': 'კანადა', 'brazil': 'ბრაზილია', 'mexico': 'მექსიკა',
+        'australia': 'ავსტრალია', 'egypt': 'ეგვიპტე', 'israel': 'ისრაელი',
+        'berlin': 'ბერლინი', 'vienna': 'ვენა', 'prague': 'პრაღა', 'milan': 'მილანი',
+        'madrid': 'მადრიდი', 'lisbon': 'ლისაბონი', 'cairo': 'კაირო', 'jerusalem': 'იერუსალიმი',
+        'istanbul': 'სტამბოლი', 'tokyo': 'ტოკიო', 'beijing': 'პეკინი', 'seoul': 'სეული',
+        'cambridge': 'ქემბრიჯი', 'oxford': 'ოქსფორდი', 'harvard': 'ჰარვარდი', 'princeton': 'პრინსტონი',
+        'boston': 'ბოსტონი', 'chicago': 'ჩიკაგო', 'washington': 'ვაშინგტონი', 'moscow': 'მოსკოვი',
+        'tom': 'თომი', 'sam': 'სემი', 'max': 'მაქსი', 'leo': 'ლეო', 'noah': 'ნოა',
+        'oliver': 'ოლივერი', 'charlie': 'ჩარლი', 'benjamin': 'ბენჯამინი', 'catherine': 'ქეთრინი',
+        'margaret': 'მარგარეტი', 'sophie': 'სოფი', 'chloe': 'ქლოი', 'lucas': 'ლუკასი',
+        'daniel': 'დანიელი', 'claire': 'კლერი', 'arthur': 'ართური',
+        'tesla': 'ტესლა', 'spacex': 'სპეის-ექსი', 'nvidia': 'ენვიდია', 'wikipedia': 'ვიკიპედია',
+        'spotify': 'სპოტიფაი', 'netflix': 'ნეტფლიქსი', 'unicef': 'იუნისეფი', 'who': 'ჯანმო', 'imf': 'ეს-ვე-ეფ'
     };
     if (commonNames[lower]) return commonNames[lower];
 
@@ -1626,9 +1643,13 @@ function transliterateLatinWordToGeorgian(word) {
          .replace(/^wh/g, 'ვ');
 
     // Suffixes and Latinate endings
-    s = s.replace(/tion\b/g, 'შენ')
+    s = s.replace(/ation\b/g, 'ეიშენ')
+         .replace(/tion\b/g, 'შენ')
          .replace(/sion\b/g, 'ჟენ')
          .replace(/ture\b/g, 'ჩერ')
+         .replace(/ight\b/g, 'აიტ')
+         .replace(/ought\b/g, 'ოტ')
+         .replace(/ould\b/g, 'უდ')
          .replace(/dge/g, 'ჯ')
          .replace(/igh/g, 'აი')
          .replace(/ew\b/g, 'იუ')
@@ -1815,12 +1836,25 @@ function verbalizeGeorgianTextForTTS(text) {
     out = out.replace(/(?<!\d)2\s+1\/2(?!\d)/g, 'ორ-ნახევარი');
 
     out = out.replace(/(\b\d{1,9})[.,](\d{1,4})\b/g, (match, intPart, decPart) => {
-        return georgianNumberToWords(parseInt(intPart, 10)) + ' მთელი ' + georgianNumberToWords(parseInt(decPart, 10));
+        const wholeWords = georgianNumberToWords(parseInt(intPart, 10));
+        let decWords;
+        if (decPart.startsWith('0') && decPart.length > 1) {
+            const zMatch = decPart.match(/^0+/)[0];
+            const zeroPad = Array.from({ length: zMatch.length }, () => 'ნული').join(' ');
+            const rem = parseInt(decPart.slice(zMatch.length) || '0', 10);
+            decWords = rem ? `${zeroPad} ${georgianNumberToWords(rem)}` : zeroPad;
+        } else {
+            decWords = georgianNumberToWords(parseInt(decPart, 10));
+        }
+        return `${wholeWords} მთელი ${decWords}`;
     });
     // Space-separated thousands: 10 000 -> ათი ათასი
     out = out.replace(/\b(\d{1,3}(?: \d{3})+)\b/g, (m) => georgianNumberToWords(parseInt(m.replace(/\s+/g, ''), 10)));
 
     // 3.6 Metric Measurements
+    out = out.replace(/(\b\d{1,9})\s*°F\b/g, (m, n) => georgianNumberToWords(parseInt(n, 10)) + ' გრადუსი ფარენჰაიტით');
+    out = out.replace(/(\b\d{1,9})\s*(?:მ²|კვ\.?\s*მ\.?)(?![\u10A0-\u10FF])/g, (m, n) => georgianNumberToWords(parseInt(n, 10)) + ' კვადრატული მეტრი');
+    out = out.replace(/(\b\d{1,9})\s*(?:კმ²|კვ\.?\s*კმ\.?)(?![\u10A0-\u10FF])/g, (m, n) => georgianNumberToWords(parseInt(n, 10)) + ' კვადრატული კილომეტრი');
     out = out.replace(/(\b\d{1,9})\s*კმ\/სთ(?![\u10A0-\u10FF])/g, (m, n) => {
         return georgianNumberToWords(parseInt(n, 10)) + ' კილომეტრი საათში';
     });
@@ -1890,13 +1924,21 @@ function verbalizeGeorgianTextForTTS(text) {
         [kaWord('სს\\.', 'g'), 'საუკუნე'],
         [kaWord('გვ\\.', 'g'), 'გვერდი'],
         [kaWord('ტ\\.', 'g'), 'ტომი'],
+        [kaWord('თავ\\.', 'g'), 'თავი'],
+        [kaWord('მუხლ\\.', 'g'), 'მუხლი'],
+        [kaWord('რედ\\.', 'g'), 'რედაქცია'],
+        [kaWord('გამომც\\.', 'g'), 'გამომცემლობა'],
+        [kaWord('მთარგმნ\\.', 'g'), 'მთარგმნელი'],
+        [kaWord('ტელ\\.', 'g'), 'ტელეფონი'],
         [kaWord('ნაწ\\.', 'g'), 'ნაწილი'],
         [kaWord('იხ\\.', 'g'), 'იხილეთ'],
         [kaWord('შდრ\\.', 'g'), 'შეადარეთ'],
         [kaWord('სხვ\\.', 'g'), 'სხვა'],
         [kaWord('რ-ნი', 'g'), 'რაიონი'],
         [kaWord('რ-ნ\\.', 'g'), 'რაიონი'],
-        [kaWord('თვ\\.', 'g'), 'თვე']
+        [kaWord('თვ\\.', 'g'), 'თვე'],
+        [kaWord('მსო', 'g'), 'ემ-ეს-ო'],
+        [kaWord('ნბა', 'g'), 'ენ-ბი-ეი']
     ];
     abbrevMap.forEach(([regex, repl]) => {
         out = out.replace(regex, repl);
@@ -2141,6 +2183,7 @@ function applyGeorgianProsody(text) {
     // convert mid-sentence spaced dialogue dashes into breathing commas, and strip noise glyphs.
     out = out.replace(/[\u1C90-\u1CBA\u1CBD-\u1CBF]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x0BC0));
     out = out.replace(/\[\s*\d+\s*\]/g, '')
+             .replace(/\s*\(([^()]{2,80})\)/g, ', $1,')
              .replace(/[„“”«»"`]/g, '')
              .replace(/\s*[—–]\s+/g, ', ')
              .replace(/\s+[—–]/g, ',')
@@ -2213,6 +2256,10 @@ function refineGeorgianGrammar(text) {
         [kaWord('მაგნიტური\\s+ჯოხივით', 'gi'), 'მაგნიტივით'],
         [kaWord('ყოველ\\s+დღეს', 'gi'), 'ყოველდღე'],
         [kaWord('დროის\\s+გასვლასთან\\s+ერთად', 'gi'), 'დროთა განმავლობაში'],
+        [kaWord('გააკეთა\\s+გადაწყვეტილება', 'gi'), 'გადაწყვეტილება მიიღო'],
+        [kaWord('გააკეთა\\s+შეცდომა', 'gi'), 'შეცდომა დაუშვა'],
+        [kaWord('მიიღო\\s+ადგილი', 'gi'), 'მოხდა'],
+        [kaWord('ადგილი\\s+ჰქონდა', 'gi'), 'მოხდა'],
         [kaWord('მიიღო\\s+გადაწყვეტილება', 'gi'), 'გადაწყვიტა'],
         [kaWord('მოახდინა\\s+გავლენა', 'gi'), 'გავლენა იქონია'],
         [kaWord('ადგილი\\s+დაიკავა', 'gi'), 'მოხდა'],
@@ -2283,6 +2330,8 @@ function refineGeorgianGrammar(text) {
 
     // 5. Strip dummy leading "რომ" at sentence or paragraph starts (calque of English "That...")
     out = out.replace(/(^|[\n\r]+|[.!?…]\s+)([„"“]?)\s*რომ\s+([ა-ჰ])/g, '$1$2$3');
+
+    out = out.replace(/(?<![\u10A0-\u10FF])(ძველ|ახალ|დიდ|მთელ|პირველ|შავ|თეთრ|ცივ|თბილ|ღრმა|მაღალ)\s+([ა-ჰ]+(?:ისკენ|ისთვის|იდან|ის))(?![ა-ჰ])/g, (m, adj, noun) => `${adj === 'ღრმა' ? adj : adj + 'ი'} ${noun}`);
 
     // 6. Ensure comma precedes Georgian subordinate conjunctions & correlatives (რომ, მაგრამ, თუმცა, ხოლო, ...)
     out = out.replace(/(?<![ა-ჰ])მიუხედავად\s+იმისა\s+რომ(?![ა-ჰ])/g, 'მიუხედავად იმისა, რომ');
@@ -12433,7 +12482,7 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority
     const pitchHz = Math.max(-20, Math.min(20, Math.round(basePitch + typePitch + userPitchDelta)));
     const rateParam = `${ratePct >= 0 ? '+' : ''}${ratePct}%`;
     const pitchParam = `${pitchHz >= 0 ? '+' : ''}${pitchHz}Hz`;
-    const key = `v5|${preset}|${rateParam}|${pitchParam}|${spoken}`;
+    const key = `v6|${preset}|${rateParam}|${pitchParam}|${spoken}`;
     if (gatewayTTSCache.has(key)) return gatewayTTSCache.get(key);
 
     // Check persistent IndexedDB cache before hitting the network
@@ -13797,19 +13846,19 @@ function generateDynamicStudioCover(title, author = '') {
     const ctx = canvas.getContext('2d');
 
     const palettes = [
-        { top: '#18232d', mid: '#101820', bot: '#090e13', accent: '#5eead4', ink: '#f2efe9', muted: 'rgba(242,239,233,0.62)' }, // Celadon Slate
-        { top: '#2b161e', mid: '#1b0d12', bot: '#10080b', accent: '#e6b968', ink: '#f5efe6', muted: 'rgba(245,239,230,0.62)' }, // Georgian Burgundy
-        { top: '#14241e', mid: '#0d1814', bot: '#070e0b', accent: '#86efac', ink: '#eff3ef', muted: 'rgba(239,243,239,0.62)' }, // Forest Cloth
-        { top: '#171e30', mid: '#101422', bot: '#090b13', accent: '#93c5fd', ink: '#eff2f7', muted: 'rgba(239,242,247,0.62)' }, // Midnight Linen
-        { top: '#251d14', mid: '#17120c', bot: '#0e0a07', accent: '#fbbf24', ink: '#f5efe5', muted: 'rgba(245,239,229,0.62)' }, // Smoked Ochre
-        { top: '#231929', mid: '#16101b', bot: '#0c080f', accent: '#d8b4fe', ink: '#f3eff7', muted: 'rgba(243,239,247,0.62)' }  // Plum Obsidian
+        { top: '#0c1626', mid: '#09101c', bot: '#04070c', accent: '#3ef4c8', accent2: '#60a5fa', ink: '#f8fafc', muted: 'rgba(226,232,240,0.62)' }, // Aurora Void
+        { top: '#24121d', mid: '#150a12', bot: '#090508', accent: '#f3c969', accent2: '#fb7185', ink: '#faf5ef', muted: 'rgba(250,245,239,0.62)' }, // Crimson & Gold Foil
+        { top: '#0c201b', mid: '#081512', bot: '#040a08', accent: '#5eead4', accent2: '#34d399', ink: '#f0fdf4', muted: 'rgba(240,253,244,0.62)' }, // Obsidian Emerald
+        { top: '#13162b', mid: '#0b0e1c', bot: '#060710', accent: '#7dd3fc', accent2: '#a78bfa', ink: '#f1f5f9', muted: 'rgba(241,245,249,0.62)' }, // Deep Cobalt Prism
+        { top: '#211912', mid: '#140f0b', bot: '#090705', accent: '#fbbf24', accent2: '#f59e0b', ink: '#fefce8', muted: 'rgba(254,252,232,0.62)' }, // Bronze Atelier
+        { top: '#1c1224', mid: '#110b17', bot: '#08050b', accent: '#e879f9', accent2: '#60a5fa', ink: '#faf5ff', muted: 'rgba(250,245,255,0.62)' }  // Silk Nocturne
     ];
     let hash = 0;
     const raw = String(title || 'EngBot Book');
     for (let i = 0; i < raw.length; i++) hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0;
     const pal = palettes[Math.abs(hash) % palettes.length];
 
-    // Matte hardcover cloth gradient
+    // Deep dimensional backdrop
     const grad = ctx.createLinearGradient(0, 0, 400, 600);
     grad.addColorStop(0, pal.top);
     grad.addColorStop(0.55, pal.mid);
@@ -13817,53 +13866,59 @@ function generateDynamicStudioCover(title, author = '') {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 400, 600);
 
-    // Subtle bookbinding spine groove on the left edge
+    // Subtle spatial radial aurora behind crest
+    const aura = ctx.createRadialGradient(210, 185, 8, 210, 185, 220);
+    aura.addColorStop(0, pal.accent + '29');
+    aura.addColorStop(0.55, pal.accent2 + '12');
+    aura.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = aura;
+    ctx.fillRect(0, 0, 400, 600);
+
+    // Crisp orbital geometric rings (spatial luxury motif)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(208, 230, 148, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = pal.accent + '44';
+    ctx.beginPath(); ctx.arc(208, 230, 112, -0.4, Math.PI * 1.35); ctx.stroke();
+    ctx.strokeStyle = pal.accent2 + '38';
+    ctx.beginPath(); ctx.arc(208, 230, 74, 0.8, Math.PI * 1.9); ctx.stroke();
+    ctx.restore();
+
+    // Realistic book spine hinge groove on left
     const spine = ctx.createLinearGradient(0, 0, 26, 0);
-    spine.addColorStop(0, 'rgba(255,255,255,0.14)');
+    spine.addColorStop(0, 'rgba(255,255,255,0.16)');
     spine.addColorStop(0.28, 'rgba(255,255,255,0.04)');
-    spine.addColorStop(0.55, 'rgba(0,0,0,0.45)');
+    spine.addColorStop(0.55, 'rgba(0,0,0,0.48)');
     spine.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = spine;
     ctx.fillRect(0, 0, 26, 600);
 
-    // Subtle radial top spotlight (soft studio lighting, no harsh neon blur)
-    const wash = ctx.createRadialGradient(210, 120, 10, 210, 140, 290);
-    wash.addColorStop(0, 'rgba(255, 255, 255, 0.06)');
-    wash.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = wash;
-    ctx.fillRect(0, 0, 400, 600);
+    // Corner precision bracket ticks
+    ctx.strokeStyle = pal.accent + '88';
+    ctx.lineWidth = 1.5;
+    const corners = [[32, 32, 1, 1], [368, 32, -1, 1], [32, 568, 1, -1], [368, 568, -1, -1]];
+    corners.forEach(([cx, cy, dx, dy]) => {
+        ctx.beginPath();
+        ctx.moveTo(cx + dx * 14, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + dy * 14);
+        ctx.stroke();
+    });
 
-    // Architectural double hairline frame
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(24, 24, 352, 552);
-    ctx.strokeStyle = pal.accent;
-    ctx.globalAlpha = 0.28;
-    ctx.strokeRect(30, 30, 340, 540);
-    ctx.globalAlpha = 1;
-
-    // Minimalist geometric crest at top
-    ctx.strokeStyle = pal.accent;
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(200, 74); ctx.lineTo(212, 86); ctx.lineTo(200, 98); ctx.lineTo(188, 86);
-    ctx.closePath();
-    ctx.stroke();
-
+    // Tracked monospace colophon badge at top
     ctx.fillStyle = pal.accent;
-    ctx.font = '600 10.5px "Plus Jakarta Sans", Inter, sans-serif';
+    ctx.font = '600 10px "JetBrains Mono", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('ENGBOT  EDITION', 200, 124);
+    ctx.fillText('ENGBOT  EDITION', 206, 86);
 
-    // Editorial Serif Title wrapped cleanly
+    // Monumental Editorial Serif Title
     ctx.fillStyle = pal.ink;
-    ctx.font = '400 28px "Instrument Serif", "EB Garamond", Georgia, serif';
+    ctx.font = '400 30px "Instrument Serif", "EB Garamond", Georgia, serif';
     const words = raw.trim().split(/\s+/).filter(Boolean);
     const lines = [];
     let currentLine = '';
     for (let i = 0; i < words.length; i++) {
         const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
-        if (ctx.measureText(testLine).width > 292 && currentLine) {
+        if (ctx.measureText(testLine).width > 286 && currentLine) {
             lines.push(currentLine);
             currentLine = words[i];
             if (lines.length >= 5) break;
@@ -13872,26 +13927,31 @@ function generateDynamicStudioCover(title, author = '') {
         }
     }
     if (currentLine && lines.length < 6) lines.push(currentLine);
-    const lineHeight = 36;
-    let y = Math.max(195, 290 - ((lines.length - 1) * lineHeight) / 2);
+    const lineHeight = 38;
+    let y = Math.max(205, 290 - ((lines.length - 1) * lineHeight) / 2);
     for (const l of lines) {
-        ctx.fillText(l, 200, y);
+        ctx.fillText(l, 206, y);
         y += lineHeight;
     }
 
-    // Bottom separator rule + Author / Edition colophon
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    // Precision horizontal rule + Author colophon
+    const ruleGrad = ctx.createLinearGradient(110, 488, 302, 488);
+    ruleGrad.addColorStop(0, 'transparent');
+    ruleGrad.addColorStop(0.5, pal.accent + '66');
+    ruleGrad.addColorStop(1, 'transparent');
+    ctx.strokeStyle = ruleGrad;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(140, 488);
-    ctx.lineTo(260, 488);
+    ctx.moveTo(110, 488);
+    ctx.lineTo(302, 488);
     ctx.stroke();
 
     const cleanAuthor = String(author || '').trim();
     ctx.fillStyle = pal.muted;
     ctx.font = '500 12px "Plus Jakarta Sans", Inter, sans-serif';
-    ctx.fillText(cleanAuthor ? cleanAuthor.slice(0, 34) : 'Audiobook & Moon Reader', 200, 518);
+    ctx.fillText(cleanAuthor ? cleanAuthor.slice(0, 34) : 'Spatial Audio & Moon Reader', 206, 518);
 
-    return canvas.toDataURL('image/jpeg', 0.9);
+    return canvas.toDataURL('image/jpeg', 0.92);
 }
 
 async function handleFileUpload(file) {

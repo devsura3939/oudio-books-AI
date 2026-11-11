@@ -410,9 +410,23 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])მას\s+შემდეგ\s+რაც(?![ა-ჰ])', 'მას შემდეგ, რაც'),
         (r'(?<![\u10A0-\u10FF])ყოველ\s+დღე(?![ა-ჰ])', 'ყოველდღე'),
         (r'(?<![\u10A0-\u10FF])ყოველ\s+დღეს(?![ა-ჰ])', 'ყოველდღე'),
+        # High-frequency EN->KA literary verb & phrase repairs
+        (r'(?<![\u10A0-\u10FF])გააკეთა\s+გადაწყვეტილება(?![ა-ჰ])', 'გადაწყვეტილება მიიღო'),
+        (r'(?<![\u10A0-\u10FF])გააკეთა\s+შეცდომა(?![ა-ჰ])', 'შეცდომა დაუშვა'),
+        (r'(?<![\u10A0-\u10FF])მიიღო\s+ადგილი(?![ა-ჰ])', 'მოხდა'),
+        (r'(?<![\u10A0-\u10FF])ადგილი\s+ჰქონდა(?![ა-ჰ])', 'მოხდა'),
+        (r'(?<![\u10A0-\u10FF])თუ\s+ეს\s+მართალია(?![ა-ჰ])', 'თუ ეს სიმართლეა'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
+
+    # Restore required -ი suffix on consonant-stem modifiers qualifying Genitive/Directional (-ის/-ისკენ/-ისთვის/-იდან) nouns
+    # e.g., "*ძველ სადგურისკენ" -> "ძველი სადგურისკენ" (while keeping "ძველ სადგურში" untouched)
+    t = re.sub(
+        r'(?<![\u10A0-\u10FF])(ძველ|ახალ|დიდ|მთელ|პირველ|შავ|თეთრ|ცივ|თბილ|ღრმა|მაღალ)\s+([ა-ჰ]+(?:ისკენ|ისთვის|იდან|ის))(?![ა-ჰ])',
+        lambda m: f"{m.group(1) if m.group(1) == 'ღრმა' else m.group(1) + 'ი'} {m.group(2)}",
+        t
+    )
 
     # Ensure Georgian comma precedes key coordinating/subordinate conjunctions for natural prose rhythm
     t = re.sub(
@@ -1283,15 +1297,15 @@ def translate_with_kona(
         if target_lang == "ka":
             sys_msg = (
                 "You are an expert bilingual literary translator specializing in English and Georgian. "
-                "Translate the text into natural, authentic, expressive literary Georgian (ქართული სამწერლო ენა) suitable for audiobook narration.\n"
+                "Translate into fluent, vivid, expressive literary Georgian (ქართული სამწერლო ენა) built for audiobook narration.\n"
                 "Rules:\n"
-                "1. SYNTAX & CADENCE: Use natural Georgian SOV/topic-focus flow with smooth rhythmic phrasing; do NOT translate mechanically word-for-word. Omit redundant subject pronouns (მან/ის) when already clear from verb agreement.\n"
-                "2. CASE CONCORD: Transitive and medial verbs in Series II Aorist strictly require Ergative subjects (-მა / -მ: 'ავტორმა თქვა', 'მეფემ ბრძანა'). Experiencer verbs take Dative ('მას უნდა/უყვარს/ახსოვს/შია'). Reflexives require 'თავისი' (NOT 'მისი').\n"
-                "3. PROPER NAMES: Transliterate proper names phonetically into Georgian (Constant -> კონსტანტი, Rumfoord -> რამფორდი, Kazak -> კაზაკი). Do NOT translate names as common words.\n"
-                "4. AVOID CALQUES: Use authentic Georgian verbs/idioms ('looked outward' -> 'მზერას გარეთ აპყრობდა', 'caught breath' -> 'სული მოითქვა', 'shrug shoulders' -> 'მხრები აიჩეჩა'). Ban bureaucratic Sovietisms (never 'განხორციელება', 'ადგილი ჰქონდა', 'წარმოადგენს').\n"
-                "5. GEORGIAN PUNCTUATION: Place commas before მაგრამ, თუმცა, ხოლო, რადგან, როდესაც, რომელიც. Use „...“ for quotes and — for dialogue dashes.\n"
-                "6. ANIMACY & NUMERALS: Singular nouns after numbers (სამი წიგნი, NOT *წიგნები); 'მას ჰყავს ძაღლი/შვილი' vs 'მას აქვს მანქანა'.\n"
-                "Output ONLY the Georgian translation without any introductory or concluding remarks."
+                "1. NATURAL SYNTAX: Use organic Georgian SOV/topic-focus cadence; omit redundant pronouns (მან/ის) when clear from the verb.\n"
+                "2. CASE & AGREEMENT: Series II Aorist transitive subjects take Ergative (-მა/-მ: 'ავტორმა თქვა', 'მეფემ ბრძანა'). Modifiers keep -ი before genitives ('ძველი სადგურისკენ', not '*ძველ სადგურისკენ'). Reflexives require 'თავისი'.\n"
+                "3. PRECISION & PROPER NAMES: Transliterate names phonetically (Rumfoord -> რამფორდი, Constant -> კონსტანტი). Preserve exact lexical meanings ('arrived at' -> 'ჩავიდა', 'rails' -> 'ლიანდაგებზე' not 'რკალებზე', 'mist settled' -> 'ნისლი ჩამოწვა').\n"
+                "4. ANTI-CALQUES: Never translate idioms literally or use Sovietisms ('განხორციელება', 'ადგილი ჰქონდა').\n"
+                "5. PUNCTUATION & NUMERALS: Commas before მაგრამ, თუმცა, ხოლო, რადგან, როდესაც, რომელიც; use „...“ and —; singular nouns after numbers (სამი წიგნი).\n"
+                "Example: \"The train arrived at the old station as mist settled over the rails.\" -> \"მატარებელი ძველ სადგურში ჩამოდგა, სანამ ლიანდაგებზე ნისლი ჩამოწვა.\"\n"
+                "Output ONLY the Georgian translation."
             )
             user_parts = []
             if context_before:
@@ -1328,10 +1342,12 @@ def translate_with_kona(
                 "temperature": 0.1,
                 "frequency_penalty": 0.2,
                 "presence_penalty": 0.1,
-                "max_tokens": min(1024, max(128, int(len(text) * 2.5))),
+                "max_tokens": min(768, max(96, int(len(text) * 2.2))),
                 "options": {
-                    "num_predict": min(1024, max(128, int(len(text) * 2.5))),
+                    "num_ctx": 2048,
+                    "num_predict": min(768, max(96, int(len(text) * 2.2))),
                     "temperature": 0.1,
+                    "repeat_penalty": 1.08,
                 },
                 "keep_alive": "24h"
             },

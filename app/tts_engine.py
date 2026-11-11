@@ -189,15 +189,16 @@ def trim_speech_silence(
     # Single-pass FFmpeg studio mastering + leading/trailing silence trim
     if is_ka:
         # ka-GE neural voices have thin low-mids, wide dynamic drops, and a 3.2kHz synthetic edge;
-        # gentle chest warmth + clarity around Georgian ejectives/sibilants + dynamic compressor
-        # produce rich, broadcast-grade audiobook tone.
+        # gentle chest warmth + consonant articulation (2150Hz/1350Hz) + de-harshing + dynamic
+        # compressor produce warm, intimate, crystal-clear Georgian audiobook narration.
         chest_freq = 215 if is_female else 160
-        chest_gain = "2.0" if is_female else "2.4"
+        chest_gain = "2.1" if is_female else "2.5"
         eq_and_gain = (
             "highpass=f=75,"
             f"equalizer=f={chest_freq}:t=q:w=1.05:g={chest_gain},"
-            "equalizer=f=1350:t=q:w=1.3:g=1.2,"
-            "equalizer=f=3250:t=q:w=1.4:g=-2.4,"
+            "equalizer=f=1350:t=q:w=1.3:g=1.1,"
+            "equalizer=f=2150:t=q:w=1.8:g=0.9,"
+            "equalizer=f=3250:t=q:w=1.4:g=-2.3,"
             "equalizer=f=5200:t=q:w=1.6:g=-1.2,"
             "highshelf=f=7500:g=1.5,"
             "acompressor=threshold=-22dB:ratio=2.4:attack=6:release=110:makeup=3.2,"
@@ -358,7 +359,7 @@ async def generate_voice_preview(
     eff_pitch = "-2Hz" if (is_ka and pitch == "+0Hz") else pitch
 
     is_female = "eka" in voice.lower()
-    key = f"v5_{voice}_{eff_rate}_{eff_pitch}_{spoken_text}"
+    key = f"v6_{voice}_{eff_rate}_{eff_pitch}_{spoken_text}"
     hash_key = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
     filename = f"preview_{voice}_{hash_key}.mp3"
     filepath = PREVIEW_DIR / filename
@@ -370,7 +371,7 @@ async def generate_voice_preview(
             if chunk_data["type"] == "audio":
                 raw.extend(chunk_data["data"])
         if raw:
-            mastered = await asyncio.to_thread(trim_speech_silence, bytes(raw), 25, 160, is_ka, is_female)
+            mastered = await asyncio.to_thread(trim_speech_silence, bytes(raw), 25, 145, is_ka, is_female)
             filepath.write_bytes(mastered)
         else:
             await communicate.save(str(filepath))
@@ -531,8 +532,8 @@ async def synthesize_single_speech(
     spoken_text = prepare_ka_tts_utterance(verbalize_georgian_for_tts(text)) if is_ka else text
     is_female = ("eka" in chosen_voice.lower()) or any(k in clean_preset for k in ("female", "soft", "modern"))
 
-    # Compute cache key (v5 includes broadcast compression, gender-tuned EQ & prosody shaping)
-    key = f"v5_{chosen_voice}_{rate_str}_{pitch_str}_{spoken_text.strip()}"
+    # Compute cache key (v6 includes v6 phonetics, 2150Hz consonant clarity, 145ms crisp inter-sentence trim)
+    key = f"v6_{chosen_voice}_{rate_str}_{pitch_str}_{spoken_text.strip()}"
     hash_key = hashlib.sha256(key.encode("utf-8")).hexdigest()[:24]
     cache_path = TTS_CACHE_DIR / f"{hash_key}.mp3"
 
@@ -555,7 +556,7 @@ async def synthesize_single_speech(
         raise RuntimeError(f"Edge-TTS returned no audio for voice '{chosen_voice}'")
 
     raw_bytes = bytes(audio_data)
-    audio_bytes = await asyncio.to_thread(trim_speech_silence, raw_bytes, 25, 160, is_ka, is_female)
+    audio_bytes = await asyncio.to_thread(trim_speech_silence, raw_bytes, 25, 145 if is_ka else 160, is_ka, is_female)
     try:
         cache_path.write_bytes(audio_bytes)
     except Exception as err:

@@ -205,6 +205,8 @@ test('Georgian TTS JS verbalizer, transliterator, acoustic prosody & ElevenLabs 
     assert.equal(ctx.verbalizeGeorgianTextForTTS('Google-მა'), 'გუგლმა');
     assert.equal(ctx.verbalizeGeorgianTextForTTS('წმ. გიორგი'), 'წმინდა გიორგი');
     assert.match(ctx.verbalizeGeorgianTextForTTS('120 კმ/სთ'), /ას ოცი კილომეტრი საათში/);
+    assert.equal(ctx.verbalizeGeorgianTextForTTS('3.05'), 'სამი მთელი ნული ხუთი');
+    assert.match(ctx.verbalizeGeorgianTextForTTS('90 კვ.მ'), /ოთხმოცდაათი კვადრატული მეტრი/);
 
     // Latin transliteration & acronym fixes in Georgian
     assert.equal(ctx.transliterateLatinWordToGeorgian('Tbilisi'), 'თბილისი');
@@ -213,6 +215,8 @@ test('Georgian TTS JS verbalizer, transliterator, acoustic prosody & ElevenLabs 
     assert.equal(ctx.transliterateLatinWordToGeorgian('Steve'), 'სტივ');
     assert.equal(ctx.transliterateLatinWordToGeorgian('Russell'), 'რუსელ'); // no doubled სს/ლლ
     assert.equal(ctx.transliterateLatinWordToGeorgian('PDF'), 'პი-დი-ეფ');
+    assert.equal(ctx.transliterateLatinWordToGeorgian('Cambridge'), 'ქემბრიჯი');
+    assert.equal(ctx.transliterateLatinWordToGeorgian('Tom'), 'თომი');
 
     // Acoustic prosody cleans quotes, spaced dashes, footnotes & Mtavruli
     assert.equal(
@@ -223,6 +227,10 @@ test('Georgian TTS JS verbalizer, transliterator, acoustic prosody & ElevenLabs 
         ctx.applyGeorgianProsody('მე ვთქვი — გაჩერდი'),
         'მე ვთქვი, გაჩერდი'
     );
+    assert.equal(
+        ctx.applyGeorgianProsody('სადგური (ძველი შენობა) გაიხსნა.'),
+        'სადგური, ძველი შენობა, გაიხსნა.'
+    );
 
     // ElevenLabs v3 Georgian dialogue keeps 0.5 Natural stability (never 0.0 accent drift)
     assert.deepEqual({ ...ctx.elevenLabsVoiceSettings('eleven_v3', 'dialogue', 'ka') }, {
@@ -230,9 +238,9 @@ test('Georgian TTS JS verbalizer, transliterator, acoustic prosody & ElevenLabs 
         similarity_boost: 0.85
     });
 
-    // fetchGatewaySpeechUrl sends calibrated rate/pitch & v5 cache key instead of hardcoded 1.0/currentPitch
+    // fetchGatewaySpeechUrl sends calibrated rate/pitch & v6 cache key instead of hardcoded 1.0/currentPitch
     assert.doesNotMatch(appJs, /rate:\s*1\.0,\s*\r?\n\s*pitch:\s*currentPitch/);
-    assert.match(appJs, /const key = `v5\|\$\{preset\}\|\$\{rateParam\}\|\$\{pitchParam\}\|\$\{spoken\}`/);
+    assert.match(appJs, /const key = `v6\|\$\{preset\}\|\$\{rateParam\}\|\$\{pitchParam\}\|\$\{spoken\}`/);
 
     // v5 presets & Obsidian editorial design tokens present
     assert.match(appJs, /id:\s*'ka-classic'/);

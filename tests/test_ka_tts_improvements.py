@@ -40,6 +40,10 @@ class TestGeorgianTTSImprovements(unittest.TestCase):
         self.assertIn("გუგლმა", verbalize_georgian_for_tts("Google-მა"))
         self.assertIn("ას ოცი კილომეტრი საათში", verbalize_georgian_for_tts("120 კმ/სთ"))
         self.assertIn("წმინდა გიორგი", verbalize_georgian_for_tts("წმ. გიორგი"))
+        self.assertEqual(verbalize_georgian_for_tts("3.05"), "სამი მთელი ნული ხუთი")
+        self.assertEqual(verbalize_georgian_for_tts("90 კვ.მ"), "ოთხმოცდაათი კვადრატული მეტრი")
+        self.assertEqual(transliterate_latin_word_to_ka("Cambridge"), "ქემბრიჯი")
+        self.assertEqual(transliterate_latin_word_to_ka("Tom"), "თომი")
 
     def test_latin_loanwords_and_acronyms(self):
         self.assertEqual(transliterate_latin_word_to_ka("Tbilisi"), "თბილისი")
@@ -55,6 +59,7 @@ class TestGeorgianTTSImprovements(unittest.TestCase):
         self.assertEqual(cleaned, "გამარჯობა! თქვა გიორგიმ.")
         self.assertEqual(prepare_ka_tts_utterance("მე ვთქვი — გაჩერდი"), "მე ვთქვი, გაჩერდი")
         self.assertEqual(prepare_ka_tts_utterance("ᲐᲮᲐᲚᲘ ᲬᲔᲚᲘ჻"), "ახალი წელი.")
+        self.assertEqual(prepare_ka_tts_utterance("სადგური (ძველი შენობა) გაიხსნა."), "სადგური, ძველი შენობა, გაიხსნა.")
 
     def test_prosody_formatting_and_preset_defaults(self):
         # Legacy float pitch 1.0 multiplier must map to +0Hz (not +1Hz bug)

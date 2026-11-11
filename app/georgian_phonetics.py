@@ -236,7 +236,25 @@ LITERARY_NAMES_MAP = {
     "tv": "თი-ვი", "ok": "ოქეი", "okay": "ოქეი", "vip": "ვი-აი-პი",
     "gps": "ჯი-პი-ეს", "wifi": "ვაი-ფაი", "un": "გაერო", "uk": "დიდი ბრიტანეთი",
     "linux": "ლინუქსი", "windows": "უინდოუზი", "python": "პითონი",
-    "vonnegut": "ვონეგუტი", "aurelia": "ავრელია", "rumfoord": "რამფორდი", "constant": "კონსტანტი"
+    "vonnegut": "ვონეგუტი", "aurelia": "ავრელია", "rumfoord": "რამფორდი", "constant": "კონსტანტი",
+    # Extended Global Literary Places, Cities, Nations & Character Names
+    "europe": "ევროპა", "asia": "აზია", "africa": "აფრიკა",
+    "germany": "გერმანია", "italy": "იტალია", "spain": "ესპანეთი", "greece": "საბერძნეთი",
+    "turkey": "თურქეთი", "china": "ჩინეთი", "japan": "იაპონია", "india": "ინდოეთი",
+    "ukraine": "უკრაინა", "russia": "რუსეთი", "poland": "პოლონეთი", "sweden": "შვედეთი",
+    "norway": "ნორვეგია", "canada": "კანადა", "brazil": "ბრაზილია", "mexico": "მექსიკა",
+    "australia": "ავსტრალია", "egypt": "ეგვიპტე", "israel": "ისრაელი",
+    "berlin": "ბერლინი", "vienna": "ვენა", "prague": "პრაღა", "milan": "მილანი",
+    "madrid": "მადრიდი", "lisbon": "ლისაბონი", "cairo": "კაირო", "jerusalem": "იერუსალიმი",
+    "istanbul": "სტამბოლი", "tokyo": "ტოკიო", "beijing": "პეკინი", "seoul": "სეული",
+    "cambridge": "ქემბრიჯი", "oxford": "ოქსფორდი", "harvard": "ჰარვარდი", "princeton": "პრინსტონი",
+    "boston": "ბოსტონი", "chicago": "ჩიკაგო", "washington": "ვაშინგტონი", "moscow": "მოსკოვი",
+    "tom": "თომი", "sam": "სემი", "max": "მაქსი", "leo": "ლეო", "noah": "ნოა",
+    "oliver": "ოლივერი", "charlie": "ჩარლი", "benjamin": "ბენჯამინი", "catherine": "ქეთრინი",
+    "margaret": "მარგარეტი", "sophie": "სოფი", "chloe": "ქლოი", "lucas": "ლუკასი",
+    "daniel": "დანიელი", "anna": "ანა", "claire": "კლერი", "arthur": "ართური",
+    "tesla": "ტესლა", "spacex": "სპეის-ექსი", "nvidia": "ენვიდია", "wikipedia": "ვიკიპედია",
+    "spotify": "სპოტიფაი", "netflix": "ნეტფლიქსი", "unicef": "იუნისეფი", "who": "ჯანმო", "imf": "ეს-ვე-ეფ"
 }
 
 LATIN_LETTER_KA = {
@@ -284,9 +302,13 @@ def transliterate_latin_word_to_ka(word: str) -> str:
     s = re.sub(r"^wh", "ვ", s)
 
     # Suffixes and Latinate endings
+    s = re.sub(r"ation\b", "ეიშენ", s)
     s = re.sub(r"tion\b", "შენ", s)
     s = re.sub(r"sion\b", "ჟენ", s)
     s = re.sub(r"ture\b", "ჩერ", s)
+    s = re.sub(r"ight\b", "აიტ", s)
+    s = re.sub(r"ought\b", "ოტ", s)
+    s = re.sub(r"ould\b", "უდ", s)
     s = re.sub(r"dge", "ჯ", s)
     s = re.sub(r"igh", "აი", s)
     s = re.sub(r"ew\b", "იუ", s)
@@ -553,12 +575,19 @@ def verbalize_georgian_for_tts(text: str) -> str:
     out = re.sub(r"(?<!\d)1\s+1/2(?!\d)", "ერთ-ნახევარი", out)
     out = re.sub(r"(?<!\d)2\s+1/2(?!\d)", "ორ-ნახევარი", out)
 
-    # Decimals (dot or comma with no space after comma)
-    out = re.sub(
-        r"(\b\d{1,9})[.,](\d{1,4})\b",
-        lambda m: f"{georgian_number_to_words(int(m.group(1)))} მთელი {georgian_number_to_words(int(m.group(2)))}",
-        out
-    )
+    # Decimals (dot or comma with no space after comma; preserve leading zeros like 3.05 -> ნული ხუთი)
+    def _replace_decimal(m):
+        whole_words = georgian_number_to_words(int(m.group(1)))
+        frac_str = m.group(2)
+        if frac_str.startswith("0") and len(frac_str) > 1:
+            zero_pad = " ".join("ნული" for _ in re.match(r"^0+", frac_str).group(0))
+            rem = int(frac_str.lstrip("0") or "0")
+            frac_words = f"{zero_pad} {georgian_number_to_words(rem)}" if rem else zero_pad
+        else:
+            frac_words = georgian_number_to_words(int(frac_str))
+        return f"{whole_words} მთელი {frac_words}"
+
+    out = re.sub(r"(\b\d{1,9})[.,](\d{1,4})\b", _replace_decimal, out)
 
     # Space-separated thousands: 10 000 -> ათი ათასი
     out = re.sub(
@@ -602,6 +631,21 @@ def verbalize_georgian_for_tts(text: str) -> str:
     out = re.sub(rf"(?<=[{KA_CHARS}\d])\s*კმ{KA_SUFFIX}", " კილომეტრი", out)
     out = re.sub(rf"(?<=[{KA_CHARS}\d])\s*სმ{KA_SUFFIX}", " სანტიმეტრი", out)
     out = re.sub(rf"(?<=[{KA_CHARS}\d])\s*სთ\.?{KA_SUFFIX}", " საათი", out)
+    out = re.sub(
+        r"(\b\d{1,9})\s*°F\b",
+        lambda m: f"{georgian_number_to_words(int(m.group(1)))} გრადუსი ფარენჰაიტით",
+        out
+    )
+    out = re.sub(
+        r"(\b\d{1,9})\s*(?:მ²|კვ\.?\s*მ\.?)" + KA_SUFFIX,
+        lambda m: f"{georgian_number_to_words(int(m.group(1)))} კვადრატული მეტრი",
+        out
+    )
+    out = re.sub(
+        r"(\b\d{1,9})\s*(?:კმ²|კვ\.?\s*კმ\.?)" + KA_SUFFIX,
+        lambda m: f"{georgian_number_to_words(int(m.group(1)))} კვადრატული კილომეტრი",
+        out
+    )
     out = re.sub(
         r"(\b\d{1,9})\s*°C\b",
         lambda m: f"{georgian_number_to_words(int(m.group(1)))} გრადუსი ცელსიუსით",
@@ -660,11 +704,19 @@ def verbalize_georgian_for_tts(text: str) -> str:
         (rf"{KA_PREFIX}სს\.{KA_SUFFIX}", "საუკუნე"),
         (rf"{KA_PREFIX}გვ\.{KA_SUFFIX}", "გვერდი"),
         (rf"{KA_PREFIX}ტ\.{KA_SUFFIX}", "ტომი"),
+        (rf"{KA_PREFIX}თავ\.{KA_SUFFIX}", "თავი"),
+        (rf"{KA_PREFIX}მუხლ\.{KA_SUFFIX}", "მუხლი"),
+        (rf"{KA_PREFIX}რედ\.{KA_SUFFIX}", "რედაქცია"),
+        (rf"{KA_PREFIX}გამომც\.{KA_SUFFIX}", "გამომცემლობა"),
+        (rf"{KA_PREFIX}მთარგმნ\.{KA_SUFFIX}", "მთარგმნელი"),
+        (rf"{KA_PREFIX}ტელ\.{KA_SUFFIX}", "ტელეფონი"),
         (rf"{KA_PREFIX}ნაწ\.{KA_SUFFIX}", "ნაწილი"),
         (rf"{KA_PREFIX}იხ\.{KA_SUFFIX}", "იხილეთ"),
         (rf"{KA_PREFIX}შდრ\.{KA_SUFFIX}", "შეადარეთ"),
         (rf"{KA_PREFIX}სხვ\.{KA_SUFFIX}", "სხვა"),
         (rf"{KA_PREFIX}რ-ნი{KA_SUFFIX}", "რაიონი"),
+        (rf"{KA_PREFIX}მსო{KA_SUFFIX}", "ემ-ეს-ო"),
+        (rf"{KA_PREFIX}ნბა{KA_SUFFIX}", "ენ-ბი-ეი"),
     ]
     for pattern, repl in abbrev_replacements:
         out = re.sub(pattern, repl, out)
@@ -777,6 +829,8 @@ def prepare_ka_tts_utterance(text: str) -> str:
     out = normalize_mtavruli_to_mkhedruli(text)
     # Strip bracketed academic footnotes like [1], [23]
     out = re.sub(r"\[\s*\d+\s*\]", "", out)
+    # Soften short parenthetical Georgian asides into natural lowered-pitch comma clauses
+    out = re.sub(r"\s*\(([^()]{2,80})\)", r", \1,", out)
     # Strip decorative quotation marks that cause Edge-TTS ka-GE pitch stutters
     out = re.sub(r"[„“”«»\"`]", "", out)
     # Replace spaced dialogue em/en dashes with breathing commas for smooth clause cadence
