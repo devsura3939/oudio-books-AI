@@ -543,45 +543,85 @@
     toast(`Indexed ${indexedCount} chapters into EmbeddingGemma vector space!`, "success");
   }
 
-  // Audio synthesis playback with animated wave
-  function toggleSpeak(textElementId, lang = "en", btnId = "eg2TtsBtn", visualizerId = "eg2TtsVisualizer") {
-    if (!("speechSynthesis" in window)) {
-      toast("Speech synthesis not supported on this browser", "warning");
-      return;
-    }
-
+  // Audio synthesis playback with neural TTS (Georgian & English) and animated wave
+  let eg2ActiveAudio = null;
+  async function toggleSpeak(textElementId, lang = "en", btnId = "eg2TtsBtn", visualizerId = "eg2TtsVisualizer") {
     const btn = document.getElementById(btnId);
     const visualizer = document.getElementById(visualizerId);
 
-    if (window.speechSynthesis.speaking && state.activeTtsElementId === textElementId) {
-      window.speechSynthesis.cancel();
+    const stopUi = () => {
+      if (eg2ActiveAudio) {
+        try { eg2ActiveAudio.pause(); eg2ActiveAudio.src = ""; } catch (_) {}
+        eg2ActiveAudio = null;
+      }
+      if ("speechSynthesis" in window) {
+        try { window.speechSynthesis.cancel(); } catch (_) {}
+      }
       if (btn) btn.innerHTML = "<span>🔊 Listen</span>";
       if (visualizer) { visualizer.classList.add("hidden"); visualizer.classList.remove("flex"); }
       state.activeTtsElementId = null;
+    };
+
+    if (state.activeTtsElementId === textElementId) {
+      stopUi();
       return;
     }
 
-    window.speechSynthesis.cancel();
+    stopUi();
     const textEl = document.getElementById(textElementId);
     const text = textEl ? textEl.innerText : "";
     if (!text || text.includes("will appear here")) return;
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
+    const hasKaScript = /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(text);
+    const targetLang = hasKaScript || (lang && lang.startsWith("ka")) ? "ka" : "en";
+    const spoken = (targetLang === "ka" && typeof window.applyGeorgianProsody === "function" && typeof window.verbalizeGeorgianTextForTTS === "function")
+      ? window.applyGeorgianProsody(window.verbalizeGeorgianTextForTTS(text))
+      : text;
+
+    state.activeTtsElementId = textElementId;
+    if (btn) btn.innerHTML = "<span>⏹ Stop</span>";
+    if (visualizer) { visualizer.classList.remove("hidden"); visualizer.classList.add("flex"); }
+
+    // Prefer calibrated neural /api/tts gateway (essential for authentic Georgian sound & accent)
+    try {
+      const apiBase = getApiBase();
+      const ttsUrl = apiBase ? `${apiBase}/api/tts` : (typeof window.getTTSApiEndpoint === "function" ? window.getTTSApiEndpoint() : "/api/tts");
+      const preset = targetLang === "ka" ? (localStorage.getItem("lumina_voice_preset_ka") || "ka-male") : (localStorage.getItem("lumina_voice_preset_en") || "en-gb-male");
+      const res = await fetch(ttsUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: spoken.slice(0, 3800), preset, lang: targetLang }),
+        signal: AbortSignal.timeout(18000)
+      });
+      if (res.ok && state.activeTtsElementId === textElementId) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        eg2ActiveAudio = audio;
+        audio.onended = audio.onerror = () => {
+          try { URL.revokeObjectURL(url); } catch (_) {}
+          if (state.activeTtsElementId === textElementId) stopUi();
+        };
+        await audio.play();
+        return;
+      }
+    } catch (_) {}
+
+    if (!("speechSynthesis" in window)) {
+      stopUi();
+      toast("Speech synthesis not available", "warning");
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(spoken);
+    utterance.rate = targetLang === "ka" ? 0.92 : 0.95;
+    utterance.lang = targetLang === "ka" ? "ka-GE" : "en-US";
     const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find(v => v.lang.startsWith(lang));
+    const voice = voices.find(v => v.lang.startsWith(targetLang));
     if (voice) utterance.voice = voice;
 
-    utterance.onstart = () => {
-      state.activeTtsElementId = textElementId;
-      if (btn) btn.innerHTML = "<span>⏹ Stop</span>";
-      if (visualizer) { visualizer.classList.remove("hidden"); visualizer.classList.add("flex"); }
-    };
-
     utterance.onend = utterance.onerror = () => {
-      if (btn) btn.innerHTML = "<span>🔊 Listen</span>";
-      if (visualizer) { visualizer.classList.add("hidden"); visualizer.classList.remove("flex"); }
-      state.activeTtsElementId = null;
+      if (state.activeTtsElementId === textElementId) stopUi();
     };
 
     window.speechSynthesis.speak(utterance);

@@ -8,7 +8,9 @@ import edge_tts
 
 from app.config import AUDIO_DIR, MAX_CHUNK_CHARS, DEFAULT_VOICE
 from app.models import TTSVoice
-from app.georgian_phonetics import verbalize_georgian_for_tts
+from app.georgian_phonetics import verbalize_georgian_for_tts, prepare_ka_tts_utterance
+
+KA_SCRIPT_RE = re.compile(r"[\u10A0-\u10FF\u1C90-\u1CBF]")
 
 PREVIEW_DIR = AUDIO_DIR / "previews"
 PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
@@ -164,17 +166,75 @@ def split_text_into_chunks(text: str, max_chunk_len: int = MAX_CHUNK_CHARS) -> L
     return split_bounded(text.strip(), max_chunk_len) if text and text.strip() else []
 
 
-def trim_speech_silence(audio_bytes: bytes, leading_pad_ms: int = 25, trailing_pad_ms: int = 160) -> bytes:
+def trim_speech_silence(
+    audio_bytes: bytes,
+    leading_pad_ms: int = 25,
+    trailing_pad_ms: int = 160,
+    is_ka: bool = False
+) -> bytes:
     """
-    Trims excessive leading and trailing dead air silence from single-sentence Edge-TTS audio clips,
-    preventing 1-2 second awkward pauses when transitioning between sentences punctuated with dots.
-    
-    Preserves pristine CD-quality audio (192k bitrate) with safe acoustic padding (25ms leading,
-    160ms trailing decay) to prevent clipping syllables or consonants at all playback speeds (1.0x - 2.0x).
+    Trims excessive leading and trailing dead air silence while applying studio vocal mastering
+    (sub-rumble highpass, warm chest EQ, harshness smoothing, peak-safe loudness lift, and
+    44.1 kHz 160 kbps CBR MP3 export for crisp intelligibility across all playback speeds 1.0x-2.0x).
+    Safely falls back to unmodified bytes if audio is too short or decoding fails.
     """
     if not audio_bytes or len(audio_bytes) < 400:
         return audio_bytes
 
+    lead_s = max(0.01, leading_pad_ms / 1000.0)
+    trail_s = max(0.08, trailing_pad_ms / 1000.0)
+
+    # Single-pass FFmpeg studio mastering + leading/trailing silence trim
+    if is_ka:
+        # ka-GE neural voices have thin low-mids and a 3.2kHz synthetic edge;
+        # gentle chest warmth + peak-safe lift yield a natural, resonant Georgian tone.
+        eq_and_gain = (
+            "highpass=f=70,"
+            "equalizer=f=175:t=q:w=1.1:g=1.8,"
+            "equalizer=f=1100:t=q:w=1.4:g=0.8,"
+            "equalizer=f=3200:t=q:w=1.5:g=-1.8,"
+            "volume=4.5dB,"
+            "alimiter=limit=0.82:level=false:attack=5:release=60"
+        )
+    else:
+        eq_and_gain = (
+            "highpass=f=70,"
+            "equalizer=f=180:t=q:w=1.2:g=0.8,"
+            "volume=3.0dB,"
+            "alimiter=limit=0.82:level=false:attack=5:release=60"
+        )
+
+    af = (
+        f"{eq_and_gain},"
+        f"silenceremove=start_periods=1:start_duration=0:start_threshold=-46dB:start_silence={lead_s:.3f},"
+        "areverse,"
+        f"silenceremove=start_periods=1:start_duration=0:start_threshold=-46dB:start_silence={trail_s:.3f},"
+        "areverse"
+    )
+
+    try:
+        import subprocess
+        proc = subprocess.run(
+            [
+                "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+                "-f", "mp3", "-i", "pipe:0",
+                "-af", af,
+                "-ar", "44100", "-ac", "1", "-c:a", "libmp3lame", "-b:a", "160k",
+                "-f", "mp3", "pipe:1",
+            ],
+            input=audio_bytes,
+            capture_output=True,
+            timeout=15,
+            check=True,
+        )
+        out_bytes = proc.stdout
+        return out_bytes if len(out_bytes) > 200 else audio_bytes
+    except FileNotFoundError:
+        pass
+    except Exception:
+        return audio_bytes
+
+    # Fallback: pydub when ffmpeg binary is resolved via pydub configuration
     try:
         import io
         from pydub import AudioSegment, silence
@@ -183,27 +243,25 @@ def trim_speech_silence(audio_bytes: bytes, leading_pad_ms: int = 25, trailing_p
         if len(seg) < 300:
             return audio_bytes
 
-        # -46dB threshold reliably detects quiet speech and whispers without catching room noise
         ranges = silence.detect_nonsilent(seg, min_silence_len=50, silence_thresh=-46)
         if not ranges:
             return audio_bytes
 
         start_trim = max(0, ranges[0][0] - leading_pad_ms)
         end_trim = min(len(seg), ranges[-1][1] + trailing_pad_ms)
-
-        saved_ms = len(seg) - (end_trim - start_trim)
-        # Only re-encode if we save a meaningful amount of dead air (at least 120ms)
-        if saved_ms < 120:
+        if len(seg) - (end_trim - start_trim) < 120:
             return audio_bytes
 
         trimmed = seg[start_trim:end_trim]
+        if trimmed.dBFS != float("-inf"):
+            gain = min(-16.5 - trimmed.dBFS, -1.5 - trimmed.max_dBFS)
+            if abs(gain) > 0.3:
+                trimmed = trimmed.apply_gain(gain)
         buf = io.BytesIO()
-        # Export at pristine 192k bitrate to maintain full neural frequency spectrum and speed fidelity
-        trimmed.export(buf, format="mp3", bitrate="192k")
+        trimmed.export(buf, format="mp3", bitrate="160k")
         out_bytes = buf.getvalue()
         return out_bytes if len(out_bytes) > 200 else audio_bytes
     except Exception:
-        # Fallback to pristine unmodified audio if pydub/ffmpeg is unavailable or fails
         return audio_bytes
 
 
@@ -233,16 +291,18 @@ async def synthesize_text_to_file(
                     prog = round((idx / total_chunks) * 100, 1)
                     progress_callback(prog, f"Synthesizing chunk {idx + 1}/{total_chunks}...")
                 
-                is_ka = bool(re.search(r"[\u10A0-\u10FF]", chunk)) or voice.startswith("ka-")
-                spoken_text = verbalize_georgian_for_tts(chunk) if is_ka else chunk
+                is_ka = bool(KA_SCRIPT_RE.search(chunk)) or voice.startswith("ka-")
+                spoken_text = prepare_ka_tts_utterance(verbalize_georgian_for_tts(chunk)) if is_ka else chunk
                 if not spoken_text.strip():
                     continue
 
+                eff_rate = "-5%" if (is_ka and rate == "+0%") else rate
+                eff_pitch = "-2Hz" if (is_ka and pitch == "+0Hz") else pitch
                 communicate = edge_tts.Communicate(
                     text=spoken_text,
                     voice=voice,
-                    rate=rate,
-                    pitch=pitch,
+                    rate=eff_rate,
+                    pitch=eff_pitch,
                     volume=volume
                 )
                 
@@ -277,23 +337,33 @@ async def generate_voice_preview(
     pitch: str = "+0Hz"
 ) -> str:
     """Generate or retrieve a cached audio preview for a specific voice."""
-    is_ka = voice.startswith("ka-") or (text is not None and bool(re.search(r"[\u10A0-\u10FF]", text)))
+    is_ka = voice.startswith("ka-") or (text is not None and bool(KA_SCRIPT_RE.search(text)))
     if not text or text == "Welcome to your high quality AI audiobook studio. Reading your favorite books with natural voice.":
         if is_ka:
             text = "მოგესალმებით თქვენს მაღალი ხარისხის აუდიოწიგნების სტუდიაში. ჩვენ ვკითხულობთ თქვენს საყვარელ წიგნებს ბუნებრივი და ცოცხალი ხმით."
         else:
             text = "Welcome to your high quality AI audiobook studio. Reading your favorite books with natural voice."
 
-    spoken_text = verbalize_georgian_for_tts(text) if is_ka else text
+    spoken_text = prepare_ka_tts_utterance(verbalize_georgian_for_tts(text)) if is_ka else text
+    eff_rate = "-5%" if (is_ka and rate == "+0%") else rate
+    eff_pitch = "-2Hz" if (is_ka and pitch == "+0Hz") else pitch
 
-    key = f"{voice}_{rate}_{pitch}_{spoken_text}"
-    hash_key = hashlib.md5(key.encode("utf-8")).hexdigest()[:12]
+    key = f"v4_{voice}_{eff_rate}_{eff_pitch}_{spoken_text}"
+    hash_key = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
     filename = f"preview_{voice}_{hash_key}.mp3"
     filepath = PREVIEW_DIR / filename
     
     if not filepath.exists():
-        communicate = edge_tts.Communicate(text=spoken_text, voice=voice, rate=rate, pitch=pitch)
-        await communicate.save(str(filepath))
+        communicate = edge_tts.Communicate(text=spoken_text, voice=voice, rate=eff_rate, pitch=eff_pitch)
+        raw = bytearray()
+        async for chunk_data in communicate.stream():
+            if chunk_data["type"] == "audio":
+                raw.extend(chunk_data["data"])
+        if raw:
+            mastered = await asyncio.to_thread(trim_speech_silence, bytes(raw), 25, 160, is_ka)
+            filepath.write_bytes(mastered)
+        else:
+            await communicate.save(str(filepath))
         
     return f"/api/audio/preview/{filename}"
 
@@ -330,6 +400,34 @@ PRESET_TO_EDGE_VOICE: Dict[str, str] = {
     "multi-fenrir": "en-US-ChristopherNeural",
 }
 
+PRESET_DEFAULT_PROSODY: Dict[str, tuple[str, str]] = {
+    "ka-male": ("-5%", "-2Hz"),
+    "ka-actor": ("-2%", "-1Hz"),
+    "ka-female": ("-4%", "-1Hz"),
+    "ka-soft": ("-7%", "-2Hz"),
+    "ka-ge-giorgi": ("-5%", "-2Hz"),
+    "ka-ge-eka": ("-4%", "-1Hz"),
+    "en-gb-male": ("-3%", "-1Hz"),
+    "en-gb-female": ("-2%", "+0Hz"),
+    "en-gb-libby": ("-3%", "-1Hz"),
+    "en-gb-thomas": ("-3%", "-2Hz"),
+    "en-us-storyteller": ("-4%", "-2Hz"),
+    "en-us-aria": ("-2%", "+1Hz"),
+    "en-us-male": ("-2%", "+0Hz"),
+    "en-us-female": ("-2%", "+0Hz"),
+    "en-us-eric": ("-3%", "-3Hz"),
+    "en-us-ava": ("-2%", "+0Hz"),
+    "en-neutral": ("+0%", "+0Hz"),
+}
+
+def _normalize_preset_key(preset: Optional[str]) -> str:
+    if not preset or not isinstance(preset, str):
+        return ""
+    clean = preset.strip().lower()
+    if clean.startswith("preset:"):
+        clean = clean[7:]
+    return clean
+
 def resolve_tts_voice(preset: Optional[str] = None, voice: Optional[str] = None, text: str = "", lang: Optional[str] = None) -> str:
     """Intelligently map presets or custom voice IDs to verified Edge-TTS neural voices."""
     if voice and isinstance(voice, str) and voice.strip():
@@ -338,15 +436,12 @@ def resolve_tts_voice(preset: Optional[str] = None, voice: Optional[str] = None,
         if clean:
             return clean
 
-    if preset and isinstance(preset, str) and preset.strip():
-        clean_preset = preset.strip().lower()
-        if clean_preset.startswith("preset:"):
-            clean_preset = clean_preset[7:]
-        if clean_preset in PRESET_TO_EDGE_VOICE:
-            return PRESET_TO_EDGE_VOICE[clean_preset]
+    clean_preset = _normalize_preset_key(preset)
+    if clean_preset and clean_preset in PRESET_TO_EDGE_VOICE:
+        return PRESET_TO_EDGE_VOICE[clean_preset]
 
     # Inspect language or text characters
-    is_ka = (lang and str(lang).lower().startswith("ka")) or bool(re.search(r"[\u10A0-\u10FF]", text))
+    is_ka = (lang and str(lang).lower().startswith("ka")) or bool(KA_SCRIPT_RE.search(text))
     if is_ka:
         return "ka-GE-GiorgiNeural"
     return "en-GB-RyanNeural"
@@ -356,21 +451,23 @@ def format_tts_rate(rate) -> str:
     if rate is None:
         return "+0%"
     if isinstance(rate, (int, float)):
-        # If passed as speed multiplier (e.g. 1.2x)
-        if 0.2 <= rate <= 3.0:
+        # Float speed multipliers (e.g. 1.0, 1.25) vs explicit percentage ints
+        if isinstance(rate, float) and 0.2 <= rate <= 3.0:
             pct = int(round((float(rate) - 1.0) * 100))
         else:
             pct = int(round(float(rate)))
+        pct = max(-50, min(80, pct))
         return f"{pct:+d}%"
     s = str(rate).strip()
     if s.endswith("%"):
         return s if s.startswith(("+", "-")) else f"+{s}"
     try:
         f = float(s)
-        if 0.2 <= f <= 3.0:
+        if "." in s and 0.2 <= f <= 3.0:
             pct = int(round((f - 1.0) * 100))
         else:
             pct = int(round(f))
+        pct = max(-50, min(80, pct))
         return f"{pct:+d}%"
     except Exception:
         return "+0%"
@@ -380,13 +477,19 @@ def format_tts_pitch(pitch) -> str:
     if pitch is None:
         return "+0Hz"
     if isinstance(pitch, (int, float)):
-        hz = int(round(float(pitch)))
+        # Guard legacy Web Speech pitch multiplier default (1.0 == 0Hz offset)
+        if isinstance(pitch, float) and abs(pitch - 1.0) < 0.001:
+            return "+0Hz"
+        hz = max(-20, min(20, int(round(float(pitch)))))
         return f"{hz:+d}Hz"
     s = str(pitch).strip()
     if s.endswith("Hz"):
         return s if s.startswith(("+", "-")) else f"+{s}"
     try:
-        hz = int(round(float(s)))
+        f = float(s)
+        if "." in s and abs(f - 1.0) < 0.001:
+            return "+0Hz"
+        hz = max(-20, min(20, int(round(f))))
         return f"{hz:+d}Hz"
     except Exception:
         return "+0Hz"
@@ -395,20 +498,26 @@ async def synthesize_single_speech(
     text: str,
     preset: Optional[str] = None,
     voice: Optional[str] = None,
-    rate: Union[str, float] = "+0%",
-    pitch: Union[str, float] = "+0Hz",
+    rate: Optional[Union[str, float, int]] = None,
+    pitch: Optional[Union[str, float, int]] = None,
     lang: Optional[str] = None
 ) -> bytes:
-    """Synthesizes a single sentence or paragraph directly to MP3 audio bytes with LRU disk caching."""
+    """Synthesizes a single sentence or paragraph directly to mastered MP3 audio bytes with LRU disk caching."""
     chosen_voice = resolve_tts_voice(preset=preset, voice=voice, text=text, lang=lang)
-    rate_str = format_tts_rate(rate)
-    pitch_str = format_tts_pitch(pitch)
+    is_ka = chosen_voice.startswith("ka-") or (lang and str(lang).lower().startswith("ka")) or bool(KA_SCRIPT_RE.search(text))
 
-    is_ka = chosen_voice.startswith("ka-") or (lang and str(lang).lower().startswith("ka")) or bool(re.search(r"[\u10A0-\u10FF]", text))
-    spoken_text = verbalize_georgian_for_tts(text) if is_ka else text
+    clean_preset = _normalize_preset_key(preset)
+    default_rate, default_pitch = PRESET_DEFAULT_PROSODY.get(
+        clean_preset,
+        ("-5%", "-2Hz") if is_ka else ("+0%", "+0Hz")
+    )
+    rate_str = format_tts_rate(rate) if rate is not None else default_rate
+    pitch_str = format_tts_pitch(pitch) if pitch is not None else default_pitch
 
-    # Compute cache key (v2 ensures clean non-re-encoded neural audio)
-    key = f"v3_{chosen_voice}_{rate_str}_{pitch_str}_{spoken_text.strip()}"
+    spoken_text = prepare_ka_tts_utterance(verbalize_georgian_for_tts(text)) if is_ka else text
+
+    # Compute cache key (v4 includes calibrated prosody and studio mastering)
+    key = f"v4_{chosen_voice}_{rate_str}_{pitch_str}_{spoken_text.strip()}"
     hash_key = hashlib.sha256(key.encode("utf-8")).hexdigest()[:24]
     cache_path = TTS_CACHE_DIR / f"{hash_key}.mp3"
 
@@ -431,7 +540,7 @@ async def synthesize_single_speech(
         raise RuntimeError(f"Edge-TTS returned no audio for voice '{chosen_voice}'")
 
     raw_bytes = bytes(audio_data)
-    audio_bytes = trim_speech_silence(raw_bytes)
+    audio_bytes = await asyncio.to_thread(trim_speech_silence, raw_bytes, 25, 160, is_ka)
     try:
         cache_path.write_bytes(audio_bytes)
     except Exception as err:

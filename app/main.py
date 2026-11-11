@@ -145,8 +145,8 @@ async def tts_endpoint(
 
         target_preset = body.get("preset") or preset or ""
         target_voice = body.get("voice") or voice or ""
-        target_rate = body.get("rate") if body.get("rate") is not None else (rate or "+0%")
-        target_pitch = body.get("pitch") if body.get("pitch") is not None else (pitch or "+0Hz")
+        target_rate = body.get("rate") if body.get("rate") is not None else rate
+        target_pitch = body.get("pitch") if body.get("pitch") is not None else pitch
         target_lang = body.get("lang") or body.get("language") or lang or ""
 
         audio_bytes = await synthesize_single_speech(

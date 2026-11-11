@@ -1182,7 +1182,7 @@
                 <div class="text-[10px] text-on-surface-variant/60 font-mono">
                     Your books and reading progress, synced across devices
                 </div>
-                <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs text-primary-fixed-dim hover:text-primary-container transition font-medium">
+                <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" data-admin-only hidden class="hidden inline-flex items-center gap-1.5 text-xs text-primary-fixed-dim hover:text-primary-container transition font-medium">
                     <svg class="w-3.5 h-3.5 fill-current text-white/80" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                     <span>About this project</span>
                     <span class="material-symbols-outlined text-[13px]">open_in_new</span>
@@ -1207,7 +1207,7 @@
             </div>
         </div>
         <div class="flex items-center gap-0.5 -mr-2">
-            <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition flex items-center justify-center" aria-label="GitHub Repository" title="GitHub Repository">
+            <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" data-admin-only hidden class="hidden p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition flex items-center justify-center" aria-label="GitHub Repository" title="GitHub Repository">
                 <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
             </a>
             <button onclick="LuminaScanner.open()" class="p-2 rounded-xl text-georgian-gold hover:bg-white/10 transition" aria-label="Scan book pages" title="Scan book pages">
@@ -1266,7 +1266,7 @@
                 <button onclick="navigate('discover');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
                     <span class="material-symbols-outlined text-[20px]">explore</span><span>Discover</span>
                 </button>
-                <button onclick="navigate('embeddinggemma');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-primary-fixed hover:bg-white/5 hover:text-white transition">
+                <button onclick="navigate('embeddinggemma');closeMobileNav()" data-admin-only hidden class="hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-primary-fixed hover:bg-white/5 hover:text-white transition">
                     <span class="material-symbols-outlined text-[20px] text-primary-container">psychology</span><span>EmbeddingGemma 2</span>
                 </button>
                 <button onclick="openCurrentBookInReader();closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-georgian-gold hover:bg-georgian-gold/10 transition">
@@ -1275,14 +1275,14 @@
                 <button onclick="openModal('voiceModal');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
                     <span class="material-symbols-outlined text-[20px]">record_voice_over</span><span>Voice settings</span>
                 </button>
-                <button onclick="openModal('aiSettingsModal');closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-primary-fixed hover:bg-white/5 transition">
+                <button onclick="openModal('aiSettingsModal');closeMobileNav()" data-admin-only hidden class="hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-primary-fixed hover:bg-white/5 transition">
                     <span class="material-symbols-outlined text-[20px]">smart_toy</span><span>AI settings</span>
                 </button>
-                <button onclick="openTrainingLabModal();closeMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-secondary hover:bg-white/5 transition">
+                <button onclick="openTrainingLabModal();closeMobileNav()" data-admin-only hidden class="hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-secondary hover:bg-white/5 transition">
                     <span class="material-symbols-outlined text-[20px]">model_training</span><span>Training Lab</span>
                 </button>
                 <button id="mobileNavServerStats" data-admin-build class="hidden" style="display: none !important;"></button>
-                <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
+                <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" data-admin-only hidden class="hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-white/5 hover:text-white transition">
                     <svg class="w-5 h-5 fill-current text-white/80" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                     <span>GitHub Repository</span>
                 </a>
@@ -1343,7 +1343,7 @@
                     <span>Scanner</span>
                 </button>
             </li>
-            <li>
+            <li data-admin-only hidden class="hidden">
                 <button onclick="navigate('embeddinggemma')" id="nav-embeddinggemma" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all font-medium text-sm">
                     <span class="material-symbols-outlined text-[20px] text-primary-container">psychology</span>
                     <span class="flex items-center gap-1.5">
@@ -1364,21 +1364,21 @@
                     <span>Voice settings</span>
                 </button>
             </li>
-            <li>
+            <li data-admin-only hidden class="hidden">
                 <button onclick="openModal('aiSettingsModal')" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-primary-fixed hover:bg-white/5 hover:text-primary-container transition-all font-medium text-sm">
                     <span class="material-symbols-outlined text-[20px]">smart_toy</span>
                     <span>AI settings</span>
                 </button>
             </li>
-            <li>
+            <li data-admin-only hidden class="hidden">
                 <button onclick="openTrainingLabModal()" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-secondary hover:bg-white/5 hover:text-white transition-all font-medium text-sm">
                     <span class="material-symbols-outlined text-[20px]">model_training</span>
                     <span>Training Lab</span>
                 </button>
             </li>
             <li id="nav-item-server-stats" data-admin-build class="hidden" style="display: none !important;"></li>
-            <li>
-                <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-white transition-all font-medium text-sm">
+            <li data-admin-only hidden class="hidden">
+                <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" data-admin-only hidden class="hidden w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 hover:text-white transition-all font-medium text-sm">
                     <svg class="w-5 h-5 fill-current text-white/80" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                     <span>Source & updates</span>
                 </a>
@@ -1421,7 +1421,7 @@
                 <span>Upload Book</span>
             </button>
 
-            <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/12 text-xs font-semibold text-white transition shadow-sm" title="View Project on GitHub">
+            <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" data-admin-only hidden class="hidden flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/12 text-xs font-semibold text-white transition shadow-sm" title="View Project on GitHub">
                 <svg class="w-4 h-4 fill-current text-white/90" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                 <span>GitHub</span>
             </a>
@@ -1556,7 +1556,7 @@
                     <p id="scanShelfMeta" class="text-[11px] text-primary-fixed-dim mt-1"></p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="navigate('embeddinggemma')" class="py-3 px-4 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold text-xs flex items-center gap-2 transition active:scale-[0.98] cursor-pointer">
+                    <button onclick="navigate('embeddinggemma')" data-admin-only hidden class="hidden py-3 px-4 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold text-xs flex items-center gap-2 transition active:scale-[0.98] cursor-pointer">
                         <span class="material-symbols-outlined text-lg">psychology</span>
                         Visual Search (EmbeddingGemma)
                     </button>
@@ -1571,7 +1571,7 @@
         </div>
 
         <!-- View: EmbeddingGemma 2 Multimodal Search & Studio -->
-        <div id="view-embeddinggemma" class="hidden space-y-6">
+        <div id="view-embeddinggemma" data-admin-only hidden class="hidden space-y-6">
             <!-- Header -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10">
                 <div>
@@ -2422,7 +2422,7 @@
             <span class="material-symbols-outlined text-2xl">document_scanner</span>
             <span>Scanner</span>
         </button>
-        <button type="button" onclick="navigate('embeddinggemma')" id="bottomNavGemma" class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
+        <button type="button" onclick="navigate('embeddinggemma')" id="bottomNavGemma" data-admin-only hidden class="hidden flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white">
             <span class="material-symbols-outlined text-2xl text-cyan-400">psychology</span>
             <span>Gemma 2</span>
         </button>
@@ -2476,7 +2476,7 @@
 
                 <!-- Admin Training Lab Shortcut -->
                 <!-- AI Training Lab & LLM Keys Shortcut -->
-                <button type="button" id="cabinetBtnTraining" onclick="openTrainingLabModal()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary-container/20 to-secondary/20 hover:from-primary-container/30 hover:to-secondary/30 text-white border border-primary-container/30 text-xs font-bold transition flex items-center justify-between">
+                <button type="button" id="cabinetBtnTraining" data-admin-only hidden onclick="openTrainingLabModal()" class="hidden w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary-container/20 to-secondary/20 hover:from-primary-container/30 hover:to-secondary/30 text-white border border-primary-container/30 text-xs font-bold transition flex items-center justify-between">
                     <span class="flex items-center gap-2.5">
                         <span class="material-symbols-outlined text-base text-primary-fixed">model_training</span>
                         <span>AI Training Lab & LLM Keys</span>
@@ -2485,7 +2485,7 @@
                 </button>
 
                 <!-- AI Engine & Frontier API Keys Shortcut -->
-                <button type="button" onclick="closeAccountCabinet(); openModal('aiSettingsModal')" class="w-full py-3 px-4 rounded-xl bg-primary-container/15 hover:bg-primary-container/25 text-white border border-primary-container/30 text-xs font-bold transition flex items-center justify-between">
+                <button type="button" id="cabinetBtnAiSettings" data-admin-only hidden onclick="closeAccountCabinet(); openModal('aiSettingsModal')" class="hidden w-full py-3 px-4 rounded-xl bg-primary-container/15 hover:bg-primary-container/25 text-white border border-primary-container/30 text-xs font-bold transition flex items-center justify-between">
                     <span class="flex items-center gap-2.5">
                         <span class="material-symbols-outlined text-base text-primary-fixed">smart_toy</span>
                         <span>AI Engine & Frontier API Keys</span>
@@ -2896,7 +2896,7 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
             </div>
 
             <!-- Primary Engine Selector / Switcher -->
-            <div class="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10 text-xs">
+            <div data-admin-only hidden class="hidden flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10 text-xs">
                 <div class="flex items-center gap-1.5 text-on-surface-variant text-[11px]">
                     <span class="material-symbols-outlined text-sm text-georgian-gold">psychology</span>
                     <span>Primary Engine:</span>
@@ -3506,7 +3506,7 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
                     <button type="button" onclick="toggleAuthForgot(true)" class="text-on-surface-variant hover:text-primary-container transition">
                         Forgot password?
                     </button>
-                    <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" class="text-primary-fixed-dim hover:text-primary-container transition text-[11px] flex items-center gap-1">
+                    <a href="https://github.com/devsura3939/oudio-books-AI" target="_blank" rel="noopener noreferrer" data-admin-only hidden class="hidden text-primary-fixed-dim hover:text-primary-container transition text-[11px] flex items-center gap-1">
                         <span>GitHub Source</span>
                         <span class="material-symbols-outlined text-[11px]">open_in_new</span>
                     </a>
@@ -3576,7 +3576,7 @@ CRITICAL LINGUISTIC RULES FOR GEORGIAN:
             </p>
 
             <!-- Active AI Engine & API Key Status Card -->
-            <div class="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-3">
+            <div data-admin-only hidden class="hidden p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2.5 min-w-0">
                     <span class="material-symbols-outlined text-xl text-primary-fixed flex-shrink-0">neurology</span>
                     <div class="min-w-0">

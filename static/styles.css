@@ -713,7 +713,8 @@ select optgroup {
 }
 
 /* Auth screens stay usable with mobile keyboards and password managers. */
-[data-admin-build][hidden] { display:none !important; }
+[data-admin-build][hidden],
+[data-admin-only][hidden] { display:none !important; }
 #authGateScreen { height:100dvh; align-items:safe center; }
 #authGateScreen input:not([type=checkbox]) { font-size:16px; min-height:48px; }
 #authGateScreen button { min-height:44px; }

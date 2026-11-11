@@ -1567,18 +1567,55 @@ function transliterateLatinWordToGeorgian(word) {
         'chekhov': 'ჩეხოვი', 'sun': 'სუნ', 'tzu': 'ძი',
         // Common English & Literary Names
         'john': 'ჯონ', 'james': 'ჯეიმს', 'george': 'ჯორჯ', 'william': 'უილიამ', 'charles': 'ჩარლზ',
-        'david': 'დავით', 'robert': 'რობერტ', 'edward': 'ედუარდ', 'henry': 'ჰენრი', 'thomas': 'თომას',
+        'david': 'დავით', 'davit': 'დავით', 'robert': 'რობერტ', 'edward': 'ედუარდ', 'henry': 'ჰენრი', 'thomas': 'თომას',
         'mary': 'მერი', 'elizabeth': 'ელიზაბეთ', 'sarah': 'სარა', 'jane': 'ჯეინ', 'emma': 'ემა',
         'london': 'ლონდონი', 'england': 'ინგლისი', 'paris': 'პარიზი', 'france': 'საფრანგეთი',
         'america': 'ამერიკა', 'york': 'იორკი', 'street': 'სტრიტი',
+        // Georgian Cities, Regions & Cultural Names in Latin
+        'georgia': 'ჯორჯია', 'sakartvelo': 'საქართველო', 'tbilisi': 'თბილისი',
+        'batumi': 'ბათუმი', 'kutaisi': 'ქუთაისი', 'rustavi': 'რუსთავი',
+        'mtskheta': 'მცხეთა', 'gori': 'გორი', 'zugdidi': 'ზუგდიდი', 'telavi': 'თელავი',
+        'kakheti': 'კახეთი', 'svaneti': 'სვანეთი', 'imereti': 'იმერეთი',
+        'samegrelo': 'სამეგრელო', 'kartli': 'ქართლი', 'adjara': 'აჭარა',
+        'ilia': 'ილია', 'lasha': 'ლაშა', 'giorgi': 'გიორგი', 'nino': 'ნინო',
+        'tamar': 'თამარ', 'mariam': 'მარიამ', 'elene': 'ელენე', 'ana': 'ანა',
+        'luka': 'ლუკა', 'levan': 'ლევან', 'zurab': 'ზურაბ', 'irakli': 'ირაკლი',
+        'tornike': 'თორნიკე', 'niko': 'ნიკო', 'pirosmani': 'ფიროსმანი',
+        'bagrationi': 'ბაგრატიონი', 'saakashvili': 'სააკაშვილი', 'shevardnadze': 'შევარდნაძე',
+        // Common International Names & Tech Terms
+        'steve': 'სტივ', 'mike': 'მაიკ', 'michael': 'მაიკლ', 'kate': 'კეიტ',
+        'alice': 'ელის', 'andrew': 'ენდრიუ', 'matthew': 'მეთიუ', 'paul': 'პოლ',
+        'peter': 'პიტერ', 'mark': 'მარკ', 'stephen': 'სტივენ', 'richard': 'რიჩარდ',
+        'victor': 'ვიქტორ', 'alex': 'ალექს', 'anna': 'ანა', 'maria': 'მარია',
+        'elena': 'ელენა', 'sophia': 'სოფია', 'google': 'გუგლი', 'apple': 'ეპლი',
+        'oracle': 'ორაკლი', 'microsoft': 'მაიკროსოფტი', 'amazon': 'ამაზონი',
+        'iphone': 'აიფონი', 'android': 'ანდროიდი', 'openai': 'ოუპენ-ეი-აი',
+        'chatgpt': 'ჩატ-ჯი-პი-ტი', 'claude': 'კლოდი', 'gemini': 'ჯემინაი',
+        'youtube': 'იუთუბი', 'github': 'გითჰაბი', 'studio': 'სტუდიო',
+        'engbot': 'ენგბოტ', 'lumina': 'ლუმინა',
         // Modern Acronyms & International Terms
         'ai': 'ეი-აი', 'it': 'აი-ტი', 'usa': 'იუ-ეს-ეი', 'eu': 'ევროკავშირი',
         'nato': 'ნატო', 'unesco': 'იუნესკო', 'ceo': 'სი-ი-ო', 'dna': 'დნმ',
-        'rna': 'რნმ', 'fbi': 'ეფ-ბი-აი', 'cia': 'სი-აი-ეი', 'nasa': 'ნასა'
+        'rna': 'რნმ', 'fbi': 'ეფ-ბი-აი', 'cia': 'სი-აი-ეი', 'nasa': 'ნასა',
+        'bbc': 'ბი-ბი-სი', 'cnn': 'სი-ენ-ენ', 'pdf': 'პი-დი-ეფ', 'usb': 'იუ-ეს-ბი',
+        'tv': 'თი-ვი', 'ok': 'ოქეი', 'okay': 'ოქეი', 'vip': 'ვი-აი-პი',
+        'gps': 'ჯი-პი-ეს', 'wifi': 'ვაი-ფაი', 'un': 'გაერო', 'uk': 'დიდი ბრიტანეთი'
     };
     if (commonNames[lower]) return commonNames[lower];
 
+    const letterKa = {
+        A: 'ეი', B: 'ბი', C: 'სი', D: 'დი', E: 'ი', F: 'ეფ', G: 'ჯი', H: 'ეიჩ',
+        I: 'აი', J: 'ჯეი', K: 'ქეი', L: 'ელ', M: 'ემ', N: 'ენ', O: 'ოუ', P: 'პი',
+        Q: 'ქიუ', R: 'არ', S: 'ეს', T: 'თი', U: 'იუ', V: 'ვი', W: 'დაბლიუ', X: 'ექს',
+        Y: 'უაი', Z: 'ზი'
+    };
+    if (/^[A-Z]{2,5}$/.test(word) && !/[AEIOUY]/.test(word) && !/^[IVXLCDM]+$/.test(word)) {
+        return word.split('').map(ch => letterKa[ch] || ch).join('-');
+    }
+
     let s = lower;
+    // Collapse English doubled consonants so ka-GE voice doesn't stutter
+    s = s.replace(/([bdfgklmnprstz])\1/g, '$1').replace(/cc(?![eiy])/g, 'k');
 
     // Silent clusters and special English onsets
     s = s.replace(/^kn/g, 'ნ')
@@ -1589,8 +1626,14 @@ function transliterateLatinWordToGeorgian(word) {
     // Suffixes and Latinate endings
     s = s.replace(/tion\b/g, 'შენ')
          .replace(/sion\b/g, 'ჟენ')
+         .replace(/ture\b/g, 'ჩერ')
+         .replace(/dge/g, 'ჯ')
          .replace(/igh/g, 'აი')
-         .replace(/ew\b/g, 'იუ');
+         .replace(/ew\b/g, 'იუ')
+         .replace(/ow\b/g, 'ოუ');
+    if (s.length > 3 && /[aeiouy]/.test(s.slice(0, -1))) {
+        s = s.replace(/(?<=[bcdfghjklmnpqrstvwxz])e\b/g, '');
+    }
 
     // Digraphs & Multigraphs
     s = s.replace(/sch/g, 'შ')
@@ -1609,6 +1652,7 @@ function transliterateLatinWordToGeorgian(word) {
          .replace(/ee/g, 'ი')
          .replace(/ea/g, 'ი')
          .replace(/oo/g, 'უ')
+         .replace(/oa/g, 'ოუ')
          .replace(/ou/g, 'აუ')
          .replace(/au|aw/g, 'ო')
          .replace(/ai|ay|ei|ey/g, 'ეი');
@@ -1637,41 +1681,124 @@ function transliterateLatinInGeorgian(text) {
 function verbalizeGeorgianTextForTTS(text) {
     if (!text) return '';
     let out = normalizeGeorgian(text);
+    // Normalize Georgian Mtavruli uppercase (U+1C90..U+1CBF) to Mkhedruli for clean G2P pronunciation
+    out = out.replace(/[\u1C90-\u1CBA\u1CBD-\u1CBF]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x0BC0));
 
-    // 1. Roman Numerals in chapters, titles, books
+    // 1. Roman Numerals in chapters, titles, books, centuries, monarchs & suffixed forms
     const romanToGeorgian = {
         'I': 'პირველი', 'II': 'მეორე', 'III': 'მესამე', 'IV': 'მეოთხე', 'V': 'მეხუთე',
         'VI': 'მეექვსე', 'VII': 'მეშვიდე', 'VIII': 'მერვე', 'IX': 'მეცხრე', 'X': 'მეათე',
-        'XI': 'მეთერთმეტე', 'XII': 'მეთორმეტე', 'XIII': 'მეცამეტე', 'XIV': 'მეთოთხმეტე',
-        'XV': 'მეთხუთმეტე', 'XVI': 'მეთექვსმეტე', 'XVII': 'მეჩვიდმეტე', 'XVIII': 'მეთვრამეტე',
-        'XIX': 'მეცხრამეტე', 'XX': 'მეოცე'
+        'XI': 'მეთერთმეტე', 'XII': 'მეთორმეტე', 'XIII': 'მეცამეტე', 'XIV': 'მეთოთხმეტე', 'XV': 'მეთხუთმეტე',
+        'XVI': 'მეთექვსმეტე', 'XVII': 'მეჩვიდმეტე', 'XVIII': 'მეთვრამეტე', 'XIX': 'მეცხრამეტე', 'XX': 'მეოცე',
+        'XXI': 'ოცდამეერთე', 'XXII': 'ოცდამეორე', 'XXIII': 'ოცდამესამე', 'XXIV': 'ოცდამეოთხე', 'XXV': 'ოცდამეხუთე',
+        'XXVI': 'ოცდამეექვსე', 'XXVII': 'ოცდამეშვიდე', 'XXVIII': 'ოცდამერვე', 'XXIX': 'ოცდამეცხრე', 'XXX': 'ოცდამეათე'
     };
-    out = out.replace(new RegExp(`(?<![${KA_CHARS}])(თავი|ნაწილი|წიგნი|ტომი|კარი)\\s+([IVXLCDM]+)\\b`, 'gi'), (match, prefix, roman) => {
+    out = out.replace(new RegExp(`(?<![${KA_CHARS}])(თავი|ნაწილი|წიგნი|ტომი|კარი|გვერდი)\\s+([IVXLCDM]+)\\b`, 'gi'), (match, prefix, roman) => {
         const upper = roman.toUpperCase();
         return `${prefix} ${romanToGeorgian[upper] || roman}`;
     });
+    out = out.replace(/(?<![A-Za-z0-9])([IVXLCDM]+)\s+(საუკუნე(?:ში|დან|მდე|ს)?)(?![A-Za-z0-9])/gi, (m, rom, suffix) => {
+        const u = rom.toUpperCase();
+        return romanToGeorgian[u] ? `${romanToGeorgian[u]} ${suffix}` : m;
+    });
+    out = out.replace(/(?<![A-Za-z])([IVXLCDM]+)-(ე|ლი|ში|მა|ად|ზე|მდე|დან)(?![\u10A0-\u10FF])/g, (m, rom, suffix) => {
+        const u = rom.toUpperCase();
+        const ord = romanToGeorgian[u];
+        if (!ord) return m;
+        if (suffix === 'ე' || suffix === 'ლი') return ord;
+        if (suffix === 'მა') return ord + 'მ';
+        return ord + suffix;
+    });
+    out = out.replace(/([ა-ჰ]+)\s+([IVXLCDM]+)(?![A-Za-z0-9])/g, (m, name, rom) => {
+        const u = rom.toUpperCase();
+        return romanToGeorgian[u] ? `${name} ${romanToGeorgian[u]}` : m;
+    });
 
-    // 2. Georgian Ordinals: 1-ლი, 2-ე, 3-ე, etc.
-    out = out.replace(/(\d+)-(ლი|ე|ში|მა|ად)/g, (match, num, suffix) => {
+    // 1.5 Dates before decimal parsing: DD.MM.YYYY or DD/MM/YYYY
+    const monthsKa = {
+        1: 'იანვარი', 2: 'თებერვალი', 3: 'მარტი', 4: 'აპრილი',
+        5: 'მაისი', 6: 'ივნისი', 7: 'ივლისი', 8: 'აგვისტო',
+        9: 'სექტემბერი', 10: 'ოქტომბერი', 11: 'ნოემბერი', 12: 'დეკემბერი'
+    };
+    out = out.replace(/\b(\d{1,2})[./](\d{1,2})[./](\d{4})\b/g, (m, dStr, moStr, yStr) => {
+        const day = parseInt(dStr, 10), month = parseInt(moStr, 10), year = parseInt(yStr, 10);
+        if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1000 && year <= 2100) {
+            return `${georgianNumberToWords(day)} ${monthsKa[month]}, ${georgianNumberToWords(year)} წელი`;
+        }
+        return m;
+    });
+
+    // 2. Georgian Ordinals: 1-ლი, 2-ე, 3-ე, მე-5, etc.
+    out = out.replace(/(მე-)?(\d+)-(ლი|ე|ში|მა|ად)/g, (match, prefix, num, suffix) => {
         const ord = georgianOrdinalToWords(parseInt(num, 10));
         if (suffix === 'ში') return ord + 'ში';
         if (suffix === 'მა') return ord + 'მ';
         return ord;
     });
+    out = out.replace(/(?<![\u10A0-\u10FF\d])მე-(\d+)(?![\u10A0-\u10FF\d])/g, (match, num) => georgianOrdinalToWords(parseInt(num, 10)));
 
-    // 3. Percentages & Decimals
+    // 2.1 Hyphenated Numeral Decades & Oblique Case Suffixes (e.g. 1990-იანი, 10-დან 15-მდე, 20-ზე)
+    out = out.replace(
+        /\b(\d{1,9})-(იანები|იანებში|იანების|იანთა|იანი|იან|ეული|წლიანი|ისთვის|სთვის|მდე|დან|ში|ზე|ით|თან|კენ|ის|ს)(?![\u10A0-\u10FF])/g,
+        (match, numStr, suffix) => {
+            const w = String(georgianNumberToWords(parseInt(numStr, 10)));
+            const endsI = w.endsWith('ი');
+            const stem = (endsI || w.endsWith('ა')) ? w.slice(0, -1) : w;
+            const cStem = endsI ? w.slice(0, -1) : w;
+            if (suffix.startsWith('იან') || suffix === 'ის' || suffix === 'ისთვის') return stem + suffix;
+            if (['ეული', 'წლიანი', 'ში', 'ზე', 'ს', 'ით', 'თან', 'კენ'].includes(suffix)) return cStem + suffix;
+            if (suffix === 'დან') return stem + 'იდან';
+            if (suffix === 'მდე') return endsI ? (stem + 'ამდე') : (w + 'მდე');
+            if (suffix === 'სთვის') return endsI ? (stem + 'ისთვის') : (w + 'სთვის');
+            return cStem + suffix;
+        }
+    );
+
+    // 2.2 Multiplicative Adverbials: 1-ჯერ -> ერთხელ, 2-ჯერ -> ორჯერ
+    out = out.replace(/\b(\d+)-ჯერ\b/g, (m, numStr) => {
+        const n = parseInt(numStr, 10);
+        if (n === 1) return 'ერთხელ';
+        const w = String(georgianNumberToWords(n));
+        const stem = w.endsWith('ი') ? w.slice(0, -1) : w;
+        return stem + 'ჯერ';
+    });
+
+    // 2.3 Clock Time: 14:30 -> თოთხმეტ საათსა და ნახევარზე
+    out = out.replace(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g, (m, hStr, mStr) => {
+        const h = parseInt(hStr, 10), mins = parseInt(mStr, 10);
+        const hw = String(georgianNumberToWords(h));
+        const hstem = hw.endsWith('ი') ? hw.slice(0, -1) : hw;
+        if (mins === 0) return `${hstem} საათზე`;
+        if (mins === 30) return `${hstem} საათსა და ნახევარზე`;
+        return `${hstem} საათსა და ${georgianNumberToWords(mins)} წუთზე`;
+    });
+
+    // 3. Percentages, Symbols & Decimals
     out = out.replace(/(\b\d{1,9})\s*%/g, (match, num) => {
         return georgianNumberToWords(parseInt(num, 10)) + ' პროცენტი';
     });
-    out = out.replace(/(\b\d{1,9})\.(\d{1,4})\b/g, (match, intPart, decPart) => {
-        return georgianNumberToWords(parseInt(intPart, 10)) + ' მთელი ' + georgianNumberToWords(parseInt(decPart, 10));
-    });
+    out = out.replace(/№\s*(\d{1,9})\b/g, (match, num) => 'ნომერი ' + georgianNumberToWords(parseInt(num, 10)));
+    out = out.replace(/§\s*(\d{1,9})\b/g, (match, num) => 'პარაგრაფი ' + georgianNumberToWords(parseInt(num, 10)));
 
-    // 3.5 Common Fractions
+    // 3.5 Common Fractions (dot & comma decimals)
+    out = out.replace(/(?<!\d)0[.,]5(?!\d)/g, 'ნახევარი');
+    out = out.replace(/(?<!\d)1[.,]5(?!\d)/g, 'ერთ-ნახევარი');
+    out = out.replace(/(?<!\d)2[.,]5(?!\d)/g, 'ორ-ნახევარი');
+    out = out.replace(/(?<!\d)3[.,]5(?!\d)/g, 'სამ-ნახევარი');
+    out = out.replace(/(?<!\d)4[.,]5(?!\d)/g, 'ოთხ-ნახევარი');
+    out = out.replace(/(?<!\d)5[.,]5(?!\d)/g, 'ხუთ-ნახევარი');
     out = out.replace(/(?<!\d)1\/2(?!\d)/g, 'ნახევარი');
     out = out.replace(/(?<!\d)1\/3(?!\d)/g, 'მესამედი');
     out = out.replace(/(?<!\d)1\/4(?!\d)/g, 'მეოთხედი');
     out = out.replace(/(?<!\d)3\/4(?!\d)/g, 'სამი მეოთხედი');
+    out = out.replace(/(?<!\d)1\s+1\/2(?!\d)/g, 'ერთ-ნახევარი');
+    out = out.replace(/(?<!\d)2\s+1\/2(?!\d)/g, 'ორ-ნახევარი');
+
+    out = out.replace(/(\b\d{1,9})[.,](\d{1,4})\b/g, (match, intPart, decPart) => {
+        return georgianNumberToWords(parseInt(intPart, 10)) + ' მთელი ' + georgianNumberToWords(parseInt(decPart, 10));
+    });
+    // Space-separated thousands: 10 000 -> ათი ათასი
+    out = out.replace(/\b(\d{1,3}(?: \d{3})+)\b/g, (m) => georgianNumberToWords(parseInt(m.replace(/\s+/g, ''), 10)));
 
     // 3.6 Metric Measurements
     out = out.replace(/(\b\d{1,9})\s*(კმ|კილომეტრი|კილომეტრში)(?![\u10A0-\u10FF])/g, (m, n, u) => {
@@ -1706,17 +1833,32 @@ function verbalizeGeorgianTextForTTS(text) {
         return georgianNumberToWords(n) + ' ევრო';
     });
 
-    // 5. Common Abbreviations
+    // 5. Common Abbreviations & Consonant Acronyms
     const abbrevMap = [
         [kaWord('და\\s*ა\\.შ\\.', 'g'), 'და ასე შემდეგ'],
+        [kaWord('ძვ\\.?\\s*წ\\.', 'g'), 'ძველი წელთაღრიცხვით'],
+        [kaWord('ახ\\.?\\s*წ\\.', 'g'), 'ახალი წელთაღრიცხვით'],
+        [kaWord('ჩვ\\.?\\s*წ\\.', 'g'), 'ჩვენი წელთაღრიცხვით'],
         [kaWord('ე\\.ი\\.', 'g'), 'ესე იგი'],
         [kaWord('ე\\.წ\\.', 'g'), 'ეგრეთ წოდებული'],
+        [kaWord('მ\\.შ\\.', 'g'), 'მათ შორის'],
+        [kaWord('თ\\.შ\\.', 'g'), 'თავისთავად'],
         [kaWord('მაგ\\.', 'g'), 'მაგალითად'],
         [kaWord('ბ-ნი', 'g'), 'ბატონი'],
         [kaWord('ქ-ნი', 'g'), 'ქალბატონი'],
         [kaWord('დოქტ\\.', 'g'), 'დოქტორი'],
         [kaWord('პროფ\\.', 'g'), 'პროფესორი'],
         [kaWord('აკად\\.', 'g'), 'აკადემიკოსი'],
+        [kaWord('შ\\.?პ\\.?ს\\.?', 'g'), 'შე-პე-სე'],
+        [kaWord('დღგ', 'g'), 'დე-ღე-გე'],
+        [kaWord('თსუ', 'g'), 'თე-ეს-უ'],
+        [kaWord('აშშ', 'g'), 'ა-შე-შე'],
+        [kaWord('შსს', 'g'), 'შე-ეს-ეს'],
+        [kaWord('სსრკ', 'g'), 'ეს-ეს-ერ-კა'],
+        [kaWord('მლნ\\.?', 'g'), 'მილიონი'],
+        [kaWord('მლრდ\\.?', 'g'), 'მილიარდი'],
+        [kaWord('წთ\\.?', 'g'), 'წუთი'],
+        [kaWord('წმ\\.?', 'g'), 'წამი'],
         [kaWord('წ\\.', 'g'), 'წელი'],
         [kaWord('წწ\\.', 'g'), 'წლები'],
         [kaWord('სს\\.', 'g'), 'საუკუნე'],
@@ -1741,41 +1883,13 @@ function verbalizeGeorgianTextForTTS(text) {
     // 5.2 Georgian initials before surname: remove dot so TTS does not pause mid-name
     out = out.replace(/(?<=(?:^|\s)[\u10D0-\u10FA])\.\s*(?=[\u10D0-\u10FA])/g, ' ');
 
-    // 5.4 Roman Numerals in Chapter/Book Headings, Centuries & Monarchs
-    const romanToOrdinalKa = {
-        'I': 'პირველი', 'II': 'მეორე', 'III': 'მესამე', 'IV': 'მეოთხე', 'V': 'მეხუთე',
-        'VI': 'მეექვსე', 'VII': 'მეშვიდე', 'VIII': 'მერვე', 'IX': 'მეცხრე', 'X': 'მეათე',
-        'XI': 'მეთერთმეტე', 'XII': 'მეთორმეტე', 'XIII': 'მეცამეტე', 'XIV': 'მეთოთხმეტე', 'XV': 'მეთხუთმეტე',
-        'XVI': 'მეთექვსმეტე', 'XVII': 'მეჩვიდმეტე', 'XVIII': 'მეთვრამეტე', 'XIX': 'მეცხრამეტე', 'XX': 'მეოცე',
-        'XXI': 'ოცდამეერთე', 'XXII': 'ოცდამეორე', 'XXIII': 'ოცდამესამე', 'XXIV': 'ოცდამეოთხე', 'XXV': 'ოცდამეხუთე',
-        'XXVI': 'ოცდამეექვსე', 'XXVII': 'ოცდამეშვიდე', 'XXVIII': 'ოცდამერვე', 'XXIX': 'ოცდამეცხრე', 'XXX': 'ოცდამეათე'
-    };
-
-    // A. Headings: "თავი IV" -> "თავი მეოთხე", "ნაწილი II" -> "ნაწილი მეორე"
-    out = out.replace(/(?<![A-Za-z0-9])(თავი|კარი|ნაწილი|წიგნი|ტომი|გვერდი)\s+([IVXLCDM]+)(?![A-Za-z0-9])/gi, (m, prefix, rom) => {
-        const u = rom.toUpperCase();
-        return romanToOrdinalKa[u] ? `${prefix} ${romanToOrdinalKa[u]}` : m;
-    });
-
-    // B. Centuries: "XXI საუკუნე" -> "ოცდამეერთე საუკუნე", "XX საუკუნეში" -> "მეოცე საუკუნეში"
-    out = out.replace(/(?<![A-Za-z0-9])([IVXLCDM]+)\s+(საუკუნე(?:ში|დან|მდე|ს)?)(?![A-Za-z0-9])/gi, (m, rom, suffix) => {
-        const u = rom.toUpperCase();
-        return romanToOrdinalKa[u] ? `${romanToOrdinalKa[u]} ${suffix}` : m;
-    });
-
-    // C. Monarchs & Popes: "ერეკლე II" -> "ერეკლე მეორე", "ლუი XIV" -> "ლუი მეთოთხმეტე"
-    out = out.replace(/([ა-ჰ]+)\s+([IVXLCDM]+)(?![A-Za-z0-9])/g, (m, name, rom) => {
-        const u = rom.toUpperCase();
-        return romanToOrdinalKa[u] ? `${name} ${romanToOrdinalKa[u]}` : m;
-    });
-
     // 5.5 Year ranges: 1939-1945 -> ათას ცხრაას ოცდაცხრამეტიდან ათას ცხრაას ორმოცდახუთ წლამდე
     out = out.replace(/(\b\d{4})\s*[-–—]\s*(\d{4}\b)/g, (match, y1, y2) => {
         const n1 = parseInt(y1, 10);
         const n2 = parseInt(y2, 10);
         if (n1 >= 1000 && n1 <= 2100 && n2 >= 1000 && n2 <= 2100) {
-            const w1 = georgianNumberToWords(n1);
-            const w2 = georgianNumberToWords(n2);
+            const w1 = String(georgianNumberToWords(n1));
+            const w2 = String(georgianNumberToWords(n2));
             const from1 = w1.endsWith('ი') ? w1.slice(0, -1) + 'იდან' : w1 + 'დან';
             const to2 = w2.endsWith('ი') ? w2.slice(0, -1) : w2;
             return `${from1} ${to2} წლამდე`;
@@ -1783,11 +1897,11 @@ function verbalizeGeorgianTextForTTS(text) {
         return match;
     });
 
-    // 5.6 Standalone Years: 1909 წელს -> ათას ცხრაას ცხრა წელს, 1920 წელს -> ათას ცხრაას ოც წელს
+    // 5.6 Standalone Years: 1909 წელს -> ათას ცხრაას ცხრა წელს
     out = out.replace(/(\b\d{4})\s+(წელს|წლიდან|წლამდე|წლის|წლები|წლებში)(?![\u10A0-\u10FF])/g, (match, y, suffix) => {
         const n = parseInt(y, 10);
         if (n >= 1000 && n <= 2100) {
-            const w = georgianNumberToWords(n);
+            const w = String(georgianNumberToWords(n));
             const stem = w.endsWith('ი') ? w.slice(0, -1) : w;
             if (suffix === 'წელს') return `${stem} წელს`;
             if (suffix === 'წლიდან') return `${stem} წლიდან`;
@@ -1995,7 +2109,24 @@ function detectSentenceType(text) {
 }
 
 function applyGeorgianProsody(text) {
-    return window.EngbotNarration.normalize(text);
+    let out = window.EngbotNarration.normalize(text);
+    if (!out) return '';
+    // Acoustic utterance shaping: remove quote glyphs that trigger ka-GE voice pitch stutters,
+    // convert mid-sentence spaced dialogue dashes into breathing commas, and strip noise glyphs.
+    out = out.replace(/[\u1C90-\u1CBA\u1CBD-\u1CBF]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x0BC0));
+    out = out.replace(/\[\s*\d+\s*\]/g, '')
+             .replace(/[„“”«»"`]/g, '')
+             .replace(/\s*[—–]\s+/g, ', ')
+             .replace(/\s+[—–]/g, ',')
+             .replace(/჻/g, '.')
+             .replace(/[*_#~|]/g, '')
+             .replace(/,\s*,+/g, ',')
+             .replace(/([.!?])\s*,+/g, '$1')
+             .replace(/,\s*([.!?])/g, '$1')
+             .replace(/^[,\s]+/, '')
+             .replace(/[ \t]+/g, ' ')
+             .trim();
+    return out;
 }
 
 function applyEnglishProsody(text) {
@@ -3571,6 +3702,14 @@ function updateBottomNavActive(tab) {
 }
 
 function navToSection(tab) {
+    const emailClean = (currentUser?.email || '').trim().toLowerCase();
+    const isVerified = Boolean(verifiedAuthUserId && currentUser?.id && verifiedAuthUserId === currentUser.id);
+    const isAdmin = Boolean(isVerified && emailClean === 'ananiadevsurashvili@gmail.com');
+    if (tab === 'gemma' && !isAdmin) {
+        updateBottomNavActive('home');
+        navigate('library');
+        return;
+    }
     updateBottomNavActive(tab);
     if (tab === 'home') {
         navigate('library');
@@ -3595,15 +3734,22 @@ function navToSection(tab) {
 function navigate(viewId) {
     const views = ['library', 'discover', 'scanner', 'embeddinggemma', 'server-stats'];
     const emailClean = (currentUser?.email || '').trim().toLowerCase();
-    const isAdmin = (emailClean === 'ananiadevsurashvili@gmail.com');
+    const isVerified = Boolean(verifiedAuthUserId && currentUser?.id && verifiedAuthUserId === currentUser.id);
+    const isAdmin = Boolean(isVerified && emailClean === 'ananiadevsurashvili@gmail.com');
 
-    // Strictly forbid non-admin users from accessing server-stats
-    if (viewId === 'server-stats' && !isAdmin) {
+    // Strictly forbid non-admin users from accessing admin-only views (server-stats, embeddinggemma)
+    if ((viewId === 'server-stats' || viewId === 'embeddinggemma') && !isAdmin) {
         const viewStats = document.getElementById('view-server-stats');
         if (viewStats) {
             viewStats.innerHTML = '';
             viewStats.classList.add('hidden');
             viewStats.style.display = 'none';
+        }
+        const viewEg = document.getElementById('view-embeddinggemma');
+        if (viewEg) {
+            viewEg.classList.add('hidden');
+            viewEg.hidden = true;
+            viewEg.style.display = 'none';
         }
         navigate('library');
         return;
@@ -4008,6 +4154,13 @@ function openModal(modalId) {
     if (modalId === 'authModal') {
         openAuthGate('signin');
         return;
+    }
+    if (modalId === 'aiSettingsModal' || modalId === 'trainingLabModal') {
+        const emailClean = (currentUser?.email || '').trim().toLowerCase();
+        const isVerified = Boolean(verifiedAuthUserId && currentUser?.id && verifiedAuthUserId === currentUser.id);
+        if (!(isVerified && emailClean === 'ananiadevsurashvili@gmail.com')) {
+            return;
+        }
     }
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -4564,6 +4717,7 @@ function checkAuthState() {
             if (!error && currentUser?.id === expectedId && data.user?.id === expectedId) {
                 verifiedAuthUserId = expectedId;
                 updateAuthUI();
+                if (typeof updateCabinetUI === 'function') updateCabinetUI();
             }
         }).catch(() => {});
     }
@@ -4574,6 +4728,29 @@ function updateAuthUI() {
     const isVerified = Boolean(verifiedAuthUserId && currentUser?.id && verifiedAuthUserId === currentUser.id);
     const isAdmin = Boolean(isVerified && emailClean === 'ananiadevsurashvili@gmail.com');
     document.querySelectorAll('[data-admin-build]').forEach(el => { el.hidden = !isAdmin; });
+    document.querySelectorAll('[data-admin-only]').forEach(el => {
+        el.hidden = !isAdmin;
+        if (el.id === 'view-embeddinggemma') {
+            if (!isAdmin) {
+                if (el.classList) el.classList.add('hidden');
+                if (el.style && typeof el.style.setProperty === 'function') el.style.setProperty('display', 'none', 'important');
+            } else if (el.style && typeof el.style.removeProperty === 'function') {
+                el.style.removeProperty('display');
+            }
+            return;
+        }
+        if (el.classList) el.classList.toggle('hidden', !isAdmin);
+        if (el.style && typeof el.style.setProperty === 'function') {
+            if (isAdmin) el.style.removeProperty('display');
+            else el.style.setProperty('display', 'none', 'important');
+        }
+    });
+    if (!isAdmin && typeof document !== 'undefined' && typeof document.querySelector === 'function') {
+        const curView = document.querySelector('main > div:not(.hidden)');
+        if (curView && (curView.id === 'view-server-stats' || curView.id === 'view-embeddinggemma') && typeof navigate === 'function') {
+            navigate('library');
+        }
+    }
 
     // 1. Desktop Top Bar Pill
     const pill = document.getElementById('adminVersionPill');
@@ -4858,6 +5035,17 @@ async function openAccountCabinet() {
                 }
             } catch (e) {}
         }
+    } else if (currentUser.email.toLowerCase() === 'ananiadevsurashvili@gmail.com' && verifiedAuthUserId !== currentUser.id && window.LuminaStore?.getClient) {
+        try {
+            const client = window.LuminaStore.getClient();
+            if (client) {
+                const { data } = await client.auth.getUser();
+                if (data?.user?.id && data.user.id === currentUser.id) {
+                    verifiedAuthUserId = data.user.id;
+                    updateAuthUI();
+                }
+            }
+        } catch (e) {}
     }
     updateCabinetUI();
     openModal('accountCabinetModal');
@@ -4873,15 +5061,17 @@ function updateCabinetUI() {
     const roleBadge = document.getElementById('cabinetRoleBadge');
     const cloudBadge = document.getElementById('cabinetCloudBadge');
     const btnTraining = document.getElementById('cabinetBtnTraining');
+    const btnAiSettings = document.getElementById('cabinetBtnAiSettings');
 
     const userEmail = (currentUser?.email || '').trim();
-    const isAdmin = !!(userEmail.toLowerCase() === 'ananiadevsurashvili@gmail.com' || currentUser?.role === 'admin');
+    const isVerified = Boolean(typeof verifiedAuthUserId !== 'undefined' && verifiedAuthUserId && currentUser?.id && verifiedAuthUserId === currentUser.id);
+    const isAdmin = Boolean(isVerified && userEmail.toLowerCase() === 'ananiadevsurashvili@gmail.com');
 
     if (avatar) avatar.textContent = userEmail ? userEmail.charAt(0).toUpperCase() : '👤';
     if (email) email.textContent = userEmail || 'Guest / Not signed in';
     if (roleBadge) {
         if (userEmail) {
-            roleBadge.textContent = isAdmin ? '👑 Administrator v1.47.0' : '🎧 PRO Listener';
+            roleBadge.textContent = isAdmin ? `👑 Administrator · ${APP_VERSION}` : '🎧 PRO Listener';
             roleBadge.className = isAdmin
                 ? 'px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-[10px] font-mono text-primary-fixed font-bold'
                 : 'px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono text-white';
@@ -4891,14 +5081,25 @@ function updateCabinetUI() {
         }
     }
     if (cloudBadge) {
-        cloudBadge.textContent = (usingCloud && userEmail) ? '☁️ Supabase Cloud (OCI)' : '💾 Local Storage';
+        cloudBadge.textContent = (usingCloud && userEmail)
+            ? (isAdmin ? '☁️ Supabase Cloud (OCI)' : '☁️ Cloud Synced')
+            : '💾 Local Storage';
     }
-    if (btnTraining) {
-        btnTraining.classList.remove('hidden');
-    }
+    [btnTraining, btnAiSettings].forEach(el => {
+        if (!el) return;
+        el.hidden = !isAdmin;
+        el.classList.toggle('hidden', !isAdmin);
+        if (isAdmin) el.style.removeProperty('display');
+        else el.style.setProperty('display', 'none', 'important');
+    });
 }
 
 function openTrainingLabModal() {
+    const emailClean = (currentUser?.email || '').trim().toLowerCase();
+    const isVerified = Boolean(verifiedAuthUserId && currentUser?.id && verifiedAuthUserId === currentUser.id);
+    if (!(isVerified && emailClean === 'ananiadevsurashvili@gmail.com')) {
+        return;
+    }
     initTrainingLabUI();
     if (typeof closeAccountCabinet === 'function') closeAccountCabinet();
     openModal('trainingLabModal');
@@ -6265,10 +6466,10 @@ const ENGBOT_VOICES = [
     { id: 'en-neutral',        label: 'Alloy — balanced studio narrator',                     group: '🇺🇸 English · American', lang: 'en', edgeVoice: 'en-US-AriaNeural - en-US (Female)', rate: 0, pitch: 0, gender: 'female', locale: 'en-US' },
 
     // 🇬🇪 ქართული (Georgian) Narrators
-    { id: 'ka-male',           label: 'გიორგი — ქართველი მთხრობელი (ღრმა და ბუნებრივი)',   group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: -3, pitch: -1, gender: 'male', locale: 'ka-GE' },
-    { id: 'ka-actor',          label: 'დავითი — დრამატული არტისტი (დინამიკური)',             group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: 0, pitch: 0, gender: 'male', locale: 'ka-GE' },
-    { id: 'ka-female',         label: 'ეკა — ქართველი მთხრობელი ქალი (მკაფიო და ცოცხალი)',    group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -2, pitch: 0, gender: 'female', locale: 'ka-GE' },
-    { id: 'ka-soft',           label: 'ნინო — ლირიკული & რბილი კითხვა',                      group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -5, pitch: -2, gender: 'female', locale: 'ka-GE' },
+    { id: 'ka-male',           label: 'გიორგი — ქართველი მთხრობელი (ღრმა და ბუნებრივი)',   group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: -5, pitch: -2, gender: 'male', locale: 'ka-GE' },
+    { id: 'ka-actor',          label: 'დავითი — დრამატული არტისტი (დინამიკური)',             group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: -2, pitch: -1, gender: 'male', locale: 'ka-GE' },
+    { id: 'ka-female',         label: 'ეკა — ქართველი მთხრობელი ქალი (მკაფიო და ცოცხალი)',    group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -4, pitch: -1, gender: 'female', locale: 'ka-GE' },
+    { id: 'ka-soft',           label: 'ნინო — ლირიკული & რბილი კითხვა',                      group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -7, pitch: -2, gender: 'female', locale: 'ka-GE' },
 
     // 🌍 Multilingual
     { id: 'multi-puck',        label: 'Puck — multilingual lively',                          group: '🌍 Multilingual',        lang: 'multi', edgeVoice: 'en-US-GuyNeural - en-US (Male)', rate: -2, pitch: 0, gender: 'male', locale: 'en-US' },
@@ -11987,7 +12188,7 @@ function speakStandardSentence(text, lang) {
     stopCurrentSpeechAudio();
     const myToken = currentSpeechToken;
     if (!('speechSynthesis' in window)) {
-        playUltimateFallbackTTS(lang === 'ka' ? verbalizeGeorgianTextForTTS(text) : verbalizeEnglishTextForTTS(text), lang, myToken);
+        playUltimateFallbackTTS(lang === 'ka' ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text)) : verbalizeEnglishTextForTTS(text), lang, myToken);
         return;
     }
 
@@ -11999,7 +12200,7 @@ function speakStandardSentence(text, lang) {
     const voices = window.speechSynthesis.getVoices();
 
     if (lang === 'ka') {
-        const normalized = verbalizeGeorgianTextForTTS(text);
+        const normalized = applyGeorgianProsody(verbalizeGeorgianTextForTTS(text));
         const nativeKaVoice = voices.find(v => v.lang.startsWith('ka') || v.name.toLowerCase().includes('georgian'));
 
         if (nativeKaVoice) {
@@ -12174,14 +12375,26 @@ window.clearNarrationBuffers = clearNarrationBuffers;
 async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority = 'high') {
     if (!gatewayTTSAvailable && gatewayConsecutiveFailures >= 3) return null;
     const preset = overridePreset || gatewayPresetForLang(lang);
+    const sentenceType = detectSentenceType(text, lang);
     const spoken = lang === 'ka'
-        ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), detectSentenceType(text, 'ka'))
-        : applyEnglishProsody(verbalizeEnglishTextForTTS(text), detectSentenceType(text, 'en'));
+        ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text), sentenceType)
+        : applyEnglishProsody(verbalizeEnglishTextForTTS(text), sentenceType);
     if (!spoken || !spoken.trim()) return null;
 
     const v = engbotVoice(preset);
     const edgeVoice = v ? v.edgeVoice : (lang === 'ka' ? 'ka-GE-GiorgiNeural' : 'en-GB-RyanNeural');
-    const key = preset + '|' + spoken;
+    const baseRate = v ? (v.rate || 0) : (lang === 'ka' ? -5 : 0);
+    const basePitch = v ? (v.pitch || 0) : (lang === 'ka' ? -2 : 0);
+    const typeRate = { question: 0, exclamation: 2, dialogue: -1, suspense: -3, short: 1, statement: 0 }[sentenceType] ?? 0;
+    const typePitch = lang === 'ka'
+        ? ({ exclamation: 1 }[sentenceType] ?? 0)
+        : ({ question: 2, exclamation: 2, dialogue: -1, suspense: -2 }[sentenceType] ?? 0);
+    const userPitchDelta = Math.round(((typeof currentPitch === 'number' ? currentPitch : 1.0) - 1.0) * 40);
+    const ratePct = Math.max(-50, Math.min(50, Math.round(baseRate + typeRate)));
+    const pitchHz = Math.max(-20, Math.min(20, Math.round(basePitch + typePitch + userPitchDelta)));
+    const rateParam = `${ratePct >= 0 ? '+' : ''}${ratePct}%`;
+    const pitchParam = `${pitchHz >= 0 ? '+' : ''}${pitchHz}Hz`;
+    const key = `v4|${preset}|${rateParam}|${pitchParam}|${spoken}`;
     if (gatewayTTSCache.has(key)) return gatewayTTSCache.get(key);
 
     // Check persistent IndexedDB cache before hitting the network
@@ -12212,8 +12425,8 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority
                 text: spoken.slice(0, 3800),
                 preset,
                 voice: edgeVoice,
-                rate: 1.0,
-                pitch: currentPitch,
+                rate: rateParam,
+                pitch: pitchParam,
                 lang
             }),
             priority: priority || 'high',
@@ -12622,8 +12835,12 @@ function elevenLabsExpressiveText(text, modelId) {
     return tag ? `${tag} ${text}` : text;
 }
 
-function elevenLabsVoiceSettings(modelId, sentenceType) {
+function elevenLabsVoiceSettings(modelId, sentenceType, lang = 'en') {
     if (modelId === 'eleven_v3') {
+        if (lang === 'ka') {
+            // Georgian pronunciation stays authentic & accent-locked at Natural (0.5) stability.
+            return { stability: 0.5, similarity_boost: 0.85 };
+        }
         // v3: lower stability = more expressive variance; dialogue gets the
         // most freedom, statements stay composed for long-form listening.
         const stability = { dialogue: 0.3, exclamation: 0.35, question: 0.4, short: 0.5, statement: 0.55 }[sentenceType] ?? 0.5;
@@ -12652,9 +12869,9 @@ function elevenSpeechPayload(text, lang, index) {
     const isKa = lang === 'ka';
     const voiceId = isKa ? (elevenLabsVoiceIdKa || 'nPczCjzI2devNBz1zQrb') : (elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB');
     const modelId = isKa ? 'eleven_v3' : (elevenLabsModelId || 'eleven_multilingual_v2');
-    const spoken = isKa ? verbalizeGeorgianTextForTTS(text) : verbalizeEnglishTextForTTS(text);
+    const spoken = isKa ? applyGeorgianProsody(verbalizeGeorgianTextForTTS(text)) : verbalizeEnglishTextForTTS(text);
     // Preserve the narrator's natural delivery; don't force every dialogue into a whisper.
-    const body = {text:spoken, model_id:modelId, voice_settings:elevenLabsVoiceSettings(modelId,detectSentenceType(spoken))};
+    const body = {text:spoken, model_id:modelId, voice_settings:elevenLabsVoiceSettings(modelId,detectSentenceType(spoken),lang)};
     if (modelId !== 'eleven_multilingual_v2') body.language_code = lang;
     if (modelId !== 'eleven_v3') {
         if (index > 0) body.previous_text = String(sentenceQueue[index-1] || '').slice(-500);
