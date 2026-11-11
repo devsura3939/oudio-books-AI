@@ -1,16 +1,16 @@
-/* AudioRead Studio Pro - Google Stitch Bento Grid Luxury Design System */
+/* AudioRead Studio - Obsidian & Editorial Design System */
 
 :root {
-    --bg-cosmic: #10131a;
-    --card-bg: rgba(12, 17, 29, 0.72);
+    --bg-cosmic: #0b0e12;
+    --card-bg: rgba(18, 23, 30, 0.88);
     --card-border: rgba(255, 255, 255, 0.08);
-    --card-hover-border: rgba(0, 240, 255, 0.45);
-    --accent-indigo: #00f0ff;
-    --accent-purple: #dcb8ff;
-    --accent-cyan: #00dbe9;
+    --card-hover-border: rgba(94, 234, 212, 0.35);
+    --accent-indigo: #5eead4;
+    --accent-purple: #e6b968;
+    --accent-cyan: #2dd4bf;
 }
 
-/* Ambient Radial Mesh Background */
+/* Editorial Obsidian Canvas */
 html {
     scroll-behavior: smooth;
     background-color: var(--bg-cosmic);
@@ -20,30 +20,28 @@ html {
 
 body {
     background-color: var(--bg-cosmic);
-    background-image: 
-        radial-gradient(at 0% 0%, rgba(0, 240, 255, 0.14) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(220, 184, 255, 0.12) 0px, transparent 50%),
-        radial-gradient(at 50% 50%, rgba(0, 219, 233, 0.06) 0px, transparent 60%),
-        radial-gradient(at 50% 100%, rgba(0, 240, 255, 0.10) 0px, transparent 50%);
+    background-image:
+        radial-gradient(ellipse 75% 45% at 50% -8%, rgba(94, 234, 212, 0.055) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 95% 15%, rgba(230, 185, 104, 0.035) 0%, transparent 65%);
     background-attachment: scroll;
     min-height: 100svh;
     overscroll-behavior-x: none;
     text-rendering: optimizeLegibility;
 }
 
-/* Bento Glass Card */
+/* Elevated Editorial Card */
 .bento-card {
     background: var(--card-bg);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
     border: 1px solid var(--card-border);
-    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+    box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .bento-card:hover {
     border-color: var(--card-hover-border);
-    box-shadow: 0 20px 50px -10px rgba(99, 102, 241, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
 }
 
 /* Universal Fast-Action Interactive Controls & Zero Mobile Touch Delay */
@@ -71,7 +69,7 @@ button:active,
 [role="button"]:active,
 input[type="button"]:active,
 input[type="submit"]:active {
-    transform: scale(0.965);
+    transform: scale(0.97);
     transition-duration: 0.05s;
 }
 
@@ -79,38 +77,38 @@ button:disabled,
 .btn:disabled,
 [role="button"][aria-disabled="true"] {
     cursor: not-allowed;
-    opacity: 0.55;
+    opacity: 0.52;
     transform: none !important;
 }
 
-/* Floating Master Audio Dock (Hardware Accelerated) */
+/* Floating Studio Audio Dock */
 .player-dock {
-    background: rgba(9, 13, 24, 0.88);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.2);
+    background: rgba(16, 21, 28, 0.94);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    box-shadow: 0 20px 52px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.07);
     transform: translateZ(0);
     will-change: transform, opacity;
 }
 
-/* Neon Glow Buttons with Tactile Spring Action */
+/* Editorial Primary Action */
 .btn-stitch-primary {
-    background: linear-gradient(135deg, #00f0ff 0%, #7df4ff 55%, #00dbe9 100%);
-    color: #00363a;
-    box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
-    transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease, filter 0.14s ease;
+    background: #5eead4;
+    color: #062823;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease, background-color 0.14s ease;
     will-change: transform, box-shadow;
 }
 
 .btn-stitch-primary:hover {
-    box-shadow: 0 0 35px rgba(0, 240, 255, 0.65);
-    transform: translateY(-1.5px) scale(1.02);
+    background: #7df2df;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+    transform: translateY(-1px);
 }
 
 .btn-stitch-primary:active {
-    transform: translateY(0.5px) scale(0.965);
-    box-shadow: 0 0 18px rgba(0, 240, 255, 0.35);
+    transform: translateY(0.5px) scale(0.975);
     transition-duration: 0.05s;
 }
 
@@ -119,49 +117,52 @@ input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
     outline: none;
-    background: #172033;
+    background: #1f2732;
+    height: 6px;
     border-radius: 9999px;
 }
 
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
-    background: #818cf8;
+    background: #5eead4;
     cursor: pointer;
-    box-shadow: 0 0 14px rgba(99, 102, 241, 0.95);
+    border: 2px solid #0b0e12;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
     transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.35);
-    background: #a5b4fc;
+    transform: scale(1.22);
+    background: #99f6e4;
 }
 
 input[type="range"]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
-    background: #818cf8;
+    background: #5eead4;
     cursor: pointer;
-    box-shadow: 0 0 14px rgba(99, 102, 241, 0.95);
+    border: 2px solid #0b0e12;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 
 /* Animated Soundwave Equalizer */
 .equalizer {
     display: inline-flex;
     align-items: flex-end;
-    gap: 3px;
-    height: 16px;
+    gap: 2.5px;
+    height: 14px;
 }
 
 .equalizer-bar {
-    width: 3px;
-    background: #818cf8;
+    width: 2.5px;
+    background: #5eead4;
     border-radius: 2px;
-    animation: eqPulse 1.0s ease-in-out infinite alternate;
+    animation: eqPulse 0.9s ease-in-out infinite alternate;
 }
 
 .equalizer-bar:nth-child(1) { height: 35%; animation-delay: 0.1s; }
@@ -183,17 +184,16 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .track-row:hover {
-    transform: translateX(3px);
+    transform: translateX(2px);
 }
 
 .track-row:active {
-    transform: scale(0.99);
+    transform: scale(0.992);
 }
 
 .track-row.active-playing {
-    border-color: rgba(99, 102, 241, 0.85) !important;
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
-    box-shadow: 0 0 35px rgba(99, 102, 241, 0.3) !important;
+    border-color: rgba(94, 234, 212, 0.45) !important;
+    background: linear-gradient(135deg, rgba(94, 234, 212, 0.08) 0%, rgba(18, 23, 30, 0.95) 100%) !important;
 }
 
 /* 3D Book Jacket */

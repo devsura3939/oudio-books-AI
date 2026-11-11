@@ -36,6 +36,10 @@ class TestGeorgianTTSImprovements(unittest.TestCase):
         self.assertIn("შე-პე-სე", verbalize_georgian_for_tts("შპს"))
         self.assertIn("დე-ღე-გე", verbalize_georgian_for_tts("დღგ"))
         self.assertIn("ძველი წელთაღრიცხვით", verbalize_georgian_for_tts("ძვ.წ."))
+        self.assertIn("ოცდამეერთე საუკუნის", verbalize_georgian_for_tts("XXI საუკუნის"))
+        self.assertIn("გუგლმა", verbalize_georgian_for_tts("Google-მა"))
+        self.assertIn("ას ოცი კილომეტრი საათში", verbalize_georgian_for_tts("120 კმ/სთ"))
+        self.assertIn("წმინდა გიორგი", verbalize_georgian_for_tts("წმ. გიორგი"))
 
     def test_latin_loanwords_and_acronyms(self):
         self.assertEqual(transliterate_latin_word_to_ka("Tbilisi"), "თბილისი")
@@ -61,6 +65,8 @@ class TestGeorgianTTSImprovements(unittest.TestCase):
         self.assertEqual(format_tts_rate(1.25), "+25%")
         self.assertIn("ka-male", PRESET_DEFAULT_PROSODY)
         self.assertEqual(PRESET_DEFAULT_PROSODY["ka-male"], ("-5%", "-2Hz"))
+        self.assertIn("ka-classic", PRESET_DEFAULT_PROSODY)
+        self.assertIn("ka-modern", PRESET_DEFAULT_PROSODY)
 
 
 if __name__ == "__main__":

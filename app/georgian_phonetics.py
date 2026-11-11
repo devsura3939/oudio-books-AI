@@ -234,7 +234,9 @@ LITERARY_NAMES_MAP = {
     "rna": "რნმ", "fbi": "ეფ-ბი-აი", "cia": "სი-აი-ეი", "nasa": "ნასა",
     "bbc": "ბი-ბი-სი", "cnn": "სი-ენ-ენ", "pdf": "პი-დი-ეფ", "usb": "იუ-ეს-ბი",
     "tv": "თი-ვი", "ok": "ოქეი", "okay": "ოქეი", "vip": "ვი-აი-პი",
-    "gps": "ჯი-პი-ეს", "wifi": "ვაი-ფაი", "un": "გაერო", "uk": "დიდი ბრიტანეთი"
+    "gps": "ჯი-პი-ეს", "wifi": "ვაი-ფაი", "un": "გაერო", "uk": "დიდი ბრიტანეთი",
+    "linux": "ლინუქსი", "windows": "უინდოუზი", "python": "პითონი",
+    "vonnegut": "ვონეგუტი", "aurelia": "ავრელია", "rumfoord": "რამფორდი", "constant": "კონსტანტი"
 }
 
 LATIN_LETTER_KA = {
@@ -325,10 +327,36 @@ def transliterate_latin_word_to_ka(word: str) -> str:
 
 
 def transliterate_latin_in_georgian(text: str) -> str:
-    """Find isolated Latin words in text and transliterate them to Mkhedruli."""
+    """Find isolated Latin words (including hyphenated Georgian case suffixes like Google-მა) and transliterate to Mkhedruli."""
     if not text or not re.search(r"[a-zA-Z]", text):
         return text
-    return re.sub(r"\b[A-Za-z]+(?:'[A-Za-z]+)?\b", lambda m: transliterate_latin_word_to_ka(m.group(0)), text)
+
+    def _fuse_latin_suffix(m):
+        root_ka = transliterate_latin_word_to_ka(m.group(1))
+        suffix = m.group(2)
+        if suffix == "მა":
+            stem = root_ka[:-1] if root_ka.endswith("ი") else root_ka
+            return stem + ("მ" if stem and stem[-1] in "აეოუ" else "მა")
+        if suffix in ("ზე", "ში", "თან", "კენ", "ს"):
+            stem = root_ka[:-1] if root_ka.endswith("ი") else root_ka
+            return stem + suffix
+        if suffix in ("დან", "მდე", "თვის", "ით", "ის", "ად"):
+            stem = root_ka[:-1] if root_ka.endswith("ი") else root_ka
+            if suffix == "დან":
+                return stem + "იდან"
+            if suffix == "მდე":
+                return stem + "ამდე"
+            if suffix == "თვის":
+                return stem + "ისთვის"
+            return stem + suffix
+        return root_ka + suffix
+
+    out = re.sub(
+        r"\b([A-Za-z]+)-(მა|ზე|ში|დან|თან|კენ|მდე|თვის|ით|ის|ად|ს)(?![\u10A0-\u10FFა-ჰ])",
+        _fuse_latin_suffix,
+        text
+    )
+    return re.sub(r"\b[A-Za-z]+(?:'[A-Za-z]+)?\b", lambda m: transliterate_latin_word_to_ka(m.group(0)), out)
 
 
 KA_MONTHS_GEN_OR_NOM = {
@@ -369,7 +397,7 @@ def verbalize_georgian_for_tts(text: str) -> str:
         return f"{ROMAN_TO_ORDINAL_KA.get(rom, rom)} {suffix}"
 
     out = re.sub(
-        rf"{KA_PREFIX}([IVXLCDM]+)\s+(საუკუნე(?:ში|დან|მდე|ს)?){KA_SUFFIX}",
+        rf"{KA_PREFIX}([IVXLCDM]+)\s+(საუკუნ(?:ე|ის|ეში|ედან|ემდე|ეს|ედ|ეები|ეების|ისა)?){KA_SUFFIX}",
         _replace_roman_century,
         out,
         flags=re.IGNORECASE
@@ -416,20 +444,29 @@ def verbalize_georgian_for_tts(text: str) -> str:
 
     out = re.sub(r"\b(\d{1,2})[./](\d{1,2})[./](\d{4})\b", _replace_full_date, out)
 
-    # 2. Georgian Ordinals: 1-ლი, 2-ე, 3-ე, მე-5, etc.
-    def _replace_ordinal(m):
-        prefix = m.group(1) or ""
-        num = int(m.group(2))
-        suffix = m.group(3) or ""
+    # 2. Georgian Ordinals: 1-ლი, 2-ე, მე-5, მე-5-ე, მე-21-ში, etc.
+    def _ordinal_with_suffix(num: int, suffix: str = "") -> str:
         ord_word = georgian_ordinal_to_words(num)
-        if suffix == "ში":
-            return ord_word + "ში"
+        if suffix in ("ში", "ზე", "დან", "მდე", "ს"):
+            return ord_word + suffix
         if suffix == "მა":
             return ord_word + "მ"
+        if suffix == "ის":
+            return (ord_word[:-1] if ord_word.endswith("ე") else ord_word) + "ის"
+        if suffix == "ად":
+            return ord_word + "დ"
         return ord_word
 
-    out = re.sub(r"(მე-)?(\d+)-(ლი|ე|ში|მა|ად)\b", _replace_ordinal, out)
-    out = re.sub(r"\bმე-(\d+)\b", lambda m: georgian_ordinal_to_words(int(m.group(1))), out)
+    out = re.sub(
+        rf"(?<![\u10A0-\u10FF\d])მე-(\d+)(?:-(ე|ლი|ში|მა|ად|ზე|დან|მდე|ის|ს))?{KA_SUFFIX}",
+        lambda m: _ordinal_with_suffix(int(m.group(1)), m.group(2) or ""),
+        out
+    )
+    out = re.sub(
+        rf"{KA_PREFIX}(\d+)-(ლი|ე){KA_SUFFIX}",
+        lambda m: _ordinal_with_suffix(int(m.group(1)), m.group(2)),
+        out
+    )
 
     # 2a. Hyphenated Numeral Decades & Oblique Case Suffixes:
     # e.g. 1990-იანი -> ათას ცხრაას ოთხმოცდაათიანი, 10-დან -> ათიდან, 50-მდე -> ორმოცდაათამდე, 20-ზე -> ოცზე
@@ -532,6 +569,11 @@ def verbalize_georgian_for_tts(text: str) -> str:
 
     # 5. Metric Measurements
     out = re.sub(
+        r"(\b\d{1,9})\s*კმ/სთ" + KA_SUFFIX,
+        lambda m: f"{georgian_number_to_words(int(m.group(1)))} კილომეტრი საათში",
+        out
+    )
+    out = re.sub(
         rf"(\b\d{{1,9}})\s*(კმ|კილომეტრი|კილომეტრში){KA_SUFFIX}",
         lambda m: f"{georgian_number_to_words(int(m.group(1)))} {'კილომეტრში' if m.group(2) == 'კილომეტრში' else 'კილომეტრი'}",
         out
@@ -551,9 +593,15 @@ def verbalize_georgian_for_tts(text: str) -> str:
         lambda m: f"{georgian_number_to_words(int(m.group(1)))} სანტიმეტრი",
         out
     )
+    out = re.sub(
+        rf"(\b\d{{1,9}})\s*(მმ|მილიმეტრი){KA_SUFFIX}",
+        lambda m: f"{georgian_number_to_words(int(m.group(1)))} მილიმეტრი",
+        out
+    )
     out = re.sub(rf"(?<=[{KA_CHARS}\d])\s*კგ{KA_SUFFIX}", " კილოგრამი", out)
     out = re.sub(rf"(?<=[{KA_CHARS}\d])\s*კმ{KA_SUFFIX}", " კილომეტრი", out)
     out = re.sub(rf"(?<=[{KA_CHARS}\d])\s*სმ{KA_SUFFIX}", " სანტიმეტრი", out)
+    out = re.sub(rf"(?<=[{KA_CHARS}\d])\s*სთ\.?{KA_SUFFIX}", " საათი", out)
     out = re.sub(
         r"(\b\d{1,9})\s*°C\b",
         lambda m: f"{georgian_number_to_words(int(m.group(1)))} გრადუსი ცელსიუსით",
@@ -578,8 +626,11 @@ def verbalize_georgian_for_tts(text: str) -> str:
     )
 
     # 7. Common Abbreviations & Unpronounceable Acronyms (ordered longest-first!)
+    # "წმ. გიორგი" -> "წმინდა გიორგი" before standalone "წმ." -> "წამი"
+    out = re.sub(rf"{KA_PREFIX}წმ\.\s*(?=[{KA_CHARS}])", "წმინდა ", out)
     abbrev_replacements = [
         (rf"{KA_PREFIX}და\s*ა\.შ\.{KA_SUFFIX}", "და ასე შემდეგ"),
+        (rf"{KA_PREFIX}და\s*სხვ\.{KA_SUFFIX}", "და სხვა"),
         (rf"{KA_PREFIX}ძვ\.?\s*წ\.{KA_SUFFIX}", "ძველი წელთაღრიცხვით"),
         (rf"{KA_PREFIX}ახ\.?\s*წ\.{KA_SUFFIX}", "ახალი წელთაღრიცხვით"),
         (rf"{KA_PREFIX}ჩვ\.?\s*წ\.{KA_SUFFIX}", "ჩვენი წელთაღრიცხვით"),
@@ -594,13 +645,14 @@ def verbalize_georgian_for_tts(text: str) -> str:
         (rf"{KA_PREFIX}პროფ\.{KA_SUFFIX}", "პროფესორი"),
         (rf"{KA_PREFIX}აკად\.{KA_SUFFIX}", "აკადემიკოსი"),
         (rf"{KA_PREFIX}შ\.?პ\.?ს\.?{KA_SUFFIX}", "შე-პე-სე"),
-        (rf"{KA_PREFIX}დღგ{KA_SUFFIX}", "დე-ღე-გე"),
+        (rf"{KA_PREFIX}დ\.?ღ\.?გ\.?{KA_SUFFIX}", "დე-ღე-გე"),
         (rf"{KA_PREFIX}თსუ{KA_SUFFIX}", "თე-ეს-უ"),
         (rf"{KA_PREFIX}აშშ{KA_SUFFIX}", "ა-შე-შე"),
         (rf"{KA_PREFIX}შსს{KA_SUFFIX}", "შე-ეს-ეს"),
         (rf"{KA_PREFIX}სსრკ{KA_SUFFIX}", "ეს-ეს-ერ-კა"),
         (rf"{KA_PREFIX}მლნ\.?{KA_SUFFIX}", "მილიონი"),
         (rf"{KA_PREFIX}მლრდ\.?{KA_SUFFIX}", "მილიარდი"),
+        (rf"{KA_PREFIX}ათ\.{KA_SUFFIX}", "ათასი"),
         (rf"{KA_PREFIX}წთ\.?{KA_SUFFIX}", "წუთი"),
         (rf"{KA_PREFIX}წმ\.?{KA_SUFFIX}", "წამი"),
         (rf"{KA_PREFIX}წ\.{KA_SUFFIX}", "წელი"),
@@ -611,6 +663,8 @@ def verbalize_georgian_for_tts(text: str) -> str:
         (rf"{KA_PREFIX}ნაწ\.{KA_SUFFIX}", "ნაწილი"),
         (rf"{KA_PREFIX}იხ\.{KA_SUFFIX}", "იხილეთ"),
         (rf"{KA_PREFIX}შდრ\.{KA_SUFFIX}", "შეადარეთ"),
+        (rf"{KA_PREFIX}სხვ\.{KA_SUFFIX}", "სხვა"),
+        (rf"{KA_PREFIX}რ-ნი{KA_SUFFIX}", "რაიონი"),
     ]
     for pattern, repl in abbrev_replacements:
         out = re.sub(pattern, repl, out)
@@ -730,6 +784,12 @@ def prepare_ka_tts_utterance(text: str) -> str:
     out = re.sub(r"\s+[—–]", ",", out)
     # Replace Georgian archaic section mark with clean pause
     out = out.replace("჻", ".")
+    # Add natural breath commas before coordinating/subordinate conjunctions if missing
+    out = re.sub(
+        rf"([ა-ჰ])\s+(მაგრამ|თუმცა|თუმცაღა|ხოლო|რადგანაც|რადგან|ვინაიდან|როდესაც|სანამ|ვიდრე|რომელიც|რომელსაც|რათა){KA_SUFFIX}",
+        r"\1, \2",
+        out
+    )
     # Clean stray formatting symbols (*, #, _, ~) without harming hyphens in words
     out = re.sub(r"[*_#~|]", "", out)
     # Clean duplicate punctuation like ",," or ",." or "!,"

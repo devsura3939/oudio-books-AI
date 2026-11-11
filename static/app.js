@@ -1599,7 +1599,9 @@ function transliterateLatinWordToGeorgian(word) {
         'rna': 'რნმ', 'fbi': 'ეფ-ბი-აი', 'cia': 'სი-აი-ეი', 'nasa': 'ნასა',
         'bbc': 'ბი-ბი-სი', 'cnn': 'სი-ენ-ენ', 'pdf': 'პი-დი-ეფ', 'usb': 'იუ-ეს-ბი',
         'tv': 'თი-ვი', 'ok': 'ოქეი', 'okay': 'ოქეი', 'vip': 'ვი-აი-პი',
-        'gps': 'ჯი-პი-ეს', 'wifi': 'ვაი-ფაი', 'un': 'გაერო', 'uk': 'დიდი ბრიტანეთი'
+        'gps': 'ჯი-პი-ეს', 'wifi': 'ვაი-ფაი', 'un': 'გაერო', 'uk': 'დიდი ბრიტანეთი',
+        'linux': 'ლინუქსი', 'windows': 'უინდოუზი', 'python': 'პითონი',
+        'vonnegut': 'ვონეგუტი', 'aurelia': 'ავრელია', 'rumfoord': 'რამფორდი', 'constant': 'კონსტანტი'
     };
     if (commonNames[lower]) return commonNames[lower];
 
@@ -1673,7 +1675,22 @@ function transliterateLatinWordToGeorgian(word) {
 
 function transliterateLatinInGeorgian(text) {
     if (!text || !/[a-zA-Z]/.test(text)) return text;
-    return text.replace(/\b[A-Za-z]+(?:'[A-Za-z]+)?\b/g, (match) => {
+    let out = text.replace(
+        /\b([A-Za-z]+)-(მა|ზე|ში|დან|თან|კენ|მდე|თვის|ით|ის|ად|ს)(?![\u10A0-\u10FFა-ჰ])/g,
+        (m, root, suffix) => {
+            const rootKa = transliterateLatinWordToGeorgian(root);
+            const stem = rootKa.endsWith('ი') ? rootKa.slice(0, -1) : rootKa;
+            if (suffix === 'მა') {
+                return stem + (stem && 'აეოუ'.includes(stem.slice(-1)) ? 'მ' : 'მა');
+            }
+            if (['ზე', 'ში', 'თან', 'კენ', 'ს'].includes(suffix)) return stem + suffix;
+            if (suffix === 'დან') return stem + 'იდან';
+            if (suffix === 'მდე') return stem + 'ამდე';
+            if (suffix === 'თვის') return stem + 'ისთვის';
+            return stem + suffix;
+        }
+    );
+    return out.replace(/\b[A-Za-z]+(?:'[A-Za-z]+)?\b/g, (match) => {
         return transliterateLatinWordToGeorgian(match);
     });
 }
@@ -1697,7 +1714,7 @@ function verbalizeGeorgianTextForTTS(text) {
         const upper = roman.toUpperCase();
         return `${prefix} ${romanToGeorgian[upper] || roman}`;
     });
-    out = out.replace(/(?<![A-Za-z0-9])([IVXLCDM]+)\s+(საუკუნე(?:ში|დან|მდე|ს)?)(?![A-Za-z0-9])/gi, (m, rom, suffix) => {
+    out = out.replace(/(?<![A-Za-z0-9])([IVXLCDM]+)\s+(საუკუნ(?:ე|ის|ეში|ედან|ემდე|ეს|ედ|ეები|ეების|ისა)?)(?![A-Za-z0-9])/gi, (m, rom, suffix) => {
         const u = rom.toUpperCase();
         return romanToGeorgian[u] ? `${romanToGeorgian[u]} ${suffix}` : m;
     });
@@ -1728,14 +1745,17 @@ function verbalizeGeorgianTextForTTS(text) {
         return m;
     });
 
-    // 2. Georgian Ordinals: 1-ლი, 2-ე, 3-ე, მე-5, etc.
-    out = out.replace(/(მე-)?(\d+)-(ლი|ე|ში|მა|ად)/g, (match, prefix, num, suffix) => {
-        const ord = georgianOrdinalToWords(parseInt(num, 10));
-        if (suffix === 'ში') return ord + 'ში';
+    // 2. Georgian Ordinals: 1-ლი, 2-ე, 3-ე, მე-5, მე-5-ე, მე-21-ში, etc.
+    const ordinalWithSuffix = (numStr, suffix = '') => {
+        const ord = String(georgianOrdinalToWords(parseInt(numStr, 10)));
+        if (['ში', 'ზე', 'დან', 'მდე', 'ს'].includes(suffix)) return ord + suffix;
         if (suffix === 'მა') return ord + 'მ';
+        if (suffix === 'ის') return (ord.endsWith('ე') ? ord.slice(0, -1) : ord) + 'ის';
+        if (suffix === 'ად') return ord + 'დ';
         return ord;
-    });
-    out = out.replace(/(?<![\u10A0-\u10FF\d])მე-(\d+)(?![\u10A0-\u10FF\d])/g, (match, num) => georgianOrdinalToWords(parseInt(num, 10)));
+    };
+    out = out.replace(/(?<![\u10A0-\u10FF\d])მე-(\d+)(?:-(ე|ლი|ში|მა|ად|ზე|დან|მდე|ის|ს))?(?![\u10A0-\u10FF\d-])/g, (match, num, suffix) => ordinalWithSuffix(num, suffix || ''));
+    out = out.replace(/(?<![\u10A0-\u10FF\d])(\d+)-(ლი|ე)(?![\u10A0-\u10FF\d])/g, (match, num, suffix) => ordinalWithSuffix(num, suffix));
 
     // 2.1 Hyphenated Numeral Decades & Oblique Case Suffixes (e.g. 1990-იანი, 10-დან 15-მდე, 20-ზე)
     out = out.replace(
@@ -1801,6 +1821,9 @@ function verbalizeGeorgianTextForTTS(text) {
     out = out.replace(/\b(\d{1,3}(?: \d{3})+)\b/g, (m) => georgianNumberToWords(parseInt(m.replace(/\s+/g, ''), 10)));
 
     // 3.6 Metric Measurements
+    out = out.replace(/(\b\d{1,9})\s*კმ\/სთ(?![\u10A0-\u10FF])/g, (m, n) => {
+        return georgianNumberToWords(parseInt(n, 10)) + ' კილომეტრი საათში';
+    });
     out = out.replace(/(\b\d{1,9})\s*(კმ|კილომეტრი|კილომეტრში)(?![\u10A0-\u10FF])/g, (m, n, u) => {
         const w = georgianNumberToWords(parseInt(n, 10));
         return u === 'კილომეტრში' ? `${w} კილომეტრში` : `${w} კილომეტრი`;
@@ -1834,8 +1857,10 @@ function verbalizeGeorgianTextForTTS(text) {
     });
 
     // 5. Common Abbreviations & Consonant Acronyms
+    out = out.replace(/(?<![\u10A0-\u10FF])წმ\.\s*(?=[\u10A0-\u10FF])/g, 'წმინდა ');
     const abbrevMap = [
         [kaWord('და\\s*ა\\.შ\\.', 'g'), 'და ასე შემდეგ'],
+        [kaWord('და\\s*სხვ\\.', 'g'), 'და სხვა'],
         [kaWord('ძვ\\.?\\s*წ\\.', 'g'), 'ძველი წელთაღრიცხვით'],
         [kaWord('ახ\\.?\\s*წ\\.', 'g'), 'ახალი წელთაღრიცხვით'],
         [kaWord('ჩვ\\.?\\s*წ\\.', 'g'), 'ჩვენი წელთაღრიცხვით'],
@@ -1850,13 +1875,14 @@ function verbalizeGeorgianTextForTTS(text) {
         [kaWord('პროფ\\.', 'g'), 'პროფესორი'],
         [kaWord('აკად\\.', 'g'), 'აკადემიკოსი'],
         [kaWord('შ\\.?პ\\.?ს\\.?', 'g'), 'შე-პე-სე'],
-        [kaWord('დღგ', 'g'), 'დე-ღე-გე'],
+        [kaWord('დ\\.?ღ\\.?გ\\.?', 'g'), 'დე-ღე-გე'],
         [kaWord('თსუ', 'g'), 'თე-ეს-უ'],
         [kaWord('აშშ', 'g'), 'ა-შე-შე'],
         [kaWord('შსს', 'g'), 'შე-ეს-ეს'],
         [kaWord('სსრკ', 'g'), 'ეს-ეს-ერ-კა'],
         [kaWord('მლნ\\.?', 'g'), 'მილიონი'],
         [kaWord('მლრდ\\.?', 'g'), 'მილიარდი'],
+        [kaWord('ათ\\.', 'g'), 'ათასი'],
         [kaWord('წთ\\.?', 'g'), 'წუთი'],
         [kaWord('წმ\\.?', 'g'), 'წამი'],
         [kaWord('წ\\.', 'g'), 'წელი'],
@@ -2119,6 +2145,7 @@ function applyGeorgianProsody(text) {
              .replace(/\s*[—–]\s+/g, ', ')
              .replace(/\s+[—–]/g, ',')
              .replace(/჻/g, '.')
+             .replace(/([ა-ჰ])\s+(მაგრამ|თუმცა|თუმცაღა|ხოლო|რადგანაც|რადგან|ვინაიდან|როდესაც|სანამ|ვიდრე|რომელიც|რომელსაც|რათა)(?![ა-ჰ])/g, '$1, $2')
              .replace(/[*_#~|]/g, '')
              .replace(/,\s*,+/g, ',')
              .replace(/([.!?])\s*,+/g, '$1')
@@ -2257,8 +2284,13 @@ function refineGeorgianGrammar(text) {
     // 5. Strip dummy leading "რომ" at sentence or paragraph starts (calque of English "That...")
     out = out.replace(/(^|[\n\r]+|[.!?…]\s+)([„"“]?)\s*რომ\s+([ა-ჰ])/g, '$1$2$3');
 
-    // 6. Ensure comma precedes Georgian subordinate conjunctions (რომ, რომელიც, როდესაც, რადგან, რადგანაც, ვინაიდან, რაკი, თუმცა, ხოლო, სანამ, ვიდრე)
-    out = out.replace(/([ა-ჰ0-9])\s+(რომ|რომელიც|როდესაც|რადგან|რადგანაც|ვინაიდან|რაკი|თუმცა|ხოლო|სანამ|ვიდრე)(?![ა-ჰ])/g, '$1, $2');
+    // 6. Ensure comma precedes Georgian subordinate conjunctions & correlatives (რომ, მაგრამ, თუმცა, ხოლო, ...)
+    out = out.replace(/(?<![ა-ჰ])მიუხედავად\s+იმისა\s+რომ(?![ა-ჰ])/g, 'მიუხედავად იმისა, რომ');
+    out = out.replace(/(?<![ა-ჰ])იმიტომ\s+რომ(?![ა-ჰ])/g, 'იმიტომ, რომ');
+    out = out.replace(/(?<![ა-ჰ])იმისათვის\s+რომ(?![ა-ჰ])/g, 'იმისათვის, რომ');
+    out = out.replace(/(?<![ა-ჰ])იმისთვის\s+რომ(?![ა-ჰ])/g, 'იმისათვის, რომ');
+    out = out.replace(/(?<![ა-ჰ])მას\s+შემდეგ\s+რაც(?![ა-ჰ])/g, 'მას შემდეგ, რაც');
+    out = out.replace(/([ა-ჰ0-9»“])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რაკი|რომ|რომელიც|რომელსაც|რომლის|როდესაც|სანამ|ვიდრე)(?![ა-ჰ])/g, '$1, $2');
 
     // 7. Dialogue dashes for spoken lines: "- გამარჯობა" -> "— გამარჯობა"
     out = out.replace(/(^|[\r\n]+)\s*[-–]\s+([ა-ჰ])/g, '$1— $2');
@@ -3693,7 +3725,7 @@ function updateBottomNavActive(tab) {
         const btn = document.getElementById('bottomNav' + t.charAt(0).toUpperCase() + t.slice(1));
         if (btn) {
             if (t === tab) {
-                btn.className = 'flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-primary-fixed-dim';
+                btn.className = 'flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-primary-container';
             } else {
                 btn.className = 'flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium transition text-on-surface-variant hover:text-white';
             }
@@ -6468,8 +6500,10 @@ const ENGBOT_VOICES = [
     // 🇬🇪 ქართული (Georgian) Narrators
     { id: 'ka-male',           label: 'გიორგი — ქართველი მთხრობელი (ღრმა და ბუნებრივი)',   group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: -5, pitch: -2, gender: 'male', locale: 'ka-GE' },
     { id: 'ka-actor',          label: 'დავითი — დრამატული არტისტი (დინამიკური)',             group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: -2, pitch: -1, gender: 'male', locale: 'ka-GE' },
+    { id: 'ka-classic',        label: 'ირაკლი — ეპიკური და პოეტური თხრობა (დინჯი)',         group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-GiorgiNeural - ka-GE (Male)', rate: -8, pitch: -3, gender: 'male', locale: 'ka-GE' },
     { id: 'ka-female',         label: 'ეკა — ქართველი მთხრობელი ქალი (მკაფიო და ცოცხალი)',    group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -4, pitch: -1, gender: 'female', locale: 'ka-GE' },
     { id: 'ka-soft',           label: 'ნინო — ლირიკული & რბილი კითხვა',                      group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -7, pitch: -2, gender: 'female', locale: 'ka-GE' },
+    { id: 'ka-modern',         label: 'თამარი — დინამიკური და თანამედროვე კითხვა',          group: '🇬🇪 ქართული (Georgian)', lang: 'ka', edgeVoice: 'ka-GE-EkaNeural - ka-GE (Female)', rate: -1, pitch: 0, gender: 'female', locale: 'ka-GE' },
 
     // 🌍 Multilingual
     { id: 'multi-puck',        label: 'Puck — multilingual lively',                          group: '🌍 Multilingual',        lang: 'multi', edgeVoice: 'en-US-GuyNeural - en-US (Male)', rate: -2, pitch: 0, gender: 'male', locale: 'en-US' },
@@ -7232,6 +7266,9 @@ async function elevateCurrentChapterProse() {
             : rawKa;
         if (typeof synthesizeGeorgianMorphology === 'function') {
             try { elevatedKa = synthesizeGeorgianMorphology(elevatedKa); } catch (e) { /* ignore */ }
+        }
+        if (typeof refineGeorgianGrammar === 'function') {
+            try { elevatedKa = refineGeorgianGrammar(elevatedKa); } catch (e) { /* ignore */ }
         }
         chap.text_ka = elevatedKa;
         if (chap.metadata) {
@@ -12385,16 +12422,18 @@ async function fetchGatewaySpeechUrl(text, lang, overridePreset = null, priority
     const edgeVoice = v ? v.edgeVoice : (lang === 'ka' ? 'ka-GE-GiorgiNeural' : 'en-GB-RyanNeural');
     const baseRate = v ? (v.rate || 0) : (lang === 'ka' ? -5 : 0);
     const basePitch = v ? (v.pitch || 0) : (lang === 'ka' ? -2 : 0);
-    const typeRate = { question: 0, exclamation: 2, dialogue: -1, suspense: -3, short: 1, statement: 0 }[sentenceType] ?? 0;
+    const typeRate = lang === 'ka'
+        ? ({ question: 0, exclamation: 2, dialogue: -2, suspense: -5, short: 1, statement: 0 }[sentenceType] ?? 0)
+        : ({ question: 0, exclamation: 2, dialogue: -1, suspense: -3, short: 1, statement: 0 }[sentenceType] ?? 0);
     const typePitch = lang === 'ka'
-        ? ({ exclamation: 1 }[sentenceType] ?? 0)
+        ? ({ question: 1, exclamation: 1, dialogue: -1, suspense: -2 }[sentenceType] ?? 0)
         : ({ question: 2, exclamation: 2, dialogue: -1, suspense: -2 }[sentenceType] ?? 0);
     const userPitchDelta = Math.round(((typeof currentPitch === 'number' ? currentPitch : 1.0) - 1.0) * 40);
     const ratePct = Math.max(-50, Math.min(50, Math.round(baseRate + typeRate)));
     const pitchHz = Math.max(-20, Math.min(20, Math.round(basePitch + typePitch + userPitchDelta)));
     const rateParam = `${ratePct >= 0 ? '+' : ''}${ratePct}%`;
     const pitchParam = `${pitchHz >= 0 ? '+' : ''}${pitchHz}Hz`;
-    const key = `v4|${preset}|${rateParam}|${pitchParam}|${spoken}`;
+    const key = `v5|${preset}|${rateParam}|${pitchParam}|${spoken}`;
     if (gatewayTTSCache.has(key)) return gatewayTTSCache.get(key);
 
     // Check persistent IndexedDB cache before hitting the network
@@ -13751,61 +13790,106 @@ async function fetchBookCoverArt(title, opts) {
 }
 
 
-function generateDynamicStudioCover(title) {
+function generateDynamicStudioCover(title, author = '') {
     const canvas = document.createElement('canvas');
     canvas.width = 400;
     canvas.height = 600;
     const ctx = canvas.getContext('2d');
 
+    const palettes = [
+        { top: '#18232d', mid: '#101820', bot: '#090e13', accent: '#5eead4', ink: '#f2efe9', muted: 'rgba(242,239,233,0.62)' }, // Celadon Slate
+        { top: '#2b161e', mid: '#1b0d12', bot: '#10080b', accent: '#e6b968', ink: '#f5efe6', muted: 'rgba(245,239,230,0.62)' }, // Georgian Burgundy
+        { top: '#14241e', mid: '#0d1814', bot: '#070e0b', accent: '#86efac', ink: '#eff3ef', muted: 'rgba(239,243,239,0.62)' }, // Forest Cloth
+        { top: '#171e30', mid: '#101422', bot: '#090b13', accent: '#93c5fd', ink: '#eff2f7', muted: 'rgba(239,242,247,0.62)' }, // Midnight Linen
+        { top: '#251d14', mid: '#17120c', bot: '#0e0a07', accent: '#fbbf24', ink: '#f5efe5', muted: 'rgba(245,239,229,0.62)' }, // Smoked Ochre
+        { top: '#231929', mid: '#16101b', bot: '#0c080f', accent: '#d8b4fe', ink: '#f3eff7', muted: 'rgba(243,239,247,0.62)' }  // Plum Obsidian
+    ];
+    let hash = 0;
+    const raw = String(title || 'EngBot Book');
+    for (let i = 0; i < raw.length; i++) hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0;
+    const pal = palettes[Math.abs(hash) % palettes.length];
+
+    // Matte hardcover cloth gradient
     const grad = ctx.createLinearGradient(0, 0, 400, 600);
-    grad.addColorStop(0, '#0a0f1d');
-    grad.addColorStop(0.5, '#19153a');
-    grad.addColorStop(1, '#06080c');
+    grad.addColorStop(0, pal.top);
+    grad.addColorStop(0.55, pal.mid);
+    grad.addColorStop(1, pal.bot);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 400, 600);
 
-    ctx.save();
-    ctx.filter = 'blur(40px)';
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
-    ctx.beginPath(); ctx.arc(90, 130, 90, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(255, 209, 102, 0.35)';
-    ctx.beginPath(); ctx.arc(310, 470, 110, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    // Subtle bookbinding spine groove on the left edge
+    const spine = ctx.createLinearGradient(0, 0, 26, 0);
+    spine.addColorStop(0, 'rgba(255,255,255,0.14)');
+    spine.addColorStop(0.28, 'rgba(255,255,255,0.04)');
+    spine.addColorStop(0.55, 'rgba(0,0,0,0.45)');
+    spine.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = spine;
+    ctx.fillRect(0, 0, 26, 600);
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    // Subtle radial top spotlight (soft studio lighting, no harsh neon blur)
+    const wash = ctx.createRadialGradient(210, 120, 10, 210, 140, 290);
+    wash.addColorStop(0, 'rgba(255, 255, 255, 0.06)');
+    wash.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, 400, 600);
+
+    // Architectural double hairline frame
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
     ctx.lineWidth = 1;
-    for (let i = 40; i < 400; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 600); ctx.stroke(); }
-    for (let j = 40; j < 600; j += 40) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(400, j); ctx.stroke(); }
+    ctx.strokeRect(24, 24, 352, 552);
+    ctx.strokeStyle = pal.accent;
+    ctx.globalAlpha = 0.28;
+    ctx.strokeRect(30, 30, 340, 540);
+    ctx.globalAlpha = 1;
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(20, 20, 360, 560);
+    // Minimalist geometric crest at top
+    ctx.strokeStyle = pal.accent;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(200, 74); ctx.lineTo(212, 86); ctx.lineTo(200, 98); ctx.lineTo(188, 86);
+    ctx.closePath();
+    ctx.stroke();
 
-    ctx.fillStyle = '#00f0ff';
-    ctx.font = '600 12px Space Grotesk, sans-serif';
+    ctx.fillStyle = pal.accent;
+    ctx.font = '600 10.5px "Plus Jakarta Sans", Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('LUMINA MOON AUDIOBOOK', 200, 70);
+    ctx.fillText('ENGBOT  EDITION', 200, 124);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px Inter, sans-serif';
-    const words = title.split(' ');
-    let line = '';
-    let y = 260;
-    for (let n = 0; n < words.length; n++) {
-        let testLine = line + words[n] + ' ';
-        if (ctx.measureText(testLine).width > 300 && n > 0) {
-            ctx.fillText(line.trim(), 200, y);
-            line = words[n] + ' ';
-            y += 34;
+    // Editorial Serif Title wrapped cleanly
+    ctx.fillStyle = pal.ink;
+    ctx.font = '400 28px "Instrument Serif", "EB Garamond", Georgia, serif';
+    const words = raw.trim().split(/\s+/).filter(Boolean);
+    const lines = [];
+    let currentLine = '';
+    for (let i = 0; i < words.length; i++) {
+        const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
+        if (ctx.measureText(testLine).width > 292 && currentLine) {
+            lines.push(currentLine);
+            currentLine = words[i];
+            if (lines.length >= 5) break;
         } else {
-            line = testLine;
+            currentLine = testLine;
         }
     }
-    ctx.fillText(line.trim(), 200, y);
+    if (currentLine && lines.length < 6) lines.push(currentLine);
+    const lineHeight = 36;
+    let y = Math.max(195, 290 - ((lines.length - 1) * lineHeight) / 2);
+    for (const l of lines) {
+        ctx.fillText(l, 200, y);
+        y += lineHeight;
+    }
 
-    ctx.fillStyle = 'rgba(255, 209, 102, 0.85)';
-    ctx.font = '500 14px Inter, sans-serif';
-    ctx.fillText('Studio Reader Edition', 200, 520);
+    // Bottom separator rule + Author / Edition colophon
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.beginPath();
+    ctx.moveTo(140, 488);
+    ctx.lineTo(260, 488);
+    ctx.stroke();
+
+    const cleanAuthor = String(author || '').trim();
+    ctx.fillStyle = pal.muted;
+    ctx.font = '500 12px "Plus Jakarta Sans", Inter, sans-serif';
+    ctx.fillText(cleanAuthor ? cleanAuthor.slice(0, 34) : 'Audiobook & Moon Reader', 200, 518);
 
     return canvas.toDataURL('image/jpeg', 0.9);
 }
@@ -14565,11 +14649,13 @@ async function renderDigitalShelf(filterText = document.getElementById('searchIn
         const stats = getBookStats(book);
         const card = document.createElement('article');
         card.className = 'studio-book' + (String(currentBook?.id) === String(book.id) ? ' is-selected' : '');
-        const cover = book.coverUrl && !book.coverUrl.includes('undefined') ? book.coverUrl : generateDynamicStudioCover(title);
+        const cover = book.coverUrl && !book.coverUrl.includes('undefined') ? book.coverUrl : generateDynamicStudioCover(title, book.author || '');
         const lang = book.lang === 'ka' || bookHasGeorgian(book) ? 'KA' : 'EN';
+        const bookPct = Math.max(0, Math.min(100, Math.round(Number(book.progressPct) || 0)));
         card.innerHTML = `
             <div class="studio-book-cover">
                 <img src="${escapeHtml(cover)}" alt="${escapeHtml(title)} cover" loading="lazy" decoding="async">
+                ${bookPct > 0 ? `<div class="studio-book-progress" aria-label="${bookPct}% completed"><span style="width:${bookPct}%"></span></div>` : ''}
                 <button type="button" class="studio-book-open" aria-label="Open ${escapeHtml(title)}"></button>
                 <button type="button" class="studio-delete" aria-label="Delete ${escapeHtml(title)}" title="Delete book"><span class="material-symbols-outlined" aria-hidden="true">delete</span></button>
                 <div class="studio-book-actions">
@@ -14826,40 +14912,40 @@ function renderChaptersList() {
         const chapBms = activeBookmarks.filter(b => String(b.chapterId) === String(chap.id));
 
         const div = document.createElement('div');
-        div.className = `glass-panel rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all ${isSpeaking ? 'border-primary-container/60 bg-primary-container/10 shadow-[0_0_20px_rgba(0,240,255,0.15)]' : 'hover:bg-white/5'}`;
+        div.className = `glass-panel rounded-xl p-3 sm:p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all ${isSpeaking ? 'border-primary-container/50 bg-primary-container/[0.08]' : 'hover:bg-white/[0.04]'}`;
 
         const bmBadge = chapBms.length > 0
-            ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 font-bold flex items-center gap-0.5" title="${chapBms.length} bookmark${chapBms.length === 1 ? '' : 's'} in this chapter"><span class="material-symbols-outlined text-[11px]">bookmark</span>${chapBms.length}</span>`
+            ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/15 text-georgian-gold border border-georgian-gold/30 font-semibold flex items-center gap-0.5" title="${chapBms.length} bookmark${chapBms.length === 1 ? '' : 's'} in this chapter"><span class="material-symbols-outlined text-[11px]">bookmark</span>${chapBms.length}</span>`
             : '';
 
         div.innerHTML = `
-            <div class="flex items-center gap-3.5 min-w-0 flex-grow">
-                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${isSpeaking ? 'bg-primary-container text-on-primary-container' : 'bg-white/5 text-primary-fixed'} flex items-center justify-center font-bold text-xs sm:text-sm font-mono flex-shrink-0">
+            <div class="flex items-center gap-3 min-w-0 flex-grow">
+                <div class="w-8 h-8 rounded-lg ${isSpeaking ? 'bg-primary-container text-on-primary-container' : 'bg-white/[0.05] text-primary-container'} flex items-center justify-center font-bold text-xs font-mono flex-shrink-0">
                     ${idx + 1}
                 </div>
                 <div class="overflow-hidden">
-                    <h4 class="font-semibold text-white text-xs sm:text-base truncate flex items-center gap-2">
+                    <h4 class="font-semibold text-white text-[13px] sm:text-[15px] truncate flex items-center gap-2">
                         ${escapeHtml(EngbotCore.chapterTitle(chap, readerActive ? readerLang : currentLang))}
                         ${bmBadge}
-                        ${chapHasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/20 text-georgian-gold border border-georgian-gold/30 font-bold">🇬🇪</span>' : ''}
-                        ${isCurrentlyTranslating ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold animate-pulse">⏳ Translating</span>' : ''}
+                        ${chapHasKa ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-georgian-gold/15 text-georgian-gold border border-georgian-gold/25 font-semibold">🇬🇪</span>' : ''}
+                        ${isCurrentlyTranslating ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-primary-container/15 text-primary-fixed border border-primary-container/30 font-semibold animate-pulse">⏳ Translating</span>' : ''}
                     </h4>
-                    <p class="text-[10px] sm:text-xs text-on-surface-variant mt-0.5">${(typeof getChapterPageBadge === 'function' && getChapterPageBadge(chap)) ? `${escapeHtml(getChapterPageBadge(chap))} • ` : ''}${(EngbotCore.chapterStats(chap).words || chap.word_count || 0).toLocaleString()} words • ~${(typeof formatChapterDuration === 'function') ? formatChapterDuration(EngbotCore.chapterStats(chap).seconds) : formatTime(EngbotCore.chapterStats(chap).seconds)}</p>
+                    <p class="text-[11px] text-on-surface-variant mt-0.5">${(typeof getChapterPageBadge === 'function' && getChapterPageBadge(chap)) ? `${escapeHtml(getChapterPageBadge(chap))} • ` : ''}${(EngbotCore.chapterStats(chap).words || chap.word_count || 0).toLocaleString()} words • ~${(typeof formatChapterDuration === 'function') ? formatChapterDuration(EngbotCore.chapterStats(chap).seconds) : formatTime(EngbotCore.chapterStats(chap).seconds)}</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
                 ${isNextToTranslate ? `
-                <button onclick="startWholeBookTranslation(true)" class="px-3 py-1.5 rounded-xl bg-georgian-gold/20 hover:bg-georgian-gold/30 text-georgian-gold text-xs font-bold flex items-center gap-1 border border-georgian-gold/40 transition shadow-sm" title="Resume translation from this chapter">
+                <button onclick="startWholeBookTranslation(true)" class="px-3 py-1.5 rounded-lg bg-georgian-gold/15 hover:bg-georgian-gold/25 text-georgian-gold text-xs font-semibold flex items-center gap-1 border border-georgian-gold/30 transition" title="Resume translation from this chapter">
                     <span class="material-symbols-outlined text-sm">play_arrow</span>
                     <span>Resume</span>
                 </button>
                 ` : ''}
-                <button onclick="openReader('${currentBook.id}', ${chap.id}, currentLang)" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-1 border border-white/10 transition" title="Read in Moon Reader">
+                <button onclick="openReader('${currentBook.id}', ${chap.id}, currentLang)" class="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white text-xs font-medium flex items-center gap-1 border border-white/10 transition" title="Read in Moon Reader">
                     <span class="material-symbols-outlined text-sm text-georgian-gold">menu_book</span>
                     <span>Read</span>
                 </button>
-                <button onclick="playChapterAudio(${chap.id})" class="px-3.5 py-1.5 rounded-xl ${isSpeaking ? 'bg-primary-container text-on-primary-container shadow-[0_0_15px_rgba(0,240,255,0.5)]' : 'bg-white/10 text-white hover:bg-primary-container/20 hover:text-primary-fixed'} text-xs font-bold transition flex items-center gap-1">
+                <button onclick="playChapterAudio(${chap.id})" class="px-3.5 py-1.5 rounded-lg ${isSpeaking ? 'bg-primary-container text-on-primary-container font-bold' : 'bg-white/[0.08] text-white hover:bg-primary-container/20 hover:text-primary-fixed font-semibold'} text-xs transition flex items-center gap-1">
                     <span class="material-symbols-outlined text-base" style="font-variation-settings: 'FILL' 1;">${isSpeaking ? 'pause' : 'play_arrow'}</span>
                     <span>${isSpeaking ? 'Pause' : 'Listen'}</span>
                 </button>
@@ -15230,7 +15316,7 @@ async function renderScanShelf() {
         const pages = (book.extra && (book.extra.scanned_pages || (book.extra.extra && book.extra.extra.scanned_pages))) || book.scanned_pages || 0;
         const coverSrc = (book.coverUrl && typeof book.coverUrl === 'string' && book.coverUrl.trim().length > 5 && !book.coverUrl.includes('undefined'))
             ? book.coverUrl
-            : (typeof generateDynamicStudioCover === 'function' ? generateDynamicStudioCover(book.title || 'Scanned Book') : '');
+            : (typeof generateDynamicStudioCover === 'function' ? generateDynamicStudioCover(book.title || 'Scanned Book', book.author || '') : '');
         const card = document.createElement('div');
         card.className = 'glass-card rounded-2xl p-4 flex gap-4';
         card.innerHTML = `

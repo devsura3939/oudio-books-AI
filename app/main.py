@@ -49,10 +49,34 @@ from app.server_stats import get_full_server_stats
 import base64
 from io import BytesIO
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def _lifespan(app_instance: FastAPI):
+    if not (os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("TESTING") or os.environ.get("ENGBOT_SKIP_OLLAMA_WARMUP")):
+        async def _warm():
+            try:
+                await asyncio.sleep(1.5)
+                ollama_url = os.environ.get("KONA_OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
+                model = os.environ.get("KONA_MODEL", "kona2-small-3.8B:latest")
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    await client.post(ollama_url, json={
+                        "model": model,
+                        "messages": [{"role": "user", "content": "ok"}],
+                        "max_tokens": 1,
+                        "keep_alive": "24h",
+                        "stream": False
+                    })
+            except Exception:
+                pass
+        asyncio.create_task(_warm())
+    yield
+
 app = FastAPI(
     title="PDF to High-Quality Audiobook Studio",
     description="Convert any PDF eBook to a studio-grade audiobook with natural neural voices.",
-    version="1.48.0"
+    version="1.48.0",
+    lifespan=_lifespan
 )
 
 # Enable CORS for local dev
@@ -370,13 +394,16 @@ async def server_ai_gateway(req: Request):
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": prompt})
-            resp = httpx.post(ollama_url, json={
-                "model": os.environ.get("KONA_MODEL", "qwen2.5:3b"),
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": False
-            }, timeout=30.0)
+            def _post_ollama():
+                return httpx.post(ollama_url, json={
+                    "model": os.environ.get("KONA_MODEL", "kona2-small-3.8B:latest"),
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "keep_alive": "24h",
+                    "stream": False
+                }, timeout=45.0)
+            resp = await run_in_threadpool(_post_ollama)
             if resp.status_code == 200:
                 data = resp.json()
                 choice = data.get("choices", [{}])[0]
@@ -388,7 +415,7 @@ async def server_ai_gateway(req: Request):
                         "finish_reason": "stop",
                         "choices": [{"finish_reason": "stop", "message": {"content": content}}],
                         "candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": content}]}}],
-                        "engine": "local-ollama"
+                        "engine": "kona2-small-3.8B"
                     })
         except Exception as ollama_err:
             pass

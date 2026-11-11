@@ -402,9 +402,25 @@ def clean_georgian_morphology(text: str) -> str:
         (r'(?<![\u10A0-\u10FF])არც\s+კი\s+შეუხედავს(?![ა-ჰ])', 'თვალიც არ შეუკრავს'),
         (r'(?<![\u10A0-\u10FF])ამასობაში\s+კი(?![ა-ჰ])', 'ამასობაში'),
         (r'(?<![\u10A0-\u10FF])ერთი\s+სიტყვით\s+რომ\s+ვთქვათ(?![ა-ჰ])', 'მოკლედ რომ ვთქვათ'),
+        # Correlative conjunction comma discipline for authentic reading & narration cadence
+        (r'(?<![\u10A0-\u10FF])მიუხედავად\s+იმისა\s+რომ(?![ა-ჰ])', 'მიუხედავად იმისა, რომ'),
+        (r'(?<![\u10A0-\u10FF])იმიტომ\s+რომ(?![ა-ჰ])', 'იმიტომ, რომ'),
+        (r'(?<![\u10A0-\u10FF])იმისათვის\s+რომ(?![ა-ჰ])', 'იმისათვის, რომ'),
+        (r'(?<![\u10A0-\u10FF])იმისთვის\s+რომ(?![ა-ჰ])', 'იმისათვის, რომ'),
+        (r'(?<![\u10A0-\u10FF])მას\s+შემდეგ\s+რაც(?![ა-ჰ])', 'მას შემდეგ, რაც'),
+        (r'(?<![\u10A0-\u10FF])ყოველ\s+დღე(?![ა-ჰ])', 'ყოველდღე'),
+        (r'(?<![\u10A0-\u10FF])ყოველ\s+დღეს(?![ა-ჰ])', 'ყოველდღე'),
     ]
     for pattern, repl in calques:
         t = re.sub(pattern, repl, t)
+
+    # Ensure Georgian comma precedes key coordinating/subordinate conjunctions for natural prose rhythm
+    t = re.sub(
+        r'([ა-ჰ0-9»“])\s+(მაგრამ|თუმცა|ხოლო|რადგანაც|რადგან|ვინაიდან|რომელიც|რომელსაც|რომლის|როდესაც)(?![ა-ჰ])',
+        r'\1, \2',
+        t
+    )
+    t = re.sub(r',\s*,+', ',', t)
 
     return t.strip()
 
@@ -1267,14 +1283,14 @@ def translate_with_kona(
         if target_lang == "ka":
             sys_msg = (
                 "You are an expert bilingual literary translator specializing in English and Georgian. "
-                "Translate the text into natural, authentic, grammatically correct literary Georgian (ქართული სამწერლო ენა).\n"
+                "Translate the text into natural, authentic, expressive literary Georgian (ქართული სამწერლო ენა) suitable for audiobook narration.\n"
                 "Rules:\n"
-                "1. SYNTAX: Use natural Georgian sentence structure and word order; do NOT translate mechanically word-for-word.\n"
-                "2. CASE CONCORD: Transitive and medial verbs in the Series II Aorist (past) strictly require Ergative case (-მა / -მ: 'ავტორმა თქვა', 'აგენტებმა იპოვეს', 'მან გაისროლა'). Experiencer verbs take Dative (მას უნდა/უყვარს/ახსოვს).\n"
+                "1. SYNTAX & CADENCE: Use natural Georgian SOV/topic-focus flow with smooth rhythmic phrasing; do NOT translate mechanically word-for-word. Omit redundant subject pronouns (მან/ის) when already clear from verb agreement.\n"
+                "2. CASE CONCORD: Transitive and medial verbs in Series II Aorist strictly require Ergative subjects (-მა / -მ: 'ავტორმა თქვა', 'მეფემ ბრძანა'). Experiencer verbs take Dative ('მას უნდა/უყვარს/ახსოვს/შია'). Reflexives require 'თავისი' (NOT 'მისი').\n"
                 "3. PROPER NAMES: Transliterate proper names phonetically into Georgian (Constant -> კონსტანტი, Rumfoord -> რამფორდი, Kazak -> კაზაკი). Do NOT translate names as common words.\n"
-                "4. AVOID CALQUES: Do not translate idioms literally (e.g. 'looked outward' -> 'მზერას გარეთ მიაპყრობდა', 'outward push' -> 'გარეთ სწრაფვა').\n"
-                "5. SOMATIC & SCI-FI: 'catch breath' -> 'სული მოითქვა', 'shrug shoulders' -> 'მხრები აიჩეჩა', 'outer space' -> 'კოსმოსური სივრცე', 'empty void' -> 'უკიდეგანო სიცარიელე'.\n"
-                "6. ANIMACY & TIME: 'მას ჰყავს ძაღლი/შვილი' (animate), 'მას აქვს მანქანა' (inanimate); 'საათების განმავლობაში' -> 'საათობით', 'დიდი დროის განმავლობაში' -> 'დიდხანს'.\n"
+                "4. AVOID CALQUES: Use authentic Georgian verbs/idioms ('looked outward' -> 'მზერას გარეთ აპყრობდა', 'caught breath' -> 'სული მოითქვა', 'shrug shoulders' -> 'მხრები აიჩეჩა'). Ban bureaucratic Sovietisms (never 'განხორციელება', 'ადგილი ჰქონდა', 'წარმოადგენს').\n"
+                "5. GEORGIAN PUNCTUATION: Place commas before მაგრამ, თუმცა, ხოლო, რადგან, როდესაც, რომელიც. Use „...“ for quotes and — for dialogue dashes.\n"
+                "6. ANIMACY & NUMERALS: Singular nouns after numbers (სამი წიგნი, NOT *წიგნები); 'მას ჰყავს ძაღლი/შვილი' vs 'მას აქვს მანქანა'.\n"
                 "Output ONLY the Georgian translation without any introductory or concluding remarks."
             )
             user_parts = []

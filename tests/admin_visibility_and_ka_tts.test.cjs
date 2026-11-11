@@ -201,6 +201,10 @@ test('Georgian TTS JS verbalizer, transliterator, acoustic prosody & ElevenLabs 
     assert.equal(ctx.verbalizeGeorgianTextForTTS('1,5'), 'ერთ-ნახევარი');
     assert.equal(ctx.verbalizeGeorgianTextForTTS('10 000'), 'ათი ათასი');
     assert.match(ctx.verbalizeGeorgianTextForTTS('შპს ძვ.წ. აშშ დღგ'), /შე-პე-სე ძველი წელთაღრიცხვით ა-შე-შე დე-ღე-გე/);
+    assert.match(ctx.verbalizeGeorgianTextForTTS('XXI საუკუნის'), /ოცდამეერთე საუკუნის/);
+    assert.equal(ctx.verbalizeGeorgianTextForTTS('Google-მა'), 'გუგლმა');
+    assert.equal(ctx.verbalizeGeorgianTextForTTS('წმ. გიორგი'), 'წმინდა გიორგი');
+    assert.match(ctx.verbalizeGeorgianTextForTTS('120 კმ/სთ'), /ას ოცი კილომეტრი საათში/);
 
     // Latin transliteration & acronym fixes in Georgian
     assert.equal(ctx.transliterateLatinWordToGeorgian('Tbilisi'), 'თბილისი');
@@ -226,7 +230,13 @@ test('Georgian TTS JS verbalizer, transliterator, acoustic prosody & ElevenLabs 
         similarity_boost: 0.85
     });
 
-    // fetchGatewaySpeechUrl sends calibrated rate/pitch & v4 cache key instead of hardcoded 1.0/currentPitch
+    // fetchGatewaySpeechUrl sends calibrated rate/pitch & v5 cache key instead of hardcoded 1.0/currentPitch
     assert.doesNotMatch(appJs, /rate:\s*1\.0,\s*\r?\n\s*pitch:\s*currentPitch/);
-    assert.match(appJs, /const key = `v4\|\$\{preset\}\|\$\{rateParam\}\|\$\{pitchParam\}\|\$\{spoken\}`/);
+    assert.match(appJs, /const key = `v5\|\$\{preset\}\|\$\{rateParam\}\|\$\{pitchParam\}\|\$\{spoken\}`/);
+
+    // v5 presets & Obsidian editorial design tokens present
+    assert.match(appJs, /id:\s*'ka-classic'/);
+    assert.match(appJs, /id:\s*'ka-modern'/);
+    assert.match(appJs, /ENGBOT\s+EDITION/);
+    assert.doesNotMatch(appJs, /LUMINA MOON AUDIOBOOK/);
 });

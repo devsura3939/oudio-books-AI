@@ -16,11 +16,11 @@ class TestSilenceTrimming(unittest.TestCase):
         result = trim_speech_silence(corrupted)
         self.assertEqual(result, corrupted)
 
-    def test_cache_key_v4_bump(self):
-        # Verify synthesize_single_speech uses v4_ cache key prefix for calibrated mastering
+    def test_cache_key_v5_bump(self):
+        # Verify synthesize_single_speech uses v5_ cache key prefix for broadcast Georgian mastering
         import inspect
         source = inspect.getsource(synthesize_single_speech)
-        self.assertIn('v4_', source, "synthesize_single_speech should use v4_ cache key prefix")
+        self.assertIn('v5_', source, "synthesize_single_speech should use v5_ cache key prefix")
         self.assertIn('trim_speech_silence', source, "synthesize_single_speech should apply trim_speech_silence")
 
 
